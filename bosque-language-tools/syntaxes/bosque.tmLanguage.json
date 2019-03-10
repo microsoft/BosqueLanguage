@@ -1,0 +1,134 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Bosque",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#string-double"
+		},
+		{
+			"include": "#string-single"
+		},
+		{
+			"include": "#constants"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#types"
+		},
+		{
+			"include": "#variables"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.comment.bosque"
+						}
+					},
+					"begin": "//",
+					"end": "$",
+					"name": "comment.line.double-dash.bosque"
+				}
+			]
+		},
+		"string-double": {
+			"name": "string.quoted.double.bosque",
+			"begin": "\"",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.bosque"
+				}
+			},
+			"end": "\"",
+			"endCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.end.bosque"
+				}
+			},
+			"patterns": [
+				{
+					"name": "constant.character.escape.bosque",
+					"match": "\\\\."
+				}
+			]
+		},
+		"string-single": {
+			"name": "string.quoted.single.bosque",
+			"begin": "'",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.bosque"
+				}
+			},
+			"end": "'",
+			"endCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.end.bosque"
+				}
+			},
+			"patterns": [
+				{
+					"name": "constant.character.escape.bosque",
+					"match": "\\\\."
+				}
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.bosque",
+					"match": "\\b(assert|check|elif|else|if|return|yield)\\b"
+				},
+				{
+					"name": "keyword.bosque",
+					"match": "\\b(this|hidden|factory|virtual|abstract|override|concept|const|enum|entity|ensures|field|fn|from|function|global|ckey|invariant|method|namespace|provides|requires|static|typedef|unique|using|var|when|where)\\b"
+				}
+			]
+		},
+		"constants": {
+			"patterns": [
+				{
+					"name": "constant.numeric.bosque",
+					"match": "\\b[0-9]+\\b"
+				},
+				{
+					"name": "constant.language",
+					"match": "\\b(none|true|false)\\b"
+				}
+			]
+		},
+		"types": {
+			"patterns": [
+				{
+					"name": "entity.name.type.bosque",
+					"match": "\\b((NS[_a-zA-Z0-9]+)::(([A-MO-Z][_a-zA-Z0-9]+)|([A-Z][_a-zA-RT-Z0-9][_a-zA-Z0-9]*)))\\b"
+				},
+				{
+					"name": "entity.name.type.bosque",
+					"match": "\\b(([A-MO-Z][_a-zA-Z0-9]+)|([A-Z][_a-zA-RT-Z0-9][_a-zA-Z0-9]*))\\b"
+				},
+				{
+					"name": "entity.name.type.bosque",
+					"match": "\\b[A-Z]\\b"
+				}
+			]
+		},
+		"variables": {
+			"patterns": [
+				{
+					"name": "variable.name",
+					"match": "\\b[_a-z][_a-zA-Z0-9]*\\b"
+				}
+			]
+		}
+	},
+	"scopeName": "source.bsq"
+}
