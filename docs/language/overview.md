@@ -843,7 +843,7 @@ entity Baz {
 var t = @[ 1, 2, 3 ];
 t<~(1=5)      //@[1, 5, 2]
 t<~(0=3, 1=5) //@[3, 5, 3]
-t<~(1=5, 4=0) //@[1, 2, 3, none, 0]
+t<~(1=5, 4=0) //@[1, 5, 3, none, 0]
 
 var r = @{ f=1, g=2, k=true };
 r<~(g=5)          //@{f=1, g=5, k=true}
@@ -1138,7 +1138,7 @@ The select operator uses a condition which may return a `Bool` or `None` and use
 
 ```none
 true ? 1 : 2      //1
-true ? 1 : 2      //2
+false ? 1 : 2      //2
 true ? 1 : 2 / 0  //1
 false ? 1 : 2 / 0 //error
 none ? 1 : 2      //2
