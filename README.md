@@ -4,7 +4,7 @@
 [![PR's Welcome](https://img.shields.io/badge/PRs%20-welcome-brightgreen.svg)](#contribute)
 [![Build Status](https://dev.azure.com/bosquepl/BosqueDevOps/_apis/build/status/Microsoft.BosqueLanguage?branchName=master)](https://dev.azure.com/bosquepl/BosqueDevOps/_build/latest?definitionId=1&branchName=master)
 
-The Bosque programming language is designed for writing code that simple, obvious, and easy to reason about for both humans and machines. The key design features of the language provide ways to avoid _accidental complexity_ in the development and coding process. The result is improved developer productivity, increased software quality, and enable a range of new compilers and developer tooling experiences.
+The Bosque programming language is designed for writing code that is simple, obvious, and easy to reason about for both humans and machines. The key design features of the language provide ways to avoid _accidental complexity_ in the development and coding process. The result is improved developer productivity, increased software quality, and enable a range of new compilers and developer tooling experiences.
 
 Small samples of code to give a sample flavor are below ([Code Snippets](#Code-Snippets)). A rundown of notable and/or unique features in the Bosque language is provided in the [language overview section 0](docs/language/overview.md#0-Highlight-Features).
 For a look at how the language works and flows _in the large_ please see the code for a [simple tic-tac-toe](docs/tictactoe.md) program that supports updating the board with user supplied moves, making an automated computer move, and managing the various game state.
