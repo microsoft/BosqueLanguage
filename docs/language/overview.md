@@ -149,8 +149,8 @@ var a = np(1, 2);         //returns @{x=1, y=2}
 var b = np(p2=2, 1);      //also returns @{x=1, y=2}
 
 //calls with spread arguments
-var l = @[0, 1, 2, 3];
-var p = nsum(0, ...l);    //returns 6 -- same as explicit call
+var t = @[1, 2, 3];
+var p = nsum(0, ...t);    //returns 6 -- same as explicit call
 
 var r = @{p1=1, p2=2};
 var q = np(...r);         //returns @{x=1, y=2} -- same as explicit call
@@ -201,13 +201,13 @@ var v: List[Int?] = List@{1, 2, none, 4};
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
 //Piped none filter - List@{1, 4, none, 16}
-v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x) |> toList[Int?]()
+v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
 
 //Piped with noneable filter - List@{1, 4, 16}
-v |??> map[Int](fn(x) => x*x) |> toList[Int]()
+v |??> map[Int](fn(x) => x*x)
 
 //Piped with none to result - List@{1, 4, none, 16}
-v |?> map[Int](fn(x) => x*x) |> toList[Int?]()
+v |?> map[Int](fn(x) => x*x)
 ```
 
 Eliminating the boilerplate of writing the same loops repeatedly eliminates whole classes of errors including, e.g. bounds computations, and makes the intent clear with a descriptively named functor instead of relying on a shared set of mutually known loop patterns. Critically, for enabling automated program validation and optimization, eliminating loops also eliminates the need for computing loop-invariants. Instead, and with a careful design of the collection libraries, it is possible to write precise transformers for each functor. In this case the computation of _strongest-postconditions_ or _weakest-preconditions_ avoids the complexity of generating a loop invariant and instead becomes a simple and deterministic case of formula pushing!
@@ -528,8 +528,8 @@ var b = np(p2=2, 1);      //also returns @{x=1, y=2}
 var c = np(p2=2, p1=1);   //also returns @{x=1, y=2}
 
 //calls with spread arguments
-var l = @[0, 1, 2, 3];
-var p = nsum(0, ...l);    //returns 6 -- same as explicit call
+var t = @[1, 2, 3];
+var p = nsum(0, ...t);    //returns 6 -- same as explicit call
 
 var r = @{p1=1, p2=2};
 var q = np(...r);         //returns @{x=1, y=2} -- same as explicit call
@@ -537,7 +537,7 @@ var q = np(...r);         //returns @{x=1, y=2} -- same as explicit call
 
 The first of the examples show the use of rest and named arguments in call signatures. The call to `nsum` takes an arbitrary number of arguments which are automatically converted into a List. The calls to `np` show how named parameters can be used and mixed with positional parameters.
 
-The next set of examples show how _spread_ arguments can be used. In the first case a tuple, `@[1, 2, 3]`, is created and assigned to the variable `l`. This tuple is then spread to provide the last three arguments to `nsum`. Semantically the call `nsum(0, ...l)` is the same as `nsum(0, l[0], l[1], l[2])` and, as a result, the value in `p` is the same as the value computed for `x`. The spread operator also works for records and named parameters. In the example the call to `np(...r)` is semantically the same as `np(p1=r.p1, p2=r.p2)`. Although not shown here spread can also be used on any collection, List, Set, Map, based data values as well.
+The next set of examples show how _spread_ arguments can be used. In the first case a tuple, `@[1, 2, 3]`, is created and assigned to the variable `t`. This tuple is then spread to provide the last three arguments to `nsum`. Semantically the call `nsum(0, ...t)` is the same as `nsum(0, t[0], t[1], t[2])` and, as a result, the value in `p` is the same as the value computed for `x`. The spread operator also works for records and named parameters. In the example the call to `np(...r)` is semantically the same as `np(p1=r.p1, p2=r.p2)`. Although not shown here spread can also be used on any collection, List, Set, Map, based data values as well.
 
 ## <a name="5.2-Constants"></a>5.2 Constants
 
@@ -971,13 +971,13 @@ var v: List[Int?] = List@{1, 2, none, 4};
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
 //Piped none filter - List@{1, 4, none, 16}
-v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x) |> toList[Int?]()
+v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
 
 //Piped with noneable filter - List@{1, 4, 16}
-v |??> map[Int](fn(x) => x*x) |> toList[Int]()
+v |??> map[Int](fn(x) => x*x)
 
 //Piped with none to result - List@{1, 4, none, 16}
-v |?> map[Int](fn(x) => x*x) |> toList[Int?]()
+v |?> map[Int](fn(x) => x*x)
 ```
 
 ## <a name="5.19-Unary-Operators"></a>5.19 Unary Operators
