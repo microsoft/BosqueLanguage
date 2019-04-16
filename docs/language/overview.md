@@ -197,16 +197,16 @@ A fundamental concept in a programming language is the iteration construct and a
 ```none
 var v: List[Int?] = List@{1, 2, none, 4};
   
-//Chained - List@{1, 4, 8}
+//Chained - List@{1, 4, 16}
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
-//Piped none filter - List@{1, 4, none, 8}
+//Piped none filter - List@{1, 4, none, 16}
 v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x) |> toList[Int?]()
 
-//Piped with noneable filter - List@{1, 4, 8}
+//Piped with noneable filter - List@{1, 4, 16}
 v |??> map[Int](fn(x) => x*x) |> toList[Int]()
 
-//Piped with none to result - List@{1, 4, none, 8}
+//Piped with none to result - List@{1, 4, none, 16}
 v |?> map[Int](fn(x) => x*x) |> toList[Int?]()
 ```
 
@@ -967,16 +967,16 @@ Thus, Bosque allows the use of both method chaining for calls on collections _an
 ```none
 var v: List[Int?] = List@{1, 2, none, 4};
   
-//Chained - List@{1, 4, 8}
+//Chained - List@{1, 4, 16}
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
-//Piped none filter - List@{1, 4, none, 8}
+//Piped none filter - List@{1, 4, none, 16}
 v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x) |> toList[Int?]()
 
-//Piped with noneable filter - List@{1, 4, 8}
+//Piped with noneable filter - List@{1, 4, 16}
 v |??> map[Int](fn(x) => x*x) |> toList[Int]()
 
-//Piped with none to result - List@{1, 4, none, 8}
+//Piped with none to result - List@{1, 4, none, 16}
 v |?> map[Int](fn(x) => x*x) |> toList[Int?]()
 ```
 
