@@ -45,10 +45,10 @@ Update y-value on point Record
 
 ```none
 function updateY(point: {x: Int, y: Int, z: Int}, value: Int): {x: Int, y: Int, z: Int} {
-    return point<~(y=value);
+    return point<~(y=value, x=-x);
 }
 
-updateY(@{x=1, y=2, z=3}, 5) //@{x=1, y=5, z=3}
+updateY(@{x=1, y=2, z=3}, 5) //@{x=-1, y=5, z=3}
 ```
 
 Noneable access on optional argument:
