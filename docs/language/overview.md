@@ -102,7 +102,7 @@ function abs(x: Int): Int {
 
 **[NOT IMPLEMENTED YET]**
 
-In addition to allowing multiple assignments to variables the Bosque language also allows developers to thread parameters via `ref` argument passing. This alternative to multi-return values simplifies scenarios where an variable (often some sort of environment) is passed to a method which may use and update it. Allowing the update in the parameter eliminates the extra return value management that would otherwise be needed:
+In addition to allowing multiple assignments to variables the Bosque language also allows developers to thread parameters via `ref` argument passing. This alternative to multi-return values simplifies scenarios where a variable (often some sort of environment) is passed to a method which may use and update it. Allowing the update in the parameter eliminates the extra return value management that would otherwise be needed:
 
 ```none
 function internString(ref env: Map<String, Int>, str: String): Int {
