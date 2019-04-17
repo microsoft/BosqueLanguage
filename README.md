@@ -82,7 +82,7 @@ The current focus of the Bosque project is core language design. As a result the
 
 ### Build & Test
 
-The `ref_impl` directory contains the reference implementation parser, type checker, interpreter, and command line runner. In this directory build and test the Bosque reference implementation with:
+The `ref_impl` directory contains the reference implementation parser, type checker, interpreter, and command line runner. In this directory, build and test the Bosque reference implementation with:
 
 ```none
 npm install && npm run-script build && npm test
