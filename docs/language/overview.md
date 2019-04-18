@@ -611,7 +611,7 @@ var x = Baz@{f=1, g=2};          //Create a Baz entity with default value for h
 
 In this code snippet two `Baz` entities are allocated via the atomic initialization constructor. In the second case the omitted `h` field is set to the provided default value of true.
 
-Sometimes it is useful to encapsulate initialization logic and, to accomplish this, Bosque provides for the definition of `factory` functions which operate similar to constructors but, in some sense, are upside down. A factory function returns a record with all the fields needed for the enclosing entity/concept. So,the `identity` factory defines `f` and `g`. When invoked with the constructor syntax this is desugared to the atomic initializer being used with expanded record result of factory function, `Baz@{...Baz::identity(1)}`, in our example.
+Sometimes it is useful to encapsulate initialization logic and, to accomplish this, Bosque provides for the definition of `factory` functions which operate similar to constructors but, in some sense, are upside down. A factory function returns a record with all the fields needed for the enclosing entity/concept. So, the `identity` factory defines `f` and `g`. When invoked with the constructor syntax this is desugared to the atomic initializer being used with expanded record result of factory function, `Baz@{...Baz::identity(1)}`, in our example.
 
 With this design the need to pass data up through super calls is eliminated as the data can be directly inserted into the initializer or, if the super constructor has factory logic, then the super factory can be called and the result expanded directly into the atomic constructor as in `Baz@{...Bar::default(), g=2}` below.
 
