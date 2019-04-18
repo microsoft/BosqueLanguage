@@ -410,7 +410,7 @@ The subtype relation on tuples `R1` and `R2` is a subset based order on the reco
 {f: Int} <: {g: Int}                    //false - different names
 {f: Int} <: {f: Bool}                   //false - Int <! Bool
 {f: Int} <: {f: Any, g?: Bool}          //true - omitting optional type is ok
-{f: Int, g: Bool} <: {f: Int, g?: Bool] //true - optional type is ok
+{f: Int, g: Bool} <: {f: Int, g?: Bool} //true - optional type is ok
 {f: Int, g?: Bool} <: {f: Int}          //false - missing optional type
 {f: Int} <: {f: Int, ...}               //true - subset matches
 {f: Int, g: Bool] <: {f: Int, ...}      //true - subset matches, open covers rest
