@@ -80,6 +80,15 @@ function sign(x?: Int): Int {
 
 The current focus of the Bosque project is core language design. As a result there is limited support for compilation/development and _no_ support for packaging, deployment, lifecycle management, etc.
 
+### Requirements
+
+#### Windows
+
+In order to build the language for Windows the following are needed:
+
+- The LTS version of [node.js](https://nodejs.org/en/download/) for Windows (x64)
+- Typescript (install with: `npm i typescript -g`)
+
 ### Build & Test
 
 The `ref_impl` directory contains the reference implementation parser, type checker, interpreter, and command line runner. In this directory, build and test the Bosque reference implementation with:
