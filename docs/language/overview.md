@@ -131,7 +131,7 @@ foo(zc, user) //ok
 
 ## <a name="0.5-Flexible-Invocations"></a>0.5 Flexible Invocations
 
-Bosque has provides _named arguments_ along with _rest_ and _spread_ operators. These can be used to perform simple and powerful data manipulation as part of invocations and constructor operations ([5.1 Arguments](#5.1-Arguments)).
+Bosque provides _named arguments_ along with _rest_ and _spread_ operators. These can be used to perform simple and powerful data manipulation as part of invocations and constructor operations ([5.1 Arguments](#5.1-Arguments)).
 
 ```none
 function nsum(d: Int, ...args: List[Int]): Int {
