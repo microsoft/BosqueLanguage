@@ -125,7 +125,7 @@ function foo(zip: String[Zipcode], name: String) {...}
 var zc: String[Zipcode] = ...;
 var user: String = ...;
 
-foo(user, zc) //Type error String not convertable to String[Zipcode]
+foo(user, zc) //Type error String not convertible to String[Zipcode]
 foo(zc, user) //ok
 ```
 
