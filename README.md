@@ -78,7 +78,7 @@ function sign(x?: Int): Int {
 
 ## Using the Bosque Language
 
-The current focus of the Bosque project is core language design. As a result there is limited support for compilation/development and _no_ support for packaging, deployment, lifecyle management, etc.
+The current focus of the Bosque project is core language design. As a result there is limited support for compilation/development and _no_ support for packaging, deployment, lifecycle management, etc.
 
 ### Build & Test
 
