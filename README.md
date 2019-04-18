@@ -41,7 +41,7 @@ function allOdd(...args: List[Int]): Bool {
 allOdd(1, 3, 4) //false
 ```
 
-Update y-value on point Record
+Bulk update properties on Record
 
 ```none
 function update(point: {x: Int, y: Int, z: Int}, value: Int): {x: Int, y: Int, z: Int} {
