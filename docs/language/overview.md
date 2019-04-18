@@ -1163,7 +1163,7 @@ Note that the introduction of an expression block creates a new lexical scope fo
 
 The _If_ statement conditions allow `Bool` and `None` types.
 
-The _Match_ statements support destructing and type operations in the match just as described in [section 6.6 Match](#6.8-Match).
+The _Match_ statements support destructuing and type operations in the match just as described in [section 6.6 Match](#6.8-Match).
 
 When block statements are used as expressions they cannot use `return` statements inside.
 
