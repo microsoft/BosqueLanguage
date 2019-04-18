@@ -73,9 +73,9 @@ The Bosque language derives from a combination of [TypeScript](https://www.types
 
 # <a name="0-Highlight-Features"></a>0 Highlight Features
 
-The Bosque programming language is designed for writing code that simple, obvious, and easy to reason about for both humans and machines. The design was driven heavily by the identification and elimination of various sources of _accidental complexity_ and insights on how they can be alleviated via the thoughtful language design.
+The Bosque programming language is designed for writing code that is simple, obvious, and easy to reason about for both humans and machines. The design was driven heavily by the identification and elimination of various sources of _accidental complexity_ and insights on how they can be alleviated via the thoughtful language design.
 
-This section highlights contains information on many of the most notable and/or unique features and design choices in the Bosque programming language.
+This section highlights and contains information on many of the most notable and/or unique features and design choices in the Bosque programming language.
 
 ## <a name="0.1-Immutable-Values"></a>0.1 Immutable Values
 
@@ -102,7 +102,7 @@ function abs(x: Int): Int {
 
 **[NOT IMPLEMENTED YET]**
 
-In addition to allowing multiple assignments to variables the Bosque language also allows developers to thread parameters via `ref` argument passing. This alternative to multi-return values simplifies scenarios where a variable (often some sort of environment) is passed to a method which may use and update it. Allowing the update in the parameter eliminates the extra return value management that would otherwise be needed:
+In addition to allowing multiple assignments to variables, the Bosque language also allows developers to thread parameters via `ref` argument passing. This alternative to multi-return values simplifies scenarios where a variable (often some sort of environment) is passed to a method which may use and update it. Allowing the update in the parameter eliminates the extra return value management that would otherwise be needed:
 
 ```none
 function internString(ref env: Map<String, Int>, str: String): Int {
@@ -182,7 +182,7 @@ r<+(@{f=5, h=1}); //@{f=5, g=8, h=1}
 
 ## <a name="0.7-None-Processing"></a>0.7 None Processing
 
-Handling `none` values is a relatively common task that can obscure the fundamental intent of a section of code with nests of cases and conditional handling for the special case. To simplify this type of code Bosque includes various forms of _coalescing_ or _short-circuit_ operators ((5.8 None-Chaining)[#5.8 None-Chaining]) to enable code like:
+Handling `none` values is a relatively common task that can obscure the fundamental intent of a section of code with nests of cases and conditional handling for the special case. To simplify this type of code, Bosque includes various forms of _coalescing_ or _short-circuit_ operators ((5.8 None-Chaining)[#5.8 None-Chaining]) to enable code like:
 
 ```none
 function foo(val?: {tag: Int, value?: String}): String {
@@ -216,28 +216,24 @@ Eliminating the boilerplate of writing the same loops repeatedly eliminates whol
 
 The lack of explicit looping constructs, and the presence of collection processing functors, is not unusual in functional languages. However, the result is often the replacement of complex loop structures with complex recursion structures. Complex raw flows obfuscate the intent of the code and hinder automated analysis and tooling regardless of if the flow is a loop or recursion.
 
-Thus, Bosque is designed to encourage limited uses of recursion,
-increase the clarity of the recursive structure, and enable compilers/runtimes to avoid stack related errors. This is done by introducing the `rec` keyword which is used at both declaration sites to indicate a function/method
-is recursive and again at the call site so to affirm that the caller is aware of the recursive nature of the call ([7 Invokable-Declarations](#7-Invokable-Declarations)).
+Thus, Bosque is designed to encourage limited uses of recursion, increase the clarity of the recursive structure, and enable compilers/runtimes to avoid stack related errors. This is done by introducing the `rec` keyword which is used at both declaration sites to indicate a function/method is recursive and again at the call site so as to affirm that the caller is aware of the recursive nature of the call ([7 Invokable-Declarations](#7-Invokable-Declarations)).
 
 ## <a name="0.10-Determinacy"></a>0.10 Determinacy
 
-When the behavior of a code block is under-specified the result is code that is harder to reason about and more prone to errors. As a key goal of the Bosque
-language is to eliminate sources of unneeded complexity that lead to confusion and errors we naturally want to eliminate these under-specified behaviors. Thus, Bosque does not have any _undefined_ behavior such as allowing uninitialized variable reads and eliminates all _under defined_ behavior as well including sorting stability and all associative collections (sets and maps) have a fixed and stable enumeration order.
+When the behavior of a code block is under-specified the result is code that is harder to reason about and more prone to errors. As a key goal of the Bosque language is to eliminate sources of unneeded complexity that lead to confusion and errors we naturally want to eliminate these under-specified behaviors. Thus, Bosque does not have any _undefined_ behavior such as allowing uninitialized variable reads and eliminates all _under defined_ behavior as well including sorting stability and all associative collections (sets and maps) have a fixed and stable enumeration order.
 
 As a result of these design choices there is always a single _unique_ and _canonical_ result for any Bosque program. This means that developers will never see intermittent production failures or flakey unit-tests!
 
 ## <a name="0.11-Equality-and-Representation"></a>0.11 Equality and Representation
 
-Equality is a multifaceted concept in programming and ensuring consistent behavior across the many areas it can surface in a modern programming language such as `==`, `.equals`, `Set.has`, `List.sort`, is source of subtle bugs.
+Equality is a multifaceted concept in programming and ensuring consistent behavior across the many areas it can surface in a modern programming language such as `==`, `.equals`, `Set.has`, `List.sort`, is a source of subtle bugs.
 This complexity further manifests itself in the need to consider the possible aliasing relations of values, in addition to their structural data, in order to understand the behavior of a block of code. The fact that _reference equality_ is chosen as a default, or is an option, is also a bit of an anachronism as reference equality heavily ties the execution to a hardware model in which objects are associated with a memory location.
 
-In light of these issues the Bosque language does not allow user visible _reference equality_ in any operation including `==` or container operations. Instead equality is defined either by the core language for the primitives `Bool`, `Int`, `String`, `GUID`, etc., or as a user defined _composite key_ `ckey` type ([5.21 Equality Comparison](#5.21-Equality-Comparison)). The composite key type allows a developer to create a distinct type to represent
-a composite equality comparable value that provides the notion of equality e.g. identity, primary key, equivalence, etc. that makes sense for their domain. The language also allows types to define a key field that will be used for equality/order by the associative containers in the language ([3 Collections](#3-Collections)).
+In light of these issues the Bosque language does not allow user visible _reference equality_ in any operation including `==` or container operations. Instead equality is defined either by the core language for the primitives `Bool`, `Int`, `String`, `GUID`, etc., or as a user defined _composite key_ `ckey` type ([5.21 Equality Comparison](#5.21-Equality-Comparison)). The composite key type allows a developer to create a distinct type to represent a composite equality comparable value that provides the notion of equality e.g. identity, primary key, equivalence, etc. that makes sense for their domain. The language also allows types to define a key field that will be used for equality/order by the associative containers in the language ([3 Collections](#3-Collections)).
 
 ## <a name="0.12-Errors-and-Checks"></a>0.12 Errors and Checks
 
-A central goal of the Bosque language is to simplify the process of building high reliability software. As part of this the language provides first-class support for expressing a full range of invariants, sanity-checks, and diagnostic assertions.
+A central goal of the Bosque language is to simplify the process of building high reliability software. As part of this, the language provides first-class support for expressing a full range of invariants, sanity-checks, and diagnostic assertions.
 
 ```none
 entity Foo {
@@ -259,7 +255,7 @@ entity Foo {
 
 ## <a name="0.13-Atomic-Constructors-and-Factories"></a>0.13 Atomic Constructors and Factories
 
-To reduce the amount of boilerplate code introduced by constructors, and in particular constructors that have long argument lists that are mainly passed through to super constructors, Bosque uses construction via direct field initialization to construct entity (object) values. For many uses this simple direct initializer approach is sufficient and there is no need for complex constructors that compute derived values as part of the constructor execution.
+To reduce the amount of boilerplate code introduced by constructors, and in particular constructors that have long argument lists that are mainly passed through to super constructors, Bosque uses construction via direct field initialization to construct entity (object) values. For many uses, this simple direct initializer approach is sufficient and there is no need for complex constructors that compute derived values as part of the constructor execution.
 
 However, it is sometimes useful to encapsulate initialization logic and, to accomplish this, we allow for the definition of `factory` functions which operate similar to constructors but, in some sense, are upside down. A factory function returns a record with all the fields needed for the enclosing entity/concept ([5.5 Entity Constructors](#5.5-Entity-Constructors)).
 
