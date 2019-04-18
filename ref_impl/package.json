@@ -11,14 +11,15 @@
         "url": "https://github.com/Microsoft/BosqueLanguage"
     },
     "dependencies": {
-        "@types/node": "~10.12.18"
+        "@types/node": "~10.12.18",
+        "typescript": "^3.4.3"
     },
     "devDependencies": {
         "chalk": "~2.4.2"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.json",
-        "test": "tsc -p tsconfig.json && node ./bin/test/test_runner.js"
+        "build": "./node_modules/.bin/tsc -p tsconfig.json",
+        "test": "./node_modules/.bin/tsc -p tsconfig.json && node ./bin/test/test_runner.js"
     },
     "files": [
         "bin/*"
