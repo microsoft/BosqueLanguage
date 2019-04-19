@@ -36,7 +36,7 @@ The Bosque language derives from a combination of [TypeScript](https://www.types
   - [5.5 Entity Constructors](#5.5-Entity-Constructors)
   - [5.6 Lambda Constructors](#5.6-Lambda-Constructors)
   - [5.7 Scoped Invokes](#5.7-Scoped-Invokes)
-  - [5.8 None-Chaining](#5.8-None-Chaining)
+  - [5.8 None-Chaining](#5.8-Chaining-and-None-Chaining)
   - [5.9 Tuple Typed Access Operators](#5.9-Tuple-Typed-Access-Operators)
   - [5.10 Record Typed Access Operators](#5.10-Record-Typed-Access-Operators)
   - [5.11 Nominal Typed Access Operators](#5.11-Nominal-Typed-Access-Operators)
@@ -182,7 +182,7 @@ r<+(@{f=5, h=1}); //@{f=5, g=8, h=1}
 
 ## <a name="0.7-None-Processing"></a>0.7 None Processing
 
-Handling `none` values is a relatively common task that can obscure the fundamental intent of a section of code with nests of cases and conditional handling for the special case. To simplify this type of code, Bosque includes various forms of _coalescing_ or _short-circuit_ operators ([5.8 None-Chaining](#5.8 None-Chaining)) to enable code like:
+Handling `none` values is a relatively common task that can obscure the fundamental intent of a section of code with nests of cases and conditional handling for the special case. To simplify this type of code, Bosque includes various forms of _coalescing_ or _short-circuit_ operators ([5.8 Chaining and None Chaining](#5.8-Chaining-and-None-Chaining)) to enable code like:
 
 ```none
 function foo(val?: {tag: Int, value?: String}): String {
