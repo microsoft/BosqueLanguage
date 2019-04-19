@@ -196,7 +196,7 @@ A fundamental concept in a programming language is the iteration construct and a
 
 ```none
 var v: List[Int?] = List@{1, 2, none, 4};
-  
+
 //Chained - List@{1, 4, 16}
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
@@ -322,7 +322,7 @@ Examples of nominal types include:
 MyType       //user declared concept or entity
 Some         //core library declared concept
 NSCore::Some //core library concept with explicit namespace scope
-List[Int]    //core collection with generic parameter Int 
+List[Int]    //core collection with generic parameter Int
 ```
 
 ### <a name="1.1.1-Type-Relation-on-Nominal-Types"></a>1.1.1 Type Relation on Nominal Types
@@ -537,7 +537,7 @@ The next set of examples show how _spread_ arguments can be used. In the first c
 
 ## <a name="5.2-Constants"></a>5.2 Constants
 
-Constant value expressions include `none`, `true`, `false` _Integer_, _String_, 
+Constant value expressions include `none`, `true`, `false` _Integer_, _String_,
 _TypedString_, and _TypedStringLiteral_:
 
 ```none
@@ -962,7 +962,7 @@ Thus, Bosque allows the use of both method chaining for calls on collections _an
 
 ```none
 var v: List[Int?] = List@{1, 2, none, 4};
-  
+
 //Chained - List@{1, 4, 16}
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
@@ -1331,7 +1331,7 @@ else {
 }
 ```
 
-Note that dangling `elifs` must have a final `else` block. 
+Note that dangling `elifs` must have a final `else` block.
 
 To avoid ambiguity when _If_ statements/expressions are used the actions cannot nest naked _If_/_Match_ expressions. Instead they must be enclosed in an expression statement block.
 

@@ -74,7 +74,7 @@ entity List[T] provides Collection[T] {
 
     //
     //TODO: May want to add optional ranges for these -- e.g. any(p: Predicate[T], start? Int, end?: Int)
-    //         This works nicely with our override concepts with the Collection definitions! 
+    //         This works nicely with our override concepts with the Collection definitions!
     //      Add map with index
     //      Maybe powerset for collections in general?
     //
@@ -131,7 +131,7 @@ entity List[T] provides Collection[T] {
 
     //<summary>Find the last index containing an element satisfying p in the list [start, end) -- return -1 if no such index.</summary>
     method findIndexOfLast(p: Predicate[T], start?: Int, end?: Int): Int # list_findindexoflast
-    
+
     //<summary>Get a sublist from the list [start, end).</summary>
     method sublist(start?: Int, end?: Int): List[T] # list_sublist
 
@@ -360,7 +360,7 @@ entity TreeMap[K where Indexable, V] provides Map[K, V] {
 
     override static union(...args: List[Map[K, V]]): Map[K, V] # treemap_union
     override static intersection(...args: List[Map[K, V]]): Map[K, V] # treemap_intersection
-    
+
     //<summary>Add a single element to the set -- only available on TreeMap for performance.</summary>
     method add(...elems: Collection[[K, V]]): TreeMap[K, V] # treemap_add
 }

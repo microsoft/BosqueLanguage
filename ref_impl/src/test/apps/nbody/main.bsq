@@ -23,7 +23,7 @@ entity Body {
    field z: Float;
 
    field vx: Float;
-   field vy: Float; 
+   field vy: Float;
    field vz: Float;
 
    const jupiter: Body = Body@{
@@ -123,7 +123,7 @@ entity NBodySystem {
    }
 
    method advance(dt: Float): NBodySystem {
-      var deltav = this.bodies->map[[Body, Float, Float, Float]](fn(b: Body): [Body, Float, Float, Float] => { 
+      var deltav = this.bodies->map[[Body, Float, Float, Float]](fn(b: Body): [Body, Float, Float, Float] => {
          var obodies = this.bodies->filter(fn(ob: Body): Bool => b.name != ob.name);
          var forces = obodies->map[[Float, Float, Float]](fn(ob: Body): [Float, Float, Float] => {
             var dx = Float::sub(ob.x, b.x);
