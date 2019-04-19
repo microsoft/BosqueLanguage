@@ -200,7 +200,7 @@ var v: List[Int?] = List@{1, 2, none, 4};
 //Chained - List@{1, 4, 16}
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
-//Piped none filter - List@{1, 4, none, 16}
+//Piped none filter - List@{1, 4, 16}
 v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
 
 //Piped with noneable filter - List@{1, 4, 16}
@@ -966,7 +966,7 @@ var v: List[Int?] = List@{1, 2, none, 4};
 //Chained - List@{1, 4, 16}
 v.filter(fn(x) => x != none).map[Int](fn(x) => x*x)
 
-//Piped none filter - List@{1, 4, none, 16}
+//Piped none filter - List@{1, 4, 16}
 v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
 
 //Piped with noneable filter - List@{1, 4, 16}
