@@ -505,7 +505,7 @@ The Bosque language provides a rich set of expressions that support compact data
 
 ## <a name="5.1-Arguments"></a>5.1 Arguments
 
-Bosque has provides _named arguments_ along with _rest_ and _spread_ operators. These can be used to perform simple and powerful data manipulation as part of invocations and constructor operations. Examples of these situations include:
+Bosque provides _named arguments_ along with _rest_ and _spread_ operators. These can be used to perform simple and powerful data manipulation as part of invocations and constructor operations. Examples of these situations include:
 
 ```none
 function nsum(d: Int, ...args: List[Int]): Int {
