@@ -11,11 +11,11 @@
         "url": "https://github.com/Microsoft/BosqueLanguage"
     },
     "dependencies": {
-        "@types/node": "~10.12.18",
-        "typescript": "^3.4.3"
+        "@types/node": "~10.12.18"
     },
     "devDependencies": {
-        "chalk": "~2.4.2"
+        "chalk": "~2.4.2",
+        "typescript": "^3.4.4"
     },
     "scripts": {
         "build": "./node_modules/.bin/tsc -p tsconfig.json",
