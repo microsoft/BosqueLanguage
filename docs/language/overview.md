@@ -1297,7 +1297,7 @@ check false;  //raise error always
 check true;   //no effect
 ```
 
-The error semantics in Bosque are unique. In most languages errors are distinguishable as runtime error reporting requires the inclusion of observable information, like line numbers and error messages, to support failure analysis and debugging. However, Since Bosque execution is fully deterministic ([0.10 Determinacy](0.10-Determinacy)) and repeatable, the language has two execution semantics: _deployed_ and _debug_. In the deployed semantics _all runtime errors_ are indistinguishable while in the debug semantics errors contain full line number, call-stack, and error metadata. When an error occurs in _deployed_ mode the runtime simply aborts, resets, and re-runs the execution in _debug_ mode to compute the precise error!
+The error semantics in Bosque are unique. In most languages errors are distinguishable as runtime error reporting requires the inclusion of observable information, like line numbers and error messages, to support failure analysis and debugging. However, Since Bosque execution is fully deterministic ([0.10 Determinacy](#0.10-Determinacy)) and repeatable, the language has two execution semantics: _deployed_ and _debug_. In the deployed semantics _all runtime errors_ are indistinguishable while in the debug semantics errors contain full line number, call-stack, and error metadata. When an error occurs in _deployed_ mode the runtime simply aborts, resets, and re-runs the execution in _debug_ mode to compute the precise error!
 
 ## <a name="6.7-If-Then-Else"></a>6.7 If-Then-Else
 
