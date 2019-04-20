@@ -1,4 +1,4 @@
-# Bosque Compute Language Overview
+# Bosque Language Overview
 
 The Bosque language derives from a combination of [TypeScript](https://www.typescriptlang.org/) inspired syntax and types plus [ML](https://www.smlnj.org/) and [Node/JavaScript](https://nodejs.org/en/) inspired semantics. This document provides an overview of the syntax, operations, and semantics in the Bosque language with an emphasis on the distinctive or unusual features in the language.
 
@@ -196,7 +196,7 @@ A fundamental concept in a programming language is the iteration construct and a
 
 ```none
 var v: List[Int?] = List@{1, 2, none, 4};
-  
+
 //Chained - List@{1, 4, 16}
 v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
 
@@ -222,7 +222,7 @@ Thus, Bosque is designed to encourage limited uses of recursion, increase the cl
 
 When the behavior of a code block is under-specified the result is code that is harder to reason about and more prone to errors. As a key goal of the Bosque language is to eliminate sources of unneeded complexity that lead to confusion and errors we naturally want to eliminate these under-specified behaviors. Thus, Bosque does not have any _undefined_ behavior such as allowing uninitialized variable reads and eliminates all _under defined_ behavior as well including sorting stability and all associative collections (sets and maps) have a fixed and stable enumeration order.
 
-As a result of these design choices there is always a single _unique_ and _canonical_ result for any Bosque program. This means that developers will never see intermittent production failures or flakey unit-tests!
+As a result of these design choices there is always a single _unique_ and _canonical_ result for any Bosque program. This means that developers will never see intermittent production failures or flaky unit-tests!
 
 ## <a name="0.11-Equality-and-Representation"></a>0.11 Equality and Representation
 
@@ -322,7 +322,7 @@ Examples of nominal types include:
 MyType       //user declared concept or entity
 Some         //core library declared concept
 NSCore::Some //core library concept with explicit namespace scope
-List[Int]    //core collection with generic parameter Int 
+List[Int]    //core collection with generic parameter Int
 ```
 
 ### <a name="1.1.1-Type-Relation-on-Nominal-Types"></a>1.1.1 Type Relation on Nominal Types
@@ -537,7 +537,7 @@ The next set of examples show how _spread_ arguments can be used. In the first c
 
 ## <a name="5.2-Constants"></a>5.2 Constants
 
-Constant value expressions include `none`, `true`, `false` _Integer_, _String_, 
+Constant value expressions include `none`, `true`, `false` _Integer_, _String_,
 _TypedString_, and _TypedStringLiteral_:
 
 ```none
@@ -707,7 +707,7 @@ When combined with a chainable operator (below) the `?` operator short-circuits 
 The tuple typed chainable operators include:
 
 - [e] to get the value at index i in the tuple or none if the index is not defined
-- @[i, ..., j], create a new tuple using the values at indecies i, ..., j
+- @[i, ..., j], create a new tuple using the values at indices i, ..., j
 
 Examples of these include:
 
@@ -962,7 +962,7 @@ Thus, Bosque allows the use of both method chaining for calls on collections _an
 
 ```none
 var v: List[Int?] = List@{1, 2, none, 4};
-  
+
 //Chained - List@{1, 4, 16}
 v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
 
@@ -1331,7 +1331,7 @@ else {
 }
 ```
 
-Note that dangling `elifs` must have a final `else` block. 
+Note that dangling `elifs` must have a final `else` block.
 
 To avoid ambiguity when _If_ statements/expressions are used the actions cannot nest naked _If_/_Match_ expressions. Instead they must be enclosed in an expression statement block.
 
