@@ -505,7 +505,7 @@ The Bosque language provides a rich set of expressions that support compact data
 
 ## <a name="5.1-Arguments"></a>5.1 Arguments
 
-Bosque has provides _named arguments_ along with _rest_ and _spread_ operators. These can be used to perform simple and powerful data manipulation as part of invocations and constructor operations. Examples of these situations include:
+Bosque provides _named arguments_ along with _rest_ and _spread_ operators. These can be used to perform simple and powerful data manipulation as part of invocations and constructor operations. Examples of these situations include:
 
 ```none
 function nsum(d: Int, ...args: List[Int]): Int {
@@ -557,7 +557,7 @@ Most of these literal expressions are familiar from other languages but Bosque i
 
 ## <a name="5.3-Variable-and-Scoped-Access"></a>5.3 Variable and Scoped Access
 
-Simple name expressions can be used to refer to local, argument, and captured variables as well as type or globally scoped constants. Examples include:
+Simple name expressions can be used to refer to local, argument, and captured variables as well as to type or globally scoped constants. Examples include:
 
 ```none
 x              //Local, Argument, or Captured Variable
@@ -567,7 +567,7 @@ Bar[Int]::c    //Generic type scoped constant
 (Bar + Baz)::c //Conjunction type scoped constant
 ```
 
-In Bosque names are resolved using the lexical scope where they are used starting from the current block, up to arguments, captured variables, type and finally namespace scoping. Shadowing is not permitted on any variables. However, for arguments/locals in a lambda body can be the same as names in the enclosing declaring body (preventing the closure capture [section 5.6 Lambda Constructors](#5.6-Lambda-Constructors)).
+Names in Bosque are resolved using the lexical scope where they are used, starting from the current block, up to arguments, captured variables, type and finally namespace scoping. Shadowing is not permitted on any variables. However, arguments/locals in a lambda body can be the same as names in the enclosing declaring body (preventing the closure capture [section 5.6 Lambda Constructors](#5.6-Lambda-Constructors)).
 
 The ability to perform conjunction scoped constant resolution works by looking up the definition of the constant using both `Bar` and `Baz`. If the constant definition is the same for both then this is well defined (and legal) otherwise it is a type error.
 
