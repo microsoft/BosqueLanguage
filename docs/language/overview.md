@@ -198,7 +198,7 @@ A fundamental concept in a programming language is the iteration construct and a
 var v: List[Int?] = List@{1, 2, none, 4};
   
 //Chained - List@{1, 4, 16}
-v.filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
+v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
 
 //Piped none filter - List@{1, 4, 16}
 v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
@@ -964,7 +964,7 @@ Thus, Bosque allows the use of both method chaining for calls on collections _an
 var v: List[Int?] = List@{1, 2, none, 4};
   
 //Chained - List@{1, 4, 16}
-v.filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
+v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
 
 //Piped none filter - List@{1, 4, 16}
 v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
