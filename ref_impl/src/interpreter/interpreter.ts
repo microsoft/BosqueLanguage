@@ -649,7 +649,7 @@ class Interpreter {
                         fscope.assignTmpReg(bop.trgt.regID, lhv * rhv);
                         break;
                     case "/":
-                        fscope.assignTmpReg(bop.trgt.regID, lhv / rhv);
+                        fscope.assignTmpReg(bop.trgt.regID, Math.floor(lhv / rhv));
                         break;
                     default:
                         fscope.assignTmpReg(bop.trgt.regID, lhv % rhv);
