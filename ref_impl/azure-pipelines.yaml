@@ -1,7 +1,7 @@
 # Build config for Azure Pipelines
 pool:
   vmImage: 'Ubuntu 16.04'
-  
+
 steps:
 - script: npm install
   displayName: 'npm install'

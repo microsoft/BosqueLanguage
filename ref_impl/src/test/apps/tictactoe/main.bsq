@@ -46,7 +46,7 @@ entity Board {
         });
     }
 
-    method getCellContents(x: Int, y: Int): String[PlayerMark]? 
+    method getCellContents(x: Int, y: Int): String[PlayerMark]?
         requires 0 <= x && x < 3 && 0 <= y && y < 3;
     {
         return this.cells->at(x + y * 3);
@@ -56,13 +56,13 @@ entity Board {
         return this->getCellContents(x, y) != none;
     }
 
-    method isCellOccupiedWith(x: Int, y: Int, mark: String[PlayerMark]): Bool 
-        requires mark == Board::playerX || mark == Board::playerO; 
+    method isCellOccupiedWith(x: Int, y: Int, mark: String[PlayerMark]): Bool
+        requires mark == Board::playerX || mark == Board::playerO;
     {
         return this->getCellContents(x, y) == mark;
     }
 
-    method markCellWith(x: Int, y: Int, mark: String[PlayerMark]): Board 
+    method markCellWith(x: Int, y: Int, mark: String[PlayerMark]): Board
         requires mark == Board::playerX || mark == Board::playerO;
         requires 0 <= x && x < 3 && 0 <= y && y < 3;
         requires !this->isCellOccupied(x, y);
@@ -99,7 +99,7 @@ entity Game {
         return this.winner != none;
     }
 
-    method getWinner(): String[PlayerMark] 
+    method getWinner(): String[PlayerMark]
         requires this->hasWinner();
     {
         return this.winner->as[String[PlayerMark]]();
@@ -117,11 +117,11 @@ entity Game {
             var tup = opts->uniform(rnd);
             nboard = this.board->markCellWith(...tup, mark);
         }
-        
+
         return this<~( board=nboard, winner=nboard->checkForWinner() );
     }
 
-    method makeExplicitMove(x: Int, y: Int, mark: String[PlayerMark]): Game 
+    method makeExplicitMove(x: Int, y: Int, mark: String[PlayerMark]): Game
         requires !this.board->isCellOccupied(x, y);
     {
         var nboard = this.board->markCellWith(x, y, mark);
