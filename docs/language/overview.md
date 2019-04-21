@@ -715,7 +715,7 @@ Examples of these include:
 var t = @[ 1, 2, 3 ];
 
 t[0]         //1
-t?[1]        //1
+t?[0]        //1
 t[101]       //none
 t@[1]        //@[2]
 t@[2, 0]     //@[3, 1]
