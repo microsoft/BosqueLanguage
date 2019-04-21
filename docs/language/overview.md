@@ -641,13 +641,13 @@ Lambda constructors in the Bosque language combine a code definition for the lam
 
 ```none
 var f = fn(): Int => { return 1; }             //No arguments statement block body
-var g = fn(): Int => 1                          //No arguments statement expression body
-var h = fn(x: Int): Int => x                    //One required argument
+var g = fn(): Int => 1;                         //No arguments statement expression body
+var h = fn(x: Int): Int => x;                   //One required argument
 var k = fn(x: Int, y?: Int): Int => @{a=x, b=y} //One required and one optional argument
 
 var c = 1;
 var fc = fn(): Int => c; //Captured variable c
-var rc = fc()            //Result is 1
+var rc = fc();           //Result is 1
 
 var! m = 1;
 var fm = fn(): Int => m; //Captured variable - always copied
