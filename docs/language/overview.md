@@ -125,8 +125,8 @@ function foo(zip: String[Zipcode], name: String) {...}
 var zc: String[Zipcode] = ...;
 var user: String = ...;
 
-foo(user, zc) //Type error String not convertible to String[Zipcode]
-foo(zc, user) //ok
+foo(user, zc); //Type error String not convertible to String[Zipcode]
+foo(zc, user); //ok
 ```
 
 ## <a name="0.5-Flexible-Invocations"></a>0.5 Flexible Invocations
@@ -198,16 +198,16 @@ A fundamental concept in a programming language is the iteration construct and a
 var v: List[Int?] = List@{1, 2, none, 4};
 
 //Chained - List@{1, 4, 16}
-v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
+v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x);
 
 //Piped none filter - List@{1, 4, 16}
-v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
+v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x);
 
 //Piped with noneable filter - List@{1, 4, 16}
-v |??> map[Int](fn(x) => x*x)
+v |??> map[Int](fn(x) => x*x);
 
 //Piped with none to result - List@{1, 4, none, 16}
-v |?> map[Int](fn(x) => x*x)
+v |?> map[Int](fn(x) => x*x);
 ```
 
 Eliminating the boilerplate of writing the same loops repeatedly eliminates whole classes of errors including, e.g. bounds computations, and makes the intent clear with a descriptively named functor instead of relying on a shared set of mutually known loop patterns. Critically, for enabling automated program validation and optimization, eliminating loops also eliminates the need for computing loop-invariants. Instead, and with a careful design of the collection libraries, it is possible to write precise transformers for each functor. In this case the computation of _strongest-postconditions_ or _weakest-preconditions_ avoids the complexity of generating a loop invariant and instead becomes a simple and deterministic case of formula pushing!
@@ -802,21 +802,21 @@ entity Baz provides Bar {
 }
 
 var t = @[ 1, 2, 3 ];
-t#[Int]        //@[1]
-t#[Bool]       //error type mismatch
-t#[Int, ?:Int] //@[1, 2]
-t#[Int, Any]   //@[1, 2]
+t#[Int];        //@[1]
+t#[Bool];       //error type mismatch
+t#[Int, ?:Int]; //@[1, 2]
+t#[Int, Any];   //@[1, 2]
 
 var r = @{ f=1, g=2, k=true };
-r#{f: Int}          //@{f=1}
-r#{f: Bool}         //error type mismatch
-t#[f: Int, g?: Int] //@{f=1, g=2}
-t#[f: Int, g: Any]  //@{f=1, g=2}
+r#{f: Int};          //@{f=1}
+r#{f: Bool};         //error type mismatch
+t#[f: Int, g?: Int]; //@{f=1, g=2}
+t#[f: Int, g: Any];  //@{f=1, g=2}
 
 var e = Baz@{ f=1, g=2, k=true };
-e#Bar       //@{f=1}
-e#{f: Bool} //error type projection requires same kinds
-e#T3         //error type mismatch
+e#Bar;       //@{f=1}
+e#{f: Bool}; //error type projection requires same kinds
+e#T3;         //error type mismatch
 ```
 
 Note that the result type of projecting from a nominal type is a _record_.
@@ -837,19 +837,19 @@ entity Baz {
 }
 
 var t = @[ 1, 2, 3 ];
-t<~(1=5)      //@[1, 5, 2]
-t<~(0=3, 1=5) //@[3, 5, 3]
-t<~(1=5, 4=0) //@[1, 5, 3, none, 0]
+t<~(1=5);      //@[1, 5, 2]
+t<~(0=3, 1=5); //@[3, 5, 3]
+t<~(1=5, 4=0); //@[1, 5, 3, none, 0]
 
 var r = @{ f=1, g=2, k=true };
-r<~(g=5)          //@{f=1, g=5, k=true}
-r<~(g=3, k=false) //@{f=1, g=3, k=false}
-r<~(g=5, h=0)     //@{f=1, g=5, k=true, h=0}
+r<~(g=5);          //@{f=1, g=5, k=true}
+r<~(g=3, k=false); //@{f=1, g=3, k=false}
+r<~(g=5, h=0);     //@{f=1, g=5, k=true, h=0}
 
 var e = Baz@{ f=1, g=2, k=true };
-e<~(g=5)          //Baz@{f=1, g=5, k=true}
-e<~(g=3, k=false) //Baz@{f=1, g=3, k=false}
-e<~(g=5, h=0)     //error invalid field name
+e<~(g=5);          //Baz@{f=1, g=5, k=true}
+e<~(g=3, k=false); //Baz@{f=1, g=3, k=false}
+e<~(g=5, h=0);     //error invalid field name
 ```
 
 Note that for tuples updating past the end of the tuple will `none` pad the needed locations while for records it will insert the specified property. Updating a non-existent field on a nominal type is an error.
@@ -866,18 +866,18 @@ entity Baz {
 }
 
 var t = @[ 1, 2, 3 ];
-t<+(@[5])       //@[1, 2, 3, 5]
-t<+(@[3, 5])    //@[1, 2, 3, 3, 5]
+t<+(@[5]);       //@[1, 2, 3, 5]
+t<+(@[3, 5]);    //@[1, 2, 3, 3, 5]
 
 var r = @{ f=1, g=2, k=true };
-r<+(@{g=5})          //@{f=1, g=5, k=true}
-r<+(@{g=3, k=false}) //@{f=1, g=3, k=false}
-r<+(@{g=5, h=0)      //@{f=1, g=5, k=true, h=0}
+r<+(@{g=5});          //@{f=1, g=5, k=true}
+r<+(@{g=3, k=false}); //@{f=1, g=3, k=false}
+r<+(@{g=5, h=0);      //@{f=1, g=5, k=true, h=0}
 
 var e = Baz@{ f=1, g=2, k=true };
-e<+(@{g=5})          //@{f=1, g=5, k=true}
-e<+(@{g=3, k=false}) //@{f=1, g=3, k=false}
-e<+(@{g=5, h=0)      //error field not defined
+e<+(@{g=5});          //@{f=1, g=5, k=true}
+e<+(@{g=3, k=false}); //@{f=1, g=3, k=false}
+e<+(@{g=5, h=0);      //error field not defined
 ```
 
 The ability to programmatically merge into values allows us to write concise data processing code and eliminate redundant code copying around individual values. In addition to helping prevent subtle bugs during initial coding the operators can also simplify the process of updating data representations when refactoring code by reducing the number of places where _explicit_ value deconstruction, update, and copies need to be used.
@@ -890,10 +890,10 @@ The lambda application operator is used to invoke the method body of a lambda va
 var f = (x: Int, y: Int): Int => x + y; //Types required
 var fn = none;
 
-f(5, 3)  //8 - normal invoke
-f?(5, 3) //8 - none-chain invoke
-fn()     //error
-fn?()    //none
+f(5, 3);  //8 - normal invoke
+f?(5, 3); //8 - none-chain invoke
+fn();     //error
+fn?();    //none
 ```
 
 ## <a name="5.17-Invoke"></a>5.17 Invoke
@@ -932,25 +932,25 @@ entity Biz provides Fizz {
 var bar = Bar@{v=10};
 var biz = Biz@{v=3};
 
-bar->m1(5) //15
-biz->m1(5) //8
+bar->m1(5); //15
+biz->m1(5); //8
 
-bar->m3(5)      //0
-bar->Fiz::m3(5) //18
-biz->m3(5)      //11
+bar->m3(5);      //0
+bar->Fiz::m3(5); //18
+biz->m3(5);      //11
 
-bar->func(2) //12
-biz->func(2) //error no such field or method
+bar->func(2); //12
+biz->func(2); //error no such field or method
 
-bar->mc[Int](3) //error no such field or method
-biz->mc[Int](3) //3
+bar->mc[Int](3); //error no such field or method
+biz->mc[Int](3); //3
 
-(none)->m1(5)    //error no such field or method
-(none)?->m1(5)   //none
+(none)->m1(5);    //error no such field or method
+(none)?->m1(5);   //none
 
-none->isNone() //true - see core None and Any types
-@{}->isSome()  //true - see core None and Any types
-5->isSome()    //true - see core None and Any types
+none->isNone(); //true - see core None and Any types
+@{}->isSome();  //true - see core None and Any types
+5->isSome();    //true - see core None and Any types
 ```
 
 The Bosque type system provides a unified model for all structural, primitive, and nominal types. So, methods can be invoked on any value. See the [core types](#2-Core-Types) section for more info on what invocations are supported.
@@ -964,16 +964,16 @@ Thus, Bosque allows the use of both method chaining for calls on collections _an
 var v: List[Int?] = List@{1, 2, none, 4};
 
 //Chained - List@{1, 4, 16}
-v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
+v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x);
 
 //Piped none filter - List@{1, 4, 16}
-v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x)
+v |> filter(fn(x) => x != none) |> map[Int](fn(x) => x*x);
 
 //Piped with noneable filter - List@{1, 4, 16}
-v |??> map[Int](fn(x) => x*x)
+v |??> map[Int](fn(x) => x*x);
 
 //Piped with none to result - List@{1, 4, none, 16}
-v |?> map[Int](fn(x) => x*x)
+v |?> map[Int](fn(x) => x*x);
 ```
 
 ## <a name="5.19-Unary-Operators"></a>5.19 Unary Operators
@@ -1114,16 +1114,16 @@ Bosque provides specific none-coalescing operations, `?|` and `?&`, as opposed t
 function default(x?: Int, y?: Int) : Int {
     return (x ?| 0) + (y ?| 0); //default on none
 }
-default(1, 1) //2
-default(1)    //1
-default()     //0
+default(1, 1); //2
+default(1);    //1
+default();     //0
 
 function check(x?: Int, y?: Int) : Int? {
     return x ?& y ?& x + y; //check none
 }
-default(1, 1) //2
-default(1)    //none
-default()     //none
+default(1, 1); //2
+default(1);    //none
+default();     //none
 ```
 
 The `?|` operator short-circuits on non-none values while the `?&` operator short-circuits on none values.
