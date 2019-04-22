@@ -149,4 +149,3 @@ entrypoint function main(): Game {
 
     return game;
 }
-

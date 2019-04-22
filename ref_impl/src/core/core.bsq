@@ -157,8 +157,3 @@ typedef Predicate[T] = fn(_: T) -> Bool;
 
 //<summary>Shorthand for transform function types.</summary>
 typedef Transform[T, U] = fn(_: T) -> U;
-
-
-
-
-
