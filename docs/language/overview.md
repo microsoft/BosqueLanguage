@@ -24,6 +24,7 @@ The Bosque language derives from a combination of [TypeScript](https://www.types
     - [0.15.2 Spacing Rules](#0.15.2-Spacing-Rules)
     - [0.15.3 Colon Rules](#0.15.3-Colon-Rules)
     - [0.15.4 Method Arguments](#0.15.4-Method-Arguments)
+    - [0.15.5 If Statements](#0.15.5-If-Statements)
 - [1 Type System](#1-Type-System)
   - [1.1 Nominal Types](#1.1-Nominal-Types)
   - [1.2 Structural Types](#1.2-Structural-Types)
@@ -428,6 +429,40 @@ function foo(name: String,
             year: Int,
             number: Int): Int {
     ...
+}
+```
+
+### <a name="0.15.5-If-Statements"></a>0.15.5 If Statements
+
+##### Do:
+
+```
+if(x == none || x == 0) {
+    y = 0;
+}
+else {
+    y = (x > 0) ? 1 : -1;
+}
+```
+
+##### Don't:
+
+```
+if(x == none || x == 0) {
+    y = 0;
+} else {
+    y = (x > 0) ? 1 : -1;
+}
+
+    // or
+
+if(x == none || x == 0) 
+{
+    y = 0;
+} 
+else 
+{
+    y = (x > 0) ? 1 : -1;
 }
 ```
 
