@@ -20,11 +20,12 @@ The Bosque language derives from a combination of [TypeScript](https://www.types
   - [0.13 Atomic Constructors and Factories](#0.13-Atomic-Constructors-and-Factories)
   - [0.14 Synthesis Blocks](#0.14-Synthesis-Blocks)
   - [0.15 Code Style](#0.15-Code-Style)
-    - [0.15.1 Naming Rules](#0.15.1-Naming-Rules)
-    - [0.15.2 Spacing Rules](#0.15.2-Spacing-Rules)
-    - [0.15.3 Colon Rules](#0.15.3-Colon-Rules)
-    - [0.15.4 Method Arguments](#0.15.4-Method-Arguments)
-    - [0.15.5 If Statements](#0.15.5-If-Statements)
+    - [0.15.1 Brackets Position](#0.15.1-Brackets-Position)
+    - [0.15.2 Naming Rules](#0.15.2-Naming-Rules)
+    - [0.15.3 Spacing Rules](#0.15.3-Spacing-Rules)
+    - [0.15.4 Colon Rules](#0.15.4-Colon-Rules)
+    - [0.15.5 Method Arguments](#0.15.5-Method-Arguments)
+    - [0.15.6 If Statements](#0.15.6-If-Statements)
 - [1 Type System](#1-Type-System)
   - [1.1 Nominal Types](#1.1-Nominal-Types)
   - [1.2 Structural Types](#1.2-Structural-Types)
@@ -308,7 +309,29 @@ __This documentation was written based on the source code in the repository in t
 
 If in doubt, the following rules are used by default:
 
-### <a name="0.15.1-Naming-Rules"></a>0.15.1 Naming Rules
+### <a name="0.15.1-Brackets-Position"></a>0.15.1 Brackets Position
+From the position of the brackets, the readability of the entire code can vary greatly, especially if different styles are used everywhere, we recommend using the recommended style of brackets:
+
+To open a block, put a bracket on the line in which you declare the method.
+To close a block, put a bracket on a new line.
+
+##### Do:
+```
+function foo(...) {  
+    // code here
+}
+```
+
+##### Don't:
+
+```
+function foo(...) 
+{
+    // code here
+}
+```
+
+### <a name="0.15.2-Naming-Rules"></a>0.15.2 Naming Rules
 Names of methods and variables and fields start with an lower case letter and use camel humps:
 
 ##### Do:
@@ -351,7 +374,7 @@ string
 alignment
 ```
 
-### <a name="0.15.2-Spacing-Rules"></a>0.15.2 Tabulation and Spacing
+### <a name="0.15.3-Spacing-Rules"></a>0.15.3 Tabulation and Spacing
 Use an indent of 4 spaces or tabulation as 4 spaces
 
 ##### Do:
@@ -370,7 +393,7 @@ function foo(...) {
 }
 ```
 
-### <a name="0.15.3-Colon-Rules"></a>0.15.3 Colon
+### <a name="0.15.4-Colon-Rules"></a>0.15.4 Colon
 If a colon is placed between the entity and the type, then the space before colon is omitted:
 
 ##### Do:
@@ -385,7 +408,7 @@ function foo(...): Int { ... }
 function foo(...) : Int { ... }
 ```
 
-### <a name="0.15.4-Method-Arguments"></a>0.15.4 Method Arguments
+### <a name="0.15.5-Method-Arguments"></a>0.15.5 Method Arguments
 Methods with a small number of arguments can be written on one line:
 
 ##### Do:
@@ -432,7 +455,8 @@ function foo(name: String,
 }
 ```
 
-### <a name="0.15.5-If-Statements"></a>0.15.5 If Statements
+### <a name="0.15.6-If-Statements"></a>0.15.6 If Statements
+The rules are the same as in the ([Brackets Position](#0.15.1-Brackets-Position)), only the else block is added. Below is an example of how to write and how not to.
 
 ##### Do:
 
