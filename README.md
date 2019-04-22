@@ -23,7 +23,7 @@ For a look at how the language works and flows _in the large_ please see the cod
 
 Add 2 numbers:
 
-```js
+```ts
 function add2(x: Int, y: Int): Int {
     return x + y;
 }
@@ -33,7 +33,7 @@ add2(2, 3) // 5
 
 All odd check using rest parameters and lambda:
 
-```js
+```ts
 function allOdd(...args: List[Int]): Bool {
     return args->all(fn(x) => x % 2 == 1);
 }
@@ -43,7 +43,7 @@ allOdd(1, 3, 4) // false
 
 Bulk update properties on Record
 
-```js
+```ts
 function update(point: {x: Int, y: Int, z: Int}, value: Int): {x: Int, y: Int, z: Int} {
     return point<~(y=value, x=-point.x);
 }
@@ -53,7 +53,7 @@ update(@{x=1, y=2, z=3}, 5) // @{x=-1, y=5, z=3}
 
 Noneable access on optional argument:
 
-```js
+```ts
 function tryGetProperty(r?: {f: Int, k: Int}): Int? {
     return r?.f;
 }
@@ -61,7 +61,7 @@ function tryGetProperty(r?: {f: Int, k: Int}): Int? {
 
 Sign (with optional argument):
 
-```js
+```ts
 function sign(x?: Int): Int {
     var! y;
 
