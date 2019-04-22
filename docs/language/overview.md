@@ -19,6 +19,11 @@ The Bosque language derives from a combination of [TypeScript](https://www.types
   - [0.12 Errors and Checks](#0.12-Errors-and-Checks)
   - [0.13 Atomic Constructors and Factories](#0.13-Atomic-Constructors-and-Factories)
   - [0.14 Synthesis Blocks](#0.14-Synthesis-Blocks)
+  - [0.15 Code Style](#0.15-Code-Style)
+    - [0.15.1 Naming Rules](#0.15.1-Naming-Rules)
+    - [0.15.2 Spacing Rules](#0.15.2-Spacing-Rules)
+    - [0.15.3 Colon Rules](#0.15.3-Colon-Rules)
+    - [0.15.4 Method Arguments](#0.15.4-Method-Arguments)
 - [1 Type System](#1-Type-System)
   - [1.1 Nominal Types](#1.1-Nominal-Types)
   - [1.2 Structural Types](#1.2-Structural-Types)
@@ -292,6 +297,139 @@ With this design the need to pass data up through super calls is eliminated as t
 ## <a name="0.14-Synthesis-Blocks"></a>0.14 Synthesis Blocks
 
 **[NOT IMPLEMENTED YET]**
+
+## <a name="0.15-Code-Style"></a>0.15 Code Style
+
+Code Style is an important part of the language. Code Style allows you to align the style of writing code. This allows you to avoid problems when reading the code and the extra errors associated with it.
+In this part of the documentation for the language are examples of code style, how to format some constructions and common errors.
+
+__This documentation was written based on the source code in the repository in the core.bsq and collection.bsq files. This documentation may not be complete, but I think that we will finish it closer to the first alpha version.__
+
+If in doubt, the following rules are used by default:
+
+### <a name="0.15.1-Naming-Rules"></a>0.15.1 Naming Rules
+Names of methods and variables and fields start with an lower case letter and use camel humps:
+
+##### Do:
+```
+function foo(...) { ... }
+
+    // or 
+
+var! fooVariable = 1;
+```
+
+##### Don't:
+
+```
+function Foo(...) { ... }
+
+    // or
+
+var! FooVariable = 1;
+```
+
+Names of types start with an upper case letter:
+
+##### Do:
+
+```
+String
+
+    // or
+
+Alignment
+```
+##### Don't:
+
+```
+string
+
+    // or
+
+alignment
+```
+
+### <a name="0.15.2-Spacing-Rules"></a>0.15.2 Tabulation and Spacing
+Use an indent of 4 spaces or tabulation as 4 spaces
+
+##### Do:
+
+```
+function foo(...) {
+    bar();
+}
+```
+
+##### Don't:
+
+```
+function foo(...) {
+  bar();
+}
+```
+
+### <a name="0.15.3-Colon-Rules"></a>0.15.3 Colon
+If a colon is placed between the entity and the type, then the space before colon is omitted:
+
+##### Do:
+
+```
+function foo(...): Int { ... }
+```
+
+##### Don't:
+
+```
+function foo(...) : Int { ... }
+```
+
+### <a name="0.15.4-Method-Arguments"></a>0.15.4 Method Arguments
+Methods with a small number of arguments can be written on one line:
+
+##### Do:
+
+```
+function foo(name: String, id: Int) { ... }
+```
+
+##### Don't:
+
+```
+function foo(name: String, id: Int, year: Int, number: Int) { ... }
+```
+
+Methods with longer signatures must be formatted so that each parameter is located on a new line.:
+
+##### Do:
+
+```
+function foo(
+    name: String,
+    id: Int,
+    year: Int,
+    number: Int
+): Int {
+    ...
+}
+```
+
+##### Don't:
+
+```
+function foo(name: String, id: Int, year: Int, number: Int): Int {
+    ...
+}
+
+    // or
+
+function foo(name: String,
+            id: Int,
+            year: Int,
+            number: Int): Int {
+    ...
+}
+```
 
 # <a name="1-Type-System"></a>1 Type System
 
