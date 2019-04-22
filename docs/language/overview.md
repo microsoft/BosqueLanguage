@@ -640,14 +640,14 @@ The result of this inverted constructor logic is that _only_ the arguments neede
 Lambda constructors in the Bosque language combine a code definition for the lambda body with a variable _copy_ semantics for closure captured variables on lambda creation. The body definition can be either an expression or a statement block. In the case of ambiguity the body is preferentially parsed as a statement block.
 
 ```none
-var f = fn(): Int => { return 1; }             //No arguments statement block body
-var g = fn(): Int => 1                          //No arguments statement expression body
-var h = fn(x: Int): Int => x                    //One required argument
-var k = fn(x: Int, y?: Int): Int => @{a=x, b=y} //One required and one optional argument
+var f = fn(): Int => { return 1; }               //No arguments statement block body
+var g = fn(): Int => 1;                          //No arguments statement expression body
+var h = fn(x: Int): Int => x;                    //One required argument
+var k = fn(x: Int, y?: Int): Int => @{a=x, b=y}; //One required and one optional argument
 
 var c = 1;
 var fc = fn(): Int => c; //Captured variable c
-var rc = fc()            //Result is 1
+var rc = fc();           //Result is 1
 
 var! m = 1;
 var fm = fn(): Int => m; //Captured variable - always copied
@@ -715,7 +715,7 @@ Examples of these include:
 var t = @[ 1, 2, 3 ];
 
 t[0]         //1
-t?[1]        //1
+t?[0]        //1
 t[101]       //none
 t@[1]        //@[2]
 t@[2, 0]     //@[3, 1]
