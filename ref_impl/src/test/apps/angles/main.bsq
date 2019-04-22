@@ -1,0 +1,39 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//
+//This is a bosque test/benchmark for an angle representation.
+//Expected output is: NSMain::Angle@{ degrees=221, primes=1, seconds=0 }
+//
+
+namespace NSMain;
+
+entity Angle {
+    field degrees: Int;
+    field primes: Int = 0;
+    field seconds: Int = 0;
+
+    method normalized(over360?: Bool): Angle
+        ensures _return_.degrees >= 0;
+        ensures _return_.primes < 60 && _return_.primes >= 0;
+        ensures _return_.seconds < 60 && _return_.seconds >= 0;
+    {
+        var seconds = this.seconds % 60;
+        var primes = (this.primes + ((this.seconds - seconds) / 60)) % 60;
+        var! degrees = this.degrees + ((this.primes - primes) + ((this.seconds - seconds) / 60)) / 60;
+        
+        if (!over360 && degrees > 360) {
+            degrees = 360;
+        }
+
+        return Angle@{degrees=degrees, primes=primes, seconds=seconds};
+    }
+}
+
+entrypoint function main(): Angle {
+    var angle = Angle@{degrees=220, primes=60, seconds=60};
+
+    return angle->normalized();
+}

@@ -1,0 +1,28 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//
+//This is a bosque test/benchmark for a simple max function.
+//Expected output is: 20
+//
+
+namespace NSMain;
+
+function max(x: Int, y: Int): Int
+    ensures _return_ == x || _return_ == y;
+{
+    if (x >= y) {
+        return x; 
+    } else {
+        return y;
+    }
+}
+
+entrypoint function main(): Int {
+    var x = 10;
+    var y = 20;
+
+    return max(x, y);
+}
