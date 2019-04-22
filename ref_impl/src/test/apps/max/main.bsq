@@ -21,8 +21,8 @@ function max(x: Int, y: Int): Int
 }
 
 entrypoint function main(): Int {
-    var! x = 10;
-    var! y = 20;
+    var x = 10;
+    var y = 20;
 
     return max(x, y);
 }

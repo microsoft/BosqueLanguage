@@ -99,7 +99,7 @@ npm install && npm run-script build && npm test
 
 ### Command Line Execution
 
-The `ref_impl` directory contains a simple command line runner for standalone Bosque (`.bsq`) files. These files must have a single `entrypoint` function called `main()` (see [example](ref_impl/src/test/apps/max/main.bsq)). The code in the file can be parsed, type checked, and executed with:
+The `ref_impl` directory contains a simple command line runner for standalone Bosque (`.bsq`) files. These files must have a single `entrypoint` function called `main()` (see [some examples](ref_impl/src/test/apps)). The code in the file can be parsed, type checked, and executed with:
 
 ```none
 node bin/test/app_runner.js FILE.bsq

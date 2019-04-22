@@ -20,8 +20,8 @@ entity Angle {
         ensures _return_.primes < 60 && _return_.primes >= 0;
         ensures _return_.seconds < 60 && _return_.seconds >= 0;
     {
-        var! seconds = this.seconds % 60;
-        var! primes = (this.primes + ((this.seconds - seconds) / 60)) % 60;
+        var seconds = this.seconds % 60;
+        var primes = (this.primes + ((this.seconds - seconds) / 60)) % 60;
         var! degrees = this.degrees + ((this.primes - primes) + ((this.seconds - seconds) / 60)) / 60;
         
         if (!over360 && degrees > 360) {
