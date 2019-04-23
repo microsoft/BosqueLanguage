@@ -2005,8 +2005,8 @@ class TypeChecker {
 
         const etreg = this.m_emitter.bodyEmitter.generateTmpRegister();
         const venv = stmt.exp !== undefined ? this.checkExpression(env, stmt.exp, etreg) : undefined;
-        this.raiseErrorIf(stmt.sinfo, venv === undefined && stmt.isConst, "Must define const var at declration site");
-        this.raiseErrorIf(stmt.sinfo, venv === undefined && stmt.vtype instanceof AutoTypeSignature, "Must define auto typed var at declration site");
+        this.raiseErrorIf(stmt.sinfo, venv === undefined && stmt.isConst, "Must define const var at declaration site");
+        this.raiseErrorIf(stmt.sinfo, venv === undefined && stmt.vtype instanceof AutoTypeSignature, "Must define auto typed var at declaration site");
 
         const vtype = (stmt.vtype instanceof AutoTypeSignature) ? (venv as TypeEnvironment).getExpressionResult().etype : this.resolveAndEnsureType(stmt.sinfo, stmt.vtype, env.terms);
         this.raiseErrorIf(stmt.sinfo, venv !== undefined && !this.m_assembly.subtypeOf(venv.getExpressionResult().etype, vtype), "Expression is not of declared type");
