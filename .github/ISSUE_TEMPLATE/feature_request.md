@@ -10,7 +10,7 @@ assignees: ''
 **What problem would this feature solve? Please describe and, if possible, provide an example.**
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 
-**Do you have a proposed solution? If so pleaese share it.**
+**Do you have a proposed solution? If so please share it.**
 A clear and concise description of what you want to happen.
 
 **Describe alternative solutions you've considered**
