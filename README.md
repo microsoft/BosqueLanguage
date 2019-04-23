@@ -23,37 +23,37 @@ For a look at how the language works and flows _in the large_ please see the cod
 
 Add 2 numbers:
 
-```ts
+```none
 function add2(x: Int, y: Int): Int {
     return x + y;
 }
 
-add2(2, 3) // 5
+add2(2, 3) //5
 ```
 
 All odd check using rest parameters and lambda:
 
-```ts
+```none
 function allOdd(...args: List[Int]): Bool {
     return args->all(fn(x) => x % 2 == 1);
 }
 
-allOdd(1, 3, 4) // false
+allOdd(1, 3, 4) //false
 ```
 
 Bulk update properties on Record
 
-```ts
+```none
 function update(point: {x: Int, y: Int, z: Int}, value: Int): {x: Int, y: Int, z: Int} {
     return point<~(y=value, x=-point.x);
 }
 
-update(@{x=1, y=2, z=3}, 5) // @{x=-1, y=5, z=3}
+update(@{x=1, y=2, z=3}, 5) //@{x=-1, y=5, z=3}
 ```
 
 Noneable access on optional argument:
 
-```ts
+```none
 function tryGetProperty(r?: {f: Int, k: Int}): Int? {
     return r?.f;
 }
@@ -61,7 +61,7 @@ function tryGetProperty(r?: {f: Int, k: Int}): Int? {
 
 Sign (with optional argument):
 
-```ts
+```none
 function sign(x?: Int): Int {
     var! y;
 
@@ -93,7 +93,7 @@ In order to build the language for Windows the following are needed:
 
 The `ref_impl` directory contains the reference implementation parser, type checker, interpreter, and command line runner. In this directory, build and test the Bosque reference implementation with:
 
-```
+```none
 npm install && npm run-script build && npm test
 ```
 
@@ -101,7 +101,7 @@ npm install && npm run-script build && npm test
 
 The `ref_impl` directory contains a simple command line runner for standalone Bosque (`.bsq`) files. These files must have a single `entrypoint` function called `main()` (see [example](ref_impl/src/test/apps/tictactoe/main.bsq)). The code in the file can be parsed, type checked, and executed with:
 
-```
+```none
 node bin/test/app_runner.js FILE.bsq
 ```
 
