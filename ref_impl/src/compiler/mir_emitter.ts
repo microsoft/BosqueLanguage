@@ -392,9 +392,16 @@ class MIREmitter {
 
             const vcpt = ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(vinv[2] as ConceptTypeDecl, vinv[3])]));
             const impls = this.entityInstantiationInfo.filter((iinfo) => {
-                const itype = ResolvedType.createSingle(ResolvedEntityAtomType.create(iinfo[1] as EntityTypeDecl, iinfo[2]));
-                return assembly.subtypeOf(itype, vcpt);
-            });
+                    if(iinfo[1] instanceof EntityTypeDecl) {
+                        const etype = ResolvedType.createSingle(ResolvedEntityAtomType.create(iinfo[1] as EntityTypeDecl, iinfo[2]));
+                        return assembly.subtypeOf(etype, vcpt);
+                    }
+                    else {
+                        const cpt = ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(iinfo[1] as ConceptTypeDecl, iinfo[2])]);
+                        const ctype = ResolvedType.createSingle(cpt)
+                        return assembly.subtypeOf(ctype, vcpt);
+                    }
+                });
 
             for (let j = 0; j < impls.length; ++j) {
                 const impl = impls[j];
