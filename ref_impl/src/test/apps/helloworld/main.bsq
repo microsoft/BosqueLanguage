@@ -2,6 +2,6 @@
 
 namespace NSMain;
 
-entrypoint function main() : String {
+entrypoint function main(): String {
    return "Hello world!";
 }
