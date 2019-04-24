@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as BasicExpresion from "./basic_evaluation_test";
+import * as Regressions from "./regression_tests";
 
 import * as FS from "fs";
 import chalk from "chalk";
@@ -145,6 +146,7 @@ function runAll() {
 
     runner.addSet(BasicExpresion.testExpression);
     runner.addSet(BasicExpresion.testStatement);
+    runner.addSet(Regressions.testRegression);
 
     runner.run();
 }
