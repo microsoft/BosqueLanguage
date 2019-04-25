@@ -816,7 +816,7 @@ class Assembly {
         const lname = t.nameSpace + "::" + t.baseName;
         const nsd = this.getNamespace(t.nameSpace);
         if (!nsd.typeDefs.has(lname)) {
-            if (t.nameSpace === "NSCore" && t.baseName === "String" && !binds.has("T")) {
+            if (t.nameSpace === "NSCore" && t.baseName === "String" && t.terms.length === 0) {
                 return [new NominalTypeSignature(t.nameSpace, t.baseName, [new TemplateTypeSignature("T")]), new Map<string, ResolvedType>(binds).set("T", this.getSpecialAnyType())];
             }
             else {
@@ -842,14 +842,8 @@ class Assembly {
     }
 
     createObjectTypeAtom(object: EntityTypeDecl, t: NominalTypeSignature, binds: Map<string, ResolvedType>): ResolvedEntityAtomType {
-        if (t.nameSpace === "NSCore" && t.baseName === "String" && t.terms.length === 0) {
-            const fullbinds = new Map<string, ResolvedType>(binds).set("T", this.getSpecialAnyType());
-            return ResolvedEntityAtomType.create(object, fullbinds);
-        }
-        else {
-            const fullbinds = this.resolveTemplateBinds(object.terms, t.terms, binds);
-            return ResolvedEntityAtomType.create(object, fullbinds);
-        }
+        const fullbinds = this.resolveTemplateBinds(object.terms, t.terms, binds);
+        return ResolvedEntityAtomType.create(object, fullbinds);
     }
 
     getAllOOFields(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>, fmap?: Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>): Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]> {
