@@ -250,7 +250,7 @@ class Lexer {
         return true;
     }
 
-    private static readonly _s_commentRe = /\/(?:\/[^\n\r]*|\*(?:[^\*]*\**)+?(?<multilineEndChar>\/|\z))/my;
+    private static readonly _s_commentRe = /\/\/[^\n\r]*/y;
     private tryLexComment(): boolean {
         Lexer._s_commentRe.lastIndex = this.m_cpos;
         const m = Lexer._s_commentRe.exec(this.m_input);
@@ -259,11 +259,6 @@ class Lexer {
         }
 
         this.m_cpos += m[0].length;
-        
-        if (m.groups && m.groups.multilineEndChar !== '/')
-        {
-            return false;
-        }
         return true;
     }
 

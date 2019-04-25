@@ -36,16 +36,6 @@
 					"begin": "//",
 					"end": "$",
 					"name": "comment.line.double-dash.bosque"
-				},
-				{
-					"captures": {
-						"1": {
-							"name": "punctuation.definition.comment.bosque"
-						}
-					},
-					"begin": "/\\*",
-					"end": "\\*/",
-					"name": "comment.multiline.double-dash.bosque"
 				}
 			]
 		},
