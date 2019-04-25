@@ -467,12 +467,13 @@ class TypeChecker {
             eargs.push({ name: "this", argtype: optSelfValue[0], expando: false, treg: optSelfValue[1] });
         }
 
+        const skipthisidx = optSelfValue !== undefined ? 1 : 0;
         const noExpando = args.argList.every((arg) => !(arg instanceof PositionalArgument) || !arg.isSpread);
         const firstNameIdx = sig.params.findIndex((p) => args.argList.some((arg) => arg instanceof NamedArgument && arg.name !== "_" && arg.name === p.name));
 
         for (let i = 0; i < args.argList.length; ++i) {
             const arg = args.argList[i];
-            const oftype = (noExpando && (firstNameIdx === -1 || i < firstNameIdx) && i < sig.params.length && !sig.params[i].isOptional) ? sig.params[i].type : this.m_assembly.getSpecialAnyType();
+            const oftype = (noExpando && (firstNameIdx === -1 || i < firstNameIdx) && i < sig.params.length && !sig.params[i].isOptional) ? sig.params[i + skipthisidx].type : this.m_assembly.getSpecialAnyType();
             const treg = this.m_emitter.bodyEmitter.generateTmpRegister();
             const earg = this.checkExpression(env, arg.value, treg, oftype).getExpressionResult().etype;
 

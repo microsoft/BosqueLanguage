@@ -1959,7 +1959,7 @@ class Parser {
             this.setRecover(this.scanParens());
             this.ensureAndConsumeToken("{");
 
-            const thisType = new NominalTypeSignature(currentDecl.ns, cname, terms.map((term) => term.ttype));
+            const thisType = new NominalTypeSignature(currentDecl.ns, cname, terms.map((term) => new TemplateTypeSignature(term.name)));
 
             const invariants: Expression[] = [];
             const staticMembers = new Map<string, StaticMemberDecl>();
