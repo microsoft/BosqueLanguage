@@ -598,9 +598,9 @@ class Interpreter {
             case MIROpTag.MIRInvokeVirtualTarget: {
                 const invk = op as MIRInvokeVirtualTarget;
                 const tvalue = this.getArgValue(fscope, invk.self);
+                const ttype = ValueOps.getValueType(tvalue).options[0] as MIREntityType;
 
-                const ekey = (ValueOps.getValueType(tvalue).options[0] as MIREntityType).ekey;
-                const edecl = this.m_env.assembly.entityMap.get(ekey) as MIREntityTypeDecl;
+                const edecl = this.m_env.assembly.entityMap.get(ttype.ekey) as MIREntityTypeDecl;
                 const fdecl = edecl.vcallMap.get(invk.vresolve) as MIRMethodDecl;
 
                 let args = new Map<string, Value>().set("this", tvalue);
