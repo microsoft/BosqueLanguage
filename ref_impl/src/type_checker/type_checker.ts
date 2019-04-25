@@ -7,7 +7,7 @@ import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTu
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, ConceptTypeDecl } from "../ast/assembly";
 import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature } from "../ast/type_signature";
-import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement } from "../ast/body";
+import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement } from "../ast/body";
 import { MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRCallKey, MIRTypeKey, MIRFunctionKey, MIRLambdaKey, MIRStaticKey, MIRMethodKey, MIRVirtualMethodKey, MIRGlobalKey, MIRConstKey } from "../compiler/mir_ops";
 import { SourceInfo } from "../ast/parser";
@@ -2147,6 +2147,24 @@ class TypeChecker {
         return TypeEnvironment.join(this.m_assembly, ...trueflow);
     }
 
+    private checkDebugStatement(env: TypeEnvironment, stmt: DebugStatement): TypeEnvironment {
+        if (stmt.value === undefined) {
+            if (this.m_emitEnabled) {
+                this.m_emitter.bodyEmitter.emitDebugBreak(stmt.sinfo);
+            }
+        }
+        else {
+            const vreg = this.m_emitter.bodyEmitter.generateTmpRegister();
+            this.checkExpression(env, stmt.value, vreg);
+
+            if (this.m_emitEnabled) {
+                this.m_emitter.bodyEmitter.emitDebugPrint(stmt.sinfo, vreg);
+            }
+        }
+
+        return env;
+    }
+
     private checkStatement(env: TypeEnvironment, stmt: Statement): TypeEnvironment {
         this.raiseErrorIf(stmt.sinfo, !env.hasNormalFlow(), "Unreachable statements");
 
@@ -2167,6 +2185,8 @@ class TypeChecker {
                 return this.checkAssertStatement(env, stmt as AssertStatement);
             case StatementTag.CheckStatement:
                 return this.checkCheckStatement(env, stmt as CheckStatement);
+            case StatementTag.DebugStatement:
+                return this.checkDebugStatement(env, stmt as DebugStatement);
             default:
                 this.raiseErrorIf(stmt.sinfo, stmt.tag !== StatementTag.BlockStatement, "Unknown statement");
                 return this.checkBlock(env, stmt as BlockStatement);

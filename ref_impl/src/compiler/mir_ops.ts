@@ -188,6 +188,7 @@ enum MIROpTag {
 
     MIRAssert = "MIRAssert",
     MIRCheck = "MIRCheck",
+    MIRDebug = "MIRDebug",
 
     MIRJump = "MIRJump",
     MIRJumpCond = "MIRJumpCond",
@@ -908,6 +909,24 @@ class MIRCheck extends MIRFlowOp {
     }
 }
 
+class MIRDebug extends MIRFlowOp {
+    readonly value: MIRArgument | undefined;
+
+    constructor(sinfo: SourceInfo, value: MIRArgument | undefined) {
+        super(MIROpTag.MIRDebug, sinfo);
+        this.value = value;
+    }
+
+    stringify(): string {
+        if (this.value === undefined) {
+            return "_debug break";
+        }
+        else {
+            return `_debug ${this.value.stringify()}`;
+        }
+    }
+}
+
 class MIRJump extends MIRJumpOp {
     readonly trgtblock: string;
 
@@ -1041,7 +1060,7 @@ export {
     MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda,
     MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp,
     MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign,
-    MIRAssert, MIRCheck,
+    MIRAssert, MIRCheck, MIRDebug,
     MIRJump, MIRJumpCond, MIRJumpNone,
     MIRVarLifetimeStart, MIRVarLifetimeEnd,
     MIRBasicBlock, MIRBody
