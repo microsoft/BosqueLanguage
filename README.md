@@ -63,7 +63,7 @@ Sign (with optional argument):
 
 ```none
 function sign(x?: Int): Int {
-    var! y;
+    var! y: Int;
 
     if(x == none || x == 0) {
         y = 0;
