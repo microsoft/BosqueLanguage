@@ -444,7 +444,7 @@ class ValueOps {
             case "undefined": return MIRType.createSingle(MIREntityType.create("NSCore::None"));
             case "boolean": return MIRType.createSingle(MIREntityType.create("NSCore::Bool"));
             case "number": return MIRType.createSingle(MIREntityType.create("NSCore::Int"));
-            case "string": return MIRType.createSingle(MIREntityType.create("NSCore::String"));
+            case "string": return MIRType.createSingle(MIREntityType.create("NSCore::String[T=NSCore::Any]"));
             default: {
                 if (v instanceof FloatValue) {
                     return MIRType.createSingle(MIREntityType.create("NSCore::Float"));
