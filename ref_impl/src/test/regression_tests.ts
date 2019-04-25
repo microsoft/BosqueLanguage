@@ -16,10 +16,19 @@ entrypoint function stringTIncludes(): Bool {
     var test = "a";
     return test->includes("a");
 }
+
+function allOdd(...args: List[Int]): Bool {
+    return args->all(fn(x) => x % 2 == 1);
+}
+
+entrypoint function invokeLambdaInfer(): Bool {
+    return allOdd(1, 3, 4);
+}
 `;
 
 const regression_tests: TestInfo[] = [
-    { name: "stringTIncludes", input: ["stringTIncludes"], expected: "true" }
+    { name: "stringTIncludes", input: ["stringTIncludes"], expected: "true" },
+    { name: "invokeLambdaInfer", input: ["invokeLambdaInfer"], expected: "false" }
 ];
 
 function regression_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
