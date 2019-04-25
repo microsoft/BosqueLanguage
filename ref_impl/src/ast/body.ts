@@ -557,6 +557,8 @@ enum StatementTag {
     AssertStatement = "AssertStatement", //assert(x > 0)
     CheckStatement = "CheckStatement", //check(x > 0)
 
+    DebugStatement = "DebugStatement", //print an arg or if empty attach debugger
+
     BlockStatement = "BlockStatement"
 }
 
@@ -653,6 +655,15 @@ class CheckStatement extends Statement {
     }
 }
 
+class DebugStatement extends Statement {
+    readonly value: Expression | undefined;
+
+    constructor(sinfo: SourceInfo, value: Expression | undefined) {
+        super(StatementTag.DebugStatement, sinfo);
+        this.value = value;
+    }
+}
+
 class BlockStatement extends Statement {
     readonly statements: Statement[];
 
@@ -688,6 +699,6 @@ export {
     StatementTag, Statement, InvalidStatement, EmptyStatement,
     VariableDeclarationStatement, VariableAssignmentStatement,
     ReturnStatement, YieldStatement,
-    IfElseStatement, AssertStatement, CheckStatement, BlockStatement,
-    BodyImplementation
+    IfElseStatement, AssertStatement, CheckStatement, DebugStatement, 
+    BlockStatement, BodyImplementation
 };
