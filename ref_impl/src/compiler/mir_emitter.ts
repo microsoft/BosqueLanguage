@@ -386,7 +386,7 @@ class MIREmitter {
             return undefined;
         }
 
-        let resvi: [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>][] = [];
+        let resvi = new Map<string, [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>]>();
         for (let i = 0; i < this.allVInvokes.length; ++i) {
             const vinv = this.allVInvokes[i];
 
@@ -412,12 +412,17 @@ class MIREmitter {
                     const binds = new Map<string, ResolvedType>(mcreate.binds);
                     vinv[5].forEach((v, k) => binds.set(k, v));
 
-                    const vci: [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>] = [vinv[0], vinv[1], mcreate.contiainingType, mcreate.binds, mcreate.decl as MemberMethodDecl, binds as Map<string, ResolvedType>];
-                    resvi.push(vci);
+                    if (!resvi.has(vinv[1])) {
+                        resvi.set(vinv[1], [vinv[0], vinv[1], mcreate.contiainingType, mcreate.binds, mcreate.decl as MemberMethodDecl, binds as Map<string, ResolvedType>]);
+                    }
                 }
             }
         }
-        return resvi;
+
+        let fres: [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>][] = [];
+        resvi.forEach((v, k) => fres.push(v));
+
+        return fres;
     }
 
     registerTypeInstantiation(decl: OOPTypeDecl, binds: Map<string, ResolvedType>) {
@@ -590,6 +595,7 @@ class MIREmitter {
         ////////////////
         //While there is more to process get an item and run the checker on it
         try {
+            let lastVCount = 0;
             while (true) {
                 while (emitter.pendingOOProcessing.length !== 0 ||
                     emitter.pendingGlobalProcessing.length !== 0 || emitter.pendingConstProcessing.length !== 0 ||
@@ -635,9 +641,10 @@ class MIREmitter {
 
                 //make sure all vcall candidates are processed
                 const vcgens = emitter.getVCallInstantiations(assembly);
-                if (vcgens === undefined) {
+                if (vcgens === undefined || vcgens.length === lastVCount) {
                     break;
                 }
+                lastVCount = vcgens.length;
 
                 for (let i = 0; i < vcgens.length; ++i) {
                     checker.processMethodFunction(...vcgens[i]);
