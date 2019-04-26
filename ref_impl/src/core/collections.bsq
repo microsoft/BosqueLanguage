@@ -161,6 +161,9 @@ entity List[T] provides Collection[T] {
 
     //<summary>Fill the list with the given value</summary>
     method fill(v: T): List[T] # list_fill
+
+    //<summary>Get the list containing all elements that aren't in the given list</summary>
+    method except(v: List[T]): List[T] # list_except
 }
 
 //<summary>A Linked-List entity.</summary>
