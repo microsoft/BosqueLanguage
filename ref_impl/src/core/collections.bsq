@@ -156,7 +156,7 @@ entity List[T] provides Collection[T] {
     //<summary>Concatenate argument lists in order.</summary>
     static concat(...args: List[Collection[T]]): List[T] # list_concat
 
-    //<summary>Get the element at the given index -- error if idx is out-of-bounds.</summary>
+    //<summary>Set the element at the given index -- error if idx is out-of-bounds.</summary>
     method set(idx: Int, v: T): List[T] # list_set
 }
 
