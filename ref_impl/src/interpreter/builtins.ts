@@ -443,6 +443,11 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
 
         return createListOf(inv.resultType, [...avals.slice(0, idx), args.get("v"), ...avals.slice(idx + 1)]);
     })
+    .set("list_fill", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        const avals = (args.get("this") as ListValue).values.map(() => args.get("v"));
+
+        return createListOf(inv.resultType, [...avals]);
+    })
 
     //////////////////
     //Some methods we want to make builtin but don't have a home for yet

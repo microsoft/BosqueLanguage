@@ -158,6 +158,9 @@ entity List[T] provides Collection[T] {
 
     //<summary>Set the element at the given index -- error if idx is out-of-bounds.</summary>
     method set(idx: Int, v: T): List[T] # list_set
+
+    //<summary>Fill the list with the given value</summary>
+    method fill(v: T): List[T] # list_fill
 }
 
 //<summary>A Linked-List entity.</summary>
