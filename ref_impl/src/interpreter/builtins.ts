@@ -86,10 +86,20 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
         const splits = ValueOps.convertToBasicString(args.get("this")).split(ValueOps.convertToBasicString(args.get("with")));
         return createListOf(inv.resultType, splits);
     })
+    .set("string_reverse", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        const val = ValueOps.convertToBasicString(args.get("this"));
+        const chars: Array<string> = val.split('').reverse();
+        return chars.join('');
+    })
+    .set("string_upperCase", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        return ValueOps.convertToBasicString(args.get("this")).toUpperCase();
+    })
+    .set("string_lowerCase", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        return ValueOps.convertToBasicString(args.get("this")).toLowerCase();
+    })
     .set("string_concat", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         return (args.get("args") as ListValue).values.join("");
     })
-
     .set("float_tryparse", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         return /^[-+]?[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?$/.test(ValueOps.convertToBasicString(args.get("str"))) ? new FloatValue(Number.parseFloat(ValueOps.convertToBasicString(args.get("str")))) : undefined;
     })
