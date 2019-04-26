@@ -198,6 +198,13 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
         raiseRuntimeErrorIf(idx === -1);
         return (args.get("this") as ListValue).values[idx];
     })
+    .set("list_findLast", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        const lambda = args.get("p") as LambdaValue;
+        const idx = (args.get("this") as ListValue).values.reverse().findIndex((v) => ValueOps.convertBoolOrNoneToBool(ep(lambda, [v])));
+
+        raiseRuntimeErrorIf(idx === -1);
+        return (args.get("this") as ListValue).values[idx];
+    })
     .set("list_tryfind", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const lambda = args.get("p") as LambdaValue;
         const idx = (args.get("this") as ListValue).values.findIndex((v) => ValueOps.convertBoolOrNoneToBool(ep(lambda, [v])));
