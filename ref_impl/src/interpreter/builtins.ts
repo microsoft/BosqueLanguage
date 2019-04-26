@@ -91,10 +91,6 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
         const chars: Array<string> = val.split('').reverse();
         return chars.join('');
     })
-    .set("string_capitalize", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        var val = ValueOps.convertToBasicString(args.get("this"));
-        return val[0].toLocaleUpperCase() + val.slice(1);
-    })
     .set("string_upperCase", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         return ValueOps.convertToBasicString(args.get("this")).toUpperCase();
     })

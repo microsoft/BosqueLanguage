@@ -191,11 +191,6 @@ entrypoint function literalFooBarReverse(): String {
     return foobar->reverse();
 }
 
-entrypoint function literalCapitalized(): String {
-    var foobar: String = "foobar";
-    return foobar->capitalize();
-}
-
 entrypoint function literalUpCase(): String {
     var foobar: String = "foobar";
     return foobar->upperCase();
@@ -871,7 +866,6 @@ const expression_tests: TestInfo[] = [
     { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo@{}" },
 
     { name: "stringReverse", input: ["literalFooBarReverse"], expected: "\"raboof\"" },
-    { name: "stringCapitalize", input: ["literalCapitalized"], expected: "\"Foobar\"" },
     { name: "stringUpCase", input: ["literalUpCase"], expected: "\"FOOBAR\"" },
     { name: "stringDownCase", input: ["literalDownCase"], expected: "\"foobar\"" },
 
