@@ -120,6 +120,9 @@ entity List[T] provides Collection[T] {
     //<summary>Find the last element in the list that match the predicate -- error if list is empty.</summary>
     method findLast(p: Predicate[T]): T # list_findLast
 
+    //<summary>Find the last element in the list that match the predicate -- return none if list is empty.</summary>
+    method tryFindLast(p: Predicate[T]): T # list_tryFindLast
+
     //<summary>Get an element at uniform from the list using the rnd value -- error if list is empty.</summary>
     method uniform(rnd: Int): T # list_uniform
 
