@@ -84,7 +84,7 @@ The current focus of the Bosque project is core language design. As a result the
 
 In order to build the language the following are needed:
 
-- 64 bits Operating System
+- 64 bit Operating System
 - The LTS version of [node.js](https://nodejs.org/en/download/) ( According to your OS )
 - Typescript (install with: `npm i typescript -g`)
 
