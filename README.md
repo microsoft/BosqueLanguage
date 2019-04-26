@@ -82,7 +82,7 @@ The current focus of the Bosque project is core language design. As a result the
 
 ### Requirements
 
-In order to build the language for Windows the following are needed:
+In order to build the language the following are needed:
 
 - 64 bits Operating System
 - The LTS version of [node.js](https://nodejs.org/en/download/) ( According to your OS )
