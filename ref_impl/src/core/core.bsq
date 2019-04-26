@@ -72,7 +72,7 @@ entity String[unique T] provides Some {
     method trim(): String # string_trim
     method split(token: String): List[String] # string_split
 
-    // Usefull string methods
+    // Useful string methods
     method reverse(): String # string_reverse
     method upperCase(): String # string_upperCase
     method lowerCase(): String # string_lowerCase
