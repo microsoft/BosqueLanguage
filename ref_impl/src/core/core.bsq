@@ -72,7 +72,7 @@ entity String[unique T] provides Some {
     method trim(): String # string_trim
     method split(token: String): List[String] # string_split
 
-    static concat(...args: List[String]): String # string_concat
+    static concat(separator: String, ...args: List[String]): String # string_concat
 
     //static interpolate(fmt: String, ...args: List[String]): String # string_interpolate
 }
