@@ -186,6 +186,26 @@ entrypoint function literalFooObject(): Foo {
     return 'hello'@Foo;
 }
 
+entrypoint function literalFooBarReverse(): String {
+    var foobar: String = "foobar";
+    return foobar->reverse();
+}
+
+entrypoint function literalCapitalized(): String {
+    var foobar: String = "foobar";
+    return foobar->capitalize();
+}
+
+entrypoint function literalUpCase(): String {
+    var foobar: String = "foobar";
+    return foobar->upperCase();
+}
+
+entrypoint function literalDownCase(): String {
+    var foobar: String = "FOOBAR";
+    return foobar->lowerCase();
+}
+
 entrypoint function emptyTuple(): [] {
     return @[];
 }
@@ -849,6 +869,11 @@ const expression_tests: TestInfo[] = [
     { name: "literalHello", input: ["literalHello"], expected: "\"hello\"" },
     { name: "literalFooString", input: ["literalFooString"], expected: "'hello'#NSTestExpression::Foo" },
     { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo@{}" },
+
+    { name: "stringReverse", input: ["literalFooBarReverse"], expected: "\"raboof\"" },
+    { name: "stringCapitalize", input: ["literalCapitalized"], expected: "\"Foobar\"" },
+    { name: "stringUpCase", input: ["literalUpCase"], expected: "\"FOOBAR\"" },
+    { name: "stringDownCase", input: ["literalDownCase"], expected: "\"foobar\"" },
 
     { name: "emptyTuple", input: ["emptyTuple"], expected: "@[]" },
     { name: "oneTuple", input: ["oneTuple"], expected: "@[ 1 ]" },
