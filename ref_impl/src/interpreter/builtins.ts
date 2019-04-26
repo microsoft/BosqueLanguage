@@ -87,7 +87,7 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
         return createListOf(inv.resultType, splits);
     })
     .set("string_concat", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        return (args.get("args") as ListValue).values.join("");
+        return (args.get("args") as ListValue).values.join(ValueOps.convertToBasicString(args.get("separator")));
     })
 
     .set("float_tryparse", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
