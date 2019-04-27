@@ -201,6 +201,68 @@ entrypoint function literalDownCase(): String {
     return foobar->lowerCase();
 }
 
+entrypoint function mathAbs(): Float {
+    var n: Float = '-2.0'@Float;
+    return Math::abs(n);
+}
+
+entrypoint function mathAtan(): Float {
+    var x: Float = '3.0'@Float;
+    return Math::atan(x);
+}
+
+entrypoint function mathAtan2(): Float {
+    var y: Float = '3.0'@Float;
+    var x: Float = '5.0'@Float;
+    return Math::atan2(y, x);
+}
+
+entrypoint function mathCeil(): Float {
+    var n: Float = '6.4'@Float;
+    return Math::ceil(n);
+}
+
+entrypoint function mathCos(): Float {
+    var x: Float = '90.0'@Float;
+    return Math::cos(x);
+}
+
+entrypoint function mathFloor(): Float {
+    var n: Float = '3.1'@Float;
+    return Math::floor(n);
+}
+
+entrypoint function mathLog(): Float {
+    var n: Float = '4.0'@Float;
+    return Math::log(n);
+}
+
+entrypoint function mathPow(): Float {
+    var b: Float = '3.0'@Float;
+    var e: Float = '3.0'@Float;
+    return Math::pow(b, e);
+}
+
+entrypoint function mathRound(): Float {
+    var n: Float = '3.4'@Float;
+    return Math::round(n);
+}
+
+entrypoint function mathSin(): Float {
+    var x: Float = '90.0'@Float;
+    return Math::sin(x);
+}
+
+entrypoint function mathSqrt(): Float {
+    var x: Float = '36.0'@Float;
+    return Math::sqrt(x);
+}
+
+entrypoint function mathTan(): Float {
+    var x: Float = '60.0'@Float;
+    return Math::tan(x);
+}
+
 entrypoint function emptyTuple(): [] {
     return @[];
 }
@@ -862,6 +924,20 @@ const expression_tests: TestInfo[] = [
     { name: "literal3", input: ["literal3"], expected: "3" },
     { name: "literalEmptyString", input: ["literalEmptyString"], expected: "\"\"" },
     { name: "literalHello", input: ["literalHello"], expected: "\"hello\"" },
+
+    { name: "mathAbs", input: ["mathAbs"], expected: "2" },
+    { name: "mathAtan", input: ["mathAtan"], expected: "1.2490457723982544" },
+    { name: "mathAtan2", input: ["mathAtan2"], expected: "0.5404195002705842" },
+    { name: "mathCeil", input: ["mathCeil"], expected: "7" },
+    { name: "mathCos", input: ["mathCos"], expected: "-0.4480736161291702" },
+    { name: "mathFloor", input: ["mathFloor"], expected: "3" },
+    { name: "mathLog", input: ["mathLog"], expected: "1.3862943611198906" },
+    { name: "mathPow", input: ["mathPow"], expected: "27" },
+    { name: "mathRound", input: ["mathRound"], expected: "3" },
+    { name: "mathSin", input: ["mathSin"], expected: "0.8939966636005579" },
+    { name: "mathSqrt", input: ["mathSqrt"], expected: "6" },
+    { name: "mathTan", input: ["mathTan"], expected: "0.320040389379563" },
+
     { name: "literalFooString", input: ["literalFooString"], expected: "'hello'#NSTestExpression::Foo" },
     { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo@{}" },
 
