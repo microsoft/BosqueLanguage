@@ -781,6 +781,23 @@ entrypoint function createListExpando(): List[Int] {
     return List[Int]@{...List[Int]@{ 1, 1, 2 }, 4};
 }
 
+entrypoint function findLastMatchingElementInList(): { f: Int, b: Int } {
+    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->findLast(fn(x) => x.f == 2);
+}
+
+entrypoint function tryFindLastMatchingElementInList1(): { f: Int, b: Int } | None {
+    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 3);
+}
+
+entrypoint function tryFindLastMatchingElementInList2(): { f: Int, b: Int } | None {
+    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 2);
+}
+
+entrypoint function fillList(): List[Int] {
+    var list: List[Int] = List[Int]@{1,2,3,4,5};
+    return list->fill(1);
+}
+
 entrypoint function createSet(): Set[Int] {
     return TreeSet[Int]@{ 1, 2, 3 };
 }
@@ -1028,6 +1045,10 @@ const expression_tests: TestInfo[] = [
 
     { name: "createList", input: ["createList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2 }" },
     { name: "createListExpando", input: ["createListExpando"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2, 4 }" },
+    { name: "findLastMatchingElementInList", input: ["findLastMatchingElementInList"], expected: "@{ b=4, f=2 }" },
+    { name: "tryFindLastMatchingElementInList1", input: ["tryFindLastMatchingElementInList1"], expected: "none" },
+    { name: "tryFindLastMatchingElementInList2", input: ["tryFindLastMatchingElementInList2"], expected: "@{ b=4, f=2 }" },
+    { name: "fillList", input: ["fillList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 1, 1, 1 }" },
     { name: "createSet", input: ["createSet"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3 }" },
     { name: "createSetOverlap", input: ["createSetOverlap"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3 }" },
     { name: "createSetExpando", input: ["createSetExpando"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 4, 5 }" },
