@@ -250,12 +250,27 @@ class Lexer {
         return true;
     }
 
-    private static readonly _s_commentRe = /\/\/[^\n\r]*/y;
+    private static readonly _s_commentRe = /\/(?:\/[^\n\r]*|\*(?<multiline>[^\*]*\**)+?(?<multilineEndChar>\/|$))/y;
     private tryLexComment(): boolean {
         Lexer._s_commentRe.lastIndex = this.m_cpos;
         const m = Lexer._s_commentRe.exec(this.m_input);
         if (m === null) {
             return false;
+        }
+
+        if (m.groups) {
+            var groups = m.groups;
+            if (groups.multiline !== undefined) {
+                for (const char of groups.multiline) {
+                    if (char === "\n") {
+                        this.m_cline++;
+                    }
+                }
+            }
+            if (groups.multilineEndChar !== undefined && groups.multilineEndChar !== '/')
+            {
+                this.recordLexToken(this.m_cpos, TokenStrings.Error);
+            }
         }
 
         this.m_cpos += m[0].length;
@@ -2046,6 +2061,13 @@ class Parser {
             try {
                 this.m_cpos = this.scanTokenOptions("function", "global", "typedef", "concept", "entity", "enum", "ckey");
                 if (this.m_cpos === this.m_epos) {
+                    const tokenIndexBeforeEOF = this.m_cpos - 2;
+                    if (tokenIndexBeforeEOF >= 0 && tokenIndexBeforeEOF < this.m_tokens.length) {
+                        const tokenBeforeEOF = this.m_tokens[tokenIndexBeforeEOF];
+                        if (tokenBeforeEOF.kind === TokenStrings.Error) { 
+                            this.raiseError(tokenBeforeEOF.line, `Expected */ but found EOF`);
+                        }
+                    }
                     break;
                 }
 
