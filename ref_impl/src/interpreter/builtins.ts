@@ -448,12 +448,6 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
 
         return createListOf(inv.resultType, [...avals]);
     })
-    .set("list_except", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        const except = (args.get("v") as ListValue).values;
-        const avals = (args.get("this") as ListValue).values.filter((v) => -1 === except.indexOf(v));
-
-        return createListOf(inv.resultType, [...avals]);
-    })
 
     //////////////////
     //Some methods we want to make builtin but don't have a home for yet
