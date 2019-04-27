@@ -1308,19 +1308,19 @@ true ==> none          //false
 Bosque provides specific none-coalescing operations, `?|` and `?&`, as opposed to truthy based coalescing that overloads the logical and/or operators.
 
 ```none
-function default(x?: Int, y?: Int) : Int {
+function defaultValue(x?: Int, y?: Int) : Int {
     return (x ?| 0) + (y ?| 0); //default on none
 }
-default(1, 1) //2
-default(1)    //1
-default()     //0
+defaultValue(1, 1) //2
+defaultValue(1)    //1
+defaultValue()     //0
 
-function check(x?: Int, y?: Int) : Int? {
+function checkValue(x?: Int, y?: Int) : Int? {
     return x ?& y ?& x + y; //check none
 }
-default(1, 1) //2
-default(1)    //none
-default()     //none
+checkValue(1, 1) //2
+checkValue(1)    //none
+checkValue()     //none
 ```
 
 The `?|` operator short-circuits on non-none values while the `?&` operator short-circuits on none values.
