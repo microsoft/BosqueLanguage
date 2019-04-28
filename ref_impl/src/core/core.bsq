@@ -116,7 +116,6 @@ entity Math {
     static floor(n: Float): Float # math_floor
     static log(n: Float): Float # math_log
     static pow(b: Float, e: Float): Float # math_pow
-    static random(): Int # math_random
     static round(n: Float): Float # math_round
     static sin(x: Float): Float # math_sin
     static sqrt(x: Float): Float # math_sqrt

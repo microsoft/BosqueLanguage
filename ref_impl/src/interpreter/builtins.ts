@@ -472,10 +472,6 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
         return new FloatValue(Math.pow(b.value, e.value));
     })
     
-    .set("math_random", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        return Math.random();
-    })
-    
     .set("math_round", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const n = args.get("n") as FloatValue;
         return new FloatValue(Math.round(n.value));
