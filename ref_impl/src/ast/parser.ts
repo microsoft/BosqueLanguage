@@ -2038,6 +2038,10 @@ class Parser {
         currentDecl.functions.set(fname, new NamespaceFunctionDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, fname, sig));
     }
 
+    private parseEndOfStream() {
+        this.ensureAndConsumeToken(TokenStrings.EndOfStream);
+    }
+
     ////
     //Public methods
 
@@ -2120,8 +2124,8 @@ class Parser {
 
         let usingok = true;
         let parseok = true;
-        while (this.m_cpos < this.m_epos && !this.testToken(TokenStrings.EndOfStream)) {
-            const rpos = this.scanTokenOptions("function", "global", "using", "typedef", "concept", "entity", "enum", "ckey");
+        while (this.m_cpos < this.m_epos) {
+            const rpos = this.scanTokenOptions("function", "global", "using", "typedef", "concept", "entity", "enum", "ckey", TokenStrings.EndOfStream);
 
             try {
                 if (rpos === this.m_epos) {
@@ -2151,6 +2155,9 @@ class Parser {
                 }
                 else if (tk === "entity") {
                     this.parseObject(nsdecl);
+                }
+                else if (tk === TokenStrings.EndOfStream) {
+                    this.parseEndOfStream();
                 }
                 else {
                     //enum or identifier
