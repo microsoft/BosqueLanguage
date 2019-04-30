@@ -186,83 +186,6 @@ entrypoint function literalFooObject(): Foo {
     return 'hello'@Foo;
 }
 
-entrypoint function literalFooBarReverse(): String {
-    var foobar: String = "foobar";
-    return foobar->reverse();
-}
-
-entrypoint function literalUpCase(): String {
-    var foobar: String = "foobar";
-    return foobar->upperCase();
-}
-
-entrypoint function literalDownCase(): String {
-    var foobar: String = "FOOBAR";
-    return foobar->lowerCase();
-}
-
-entrypoint function mathAbs(): Float {
-    var n: Float = '-2.0'@Float;
-    return Math::abs(n);
-}
-
-entrypoint function mathAtan(): Float {
-    var x: Float = '3.0'@Float;
-    return Math::atan(x);
-}
-
-entrypoint function mathAtan2(): Float {
-    var y: Float = '3.0'@Float;
-    var x: Float = '5.0'@Float;
-    return Math::atan2(y, x);
-}
-
-entrypoint function mathCeil(): Float {
-    var n: Float = '6.4'@Float;
-    return Math::ceil(n);
-}
-
-entrypoint function mathCos(): Float {
-    var x: Float = '90.0'@Float;
-    return Math::cos(x);
-}
-
-entrypoint function mathFloor(): Float {
-    var n: Float = '3.1'@Float;
-    return Math::floor(n);
-}
-
-entrypoint function mathLog(): Float {
-    var n: Float = '4.0'@Float;
-    return Math::log(n);
-}
-
-entrypoint function mathPow(): Float {
-    var b: Float = '3.0'@Float;
-    var e: Float = '3.0'@Float;
-    return Math::pow(b, e);
-}
-
-entrypoint function mathRound(): Float {
-    var n: Float = '3.4'@Float;
-    return Math::round(n);
-}
-
-entrypoint function mathSin(): Float {
-    var x: Float = '90.0'@Float;
-    return Math::sin(x);
-}
-
-entrypoint function mathSqrt(): Float {
-    var x: Float = '36.0'@Float;
-    return Math::sqrt(x);
-}
-
-entrypoint function mathTan(): Float {
-    var x: Float = '60.0'@Float;
-    return Math::tan(x);
-}
-
 entrypoint function emptyTuple(): [] {
     return @[];
 }
@@ -843,23 +766,6 @@ entrypoint function createListExpando(): List[Int] {
     return List[Int]@{...List[Int]@{ 1, 1, 2 }, 4};
 }
 
-entrypoint function findLastMatchingElementInList(): { f: Int, b: Int } {
-    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->findLast(fn(x) => x.f == 2);
-}
-
-entrypoint function tryFindLastMatchingElementInList1(): { f: Int, b: Int } | None {
-    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 3);
-}
-
-entrypoint function tryFindLastMatchingElementInList2(): { f: Int, b: Int } | None {
-    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 2);
-}
-
-entrypoint function fillList(): List[Int] {
-    var list: List[Int] = List[Int]@{1,2,3,4,5};
-    return list->fill(1);
-}
-
 entrypoint function createSet(): Set[Int] {
     return TreeSet[Int]@{ 1, 2, 3 };
 }
@@ -942,25 +848,8 @@ const expression_tests: TestInfo[] = [
     { name: "literalEmptyString", input: ["literalEmptyString"], expected: "\"\"" },
     { name: "literalHello", input: ["literalHello"], expected: "\"hello\"" },
 
-    { name: "mathAbs", input: ["mathAbs"], expected: "2" },
-    { name: "mathAtan", input: ["mathAtan"], expected: "1.2490457723982544" },
-    { name: "mathAtan2", input: ["mathAtan2"], expected: "0.5404195002705842" },
-    { name: "mathCeil", input: ["mathCeil"], expected: "7" },
-    { name: "mathCos", input: ["mathCos"], expected: "-0.4480736161291702" },
-    { name: "mathFloor", input: ["mathFloor"], expected: "3" },
-    { name: "mathLog", input: ["mathLog"], expected: "1.3862943611198906" },
-    { name: "mathPow", input: ["mathPow"], expected: "27" },
-    { name: "mathRound", input: ["mathRound"], expected: "3" },
-    { name: "mathSin", input: ["mathSin"], expected: "0.8939966636005579" },
-    { name: "mathSqrt", input: ["mathSqrt"], expected: "6" },
-    { name: "mathTan", input: ["mathTan"], expected: "0.320040389379563" },
-
     { name: "literalFooString", input: ["literalFooString"], expected: "'hello'#NSTestExpression::Foo" },
     { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo@{}" },
-
-    { name: "stringReverse", input: ["literalFooBarReverse"], expected: "\"raboof\"" },
-    { name: "stringUpCase", input: ["literalUpCase"], expected: "\"FOOBAR\"" },
-    { name: "stringDownCase", input: ["literalDownCase"], expected: "\"foobar\"" },
 
     { name: "emptyTuple", input: ["emptyTuple"], expected: "@[]" },
     { name: "oneTuple", input: ["oneTuple"], expected: "@[ 1 ]" },
@@ -1121,10 +1010,6 @@ const expression_tests: TestInfo[] = [
 
     { name: "createList", input: ["createList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2 }" },
     { name: "createListExpando", input: ["createListExpando"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2, 4 }" },
-    { name: "findLastMatchingElementInList", input: ["findLastMatchingElementInList"], expected: "@{ b=4, f=2 }" },
-    { name: "tryFindLastMatchingElementInList1", input: ["tryFindLastMatchingElementInList1"], expected: "none" },
-    { name: "tryFindLastMatchingElementInList2", input: ["tryFindLastMatchingElementInList2"], expected: "@{ b=4, f=2 }" },
-    { name: "fillList", input: ["fillList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 1, 1, 1 }" },
     { name: "createSet", input: ["createSet"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3 }" },
     { name: "createSetOverlap", input: ["createSetOverlap"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3 }" },
     { name: "createSetExpando", input: ["createSetExpando"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 4, 5 }" },
