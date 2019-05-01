@@ -1098,6 +1098,98 @@ entrypoint function varDeclAndAssignWithNoValue(): Int? {
     return x;
 }
 
+entrypoint function structuredDeclTuple(): Int {
+    @[var x: Int, var y] = @[1, 2];
+    return x + y;
+}
+
+entrypoint function structuredDeclMutableTuple(): Int {
+    @[var! x: Int, var! y] = @[1, 2];
+    x = x + 1;
+    y = y + 1;
+    return x + y;
+}
+
+entrypoint function structuredAssignTuple(): Int {
+    var! x: Int = 4;
+    var! y: Int;
+
+    @[x, y] = @[1, 2];
+    return x + y;
+}
+
+entrypoint function structuredDeclRecord(): Int {
+    @{f=var x: Int, g=var y} = @{f=1, g=2};
+    return x + y;
+}
+
+entrypoint function structuredDeclMutableRecord(): Int {
+    @{f=var! x: Int, g=var! y} = @{f=1, g=2};
+    return x + y;
+}
+
+entrypoint function structuredAssignRecord(): Int {
+    var! x: Int = 4;
+    var! y: Int;
+
+    @{f=x, g=y} = @{f=1, g=2};
+    return x + y;
+}
+
+entrypoint function structuredDeclAndAssign(): Int {
+    var! y: Int;
+
+    @[var x: Int, y] = @[1, 2];
+    return x + y;
+}
+
+entrypoint function structuredDeclGlobal(): Int {
+    var @{f=x, g=y} = @{f=1, g=2};
+    return x + y;
+}
+
+entrypoint function structuredDeclGlobalMutable(): Int {
+    var! @{f=x: Int, g=y} = @{f=1, g=2};
+    x = x + 1;
+    y = y + 1;
+    return x + y;
+}
+
+entrypoint function structuredRecordWithTuple(): Int {
+    var @{f=x, g=@[y, z]} = @{f=1, g=@[2, 3]};
+    return x + y + z;
+}
+
+entrypoint function structuredTupleWithRecord(): Int {
+    var @[x, @{f=y, g=z}] = @[1, @{f=2, g=3}];
+    return x + y + z;
+}
+
+entrypoint function structuredDeclAndAssignOptionalsMatch(): Int {
+    var @{f=x?: Int, g=y?} = @{f=1, g=2};
+    return x + y;
+}
+
+entrypoint function structuredDeclAndAssignOptionalsDefault(): Int {
+    var @{f=x?: Int, g=y?} = (0 < 1) ? @{} : @{f=1, g=2};
+    return (x ?| 1) + (y ?| 2);
+}
+
+entrypoint function structuredDeclAndAssignOpenTuple(): Int {
+    @[var x: Int, var y, ...] = @[1, 2, 4];
+    return x + y;
+}
+
+entrypoint function structuredDeclAndAssignOpenRecord(): Int {
+    var @{f=x, g=y, ...} = @{f=1, h=12, g=2};
+    return x + y;
+}
+
+entrypoint function structuredDeclAndAssignIgnores(): Int {
+    var @{f=_, g=@[y, _:Int]} = @{f=1, g=@[2, 3]};
+    return y;
+}
+
 entrypoint function ifAssignInBranches(): Int | Bool | None {
     var x = 1;
 
@@ -1231,6 +1323,24 @@ const statement_tests: TestInfo[] = [
     { name: "varDeclAndAssignWithType", input: ["varDeclAndAssignWithType"], expected: "4" },
     { name: "varDeclAndAssignNoType", input: ["varDeclAndAssignNoType"], expected: "4" },
     { name: "varDeclAndAssignWithNoValue", input: ["varDeclAndAssignWithNoValue"], expected: "5" },
+
+    { name: "structuredDeclTuple", input: ["structuredDeclTuple"], expected: "3" },
+    { name: "structuredDeclMutableTuple", input: ["structuredDeclMutableTuple"], expected: "5" },
+    { name: "structuredAssignTuple", input: ["structuredAssignTuple"], expected: "3" },
+    { name: "structuredDeclRecord", input: ["structuredDeclRecord"], expected: "3" },
+    { name: "structuredDeclMutableRecord", input: ["structuredDeclMutableRecord"], expected: "3" },
+    { name: "structuredAssignRecord", input: ["structuredAssignRecord"], expected: "3" },
+    { name: "structuredDeclAndAssign", input: ["structuredDeclAndAssign"], expected: "3" },
+    { name: "structuredDeclGlobal", input: ["structuredDeclGlobal"], expected: "3" },
+    { name: "structuredDeclGlobalMutable", input: ["structuredDeclGlobalMutable"], expected: "5" },
+    { name: "structuredRecordWithTuple", input: ["structuredRecordWithTuple"], expected: "6" },
+    { name: "structuredTupleWithRecord", input: ["structuredTupleWithRecord"], expected: "6" },
+    { name: "structuredDeclAndAssignOptionalsMatch", input: ["structuredDeclAndAssignOptionalsMatch"], expected: "3" },
+    { name: "structuredDeclAndAssignOptionalsDefault", input: ["structuredDeclAndAssignOptionalsDefault"], expected: "3" },
+
+    { name: "structuredDeclAndAssignOpenTuple", input: ["structuredDeclAndAssignOpenTuple"], expected: "3" },
+    { name: "structuredDeclAndAssignOpenRecord", input: ["structuredDeclAndAssignOpenRecord"], expected: "3" },
+    { name: "structuredDeclAndAssignIgnores", input: ["structuredDeclAndAssignIgnores"], expected: "2" },
 
     { name: "ifAssignInBranches", input: ["ifAssignInBranches"], expected: "1" },
     { name: "ifReAssignInBranches", input: ["ifReAssignInBranches"], expected: "2" },

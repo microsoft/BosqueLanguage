@@ -5,7 +5,7 @@
 
 import { ParserEnvironment, FunctionScope } from "./parser_env";
 import { FunctionParameter, TypeSignature, NominalTypeSignature, TemplateTypeSignature, ParseErrorTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, IntersectionTypeSignature, AutoTypeSignature } from "./type_signature";
-import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorLambdaExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixInvoke, PostfixCallLambda, PostfixOp, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionExpression, AssertStatement, CheckStatement, DebugStatement } from "./body";
+import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorLambdaExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixInvoke, PostfixCallLambda, PostfixOp, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, ConstValueStructuredAssignment, StructuredVariableAssignmentStatement } from "./body";
 import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, TemplateTermRestriction } from "./assembly";
 
 const KeywordStrings = [
@@ -1466,6 +1466,102 @@ class Parser {
     ////
     //Statement parsing
 
+    parseStructuredAssignment(sinfo: SourceInfo, vars: "var" | "var!" | undefined, decls: Set<string>): StructuredAssignment {
+        if (this.testToken("@[")) {
+            const [assigns, isOpen] = this.parseListOf<StructuredAssignment>("@[", "]", ",", () => {
+                return this.parseStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+            }, "...");
+
+            return new TupleStructuredAssignment(assigns, isOpen);
+        }
+        else if (this.testToken("@{")) {
+            const [assigns, isOpen] = this.parseListOf<[string, StructuredAssignment]>("@{", "}", ",", () => {
+                this.ensureToken(TokenStrings.Identifier);
+                const name = this.consumeTokenAndGetValue();
+
+                this.ensureAndConsumeToken("=");
+                const subg = this.parseStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+
+                return [name, subg];
+            }, "...");
+
+            return new RecordStructuredAssignment(assigns, isOpen);
+        }
+        else {
+            if (this.testToken("var")) {
+                if (vars !== undefined) {
+                    this.raiseError(sinfo.line, "Cannot mix var decl before and inside structured assign");
+                }
+
+                this.consumeToken();
+                const isConst = !this.testAndConsumeTokenIf("!");
+
+                this.ensureToken(TokenStrings.Identifier);
+                const name = this.consumeTokenAndGetValue();
+
+                if (decls.has(name)) {
+                    this.raiseError(sinfo.line, "Variable is already defined in scope");
+                }
+                decls.add(name);
+
+                const isopt = this.testAndConsumeTokenIf("?");
+                let itype = this.m_penv.SpecialAutoSignature;
+                if (this.testAndConsumeTokenIf(":")) {
+                    itype = this.parseTypeSignature();
+                }
+
+                return new VariableDeclarationStructuredAssignment(isopt, name, isConst, itype);
+            }
+            else if (this.testToken(TokenStrings.Identifier)) {
+                const name = this.consumeTokenAndGetValue();
+
+                if (name === "_") {
+                    const isopt = this.testAndConsumeTokenIf("?");
+
+                    let itype = this.m_penv.SpecialAnySignature;
+                    if (this.testAndConsumeTokenIf(":")) {
+                        itype = this.parseTypeSignature();
+                    }
+
+                    return new IgnoreTermStructuredAssignment(isopt, itype);
+                }
+                else {
+                    const isopt = this.testAndConsumeTokenIf("?");
+
+                    let itype = this.m_penv.SpecialAutoSignature;
+                    if (this.testAndConsumeTokenIf(":")) {
+                        itype = this.parseTypeSignature();
+                    }
+
+                    if (vars !== undefined) {
+                        if (decls.has(name)) {
+                            this.raiseError(sinfo.line, "Variable is already defined in scope");
+                        }
+                        decls.add(name);
+
+                        if (vars === "var") {
+                            return new VariableDeclarationStructuredAssignment(isopt, name, true, itype);
+                        }
+                        else {
+                            return new VariableDeclarationStructuredAssignment(isopt, name, false, itype);
+                        }
+                    }
+                    else {
+                        if (!this.m_penv.getCurrentFunctionScope().isVarNameDefined(name)) {
+                            this.raiseError(sinfo.line, "Variable is not defined in scope");
+                        }
+
+                        return new VariableAssignmentStructuredAssignment(isopt, name);
+                    }
+                }
+            }
+            else {
+                const cexp = this.parseExpression();
+                return new ConstValueStructuredAssignment(cexp);
+            }
+        }
+    }
+
     private parseLineStatement(): Statement {
         const line = this.getCurrentLine();
         const sinfo = this.getCurrentSrcInfo();
@@ -1479,23 +1575,41 @@ class Parser {
             this.consumeToken();
             const isConst = !this.testAndConsumeTokenIf("!");
 
-            this.ensureToken(TokenStrings.Identifier);
-            const name = this.consumeTokenAndGetValue();
+            if (this.testToken("@[") || this.testToken("@{")) {
+                let decls = new Set<string>();
+                const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), isConst ? "var" : "var!", decls);
+                decls.forEach((dv) => {
+                    if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
+                        this.raiseError(line, "Variable name is already defined")
+                    }
+                    this.m_penv.getCurrentFunctionScope().defineLocalVar(dv);
+                });
 
-            if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(name)) {
-                this.raiseError(line, "Variable is already defined in scope");
+                this.ensureAndConsumeToken("=");
+                const exp = this.parseExpression();
+                this.ensureAndConsumeToken(";");
+
+                return new StructuredVariableAssignmentStatement(sinfo, assign, exp);
             }
-            this.m_penv.getCurrentFunctionScope().defineLocalVar(name);
+            else {
+                this.ensureToken(TokenStrings.Identifier);
+                const name = this.consumeTokenAndGetValue();
 
-            const vtype = this.testAndConsumeTokenIf(":") ? this.parseTypeSignature() : this.m_penv.SpecialAutoSignature;
-            const exp = this.testAndConsumeTokenIf("=") ? this.parseExpression() : undefined;
+                if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(name)) {
+                    this.raiseError(line, "Variable is already defined in scope");
+                }
+                this.m_penv.getCurrentFunctionScope().defineLocalVar(name);
 
-            if (exp === undefined && isConst) {
-                this.raiseError(line, "Const variable declaration must include an assignment to the variable");
+                const vtype = this.testAndConsumeTokenIf(":") ? this.parseTypeSignature() : this.m_penv.SpecialAutoSignature;
+                const exp = this.testAndConsumeTokenIf("=") ? this.parseExpression() : undefined;
+
+                if (exp === undefined && isConst) {
+                    this.raiseError(line, "Const variable declaration must include an assignment to the variable");
+                }
+
+                this.ensureAndConsumeToken(";");
+                return new VariableDeclarationStatement(sinfo, name, isConst, vtype, exp);
             }
-
-            this.ensureAndConsumeToken(";");
-            return new VariableDeclarationStatement(sinfo, name, isConst, vtype, exp);
         }
         else if (tk === TokenStrings.Identifier) {
             const name = this.consumeTokenAndGetValue();
@@ -1509,29 +1623,22 @@ class Parser {
             this.ensureAndConsumeToken(";");
             return new VariableAssignmentStatement(sinfo, name, exp);
         }
-        /*
-        else if (tk == TokenKind::AT)
-        {
-            if (!this->testFollows({ TokenKind::AT, TokenKind::LBRACK }) && !this->testFollows({ TokenKind::AT, TokenKind::LBRACE }))
-            {
-                this->processError("Expected structural assignment with @[ or @{");
-            }
+        else if (tk === "@[" || tk === "@{") {
+            let decls = new Set<string>();
+            const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+            decls.forEach((dv) => {
+                if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
+                    this.raiseError(line, "Variable name is already defined")
+                }
+                this.m_penv.getCurrentFunctionScope().defineLocalVar(dv);
+            });
 
-            set<string> decls;
-            shared_ptr<StructuredAssignment> assign = this->parseStructuredAssignment(decls);
-            for (auto diter = decls.cbegin(); diter != decls.cend(); ++diter)
-            {
-                this->getCurrentFunctionScope().addLocalVar(*diter);
-            }
+            this.ensureAndConsumeToken("=");
+            const exp = this.parseExpression();
+            this.ensureAndConsumeToken(";");
 
-            this->ensureAndConsumeToken(TokenKind::EQ, "Expected '='");
-
-            shared_ptr<Expression> exp = this->parseExpression();
-
-            this->ensureAndConsumeToken(TokenKind::SEMI, "Expected ';'");
-            return make_shared<StructuredVariableAssignmentStatement>(sinfo, assign, exp);
+            return new StructuredVariableAssignmentStatement(sinfo, assign, exp);
         }
-        */
         else if (tk === "return") {
             this.consumeToken();
 
