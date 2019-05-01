@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as BasicExpresion from "./basic_evaluation_test";
+import * as Libraries from "./library_tests";
 import * as Regressions from "./regression_tests";
 
 import * as FS from "fs";
@@ -146,6 +147,10 @@ function runAll() {
 
     runner.addSet(BasicExpresion.testExpression);
     runner.addSet(BasicExpresion.testStatement);
+
+    runner.addSet(Libraries.testCoreLibs);
+    runner.addSet(Libraries.testCollectionLibs);
+
     runner.addSet(Regressions.testRegression);
 
     runner.run();

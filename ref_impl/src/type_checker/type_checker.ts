@@ -7,7 +7,7 @@ import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTu
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, ConceptTypeDecl } from "../ast/assembly";
 import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature } from "../ast/type_signature";
-import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement } from "../ast/body";
+import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment } from "../ast/body";
 import { MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRCallKey, MIRTypeKey, MIRFunctionKey, MIRLambdaKey, MIRStaticKey, MIRMethodKey, MIRVirtualMethodKey, MIRGlobalKey, MIRConstKey } from "../compiler/mir_ops";
 import { SourceInfo } from "../ast/parser";
@@ -2042,6 +2042,134 @@ class TypeChecker {
         return env.setVar(stmt.name, venv.getExpressionResult().etype);
     }
 
+    private checkStructuredAssign(sinfo: SourceInfo, env: TypeEnvironment, isopt: boolean, cpath: (string|number)[], assign: StructuredAssignment, expt: ResolvedType, allDeclared: [boolean, string, ResolvedType, (string|number)[], ResolvedType][], allAssigned: [string, (string|number)[], ResolvedType][]) {
+        if (assign instanceof IgnoreTermStructuredAssignment) {
+            this.raiseErrorIf(sinfo, isopt && !assign.isOptional, "Missing value for required entry");
+
+            const itype = this.resolveAndEnsureType(sinfo, assign.termType, env.terms);
+            this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(expt, itype), "Ignore type is not a subtype of declared type");
+        }
+        else if (assign instanceof ConstValueStructuredAssignment) {
+            this.raiseErrorIf(sinfo, isopt, "Missing value for required entry");
+            this.raiseError(sinfo, "Cannot use constants in structured assignment");
+        }
+        else if (assign instanceof VariableDeclarationStructuredAssignment) {
+            this.raiseErrorIf(sinfo, allDeclared.find((decl) => decl[1] === assign.vname) !== undefined || allAssigned.find((asgn) => asgn[0] === assign.vname) !== undefined, "Duplicate variables used in structured assign");
+            this.raiseErrorIf(sinfo, isopt && !assign.isOptional, "Missing value for required entry");
+
+            const vtype = (assign.vtype instanceof AutoTypeSignature)
+                ? expt
+                : (assign.isOptional
+                    ? this.m_assembly.typeUnion([this.m_assembly.getSpecialNoneType(), this.resolveAndEnsureType(sinfo, assign.vtype, env.terms)])
+                    : this.resolveAndEnsureType(sinfo, assign.vtype, env.terms));
+
+            this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(expt, vtype), "Expression is not of declared type");
+
+            allDeclared.push([assign.isConst, assign.vname, vtype, [...cpath], expt]);
+        }
+        else if (assign instanceof VariableAssignmentStructuredAssignment) {
+            this.raiseErrorIf(sinfo, allDeclared.find((decl) => decl[1] === assign.vname) !== undefined || allAssigned.find((asgn) => asgn[0] === assign.vname) !== undefined, "Duplicate variables used in structured assign");
+            this.raiseErrorIf(sinfo, isopt && !assign.isOptional, "Missing value for required entry");
+
+            const vinfo = env.lookupVar(assign.vname);
+            this.raiseErrorIf(sinfo, vinfo === undefined, "Variable was not previously defined");
+            this.raiseErrorIf(sinfo, (vinfo as VarInfo).isConst, "Variable defined as const");
+
+            this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(expt, (vinfo as VarInfo).declaredType), "Assign value is not subtype of declared variable type");
+
+            allAssigned.push([assign.vname, [...cpath], expt]);
+        }
+        else if (assign instanceof TupleStructuredAssignment) {
+            this.raiseErrorIf(sinfo, isopt, "Missing value for required entry");
+            this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(expt, ResolvedType.createSingle(ResolvedTupleAtomType.createGenericOpen())), "Assign value is not subtype of declared variable type");
+
+            for (let i = 0; i < assign.assigns.length; ++i) {
+                const isopt = expt.options.some((atom) => (atom as ResolvedTupleAtomType).types.length < i || (atom as ResolvedTupleAtomType).types[i].isOptional);
+                const ttype = this.getInfoForLoadFromIndex(expt, i);
+                this.checkStructuredAssign(sinfo, env, isopt, [...cpath, i], assign.assigns[i], ttype, allDeclared, allAssigned);
+            }
+
+            if (!assign.isOpen) {
+                this.raiseErrorIf(sinfo, expt.options.some((atom) => (atom as ResolvedTupleAtomType).types.length > assign.assigns.length), "More values in tuple that assignment");
+                this.raiseErrorIf(sinfo, expt.options.some((atom) => (atom as ResolvedTupleAtomType).isOpen), "Tuple is open and assignemnt is not");
+            }
+        }
+        else {
+            this.raiseErrorIf(sinfo, !(assign instanceof RecordStructuredAssignment), "Unknown structured assignment type");
+
+            this.raiseErrorIf(sinfo, isopt, "Missing value for required entry");
+            this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(expt, ResolvedType.createSingle(ResolvedRecordAtomType.createGenericOpen())), "Assign value is not subtype of declared variable type");
+
+            const rassign = assign as RecordStructuredAssignment;
+            for (let i = 0; i < rassign.assigns.length; ++i) {
+                const pname = rassign.assigns[i][0];
+                const isopt = expt.options.some((atom) => {
+                    const entry = (atom as ResolvedRecordAtomType).entries.find((re) => re.name === pname);
+                    return (entry === undefined || entry.isOptional);
+                });
+                const ttype = this.getInfoForLoadFromPropertyName(expt, pname);
+                this.checkStructuredAssign(sinfo, env, isopt, [...cpath, pname], rassign.assigns[i][1], ttype, allDeclared, allAssigned);
+            }
+
+            if (!rassign.isOpen) {
+                this.raiseErrorIf(sinfo, expt.options.some((atom) => {
+                    return (atom as ResolvedRecordAtomType).entries.some((re) => {
+                        const entry = rassign.assigns.find((e) => e[0] === re.name);
+                        return entry === undefined;
+                    });
+                }), "More values in record that assignment");
+                this.raiseErrorIf(sinfo, expt.options.some((atom) => (atom as ResolvedRecordAtomType).isOpen), "Record is open and assignemnt is not");
+            }
+        }
+    }
+
+    private generateAssignOps(sinfo: SourceInfo, ereg: MIRTempRegister, assign: (string|number)[]): MIRTempRegister {
+        let creg = ereg;
+        for (let i = 0; i < assign.length; ++i) {
+            const nreg = this.m_emitter.bodyEmitter.generateTmpRegister();
+            if (typeof (assign[i]) === "number") {
+                this.m_emitter.bodyEmitter.emitLoadTupleIndex(sinfo, creg, assign[i] as number, nreg);
+            }
+            else {
+                this.m_emitter.bodyEmitter.emitLoadProperty(sinfo, creg, assign[i] as string, nreg);
+            }
+            creg = nreg;
+        }
+        return creg;
+    }
+
+    private checkStructuredVariableAssignmentStatement(env: TypeEnvironment, stmt: StructuredVariableAssignmentStatement): TypeEnvironment {
+        const expreg = this.m_emitter.bodyEmitter.generateTmpRegister();
+        const eenv = this.checkExpression(env, stmt.exp, expreg);
+
+        let allDeclared: [boolean, string, ResolvedType, (string|number)[], ResolvedType][] = [];
+        let allAssigned: [string, (string|number)[], ResolvedType][] = [];
+        this.checkStructuredAssign(stmt.sinfo, env, false, [], stmt.assign, eenv.getExpressionResult().etype, allDeclared, allAssigned);
+
+        if (this.m_emitEnabled) {
+            for (let i = 0; i < allDeclared.length; ++i) {
+                const declv = allDeclared[i];
+
+                this.m_emitter.bodyEmitter.registerVar(declv[1]);
+
+                const mirvtype = this.m_emitter.registerResolvedTypeReference(declv[2]);
+                this.m_emitter.bodyEmitter.localLifetimeStart(stmt.sinfo, declv[1], mirvtype.trkey);
+
+                const treg = this.generateAssignOps(stmt.sinfo, expreg, declv[3]);
+                this.m_emitter.bodyEmitter.emitVarStore(stmt.sinfo, treg, declv[1]);
+            }
+
+            for (let i = 0; i < allAssigned.length; ++i) {
+                const assignv = allAssigned[i];
+
+                const treg = this.generateAssignOps(stmt.sinfo, expreg, assignv[1]);
+                this.m_emitter.bodyEmitter.emitVarStore(stmt.sinfo, treg, assignv[0]);
+            }
+        }
+
+        return eenv.multiVarUpdate(allDeclared, allAssigned);
+    }
+
     private checkIfElseStatement(env: TypeEnvironment, stmt: IfElseStatement): TypeEnvironment {
         const okType = this.m_assembly.typeUnion([this.m_assembly.getSpecialNoneType(), this.m_assembly.getSpecialBoolType()]);
 
@@ -2176,6 +2304,8 @@ class TypeChecker {
                 return this.checkVariableDeclarationStatement(env, stmt as VariableDeclarationStatement);
             case StatementTag.VariableAssignmentStatement:
                 return this.checkVariableAssignmentStatement(env, stmt as VariableAssignmentStatement);
+            case StatementTag.StructuredVariableAssignmentStatement:
+                return this.checkStructuredVariableAssignmentStatement(env, stmt as StructuredVariableAssignmentStatement);
             case StatementTag.IfElseStatement:
                 return this.checkIfElseStatement(env, stmt as IfElseStatement);
             case StatementTag.ReturnStatement:

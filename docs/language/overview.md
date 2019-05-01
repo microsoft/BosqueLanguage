@@ -1308,19 +1308,19 @@ true ==> none          //false
 Bosque provides specific none-coalescing operations, `?|` and `?&`, as opposed to truthy based coalescing that overloads the logical and/or operators.
 
 ```none
-function default(x?: Int, y?: Int) : Int {
+function defaultValue(x?: Int, y?: Int) : Int {
     return (x ?| 0) + (y ?| 0); //default on none
 }
-default(1, 1) //2
-default(1)    //1
-default()     //0
+defaultValue(1, 1) //2
+defaultValue(1)    //1
+defaultValue()     //0
 
-function check(x?: Int, y?: Int) : Int? {
+function checkValue(x?: Int, y?: Int) : Int? {
     return x ?& y ?& x + y; //check none
 }
-default(1, 1) //2
-default(1)    //none
-default()     //none
+checkValue(1, 1) //2
+checkValue(1)    //none
+checkValue()     //none
 ```
 
 The `?|` operator short-circuits on non-none values while the `?&` operator short-circuits on none values.
@@ -1447,7 +1447,65 @@ else {
 
 ## <a name="6.4-Structured-Declaration-and-Assignment"></a>6.4 Structured Declaration and Assignment
 
-**[Not Implemented Yet]**
+In addition to single variable declarations and assignments the Bosque language also supports de-structuring values with declaration/assignment to multiple variables simultaneously.
+
+```none
+@[var x: Int, var y: Int] = @[1, 2];               //declare and assign x=1, y=2 (explicit types)
+@{f=var x, g=var y} = @{f=1, g=2};                 //declare and assign x=1, y=2 (infer types)
+@{f=var x, g=@[var y, var z]} = @{f=1, g=@[2, 3]}; //declare x=1, y=2, and z=3
+```
+
+Just as with single variable declaration, variables can be declared as mutable:
+
+```none
+@[var! x, var! y] = @[1, 2]; //declare and assign x=1, y=2 (mutable)
+@[var! x, var y] = @[1, 2];  //declare and assign x=1, y=2 (x is mutable but y is not)
+```
+
+Since including `var` or `var!` for each variable is often redundant and cluttered you can do a single global declaration for all variables in the assignment:
+
+```none
+var @{f=x, g=y} = @{f=1, g=2};  //declare and assign x=1, y=2
+var! @{f=x, g=y} = @{f=1, g=2}; //declare and assign x=1, y=2 (mutable)
+```
+
+In addition to declaration variables can also be updated as part of a structured assignment:
+
+```none
+var! x: Int;
+var! y: Int;
+@{f=x, g=y} = @{f=1, g=2}; //assign x=1, y=2
+```
+
+It is possible to mix declarations and assignments:
+
+```none
+var! x: Int;
+@[x, var y] = @[1, 2]; //assign x=1 and declare y=2
+```
+
+Finally, as in many cases there are parts of a structure that are not useful, Bosque provides ways to ignore these values:
+
+```none
+//declare and assign x, y but ignore the h property
+var @{f=x, h=_, g=y} = @{f=1, g=2};
+
+//declare and assign x, y but ignore the h property which must be an Int
+var @{f=x, h=_:Int, g=y} = @{f=1, g=2};
+
+//declare and assign x, y -- since g property is missing y=none
+var @{f=x, g=y?: Int} = @{f=1};
+
+//declare and assign x, y -- since g property is missing y=none
+var @{f=x, g=y?: Int} = @{f=1};
+
+//declare and assign x -- ignore optional g property
+var @{f=x, g=_?} = @{f=1};
+
+//declare and assign x -- ignore any other tuple values
+var @[x, ...] = @[1, 2, 3];
+
+```
 
 ## <a name="6.5-Return-and-Yield"></a>6.5 Return and Yield
 

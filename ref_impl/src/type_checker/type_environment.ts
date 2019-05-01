@@ -236,6 +236,23 @@ class TypeEnvironment {
         return this.updateVarInfo(name, newv);
     }
 
+    multiVarUpdate(allDeclared: [boolean, string, ResolvedType, (string|number)[], ResolvedType][], allAssigned: [string, (string|number)[] | undefined, ResolvedType][]): TypeEnvironment {
+        //TODO: many copies here could make this more efficient
+        let nenv: TypeEnvironment = this;
+
+        for (let i = 0; i < allDeclared.length; ++i) {
+            const declv = allDeclared[i];
+            nenv = nenv.addVar(declv[1], declv[0], declv[2], true, declv[4]);
+        }
+
+        for (let i = 0; i < allAssigned.length; ++i) {
+            const assignv = allAssigned[i];
+            nenv = nenv.setVar(assignv[0], assignv[2]);
+        }
+
+        return nenv;
+    }
+
     assumeVar(name: string, ftype: ResolvedType): TypeEnvironment {
         const oldv = this.lookupVar(name) as VarInfo;
         const newv = oldv.infer(ftype);

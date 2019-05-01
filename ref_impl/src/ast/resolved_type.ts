@@ -113,7 +113,7 @@ class ResolvedTupleAtomType extends ResolvedAtomType {
     }
 
     static createGenericOpen(): ResolvedTupleAtomType {
-        return new ResolvedTupleAtomType("[]", [], true);
+        return new ResolvedTupleAtomType("[...]", [], true);
     }
 
     isAllOpenType(): boolean {
@@ -162,7 +162,7 @@ class ResolvedRecordAtomType extends ResolvedAtomType {
     }
 
     static createGenericOpen(): ResolvedRecordAtomType {
-        return new ResolvedRecordAtomType("{}", [], true);
+        return new ResolvedRecordAtomType("{...}", [], true);
     }
 
     isAllOpenType(): boolean {

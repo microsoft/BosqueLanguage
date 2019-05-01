@@ -117,6 +117,12 @@ entity List[T] provides Collection[T] {
     //<summary>Get last element in the list -- error if list is empty.</summary>
     method last(): T # list_last
 
+    //<summary>Find the last element in the list that match the predicate -- error if list is empty.</summary>
+    method findLast(p: Predicate[T]): T # list_findLast
+
+    //<summary>Find the last element in the list that match the predicate -- return none if list is empty.</summary>
+    method tryFindLast(p: Predicate[T]): T # list_tryFindLast
+
     //<summary>Get an element at uniform from the list using the rnd value -- error if list is empty.</summary>
     method uniform(rnd: Int): T # list_uniform
 
@@ -150,8 +156,11 @@ entity List[T] provides Collection[T] {
     //<summary>Concatenate argument lists in order.</summary>
     static concat(...args: List[Collection[T]]): List[T] # list_concat
 
-    //<summary>Get the element at the given index -- error if idx is out-of-bounds.</summary>
+    //<summary>Set the element at the given index -- error if idx is out-of-bounds.</summary>
     method set(idx: Int, v: T): List[T] # list_set
+
+    //<summary>Fill the list with the given value</summary>
+    method fill(v: T): List[T] # list_fill
 }
 
 //<summary>A Linked-List entity.</summary>
