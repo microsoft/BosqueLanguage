@@ -198,7 +198,7 @@ class Lexer {
     constructor(input: string) {
         this.m_input = input;
         this.m_internTable = new Map<string, string>();
-        this.m_cline = 0;
+        this.m_cline = 1;
         this.m_cpos = 0;
         this.m_tokens = [];
     }
