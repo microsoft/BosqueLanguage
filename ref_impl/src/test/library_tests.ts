@@ -110,7 +110,7 @@ const corelib_tests: TestInfo[] = [
 ];
 
 function corelib_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
-    const files = core.concat([{ relativePath: "corelib_tests.fl", contents: corelib_test }]);
+    const files = core.concat([{ relativePath: "corelib_tests.bsq", contents: corelib_test }]);
 
     return MIREmitter.generateMASM(new PackageConfig(), files);
 }
@@ -151,7 +151,7 @@ const collectionlib_tests: TestInfo[] = [
 ];
 
 function collectionlib_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
-    const files = core.concat([{ relativePath: "collectionlib_tests.fl", contents: collectionlib_test }]);
+    const files = core.concat([{ relativePath: "collectionlib_tests.bsq", contents: collectionlib_test }]);
 
     return MIREmitter.generateMASM(new PackageConfig(), files);
 }
