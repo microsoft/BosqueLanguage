@@ -1,4 +1,11 @@
-# Contributing
+# Contributing to BosqueLanguage
+
+We love your input! We want to make contributing to this project as easy as possible, whether it's:
+
+- Reporting a bug
+- Discussing the current state of the code
+- Submitting a fix
+- Proposing new features
 
 This project welcomes contributions and suggestions. Most contributions require you to
 agree to a Contributor License Agreement (CLA) declaring that you have the right to,
