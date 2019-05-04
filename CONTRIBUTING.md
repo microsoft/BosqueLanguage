@@ -7,6 +7,26 @@ We love your input! We want to make contributing to this project as easy as poss
 - Submitting a fix
 - Proposing new features
 
+# How Do I Submit A (Good) Bug Report?
+
+Explain the problem and include additional details to help maintainers reproduce the problem:
+
+- Use a clear and descriptive title for the issue to identify the problem.
+- Describe the exact steps which reproduce the problem in as many details as possible.
+- Provide specific examples to demonstrate the steps.
+- Describe the behavior you observed after following the steps and point out what exactly is the problem with that behavior.
+- Explain which behavior you expected to see instead and why.
+- Include screenshots and animated GIFs which show you following the described steps and clearly demonstrate the problem.
+- If the problem wasn't triggered by a specific action, describe what you were doing before the problem happened and share more information.
+
+# How Do I Submit A (Good) Pull Request?
+
+The process described here has several goals:
+
+- Maintain BosqueLanguage's quality.
+- Fix problems that are important to users.
+- Enable a sustainable system for BosqueLanguage's maintainers to review contributions.
+
 This project welcomes contributions and suggestions. Most contributions require you to
 agree to a Contributor License Agreement (CLA) declaring that you have the right to,
 and actually do, grant us the rights to use your contribution. For details, visit
