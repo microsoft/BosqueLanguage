@@ -1155,10 +1155,10 @@ The Bosque type system provides a unified model for all structural, primitive, a
 ## <a name="5.18-Pipeline"></a>5.18 Pipeline
 
 Higher-order processing of collections is a fundamental aspect of the Bosque language ([section](TODO)) but often times chaining filter/map/etc. is not a natural way to think about a particular set of operations and can result in the creation of substantial memory allocation for intermediate collection objects.
-Thus, Bosque allows the use of both method chaining for calls on collections _and_ pipelining, `|>`, values through multiple steps. This allows a developer to specify a sequence of operations, each of which is applied to elements from a base collection sequence, that transform the input data into a final collection. As with other chaining we support none-coalescing operations, `|?>`, which propagates a none immediately to the output in the pipeline and, `|??>`, which short circuits the processing and drops the value. Some representative examples are shown below:
+Thus, Bosque allows the use of both method chaining for calls on collections _and_ pipelining, `|>` (**[Not Implemented Yet]**), values through multiple steps. This allows a developer to specify a sequence of operations, each of which is applied to elements from a base collection sequence, that transform the input data into a final collection. As with other chaining we support none-coalescing operations, `|?>`, which propagates a none immediately to the output in the pipeline and, `|??>`, which short circuits the processing and drops the value. Some representative examples are shown below:
 
 ```none
-var v: List[Int?] = List@{1, 2, none, 4};
+var v: List[Int?] = List[Int?]@{1, 2, none, 4};
 
 //Chained - List@{1, 4, 16}
 v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
