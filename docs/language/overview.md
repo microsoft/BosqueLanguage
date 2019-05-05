@@ -202,7 +202,7 @@ function foo(val?: {tag: Int, value?: String}): String {
 A fundamental concept in a programming language is the iteration construct and a critical question is should this construct be provided as high-level functors, such as filter/map/reduce, or do programmers benefit from the flexibility available with iterative, while or for, looping constructs. To answer this question in a definitive manner the authors of [Mining Semantic Loop Idioms](https://www.microsoft.com/en-us/research/uploads/prod/2018/10/LoopIdioms.pdf) engaged in a study of all the loops "idioms" found in real-world code. The categorization and coverage results showed that almost every loop a developer would want to write falls into a small number of idiomatic patterns which correspond to higher level concepts developers are using in the code, e.g., filter, find, group, map, etc. With this result in mind the Bosque language trades structured loops for a set of high-level iterative processing constructs ([3 Collections](#3-Collections) and [5.18 Pipeline](#5.18-Pipeline)).
 
 ```none
-var v: List[Int?] = List@{1, 2, none, 4};
+var v: List[Int?] = List[Int?]@{1, 2, none, 4};
 
 //Chained - List@{1, 4, 16}
 v->filter(fn(x) => x != none)->map[Int](fn(x) => x*x)
