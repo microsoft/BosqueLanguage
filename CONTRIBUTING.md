@@ -27,6 +27,18 @@ The process described here has several goals:
 - Fix problems that are important to users.
 - Enable a sustainable system for BosqueLanguage's maintainers to review contributions.
 
+# If you are willing to contribute to BosqueLanguage project, you are awesome! Just follow the steps below:
+
+- Fork it!
+- Make a local clone of this repository.
+- Switch to the directory: cd BosqueLanguage
+- Create your new branch: git checkout -b feature name
+- Make necessary changes to the source code
+- Add changes to git index by using git add --all .
+- Commit your changes: git commit -am 'Added new feature'
+- Push to the branch: git push
+- Submit a new pull request 😄
+
 This project welcomes contributions and suggestions. Most contributions require you to
 agree to a Contributor License Agreement (CLA) declaring that you have the right to,
 and actually do, grant us the rights to use your contribution. For details, visit
