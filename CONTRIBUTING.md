@@ -1,4 +1,44 @@
-# Contributing
+# Contributing to BosqueLanguage
+
+We want to make contributing to this project as easy as possible, whether it's:
+
+- Reporting a bug
+- Discussing the current state of the code
+- Submitting a fix
+- Proposing new features
+
+# How Do I Submit A (Good) Bug Report?
+
+Explain the problem and include additional details to help maintainers reproduce the problem:
+
+- Check if the same, or a similar issue has already been reported.
+- Use a clear and descriptive title for the issue to identify the problem.
+- Describe the exact steps which reproduce the problem in as many details as possible.
+- Provide specific examples to demonstrate the steps.
+- Describe the behavior you observed after following the steps and point out what exactly is the problem with that behavior.
+- Explain which behavior you expected to see instead and why.
+- Include screenshots and animated GIFs which show you following the described steps and clearly demonstrate the problem.
+- If the problem wasn't triggered by a specific action, describe what you were doing before the problem happened and share more information.
+
+# How Do I Submit A (Good) Pull Request?
+
+The process described here has several goals:
+
+- Maintain BosqueLanguage's quality.
+- Fix problems that are important to users.
+- Enable a sustainable system for BosqueLanguage's maintainers to review contributions.
+
+# If you are willing to contribute to BosqueLanguage project, you are awesome! Just follow the steps below:
+
+- Fork it!
+- Make a local clone of this repository.
+- Switch to the directory: cd BosqueLanguage
+- Create your new branch: git checkout -b feature name
+- Make necessary changes to the source code
+- Add changes to git index by using git add --all .
+- Commit your changes: git commit -am 'Added new feature'
+- Push to the branch: git push
+- Submit a new pull request 😄
 
 This project welcomes contributions and suggestions. Most contributions require you to
 agree to a Contributor License Agreement (CLA) declaring that you have the right to,
