@@ -1,6 +1,6 @@
 # Contributing to BosqueLanguage
 
-We love your input! We want to make contributing to this project as easy as possible, whether it's:
+We want to make contributing to this project as easy as possible, whether it's:
 
 - Reporting a bug
 - Discussing the current state of the code
@@ -11,6 +11,7 @@ We love your input! We want to make contributing to this project as easy as poss
 
 Explain the problem and include additional details to help maintainers reproduce the problem:
 
+- Check if the same, or a similar issue has already been reported.
 - Use a clear and descriptive title for the issue to identify the problem.
 - Describe the exact steps which reproduce the problem in as many details as possible.
 - Provide specific examples to demonstrate the steps.
