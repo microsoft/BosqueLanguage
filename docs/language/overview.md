@@ -1007,8 +1007,8 @@ t#[Int, Any]   //@[1, 2]
 var r = @{ f=1, g=2, k=true };
 r#{f: Int}          //@{f=1}
 r#{f: Bool}         //error type mismatch
-t#[f: Int, g?: Int] //@{f=1, g=2}
-t#[f: Int, g: Any]  //@{f=1, g=2}
+r#{f: Int, g?: Int} //@{f=1, g=2}
+r#{f: Int, g: Any}  //@{f=1, g=2}
 
 var e = Baz@{ f=1, g=2, k=true };
 e#Bar       //@{f=1}
