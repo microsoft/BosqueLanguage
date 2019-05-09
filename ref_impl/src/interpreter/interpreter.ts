@@ -585,8 +585,8 @@ class Interpreter {
             case MIROpTag.MIRInvokeKnownTarget: {
                 const invk = op as MIRInvokeKnownTarget;
                 const fdecl = this.m_env.assembly.methodDecls.get(invk.mkey) as MIRMethodDecl;
-                let args = new Map<string, Value>().set("this", this.getArgValue(fscope, invk.self));
-                for (let i = 1; i < fdecl.invoke.params.length; ++i) {
+                let args = new Map<string, Value>();
+                for (let i = 0; i < fdecl.invoke.params.length; ++i) {
                     args.set(fdecl.invoke.params[i].name, this.getArgValue(fscope, invk.args[i]));
                 }
                 if (fdecl.invoke.optRestName !== undefined) {
@@ -597,14 +597,14 @@ class Interpreter {
             }
             case MIROpTag.MIRInvokeVirtualTarget: {
                 const invk = op as MIRInvokeVirtualTarget;
-                const tvalue = this.getArgValue(fscope, invk.self);
+                const tvalue = this.getArgValue(fscope, invk.args[0]);
                 const ttype = ValueOps.getValueType(tvalue).options[0] as MIREntityType;
 
                 const edecl = this.m_env.assembly.entityMap.get(ttype.ekey) as MIREntityTypeDecl;
                 const fdecl = edecl.vcallMap.get(invk.vresolve) as MIRMethodDecl;
 
-                let args = new Map<string, Value>().set("this", tvalue);
-                for (let i = 1; i < fdecl.invoke.params.length; ++i) {
+                let args = new Map<string, Value>();
+                for (let i = 0; i < fdecl.invoke.params.length; ++i) {
                     args.set(fdecl.invoke.params[i].name, this.getArgValue(fscope, invk.args[i]));
                 }
                 if (fdecl.invoke.optRestName !== undefined) {

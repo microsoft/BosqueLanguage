@@ -9,7 +9,7 @@ import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue } 
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment } from "../ast/body";
 import { MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
-import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRCallKey, MIRTypeKey, MIRFunctionKey, MIRLambdaKey, MIRStaticKey, MIRMethodKey, MIRVirtualMethodKey, MIRGlobalKey, MIRConstKey } from "../compiler/mir_ops";
+import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRTypeKey, MIRFunctionKey, MIRLambdaKey, MIRStaticKey, MIRMethodKey, MIRVirtualMethodKey, MIRGlobalKey, MIRConstKey } from "../compiler/mir_ops";
 import { SourceInfo } from "../ast/parser";
 import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRFunctionDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIREntityType, MIRStaticDecl, MIRGlobalDecl, MIRConstDecl, MIRMethodDecl, MIROOTypeDecl } from "../compiler/mir_assembly";
 
@@ -36,7 +36,6 @@ type ExpandedArgument = {
 class TypeChecker {
     private readonly m_assembly: Assembly;
 
-    private m_currentIKey: MIRCallKey;
     private m_file: string;
     private m_errors: [string, number, string][];
 
@@ -49,7 +48,6 @@ class TypeChecker {
     constructor(assembly: Assembly, emitEnabled: boolean, emitter: MIREmitter) {
         this.m_assembly = assembly;
 
-        this.m_currentIKey = "[No Key]";
         this.m_file = "[No File]";
         this.m_errors = [];
 
@@ -1044,7 +1042,7 @@ class TypeChecker {
                 capturedMap.set(v, (env.lookupVar(v) as VarInfo).flowType);
             });
 
-            const lkey = MIRKeyGenerator.generateLambdaKey(this.m_currentIKey, exp.sinfo.line, exp.sinfo.column, new Map<string, ResolvedType>(env.terms));
+            const lkey = MIRKeyGenerator.generateLambdaKey(this.m_file, exp.sinfo.line, exp.sinfo.column, exp.sinfo.pos, new Map<string, ResolvedType>(env.terms));
             this.m_emitter.registerResolvedTypeReference(ltypetry as ResolvedType);
             this.m_emitter.registerLambda(lkey, capturedMap, exp.invoke, env.terms, ResolvedType.tryGetUniqueFunctionTypeAtom(ltypetry as ResolvedType) as ResolvedFunctionAtomType);
 
@@ -1368,7 +1366,7 @@ class TypeChecker {
                 this.m_emitter.registerTypeInstantiation(mdecl.contiainingType, mdecl.binds);
                 this.m_emitter.registerMethodCall(mdecl.contiainingType, mdecl.decl as MemberMethodDecl, mdecl.binds, (mdecl.decl as MemberMethodDecl).name, binds as Map<string, ResolvedType>);
 
-                this.m_emitter.bodyEmitter.emitInvokeKnownTarget(op.sinfo, arg, MIRKeyGenerator.generateMethodKey(mdecl.contiainingType, (mdecl.decl as MemberMethodDecl).name, binds as Map<string, ResolvedType>), margs, trgt);
+                this.m_emitter.bodyEmitter.emitInvokeKnownTarget(op.sinfo, MIRKeyGenerator.generateMethodKey(mdecl.contiainingType, (mdecl.decl as MemberMethodDecl).name, binds as Map<string, ResolvedType>), margs, trgt);
             }
 
             return [env.setExpressionResult(this.m_assembly, (ResolvedType.tryGetUniqueFunctionTypeAtom(fsig) as ResolvedFunctionAtomType).resultType)];
@@ -1399,7 +1397,7 @@ class TypeChecker {
                 if (this.m_emitEnabled) {
                     let cbindsonly = this.m_assembly.resolveBindsForCall(rootdecl.invoke.terms, op.terms.targs, new Map<string, ResolvedType>(), env.terms) as Map<string, ResolvedType>;
                     this.m_emitter.registerVirtualMethodCall((vinfo.root as OOMemberLookupInfo).contiainingType, (vinfo.root as OOMemberLookupInfo).binds, op.name, cbindsonly);
-                    this.m_emitter.bodyEmitter.emitInvokeVirtualTarget(op.sinfo, arg, MIRKeyGenerator.generateVirtualMethodKey(op.name, rootbinds), margs, trgt);
+                    this.m_emitter.bodyEmitter.emitInvokeVirtualTarget(op.sinfo, MIRKeyGenerator.generateVirtualMethodKey(op.name, rootbinds), margs, trgt);
                 }
 
                 if (optArgVar === undefined || !this.AnySplitMethods.some((m) => m === op.name)) {

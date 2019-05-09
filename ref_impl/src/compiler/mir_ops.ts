@@ -17,8 +17,6 @@ type MIRMethodKey = string; //ns::name::method#binds
 type MIRResolvedTypeKey = string; //idstr
 type MIRVirtualMethodKey = string; //method#binds
 
-type MIRCallKey = MIRLambdaKey | MIRFunctionKey | MIRStaticKey | MIRMethodKey;
-
 abstract class MIRArgument {
     readonly nameID: string;
 
@@ -207,6 +205,9 @@ abstract class MIROp {
         this.sinfo = sinfo;
     }
 
+    abstract getUsed(): MIRArgument[];
+    abstract getMod(): MIRArgument[];
+
     abstract stringify(): string;
 }
 
@@ -217,6 +218,8 @@ abstract class MIRValueOp extends MIROp {
         super(tag, sinfo);
         this.trgt = trgt;
     }
+
+    getMod(): MIRArgument[] { return [this.trgt]; }
 }
 
 abstract class MIRFlowOp extends MIROp {
@@ -239,6 +242,8 @@ class MIRLoadConst extends MIRValueOp {
         this.src = src;
     }
 
+    getUsed(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.src.stringify()}`;
     }
@@ -256,6 +261,8 @@ class MIRLoadConstTypedString extends MIRValueOp {
         this.tskey = tskey;
     }
 
+    getUsed(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.ivalue}#${this.tkey}`;
     }
@@ -268,6 +275,8 @@ class MIRAccessNamespaceConstant extends MIRValueOp {
         super(MIROpTag.AccessNamespaceConstant, sinfo, trgt);
         this.gkey = gkey;
     }
+
+    getUsed(): MIRArgument[] { return []; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.gkey}`;
@@ -282,6 +291,8 @@ class MIRAccessConstField extends MIRValueOp {
         this.ckey = ckey;
     }
 
+    getUsed(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.ckey}`;
     }
@@ -294,6 +305,8 @@ class MIRLoadFieldDefaultValue extends MIRValueOp {
         super(MIROpTag.LoadFieldDefaultValue, sinfo, trgt);
         this.fkey = fkey;
     }
+
+    getUsed(): MIRArgument[] { return []; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = default(${this.fkey})`;
@@ -308,6 +321,8 @@ class MIRAccessCapturedVariable extends MIRValueOp {
         this.name = name;
     }
 
+    getUsed(): MIRArgument[] { return [new MIRVarCaptured(this.name)]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.name}`;
     }
@@ -320,6 +335,8 @@ class MIRAccessArgVariable extends MIRValueOp {
         super(MIROpTag.AccessArgVariable, sinfo, trgt);
         this.name = name;
     }
+
+    getUsed(): MIRArgument[] { return [new MIRVarParameter(this.name)]; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.name}`;
@@ -334,6 +351,8 @@ class MIRAccessLocalVariable extends MIRValueOp {
         this.name = name;
     }
 
+    getUsed(): MIRArgument[] { return [new MIRVarLocal(this.name)]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.name}`;
     }
@@ -341,13 +360,15 @@ class MIRAccessLocalVariable extends MIRValueOp {
 
 class MIRConstructorPrimary extends MIRValueOp {
     readonly tkey: MIRTypeKey;
-    readonly args: MIRArgument[];
+    args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, tkey: MIRTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.ConstructorPrimary, sinfo, trgt);
         this.tkey = tkey;
         this.args = args;
     }
+
+    getUsed(): MIRArgument[] { return [...this.args]; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.tkey}@(${this.args.map((arg) => arg.stringify()).join(", ")})`;
@@ -362,6 +383,8 @@ class MIRConstructorPrimaryCollectionEmpty extends MIRValueOp {
         this.tkey = tkey;
     }
 
+    getUsed(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.tkey}@{}`;
     }
@@ -369,13 +392,15 @@ class MIRConstructorPrimaryCollectionEmpty extends MIRValueOp {
 
 class MIRConstructorPrimaryCollectionSingletons extends MIRValueOp {
     readonly tkey: MIRTypeKey;
-    readonly args: MIRArgument[];
+    args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, tkey: MIRTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.ConstructorPrimaryCollectionSingletons, sinfo, trgt);
         this.tkey = tkey;
         this.args = args;
     }
+
+    getUsed(): MIRArgument[] { return [...this.args]; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.tkey}@{${this.args.map((arg) => arg.stringify()).join(", ")}}`;
@@ -384,13 +409,15 @@ class MIRConstructorPrimaryCollectionSingletons extends MIRValueOp {
 
 class MIRConstructorPrimaryCollectionCopies extends MIRValueOp {
     readonly tkey: MIRTypeKey;
-    readonly args: MIRArgument[];
+    args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, tkey: MIRTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.ConstructorPrimaryCollectionCopies, sinfo, trgt);
         this.tkey = tkey;
         this.args = args;
     }
+
+    getUsed(): MIRArgument[] { return [...this.args]; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.tkey}@{${this.args.map((arg) => `expand(${arg.stringify()})`).join(", ")}`;
@@ -399,7 +426,7 @@ class MIRConstructorPrimaryCollectionCopies extends MIRValueOp {
 
 class MIRConstructorPrimaryCollectionMixed extends MIRValueOp {
     readonly tkey: MIRTypeKey;
-    readonly args: [boolean, MIRArgument][];
+    args: [boolean, MIRArgument][];
 
     constructor(sinfo: SourceInfo, tkey: MIRTypeKey, args: [boolean, MIRArgument][], trgt: MIRTempRegister) {
         super(MIROpTag.ConstructorPrimaryCollectionMixed, sinfo, trgt);
@@ -407,31 +434,37 @@ class MIRConstructorPrimaryCollectionMixed extends MIRValueOp {
         this.args = args;
     }
 
+    getUsed(): MIRArgument[] { return this.args.map((tv) => tv[1]); }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.tkey}@{${this.args.map((arg) => arg[0] ? `expand(${arg[1].stringify()})` : arg[1].stringify()).join(", ")}`;
     }
 }
 
 class MIRConstructorTuple extends MIRValueOp {
-    readonly args: MIRArgument[];
+    args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.ConstructorTuple, sinfo, trgt);
         this.args = args;
     }
 
+    getUsed(): MIRArgument[] { return [...this.args]; }
+
     stringify(): string {
-        return `${this.trgt.stringify()} = $@[${this.args.map((arg) => arg.stringify()).join(", ")}]`;
+        return `${this.trgt.stringify()} = @[${this.args.map((arg) => arg.stringify()).join(", ")}]`;
     }
 }
 
 class MIRConstructorRecord extends MIRValueOp {
-    readonly args: [string, MIRArgument][];
+    args: [string, MIRArgument][];
 
     constructor(sinfo: SourceInfo, args: [string, MIRArgument][], trgt: MIRTempRegister) {
         super(MIROpTag.ConstructorRecord, sinfo, trgt);
         this.args = args;
     }
+
+    getUsed(): MIRArgument[] { return this.args.map((tv) => tv[1]); }
 
     stringify(): string {
         return `${this.trgt.stringify()} = @{${this.args.map((arg) => `${arg[0]}=${arg[1].stringify()}`).join(", ")}}`;
@@ -450,6 +483,8 @@ class MIRConstructorLambda extends MIRValueOp {
         this.captured = captured;
     }
 
+    getUsed(): MIRArgument[] { return this.captured.map((cv) => new MIRVarCaptured(cv)); }
+
     stringify(): string {
         return `${this.trgt.stringify()} = fn(${this.lkey})`;
     }
@@ -457,13 +492,15 @@ class MIRConstructorLambda extends MIRValueOp {
 
 class MIRCallNamespaceFunction extends MIRValueOp {
     readonly fkey: MIRFunctionKey;
-    readonly args: MIRArgument[];
+    args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, fkey: MIRFunctionKey, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.CallNamespaceFunction, sinfo, trgt);
         this.fkey = fkey;
         this.args = args;
     }
+
+    getUsed(): MIRArgument[] { return [...this.args]; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.fkey}(${this.args.map((arg) => arg.stringify()).join(", ")})`;
@@ -472,7 +509,7 @@ class MIRCallNamespaceFunction extends MIRValueOp {
 
 class MIRCallStaticFunction extends MIRValueOp {
     readonly skey: MIRStaticKey;
-    readonly args: MIRArgument[];
+    args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, skey: MIRStaticKey, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.CallStaticFunction, sinfo, trgt);
@@ -480,13 +517,15 @@ class MIRCallStaticFunction extends MIRValueOp {
         this.args = args;
     }
 
+    getUsed(): MIRArgument[] { return [...this.args]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.skey}(${this.args.map((arg) => arg.stringify()).join(", ")})`;
     }
 }
 
 class MIRAccessFromIndex extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly idx: number;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, idx: number, trgt: MIRTempRegister) {
@@ -495,13 +534,15 @@ class MIRAccessFromIndex extends MIRValueOp {
         this.idx = idx;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}[${this.idx}]`;
     }
 }
 
 class MIRProjectFromIndecies extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly indecies: number[];
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, indecies: number[], trgt: MIRTempRegister) {
@@ -510,13 +551,15 @@ class MIRProjectFromIndecies extends MIRValueOp {
         this.indecies = indecies;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}@[${this.indecies.map((i) => i.toString()).join(", ")}]`;
     }
 }
 
 class MIRAccessFromProperty extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly property: string;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, property: string, trgt: MIRTempRegister) {
@@ -525,13 +568,15 @@ class MIRAccessFromProperty extends MIRValueOp {
         this.property = property;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}.${this.property}`;
     }
 }
 
 class MIRProjectFromProperties extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly properties: string[];
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, properties: string[], trgt: MIRTempRegister) {
@@ -540,13 +585,15 @@ class MIRProjectFromProperties extends MIRValueOp {
         this.properties = properties;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}@{${this.properties.join(", ")}}`;
     }
 }
 
 class MIRAccessFromField extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly field: string;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, field: string, trgt: MIRTempRegister) {
@@ -555,13 +602,15 @@ class MIRAccessFromField extends MIRValueOp {
         this.field = field;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}.${this.field}`;
     }
 }
 
 class MIRProjectFromFields extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly fields: string[];
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, fields: string[], trgt: MIRTempRegister) {
@@ -570,13 +619,15 @@ class MIRProjectFromFields extends MIRValueOp {
         this.fields = fields;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}@{${this.fields.join(", ")}}`;
     }
 }
 
 class MIRProjectFromTypeTuple extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly ptype: MIRResolvedTypeKey;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, ptype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
@@ -585,13 +636,15 @@ class MIRProjectFromTypeTuple extends MIRValueOp {
         this.ptype = ptype;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}#${this.ptype}`;
     }
 }
 
 class MIRProjectFromTypeRecord extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly ptype: MIRResolvedTypeKey;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, ptype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
@@ -600,13 +653,15 @@ class MIRProjectFromTypeRecord extends MIRValueOp {
         this.ptype = ptype;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}#${this.ptype}`;
     }
 }
 
 class MIRProjectFromTypeConcept extends MIRValueOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly ctypes: MIRTypeKey[];
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, ctypes: MIRTypeKey[], trgt: MIRTempRegister) {
@@ -615,14 +670,16 @@ class MIRProjectFromTypeConcept extends MIRValueOp {
         this.ctypes = ctypes;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}#${this.ctypes.join("&")}`;
     }
 }
 
 class MIRModifyWithIndecies extends MIRValueOp {
-    readonly arg: MIRArgument;
-    readonly updates: [number, MIRArgument][];
+    arg: MIRArgument;
+    updates: [number, MIRArgument][];
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, updates: [number, MIRArgument][], trgt: MIRTempRegister) {
         super(MIROpTag.MIRModifyWithIndecies, sinfo, trgt);
@@ -630,14 +687,16 @@ class MIRModifyWithIndecies extends MIRValueOp {
         this.updates = updates;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg, ...this.updates.map((u) => u[1])]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}<~${this.updates.map((u) => `${u[0]}=${u[1].stringify()}`).join(", ")}]`;
     }
 }
 
 class MIRModifyWithProperties extends MIRValueOp {
-    readonly arg: MIRArgument;
-    readonly updates: [string, MIRArgument][];
+    arg: MIRArgument;
+    updates: [string, MIRArgument][];
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, updates: [string, MIRArgument][], trgt: MIRTempRegister) {
         super(MIROpTag.MIRModifyWithProperties, sinfo, trgt);
@@ -645,14 +704,16 @@ class MIRModifyWithProperties extends MIRValueOp {
         this.updates = updates;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg, ...this.updates.map((u) => u[1])]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}<~${this.updates.map((u) => `${u[0]}=${u[1].stringify()}`).join(", ")}]`;
     }
 }
 
 class MIRModifyWithFields extends MIRValueOp {
-    readonly arg: MIRArgument;
-    readonly updates: [string, MIRArgument][];
+    arg: MIRArgument;
+    updates: [string, MIRArgument][];
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, updates: [string, MIRArgument][], trgt: MIRTempRegister) {
         super(MIROpTag.MIRModifyWithFields, sinfo, trgt);
@@ -660,14 +721,16 @@ class MIRModifyWithFields extends MIRValueOp {
         this.updates = updates;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg, ...this.updates.map((u) => u[1])]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}<~${this.updates.map((u) => `${u[0]}=${u[1].stringify()}`).join(", ")}]`;
     }
 }
 
 class MIRStructuredExtendTuple extends MIRValueOp {
-    readonly arg: MIRArgument;
-    readonly update: MIRArgument;
+    arg: MIRArgument;
+    update: MIRArgument;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRStructuredExtendTuple, sinfo, trgt);
@@ -675,14 +738,16 @@ class MIRStructuredExtendTuple extends MIRValueOp {
         this.update = update;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg, this.update]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}<+(${this.update.stringify()})`;
     }
 }
 
 class MIRStructuredExtendRecord extends MIRValueOp {
-    readonly arg: MIRArgument;
-    readonly update: MIRArgument;
+    arg: MIRArgument;
+    update: MIRArgument;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRStructuredExtendRecord, sinfo, trgt);
@@ -690,14 +755,16 @@ class MIRStructuredExtendRecord extends MIRValueOp {
         this.update = update;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg, this.update]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}<+(${this.update.stringify()})`;
     }
 }
 
 class MIRStructuredExtendObject extends MIRValueOp {
-    readonly arg: MIRArgument;
-    readonly update: MIRArgument;
+    arg: MIRArgument;
+    update: MIRArgument;
 
     constructor(sinfo: SourceInfo, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRStructuredExtendObject, sinfo, trgt);
@@ -705,54 +772,58 @@ class MIRStructuredExtendObject extends MIRValueOp {
         this.update = update;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg, this.update]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}<+(${this.update.stringify()})`;
     }
 }
 
 class MIRInvokeKnownTarget extends MIRValueOp {
-    readonly self: MIRArgument;
     readonly mkey: MIRMethodKey;
-    readonly args: MIRArgument[];
+    args: MIRArgument[]; //this is args[0]
 
-    constructor(sinfo: SourceInfo, self: MIRArgument, mkey: MIRMethodKey, args: MIRArgument[], trgt: MIRTempRegister) {
+    constructor(sinfo: SourceInfo, mkey: MIRMethodKey, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.MIRInvokeKnownTarget, sinfo, trgt);
-        this.self = self;
         this.mkey = mkey;
         this.args = args;
     }
 
+    getUsed(): MIRArgument[] { return [...this.args]; }
+
     stringify(): string {
-        return `${this.trgt.stringify()} = ${this.self.stringify()}->::${this.mkey}::(${this.args.map((arg) => arg.stringify()).join(", ")})`;
+        return `${this.trgt.stringify()} = ${this.args[0].stringify()}->::${this.mkey}::(${[...this.args].slice(1).map((arg) => arg.stringify()).join(", ")})`;
     }
 }
 
 class MIRInvokeVirtualTarget extends MIRValueOp {
-    readonly self: MIRArgument;
     readonly vresolve: MIRVirtualMethodKey;
-    readonly args: MIRArgument[];
+    args: MIRArgument[]; //this is args[0]
 
-    constructor(sinfo: SourceInfo, self: MIRArgument, vresolve: MIRVirtualMethodKey, args: MIRArgument[], trgt: MIRTempRegister) {
+    constructor(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.MIRInvokeVirtualTarget, sinfo, trgt);
-        this.self = self;
         this.vresolve = vresolve;
         this.args = args;
     }
 
+    getUsed(): MIRArgument[] { return [...this.args]; }
+
     stringify(): string {
-        return `${this.trgt.stringify()} = ${this.self.stringify()}->${this.vresolve}(${this.args.map((arg) => arg.stringify()).join(", ")})`;
+        return `${this.trgt.stringify()} = ${this.args[0].stringify()}->${this.vresolve}(${[...this.args].slice(1).map((arg) => arg.stringify()).join(", ")})`;
     }
 }
 
 class MIRCallLambda extends MIRValueOp {
-    readonly lambda: MIRArgument;
-    readonly args: MIRArgument[];
+    lambda: MIRArgument;
+    args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, lambda: MIRArgument, args: MIRArgument[], trgt: MIRTempRegister) {
         super(MIROpTag.MIRCallLambda, sinfo, trgt);
         this.lambda = lambda;
         this.args = args;
     }
+
+    getUsed(): MIRArgument[] { return [this.lambda, ...this.args]; }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.lambda.stringify()}(${this.args.map((arg) => arg.stringify()).join(", ")})`;
@@ -761,7 +832,7 @@ class MIRCallLambda extends MIRValueOp {
 
 class MIRPrefixOp extends MIRValueOp {
     readonly op: string; //+, -, !
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
 
     constructor(sinfo: SourceInfo, op: string, arg: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRPrefixOp, sinfo, trgt);
@@ -769,15 +840,17 @@ class MIRPrefixOp extends MIRValueOp {
         this.arg = arg;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.op}${this.arg.stringify()}`;
     }
 }
 
 class MIRBinOp extends MIRValueOp {
-    readonly lhs: MIRArgument;
+    lhs: MIRArgument;
     readonly op: string; //+, -, *, /, %
-    readonly rhs: MIRArgument;
+    rhs: MIRArgument;
 
     constructor(sinfo: SourceInfo, lhs: MIRArgument, op: string, rhs: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRBinOp, sinfo, trgt);
@@ -786,15 +859,17 @@ class MIRBinOp extends MIRValueOp {
         this.rhs = rhs;
     }
 
+    getUsed(): MIRArgument[] { return [this.lhs, this.rhs]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.lhs.stringify()}${this.op}${this.rhs.stringify()}`;
     }
 }
 
 class MIRBinEq extends MIRValueOp {
-    readonly lhs: MIRArgument;
+    lhs: MIRArgument;
     readonly op: string; //==, !=
-    readonly rhs: MIRArgument;
+    rhs: MIRArgument;
 
     constructor(sinfo: SourceInfo, lhs: MIRArgument, op: string, rhs: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRBinEq, sinfo, trgt);
@@ -803,15 +878,17 @@ class MIRBinEq extends MIRValueOp {
         this.rhs = rhs;
     }
 
+    getUsed(): MIRArgument[] { return [this.lhs, this.rhs]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.lhs.stringify()}${this.op}${this.rhs.stringify()}`;
     }
 }
 
 class MIRBinCmp extends MIRValueOp {
-    readonly lhs: MIRArgument;
+    lhs: MIRArgument;
     readonly op: string; //<, >, <=, >=
-    readonly rhs: MIRArgument;
+    rhs: MIRArgument;
 
     constructor(sinfo: SourceInfo, lhs: MIRArgument, op: string, rhs: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRBinCmp, sinfo, trgt);
@@ -820,14 +897,16 @@ class MIRBinCmp extends MIRValueOp {
         this.rhs = rhs;
     }
 
+    getUsed(): MIRArgument[] { return [this.lhs, this.rhs]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.lhs.stringify()}${this.op}${this.rhs.stringify()}`;
     }
 }
 
 class MIRRegAssign extends MIRFlowOp {
-    readonly src: MIRArgument;
-    readonly trgt: MIRTempRegister;
+    src: MIRArgument;
+    trgt: MIRTempRegister;
 
     constructor(sinfo: SourceInfo, src: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRRegAssign, sinfo);
@@ -835,14 +914,17 @@ class MIRRegAssign extends MIRFlowOp {
         this.trgt = trgt;
     }
 
+    getUsed(): MIRArgument[] { return [this.src]; }
+    getMod(): MIRArgument[] { return [this.trgt]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.src.stringify()}`;
     }
 }
 
 class MIRTruthyConvert extends MIRFlowOp {
-    readonly src: MIRArgument;
-    readonly trgt: MIRTempRegister;
+    src: MIRArgument;
+    trgt: MIRTempRegister;
 
     constructor(sinfo: SourceInfo, src: MIRArgument, trgt: MIRTempRegister) {
         super(MIROpTag.MIRTruthyConvert, sinfo);
@@ -850,13 +932,16 @@ class MIRTruthyConvert extends MIRFlowOp {
         this.trgt = trgt;
     }
 
+    getUsed(): MIRArgument[] { return [this.src]; }
+    getMod(): MIRArgument[] { return [this.trgt]; }
+
     stringify(): string {
         return `${this.trgt.stringify()} = truthy(${this.src.stringify()})`;
     }
 }
 
 class MIRVarStore extends MIRFlowOp {
-    readonly src: MIRArgument;
+    src: MIRArgument;
     readonly name: string;
 
     constructor(sinfo: SourceInfo, src: MIRTempRegister, name: string) {
@@ -865,18 +950,24 @@ class MIRVarStore extends MIRFlowOp {
         this.name = name;
     }
 
+    getUsed(): MIRArgument[] { return [this.src]; }
+    getMod(): MIRArgument[] { return [new MIRVarLocal(this.name)]; }
+
     stringify(): string {
         return `${this.name} = ${this.src.stringify()}`;
     }
 }
 
 class MIRReturnAssign extends MIRFlowOp {
-    readonly src: MIRArgument;
+    src: MIRArgument;
 
     constructor(sinfo: SourceInfo, src: MIRTempRegister) {
         super(MIROpTag.MIRReturnAssign, sinfo);
         this.src = src;
     }
+
+    getUsed(): MIRArgument[] { return [this.src]; }
+    getMod(): MIRArgument[] { return []; }
 
     stringify(): string {
         return `_return_ = ${this.src.stringify()}`;
@@ -884,12 +975,15 @@ class MIRReturnAssign extends MIRFlowOp {
 }
 
 class MIRAssert extends MIRFlowOp {
-    readonly cond: MIRArgument;
+    cond: MIRArgument;
 
     constructor(sinfo: SourceInfo, cond: MIRArgument) {
         super(MIROpTag.MIRAssert, sinfo);
         this.cond = cond;
     }
+
+    getUsed(): MIRArgument[] { return [this.cond]; }
+    getMod(): MIRArgument[] { return []; }
 
     stringify(): string {
         return `assert ${this.cond.stringify()}`;
@@ -897,12 +991,15 @@ class MIRAssert extends MIRFlowOp {
 }
 
 class MIRCheck extends MIRFlowOp {
-    readonly cond: MIRArgument;
+    cond: MIRArgument;
 
     constructor(sinfo: SourceInfo, cond: MIRArgument) {
         super(MIROpTag.MIRCheck, sinfo);
         this.cond = cond;
     }
+
+    getUsed(): MIRArgument[] { return [this.cond]; }
+    getMod(): MIRArgument[] { return []; }
 
     stringify(): string {
         return `check ${this.cond.stringify()}`;
@@ -910,12 +1007,15 @@ class MIRCheck extends MIRFlowOp {
 }
 
 class MIRDebug extends MIRFlowOp {
-    readonly value: MIRArgument | undefined;
+    value: MIRArgument | undefined;
 
     constructor(sinfo: SourceInfo, value: MIRArgument | undefined) {
         super(MIROpTag.MIRDebug, sinfo);
         this.value = value;
     }
+
+    getUsed(): MIRArgument[] { return this.value !== undefined ? [this.value] : []; }
+    getMod(): MIRArgument[] { return []; }
 
     stringify(): string {
         if (this.value === undefined) {
@@ -935,6 +1035,9 @@ class MIRJump extends MIRJumpOp {
         this.trgtblock = blck;
     }
 
+    getUsed(): MIRArgument[] { return []; }
+    getMod(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `jump ${this.trgtblock}`;
     }
@@ -950,6 +1053,9 @@ class MIRVarLifetimeStart extends MIRJumpOp {
         this.rtype = rtype;
     }
 
+    getUsed(): MIRArgument[] { return []; }
+    getMod(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `v-begin ${this.name}`;
     }
@@ -963,13 +1069,16 @@ class MIRVarLifetimeEnd extends MIRJumpOp {
         this.name = name;
     }
 
+    getUsed(): MIRArgument[] { return []; }
+    getMod(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `v-end ${this.name}`;
     }
 }
 
 class MIRJumpCond extends MIRJumpOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly trueblock: string;
     readonly falseblock: string;
 
@@ -980,13 +1089,16 @@ class MIRJumpCond extends MIRJumpOp {
         this.falseblock = falseblck;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+    getMod(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `cjump ${this.arg.stringify()} ${this.trueblock} ${this.falseblock}`;
     }
 }
 
 class MIRJumpNone extends MIRJumpOp {
-    readonly arg: MIRArgument;
+    arg: MIRArgument;
     readonly noneblock: string;
     readonly someblock: string;
 
@@ -997,6 +1109,9 @@ class MIRJumpNone extends MIRJumpOp {
         this.someblock = someblck;
     }
 
+    getUsed(): MIRArgument[] { return [this.arg]; }
+    getMod(): MIRArgument[] { return []; }
+
     stringify(): string {
         return `njump ${this.arg.stringify()} ${this.noneblock} ${this.someblock}`;
     }
@@ -1004,21 +1119,21 @@ class MIRJumpNone extends MIRJumpOp {
 
 class MIRBasicBlock {
     readonly label: string;
-    readonly ops: MIROp[];
+    ops: MIROp[];
 
     constructor(label: string, ops: MIROp[]) {
         this.label = label;
         this.ops = ops;
     }
 
-    stringify(): string {
-        const jstring = {
+    jsonify(): any {
+        const jblck = {
             label: this.label,
             line: (this.ops.length !== 0) ? this.ops[0].sinfo.line : -1,
             ops: this.ops.map((op) => op.stringify())
         };
 
-        return JSON.stringify(jstring);
+        return jblck;
     }
 }
 
@@ -1027,7 +1142,7 @@ class MIRBody {
     readonly sinfo: SourceInfo;
 
     readonly varNames: Set<string>;
-    readonly body: string | Map<string, MIRBasicBlock>;
+    body: string | Map<string, MIRBasicBlock>;
 
     constructor(file: string, sinfo: SourceInfo, varNames: Set<string>, body: string | Map<string, MIRBasicBlock>) {
         this.file = file;
@@ -1036,21 +1151,21 @@ class MIRBody {
         this.body = body;
     }
 
-    stringify(): string {
+    jsonify(): any {
         if (typeof (this.body) === "string") {
             return this.body;
         }
         else {
             let blocks: string[] = [];
-            this.body.forEach((v, k) => blocks.push(v.stringify()));
+            this.body.forEach((v, k) => blocks.push(v.jsonify()));
 
-            return JSON.stringify(blocks);
+            return blocks;
         }
     }
 }
 
 export {
-    MIRTypeKey, MIRGlobalKey, MIRConstKey, MIRFieldKey, MIRLambdaKey, MIRFunctionKey, MIRStaticKey, MIRMethodKey, MIRCallKey, MIRResolvedTypeKey, MIRVirtualMethodKey,
+    MIRTypeKey, MIRGlobalKey, MIRConstKey, MIRFieldKey, MIRLambdaKey, MIRFunctionKey, MIRStaticKey, MIRMethodKey, MIRResolvedTypeKey, MIRVirtualMethodKey,
     MIRArgument, MIRRegisterArgument, MIRTempRegister, MIRVarCaptured, MIRVarParameter, MIRVarLocal, MIRConstantArgument, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantString,
     MIROpTag, MIROp, MIRValueOp, MIRFlowOp, MIRJumpOp,
     MIRLoadConst, MIRLoadConstTypedString,
