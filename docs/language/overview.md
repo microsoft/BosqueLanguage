@@ -511,7 +511,7 @@ Users can define abstract types ([TODO]()), `concept` declarations, which allow 
 
 Developers can alias types or create special types ([TODO]()) using `typedef`, `enum`, and `ckey` constructs ([TODO]()).
 
-The Bosque core library defines several unique concepts/entities. The `Any` type is a uber type which all others are a subtype of, the `None` and `Some` types are for distinguishing around the unique `none` value, and `Tuple`, `Record`, etc. exist to unify with the structural type system ([section 2](#2-Core-Types)). The language has primitives for `Bool`, `Int`, `String`, etc. as well as the expected set of parametric collection types such as `List[T]` `Map[K, V]` ([section 3](#2-Collections)).
+The Bosque core library defines several unique concepts/entities. The `Any` type is an uber type which all others are a subtype of, the `None` and `Some` types are for distinguishing around the unique `none` value, and `Tuple`, `Record`, etc. exist to unify with the structural type system ([section 2](#2-Core-Types)). The language has primitives for `Bool`, `Int`, `String`, etc. as well as the expected set of parametric collection types such as `List[T]` `Map[K, V]` ([section 3](#2-Collections)).
 
 Examples of nominal types include:
 
@@ -600,7 +600,7 @@ A record is a map of identifier names to entries where each entry provides a typ
 {f: Int, ...} //Record required f open other
 ```
 
-The subtype relation on tuples `R1` and `R2` is a subset based order on the record entries where a required entry is always less than an optional (`?`) entry and open tuples match any suffixes of a closed tuple.
+The subtype relation on records `R1` and `R2` is a subset based order on the record entries where a required entry is always less than an optional (`?`) entry and open records match any suffixes of a closed record.
 
 ```none
 {f: Int} <: {f: Any}                    //true - Int <: Any
@@ -610,7 +610,7 @@ The subtype relation on tuples `R1` and `R2` is a subset based order on the reco
 {f: Int, g: Bool} <: {f: Int, g?: Bool} //true - optional type is ok
 {f: Int, g?: Bool} <: {f: Int}          //false - missing optional type
 {f: Int} <: {f: Int, ...}               //true - subset matches
-{f: Int, g: Bool] <: {f: Int, ...}      //true - subset matches, open covers rest
+{f: Int, g: Bool} <: {f: Int, ...}      //true - subset matches, open covers rest
 {f: Int, ...} <: {f: Int}               //false - open is not subtype of closed
 ```
 
@@ -638,17 +638,17 @@ fn(x: Any) -> Int <: fn(y: Int) -> Int //false - name mismatch
 fn(x: Any) -> Int <: fn(_: Int) -> Int //true - name ignore
 fn(_: Any) -> Int <: fn(x: Int) -> Int //false - name needed
 
-fn(x: Int, y?: Bool) <: fn(x: Int) -> Int //true - omitting optional parameter is ok
-fn(y?: Bool) <: fn(y: Bool) -> Int        //true - optional parameter is subtype
-fn(x: Int) <: fn(x: Int, y?: Bool) -> Int //false - missing optional type
+fn(x: Int, y?: Bool) -> Int <: fn(x: Int) -> Int           //true - omitting optional parameter is ok
+fn(y?: Bool) -> Int         <: fn(y: Bool) -> Int          //true - optional parameter is subtype
+fn(x: Int) -> Int           <: fn(x: Int, y?: Bool) -> Int //false - missing optional type
 
 fn(x: Any) -> Int <: fn(x: Int) -> Any //true - Int <: Any
 fn(x: Any) -> Any <: fn(x: Int) -> Int //true - Any <! Int
 
-fn(...r: List[Int]) -> Int <: fn(...r: List[Int]) -> Int   //true - prefix match
-fn(x: Any, ...r: List[Int]) -> Int <: fn(x: Int) -> Int    //true - prefix match
-fn(_: Int) -> Int <: fn(..._: List[Int]) -> Int            //false - rest match
-fn(...r: List[Int]) -> Int <: fn(_: Int) -> Int            //true - rest covers
+fn(...r: List[Int]) -> Int         <: fn(...r: List[Int]) -> Int //true - prefix match
+fn(x: Any, ...r: List[Int]) -> Int <: fn(x: Int) -> Int          //true - prefix match
+fn(_: Int) -> Int                  <: fn(..._: List[Int]) -> Int //false - rest match
+fn(...r: List[Int]) -> Int         <: fn(_: Int) -> Int          //true - rest covers
 ```
 
 ## <a name="1.4-Combination-Types"></a>1.4 Combination Types
@@ -679,7 +679,7 @@ Int?? <: Int?             //true - algebra
 None? <: None             //true - algebra
 C1 + C2 <: C2             //true
 C1 + C1 <: C1             //true - algebra
-C1 <: C1 + C2             //false - (unless C2 <: C1)
+C1 <: C1 + C2             //false - (unless C1 <: C2)
 ```
 
 As shown in the above examples several combination types reduce to simpler version based on algebraic rules.
@@ -837,10 +837,10 @@ The result of this inverted constructor logic is that _only_ the arguments neede
 Lambda constructors in the Bosque language combine a code definition for the lambda body with a variable _copy_ semantics for closure captured variables on lambda creation. The body definition can be either an expression or a statement block. In the case of ambiguity the body is preferentially parsed as a statement block.
 
 ```none
-var f = fn(): Int => { return 1; }               //No arguments statement block body
-var g = fn(): Int => 1;                          //No arguments statement expression body
-var h = fn(x: Int): Int => x;                    //One required argument
-var k = fn(x: Int, y?: Int): Int => @{a=x, b=y}; //One required and one optional argument
+var f = fn(): Int => { return 1; }                             //No arguments statement block body
+var g = fn(): Int => 1;                                        //No arguments statement expression body
+var h = fn(x: Int): Int => x;                                  //One required argument
+var k = fn(x: Int, y?: Int): {a: Int, b: Int?} => @{a=x, b=y}; //One required and one optional argument
 
 var c = 1;
 var fc = fn(): Int => c; //Captured variable c
@@ -903,7 +903,7 @@ When combined with a chainable operator (below) the `?` operator short-circuits 
 
 The tuple typed chainable operators include:
 
-- [e] to get the value at index i in the tuple or none if the index is not defined
+- [i] to get the value at index i in the tuple or none if the index is not defined
 - @[i, ..., j], create a new tuple using the values at indices i, ..., j
 
 Examples of these include:
@@ -1069,12 +1069,12 @@ t<+(@[3, 5])    //@[1, 2, 3, 3, 5]
 var r = @{ f=1, g=2, k=true };
 r<+(@{g=5})          //@{f=1, g=5, k=true}
 r<+(@{g=3, k=false}) //@{f=1, g=3, k=false}
-r<+(@{g=5, h=0)      //@{f=1, g=5, k=true, h=0}
+r<+(@{g=5, h=0})     //@{f=1, g=5, k=true, h=0}
 
 var e = Baz@{ f=1, g=2, k=true };
 e<+(@{g=5})          //@{f=1, g=5, k=true}
 e<+(@{g=3, k=false}) //@{f=1, g=3, k=false}
-e<+(@{g=5, h=0)      //error field not defined
+e<+(@{g=5, h=0})     //error field not defined
 ```
 
 The ability to programmatically merge into values allows us to write concise data processing code and eliminate redundant code copying around individual values. In addition to helping prevent subtle bugs during initial coding the operators can also simplify the process of updating data representations when refactoring code by reducing the number of places where _explicit_ value deconstruction, update, and copies need to be used.
@@ -1496,9 +1496,6 @@ var @{f=x, h=_:Int, g=y} = @{f=1, g=2};
 //declare and assign x, y -- since g property is missing y=none
 var @{f=x, g=y?: Int} = @{f=1};
 
-//declare and assign x, y -- since g property is missing y=none
-var @{f=x, g=y?: Int} = @{f=1};
-
 //declare and assign x -- ignore optional g property
 var @{f=x, g=_?} = @{f=1};
 
@@ -1603,7 +1600,7 @@ var x = 3;
 {
     var y = 5;
 
-    var z: Int;
+    var! z: Int;
     if(x != 3) {
         z = 0;
     }
