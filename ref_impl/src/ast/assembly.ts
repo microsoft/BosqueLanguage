@@ -1093,7 +1093,7 @@ class Assembly {
         }
         else {
             //
-            //TODO: we may want to be more intelligent with unification here later
+            //TODO: we probably actually want to check if each sig matches individually and then union the results...
             //
 
             return rootSig || undefined;
