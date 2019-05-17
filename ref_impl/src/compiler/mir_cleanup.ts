@@ -1,11 +1,11 @@
-import * as assert from "assert";
-
-import { MIROp, MIRBody, MIRArgument, MIROpTag, MIRTempRegister, MIRLoadConst, MIRAccessCapturedVariable, MIRVarCaptured, MIRAccessArgVariable, MIRAccessLocalVariable, MIRVarParameter, MIRVarLocal, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRJumpCond, MIRJumpNone, MIRBasicBlock } from "./mir_ops";
-
 //-------------------------------------------------------------------------------------------------------
 // Copyright (C) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
+
+import * as assert from "assert";
+
+import { MIROp, MIRBody, MIRArgument, MIROpTag, MIRTempRegister, MIRLoadConst, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRJumpCond, MIRJumpNone, MIRBasicBlock } from "./mir_ops";
 
 //
 //Implement cleanup passes for the MIR after translation from the AST representation:
@@ -46,17 +46,17 @@ function propagateTmpAssignForOp(op: MIROp, propMap: Map<number, MIRArgument>) {
         }
         case MIROpTag.AccessCapturedVariable: {
             const lcv = op as MIRAccessCapturedVariable;
-            propagateTmpAssign_Bind(lcv.trgt, new MIRVarCaptured(lcv.name), propMap);
+            propagateTmpAssign_Bind(lcv.trgt, lcv.name, propMap);
             break;
         }
         case MIROpTag.AccessArgVariable: {
             const lav = op as MIRAccessArgVariable;
-            propagateTmpAssign_Bind(lav.trgt, new MIRVarParameter(lav.name), propMap);
+            propagateTmpAssign_Bind(lav.trgt, lav.name, propMap);
             break;
         }
         case MIROpTag.AccessLocalVariable: {
             const llv = op as MIRAccessLocalVariable;
-            propagateTmpAssign_Bind(llv.trgt, new MIRVarLocal(llv.name), propMap);
+            propagateTmpAssign_Bind(llv.trgt, llv.name, propMap);
             break;
         }
         case MIROpTag.ConstructorPrimary: {
@@ -307,7 +307,7 @@ function computeTmpUseForBody(body: MIRBody): Set<number> {
     let usedTemps = new Set<number>();
     (body.body as Map<string, MIRBasicBlock>).forEach((blk) => {
         for (let i = 0; i < blk.ops.length; ++i) {
-            const optmps = blk.ops[i].getUsed().filter((arg) => arg instanceof MIRTempRegister);
+            const optmps = blk.ops[i].getUsedVars().filter((arg) => arg instanceof MIRTempRegister);
             for (let j = 0; j < optmps.length; ++j) {
                 usedTemps.add((optmps[j] as MIRTempRegister).regID);
             }
@@ -324,7 +324,7 @@ function isDeadTempAssign(op: MIROp, liveTemps: Set<number>): boolean {
         case MIROpTag.AccessArgVariable:
         case MIROpTag.AccessLocalVariable:
         case MIROpTag.MIRRegAssign: {
-            return op.getMod().every((mv) => mv instanceof MIRTempRegister && !liveTemps.has(mv.regID));
+            return op.getModVars().every((mv) => mv instanceof MIRTempRegister && !liveTemps.has(mv.regID));
         }
         default:
             return false;
