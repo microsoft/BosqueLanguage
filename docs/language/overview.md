@@ -1219,8 +1219,8 @@ The Bosque language provides `==` and `!=` operators which work for values of th
 - `Int`
 - `String` where typed strings are implicitly coerced to their untyped version
 - `GUID`
-- `Enum` where they types and values must be the same
-- `CustomKey` where they types and values must be the same
+- `Enum` where their types and values must be the same
+- `CustomKey` where their types and values must be the same
 
 Examples of the equality operators on primitive values include:
 
