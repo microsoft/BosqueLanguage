@@ -135,11 +135,11 @@ function restArgListSimple(...arg: List[Int]): List[Int] {
     return arg;
 }
 
-function restArgSetSimple[T](...arg: TreeSet[T]): TreeSet[T] {
+function restArgSetSimple[T](...arg: HashSet[T]): HashSet[T] {
     return arg;
 }
 
-function restArgMapSimple(...arg: TreeMap[Int, Bool]): TreeMap[Int, Bool] {
+function restArgMapSimple(...arg: HashMap[Int, Bool]): HashMap[Int, Bool] {
     return arg;
 }
 
@@ -420,6 +420,42 @@ entrypoint function eqTypedStringMixedTrue(): Bool {
 
 entrypoint function eqTypedStringMixedFalse(): Bool {
     return 'hello'#Foo == "hi";
+}
+
+entrypoint function eqTupleTrue(): Bool {
+    return @[1, 2] == @[1, 2];
+}
+
+entrypoint function eqTupleFalse(): Bool {
+    return @[1] == @[3];
+}
+
+entrypoint function eqRecordTrue(): Bool {
+    return @{f=2} == @{f=2};
+}
+
+entrypoint function eqRecordFalse(): Bool {
+    return @{f=2, g=5} == @{f=2, g=1};
+}
+
+entrypoint function eqTupleTrue_Mix(): Bool {
+    var tup: [Int, Int, ?:String] = (1 != 0) ? @[1, 2] : @[1, 2, "ok"];
+    return @[1, 2] == tup;
+}
+
+entrypoint function eqTupleFalse_Mix(): Bool {
+    var tup: [Int, Int, ?:String] = (1 == 0) ? @[1, 2] : @[1, 2, "ok"];
+    return @[1, 2] == tup;
+}
+
+entrypoint function eqRecordTrue_Mix(): Bool {
+    var rec: {f:Int, g?:Int} = (1 != 0) ? @{f=2} : @{f=2, g=5};
+    return @{f=2} == rec;
+}
+
+entrypoint function eqRecordFalse_Mix(): Bool {
+    var rec: {f:Int, g?:Int} = (1 == 0) ? @{f=2} : @{f=2, g=5};
+    return @{f=2} == rec;
 }
 
 entrypoint function neqIntTrue(): Bool {
@@ -767,27 +803,27 @@ entrypoint function createListExpando(): List[Int] {
 }
 
 entrypoint function createSet(): Set[Int] {
-    return TreeSet[Int]@{ 1, 2, 3 };
+    return HashSet[Int]@{ 1, 2, 3 };
 }
 
 entrypoint function createSetOverlap(): Set[Int] {
-    return TreeSet[Int]@{ 1, 2, 3, 2 };
+    return HashSet[Int]@{ 1, 2, 3, 2 };
 }
 
 entrypoint function createSetExpando(): Set[Int] {
-    return TreeSet[Int]@{ ...TreeSet[Int]@{ 1 }, 2, ...List[Int]@{ 4, 5 } };
+    return HashSet[Int]@{ ...HashSet[Int]@{ 1 }, 2, ...List[Int]@{ 4, 5 } };
 }
 
 entrypoint function createMap(): Map[Int, Bool] {
-    return TreeMap[Int, Bool]@{ @[ 1, true ], @[ 2, true ] };
+    return HashMap[Int, Bool]@{ @[ 1, true ], @[ 2, true ] };
 }
 
 entrypoint function createMapOverlap(): Map[Int, Bool] {
-    return TreeMap[Int, Bool]@{ @[ 1, true ], @[ 2, false ], @[ 2, true ] };
+    return HashMap[Int, Bool]@{ @[ 1, true ], @[ 2, false ], @[ 2, true ] };
 }
 
 entrypoint function createMapExpando(): Map[Int, Bool] {
-    return TreeMap[Int, Bool]@{ @[ 1, true ], ...TreeMap[Int, Bool]@{ @[ 1, false ], @[ 2, true ] }, @[ 5, true ] };
+    return HashMap[Int, Bool]@{ @[ 1, true ], ...HashMap[Int, Bool]@{ @[ 1, false ], @[ 2, true ] }, @[ 5, true ] };
 }
 
 entrypoint function invokee3func(): Int {
@@ -916,6 +952,14 @@ const expression_tests: TestInfo[] = [
     { name: "eqTypedStringTrue", input: ["eqTypedStringTrue"], expected: "true" },
     { name: "eqTypedStringMixedTrue", input: ["eqTypedStringMixedTrue"], expected: "true" },
     { name: "eqTypedStringMixedFalse", input: ["eqTypedStringMixedFalse"], expected: "false" },
+    { name: "eqTupleTrue", input: ["eqTupleTrue"], expected: "true" },
+    { name: "eqTupleFalse", input: ["eqTupleFalse"], expected: "false" },
+    { name: "eqRecordTrue", input: ["eqRecordTrue"], expected: "true" },
+    { name: "eqRecordFalse", input: ["eqRecordFalse"], expected: "false" },
+    { name: "eqTupleTrue_Mix", input: ["eqTupleTrue_Mix"], expected: "true" },
+    { name: "eqTupleFalse_Mix", input: ["eqTupleFalse_Mix"], expected: "false" },
+    { name: "eqRecordTrue_Mix", input: ["eqRecordTrue_Mix"], expected: "true" },
+    { name: "eqRecordFalse_Mix", input: ["eqRecordFalse_Mix"], expected: "false" },
     { name: "neqIntTrue", input: ["neqIntTrue"], expected: "true" },
     { name: "neqIntFalse", input: ["neqIntFalse"], expected: "false" },
 
@@ -1001,21 +1045,21 @@ const expression_tests: TestInfo[] = [
     { name: "updateObj", input: ["updateObj"], expected: "NSTestExpression::E1@{ f=5, x=false, y=1, z=true }" },
 
     { name: "restCallSimpleArgsList", input: ["restCallSimpleArgsList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2 }" },
-    { name: "restCallSimpleArgsSet", input: ["restCallSimpleArgsSet"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3, 4 }" },
-    { name: "restCallOverlapArgsSet", input: ["restCallOverlapArgsSet"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3 }" },
-    { name: "restCallSimpleArgsMap", input: ["restCallSimpleArgsMap"], expected: "NSCore::TreeMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, false ], @[ 2, true ] }" },
-    { name: "restCallOverlapArgsMap", input: ["restCallOverlapArgsMap"], expected: "NSCore::TreeMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ] }" },
+    { name: "restCallSimpleArgsSet", input: ["restCallSimpleArgsSet"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 4, 1, 2, 3 }" },
+    { name: "restCallOverlapArgsSet", input: ["restCallOverlapArgsSet"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 2, 3 }" },
+    { name: "restCallSimpleArgsMap", input: ["restCallSimpleArgsMap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, false ], @[ 2, true ] }" },
+    { name: "restCallOverlapArgsMap", input: ["restCallOverlapArgsMap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ] }" },
     { name: "restCallMixedList1", input: ["restCallMixedList1"], expected: "NSCore::List[T=NSCore::Int]@{ 4, 1, 2, 3 }" },
     { name: "restCallMixedList2", input: ["restCallMixedList2"], expected: "NSCore::List[T=NSCore::Int]@{ 4, 1, 2, 3 }" },
 
     { name: "createList", input: ["createList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2 }" },
     { name: "createListExpando", input: ["createListExpando"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2, 4 }" },
-    { name: "createSet", input: ["createSet"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3 }" },
-    { name: "createSetOverlap", input: ["createSetOverlap"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 3 }" },
-    { name: "createSetExpando", input: ["createSetExpando"], expected: "NSCore::TreeSet[T=NSCore::Int]@{ 1, 2, 4, 5 }" },
-    { name: "createMap", input: ["createMap"], expected: "NSCore::TreeMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ], @[ 2, true ] }" },
-    { name: "createMapOverlap", input: ["createMapOverlap"], expected: "NSCore::TreeMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ], @[ 2, true ] }" },
-    { name: "createMapExpando", input: ["createMapExpando"], expected: "NSCore::TreeMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, false ], @[ 2, true ], @[ 5, true ] }" },
+    { name: "createSet", input: ["createSet"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 2, 3 }" },
+    { name: "createSetOverlap", input: ["createSetOverlap"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 3, 2 }" },
+    { name: "createSetExpando", input: ["createSetExpando"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 2, 4, 5 }" },
+    { name: "createMap", input: ["createMap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ], @[ 2, true ] }" },
+    { name: "createMapOverlap", input: ["createMapOverlap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ], @[ 2, true ] }" },
+    { name: "createMapExpando", input: ["createMapExpando"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, false ], @[ 2, true ], @[ 5, true ] }" },
 
     { name: "invokee3func", input: ["invokee3func"], expected: "4" },
     { name: "invokee4func", input: ["invokee4func"], expected: "false" },

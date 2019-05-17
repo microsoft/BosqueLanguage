@@ -223,7 +223,7 @@ class OOPTypeDecl {
             return false;
         }
 
-        return this.name === "List" || this.name === "TreeSet";
+        return this.name === "List" || this.name === "HashSet";
     }
 
     isTypeAMapEntity(): boolean {
@@ -231,7 +231,7 @@ class OOPTypeDecl {
             return false;
         }
 
-        return this.name === "TreeMap";
+        return this.name === "HashMap";
     }
 
     static attributeSetContains(attr: string, attrSet: string[]): boolean {
