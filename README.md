@@ -93,7 +93,7 @@ In order to build the language the following are needed:
 The `ref_impl` directory contains the reference implementation parser, type checker, interpreter, and command line runner. In this directory, build and test the Bosque reference implementation with:
 
 ```none
-npm install && npm run-script build && npm test
+npm install --production=false && npm run-script build && npm test
 ```
 
 ### Command Line Execution
