@@ -456,11 +456,9 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
     }
 }
 
-function generatePhi(sinfo: SourceInfo, lv: string, opts: Map<string, [string, MIRRegisterArgument]>, ctrs: Map<string, number>): MIRPhi {
+function generatePhi(sinfo: SourceInfo, lv: string, opts: [string, MIRRegisterArgument][], ctrs: Map<string, number>): MIRPhi {
     let vassign = new Map<string, MIRRegisterArgument>();
-    opts.forEach((v, k) => {
-        vassign.set(v[0], v[1]);
-    });
+    opts.forEach((e) => { vassign.set(e[0], e[1]); });
 
     const ssaCtr = ctrs.get(lv) as number + 1;
     ctrs.set(lv, ssaCtr);
@@ -483,19 +481,24 @@ function computePhis(sinfo: SourceInfo, block: string, ctrs: Map<string, number>
     let remap = new Map<string, MIRRegisterArgument>();
     let phis: MIRPhi[] = [];
     (live.get(block) as BlockLiveSet).liveEntry.forEach((lv) => {
-        let opts = new Map<string, [string, MIRRegisterArgument]>();
-        predmaps.forEach((pm) => opts.set((pm[1].get(lv) as MIRRegisterArgument).nameID, [pm[0], pm[1].get(lv) as MIRRegisterArgument]));
+        let phiOpts: [string, MIRRegisterArgument][] = [];
+        let uniqueOpts = new Map<string, MIRRegisterArgument>();
+        predmaps.forEach((pm) => {
+            const mreg = pm[1].get(lv) as MIRRegisterArgument;
+            uniqueOpts.set(mreg.nameID, mreg);
+            phiOpts.push([pm[0], mreg]);
+        });
 
-        if (opts.size === 1) {
+        if (uniqueOpts.size === 1) {
             let uniq: MIRRegisterArgument[] = [];
-            opts.forEach((v) => {
-                uniq.push(v[1]);
+            uniqueOpts.forEach((v) => {
+                uniq.push(v);
             });
 
             remap.set(lv, uniq[0]);
         }
         else {
-            const phi = generatePhi(sinfo, lv, opts, ctrs);
+            const phi = generatePhi(sinfo, lv, phiOpts, ctrs);
 
             phis.push(phi);
             remap.set(lv, phi.trgt);
