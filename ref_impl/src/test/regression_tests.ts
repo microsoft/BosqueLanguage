@@ -38,13 +38,37 @@ entrypoint function vInvoke2(): Int {
     var x: String = "ok";
     return convert(x);
 }
+
+function phimulti_doit(x: Int): Int
+{
+    var! res = 1;
+    if (x == 1) {
+        res = 2;
+    }
+    elif (x == 2) {
+        ;
+    }
+    else {
+        ;
+    }
+
+    return res;
+}
+
+entrypoint function phimulti(): Bool {
+    var r1 = phimulti_doit(1);
+    var r2 = phimulti_doit(2);
+    var r3 = phimulti_doit(3);
+    return r1 == 2 && r2 == r3;
+}
 `;
 
 const regression_tests: TestInfo[] = [
     { name: "stringTIncludes", input: ["stringTIncludes"], expected: "true" },
     { name: "invokeLambdaInfer", input: ["invokeLambdaInfer"], expected: "false" },
     { name: "vInvoke1", input: ["vInvoke1"], expected: "3" },
-    { name: "vInvoke2", input: ["vInvoke2"], expected: "[NO RESULT]", expectedError: true }
+    { name: "vInvoke2", input: ["vInvoke2"], expected: "[NO RESULT]", expectedError: true },
+    { name: "phimulti", input: ["phimulti"], expected: "true" },
 ];
 
 function regression_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
