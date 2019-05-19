@@ -98,10 +98,14 @@ npm install --production=false && npm run-script build && npm test
 
 ### Command Line Execution
 
-The `ref_impl` directory contains a simple command line runner for standalone Bosque (`.bsq`) files. These files must have a single `entrypoint` function called `main()` (see [some examples](ref_impl/src/test/apps)). The code in the file can be parsed, type checked, and executed with:
-
+The `ref_impl` directory contains a simple command line runner for standalone Bosque (`.bsq`) files. These files must have a single `entrypoint` function called `main()` (see [some examples](ref_impl/src/test/apps)). 
+Firstly you should compile `app_runner.ts`:
 ```none
-node bin/test/app_runner.js FILE.bsq
+tsc --downlevelIteration ref_impl/src/test/app_runner.ts
+```
+The bosque code in the file can be parsed, type checked, and executed with:
+```none
+node ref_impl/src/test/app_runner.js FILE.bsq
 ```
 
 ### Visual Studio Code Integration
