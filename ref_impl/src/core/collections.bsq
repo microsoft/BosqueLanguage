@@ -208,44 +208,40 @@ concept Set[T where Indexable] provides Collection[T] {
     virtual static intersection(...args: List[Set[T]]): Set[T] # set_intersection
 }
 
-//<summary>A TreeSet entity.</summary>
-entity TreeSet[T where Indexable] provides Set[T] {
-    override method empty(): Bool # treeset_empty
-    override method size(): Int # treeset_size
-    override method count(p: Predicate[T]): Int # treeset_count
-    override method {when T Indexable} has(v: T): Bool # treeset_has
-    override method any(p: Predicate[T]): Bool # treeset_any
-    override method all(p: Predicate[T]): Bool # treeset_all
-    override method find(p: Predicate[T]): T # treeset_find
-    override method tryFind(p: Predicate[T]): T? # treeset_tryfind
-    override method defaultFind(p: Predicate[T], default: T): T # treeset_defaultfind
-    override method filter(p: Predicate[T]): TreeSet[T] # treeset_filter
-    override method ofType[U where T](): TreeSet[U] # treeset_ofType
-    override method map[U](f: Transform[T, U]): List[U] # treeset_map
-    override method skipMap[U](f: Transform[T, U?]): List[U] # treeset_skipMap
-    override method flatMap[U](f: Transform[T, Collection[U]]): List[U] # treeset_flatMap
-    override method transform(f: Transform[T, T]): List[T] # treeset_transform
-    override method {when T Indexable} project[U](map: Map[T, U]): List[U] # treeset_project
-    override method {when T Int} min(default?: Int): Int # treeset_min
-    override method {when T Int} max(default?: Int): Int # treeset_max
-    override method {when T Int} sum(): Int # treeset_sum
+//<summary>A HashSet entity.</summary>
+entity HashSet[T where Indexable] provides Set[T] {
+    override method empty(): Bool # hashset_empty
+    override method size(): Int # hashset_size
+    override method count(p: Predicate[T]): Int # hashset_count
+    override method {when T Indexable} has(v: T): Bool # hashset_has
+    override method any(p: Predicate[T]): Bool # hashset_any
+    override method all(p: Predicate[T]): Bool # hashset_all
+    override method find(p: Predicate[T]): T # hashset_find
+    override method tryFind(p: Predicate[T]): T? # hashset_tryfind
+    override method defaultFind(p: Predicate[T], default: T): T # hashset_defaultfind
+    override method filter(p: Predicate[T]): HashSet[T] # hashset_filter
+    override method ofType[U where T](): HashSet[U] # hashset_ofType
+    override method map[U](f: Transform[T, U]): List[U] # hashset_map
+    override method skipMap[U](f: Transform[T, U?]): List[U] # hashset_skipMap
+    override method flatMap[U](f: Transform[T, Collection[U]]): List[U] # hashset_flatMap
+    override method transform(f: Transform[T, T]): List[T] # hashset_transform
+    override method {when T Indexable} project[U](map: Map[T, U]): List[U] # hashset_project
+    override method {when T Int} min(default?: Int): Int # hashset_min
+    override method {when T Int} max(default?: Int): Int # hashset_max
+    override method {when T Int} sum(): Int # hashset_sum
 
-    override method unionWith(other: Set[T]): TreeSet[T] # treeset_unionwith
-    override method difference(other: Set[T]): TreeSet[T] # treeset_difference
+    override method unionWith(other: Set[T]): HashSet[T] # hashset_unionwith
+    override method difference(other: Set[T]): HashSet[T] # hashset_difference
 
-    override static union(...args: List[Set[T]]): TreeSet[T] # treeset_union
-    override static intersection(...args: List[TreeSet[T]]): TreeSet[T] # treeset_intersection
+    override static union(...args: List[Set[T]]): HashSet[T] # hashset_union
+    override static intersection(...args: List[HashSet[T]]): HashSet[T] # hashset_intersection
 
-    //<summary>Add a single element to the set -- only available on TreeSet for performance.</summary>
-    method add(...elems: Collection[T]): TreeSet[T] # treeset_add
+    //<summary>Add a single element to the set -- only available on HashSet for performance.</summary>
+    method add(...elems: Collection[T]): HashSet[T] # hashset_add
 }
 
-//<summary>A HashSet entity.</summary>
-//entity HashSet[T where Indexable] provides Set[T] {
-//}
-
-//<summary>A SortedSet entity.</summary>
-//entity SortedSet[T where Indexable] provides Set[T] {
+//<summary>A CompactSet entity.</summary>
+//entity CompactSet[T where Indexable] provides Set[T] {
 //}
 
 //<summary>A Map concept.</summary>
@@ -338,46 +334,42 @@ concept Map[K where Indexable, V] provides Object {
     virtual static intersection(...args: List[Map[K, V]]): Map[K, V] # map_intersection
 }
 
-//<summary>A TreeMap entity.</summary>
-entity TreeMap[K where Indexable, V] provides Map[K, V] {
-    override method empty(): Bool # treemap_empty
-    override method size(): Int # treemap_size
-    override method has(k: K): Bool # treemap_haskey
-    override method {when V Indexable} hasEntry(entry: [K, V]): Bool # treemap_has
-    override method get(k: K): V # treemap_get
-    override method tryGet(k: K): V? # treemap_tryget
-    override method defaultGet(k: K, default: V): V # treemap_defaultget
-    override method entries(): List[[K, V]] # treemap_entries
-    override method keys(): List[K] # treemap_keys
-    override method values(): List[V] # treemap_values
-    override method count(p: Predicate[[K, V]]): Int # treemap_count
-    override method any(p: Predicate[[K, V]]): Bool # treemap_any
-    override method all(p: Predicate[[K, V]]): Bool # treemap_all
-    override method find(p: Predicate[[K, V]]): [K, V] # treemap_find
-    override method tryFind(p: Predicate[[K, V]]): [K, V]? # treemap_tryfind
-    override method defaultFind(p: Predicate[[K, V]], default: [K, V]): [K, V] # treemap_defaultfind
-    override method filter(p: Predicate[[K, V]]): Map[K, V] # treemap_filter
-    override method ofType[U where K, W where V](): Map[U, W] # treemap_oftype
-    override method map[U where Indexable, W](f: Transform[[K, V], [ U, W ]]): List[[ U, W ]] # treemap_map
-    override method skipMap[U](f: Transform[[K, V], [ U, W ]?]): List[[ U, W ]] # treemap_skipMap
-    override method transform(f: Transform[[K, V], [K, V]]): List[[K, V]] # treemap_transform
-    override method subsetOf(other: Collection[K] | Map[K, V]): Bool # treemap_subsetof
-    override method overlapWith(other: Collection[K] | Map[K, V]): Bool # treemap_overlapwith
-    override method disjointWith(other: Collection[K] | Map[K, V]): Bool # treemap_disjointwith
-    override method unionWith(other: Map[K, V]): Map[K, V] # treemap_unionWith
-    override method difference(other: Collection[K] | Map[K, V]): Map[K, V] # treemap_difference
+//<summary>A HashMap entity.</summary>
+entity HashMap[K where Indexable, V] provides Map[K, V] {
+    override method empty(): Bool # hashmap_empty
+    override method size(): Int # hashmap_size
+    override method has(k: K): Bool # hashmap_haskey
+    override method {when V Indexable} hasEntry(entry: [K, V]): Bool # hashmap_has
+    override method get(k: K): V # hashmap_get
+    override method tryGet(k: K): V? # hashmap_tryget
+    override method defaultGet(k: K, default: V): V # hashmap_defaultget
+    override method entries(): List[[K, V]] # hashmap_entries
+    override method keys(): List[K] # hashmap_keys
+    override method values(): List[V] # hashmap_values
+    override method count(p: Predicate[[K, V]]): Int # hashmap_count
+    override method any(p: Predicate[[K, V]]): Bool # hashmap_any
+    override method all(p: Predicate[[K, V]]): Bool # hashmap_all
+    override method find(p: Predicate[[K, V]]): [K, V] # hashmap_find
+    override method tryFind(p: Predicate[[K, V]]): [K, V]? # hashmap_tryfind
+    override method defaultFind(p: Predicate[[K, V]], default: [K, V]): [K, V] # hashmap_defaultfind
+    override method filter(p: Predicate[[K, V]]): Map[K, V] # hashmap_filter
+    override method ofType[U where K, W where V](): Map[U, W] # hashmap_oftype
+    override method map[U where Indexable, W](f: Transform[[K, V], [ U, W ]]): List[[ U, W ]] # hashmap_map
+    override method skipMap[U](f: Transform[[K, V], [ U, W ]?]): List[[ U, W ]] # hashmap_skipMap
+    override method transform(f: Transform[[K, V], [K, V]]): List[[K, V]] # hashmap_transform
+    override method subsetOf(other: Collection[K] | Map[K, V]): Bool # hashmap_subsetof
+    override method overlapWith(other: Collection[K] | Map[K, V]): Bool # hashmap_overlapwith
+    override method disjointWith(other: Collection[K] | Map[K, V]): Bool # hashmap_disjointwith
+    override method unionWith(other: Map[K, V]): Map[K, V] # hashmap_unionWith
+    override method difference(other: Collection[K] | Map[K, V]): Map[K, V] # hashmap_difference
 
-    override static union(...args: List[Map[K, V]]): Map[K, V] # treemap_union
-    override static intersection(...args: List[Map[K, V]]): Map[K, V] # treemap_intersection
+    override static union(...args: List[Map[K, V]]): Map[K, V] # hashmap_union
+    override static intersection(...args: List[Map[K, V]]): Map[K, V] # hashmap_intersection
 
-    //<summary>Add a single element to the set -- only available on TreeMap for performance.</summary>
-    method add(...elems: Collection[[K, V]]): TreeMap[K, V] # treemap_add
+    //<summary>Add a single element to the set -- only available on HashMap for performance.</summary>
+    method add(...elems: Collection[[K, V]]): HashMap[K, V] # hashmap_add
 }
 
-//<summary>A HashMap entity.</summary>
-//entity HashMap[K where Indexable, V] provides Map[K, V] {
-//}
-
-//<summary>A SortedMap entity.</summary>
-//entity SortedMap[K where Indexable, V] provides Map[K, V] {
+//<summary>A CompactMap entity.</summary>
+//entity CompactMap[K where Indexable, V] provides Map[K, V] {
 //}

@@ -236,7 +236,7 @@ As a result of these design choices there is always a single _unique_ and _canon
 Equality is a multifaceted concept in programming and ensuring consistent behavior across the many areas it can surface in a modern programming language such as `==`, `.equals`, `Set.has`, `List.sort`, is a source of subtle bugs.
 This complexity further manifests itself in the need to consider the possible aliasing relations of values, in addition to their structural data, in order to understand the behavior of a block of code. The fact that _reference equality_ is chosen as a default, or is an option, is also a bit of an anachronism as reference equality heavily ties the execution to a hardware model in which objects are associated with a memory location.
 
-In light of these issues the Bosque language does not allow user visible _reference equality_ in any operation including `==` or container operations. Instead equality is defined either by the core language for the primitives `Bool`, `Int`, `String`, `GUID`, etc., or as a user defined _composite key_ `ckey` type ([5.21 Equality Comparison](#5.21-Equality-Comparison)). The composite key type allows a developer to create a distinct type to represent a composite equality comparable value that provides the notion of equality e.g. identity, primary key, equivalence, etc. that makes sense for their domain. The language also allows types to define a key field that will be used for equality/order by the associative containers in the language ([3 Collections](#3-Collections)).
+In light of these issues the Bosque language does not allow user visible _reference equality_ in any operation including `==` or container operations. Instead equality is defined either by the core language for the primitives `Bool`, `Int`, `String`, `GUID`, etc., or as a user defined _composite key_ `identifier` type ([5.21 Equality Comparison](#5.21-Equality-Comparison)). The composite key type allows a developer to create a distinct type to represent a composite equality comparable value that provides the notion of equality e.g. identity, primary key, equivalence, etc. that makes sense for their domain. The language also allows types to define a key field that will be used for equality/order by the associative containers in the language ([3 Collections](#3-Collections)).
 
 ## <a name="0.12-Errors-and-Checks"></a>0.12 Errors and Checks
 
@@ -509,7 +509,7 @@ The nominal type system is a mostly standard _object-oriented_ design with param
 
 Users can define abstract types ([TODO]()), `concept` declarations, which allow both abstract definitions and inheritable implementations for `const` members ([TODO]()), `static` functions ([TODO]()), `field` members ([TODO]()), and virtual `method` members ([TODO]()). Bosque `concept` types are fully abstract and can never be instantiated concretely. The `entity` types can provide concepts as well as override definitions in them and can be instantiated concretely but can never be further inherited from.
 
-Developers can alias types or create special types ([TODO]()) using `typedef`, `enum`, and `ckey` constructs ([TODO]()).
+Developers can alias types or create special types ([TODO]()) using `typedef`, `enum`, and `identifier` constructs ([TODO]()).
 
 The Bosque core library defines several unique concepts/entities. The `Any` type is an uber type which all others are a subtype of, the `None` and `Some` types are for distinguishing around the unique `none` value, and `Tuple`, `Record`, etc. exist to unify with the structural type system ([section 2](#2-Core-Types)). The language has primitives for `Bool`, `Int`, `String`, etc. as well as the expected set of parametric collection types such as `List[T]` `Map[K, V]` ([section 3](#2-Collections)).
 
@@ -1234,26 +1234,20 @@ Examples of the equality operators on primitive values include:
 false == none              //false
 ```
 
-Bosque _does not_ admit _reference equality_ in any form. A program can either use explicit comparison on a primitive type _or_ a developer can define a custom key that provides the notion of equality e.g. identity, primary key, equivalence, etc. that makes sense for their domain.
+Bosque _does not_ admit _reference equality_ in any form. A program can either use explicit comparison on a primitive type _or_ a developer can define an identifier key that provides the notion of equality e.g. identity, primary key, equivalence, etc. that makes sense for their domain.
 
-Custom keys are compared using the type of the key and the pairwise equality of each field defined in the key.
+Identifier keys are compared using the type of the key and the pairwise equality of each field defined in the key.
 
 ```none
-ckey MyKey {
-    field idx: Int;
-    field category: String;
-}
+identifier MyKey [Int, String];
 
-ckey OtherKey {
-    field idx: Int;
-    field category: String;
-}
+identifier OtherKey Int;
 
-var a = MyKey@{1, "yes"};
-var b = MyKey@{1, "yes"};
-var c = MyKey@{1, "no"};
+var a = MyKey@create(@[1, "yes"]);
+var b = MyKey@create(@[1, "yes"]);
+var c = MyKey@create(@[1, "no"]);
 
-var q = OtherKey@{1, "yes"};
+var q = OtherKey@create(1);
 
 a == a //true
 a == b //true

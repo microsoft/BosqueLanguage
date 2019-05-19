@@ -149,16 +149,16 @@ concept Function provides Some {
 concept Object provides Some {
 }
 
-//<summary>All actual enums implicitly provide this concept.</summary>
-concept Enum provides Object {
+//<summary>All actual enums implicitly provide this.</summary>
+concept Enum provides Some {
 }
 
-//<summary>All actual custom keys implicitly provide this concept.</summary>
-concept CustomKey provides Object {
+//<summary>All actual custom keys implicitly provide this.</summary>
+concept CustomKey provides Some {
 }
 
 //<summary>Types that can be used as equality based keys.</summary>
-typedef KeyType = None | Bool | Int | String | GUID | Enum | CustomKey;
+typedef KeyType = None | Bool | Int | String | GUID | Enum | Tuple | Record | CustomKey;
 
 //<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
 concept Keyed[T where KeyType] provides Some {

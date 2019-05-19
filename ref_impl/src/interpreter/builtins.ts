@@ -88,8 +88,8 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
     })
     .set("string_reverse", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const val = ValueOps.convertToBasicString(args.get("this"));
-        const chars: Array<string> = val.split('').reverse();
-        return chars.join('');
+        const chars: Array<string> = val.split("").reverse();
+        return chars.join("");
     })
     .set("string_upperCase", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         return ValueOps.convertToBasicString(args.get("this")).toUpperCase();
@@ -439,7 +439,7 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
     .set("list_set", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const idx = args.get("idx") as number;
         const avals = (args.get("this") as ListValue).values;
-        
+
         return createListOf(inv.resultType, [...avals.slice(0, idx), args.get("v"), ...avals.slice(idx + 1)]);
     })
     .set("list_fill", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
@@ -447,64 +447,52 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
 
         return createListOf(inv.resultType, [...avals]);
     })
-
     .set("math_abs", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const n = args.get("n") as FloatValue;
         return new FloatValue(Math.abs(n.value));
     })
-
     .set("math_atan", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const x = args.get("x") as FloatValue;
         return new FloatValue(Math.atan(x.value));
     })
-
     .set("math_atan2", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const x = args.get("x") as FloatValue;
         const y = args.get("y") as FloatValue;
         return new FloatValue(Math.atan2(y.value, x.value));
     })
-    
     .set("math_ceil", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const n = args.get("n") as FloatValue;
         return new FloatValue(Math.ceil(n.value));
     })
-    
     .set("math_cos", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const x = args.get("x") as FloatValue;
         return new FloatValue(Math.cos(x.value));
     })
-
     .set("math_floor", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const n = args.get("n") as FloatValue;
         return new FloatValue(Math.floor(n.value));
     })
-    
     .set("math_log", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const n = args.get("n") as FloatValue;
         return new FloatValue(Math.log(n.value));
     })
-    
     .set("math_pow", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const b = args.get("b") as FloatValue;
         const e = args.get("e") as FloatValue;
         return new FloatValue(Math.pow(b.value, e.value));
     })
-    
     .set("math_round", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const n = args.get("n") as FloatValue;
         return new FloatValue(Math.round(n.value));
     })
-
     .set("math_sin", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const x = args.get("x") as FloatValue;
         return new FloatValue(Math.sin(x.value));
     })
-
     .set("math_sqrt", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const x = args.get("x") as FloatValue;
         return new FloatValue(Math.sqrt(x.value));
     })
-
     .set("math_tan", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const x = args.get("x") as FloatValue;
         return new FloatValue(Math.tan(x.value));

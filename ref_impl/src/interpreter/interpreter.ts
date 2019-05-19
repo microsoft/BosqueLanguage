@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { Value, TypedStringValue, EntityValueSimple, ValueOps, ListValue, TreeSetValue, TreeMapValue, TupleValue, RecordValue, LambdaValue } from "./value";
+import { Value, TypedStringValue, EntityValueSimple, ValueOps, ListValue, HashSetValue, HashMapValue, TupleValue, RecordValue, LambdaValue } from "./value";
 import { Environment, PrePostError, raiseRuntimeError, FunctionScope, InvariantError, NotImplementedRuntimeError } from "./interpreter_environment";
 import { MIRAssembly, MIRTupleType, MIRTupleTypeEntry, MIRRecordTypeEntry, MIRRecordType, MIREntityType, MIREntityTypeDecl, MIRFieldDecl, MIROOTypeDecl, MIRType, MIRGlobalDecl, MIRConstDecl, MIRFunctionDecl, MIRStaticDecl, MIRConceptTypeDecl, MIRMethodDecl, MIRInvokeDecl, MIRFunctionType } from "../compiler/mir_assembly";
 import { MIRBody, MIROp, MIROpTag, MIRLoadConst, MIRArgument, MIRTempRegister, MIRRegisterArgument, MIRConstantTrue, MIRConstantString, MIRConstantInt, MIRConstantNone, MIRConstantFalse, MIRLoadConstTypedString, MIRAccessNamespaceConstant, MIRAccessConstField, MIRLoadFieldDefaultValue, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRAccessFromField, MIRProjectFromProperties, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRJump, MIRJumpCond, MIRJumpNone, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRCheck, MIRAssert, MIRTruthyConvert, MIRDebug, MIRPhi, MIRVarLocal } from "../compiler/mir_ops";
@@ -153,13 +153,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, []);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, []);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, []);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, [] as TupleValue[]);
+            return HashMapValue.create(ctype, [] as TupleValue[]);
         }
     }
 
@@ -171,13 +171,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, args);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, args);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, args as TupleValue[]);
+            return HashMapValue.create(ctype, args as TupleValue[]);
         }
     }
 
@@ -189,13 +189,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, args);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, args);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, args as TupleValue[]);
+            return HashMapValue.create(ctype, args as TupleValue[]);
         }
     }
 
@@ -207,13 +207,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, args);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, args);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, args as TupleValue[]);
+            return HashMapValue.create(ctype, args as TupleValue[]);
         }
     }
 

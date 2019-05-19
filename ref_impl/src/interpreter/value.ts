@@ -7,7 +7,7 @@ import * as assert from "assert";
 import { MIRType, MIROOTypeDecl, MIRTupleType, MIRRecordType, MIRFunctionType, MIRInvokeDecl, MIREntityType } from "../compiler/mir_assembly";
 
 type Value = undefined | boolean | number | string | FloatValue | TypedStringValue | RegexValue | GUIDValue | EntityValue | TupleValue | RecordValue | LambdaValue;
-type KeyValue = undefined | boolean | number | string | GUIDValue | EnumValue | CustomKeyValue;
+type KeyValue = undefined | boolean | number | string | GUIDValue | EnumValue | TupleValue | RecordValue | CustomKeyValue;
 
 class FloatValue {
     readonly value: number;
@@ -108,15 +108,11 @@ class EnumValue extends EntityValue {
 }
 
 class CustomKeyValue extends EntityValue {
-    readonly prefix: string;
-    readonly key: string[];
-    readonly value: string;
+    readonly cvalue: undefined | boolean | number | string | GUIDValue | EnumValue | TupleValue | RecordValue;
 
-    constructor(etype: MIREntityType, prefix: string, key: string[]) {
+    constructor(etype: MIREntityType, cvalue: undefined | boolean | number | string | GUIDValue | EnumValue | TupleValue | RecordValue) {
         super(etype);
-        this.prefix = prefix;
-        this.key = key;
-        this.value = `${prefix}$[${key.join(",")}]`;
+        this.cvalue = cvalue;
     }
 }
 
@@ -141,121 +137,64 @@ class ListValue extends CollectionValue {
     }
 }
 
-//
-//TODO: make this a RB tree -- we expect terrible performance for anything but small trees with this impl
-//
-class BSTNode {
-    private key: KeyValue;
-    private left: BSTNode | undefined;
-    private right: BSTNode | undefined;
+class HashSetValue extends CollectionValue {
+    readonly enumContents: Value[];
+    readonly values: Map<number, Value[]>;
 
-    data: Value; //value for set [K, V] tuple for map
-
-    constructor(key: KeyValue, left: BSTNode | undefined, right: BSTNode | undefined, data: Value) {
-        this.key = key;
-        this.left = left;
-        this.right = right;
-        this.data = data;
-    }
-
-    static create(key: KeyValue, data: Value): BSTNode {
-        return new BSTNode(key, undefined, undefined, data);
-    }
-
-    getContentsInto(contents: Value[]) {
-        if (this.left !== undefined) {
-            this.left.getContentsInto(contents);
-        }
-
-        contents.push(this.data);
-
-        if (this.right !== undefined) {
-            this.right.getContentsInto(contents);
-        }
-    }
-
-    find(k: KeyValue): BSTNode | undefined {
-        let curr: BSTNode | undefined = this;
-        while (curr !== undefined) {
-            if (ValueOps.keyValueEqualTo(k, curr.key)) {
-                return curr;
-            }
-            else if (ValueOps.keyValueLessThan(k, curr.key)) {
-                curr = curr.left;
-            }
-            else {
-                curr = curr.right;
-            }
-        }
-        return curr;
-    }
-
-    insertDirect(k: KeyValue, v: Value) {
-        if (ValueOps.keyValueEqualTo(this.key, k)) {
-            this.data = v;
-        }
-        else if (ValueOps.keyValueLessThan(k, this.key)) {
-            if (this.left === undefined) {
-                this.left = BSTNode.create(k, v);
-            }
-            else {
-                this.left.insertDirect(k, v);
-            }
-        }
-        else {
-            if (this.right === undefined) {
-                this.right = BSTNode.create(k, v);
-            }
-            else {
-                this.right.insertDirect(k, v);
-            }
-        }
-    }
-
-    insertPersist(k: KeyValue, v: Value): BSTNode {
-        if (ValueOps.keyValueEqualTo(this.key, k)) {
-            return new BSTNode(k, this.left, this.right, v);
-        }
-        else if (ValueOps.keyValueLessThan(k, this.key)) {
-            return (this.left === undefined) ? BSTNode.create(k, v) : this.left.insertPersist(k, v);
-        }
-        else {
-            return (this.right === undefined) ? BSTNode.create(k, v) : this.right.insertPersist(k, v);
-        }
-    }
-}
-
-class TreeSetValue extends CollectionValue {
-    private enumContents: Value[] | undefined;
-    readonly tree: BSTNode | undefined;
-
-    constructor(etype: MIREntityType, tree: BSTNode | undefined) {
+    constructor(etype: MIREntityType, enumContents: Value[], values: Map<number, Value[]>) {
         super(etype);
-        this.enumContents = undefined;
-        this.tree = tree;
+        this.enumContents = enumContents;
+        this.values = values;
     }
 
-    static create(etype: MIREntityType, values: Value[]): TreeSetValue {
-        if (values.length === 0) {
-            return new TreeSetValue(etype, undefined);
+    private static has(k: number, v: Value, values: Map<number, [number, Value][]>): boolean {
+        const bucket = values.get(k);
+        if (bucket === undefined) {
+            return false;
+        }
+
+        return bucket.findIndex((e) => ValueOps.valueEqualTo(e[1], v)) !== -1;
+    }
+
+    private static insert(k: number, v: Value, ictr: number, values: Map<number, [number, Value][]>) {
+        const bucket = values.get(k);
+        if (bucket === undefined) {
+            values.set(k, [[ictr, v]]);
         }
         else {
-            let n = BSTNode.create(ValueOps.getKeyForValue(values[0]), values[0]);
-            for (let i = 1; i < values.length; ++i) {
-                n.insertDirect(ValueOps.getKeyForValue(values[i]), values[i]);
-            }
-            return new TreeSetValue(etype, n);
+            bucket.push([ictr, v]);
         }
+    }
+
+    private static update(k: number, v: Value, ictr: number, values: Map<number, [number, Value][]>) {
+        const bucket = values.get(k) as [number, Value][];
+        const bidx = bucket.findIndex((e) => ValueOps.valueEqualTo(e[1], v));
+        bucket[bidx] = [ictr, v];
+    }
+
+    static create(etype: MIREntityType, values: Value[]): HashSetValue {
+        let tvm = new Map<number, [number, Value][]>();
+        values.forEach((v, idx) => {
+            const key = ValueOps.valueHash(v);
+            if (HashSetValue.has(key, v, tvm)) {
+                HashSetValue.update(key, v, idx, tvm);
+            }
+            else {
+                HashSetValue.insert(key, v, idx, tvm);
+            }
+        });
+
+        let ec: [number, Value][] = [];
+        let vm = new Map<number, Value[]>();
+        tvm.forEach((v, k) => {
+            ec.push(...v);
+            vm.set(k, v.map((nv) => nv[1]));
+        });
+
+        return new HashSetValue(etype, ec.sort((nv1, nv2) => nv1[0] - nv2[0]).map((nv) => nv[1]), vm);
     }
 
     getEnumContents(): Value[] {
-        if (this.enumContents === undefined) {
-            this.enumContents = [];
-            if (this.tree !== undefined) {
-                this.tree.getContentsInto(this.enumContents);
-            }
-        }
-
         return this.enumContents;
     }
 }
@@ -269,46 +208,74 @@ abstract class MapValue extends EntityValue {
     abstract getEnumContents(): Value[];
 }
 
-class TreeMapValue extends MapValue {
-    private enumContents: Value[] | undefined;
-    readonly tree: BSTNode | undefined;
+class HashMapValue extends MapValue {
+    readonly enumContents: Value[];
+    readonly values: Map<number, TupleValue[]>;
 
-    constructor(etype: MIREntityType, tree: BSTNode | undefined) {
+    constructor(etype: MIREntityType, enumContents: Value[], values: Map<number, TupleValue[]>) {
         super(etype);
-        this.enumContents = undefined;
-        this.tree = tree;
+        this.enumContents = enumContents;
+        this.values = values;
     }
 
-    static create(etype: MIREntityType, values: TupleValue[]): TreeSetValue {
-        if (values.length === 0) {
-            return new TreeSetValue(etype, undefined);
+    private static has(k: number, v: TupleValue, values: Map<number, [number, TupleValue][]>): boolean {
+        const bucket = values.get(k);
+        if (bucket === undefined) {
+            return false;
+        }
+
+        return bucket.findIndex((e) => ValueOps.valueEqualTo(e[1].values[0], v.values[0])) !== -1;
+    }
+
+    private static insert(k: number, v: TupleValue, ictr: number, values: Map<number, [number, TupleValue][]>) {
+        const bucket = values.get(k);
+        if (bucket === undefined) {
+            values.set(k, [[ictr, v]]);
         }
         else {
-            let n = BSTNode.create(ValueOps.getKeyForValue(values[0].values[0]), values[0]);
-            for (let i = 1; i < values.length; ++i) {
-                n.insertDirect(ValueOps.getKeyForValue(values[i].values[0]), values[i]);
-            }
-            return new TreeSetValue(etype, n);
+            bucket.push([ictr, v]);
         }
     }
 
-    lookup(key: KeyValue): Value | null {
-        if (this.tree === undefined) {
+    private static update(k: number, v: TupleValue, ictr: number, values: Map<number, [number, TupleValue][]>) {
+        const bucket = values.get(k) as [number, TupleValue][];
+        const bidx = bucket.findIndex((e) => ValueOps.valueEqualTo(e[1].values[0], v.values[0]));
+        bucket[bidx] = [ictr, v];
+    }
+
+    static create(etype: MIREntityType, values: TupleValue[]): HashMapValue {
+        let tvm = new Map<number, [number, TupleValue][]>();
+        values.forEach((v, idx) => {
+            const key = ValueOps.valueHash(v.values[0]);
+            if (HashMapValue.has(key, v, tvm)) {
+                HashMapValue.update(key, v, idx, tvm);
+            }
+            else {
+                HashMapValue.insert(key, v, idx, tvm);
+            }
+        });
+
+        let ec: [number, TupleValue][] = [];
+        let vm = new Map<number, TupleValue[]>();
+        tvm.forEach((v, k) => {
+            ec.push(...v);
+            vm.set(k, v.map((nv) => nv[1]));
+        });
+
+        return new HashMapValue(etype, ec.sort((nv1, nv2) => nv1[0] - nv2[0]).map((nv) => nv[1]), vm);
+    }
+
+    lookup(key: Value): Value | null {
+        const bucket = this.values.get(ValueOps.valueHash(key));
+        if (bucket === undefined) {
             return null;
         }
 
-        const nn = this.tree.find(key);
-        return nn !== undefined ? nn.data : null;
+        const bidx = bucket.findIndex((e) => ValueOps.valueEqualTo(e.values[0], key));
+        return (bidx !== -1) ? bucket[bidx].values[1] : null;
     }
 
     getEnumContents(): Value[] {
-        if (this.enumContents === undefined) {
-            this.enumContents = [];
-            if (this.tree !== undefined) {
-                this.tree.getContentsInto(this.enumContents);
-            }
-        }
-
         return this.enumContents;
     }
 }
@@ -413,7 +380,7 @@ class ValueOps {
                     return v.etype.ekey + "::" + v.enumValue;
                 }
                 else if (v instanceof CustomKeyValue) {
-                    return v.etype.ekey + "::" + v.value;
+                    return v.etype.ekey + "::" + v.cvalue;
                 }
                 else if (v instanceof EntityValueSimple) {
                     let vals: string[] = [];
@@ -424,11 +391,11 @@ class ValueOps {
                     const vals = v.values.map((lv) => ValueOps.diagnosticPrintValue(lv));
                     return v.etype.ekey + (vals.length === 0 ? "@{}" : `@{ ${vals.join(", ")} }`);
                 }
-                else if (v instanceof TreeSetValue) {
+                else if (v instanceof HashSetValue) {
                     const vals = v.getEnumContents().map((sv) => ValueOps.diagnosticPrintValue(sv));
                     return v.etype.ekey + (vals.length === 0 ? "@{}" : `@{ ${vals.join(", ")} }`);
                 }
-                else if (v instanceof TreeMapValue) {
+                else if (v instanceof HashMapValue) {
                     const vals = v.getEnumContents().map((mv) => ValueOps.diagnosticPrintValue(mv));
                     return v.etype.ekey + (vals.length === 0 ? "@{}" : `@{ ${vals.join(", ")} }`);
                 }
@@ -538,10 +505,25 @@ class ValueOps {
             else if (v instanceof EnumValue) {
                 return ValueOps.hashHelper(ValueOps.hashStringHelper(v.etype.ekey as string, 43), v.enumValue);
             }
+            else if (v instanceof TupleValue) {
+                let hv = ValueOps.hashStringHelper(v.ttype.trkey, 33);
+                v.values.forEach((tv) => {
+                    hv = ValueOps.hashHelper(hv, ValueOps.valueHash(tv));
+                });
+                return hv;
+            }
+            else if (v instanceof RecordValue) {
+                let hv = ValueOps.hashStringHelper(v.rtype.trkey, 53);
+                v.values.forEach((rv) => {
+                    hv = ValueOps.hashHelper(hv, ValueOps.hashStringHelper(rv[0], 101));
+                    hv = ValueOps.hashHelper(hv, ValueOps.valueHash(rv[1]));
+                });
+                return hv;
+            }
             else {
                 assert(v instanceof CustomKeyValue);
 
-                return ValueOps.hashStringHelper((v as CustomKeyValue).value, 101);
+                return ValueOps.keyValueHash((v as CustomKeyValue).cvalue);
             }
         }
     }
@@ -553,6 +535,10 @@ class ValueOps {
     static keyValueEqualTo(v1: KeyValue, v2: KeyValue): boolean {
         if (v1 === undefined || v2 === undefined) {
             return v1 === v2;
+        }
+
+        if (ValueOps.keyValueHash(v1) !== ValueOps.keyValueHash(v2)) {
+            return false;
         }
 
         const t1 = typeof (v1);
@@ -573,8 +559,34 @@ class ValueOps {
             else if (v1 instanceof EnumValue && v2 instanceof EnumValue) {
                 return v1.etype.ekey === v2.etype.ekey && v1.enumValue === v2.enumValue;
             }
+            else if (v1 instanceof TupleValue && v2 instanceof TupleValue) {
+                if (v1.values.length !== v2.values.length) {
+                    return false;
+                }
+
+                for (let i = 0; i < v1.values.length; ++i) {
+                    if (!ValueOps.valueEqualTo(v1.values[i], v2.values[i])) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            else if (v1 instanceof RecordValue && v2 instanceof RecordValue) {
+                if (v1.values.length !== v2.values.length) {
+                    return false;
+                }
+
+                for (let i = 0; i < v1.values.length; ++i) {
+                    if (v1.values[i][0] !== v2.values[i][0] || !ValueOps.valueEqualTo(v1.values[i][1], v2.values[i][1])) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
             else if (v1 instanceof CustomKeyValue && v2 instanceof CustomKeyValue) {
-                return (v1 as CustomKeyValue).value === (v2 as CustomKeyValue).value;
+                return (v1.etype.ekey === v2.etype.ekey) && ValueOps.keyValueEqualTo((v1 as CustomKeyValue).cvalue, (v2 as CustomKeyValue).cvalue);
             }
             else {
                 return false;
@@ -586,58 +598,16 @@ class ValueOps {
         return ValueOps.keyValueEqualTo(ValueOps.getKeyForValue(v1), ValueOps.getKeyForValue(v2));
     }
 
-    static keyValueLessThan(v1: KeyValue, v2: KeyValue): boolean {
-        if (v1 === undefined || v2 === undefined) {
-            return v1 === undefined || v2 !== undefined;
-        }
+    static valueLessThan(v1: Value, v2: Value): boolean {
+        const rv1 = (typeof(v1) === "object" && v1 instanceof TypedStringValue) ? v1.value : v1;
+        const rv2 = (typeof(v2) === "object" && v2 instanceof TypedStringValue) ? v2.value : v2;
 
-        const t1 = typeof (v1);
-        const t2 = typeof (v2);
-        if (t1 !== t2) {
-            if (t1 === "boolean") {
-                return true;
-            }
-
-            if (t1 === "number" && t2 !== "boolean") {
-                return true;
-            }
-
-            if (t1 === "string" && t2 !== "boolean" && t2 !== "number") {
-                return true;
-            }
-
-            if (t1 === "object") {
-                return false;
-            }
-        }
-
-        if (t1 === "boolean" && t2 === "boolean") {
-            return !(v1 as boolean) && (v2 as boolean);
-        }
-        else if (t1 === "number" && t2 === "number") {
-            return (v1 as number) < (v2 as number);
-        }
-        else if (t1 === "string" && t2 === "string") {
-            return (v1 as string) < (v2 as string);
+        if (typeof(rv1) === "number" && typeof(rv2) === "number") {
+            return (rv1 as number) < (rv2 as number);
         }
         else {
-            if (v1 instanceof GUIDValue && v2 instanceof GUIDValue) {
-                return v1.host < v2.host || (v1.host === v2.host && v1.tag < v2.tag);
-            }
-            else if (v1 instanceof EnumValue && v2 instanceof EnumValue) {
-                return v1.etype.trkey < v2.etype.trkey || (v1.etype.trkey === v2.etype.trkey && v1.enumValue < v2.enumValue);
-            }
-            else if (v1 instanceof CustomKeyValue && v2 instanceof CustomKeyValue) {
-                return (v1 as CustomKeyValue).value < (v2 as CustomKeyValue).value;
-            }
-            else {
-                return (v1 as EntityValue).etype.ekey < (v2 as EntityValue).etype.ekey;
-            }
+            return (rv1 as string) < (rv2 as string);
         }
-    }
-
-    static valueLessThan(v1: Value, v2: Value): boolean {
-        return ValueOps.keyValueLessThan(ValueOps.getKeyForValue(v1), ValueOps.getKeyForValue(v2));
     }
 }
 
@@ -645,5 +615,5 @@ export {
     Value, KeyValue, FloatValue, TypedStringValue, RegexValue, GUIDValue, ValueOps,
     TupleValue, RecordValue, LambdaValue,
     EntityValue, EntityValueSimple, EnumValue, CustomKeyValue,
-    CollectionValue, ListValue, TreeSetValue, MapValue, TreeMapValue
+    CollectionValue, ListValue, HashSetValue, MapValue, HashMapValue
 };

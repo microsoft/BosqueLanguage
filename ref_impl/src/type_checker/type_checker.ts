@@ -128,6 +128,16 @@ class TypeChecker {
     }
 
     private checkValueEq(lhs: ResolvedType, rhs: ResolvedType): boolean {
+        return lhs.options.some((lhsopt) => {
+            const lhst = ResolvedType.createSingle(lhsopt);
+            return rhs.options.some((rhsopt) => {
+                const rhst = ResolvedType.createSingle(rhsopt);
+                return this.checkValueEq_Single(lhst, rhst);
+            });
+        });
+    }
+
+    private checkValueEq_Single(lhs: ResolvedType, rhs: ResolvedType): boolean {
         if (this.m_assembly.subtypeOf(lhs, this.m_assembly.getSpecialNoneType()) || this.m_assembly.subtypeOf(rhs, this.m_assembly.getSpecialNoneType())) {
             return true;
         }
@@ -146,6 +156,77 @@ class TypeChecker {
 
         if (bothEnum || bothCustomKey) {
             return this.m_assembly.subtypeOf(lhs, rhs) && this.m_assembly.subtypeOf(rhs, lhs); //types are equal
+        }
+
+        const bothTuple = (this.m_assembly.subtypeOf(lhs, this.m_assembly.getSpecialTupleConceptType()) && this.m_assembly.subtypeOf(rhs, this.m_assembly.getSpecialTupleConceptType()));
+        if (bothTuple) {
+            const tup1 = this.m_assembly.normalizeToTupleRepresentation(lhs.options[0]);
+            const tup2 = this.m_assembly.normalizeToTupleRepresentation(rhs.options[0]);
+
+            for (let i = 0; i < Math.max(tup1.types.length, tup2.types.length); ++i) {
+                const t1 = (i < tup1.types.length) ? tup1.types[i] : undefined;
+                const t2 = (i < tup2.types.length) ? tup2.types[i] : undefined;
+
+                if (t1 !== undefined && !t1.isOptional && t2 !== undefined && !t2.isOptional) {
+                    if (!this.checkValueEq(t1.type, t2.type)) {
+                        return false;
+                    }
+                }
+                else {
+                    if (t1 !== undefined && t2 === undefined) {
+                        if (!t1.isOptional && !tup2.isOpen) {
+                            return false;
+                        }
+                    }
+
+                    if (t1 === undefined && t2 !== undefined) {
+                        if (!tup1.isOpen && !t2.isOptional) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        const bothRecord = (this.m_assembly.subtypeOf(lhs, this.m_assembly.getSpecialRecordConceptType()) && this.m_assembly.subtypeOf(rhs, this.m_assembly.getSpecialRecordConceptType()));
+        if (bothRecord) {
+            const rec1 = this.m_assembly.normalizeToRecordRepresentation(lhs.options[0]);
+            const rec2 = this.m_assembly.normalizeToRecordRepresentation(rhs.options[0]);
+
+            let allprops = new Set<string>();
+            rec1.entries.forEach((e) => allprops.add(e.name));
+            rec2.entries.forEach((e) => allprops.add(e.name));
+
+            let pl: string[] = [];
+            allprops.forEach((se) => pl.push(se));
+
+            for (let i = 0; i < pl.length; ++i) {
+                const t1 = rec1.entries.find((v) => v.name === pl[i]);
+                const t2 = rec2.entries.find((v) => v.name === pl[i]);
+
+                if (t1 !== undefined && !t1.isOptional && t2 !== undefined && !t2.isOptional) {
+                    if (!this.checkValueEq(t1.type, t2.type)) {
+                        return false;
+                    }
+                }
+                else {
+                    if (t1 !== undefined && t2 === undefined) {
+                        if (!t1.isOptional && !rec2.isOpen) {
+                            return false;
+                        }
+                    }
+
+                    if (t1 === undefined && t2 !== undefined) {
+                        if (!rec1.isOpen && !t2.isOptional) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
         }
 
         return false;
@@ -1703,13 +1784,7 @@ class TypeChecker {
         const rhsreg = this.m_emitter.bodyEmitter.generateTmpRegister();
         const rhs = this.checkExpression(env, exp.rhs, rhsreg);
 
-        const pairwiseok = lhs.getExpressionResult().etype.options.every((lhsopt) => {
-            const lhst = ResolvedType.createSingle(lhsopt);
-            return rhs.getExpressionResult().etype.options.every((rhsopt) => {
-                const rhst = ResolvedType.createSingle(rhsopt);
-                return this.checkValueEq(lhst, rhst);
-            });
-        });
+        const pairwiseok = this.checkValueEq(lhs.getExpressionResult().etype, rhs.getExpressionResult().etype);
         this.raiseErrorIf(exp.sinfo, !pairwiseok, "Types are incompatible for equality compare");
 
         if (this.m_emitEnabled) {
@@ -2101,9 +2176,9 @@ class TypeChecker {
             this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(expt, ResolvedType.createSingle(ResolvedTupleAtomType.createGenericOpen())), "Assign value is not subtype of declared variable type");
 
             for (let i = 0; i < assign.assigns.length; ++i) {
-                const isopt = expt.options.some((atom) => (atom as ResolvedTupleAtomType).types.length < i || (atom as ResolvedTupleAtomType).types[i].isOptional);
+                const aopt = expt.options.some((atom) => (atom as ResolvedTupleAtomType).types.length < i || (atom as ResolvedTupleAtomType).types[i].isOptional);
                 const ttype = this.getInfoForLoadFromIndex(expt, i);
-                this.checkStructuredAssign(sinfo, env, isopt, [...cpath, i], assign.assigns[i], ttype, allDeclared, allAssigned);
+                this.checkStructuredAssign(sinfo, env, aopt, [...cpath, i], assign.assigns[i], ttype, allDeclared, allAssigned);
             }
 
             if (!assign.isOpen) {
@@ -2120,12 +2195,12 @@ class TypeChecker {
             const rassign = assign as RecordStructuredAssignment;
             for (let i = 0; i < rassign.assigns.length; ++i) {
                 const pname = rassign.assigns[i][0];
-                const isopt = expt.options.some((atom) => {
+                const aopt = expt.options.some((atom) => {
                     const entry = (atom as ResolvedRecordAtomType).entries.find((re) => re.name === pname);
                     return (entry === undefined || entry.isOptional);
                 });
                 const ttype = this.getInfoForLoadFromPropertyName(expt, pname);
-                this.checkStructuredAssign(sinfo, env, isopt, [...cpath, pname], rassign.assigns[i][1], ttype, allDeclared, allAssigned);
+                this.checkStructuredAssign(sinfo, env, aopt, [...cpath, pname], rassign.assigns[i][1], ttype, allDeclared, allAssigned);
             }
 
             if (!rassign.isOpen) {

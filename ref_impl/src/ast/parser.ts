@@ -32,7 +32,7 @@ const KeywordStrings = [
     "from",
     "function",
     "global",
-    "ckey",
+    "identifier",
     "if",
     "invariant",
     "method",
@@ -259,7 +259,7 @@ class Lexer {
         }
 
         if (m.groups) {
-            var groups = m.groups;
+            const groups = m.groups;
             if (groups.multiline !== undefined) {
                 for (const char of groups.multiline) {
                     if (char === "\n") {
@@ -267,7 +267,7 @@ class Lexer {
                     }
                 }
             }
-            if (groups.multilineEndChar !== undefined && groups.multilineEndChar !== '/')
+            if (groups.multilineEndChar !== undefined && groups.multilineEndChar !== "/")
             {
                 this.recordLexToken(this.m_cpos, TokenStrings.Error);
             }
@@ -1580,7 +1580,7 @@ class Parser {
                 const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), isConst ? "var" : "var!", decls);
                 decls.forEach((dv) => {
                     if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
-                        this.raiseError(line, "Variable name is already defined")
+                        this.raiseError(line, "Variable name is already defined");
                     }
                     this.m_penv.getCurrentFunctionScope().defineLocalVar(dv);
                 });
@@ -1628,7 +1628,7 @@ class Parser {
             const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
             decls.forEach((dv) => {
                 if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
-                    this.raiseError(line, "Variable name is already defined")
+                    this.raiseError(line, "Variable name is already defined");
                 }
                 this.m_penv.getCurrentFunctionScope().defineLocalVar(dv);
             });
@@ -2170,12 +2170,12 @@ class Parser {
         let parseok = true;
         while (this.m_cpos < this.m_epos) {
             try {
-                this.m_cpos = this.scanTokenOptions("function", "global", "typedef", "concept", "entity", "enum", "ckey");
+                this.m_cpos = this.scanTokenOptions("function", "global", "typedef", "concept", "entity", "enum", "identifier");
                 if (this.m_cpos === this.m_epos) {
                     const tokenIndexBeforeEOF = this.m_cpos - 2;
                     if (tokenIndexBeforeEOF >= 0 && tokenIndexBeforeEOF < this.m_tokens.length) {
                         const tokenBeforeEOF = this.m_tokens[tokenIndexBeforeEOF];
-                        if (tokenBeforeEOF.kind === TokenStrings.Error) { 
+                        if (tokenBeforeEOF.kind === TokenStrings.Error) {
                             this.raiseError(tokenBeforeEOF.line, `Expected */ but found EOF`);
                         }
                     }
@@ -2192,7 +2192,7 @@ class Parser {
 
                     nsdecl.declaredNames.add(ns + "::" + fname);
                 }
-                else if (this.testToken("typedef") || this.testToken("concept") || this.testToken("entity") || this.testToken("enum") || this.testToken("ckey")) {
+                else if (this.testToken("typedef") || this.testToken("concept") || this.testToken("entity") || this.testToken("enum") || this.testToken("identifier")) {
                     this.consumeToken();
                     this.ensureToken(TokenStrings.Type);
                     const tname = this.consumeTokenAndGetValue();
@@ -2232,7 +2232,7 @@ class Parser {
         let usingok = true;
         let parseok = true;
         while (this.m_cpos < this.m_epos) {
-            const rpos = this.scanTokenOptions("function", "global", "using", "typedef", "concept", "entity", "enum", "ckey", TokenStrings.EndOfStream);
+            const rpos = this.scanTokenOptions("function", "global", "using", "typedef", "concept", "entity", "enum", "identifier", TokenStrings.EndOfStream);
 
             try {
                 if (rpos === this.m_epos) {
