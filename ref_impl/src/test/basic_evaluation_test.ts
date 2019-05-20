@@ -714,6 +714,11 @@ entrypoint function lambdaArgumentInferTest(): Int {
     return lambdaArgument(fn(x) => { return x * 2; }, 3);
 }
 
+entrypoint function lambdaMultiTest():Int {
+    var f = (1 == 1) ? fn(x: Int): Int => { return x * 2; } : fn(x: Any): Int => { return 2; };
+    return f(3);
+}
+
 entrypoint function createObjSimple(): E1 {
     return E1@{ x=none, y=1, z=true, f=3 };
 }
@@ -1028,6 +1033,7 @@ const expression_tests: TestInfo[] = [
     { name: "lambdaShortTestOut", input: ["lambdaShortTestOut"], expected: "none" },
     { name: "lambdaArgumentTest", input: ["lambdaArgumentTest"], expected: "6" },
     { name: "lambdaArgumentInferTest", input: ["lambdaArgumentInferTest"], expected: "6" },
+    { name: "lambdaMultiTest", input: ["lambdaMultiTest"], expected: "6" },
 
     { name: "createObjSimple", input: ["createObjSimple"], expected: "NSTestExpression::E1@{ f=3, x=none, y=1, z=true }" },
     { name: "createObjDefault", input: ["createObjDefault"], expected: "NSTestExpression::E1@{ f=3, x=none, y=3, z=true }" },
