@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as FS from "fs";
+import * as Path from "path";
 import chalk from "chalk";
 import { Interpreter } from "../interpreter/interpreter";
 import { ValueOps } from "../interpreter/value";
@@ -13,12 +14,14 @@ import { PackageConfig, MIRAssembly } from "../compiler/mir_assembly";
 function runApp(app: string) {
     process.stdout.write("Reading app code...\n");
 
+    let bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
+
     let files: { relativePath: string, contents: string }[] = [];
     try {
-        const coredir = "./src/core/core.bsq";
+        const coredir = Path.join(bosque_dir, "src/core/core.bsq");
         const coredata = FS.readFileSync(coredir).toString();
 
-        const collectionsdir = "./src/core/collections.bsq";
+        const collectionsdir = Path.join(bosque_dir, "src/core/collections.bsq");
         const collectionsdata = FS.readFileSync(collectionsdir).toString();
 
         const appdir = app;
@@ -54,6 +57,11 @@ function runApp(app: string) {
 
     process.stdout.write(`Done with -- ${res}\n`);
     process.exit(0);
+}
+
+if (!process.argv[2]) {
+    process.stdout.write(chalk.red("Error -- Please specify a source file as an argument"));
+    process.exit(1);
 }
 
 ////
