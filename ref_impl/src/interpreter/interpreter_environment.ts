@@ -53,6 +53,8 @@ class FunctionScope {
     private m_activeblock: MIRBasicBlock;
     private m_activeops: MIROp[];
 
+    private m_lastJumpBlock: string;
+
     private readonly m_captured: Map<string, Value>;
     private readonly m_args: Map<string, Value>;
     private readonly m_locals: Map<string, Value>;
@@ -65,6 +67,8 @@ class FunctionScope {
         this.m_flow = flow;
         this.m_activeblock = this.m_flow.get("entry") as MIRBasicBlock;
         this.m_activeops = this.m_activeblock.ops;
+
+        this.m_lastJumpBlock = "[NO JUMP]";
 
         this.m_args = args;
         this.m_captured = captured;
@@ -123,6 +127,14 @@ class FunctionScope {
     setActiveBlock(label: string) {
         this.m_activeblock = this.m_flow.get(label) as MIRBasicBlock;
         this.m_activeops = this.m_activeblock.ops;
+    }
+
+    getLastJumpSource(): string {
+        return this.m_lastJumpBlock;
+    }
+
+    setLastJumpSource() {
+        this.m_lastJumpBlock = this.m_activeblock.label;
     }
 
     stringify(): string {

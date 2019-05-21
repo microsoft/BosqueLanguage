@@ -3,10 +3,10 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { Value, TypedStringValue, EntityValueSimple, ValueOps, ListValue, TreeSetValue, TreeMapValue, TupleValue, RecordValue, LambdaValue } from "./value";
+import { Value, TypedStringValue, EntityValueSimple, ValueOps, ListValue, HashSetValue, HashMapValue, TupleValue, RecordValue, LambdaValue } from "./value";
 import { Environment, PrePostError, raiseRuntimeError, FunctionScope, InvariantError, NotImplementedRuntimeError } from "./interpreter_environment";
 import { MIRAssembly, MIRTupleType, MIRTupleTypeEntry, MIRRecordTypeEntry, MIRRecordType, MIREntityType, MIREntityTypeDecl, MIRFieldDecl, MIROOTypeDecl, MIRType, MIRGlobalDecl, MIRConstDecl, MIRFunctionDecl, MIRStaticDecl, MIRConceptTypeDecl, MIRMethodDecl, MIRInvokeDecl, MIRFunctionType } from "../compiler/mir_assembly";
-import { MIRBody, MIROp, MIROpTag, MIRLoadConst, MIRArgument, MIRTempRegister, MIRRegisterArgument, MIRConstantTrue, MIRConstantString, MIRConstantInt, MIRConstantNone, MIRConstantFalse, MIRLoadConstTypedString, MIRAccessNamespaceConstant, MIRAccessConstField, MIRLoadFieldDefaultValue, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRAccessFromField, MIRProjectFromProperties, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRJump, MIRJumpCond, MIRJumpNone, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRCheck, MIRAssert, MIRTruthyConvert, MIRDebug } from "../compiler/mir_ops";
+import { MIRBody, MIROp, MIROpTag, MIRLoadConst, MIRArgument, MIRTempRegister, MIRRegisterArgument, MIRConstantTrue, MIRConstantString, MIRConstantInt, MIRConstantNone, MIRConstantFalse, MIRLoadConstTypedString, MIRAccessNamespaceConstant, MIRAccessConstField, MIRLoadFieldDefaultValue, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRAccessFromField, MIRProjectFromProperties, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRJump, MIRJumpCond, MIRJumpNone, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRCheck, MIRAssert, MIRTruthyConvert, MIRDebug, MIRPhi, MIRVarLocal } from "../compiler/mir_ops";
 
 import * as assert from "assert";
 import { BuiltinCalls, BuiltinCallSig } from "./builtins";
@@ -153,13 +153,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, []);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, []);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, []);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, [] as TupleValue[]);
+            return HashMapValue.create(ctype, [] as TupleValue[]);
         }
     }
 
@@ -171,13 +171,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, args);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, args);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, args as TupleValue[]);
+            return HashMapValue.create(ctype, args as TupleValue[]);
         }
     }
 
@@ -189,13 +189,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, args);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, args);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, args as TupleValue[]);
+            return HashMapValue.create(ctype, args as TupleValue[]);
         }
     }
 
@@ -207,13 +207,13 @@ class Interpreter {
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
         }
-        else if (ootype.name === "TreeSet") {
-            return TreeSetValue.create(ctype, args);
+        else if (ootype.name === "HashSet") {
+            return HashSetValue.create(ctype, args);
         }
         else {
-            assert(ootype.name === "TreeMap");
+            assert(ootype.name === "HashMap");
 
-            return TreeMapValue.create(ctype, args as TupleValue[]);
+            return HashMapValue.create(ctype, args as TupleValue[]);
         }
     }
 
@@ -254,17 +254,17 @@ class Interpreter {
             }
             case MIROpTag.AccessCapturedVariable: {
                 const lcv = op as MIRAccessCapturedVariable;
-                fscope.assignTmpReg(lcv.trgt.regID, fscope.lookupVar(lcv.name));
+                fscope.assignTmpReg(lcv.trgt.regID, fscope.lookupVar(lcv.name.nameID));
                 break;
             }
             case MIROpTag.AccessArgVariable: {
                 const lav = op as MIRAccessArgVariable;
-                fscope.assignTmpReg(lav.trgt.regID, fscope.lookupVar(lav.name));
+                fscope.assignTmpReg(lav.trgt.regID, fscope.lookupVar(lav.name.nameID));
                 break;
             }
             case MIROpTag.AccessLocalVariable: {
                 const llv = op as MIRAccessLocalVariable;
-                fscope.assignTmpReg(llv.trgt.regID, fscope.lookupVar(llv.name));
+                fscope.assignTmpReg(llv.trgt.regID, fscope.lookupVar(llv.name.nameID));
                 break;
             }
             case MIROpTag.ConstructorPrimary: {
@@ -696,7 +696,7 @@ class Interpreter {
             }
             case MIROpTag.MIRVarStore: {
                 const vs = op as MIRVarStore;
-                fscope.assignVar(vs.name, this.getArgValue(fscope, vs.src));
+                fscope.assignVar(vs.name.nameID, this.getArgValue(fscope, vs.src));
                 break;
             }
             case MIROpTag.MIRReturnAssign: {
@@ -725,25 +725,41 @@ class Interpreter {
                 }
                 else {
                     const pval = this.getArgValue(fscope, dbg.value);
-                    console.log(ValueOps.diagnosticPrintValue(pval));
+                    process.stdout.write(ValueOps.diagnosticPrintValue(pval) + "\n");
                 }
                 break;
             }
             case MIROpTag.MIRJump: {
                 const jop = op as MIRJump;
+                fscope.setLastJumpSource();
                 fscope.setActiveBlock(jop.trgtblock);
                 break;
             }
             case MIROpTag.MIRJumpCond: {
                 const cjop = op as MIRJumpCond;
                 const bv = ValueOps.convertBoolOrNoneToBool(this.getArgValue(fscope, cjop.arg));
+                fscope.setLastJumpSource();
                 fscope.setActiveBlock(bv ? cjop.trueblock : cjop.falseblock);
                 break;
             }
             case MIROpTag.MIRJumpNone: {
                 const njop = op as MIRJumpNone;
                 const bv = this.getArgValue(fscope, njop.arg) === undefined;
+                fscope.setLastJumpSource();
                 fscope.setActiveBlock(bv ? njop.noneblock : njop.someblock);
+                break;
+            }
+            case MIROpTag.MIRPhi: {
+                const pop = op as MIRPhi;
+                const uvar = pop.src.get(fscope.getLastJumpSource()) as MIRRegisterArgument;
+                if (pop.trgt instanceof MIRTempRegister) {
+                    fscope.assignTmpReg(pop.trgt.regID, this.getArgValue(fscope, uvar));
+                }
+                else {
+                    assert(pop.trgt instanceof MIRVarLocal);
+
+                    fscope.assignVar(pop.trgt.nameID, this.getArgValue(fscope, uvar));
+                }
                 break;
             }
             case MIROpTag.MIRVarLifetimeStart: {

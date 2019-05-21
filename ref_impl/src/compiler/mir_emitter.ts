@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo, Parser } from "../ast/parser";
-import { MIRTempRegister, MIROp, MIRLoadConst, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantString, MIRLoadConstTypedString, MIRTypeKey, MIRAccessNamespaceConstant, MIRAccessConstField, MIRConstKey, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRArgument, MIRLambdaKey, MIRFunctionKey, MIRStaticKey, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRMethodKey, MIRGlobalKey, MIRAccessFromIndex, MIRProjectFromIndecies, MIRProjectFromProperties, MIRProjectFromFields, MIRAccessFromProperty, MIRAccessFromField, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorPrimaryCollectionEmpty, MIRResolvedTypeKey, MIRFieldKey, MIRLoadFieldDefaultValue, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRVirtualMethodKey, MIRInvokeVirtualTarget, MIRCallLambda, MIRJump, MIRJumpCond, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRBody, MIRAssert, MIRCheck, MIRBasicBlock, MIRTruthyConvert, MIRJumpNone, MIRDebug } from "./mir_ops";
+import { MIRTempRegister, MIROp, MIRLoadConst, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantString, MIRLoadConstTypedString, MIRTypeKey, MIRAccessNamespaceConstant, MIRAccessConstField, MIRConstKey, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRArgument, MIRLambdaKey, MIRFunctionKey, MIRStaticKey, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRMethodKey, MIRGlobalKey, MIRAccessFromIndex, MIRProjectFromIndecies, MIRProjectFromProperties, MIRProjectFromFields, MIRAccessFromProperty, MIRAccessFromField, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorPrimaryCollectionEmpty, MIRResolvedTypeKey, MIRFieldKey, MIRLoadFieldDefaultValue, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRVirtualMethodKey, MIRInvokeVirtualTarget, MIRCallLambda, MIRJump, MIRJumpCond, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRBody, MIRAssert, MIRCheck, MIRBasicBlock, MIRTruthyConvert, MIRJumpNone, MIRDebug, MIRVarCaptured, MIRVarParameter, MIRVarLocal, MIRRegisterArgument } from "./mir_ops";
 import { OOPTypeDecl, StaticFunctionDecl, MemberMethodDecl, InvokeDecl, Assembly, NamespaceFunctionDecl, NamespaceConstDecl, StaticMemberDecl, ConceptTypeDecl, EntityTypeDecl } from "../ast/assembly";
 import { ResolvedType, ResolvedEntityAtomType, ResolvedConceptAtomType, ResolvedTupleAtomType, ResolvedRecordAtomType, ResolvedFunctionAtomType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
 import { PackageConfig, MIRAssembly, MIRType, MIRTypeOption, MIRFunctionType, MIRFunctionParameter, MIREntityType, MIRConceptType, MIRTupleTypeEntry, MIRTupleType, MIRRecordTypeEntry, MIRRecordType } from "./mir_assembly";
@@ -12,6 +12,7 @@ import { PackageConfig, MIRAssembly, MIRType, MIRTypeOption, MIRFunctionType, MI
 import * as Crypto from "crypto";
 import { TypeChecker } from "../type_checker/type_checker";
 import { propagateTmpAssignForBody, removeDeadTempAssignsFromBody } from "./mir_cleanup";
+import { convertBodyToSSA } from "./mir_ssa";
 
 class MIRKeyGenerator {
     static computeBindsKeyInfo(binds: Map<string, ResolvedType>): string {
@@ -102,12 +103,9 @@ class MIRBodyEmitter {
     private m_blockMap: Map<string, MIRBasicBlock> = new Map<string, MIRBasicBlock>();
     private m_currentBlock: MIROp[] = [];
 
-    private m_varNames: Set<string> = new Set<string>();
-
     private m_tmpIDCtr = 0;
 
     initialize() {
-        this.m_varNames = new Set<string>();
         this.m_tmpIDCtr = 0;
 
         this.m_blockMap = new Map<string, MIRBasicBlock>();
@@ -115,10 +113,6 @@ class MIRBodyEmitter {
         this.m_blockMap.set("exit", new MIRBasicBlock("exit", []));
 
         this.m_currentBlock = (this.m_blockMap.get("entry") as MIRBasicBlock).ops;
-    }
-
-    registerVar(name: string) {
-        this.m_varNames.add(name);
     }
 
     generateTmpRegister(): MIRTempRegister {
@@ -169,15 +163,15 @@ class MIRBodyEmitter {
     }
 
     emitAccessCapturedVariable(sinfo: SourceInfo, name: string, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessCapturedVariable(sinfo, name, trgt));
+        this.m_currentBlock.push(new MIRAccessCapturedVariable(sinfo, new MIRVarCaptured(name), trgt));
     }
 
     emitAccessArgVariable(sinfo: SourceInfo, name: string, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessArgVariable(sinfo, name, trgt));
+        this.m_currentBlock.push(new MIRAccessArgVariable(sinfo, new MIRVarParameter(name), trgt));
     }
 
     emitAccessLocalVariable(sinfo: SourceInfo, name: string, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessLocalVariable(sinfo, name, trgt));
+        this.m_currentBlock.push(new MIRAccessLocalVariable(sinfo, new MIRVarLocal(name), trgt));
     }
 
     emitConstructorPrimary(sinfo: SourceInfo, tkey: MIRTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
@@ -208,7 +202,7 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRConstructorRecord(sinfo, args, trgt));
     }
 
-    emitConstructorLambda(sinfo: SourceInfo, lkey: MIRLambdaKey, lsigkey: MIRResolvedTypeKey, captured: string[], trgt: MIRTempRegister) {
+    emitConstructorLambda(sinfo: SourceInfo, lkey: MIRLambdaKey, lsigkey: MIRResolvedTypeKey, captured: Map<string, MIRRegisterArgument>, trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRConstructorLambda(sinfo, lkey, lsigkey, captured, trgt));
     }
 
@@ -321,7 +315,7 @@ class MIRBodyEmitter {
     }
 
     emitVarStore(sinfo: SourceInfo, src: MIRTempRegister, name: string) {
-        this.m_currentBlock.push(new MIRVarStore(sinfo, src, name));
+        this.m_currentBlock.push(new MIRVarStore(sinfo, src, new MIRVarLocal(name)));
     }
 
     localLifetimeEnd(sinfo: SourceInfo, name: string) {
@@ -360,11 +354,12 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRJumpNone(sinfo, arg, noneblck, someblk));
     }
 
-    getBody(file: string, sinfo: SourceInfo): MIRBody {
-        let ibody = new MIRBody(file, sinfo, this.m_varNames, this.m_blockMap);
+    getBody(file: string, sinfo: SourceInfo, args: string[], captured: string[]): MIRBody {
+        let ibody = new MIRBody(file, sinfo, this.m_blockMap);
 
         propagateTmpAssignForBody(ibody);
         removeDeadTempAssignsFromBody(ibody);
+        convertBodyToSSA(ibody, args, captured);
 
         return ibody;
     }

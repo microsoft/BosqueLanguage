@@ -99,7 +99,7 @@
 				},
 				{
 					"name": "keyword.bosque",
-					"match": "\\b(this|hidden|factory|virtual|abstract|override|concept|const|enum|entity|ensures|field|fn|from|function|global|ckey|invariant|method|namespace|provides|requires|static|typedef|unique|using|var|when|where)\\b"
+					"match": "\\b(this|hidden|factory|virtual|abstract|override|concept|const|enum|entity|ensures|field|fn|from|function|global|identifier|invariant|method|namespace|provides|requires|static|typedef|unique|using|var|when|where)\\b"
 				}
 			]
 		},
