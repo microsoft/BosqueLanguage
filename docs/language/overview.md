@@ -627,7 +627,7 @@ fn(x?: Int) -> Int         //Function optional x parameter
 fn(...l: List[Int]) -> Int //Function rest List parameter
 ```
 
-The subtype relation on function `F1` and `F2` starts with a lexicographic order on the parameter entries (with _contravariant_ subtyping) where an optional (`?`) entry is always less than a required entry and open tuples match any suffixes of a closed tuple. The relation is _covariant_ in the return type.
+The subtype relation on function `F1` and `F2` starts with a lexicographic order on the parameter entries (with _contravariant_ subtyping) where an optional. The relation is _covariant_ in the return type.
 
 ```none
 fn(x: Any) -> Int <: fn(x: Int) -> Int  //true - Int <: Any
@@ -638,17 +638,17 @@ fn(x: Any) -> Int <: fn(y: Int) -> Int //false - name mismatch
 fn(x: Any) -> Int <: fn(_: Int) -> Int //true - name ignore
 fn(_: Any) -> Int <: fn(x: Int) -> Int //false - name needed
 
-fn(x: Int, y?: Bool) -> Int <: fn(x: Int) -> Int           //true - omitting optional parameter is ok
-fn(y?: Bool) -> Int         <: fn(y: Bool) -> Int          //true - optional parameter is subtype
-fn(x: Int) -> Int           <: fn(x: Int, y?: Bool) -> Int //false - missing optional type
+fn(y?: Bool) -> Int         <: fn(y: Bool) -> Int          //false - optional parameter mismatch
+fn(x: Int, y?: Bool) -> Int <: fn(x: Int) -> Int           //false - mismatch optional parameter
+fn(x: Int) -> Int           <: fn(x: Int, y?: Bool) -> Int //false - mismatch optional type
 
 fn(x: Any) -> Int <: fn(x: Int) -> Any //true - Int <: Any
-fn(x: Any) -> Any <: fn(x: Int) -> Int //true - Any <! Int
+fn(x: Any) -> Any <: fn(x: Any) -> Int //false - Any <! Int
 
-fn(...r: List[Int]) -> Int         <: fn(...r: List[Int]) -> Int //true - prefix match
-fn(x: Any, ...r: List[Int]) -> Int <: fn(x: Int) -> Int          //true - prefix match
-fn(_: Int) -> Int                  <: fn(..._: List[Int]) -> Int //false - rest match
-fn(...r: List[Int]) -> Int         <: fn(_: Int) -> Int          //true - rest covers
+fn(...r: List[Int]) -> Int <: fn(...r: List[Int]) -> Int    //true - prefix match
+fn(...r: List[Int]) -> Int <: fn(_: Int) -> Int             //false - rest mismatch
+fn(...r: List[Int]) -> Int <: fn() -> Int                   //false - rest mismatch
+fn(...r: List[Int]) -> Int <: fn(...r: HashSet[Int]) -> Int //false - rest mismatch
 ```
 
 ## <a name="1.4-Combination-Types"></a>1.4 Combination Types

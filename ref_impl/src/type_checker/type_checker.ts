@@ -56,6 +56,8 @@ class TypeChecker {
     }
 
     private raiseError(sinfo: SourceInfo, msg?: string) {
+        this.m_emitEnabled = false;
+
         this.m_errors.push([this.m_file, sinfo.line, msg || "Type error"]);
         throw new TypeError(this.m_file, sinfo.line, msg || "Type error");
     }
@@ -539,8 +541,13 @@ class TypeChecker {
         return [ok, reqNames, allNames];
     }
 
-    private checkArgumentsEvaluationWSig(env: TypeEnvironment, sig: ResolvedFunctionAtomType, args: Arguments, optSelfValue: [ResolvedType, MIRTempRegister] | undefined): ExpandedArgument[] {
+    private checkArgumentsEvaluationWSig(env: TypeEnvironment, sig: ResolvedFunctionAtomType, args: Arguments, optSelfValue: [ResolvedType, MIRTempRegister] | undefined, skipEmit?: boolean): ExpandedArgument[] {
         let eargs: ExpandedArgument[] = [];
+
+        const emitRestore = this.m_emitEnabled;
+        if (skipEmit) {
+            this.m_emitEnabled = false;
+        }
 
         if (optSelfValue !== undefined) {
             eargs.push({ name: "this", argtype: optSelfValue[0], expando: false, treg: optSelfValue[1] });
@@ -562,6 +569,10 @@ class TypeChecker {
             else {
                 eargs.push({ name: undefined, argtype: earg, expando: (arg as PositionalArgument).isSpread, treg: treg });
             }
+        }
+
+        if (skipEmit) {
+            this.m_emitEnabled = emitRestore && true;
         }
 
         return eargs;
@@ -752,8 +763,13 @@ class TypeChecker {
         return ResolvedType.createSingle(oftype);
     }
 
-    private checkArgumentsSignature(sinfo: SourceInfo, env: TypeEnvironment, sig: ResolvedFunctionAtomType, args: ExpandedArgument[]): MIRArgument[] {
+    private checkArgumentsSignature(sinfo: SourceInfo, env: TypeEnvironment, sig: ResolvedFunctionAtomType, args: ExpandedArgument[], skipEmit?: boolean): MIRArgument[] {
         let filledLocations: { vtype: ResolvedType, mustDef: boolean, trgt: MIRArgument }[] = [];
+
+        const emitRestore = this.m_emitEnabled;
+        if (skipEmit) {
+            this.m_emitEnabled = false;
+        }
 
         //figure out named parameter mapping first
         for (let j = 0; j < args.length; ++j) {
@@ -889,6 +905,10 @@ class TypeChecker {
             }
 
             margs.push(rtreg);
+        }
+
+        if (skipEmit) {
+            this.m_emitEnabled = emitRestore && true;
         }
 
         return margs;
@@ -1482,6 +1502,13 @@ class TypeChecker {
                 const rootbinds = this.m_assembly.resolveBindsForCall(rootdecl.invoke.terms, op.terms.targs, (vinfo.root as OOMemberLookupInfo).binds, env.terms) as Map<string, ResolvedType>;
                 const rootsig = ResolvedType.tryGetUniqueFunctionTypeAtom(this.resolveAndEnsureType(op.sinfo, rootdecl.invoke.generateSig(), rootbinds)) as ResolvedFunctionAtomType;
 
+                vopts.forEach((fopt) => {
+                    this.raiseErrorIf(op.sinfo, !(fopt instanceof ResolvedFunctionAtomType), "Non-function type at lambda invocation site");
+                    const optsig = fopt as ResolvedFunctionAtomType;
+                    const optargs = this.checkArgumentsEvaluationWSig(env, optsig, op.args, [texp, arg], true);
+                    this.checkArgumentsSignature(op.sinfo, env, optsig, optargs, true);
+                });
+
                 const lsigtry = this.m_assembly.computeUnifiedFunctionType(vopts, rootsig);
                 this.raiseErrorIf(op.sinfo, lsigtry === undefined, "Ambigious signature for invoke");
 
@@ -1583,9 +1610,13 @@ class TypeChecker {
                 this.raiseErrorIf(op.sinfo, lambda === undefined || !this.m_assembly.subtypeOf(lambda, this.m_assembly.getSpecialFunctionConceptType()), "Ambigious signature for invoke");
                 this.raiseErrorIf(op.sinfo, op.terms.targs.length !== 0, "Cannot have template args on lambda invoke");
 
-                //
-                //TODO: we probably actually want to check if each sig matches individually and then union the results...
-                //
+                lambda.options.forEach((fopt) => {
+                    this.raiseErrorIf(op.sinfo, !(fopt instanceof ResolvedFunctionAtomType), "Non-function type at lambda invocation site");
+                    const optsig = fopt as ResolvedFunctionAtomType;
+                    const optargs = this.checkArgumentsEvaluationWSig(env, optsig, op.args, [texp, arg], true);
+                    this.checkArgumentsSignature(op.sinfo, env, optsig, optargs, true);
+                });
+
                 const lsigtry = this.m_assembly.computeUnifiedFunctionType(lambda.options);
                 this.raiseErrorIf(op.sinfo, lsigtry === undefined, "Ambigious signature for invoke");
 
@@ -1609,11 +1640,15 @@ class TypeChecker {
 
         this.raiseErrorIf(op.sinfo, !this.m_assembly.subtypeOf(texp, this.m_assembly.getSpecialFunctionConceptType()), "Ambigious signature for invoke");
 
-        //
-        //TODO: we probably actually want to check if each sig matches individually and then union the results...
-        //
-        const lsigtry = ResolvedType.tryGetUniqueFunctionTypeAtom(texp);
-        this.raiseErrorIf(op.sinfo, lsigtry === undefined, "Ambigious signature for invoke");
+        texp.options.forEach((fopt) => {
+            this.raiseErrorIf(op.sinfo, !(fopt instanceof ResolvedFunctionAtomType), "Non-function type at lambda invocation site");
+            const optsig = fopt as ResolvedFunctionAtomType;
+            const optargs = this.checkArgumentsEvaluationWSig(env, optsig, op.args, undefined, true);
+            this.checkArgumentsSignature(op.sinfo, env, optsig, optargs, true);
+        });
+
+        const lsigtry = this.m_assembly.computeUnifiedFunctionType(texp.options);
+        this.raiseErrorIf(op.sinfo, lsigtry === undefined, "Ambigious signature for call");
 
         const lsig = lsigtry as ResolvedFunctionAtomType;
 
@@ -1624,7 +1659,8 @@ class TypeChecker {
             this.m_emitter.bodyEmitter.emitCallLambda(op.sinfo, arg, margs, trgt);
         }
 
-        return [env.setExpressionResult(this.m_assembly, lsig.resultType)];
+        const returnOpts = texp.options.map((sopt) => (sopt as ResolvedFunctionAtomType).resultType);
+        return [env.setExpressionResult(this.m_assembly, this.m_assembly.typeUnion(returnOpts))];
     }
 
     private checkElvisAction(sinfo: SourceInfo, env: TypeEnvironment[], elvisEnabled: boolean, etrgt: MIRTempRegister, noneblck: string): [TypeEnvironment[], TypeEnvironment[]] {
@@ -1810,8 +1846,12 @@ class TypeChecker {
 
             return [...eqnone, ...neqnone];
         }
-
-        return [env.setExpressionResult(this.m_assembly, this.m_assembly.getSpecialBoolType())];
+        else {
+            //
+            //TODO: maybe later (since this is tricky) infer that variable is strengthened by type on other side in case of -- exp.rhs instanceof AccessVariableExpression || exp.lhs instanceof AccessVariableExpression
+            //
+            return [env.setExpressionResult(this.m_assembly, this.m_assembly.getSpecialBoolType())];
+        }
     }
 
     private checkBinCmp(env: TypeEnvironment, exp: BinCmpExpression, trgt: MIRTempRegister): TypeEnvironment[] {

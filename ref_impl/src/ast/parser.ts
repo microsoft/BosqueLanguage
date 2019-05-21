@@ -642,6 +642,10 @@ class Parser {
             }
         }
 
+        if (restName !== undefined && params.some((p) => p[2])) {
+            this.raiseError(line, "Cannot have optional and rest parameters in a function");
+        }
+
         if (this.testAndConsumeTokenIf(":")) {
             resultType = this.parseTypeSignature();
         }
@@ -902,6 +906,10 @@ class Parser {
                     restName = params[i][0];
                     restType = params[i][1];
                 }
+            }
+
+            if (restName !== undefined && params.some((p) => p[2])) {
+                this.raiseError(this.getCurrentLine(), "Cannot have optional and rest parameters in a function type");
             }
 
             this.ensureAndConsumeToken("->");
