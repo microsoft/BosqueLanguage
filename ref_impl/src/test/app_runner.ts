@@ -66,4 +66,5 @@ if (!process.argv[2]) {
 
 ////
 //Entrypoint
+
 setImmediate(() => runApp(process.argv[2]));
