@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo } from "../ast/parser";
+import { topologicalOrder, computeBlockLinks, FlowLink } from "./ir_info";
 
 type MIRTypeKey = string; //ns::name#binds
 type MIRGlobalKey = string; //ns::global
@@ -958,7 +959,7 @@ class MIRVarStore extends MIRFlowOp {
     src: MIRArgument;
     name: MIRVarLocal;
 
-    constructor(sinfo: SourceInfo, src: MIRTempRegister, name: MIRVarLocal) {
+    constructor(sinfo: SourceInfo, src: MIRArgument, name: MIRVarLocal) {
         super(MIROpTag.MIRVarStore, sinfo);
         this.src = src;
         this.name = name;
@@ -974,17 +975,19 @@ class MIRVarStore extends MIRFlowOp {
 
 class MIRReturnAssign extends MIRFlowOp {
     src: MIRArgument;
+    name: MIRVarLocal;
 
     constructor(sinfo: SourceInfo, src: MIRTempRegister) {
         super(MIROpTag.MIRReturnAssign, sinfo);
         this.src = src;
+        this.name = new MIRVarLocal("_ir_ret_");
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.src]); }
-    getModVars(): MIRRegisterArgument[] { return []; }
+    getModVars(): MIRRegisterArgument[] { return [this.name]; }
 
     stringify(): string {
-        return `_return_ = ${this.src.stringify()}`;
+        return `${this.name.stringify()} = ${this.src.stringify()}`;
     }
 }
 
@@ -1167,7 +1170,7 @@ class MIRBasicBlock {
         this.ops = ops;
     }
 
-    jsonify(): any {
+    jsonify(): { label: string, line: number, ops: string[] } {
         const jblck = {
             label: this.label,
             line: (this.ops.length !== 0) ? this.ops[0].sinfo.line : -1,
@@ -1195,10 +1198,42 @@ class MIRBody {
             return this.body;
         }
         else {
-            let blocks: string[] = [];
-            this.body.forEach((v, k) => blocks.push(v.jsonify()));
+            let blocks: any[] = [];
+            topologicalOrder(this.body).forEach((v, k) => blocks.push(v.jsonify()));
 
             return blocks;
+        }
+    }
+
+    dgmlify(siginfo: string): string {
+        if (typeof (this.body) === "string") {
+            return this.body;
+        }
+        else {
+            const blocks = topologicalOrder(this.body);
+            const flow = computeBlockLinks(this.body);
+
+            let nodes: string[] = [`<Node Id="fdecl" Label="${siginfo}"/>`];
+            let links: string[] = [`<Link Source="fdecl" Target="entry"/>`];
+            blocks.forEach((b) => {
+                const ndata = b.jsonify();
+                const dstring = `L: ${ndata.label} &#10;  ` + ndata.ops.join("&#10;  ");
+                nodes.push(`<Node Id="${ndata.label}" Label="${dstring}"/>`);
+
+                (flow.get(ndata.label) as FlowLink).succs.forEach((succ) => {
+                    links.push(`<Link Source="${ndata.label}" Target="${succ}"/>`);
+                });
+            });
+
+            return `<?xml version="1.0" encoding="utf-8"?>
+        <DirectedGraph Title="DrivingTest" xmlns="http://schemas.microsoft.com/vs/2009/dgml">
+           <Nodes>
+                ${nodes.join("\n")}
+           </Nodes>
+           <Links>
+                ${links.join("\n")}
+           </Links>
+        </DirectedGraph>`;
         }
     }
 }

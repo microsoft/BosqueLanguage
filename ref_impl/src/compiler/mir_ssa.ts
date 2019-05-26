@@ -4,122 +4,13 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert from "assert";
-import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJump, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRArgument, MIRVarLocal, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRPhi, MIRVarParameter, MIRVarCaptured } from "./mir_ops";
+import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRArgument, MIRVarLocal, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRPhi, MIRVarParameter, MIRVarCaptured } from "./mir_ops";
 import { SourceInfo } from "../ast/parser";
+import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./ir_info";
 
 //
 //Convert MIR into SSA form
 //
-
-type FlowLink = {
-    label: string,
-    succs: Set<string>,
-    preds: Set<string>
-};
-
-type BlockLiveSet = {
-    label: string,
-    liveEntry: Set<string>,
-    liveExit: Set<string>
-};
-
-function computeBlockLinks(blocks: Map<string, MIRBasicBlock>): Map<string, FlowLink> {
-    let links = new Map<string, FlowLink>();
-    let done = new Set<string>();
-    let worklist = ["entry"];
-
-    while (worklist.length !== 0) {
-        const bb = worklist.shift() as string;
-        const block = blocks.get(bb) as MIRBasicBlock;
-        if (block.ops.length === 0) {
-            continue;
-        }
-
-        let link = links.get(bb) || { label: bb, succs: new Set<string>(), preds: new Set<string>() };
-        if (!links.has(bb)) {
-            links.set(bb, link);
-        }
-
-        const jop = block.ops[block.ops.length - 1];
-        if (jop.tag === MIROpTag.MIRJump) {
-            const jmp = jop as MIRJump;
-            link.succs.add(jmp.trgtblock);
-        }
-        else if (jop.tag === MIROpTag.MIRJumpCond) {
-            const jmp = jop as MIRJumpCond;
-            link.succs.add(jmp.trueblock);
-            link.succs.add(jmp.falseblock);
-        }
-        else if (jop.tag === MIROpTag.MIRJumpNone) {
-            const jmp = jop as MIRJumpNone;
-            link.succs.add(jmp.someblock);
-            link.succs.add(jmp.noneblock);
-
-        }
-        else {
-            assert(block.label === "exit");
-        }
-
-        done.add(bb);
-        link.succs.forEach((succ) => {
-            if (!done.has(succ) && !worklist.includes(succ)) {
-                worklist.push(succ);
-            }
-
-            if (!links.has(succ)) {
-                links.set(succ, { label: succ, succs: new Set<string>(), preds: new Set<string>() });
-            }
-
-            let slink = links.get(succ) as FlowLink;
-            slink.preds.add(bb);
-        });
-    }
-
-    return links;
-}
-
-function computeLiveVarsInBlock(ops: MIROp[], liveOnExit: Set<string>): Set<string> {
-    let live = new Set<string>(liveOnExit);
-
-    for (let i = ops.length - 1; i >= 0; --i) {
-        const op = ops[i];
-
-        const mod = op.getModVars().map((arg) => arg.nameID);
-        mod.forEach((v) => live.delete(v));
-
-        const use = op.getUsedVars().map((v) => v.nameID);
-        use.forEach((v) => live.add(v));
-    }
-
-    return live;
-}
-
-function computeBlockLiveVars(blocks: Map<string, MIRBasicBlock>): Map<string, BlockLiveSet> {
-    let liveInfo = new Map<string, BlockLiveSet>();
-    blocks.forEach((bb) => liveInfo.set(bb.label, { label: bb.label, liveEntry: new Set<string>(), liveExit: new Set<string>() }));
-
-    const flow = computeBlockLinks(blocks);
-
-    let changing = true;
-    while (changing) {
-        changing = false;
-
-        blocks.forEach((bb) => {
-            let lexit = new Set<string>();
-            (flow.get(bb.label) as FlowLink).succs.forEach((succ) => {
-                (liveInfo.get(succ) as BlockLiveSet).liveEntry.forEach((v) => lexit.add(v));
-            });
-            const lentry = computeLiveVarsInBlock(bb.ops, lexit);
-
-            let olive = liveInfo.get(bb.label) as BlockLiveSet;
-            changing = (lexit.size !== olive.liveExit.size) || (lentry.size !== olive.liveEntry.size);
-            olive.liveEntry = lentry;
-            olive.liveExit = lexit;
-        });
-    }
-
-    return liveInfo;
-}
 
 function convertToSSA(reg: MIRRegisterArgument, remap: Map<string, MIRRegisterArgument>, ctrs: Map<string, number>): MIRRegisterArgument {
     if (!ctrs.has(reg.nameID)) {
@@ -414,6 +305,7 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
         case MIROpTag.MIRReturnAssign: {
             const ra = op as MIRReturnAssign;
             ra.src = processSSA_Use(ra.src, remap);
+            ra.name = convertToSSA(ra.name, remap, ctrs) as MIRVarLocal;
             break;
         }
         case MIROpTag.MIRAssert: {
@@ -458,7 +350,7 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
 
 function generatePhi(sinfo: SourceInfo, lv: string, opts: [string, MIRRegisterArgument][], ctrs: Map<string, number>): MIRPhi {
     let vassign = new Map<string, MIRRegisterArgument>();
-    opts.forEach((e) => { vassign.set(e[0], e[1]); });
+    opts.forEach((e) => vassign.set(e[0], e[1]));
 
     const ssaCtr = ctrs.get(lv) as number + 1;
     ctrs.set(lv, ssaCtr);
@@ -473,29 +365,24 @@ function generatePhi(sinfo: SourceInfo, lv: string, opts: [string, MIRRegisterAr
 }
 
 function computePhis(sinfo: SourceInfo, block: string, ctrs: Map<string, number>, remapped: Map<string, Map<string, MIRRegisterArgument>>, links: Map<string, FlowLink>, live: Map<string, BlockLiveSet>): [MIRPhi[], Map<string, MIRRegisterArgument>] {
-    const predmaps: [string, Map<string, MIRRegisterArgument>][] = [];
-    (links.get(block) as FlowLink).preds.forEach((pred) => {
-        predmaps.push([pred, remapped.get(pred) as Map<string, MIRRegisterArgument>]);
-    });
-
     let remap = new Map<string, MIRRegisterArgument>();
     let phis: MIRPhi[] = [];
+
     (live.get(block) as BlockLiveSet).liveEntry.forEach((lv) => {
+        const preds = (links.get(block) as FlowLink).preds;
+
         let phiOpts: [string, MIRRegisterArgument][] = [];
         let uniqueOpts = new Map<string, MIRRegisterArgument>();
-        predmaps.forEach((pm) => {
-            const mreg = pm[1].get(lv) as MIRRegisterArgument;
+        preds.forEach((pred) => {
+            const pm = remapped.get(pred) as Map<string, MIRRegisterArgument>;
+            const mreg = pm.get(lv) as MIRRegisterArgument;
             uniqueOpts.set(mreg.nameID, mreg);
-            phiOpts.push([pm[0], mreg]);
+            phiOpts.push([pred, mreg]);
         });
 
         if (uniqueOpts.size === 1) {
-            let uniq: MIRRegisterArgument[] = [];
-            uniqueOpts.forEach((v) => {
-                uniq.push(v);
-            });
-
-            remap.set(lv, uniq[0]);
+            const rmp = [...uniqueOpts][0][1];
+            remap.set(lv, rmp);
         }
         else {
             const phi = generatePhi(sinfo, lv, phiOpts, ctrs);
@@ -514,65 +401,37 @@ function convertBodyToSSA(body: MIRBody, args: string[], captured: string[]) {
     }
 
     const blocks = body.body as Map<string, MIRBasicBlock>;
-
     const links = computeBlockLinks(blocks);
-
-    let linkedblocks = new Set<string>();
-    links.forEach((v, k) => linkedblocks.add(k));
-
-    let allblocks: string[] = [];
-    (blocks).forEach((v, k) => allblocks.push(k));
-
-    for(let i = 0; i < allblocks.length; ++i) {
-        if(allblocks[i] !== "entry" && !linkedblocks.has(allblocks[i])) {
-            blocks.delete(allblocks[i]);
-        }
-    }
-
     const live = computeBlockLiveVars(blocks);
+    const torder = topologicalOrder(blocks);
 
-    let worklist = ["entry"];
     let remapped = new Map<string, Map<string, MIRRegisterArgument>>();
     let ctrs = new Map<string, number>();
 
-    while (worklist.length !== 0) {
-        const block = worklist.shift() as string;
-        const blk = (blocks).get(block) as MIRBasicBlock;
+    for (let j = 0; j < torder.length; ++j) {
+        const block = torder[j];
 
-        let predsok = true;
-        (links.get(block) as FlowLink).preds.forEach((pred) => { predsok = predsok && remapped.has(pred); });
-        if (!predsok) {
-            worklist.push(block);
-            continue;
-        }
-
-        if (block === "entry") {
+        if (block.label === "entry") {
             let remap = new Map<string, MIRRegisterArgument>();
             args.forEach((arg) => remap.set(arg, new MIRVarParameter(arg)));
             captured.forEach((capture) => remap.set(capture, new MIRVarCaptured(capture)));
 
-            for (let i = 0; i < blk.ops.length; ++i) {
-                assignSSA(blk.ops[i], remap, ctrs);
+            for (let i = 0; i < block.ops.length; ++i) {
+                assignSSA(block.ops[i], remap, ctrs);
             }
 
-            remapped.set(block, remap);
+            remapped.set(block.label, remap);
         }
         else {
-            const [phis, remap] = computePhis(body.sinfo, block, ctrs, remapped, links, live);
+            const [phis, remap] = computePhis(body.sinfo, block.label, ctrs, remapped, links, live);
 
-            for (let i = 0; i < blk.ops.length; ++i) {
-                assignSSA(blk.ops[i], remap, ctrs);
+            for (let i = 0; i < block.ops.length; ++i) {
+                assignSSA(block.ops[i], remap, ctrs);
             }
 
-            blk.ops.unshift(...phis);
-            remapped.set(block, remap);
+            block.ops.unshift(...phis);
+            remapped.set(block.label, remap);
         }
-
-        (links.get(block) as FlowLink).succs.forEach((succ) => {
-            if (!remapped.has(succ) && !worklist.includes(succ)) {
-                worklist.push(succ);
-            }
-        });
     }
 }
 
