@@ -112,6 +112,8 @@ class MIRBodyEmitter {
         this.m_blockMap.set("entry", new MIRBasicBlock("entry", []));
         this.m_blockMap.set("exit", new MIRBasicBlock("exit", []));
 
+        (this.m_blockMap.get("exit") as MIRBasicBlock).ops.push(new MIRVarStore(new SourceInfo(-1, 0, 0, 0), new MIRVarLocal("_ir_ret_"), new MIRVarLocal("_return_")));
+
         this.m_currentBlock = (this.m_blockMap.get("entry") as MIRBasicBlock).ops;
     }
 

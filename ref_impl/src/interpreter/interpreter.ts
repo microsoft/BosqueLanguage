@@ -701,7 +701,7 @@ class Interpreter {
             }
             case MIROpTag.MIRReturnAssign: {
                 const ra = op as MIRReturnAssign;
-                fscope.assignVar("_return_", this.getArgValue(fscope, ra.src));
+                fscope.assignVar(ra.name.nameID, this.getArgValue(fscope, ra.src));
                 break;
             }
             case MIROpTag.MIRAssert: {
@@ -791,6 +791,8 @@ class Interpreter {
             const blck = fscope.getActiveOps();
             this.evaluateBlock(blck, fscope);
         }
+
+        this.evaluateBlock(fscope.getActiveOps(), fscope);
     }
 
     evaluateRootNamespaceCall(ns: string, func: string, cargs: Value[]): Value {
