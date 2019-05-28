@@ -7,7 +7,7 @@ import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTu
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, ConceptTypeDecl } from "../ast/assembly";
 import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature } from "../ast/type_signature";
-import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard } from "../ast/body";
+import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement } from "../ast/body";
 import { MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRTypeKey, MIRFunctionKey, MIRLambdaKey, MIRStaticKey, MIRMethodKey, MIRVirtualMethodKey, MIRGlobalKey, MIRConstKey, MIRRegisterArgument, MIRVarLocal, MIRVarParameter, MIRVarCaptured } from "../compiler/mir_ops";
 import { SourceInfo } from "../ast/parser";
@@ -1534,9 +1534,17 @@ class TypeChecker {
                             this.m_emitter.bodyEmitter.emitTypeOf(op.sinfo, trgt, mt.trkey, margs[0]);
                         }
                         else if (op.name === "as") {
+                            const doneblck = this.m_emitter.bodyEmitter.createNewBlock("Las_done");
+                            const failblck = this.m_emitter.bodyEmitter.createNewBlock("Las_fail");
                             const creg = this.m_emitter.bodyEmitter.generateTmpRegister();
                             this.m_emitter.bodyEmitter.emitTypeOf(op.sinfo, creg, mt.trkey, margs[0]);
-                            this.m_emitter.bodyEmitter.emitCheck(op.sinfo, creg);
+                            this.m_emitter.bodyEmitter.emitBoolJump(op.sinfo, creg, doneblck, failblck);
+
+                            this.m_emitter.bodyEmitter.setActiveBlock(failblck);
+                            this.m_emitter.bodyEmitter.emitAbort(op.sinfo, true, "as<T> fail");
+                            this.m_emitter.bodyEmitter.emitDirectJump(op.sinfo, "exit");
+
+                            this.m_emitter.bodyEmitter.setActiveBlock(doneblck);
                             this.m_emitter.bodyEmitter.emitRegAssign(op.sinfo, margs[0], trgt);
                         }
                         else if (op.name === "tryAs") {
@@ -2703,8 +2711,8 @@ class TypeChecker {
         }
 
         if (this.m_emitEnabled) {
-            this.m_emitter.bodyEmitter.emitExhaustiveCheck(stmt.sinfo);
-            this.m_emitter.bodyEmitter.emitDirectJump(stmt.sinfo, doneblck);
+            this.m_emitter.bodyEmitter.emitAbort(stmt.sinfo, true, "exhaustive");
+            this.m_emitter.bodyEmitter.emitDirectJump(stmt.sinfo, "exit");
         }
 
         if (this.m_emitEnabled) {
@@ -2726,6 +2734,15 @@ class TypeChecker {
         return env.setReturn(this.m_assembly, venv.getExpressionResult().etype);
     }
 
+    private checkAbortStatement(env: TypeEnvironment, stmt: AbortStatement): TypeEnvironment {
+        if (this.m_emitEnabled) {
+            this.m_emitter.bodyEmitter.emitAbort(stmt.sinfo, true, "abort");
+            this.m_emitter.bodyEmitter.emitDirectJump(stmt.sinfo, "exit");
+        }
+
+        return env.setAbort();
+    }
+
     private checkAssertStatement(env: TypeEnvironment, stmt: AssertStatement): TypeEnvironment {
         const okType = this.m_assembly.typeUnion([this.m_assembly.getSpecialNoneType(), this.m_assembly.getSpecialBoolType()]);
         const testreg = this.m_emitter.bodyEmitter.generateTmpRegister();
@@ -2737,7 +2754,15 @@ class TypeChecker {
         this.raiseErrorIf(stmt.sinfo, trueflow.length === 0 || falseflow.length === 0, "Expression is always true/false assert is redundant");
 
         if (this.m_emitEnabled) {
-            this.m_emitter.bodyEmitter.emitAssert(stmt.sinfo, testreg);
+            const doneblck = this.m_emitter.bodyEmitter.createNewBlock("Lassert_done");
+            const failblck = this.m_emitter.bodyEmitter.createNewBlock("Lassert_fail");
+            this.m_emitter.bodyEmitter.emitBoolJump(stmt.sinfo, testreg, doneblck, failblck);
+
+            this.m_emitter.bodyEmitter.setActiveBlock(failblck);
+            this.m_emitter.bodyEmitter.emitAbort(stmt.sinfo, false, "assert fail");
+            this.m_emitter.bodyEmitter.emitDirectJump(stmt.sinfo, "exit");
+
+            this.m_emitter.bodyEmitter.setActiveBlock(doneblck);
         }
 
         return TypeEnvironment.join(this.m_assembly, ...trueflow);
@@ -2754,7 +2779,15 @@ class TypeChecker {
         this.raiseErrorIf(stmt.sinfo, trueflow.length === 0 || falseflow.length === 0, "Expression is always true/false check is redundant");
 
         if (this.m_emitEnabled) {
-            this.m_emitter.bodyEmitter.emitCheck(stmt.sinfo, testreg);
+            const doneblck = this.m_emitter.bodyEmitter.createNewBlock("Lcheck_done");
+            const failblck = this.m_emitter.bodyEmitter.createNewBlock("Lcheck_fail");
+            this.m_emitter.bodyEmitter.emitBoolJump(stmt.sinfo, testreg, doneblck, failblck);
+
+            this.m_emitter.bodyEmitter.setActiveBlock(failblck);
+            this.m_emitter.bodyEmitter.emitAbort(stmt.sinfo, true, "check fail");
+            this.m_emitter.bodyEmitter.emitDirectJump(stmt.sinfo, "exit");
+
+            this.m_emitter.bodyEmitter.setActiveBlock(doneblck);
         }
 
         return TypeEnvironment.join(this.m_assembly, ...trueflow);
@@ -2798,6 +2831,8 @@ class TypeChecker {
                 return this.checkReturnStatement(env, stmt as ReturnStatement);
             //case StatementTag.YieldStatement:
             //    return this.checkYieldStatement(env, stmt as YieldStatement);
+            case StatementTag.AbortStatement:
+                return this.checkAbortStatement(env, stmt as AbortStatement);
             case StatementTag.AssertStatement:
                 return this.checkAssertStatement(env, stmt as AssertStatement);
             case StatementTag.CheckStatement:
@@ -2858,7 +2893,7 @@ class TypeChecker {
             }
 
             const renv = this.checkBlock(env, body.body);
-            this.raiseErrorIf(body.body.sinfo, renv.hasNormalFlow() || renv.returnResult === undefined, "Not all flow paths return a value!");
+            this.raiseErrorIf(body.body.sinfo, renv.hasNormalFlow(), "Not all flow paths return a value!");
             this.raiseErrorIf(body.body.sinfo, !this.m_assembly.subtypeOf(renv.returnResult as ResolvedType, resultType), "Did not produce the expected return type");
 
             return this.m_emitEnabled ? this.m_emitter.bodyEmitter.getBody(this.m_file, body.body.sinfo, args, captured) : undefined;

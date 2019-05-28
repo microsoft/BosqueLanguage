@@ -598,6 +598,7 @@ enum StatementTag {
     IfElseStatement = "IfElseStatement",
     MatchStatement = "MatchStatement",
 
+    AbortStatement = "AbortStatement",
     AssertStatement = "AssertStatement", //assert(x > 0)
     CheckStatement = "CheckStatement", //check(x > 0)
 
@@ -774,6 +775,12 @@ class MatchStatement extends Statement {
     }
 }
 
+class AbortStatement extends Statement {
+    constructor(sinfo: SourceInfo) {
+        super(StatementTag.AbortStatement, sinfo);
+    }
+}
+
 class AssertStatement extends Statement {
     readonly cond: Expression;
 
@@ -837,7 +844,7 @@ export {
     VariableDeclarationStatement, VariableAssignmentStatement,
     StructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, StructuredVariableAssignmentStatement,
     ReturnStatement, YieldStatement,
-    IfElseStatement, AssertStatement, CheckStatement, DebugStatement,
+    IfElseStatement, AbortStatement, AssertStatement, CheckStatement, DebugStatement,
     MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, MatchEntry, MatchStatement,
     BlockStatement, BodyImplementation
 };

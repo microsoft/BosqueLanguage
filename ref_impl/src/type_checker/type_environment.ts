@@ -172,6 +172,11 @@ class TypeEnvironment {
         return [nvals, svals];
     }
 
+    setAbort(): TypeEnvironment {
+        assert(this.hasNormalFlow());
+        return new TypeEnvironment(this.terms, this.args, this.captured, undefined, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+    }
+
     setReturn(assembly: Assembly, rtype: ResolvedType): TypeEnvironment {
         assert(this.hasNormalFlow());
         const rrtype = this.returnResult !== undefined ? assembly.typeUnion([this.returnResult, rtype]) : rtype;

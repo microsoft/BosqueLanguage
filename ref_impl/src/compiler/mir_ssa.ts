@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert from "assert";
-import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRArgument, MIRVarLocal, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRPhi, MIRVarParameter, MIRVarCaptured, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore } from "./mir_ops";
+import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRArgument, MIRVarLocal, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRPhi, MIRVarParameter, MIRVarCaptured, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore } from "./mir_ops";
 import { SourceInfo } from "../ast/parser";
 import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./mir_info";
 
@@ -333,17 +333,7 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
             ra.name = convertToSSA(ra.name, remap, ctrs) as MIRVarLocal;
             break;
         }
-        case MIROpTag.MIRAssert: {
-            const asrt = op as MIRAssert;
-            asrt.cond = processSSA_Use(asrt.cond, remap);
-            break;
-        }
-        case MIROpTag.MIRCheck: {
-            const chk = op as MIRCheck;
-            chk.cond = processSSA_Use(chk.cond, remap);
-            break;
-        }
-        case MIROpTag.MIRExhaustiveCheck: {
+        case MIROpTag.MIRAbort: {
             break;
         }
         case MIROpTag.MIRDebug: {
@@ -443,6 +433,7 @@ function convertBodyToSSA(body: MIRBody, args: string[], captured: string[]) {
             let remap = new Map<string, MIRRegisterArgument>();
             args.forEach((arg) => remap.set(arg, new MIRVarParameter(arg)));
             captured.forEach((capture) => remap.set(capture, new MIRVarCaptured(capture)));
+            remap.set("_ir_ret_", new MIRVarLocal("_ir_ret_"));
 
             for (let i = 0; i < block.ops.length; ++i) {
                 assignSSA(block.ops[i], remap, ctrs);

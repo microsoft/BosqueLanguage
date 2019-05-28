@@ -193,9 +193,7 @@ enum MIROpTag {
     MIRVarStore = "MIRVarStore",
     MIRReturnAssign = "MIRReturnAssign",
 
-    MIRAssert = "MIRAssert",
-    MIRCheck = "MIRCheck",
-    MIRExhaustiveCheck = "MIRExhaustiveCheck",
+    MIRAbort = "MIRAbort",
     MIRDebug = "MIRDebug",
 
     MIRJump = "MIRJump",
@@ -1052,7 +1050,7 @@ class MIRReturnAssign extends MIRFlowOp {
     src: MIRArgument;
     name: MIRVarLocal;
 
-    constructor(sinfo: SourceInfo, src: MIRTempRegister) {
+    constructor(sinfo: SourceInfo, src: MIRArgument) {
         super(MIROpTag.MIRReturnAssign, sinfo);
         this.src = src;
         this.name = new MIRVarLocal("_ir_ret_");
@@ -1066,48 +1064,21 @@ class MIRReturnAssign extends MIRFlowOp {
     }
 }
 
-class MIRAssert extends MIRFlowOp {
-    cond: MIRArgument;
+class MIRAbort extends MIRFlowOp {
+    readonly releaseEnable: boolean;
+    readonly info: string;
 
-    constructor(sinfo: SourceInfo, cond: MIRArgument) {
-        super(MIROpTag.MIRAssert, sinfo);
-        this.cond = cond;
-    }
-
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.cond]); }
-    getModVars(): MIRRegisterArgument[] { return []; }
-
-    stringify(): string {
-        return `assert ${this.cond.stringify()}`;
-    }
-}
-
-class MIRCheck extends MIRFlowOp {
-    cond: MIRArgument;
-
-    constructor(sinfo: SourceInfo, cond: MIRArgument) {
-        super(MIROpTag.MIRCheck, sinfo);
-        this.cond = cond;
-    }
-
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.cond]); }
-    getModVars(): MIRRegisterArgument[] { return []; }
-
-    stringify(): string {
-        return `check ${this.cond.stringify()}`;
-    }
-}
-
-class MIRExhaustiveCheck extends MIRFlowOp {
-    constructor(sinfo: SourceInfo) {
-        super(MIROpTag.MIRExhaustiveCheck, sinfo);
+    constructor(sinfo: SourceInfo, releaseEnable: boolean, info: string) {
+        super(MIROpTag.MIRAbort, sinfo);
+        this.releaseEnable = releaseEnable;
+        this.info = info;
     }
 
     getUsedVars(): MIRRegisterArgument[] { return []; }
     getModVars(): MIRRegisterArgument[] { return []; }
 
     stringify(): string {
-        return "$ExhaustiveCheck";
+        return `abort${this.releaseEnable ? "" : "_debug"} -- ${this.info}`;
     }
 }
 
@@ -1338,7 +1309,7 @@ export {
     MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp,
     MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf,
     MIRRegAssign, MIRTruthyConvert, MIRLogicStore, MIRVarStore, MIRReturnAssign,
-    MIRAssert, MIRCheck, MIRExhaustiveCheck, MIRDebug,
+    MIRAbort, MIRDebug,
     MIRJump, MIRJumpCond, MIRJumpNone,
     MIRPhi,
     MIRVarLifetimeStart, MIRVarLifetimeEnd,

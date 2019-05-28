@@ -1543,6 +1543,24 @@ entrypoint function switchCaseEx_error(): Any {
     return switchCaseEx(@{});
 }
 
+entrypoint function abortOk(): Int {
+    if(1 < 2) {
+        return 1;
+    }
+    else {
+        abort;
+    }
+}
+
+entrypoint function abortFail(): Int {
+    if(1 == 2) {
+        return 1;
+    }
+    else {
+        abort;
+    }
+}
+
 entrypoint function assertOk(): Int {
     assert 1 < 2;
     return 1;
@@ -1672,8 +1690,10 @@ const statement_tests: TestInfo[] = [
 
     { name: "switchCaseEx_0", input: ["switchCaseEx_0"], expected: "0" },
     { name: "switchCaseEx_false", input: ["switchCaseEx_false"], expected: "false" },
-    { name: "switchCaseEx_error", input: ["switchCaseEx_error"], expected: "none", expectedError: true },
+    { name: "switchCaseEx_error", input: ["switchCaseEx_error"], expected: "[NO RESULT]", expectedError: true },
 
+    { name: "abortOk", input: ["abortOk"], expected: "1" },
+    { name: "abortFail", input: ["abortFail"], expected: "[NO RESULT]", expectedError: true },
     { name: "assertOk", input: ["assertOk"], expected: "1" },
     { name: "assertFail", input: ["assertFail"], expected: "[NO RESULT]", expectedError: true },
     { name: "checkOk", input: ["checkOk"], expected: "1" },
