@@ -16,8 +16,6 @@ concept Any {
 
     method isNone(): Bool # any_isnone
     method isSome(): Bool # any_issome
-
-    method display(): Any # any_display
 }
 
 //<summary>Type for representing all non-none values.</summary>

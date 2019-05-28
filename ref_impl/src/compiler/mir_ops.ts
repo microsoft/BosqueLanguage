@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo } from "../ast/parser";
-import { topologicalOrder, computeBlockLinks, FlowLink } from "./ir_info";
+import { topologicalOrder, computeBlockLinks, FlowLink } from "./mir_info";
 
 type MIRTypeKey = string; //ns::name#binds
 type MIRGlobalKey = string; //ns::global
@@ -183,13 +183,19 @@ enum MIROpTag {
     MIRBinEq = "MIRBinEq",
     MIRBinCmp = "MIRBinCmp",
 
+    MIRIsTypeOfNone = "MIRIsTypeOfNone",
+    MIRIsTypeOfSome = "MIRIsTypeOfSome",
+    MIRIsTypeOf = "MIRIsTypeOf",
+
     MIRRegAssign = "MIRRegAssign",
     MIRTruthyConvert = "MIRTruthyConvert",
+    MIRLogicStore = "MIRLogicStore",
     MIRVarStore = "MIRVarStore",
     MIRReturnAssign = "MIRReturnAssign",
 
     MIRAssert = "MIRAssert",
     MIRCheck = "MIRCheck",
+    MIRExhaustiveCheck = "MIRExhaustiveCheck",
     MIRDebug = "MIRDebug",
 
     MIRJump = "MIRJump",
@@ -919,6 +925,53 @@ class MIRBinCmp extends MIRValueOp {
     }
 }
 
+class MIRIsTypeOfNone extends MIRValueOp {
+    arg: MIRArgument;
+
+    constructor(sinfo: SourceInfo, arg: MIRArgument, trgt: MIRTempRegister) {
+        super(MIROpTag.MIRIsTypeOfNone, sinfo, trgt);
+        this.arg = arg;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = $isNoneType(${this.arg.stringify()})`;
+    }
+}
+
+class MIRIsTypeOfSome extends MIRValueOp {
+    arg: MIRArgument;
+
+    constructor(sinfo: SourceInfo, arg: MIRArgument, trgt: MIRTempRegister) {
+        super(MIROpTag.MIRIsTypeOfSome, sinfo, trgt);
+        this.arg = arg;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = $isSomeType(${this.arg.stringify()})`;
+    }
+}
+
+class MIRIsTypeOf extends MIRValueOp {
+    arg: MIRArgument;
+    readonly oftype: MIRResolvedTypeKey;
+
+    constructor(sinfo: SourceInfo, arg: MIRArgument, oftype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
+        super(MIROpTag.MIRIsTypeOf, sinfo, trgt);
+        this.arg = arg;
+        this.oftype = oftype;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = $isTypeOf(${this.arg.stringify()}, ${this.oftype})`;
+    }
+}
+
 class MIRRegAssign extends MIRFlowOp {
     src: MIRArgument;
     trgt: MIRTempRegister;
@@ -951,7 +1004,29 @@ class MIRTruthyConvert extends MIRFlowOp {
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        return `${this.trgt.stringify()} = truthy(${this.src.stringify()})`;
+        return `${this.trgt.stringify()} = $truthy(${this.src.stringify()})`;
+    }
+}
+
+class MIRLogicStore extends MIRFlowOp {
+    lhs: MIRArgument;
+    readonly op: string;
+    rhs: MIRArgument;
+    trgt: MIRTempRegister;
+
+    constructor(sinfo: SourceInfo, lhs: MIRArgument, op: string, rhs: MIRArgument, trgt: MIRTempRegister) {
+        super(MIROpTag.MIRLogicStore, sinfo);
+        this.lhs = lhs;
+        this.op = op;
+        this.rhs = rhs;
+        this.trgt = trgt;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.lhs, this.rhs]); }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = ${this.lhs.stringify()} ${this.op} ${this.rhs.stringify()}`;
     }
 }
 
@@ -1020,6 +1095,19 @@ class MIRCheck extends MIRFlowOp {
 
     stringify(): string {
         return `check ${this.cond.stringify()}`;
+    }
+}
+
+class MIRExhaustiveCheck extends MIRFlowOp {
+    constructor(sinfo: SourceInfo) {
+        super(MIROpTag.MIRExhaustiveCheck, sinfo);
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return []; }
+    getModVars(): MIRRegisterArgument[] { return []; }
+
+    stringify(): string {
+        return "$ExhaustiveCheck";
     }
 }
 
@@ -1248,8 +1336,9 @@ export {
     MIRCallNamespaceFunction, MIRCallStaticFunction,
     MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda,
     MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp,
-    MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign,
-    MIRAssert, MIRCheck, MIRDebug,
+    MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf,
+    MIRRegAssign, MIRTruthyConvert, MIRLogicStore, MIRVarStore, MIRReturnAssign,
+    MIRAssert, MIRCheck, MIRExhaustiveCheck, MIRDebug,
     MIRJump, MIRJumpCond, MIRJumpNone,
     MIRPhi,
     MIRVarLifetimeStart, MIRVarLifetimeEnd,
