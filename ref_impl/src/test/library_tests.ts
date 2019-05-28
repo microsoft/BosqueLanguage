@@ -17,6 +17,16 @@ entrypoint function mathAbs(): Float {
     return Math::abs(n);
 }
 
+entrypoint function mathAcos(): Float {
+    var x: Float = '0.0'@Float;
+    return Math::acos(x);
+}
+
+entrypoint function mathAsin(): Float {
+    var x: Float = '1.0'@Float;
+    return Math::asin(x);
+}
+
 entrypoint function mathAtan(): Float {
     var x: Float = '3.0'@Float;
     return Math::atan(x);
@@ -92,6 +102,8 @@ entrypoint function literalDownCase(): String {
 
 const corelib_tests: TestInfo[] = [
     { name: "mathAbs", input: ["mathAbs"], expected: "2" },
+    { name: "mathAcos", input: ["mathAcos"], expected: "1.5707963267948966" },
+    { name: "mathAsin", input: ["mathAsin"], expected: "1.5707963267948966" },
     { name: "mathAtan", input: ["mathAtan"], expected: "1.2490457723982544" },
     { name: "mathAtan2", input: ["mathAtan2"], expected: "0.5404195002705842" },
     { name: "mathCeil", input: ["mathCeil"], expected: "7" },
