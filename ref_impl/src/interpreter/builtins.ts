@@ -28,21 +28,22 @@ type BuiltinCallSig = (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRA
 
 const BuiltinCalls = new Map<string, BuiltinCallSig>()
     .set("any_istype", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        return masm.subtypeOf(ValueOps.getValueType(args.get("this")), inv.terms.get("T") as MIRType);
+        throw new Error("This should always be converted to special op");
     })
     .set("any_as", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        raiseRuntimeErrorIf(!masm.subtypeOf(ValueOps.getValueType(args.get("this")), inv.terms.get("T") as MIRType));
-        return args.get("this");
+        throw new Error("This should always be converted to special op");
+    })
+    .set("any_tryas", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        throw new Error("This should always be converted to special op");
+    })
+    .set("any_defaultas", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        throw new Error("This should always be converted to special op");
     })
     .set("any_isnone", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        return args.get("this") === undefined;
+        throw new Error("This should always be converted to special op");
     })
     .set("any_issome", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        return args.get("this") !== undefined;
-    })
-    .set("any_display", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
-        process.stdout.write(ValueOps.diagnosticPrintValue(args.get("this") + "\n"));
-        return args.get("this");
+        throw new Error("This should always be converted to special op");
     })
 
     .set("bool_tryparse", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {

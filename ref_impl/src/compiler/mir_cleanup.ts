@@ -5,7 +5,7 @@
 
 import * as assert from "assert";
 
-import { MIROp, MIRBody, MIRArgument, MIROpTag, MIRTempRegister, MIRLoadConst, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRJumpCond, MIRJumpNone, MIRBasicBlock } from "./mir_ops";
+import { MIROp, MIRBody, MIRArgument, MIROpTag, MIRTempRegister, MIRLoadConst, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRJumpCond, MIRJumpNone, MIRBasicBlock, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore } from "./mir_ops";
 
 //
 //Implement cleanup passes for the MIR after translation from the AST representation:
@@ -225,6 +225,21 @@ function propagateTmpAssignForOp(op: MIROp, propMap: Map<number, MIRArgument>) {
             bcp.rhs = propagateTmpAssign_Remap(bcp.rhs, propMap);
             break;
         }
+        case MIROpTag.MIRIsTypeOfNone: {
+            const ton = op as MIRIsTypeOfNone;
+            ton.arg = propagateTmpAssign_Remap(ton.arg, propMap);
+            break;
+        }
+        case MIROpTag.MIRIsTypeOfSome: {
+            const tos = op as MIRIsTypeOfSome;
+            tos.arg = propagateTmpAssign_Remap(tos.arg, propMap);
+            break;
+        }
+        case MIROpTag.MIRIsTypeOf: {
+            const tog = op as MIRIsTypeOf;
+            tog.arg = propagateTmpAssign_Remap(tog.arg, propMap);
+            break;
+        }
         case MIROpTag.MIRRegAssign: {
             const regop = op as MIRRegAssign;
             regop.src = propagateTmpAssign_Remap(regop.src, propMap);
@@ -234,6 +249,12 @@ function propagateTmpAssignForOp(op: MIROp, propMap: Map<number, MIRArgument>) {
         case MIROpTag.MIRTruthyConvert: {
             const tcop = op as MIRTruthyConvert;
             tcop.src = propagateTmpAssign_Remap(tcop.src, propMap);
+            break;
+        }
+        case MIROpTag.MIRLogicStore: {
+            const llop = op as MIRLogicStore;
+            llop.lhs = propagateTmpAssign_Remap(llop.lhs, propMap);
+            llop.rhs = propagateTmpAssign_Remap(llop.rhs, propMap);
             break;
         }
         case MIROpTag.MIRVarStore: {
@@ -254,6 +275,9 @@ function propagateTmpAssignForOp(op: MIROp, propMap: Map<number, MIRArgument>) {
         case MIROpTag.MIRCheck: {
             const chk = op as MIRCheck;
             chk.cond = propagateTmpAssign_Remap(chk.cond, propMap);
+            break;
+        }
+        case MIROpTag.MIRExhaustiveCheck: {
             break;
         }
         case MIROpTag.MIRDebug: {

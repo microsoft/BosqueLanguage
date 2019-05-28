@@ -95,7 +95,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.bosque",
-					"match": "\\b(assert|check|elif|else|if|return|yield)\\b"
+					"match": "\\b(abort|assert|case|check|elif|else|if|return|switch|type|yield)\\b"
 				},
 				{
 					"name": "keyword.bosque",

@@ -4,9 +4,9 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert from "assert";
-import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRArgument, MIRVarLocal, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRPhi, MIRVarParameter, MIRVarCaptured } from "./mir_ops";
+import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRArgument, MIRVarLocal, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRAssert, MIRCheck, MIRDebug, MIRPhi, MIRVarParameter, MIRVarCaptured, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore } from "./mir_ops";
 import { SourceInfo } from "../ast/parser";
-import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./ir_info";
+import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./mir_info";
 
 //
 //Convert MIR into SSA form
@@ -284,6 +284,24 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
             processValueOpTempSSA(bcp, remap, ctrs);
             break;
         }
+        case MIROpTag.MIRIsTypeOfNone: {
+            const ton = op as MIRIsTypeOfNone;
+            ton.arg = processSSA_Use(ton.arg, remap);
+            processValueOpTempSSA(ton, remap, ctrs);
+            break;
+        }
+        case MIROpTag.MIRIsTypeOfSome: {
+            const tos = op as MIRIsTypeOfSome;
+            tos.arg = processSSA_Use(tos.arg, remap);
+            processValueOpTempSSA(tos, remap, ctrs);
+            break;
+        }
+        case MIROpTag.MIRIsTypeOf: {
+            const tog = op as MIRIsTypeOf;
+            tog.arg = processSSA_Use(tog.arg, remap);
+            processValueOpTempSSA(tog, remap, ctrs);
+            break;
+        }
         case MIROpTag.MIRRegAssign: {
             const regop = op as MIRRegAssign;
             regop.src = processSSA_Use(regop.src, remap);
@@ -294,6 +312,13 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
             const tcop = op as MIRTruthyConvert;
             tcop.src = processSSA_Use(tcop.src, remap);
             tcop.trgt = convertToSSA(tcop.trgt, remap, ctrs) as MIRTempRegister;
+            break;
+        }
+        case MIROpTag.MIRLogicStore: {
+            const llop = op as MIRLogicStore;
+            llop.lhs = processSSA_Use(llop.lhs, remap);
+            llop.rhs = processSSA_Use(llop.rhs, remap);
+            llop.trgt = convertToSSA(llop.trgt, remap, ctrs) as MIRTempRegister;
             break;
         }
         case MIROpTag.MIRVarStore: {
@@ -316,6 +341,9 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
         case MIROpTag.MIRCheck: {
             const chk = op as MIRCheck;
             chk.cond = processSSA_Use(chk.cond, remap);
+            break;
+        }
+        case MIROpTag.MIRExhaustiveCheck: {
             break;
         }
         case MIROpTag.MIRDebug: {

@@ -72,7 +72,7 @@ The Bosque language derives from a combination of [TypeScript](https://www.types
   - [6.5 Return and Yield](#6.5-Return-and-Yield)
   - [6.6 Validation](#6.6-Validation)
   - [6.7 If-Then-Else](#6.7-If-Then-Else)
-  - [6.8 Match](#6.8-Match)
+  - [6.8 Switch](#6.8-Switch)
   - [6.9 Block](#6.9-Block)
 - [7 Invokable Declarations](#7-Invokable-Declarations)
 - [8 Concept and Entity Declarations](#8-Concept-and-Entity-Declarations)
@@ -1579,11 +1579,56 @@ else {
 
 Note that dangling `elifs` must have a final `else` block.
 
-To avoid ambiguity when _If_ statements/expressions are used the actions cannot nest naked _If_/_Match_ expressions. Instead they must be enclosed in an expression statement block.
+## <a name="6.8-Switch"></a>6.8 Switch
 
-## <a name="6.8-Match"></a>6.8 Match
+Bosque provides a `switch` statement that supports simple literal dispatch, type based dispatch, pattern matching, and optional additional constraints. A switch statement must be exhaustive in the case list so there is a simple wildcard case option `_` that matches anything.
 
-**[Not Implemented Yet]**
+A simple switch statement is:
+
+```none
+switch(x) {
+    case 0 => { return "zero"; }
+    case 1 => { return "one"; }
+    case _ => { return "many"; }
+}
+```
+
+The case statement uses the same syntax as structured assignments (plus checking literal values) and can bind variables:
+
+```none
+var! z: Int;
+switch(x) {
+    case @[1, var y: Int] => { return y; }     //on match define, bind, and use y
+    case var @{f=2, g=y: Int} => { return y; } //on match define all new vars in the match
+    case @{f=3, g=z} => { return z; }          //on match bind the mutable outer variable z
+    case _ => { return none; }
+}
+```
+
+The `switch` statement also supports matching on the type of the value as in the following example:
+
+```none
+switch(x) {
+    type Bool => { return false; }
+    type Int => { return 0; }
+    type String => {return ""; }
+    type {f: Int, g?: Bool} => { return x.f; }
+    case _ => { return none; }
+}
+```
+
+The `switch` statement supports additional conditions with the use of a `when` clause. This clause can be any boolean expression and, in the case of bound variables, may refer to them as well. 
+
+```none
+switch(x) {
+    case Int when x >= 0 => { return x; }
+    case Int when x < 0 => { return -x; }
+    case {f=_: Int, g=var y: Int} when y != 0 => { return y; }
+    case _ => { return -1; }
+}
+```
+
+Finally, a switch statement is allowed to mix `case` and `type` matches *but* it is required to be exhaustive. The matches are checked in order from top to bottom, first matching option is taken, and if none of the matches are valid a runtime error is raised.
 
 ## <a name="6.9-Block"></a>6.9 Block
 

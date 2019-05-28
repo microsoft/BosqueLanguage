@@ -1313,6 +1313,236 @@ entrypoint function ifReturnInElifBranch(): Int {
     }
 }
 
+function switchCaseInt(x: Int): Int {
+    switch(x) {
+        case 1 => { return 1; }
+        case 2 => { return 2; }
+        case 3 => { return 3; }
+        case _ => { ; }
+    }
+
+    return x;
+}
+
+function switchCaseMixedTypes(x: Any): Int {
+    switch(x) {
+        case none => { return 1; }
+        case @[1, 2] => { return 2; }
+        case @{f=1} => { return 3; }
+        case "ok" => { return 4; }
+        case _ => { ; }
+    }
+
+    return 31;
+}
+
+function switchCaseBindTypes(x: Any): Int {
+    var! z: Int;
+    switch(x) {
+        case @[1, var y: Int] => { return y; }
+        case @[2, var! y: Int] => { return y; }
+        case @[3, _:Int, var y: Int] => { return y; }
+        case @[3, _:Int, var y: Int, ...] => { return y; }
+        case @{f=1, g=var y: Int} => { return y; }
+        case var @{f=2, g=y: Int} => { return y; }
+        case @{f=3, g=z} => { return z; }
+        case var y: Int => { return y; }
+        case _ => { ; }
+    }
+
+    return 31;
+}
+
+function switchCaseBindWhen(x: Any): Int {
+    var! z: Int;
+    switch(x) {
+        case @[1, var y: Int] when y > 0 => { return y; }
+        case @[1, var y: Int] when y <= 0 => { return 0; }
+        case @[2, var y?: Int] => { return y ?| 20; }
+        case @[2, var y: Int, z] => { return y + z; }
+        case _ => { ; }
+    }
+
+    return 31;
+}
+
+function switchCaseType(x: Any): Int {
+    switch(x) {
+        type Int => { return 1; }
+        type [Int, Int] => { return 2; }
+        type {f:Int, g?:Int} => { return x.g ?| x.f; }
+        case _ => { ; }
+    }
+
+    return 31;
+}
+
+function switchCaseTypeWhen(x: Any): Int {
+    switch(x) {
+        type Int when x > 0 => { return x; }
+        type Int => { return -x; }
+        type {f:Int, g?:Int} when x.f == 10 => { return x.f; }
+        case _ => { ; }
+    }
+
+    return 31;
+}
+
+function switchCaseEx(x: Any): Any {
+    switch(x) {
+        type Int => { return 0; }
+        type Bool => { return false; }
+    }
+}
+
+entrypoint function switchCaseInt_1(): Int {
+    return switchCaseInt(1);
+}
+
+entrypoint function switchCaseInt_2(): Int {
+    return switchCaseInt(2);
+}
+
+entrypoint function switchCaseInt_3(): Int {
+    return switchCaseInt(3);
+}
+
+entrypoint function switchCaseInt_x(): Int {
+    return switchCaseInt(5);
+}
+
+entrypoint function switchCaseAny_none(): Int {
+    return switchCaseMixedTypes(none);
+}
+
+entrypoint function switchCaseAny_tup(): Int {
+    return switchCaseMixedTypes(@[1,2]);
+}
+
+entrypoint function switchCaseAny_rec(): Int {
+    return switchCaseMixedTypes(@{f=1});
+}
+
+entrypoint function switchCaseAny_string(): Int {
+    return switchCaseMixedTypes("ok");
+}
+
+entrypoint function switchCaseAny_x(): Int {
+    return switchCaseMixedTypes("fallthrough");
+}
+
+entrypoint function switchCaseBindTypes_1(): Int {
+    return switchCaseBindTypes(@[1, 1]);
+}
+
+entrypoint function switchCaseBindTypes_2(): Int {
+    return switchCaseBindTypes(@[1, 2]);
+}
+
+entrypoint function switchCaseBindTypes_3(): Int {
+    return switchCaseBindTypes(@[3, 5, 3]);
+}
+
+entrypoint function switchCaseBindTypes_4(): Int {
+    return switchCaseBindTypes(@[3, 5, 4, 7, 11]);
+}
+
+entrypoint function switchCaseBindTypes_5(): Int {
+    return switchCaseBindTypes(@{f=1, g=5});
+}
+
+entrypoint function switchCaseBindTypes_6(): Int {
+    return switchCaseBindTypes(@{f=2, g=6});
+}
+
+entrypoint function switchCaseBindTypes_7(): Int {
+    return switchCaseBindTypes(@{f=3, g=7});
+}
+
+entrypoint function switchCaseBindTypes_8(): Int {
+    return switchCaseBindTypes(8);
+}
+
+entrypoint function switchCaseBindWhen_1(): Int {
+    return switchCaseBindWhen(@[1, 1]);
+}
+
+entrypoint function switchCaseBindWhen_0(): Int {
+    return switchCaseBindWhen(@[1, -1]);
+}
+
+entrypoint function switchCaseBindWhen_5(): Int {
+    return switchCaseBindWhen(@[2, 5]);
+}
+
+entrypoint function switchCaseBindWhen_20(): Int {
+    return switchCaseBindWhen(@[2]);
+}
+
+entrypoint function switchCaseBindWhen_101(): Int {
+    return switchCaseBindWhen(@[2, 1, 100]);
+}
+
+entrypoint function switchCaseType_1(): Int {
+    return switchCaseType(3);
+}
+
+entrypoint function switchCaseType_2(): Int {
+    return switchCaseType(@[1, 2]);
+}
+
+entrypoint function switchCaseType_3(): Int {
+    return switchCaseType(@{f=3});
+}
+
+entrypoint function switchCaseType_4(): Int {
+    return switchCaseType(@{f=3, g=4});
+}
+
+entrypoint function switchCaseType_31(): Int {
+    return switchCaseType(true);
+}
+
+entrypoint function switchCaseTypeWhen_10(): Int {
+    return switchCaseTypeWhen(10);
+}
+
+entrypoint function switchCaseTypeWhen_3(): Int {
+    return switchCaseTypeWhen(-3);
+}
+
+entrypoint function switchCaseTypeWhen_10v1(): Int {
+    return switchCaseTypeWhen(@{f=10});
+}
+
+entrypoint function switchCaseTypeWhen_10v2(): Int {
+    return switchCaseTypeWhen(@{f=10, g=3});
+}
+
+entrypoint function switchCaseTypeWhen_31v1(): Int {
+    return switchCaseTypeWhen(@{f=10, g=true});
+}
+
+entrypoint function switchCaseTypeWhen_31v2(): Int {
+    return switchCaseTypeWhen(@{f=20});
+}
+
+entrypoint function switchCaseTypeWhen_31v3(): Int {
+    return switchCaseTypeWhen("ok");
+}
+
+entrypoint function switchCaseEx_0(): Any {
+    return switchCaseEx(5);
+}
+
+entrypoint function switchCaseEx_false(): Any {
+    return switchCaseEx(true);
+}
+
+entrypoint function switchCaseEx_error(): Any {
+    return switchCaseEx(@{});
+}
+
 entrypoint function assertOk(): Int {
     assert 1 < 2;
     return 1;
@@ -1398,6 +1628,51 @@ const statement_tests: TestInfo[] = [
     { name: "ifEarlyReturnYes", input: ["ifEarlyReturnYes"], expected: "true" },
     { name: "ifEarlyReturnNo", input: ["ifEarlyReturnNo"], expected: "false" },
     { name: "ifReturnInElifBranch", input: ["ifReturnInElifBranch"], expected: "1" },
+
+    { name: "switchCaseInt_1", input: ["switchCaseInt_1"], expected: "1" },
+    { name: "switchCaseInt_2", input: ["switchCaseInt_2"], expected: "2" },
+    { name: "switchCaseInt_3", input: ["switchCaseInt_3"], expected: "3" },
+    { name: "switchCaseInt_x", input: ["switchCaseInt_x"], expected: "5" },
+
+    { name: "switchCaseAny_none", input: ["switchCaseAny_none"], expected: "1" },
+    { name: "switchCaseAny_tup", input: ["switchCaseAny_tup"], expected: "2" },
+    { name: "switchCaseAny_rec", input: ["switchCaseAny_rec"], expected: "3" },
+    { name: "switchCaseAny_string", input: ["switchCaseAny_string"], expected: "4" },
+    { name: "switchCaseAny_x", input: ["switchCaseAny_x"], expected: "31" },
+
+    { name: "switchCaseBindTypes_1", input: ["switchCaseBindTypes_1"], expected: "1" },
+    { name: "switchCaseBindTypes_2", input: ["switchCaseBindTypes_2"], expected: "2" },
+    { name: "switchCaseBindTypes_3", input: ["switchCaseBindTypes_3"], expected: "3" },
+    { name: "switchCaseBindTypes_4", input: ["switchCaseBindTypes_4"], expected: "4" },
+    { name: "switchCaseBindTypes_5", input: ["switchCaseBindTypes_5"], expected: "5" },
+    { name: "switchCaseBindTypes_6", input: ["switchCaseBindTypes_6"], expected: "6" },
+    { name: "switchCaseBindTypes_7", input: ["switchCaseBindTypes_7"], expected: "7" },
+    { name: "switchCaseBindTypes_8", input: ["switchCaseBindTypes_8"], expected: "8" },
+
+    { name: "switchCaseBindWhen_1", input: ["switchCaseBindWhen_1"], expected: "1" },
+    { name: "switchCaseBindWhen_0", input: ["switchCaseBindWhen_0"], expected: "0" },
+    { name: "switchCaseBindWhen_5", input: ["switchCaseBindWhen_5"], expected: "5" },
+    { name: "switchCaseBindWhen_20", input: ["switchCaseBindWhen_20"], expected: "20" },
+    { name: "switchCaseBindWhen_101", input: ["switchCaseBindWhen_101"], expected: "101" },
+
+    { name: "switchCaseType_1", input: ["switchCaseType_1"], expected: "1" },
+    { name: "switchCaseType_2", input: ["switchCaseType_2"], expected: "2" },
+    { name: "switchCaseType_3", input: ["switchCaseType_3"], expected: "3" },
+    { name: "switchCaseType_4", input: ["switchCaseType_4"], expected: "4" },
+    { name: "switchCaseType_31", input: ["switchCaseType_31"], expected: "31" },
+
+    { name: "switchCaseTypeWhen_10", input: ["switchCaseTypeWhen_10"], expected: "10" },
+    { name: "switchCaseTypeWhen_3", input: ["switchCaseTypeWhen_3"], expected: "3" },
+    { name: "switchCaseTypeWhen_10v1", input: ["switchCaseTypeWhen_10v1"], expected: "10" },
+    { name: "switchCaseTypeWhen_10v2", input: ["switchCaseTypeWhen_10v2"], expected: "10" },
+
+    { name: "switchCaseTypeWhen_31v1", input: ["switchCaseTypeWhen_31v1"], expected: "31" },
+    { name: "switchCaseTypeWhen_31v2", input: ["switchCaseTypeWhen_31v2"], expected: "31" },
+    { name: "switchCaseTypeWhen_31v3", input: ["switchCaseTypeWhen_31v3"], expected: "31" },
+
+    { name: "switchCaseEx_0", input: ["switchCaseEx_0"], expected: "0" },
+    { name: "switchCaseEx_false", input: ["switchCaseEx_false"], expected: "false" },
+    { name: "switchCaseEx_error", input: ["switchCaseEx_error"], expected: "none", expectedError: true },
 
     { name: "assertOk", input: ["assertOk"], expected: "1" },
     { name: "assertFail", input: ["assertFail"], expected: "[NO RESULT]", expectedError: true },

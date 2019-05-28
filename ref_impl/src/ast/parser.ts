@@ -5,7 +5,7 @@
 
 import { ParserEnvironment, FunctionScope } from "./parser_env";
 import { FunctionParameter, TypeSignature, NominalTypeSignature, TemplateTypeSignature, ParseErrorTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, IntersectionTypeSignature, AutoTypeSignature } from "./type_signature";
-import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorLambdaExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixInvoke, PostfixCallLambda, PostfixOp, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, ConstValueStructuredAssignment, StructuredVariableAssignmentStatement } from "./body";
+import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorLambdaExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixInvoke, PostfixCallLambda, PostfixOp, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, ConstValueStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard } from "./body";
 import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, TemplateTermRestriction } from "./assembly";
 
 const KeywordStrings = [
@@ -18,6 +18,7 @@ const KeywordStrings = [
 
     "_debug",
     "assert",
+    "case",
     "check",
     "concept",
     "const",
@@ -42,7 +43,9 @@ const KeywordStrings = [
     "return",
     "requires",
     "static",
+    "switch",
     "true",
+    "type",
     "typedef",
     "unique",
     "using",
@@ -1474,10 +1477,10 @@ class Parser {
     ////
     //Statement parsing
 
-    parseStructuredAssignment(sinfo: SourceInfo, vars: "var" | "var!" | undefined, decls: Set<string>): StructuredAssignment {
+    parseStructuredAssignment(sinfo: SourceInfo, vars: "var" | "var!" | undefined, trequired: boolean, decls: Set<string>): StructuredAssignment {
         if (this.testToken("@[")) {
             const [assigns, isOpen] = this.parseListOf<StructuredAssignment>("@[", "]", ",", () => {
-                return this.parseStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+                return this.parseStructuredAssignment(this.getCurrentSrcInfo(), vars, trequired, decls);
             }, "...");
 
             return new TupleStructuredAssignment(assigns, isOpen);
@@ -1488,7 +1491,7 @@ class Parser {
                 const name = this.consumeTokenAndGetValue();
 
                 this.ensureAndConsumeToken("=");
-                const subg = this.parseStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+                const subg = this.parseStructuredAssignment(this.getCurrentSrcInfo(), vars, trequired, decls);
 
                 return [name, subg];
             }, "...");
@@ -1514,8 +1517,14 @@ class Parser {
 
                 const isopt = this.testAndConsumeTokenIf("?");
                 let itype = this.m_penv.SpecialAutoSignature;
-                if (this.testAndConsumeTokenIf(":")) {
+                if (trequired) {
+                    this.ensureAndConsumeToken(":");
                     itype = this.parseTypeSignature();
+                }
+                else {
+                    if (this.testAndConsumeTokenIf(":")) {
+                        itype = this.parseTypeSignature();
+                    }
                 }
 
                 return new VariableDeclarationStructuredAssignment(isopt, name, isConst, itype);
@@ -1527,8 +1536,14 @@ class Parser {
                     const isopt = this.testAndConsumeTokenIf("?");
 
                     let itype = this.m_penv.SpecialAnySignature;
-                    if (this.testAndConsumeTokenIf(":")) {
+                    if (trequired) {
+                        this.ensureAndConsumeToken(":");
                         itype = this.parseTypeSignature();
+                    }
+                    else {
+                        if (this.testAndConsumeTokenIf(":")) {
+                            itype = this.parseTypeSignature();
+                        }
                     }
 
                     return new IgnoreTermStructuredAssignment(isopt, itype);
@@ -1537,8 +1552,14 @@ class Parser {
                     const isopt = this.testAndConsumeTokenIf("?");
 
                     let itype = this.m_penv.SpecialAutoSignature;
-                    if (this.testAndConsumeTokenIf(":")) {
+                    if (trequired && vars !== undefined) {
+                        this.ensureAndConsumeToken(":");
                         itype = this.parseTypeSignature();
+                    }
+                    else {
+                        if (this.testAndConsumeTokenIf(":")) {
+                            itype = this.parseTypeSignature();
+                        }
                     }
 
                     if (vars !== undefined) {
@@ -1585,7 +1606,7 @@ class Parser {
 
             if (this.testToken("@[") || this.testToken("@{")) {
                 let decls = new Set<string>();
-                const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), isConst ? "var" : "var!", decls);
+                const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), isConst ? "var" : "var!", false, decls);
                 decls.forEach((dv) => {
                     if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
                         this.raiseError(line, "Variable name is already defined");
@@ -1633,7 +1654,7 @@ class Parser {
         }
         else if (tk === "@[" || tk === "@{") {
             let decls = new Set<string>();
-            const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+            const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), undefined, false, decls);
             decls.forEach((dv) => {
                 if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
                     this.raiseError(line, "Variable name is already defined");
@@ -1751,6 +1772,76 @@ class Parser {
         return new IfElseStatement(sinfo, new IfElse<BlockStatement>(conds, elsebody));
     }
 
+    private parseMatchGuard(sinfo: SourceInfo, istypematch: boolean): MatchGuard {
+        if (this.testToken(TokenStrings.Identifier)) {
+            const tv = this.consumeTokenAndGetValue();
+            if (tv !== "_") {
+                this.raiseError(sinfo.line, "Expected wildcard match");
+            }
+
+            return new WildcardMatchGuard();
+        }
+
+        let typecheck: TypeSignature | undefined = undefined;
+        let layoutcheck: StructuredAssignment | undefined = undefined;
+        let decls = new Set<string>();
+        if (istypematch) {
+            typecheck = this.parseTypeSignature();
+        }
+        else {
+            let varinfo: "var" | "var!" | undefined = undefined;
+            if (this.testAndConsumeTokenIf("var")) {
+                varinfo = (this.testAndConsumeTokenIf("!") ? "var!" : "var");
+            }
+            layoutcheck = this.parseStructuredAssignment(sinfo, varinfo, true, decls);
+        }
+
+        let whencheck = undefined;
+        if (this.testAndConsumeTokenIf("when")) {
+            whencheck = this.parseExpression();
+        }
+
+        if (istypematch) {
+            return new TypeMatchGuard(typecheck as TypeSignature, whencheck);
+        }
+        else {
+            return new StructureMatchGuard(layoutcheck as StructuredAssignment, decls, whencheck);
+        }
+    }
+
+    private parseMatchEntry<T>(sinfo: SourceInfo, istypematch: boolean, actionp: () => T): MatchEntry<T> {
+        this.consumeToken();
+        const guard = this.parseMatchGuard(sinfo, istypematch);
+        this.ensureAndConsumeToken("=>");
+        const action = actionp();
+
+        return new MatchEntry<T>(guard, action);
+    }
+
+    private parseMatchStatement(): Statement {
+        const sinfo = this.getCurrentSrcInfo();
+
+        this.ensureAndConsumeToken("switch");
+
+        this.ensureAndConsumeToken("(");
+        const mexp = this.parseExpression();
+        this.ensureAndConsumeToken(")");
+
+        let entries: MatchEntry<BlockStatement>[] = [];
+        this.ensureAndConsumeToken("{");
+        while (this.testToken("type") || this.testToken("case")) {
+            if (this.testToken("type")) {
+                entries.push(this.parseMatchEntry<BlockStatement>(sinfo, true, () => this.parseBlockStatement()));
+            }
+            else {
+                entries.push(this.parseMatchEntry<BlockStatement>(sinfo, false, () => this.parseBlockStatement()));
+            }
+        }
+        this.ensureAndConsumeToken("}");
+
+        return new MatchStatement(sinfo, mexp, entries);
+    }
+
     private parseStatement(): Statement {
         if (this.testToken("{")) {
             return this.parseBlockStatement();
@@ -1758,6 +1849,9 @@ class Parser {
         else {
             if (this.testToken("if")) {
                 return this.parseIfElseStatement();
+            }
+            else if (this.testToken("switch")) {
+                return this.parseMatchStatement();
             }
             else {
                 return this.parseLineStatement();
