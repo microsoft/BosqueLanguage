@@ -37,7 +37,7 @@ entity E1 provides Bar, Baz {
         return @{ x=none, y=1, z=true, f=3 };
     }
 
-    factory static creat[T](arg: T): {x: T, y: Int, z: Bool, f: Int} {
+    factory static create[T](arg: T): {x: T, y: Int, z: Bool, f: Int} {
         return @{ x=arg, y=1, z=true, f=3 };
     }
 }
@@ -50,7 +50,7 @@ entity E2[T] {
         return @{ f=arg, g=1 };
     }
 
-    factory static creat[U](x: T, y: U): {f: T, g: U} {
+    factory static create[U](x: T, y: U): {f: T, g: U} {
         return @{ f=x, g=y };
     }
 }
@@ -695,7 +695,7 @@ entrypoint function createObjFactory(): E1 {
 }
 
 entrypoint function createObjFactoryTemplate(): E1 {
-    return E1@creat[String]("ok");
+    return E1@create[String]("ok");
 }
 
 entrypoint function createObjTFactory(): E2[Int] {
@@ -703,7 +703,7 @@ entrypoint function createObjTFactory(): E2[Int] {
 }
 
 entrypoint function createObjTFactoryTemplate(): E2[Int] {
-    return E2[Int]@creat[String](3, "ok");
+    return E2[Int]@create[String](3, "ok");
 }
 
 entrypoint function getObjFieldF(): Int {
