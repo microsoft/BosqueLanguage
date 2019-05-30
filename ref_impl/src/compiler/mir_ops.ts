@@ -1272,11 +1272,19 @@ class MIRBody {
             const blocks = topologicalOrder(this.body);
             const flow = computeBlockLinks(this.body);
 
+            const xmlescape = (str: string) => {
+                return str.replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")
+               .replace(/"/g, "&quot;")
+               .replace(/'/g, "&apos;");
+            };
+
             let nodes: string[] = [`<Node Id="fdecl" Label="${siginfo}"/>`];
             let links: string[] = [`<Link Source="fdecl" Target="entry"/>`];
             blocks.forEach((b) => {
                 const ndata = b.jsonify();
-                const dstring = `L: ${ndata.label} &#10;  ` + ndata.ops.join("&#10;  ");
+                const dstring = `L: ${ndata.label} &#10;  ` + ndata.ops.map((op) => xmlescape(op)).join("&#10;  ");
                 nodes.push(`<Node Id="${ndata.label}" Label="${dstring}"/>`);
 
                 (flow.get(ndata.label) as FlowLink).succs.forEach((succ) => {
