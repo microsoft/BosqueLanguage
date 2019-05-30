@@ -452,6 +452,14 @@ const BuiltinCalls = new Map<string, BuiltinCallSig>()
         const n = args.get("n") as FloatValue;
         return new FloatValue(Math.abs(n.value));
     })
+    .set("math_acos", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        const x = args.get("x") as FloatValue;
+        return new FloatValue(Math.acos(x.value));    
+    })
+    .set("math_asin", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
+        const x = args.get("x") as FloatValue;
+        return new FloatValue(Math.asin(x.value));    
+    })
     .set("math_atan", (ep: InterpreterEntryPoint, inv: MIRInvokeDecl, masm: MIRAssembly, args: Map<string, Value>): Value => {
         const x = args.get("x") as FloatValue;
         return new FloatValue(Math.atan(x.value));

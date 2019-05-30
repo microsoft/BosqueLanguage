@@ -107,6 +107,8 @@ entity Float provides Some, Parsable {
 //<summary>Math helpers</summary>
 entity Math {
     static abs(n: Float): Float # math_abs
+    static acos(x: Float): Float # math_acos
+    static asin(x: Float): Float # math_asin
     static atan(x: Float): Float # math_atan
     static atan2(y: Float, x: Float): Float # math_atan2
     static ceil(n: Float): Float # math_ceil
