@@ -150,9 +150,9 @@ enum ExpressionTag {
     CoalesceExpression = "CoalesceExpression",
     SelectExpression = "SelectExpression",
 
-    //    BlockStatementExpression,
-    //    IfExpression,
-    //    MatchExpression,
+    BlockStatementExpression = "BlockStatementExpression",
+    IfExpression = "IfExpression",
+    MatchExpression = "MatchExpression",
     //    ProroguedExpression,
 
     //    LazyExpression
@@ -582,6 +582,35 @@ class SelectExpression extends Expression {
     }
 }
 
+class BlockStatementExpression extends Expression {
+    readonly ops: Statement[];
+
+    constructor(sinfo: SourceInfo, ops: Statement[]) {
+        super(ExpressionTag.BlockStatementExpression, sinfo);
+        this.ops = ops;
+    }
+}
+
+class IfExpression extends Expression {
+    readonly flow: IfElse<Expression>;
+
+    constructor(sinfo: SourceInfo, flow: IfElse<Expression>) {
+        super(ExpressionTag.IfExpression, sinfo);
+        this.flow = flow;
+    }
+}
+
+class MatchExpression extends Expression {
+    readonly sval: Expression;
+    readonly flow: MatchEntry<Expression>[];
+
+    constructor(sinfo: SourceInfo, sval: Expression, flow: MatchEntry<Expression>[]) {
+        super(ExpressionTag.MatchExpression, sinfo);
+        this.sval = sval;
+        this.flow = flow;
+    }
+}
+
 enum StatementTag {
     Clear = "[CLEAR]",
     InvalidStatement = "[INVALID]",
@@ -840,6 +869,7 @@ export {
     PostfixInvoke, PostfixCallLambda,
     PrefixOp, BinOpExpression, BinCmpExpression, BinEqExpression, BinLogicExpression,
     NonecheckExpression, CoalesceExpression, SelectExpression,
+    BlockStatementExpression, IfExpression, MatchExpression,
     StatementTag, Statement, InvalidStatement, EmptyStatement,
     VariableDeclarationStatement, VariableAssignmentStatement,
     StructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, StructuredVariableAssignmentStatement,

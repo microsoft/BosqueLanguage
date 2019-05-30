@@ -7,7 +7,7 @@ import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTu
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, ConceptTypeDecl } from "../ast/assembly";
 import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature } from "../ast/type_signature";
-import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement } from "../ast/body";
+import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, ConstructorLambdaExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixCallLambda, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression } from "../ast/body";
 import { MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRTypeKey, MIRFunctionKey, MIRLambdaKey, MIRStaticKey, MIRMethodKey, MIRVirtualMethodKey, MIRGlobalKey, MIRConstKey, MIRRegisterArgument, MIRVarLocal, MIRVarParameter, MIRVarCaptured } from "../compiler/mir_ops";
 import { SourceInfo } from "../ast/parser";
@@ -2146,6 +2146,134 @@ class TypeChecker {
         return [env.setExpressionResult(this.m_assembly, rtype)];
     }
 
+    private checkBlockExpression(env: TypeEnvironment, exp: BlockStatementExpression, trgt: MIRTempRegister): TypeEnvironment[] {
+        let cenv = env.pushLocalScope().pushYieldTarget(trgt);
+
+        for (let i = 0; i < exp.ops.length; ++i) {
+            if (!cenv.hasNormalFlow()) {
+                break;
+            }
+
+            cenv = this.checkStatement(cenv, exp.ops[i]);
+        }
+
+        if (this.m_emitEnabled && cenv.hasNormalFlow()) {
+            const deadvars = cenv.getCurrentFrameNames();
+            for (let i = 0; i < deadvars.length; ++i) {
+                this.m_emitter.bodyEmitter.localLifetimeEnd(exp.sinfo, deadvars[i]);
+            }
+        }
+
+        this.raiseErrorIf(exp.sinfo, cenv.hasNormalFlow(), "Not all flow paths yield a value!");
+        this.raiseErrorIf(exp.sinfo, cenv.yieldResult === undefined, "No valid flow through expresssion block");
+
+        const ytype = cenv.yieldResult as ResolvedType;
+        return [env.setExpressionResult(this.m_assembly, ytype)];
+    }
+
+    private checkIfExpression(env: TypeEnvironment, exp: IfExpression, trgt: MIRTempRegister): TypeEnvironment[] {
+        const okType = this.m_assembly.typeUnion([this.m_assembly.getSpecialNoneType(), this.m_assembly.getSpecialBoolType()]);
+
+        const doneblck = this.m_emitter.bodyEmitter.createNewBlock("Lifexp_done");
+
+        let cenv = env;
+        let results: TypeEnvironment[] = [];
+        for (let i = 0; i < exp.flow.conds.length; ++i) {
+            const testreg = this.m_emitter.bodyEmitter.generateTmpRegister();
+            const test = this.checkExpressionMultiFlow(cenv, exp.flow.conds[i].cond, testreg);
+
+            this.raiseErrorIf(exp.sinfo, test.some((opt) => !this.m_assembly.subtypeOf(opt.getExpressionResult().etype, okType)), "Type of logic op must be Bool | None");
+
+            const [trueflow, falseflow] = TypeEnvironment.convertToBoolFlowsOnExpressionResult(this.m_assembly, test);
+            this.raiseErrorIf(exp.sinfo, trueflow.length === 0 || falseflow.length === 0, "Expression is always true/false expression test is redundant");
+
+            const trueblck = this.m_emitter.bodyEmitter.createNewBlock(`Lifexp_${i}true`);
+            const falseblck = this.m_emitter.bodyEmitter.createNewBlock(`Lifexp_${i}false`);
+            if (this.m_emitEnabled) {
+                this.m_emitter.bodyEmitter.emitBoolJump(exp.sinfo, testreg, trueblck, falseblck);
+            }
+
+            if (this.m_emitEnabled) {
+                this.m_emitter.bodyEmitter.setActiveBlock(trueblck);
+            }
+
+            const truestate = this.checkExpression(TypeEnvironment.join(this.m_assembly, ...trueflow), exp.flow.conds[i].action, trgt);
+            if (this.m_emitEnabled) {
+                if (truestate.hasNormalFlow()) {
+                    this.m_emitter.bodyEmitter.emitDirectJump(exp.sinfo, doneblck);
+                }
+
+                this.m_emitter.bodyEmitter.setActiveBlock(falseblck);
+            }
+
+            results.push(truestate);
+            cenv = TypeEnvironment.join(this.m_assembly, ...falseflow);
+        }
+
+        const aenv = this.checkExpression(cenv, exp.flow.elseAction as Expression, trgt);
+        results.push(aenv);
+
+        if (this.m_emitEnabled && aenv.hasNormalFlow()) {
+            this.m_emitter.bodyEmitter.emitDirectJump(exp.sinfo, doneblck);
+        }
+
+        if (this.m_emitEnabled) {
+            this.m_emitter.bodyEmitter.setActiveBlock(doneblck);
+        }
+
+        return results;
+    }
+
+    private checkMatchExpression(env: TypeEnvironment, exp: MatchExpression, trgt: MIRTempRegister): TypeEnvironment[] {
+        const vreg = this.m_emitter.bodyEmitter.generateTmpRegister();
+        const venv = this.checkExpression(env, exp.sval, vreg);
+
+        const svname = exp.sval instanceof AccessVariableExpression ? exp.sval.name : undefined;
+
+        const doneblck = this.m_emitter.bodyEmitter.createNewBlock("Lswitchexp_done");
+
+        let cenv = venv;
+        let vtype = venv.getExpressionResult().etype;
+        let results: TypeEnvironment[] = [];
+        for (let i = 0; i < exp.flow.length; ++i) {
+            const nextlabel = this.m_emitter.bodyEmitter.createNewBlock(`Lswitchexp_${i}next`);
+            const actionlabel = this.m_emitter.bodyEmitter.createNewBlock(`Lswitchexp_${i}action`);
+
+            const test = this.checkMatchGuard(exp.sinfo, i, vreg, vtype, cenv, exp.flow[i].check, nextlabel, actionlabel, svname, i === exp.flow.length - 1);
+
+            vtype = test.nexttype;
+            const [trueflow, falseflow] = TypeEnvironment.convertToBoolFlowsOnExpressionResult(this.m_assembly, test.envinfo);
+            this.raiseErrorIf(exp.sinfo, trueflow.length === 0 || (falseflow.length === 0 && i !== exp.flow.length - 1) , "Expression is always true/false expression test is redundant");
+
+            if (this.m_emitEnabled) {
+                this.m_emitter.bodyEmitter.setActiveBlock(actionlabel);
+            }
+
+            const truestate = this.checkExpression(TypeEnvironment.join(this.m_assembly, ...trueflow), exp.flow[i].action, trgt);
+            if (this.m_emitEnabled) {
+                if (truestate.hasNormalFlow()) {
+                    this.m_emitter.bodyEmitter.emitDirectJump(exp.sinfo, doneblck);
+                }
+
+                this.m_emitter.bodyEmitter.setActiveBlock(nextlabel);
+            }
+
+            results.push(truestate);
+            cenv = falseflow.length !== 0 ? TypeEnvironment.join(this.m_assembly, ...falseflow) : cenv;
+        }
+
+        if (this.m_emitEnabled) {
+            this.m_emitter.bodyEmitter.emitAbort(exp.sinfo, true, "exhaustive");
+            this.m_emitter.bodyEmitter.emitDirectJump(exp.sinfo, "exit");
+        }
+
+        if (this.m_emitEnabled) {
+            this.m_emitter.bodyEmitter.setActiveBlock(doneblck);
+        }
+
+        return results;
+    }
+
     private checkExpression(env: TypeEnvironment, exp: Expression, trgt: MIRTempRegister, inferType?: ResolvedType): TypeEnvironment {
         const res = this.checkExpressionMultiFlow(env, exp, trgt, inferType);
         this.raiseErrorIf(exp.sinfo, res.length === 0, "No feasible flow for expression");
@@ -2203,9 +2331,15 @@ class TypeChecker {
                 return this.checkNonecheck(env, exp as NonecheckExpression, trgt);
             case ExpressionTag.CoalesceExpression:
                 return this.checkCoalesce(env, exp as CoalesceExpression, trgt);
-            default:
-                this.raiseErrorIf(exp.sinfo, exp.tag !== ExpressionTag.SelectExpression, "Unknown expression");
+            case ExpressionTag.SelectExpression:
                 return this.checkSelect(env, exp as SelectExpression, trgt);
+            case ExpressionTag.BlockStatementExpression:
+                return this.checkBlockExpression(env, exp as BlockStatementExpression, trgt);
+            case ExpressionTag.IfExpression:
+                return this.checkIfExpression(env, exp as IfExpression, trgt);
+            default:
+                this.raiseErrorIf(exp.sinfo, exp.tag !== ExpressionTag.MatchExpression, "Unknown expression");
+                return this.checkMatchExpression(env, exp as MatchExpression, trgt);
         }
     }
 
@@ -2726,12 +2860,23 @@ class TypeChecker {
         const etreg = this.m_emitter.bodyEmitter.generateTmpRegister();
         const venv = this.checkExpression(env, stmt.value, etreg);
 
+        this.raiseErrorIf(stmt.sinfo, env.isInYieldBlock(), "Cannot use return statment inside an expression block");
+
         if (this.m_emitEnabled) {
             this.m_emitter.bodyEmitter.emitReturnAssign(stmt.sinfo, etreg);
             this.m_emitter.bodyEmitter.emitDirectJump(stmt.sinfo, "exit");
         }
 
         return env.setReturn(this.m_assembly, venv.getExpressionResult().etype);
+    }
+
+    private checkYieldStatement(env: TypeEnvironment, stmt: YieldStatement): TypeEnvironment {
+        const yinfo = env.getYieldTargetInfo();
+        const venv = this.checkExpression(env, stmt.value, yinfo);
+
+        this.raiseErrorIf(stmt.sinfo, !env.isInYieldBlock(), "Cannot use yield statment outside expression blocks");
+
+        return env.setYield(this.m_assembly, venv.getExpressionResult().etype);
     }
 
     private checkAbortStatement(env: TypeEnvironment, stmt: AbortStatement): TypeEnvironment {
@@ -2829,8 +2974,8 @@ class TypeChecker {
                 return this.checkMatchStatement(env, stmt as MatchStatement);
             case StatementTag.ReturnStatement:
                 return this.checkReturnStatement(env, stmt as ReturnStatement);
-            //case StatementTag.YieldStatement:
-            //    return this.checkYieldStatement(env, stmt as YieldStatement);
+            case StatementTag.YieldStatement:
+                return this.checkYieldStatement(env, stmt as YieldStatement);
             case StatementTag.AbortStatement:
                 return this.checkAbortStatement(env, stmt as AbortStatement);
             case StatementTag.AssertStatement:

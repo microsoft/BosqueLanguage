@@ -1334,14 +1334,14 @@ none ? 1 : 2      //2
 
 ## <a name="5.26-Statement-Expressions"></a>5.26 Statement Expressions
 
-Bosque includes _Match_, _If_, and _Block_ statements ([section 6 Statements](#6-Statements)) which can be used as both expressions and statements. It also allows these to be used in expression positions where the action blocks in If/Match are treated as expressions and, instead of `return`, a block will `yield` a result:
+Bosque includes _Switch_, _If_, and _Block_ statements ([section 6 Statements](#6-Statements)) which can be used as both expressions and statements. It also allows these to be used in expression positions where the action blocks in If/Switch are treated as expressions and, instead of `return`, a block will `yield` a result:
 
 ```none
 var a = if(true) 3 else 4;    //3
-var b = {var x = 3; yield x;} //3
-var c = match("yes") {
+var b = {| var x = 3; yield x; |} //3
+var c = switch("yes") {
     case "yes" => 5
-    case "no" => {var x = 5; yield x - 3;}
+    case "no" => {| var x = 5; yield x - 3; |}
     case _ => if(true) 11 else 17
 } //5
 ```
@@ -1350,7 +1350,7 @@ Note that the introduction of an expression block creates a new lexical scope fo
 
 The _If_ statement conditions allow `Bool` and `None` types.
 
-The _Match_ statements support destructuring and type operations in the match just as described in [section 6.6 Match](#6.8-Match).
+The _Switch_ statements support destructuring and type operations in the match just as described in [section 6.6 Match](#6.8-Switch).
 
 When block statements are used as expressions they cannot use `return` statements inside.
 

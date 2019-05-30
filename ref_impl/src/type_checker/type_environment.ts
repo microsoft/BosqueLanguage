@@ -7,6 +7,7 @@ import assert = require("assert");
 
 import { Assembly } from "../ast/assembly";
 import { ResolvedType } from "../ast/resolved_type";
+import { MIRTempRegister } from "../compiler/mir_ops";
 
 enum FlowTypeTruthValue {
     True = "True",
@@ -93,12 +94,14 @@ class TypeEnvironment {
     readonly returnResult: ResolvedType | undefined;
     readonly yieldResult: ResolvedType | undefined;
 
+    readonly yieldTrgtInfo: MIRTempRegister[];
+
     readonly frozenVars: Set<string>;
 
     private constructor(terms: Map<string, ResolvedType>,
         args: Map<string, VarInfo>, captured: Map<string, VarInfo>, locals: Map<string, VarInfo>[] | undefined,
         expressionResult: ExpressionReturnResult | undefined, rflow: ResolvedType | undefined, yflow: ResolvedType | undefined,
-        frozenVars: Set<string>) {
+        yieldTrgtInfo: MIRTempRegister[], frozenVars: Set<string>) {
         this.terms = terms;
 
         this.args = args;
@@ -109,26 +112,28 @@ class TypeEnvironment {
         this.returnResult = rflow;
         this.yieldResult = yflow;
 
+        this.yieldTrgtInfo = yieldTrgtInfo;
+
         this.frozenVars = frozenVars;
     }
 
     private updateVarInfo(name: string, nv: VarInfo): TypeEnvironment {
         if (this.getLocalVarInfo(name) !== undefined) {
             let localcopy = (this.locals as Map<string, VarInfo>[]).map((frame) => frame.has(name) ? new Map<string, VarInfo>(frame).set(name, nv) : new Map<string, VarInfo>(frame));
-            return new TypeEnvironment(this.terms, this.args, this.captured, localcopy, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+            return new TypeEnvironment(this.terms, this.args, this.captured, localcopy, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
         }
         else if (this.args.has(name)) {
             const argscopy = new Map<string, VarInfo>(this.args).set(name, nv);
-            return new TypeEnvironment(this.terms, argscopy, this.captured, this.locals, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+            return new TypeEnvironment(this.terms, argscopy, this.captured, this.locals, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
         }
         else {
             const capturedcopy = new Map<string, VarInfo>(this.captured).set(name, nv);
-            return new TypeEnvironment(this.terms, this.args, capturedcopy, this.locals, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+            return new TypeEnvironment(this.terms, this.args, capturedcopy, this.locals, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
         }
     }
 
     static createInitialEnvForCall(terms: Map<string, ResolvedType>, args: Map<string, VarInfo>, captured?: Map<string, VarInfo>): TypeEnvironment {
-        return new TypeEnvironment(terms, args, captured || new Map<string, VarInfo>(), [new Map<string, VarInfo>()], undefined, undefined, undefined, new Set<string>());
+        return new TypeEnvironment(terms, args, captured || new Map<string, VarInfo>(), [new Map<string, VarInfo>()], undefined, undefined, undefined, [], new Set<string>());
     }
 
     hasNormalFlow(): boolean {
@@ -147,7 +152,7 @@ class TypeEnvironment {
             rvalue = etype.isNoneType() ? FlowTypeTruthValue.False : FlowTypeTruthValue.Unknown;
         }
 
-        return new TypeEnvironment(this.terms, this.args, this.captured, this.locals, { etype: etype, value: rvalue }, this.returnResult, this.yieldResult, this.frozenVars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, this.locals, { etype: etype, value: rvalue }, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
     }
 
     static convertToBoolFlowsOnExpressionResult(assembly: Assembly, options: TypeEnvironment[]): [TypeEnvironment[], TypeEnvironment[]] {
@@ -174,30 +179,48 @@ class TypeEnvironment {
 
     setAbort(): TypeEnvironment {
         assert(this.hasNormalFlow());
-        return new TypeEnvironment(this.terms, this.args, this.captured, undefined, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, undefined, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
     }
 
     setReturn(assembly: Assembly, rtype: ResolvedType): TypeEnvironment {
         assert(this.hasNormalFlow());
         const rrtype = this.returnResult !== undefined ? assembly.typeUnion([this.returnResult, rtype]) : rtype;
-        return new TypeEnvironment(this.terms, this.args, this.captured, undefined, this.expressionResult, rrtype, this.yieldResult, this.frozenVars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, undefined, this.expressionResult, rrtype, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
     }
 
     setYield(assembly: Assembly, ytype: ResolvedType): TypeEnvironment {
         assert(this.hasNormalFlow());
         const rytype = this.yieldResult !== undefined ? assembly.typeUnion([this.yieldResult, ytype]) : ytype;
-        return new TypeEnvironment(this.terms, this.args, this.captured, undefined, this.expressionResult, this.returnResult, rytype, this.frozenVars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, undefined, this.expressionResult, this.returnResult, rytype, this.yieldTrgtInfo, this.frozenVars);
     }
 
     pushLocalScope(): TypeEnvironment {
         assert(this.hasNormalFlow());
         let localscopy = [...(this.locals as Map<string, VarInfo>[]), new Map<string, VarInfo>()];
-        return new TypeEnvironment(this.terms, this.args, this.captured, localscopy, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, localscopy, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
     }
 
     popLocalScope(): TypeEnvironment {
         let localscopy = this.locals !== undefined ? (this.locals as Map<string, VarInfo>[]).slice(0, -1) : undefined;
-        return new TypeEnvironment(this.terms, this.args, this.captured, localscopy, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, localscopy, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
+    }
+
+    isInYieldBlock(): boolean {
+        return this.yieldTrgtInfo.length !== 0;
+    }
+
+    pushYieldTarget(trgt: MIRTempRegister): TypeEnvironment {
+        let nyield = [...this.yieldTrgtInfo, trgt];
+        return new TypeEnvironment(this.terms, this.args, this.captured, this.locals, this.expressionResult, this.returnResult, this.yieldResult, nyield, this.frozenVars);
+    }
+
+    popYieldTargetInfo(): TypeEnvironment {
+        let nyield = this.yieldTrgtInfo.slice(0, this.yieldTrgtInfo.length - 1);
+        return new TypeEnvironment(this.terms, this.args, this.captured, this.locals, this.expressionResult, this.returnResult, this.yieldResult, nyield, this.frozenVars);
+    }
+
+    getYieldTargetInfo(): MIRTempRegister {
+        return this.yieldTrgtInfo[this.yieldTrgtInfo.length - 1];
     }
 
     private getLocalVarInfo(name: string): VarInfo | undefined {
@@ -231,7 +254,7 @@ class TypeEnvironment {
     addVar(name: string, isConst: boolean, dtype: ResolvedType, isDefined: boolean, ftype: ResolvedType): TypeEnvironment {
         let localcopy = (this.locals as Map<string, VarInfo>[]).map((frame) => new Map<string, VarInfo>(frame));
         localcopy[localcopy.length - 1].set(name, new VarInfo(dtype, isConst, isDefined, ftype));
-        return new TypeEnvironment(this.terms, this.args, this.captured, localcopy, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, localcopy, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
     }
 
     setVar(name: string, ftype: ResolvedType): TypeEnvironment {
@@ -289,7 +312,7 @@ class TypeEnvironment {
             (this.locals as Map<string, VarInfo>[])[i].forEach((v, k) => svars.add(k));
         }
 
-        return new TypeEnvironment(this.terms, this.args, this.captured, this.locals, this.expressionResult, this.returnResult, this.yieldResult, svars);
+        return new TypeEnvironment(this.terms, this.args, this.captured, this.locals, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, svars);
     }
 
     static join(assembly: Assembly, ...opts: TypeEnvironment[]): TypeEnvironment {
@@ -335,7 +358,7 @@ class TypeEnvironment {
         const rflow = opts.filter((opt) => opt.returnResult !== undefined).map((opt) => opt.returnResult as ResolvedType);
         const yflow = opts.filter((opt) => opt.yieldResult !== undefined).map((opt) => opt.yieldResult as ResolvedType);
 
-        return new TypeEnvironment(opts[0].terms, args, captured, locals, expres, rflow.length !== 0 ? assembly.typeUnion(rflow) : undefined, yflow.length !== 0 ? assembly.typeUnion(yflow) : undefined, opts[0].frozenVars);
+        return new TypeEnvironment(opts[0].terms, args, captured, locals, expres, rflow.length !== 0 ? assembly.typeUnion(rflow) : undefined, yflow.length !== 0 ? assembly.typeUnion(yflow) : undefined, opts[0].yieldTrgtInfo, opts[0].frozenVars);
     }
 }
 

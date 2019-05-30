@@ -5,7 +5,7 @@
 
 import { ParserEnvironment, FunctionScope } from "./parser_env";
 import { FunctionParameter, TypeSignature, NominalTypeSignature, TemplateTypeSignature, ParseErrorTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, IntersectionTypeSignature, AutoTypeSignature } from "./type_signature";
-import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorLambdaExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixInvoke, PostfixCallLambda, PostfixOp, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, ConstValueStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement } from "./body";
+import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorLambdaExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PostfixInvoke, PostfixCallLambda, PostfixOp, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, ConstValueStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, BlockStatementExpression, IfExpression, MatchExpression } from "./body";
 import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, TemplateTermRestriction } from "./assembly";
 
 const KeywordStrings = [
@@ -69,6 +69,8 @@ const SymbolStrings = [
     "?(",
     "?@[",
     "?@{",
+    "{|",
+    "|}",
 
     "#",
     "&",
@@ -113,8 +115,8 @@ const SymbolStrings = [
     "?->"
 ].sort((a, b) => { return (a.length !== b.length) ? (b.length - a.length) : a.localeCompare(b); });
 
-const LeftScanParens = ["[", "(", "{", "@[", "@{", "?[", "?(", "?@[", "?@{"];
-const RightScanParens = ["]", ")", "}"];
+const LeftScanParens = ["[", "(", "{", "@[", "@{", "?[", "?(", "?@[", "?@{", "{|"];
+const RightScanParens = ["]", ")", "}", "|}"];
 
 const AttributeStrings = ["hidden", "factory", "virtual", "abstract", "override", "entrypoint"];
 
@@ -1327,17 +1329,18 @@ class Parser {
     }
 
     private parseStatementExpression(): Expression {
-        //const sinfo = this.getCurrentSrcInfo();
-
-        //TODO: statement expression
-        //if (this->testToken(TokenKind::LBRACE) || this->testToken(TokenKind::IF) || this->testToken(TokenKind::MATCH))
-        //{
-        //    return make_shared<StatementExpression>(sinfo, this->parseStatement());
-        //}
-        //else
-        //{
-        return this.parsePostfixExpression();
-        //}
+        if (this.testToken("{|")) {
+            return this.parseBlockStatementExpression();
+        }
+        else if (this.testToken("if")) {
+            return this.parseIfExpression();
+        }
+        else if (this.testToken("switch")) {
+            return this.parseMatchExpression();
+        }
+        else {
+            return this.parsePostfixExpression();
+        }
     }
 
     private parsePrefixExpression(): Expression {
@@ -1469,6 +1472,83 @@ class Parser {
         else {
             return texp;
         }
+    }
+
+    private parseBlockStatementExpression(): Expression {
+        const sinfo = this.getCurrentSrcInfo();
+
+        this.m_penv.getCurrentFunctionScope().pushLocalScope();
+        let stmts: Statement[] = [];
+        try {
+            this.setRecover(this.scanParens());
+
+            this.consumeToken();
+            while (!this.testAndConsumeTokenIf("|}")) {
+                stmts.push(this.parseStatement());
+            }
+
+            this.m_penv.getCurrentFunctionScope().popLocalScope();
+
+            this.clearRecover();
+            return new BlockStatementExpression(sinfo, stmts);
+        }
+        catch (ex) {
+            this.m_penv.getCurrentFunctionScope().popLocalScope();
+            this.processRecover();
+            return new BlockStatementExpression(sinfo, [new InvalidStatement(sinfo)]);
+        }
+    }
+
+    private parseIfExpression(): Expression {
+        const sinfo = this.getCurrentSrcInfo();
+
+        let conds: CondBranchEntry<Expression>[] = [];
+
+        this.ensureAndConsumeToken("if");
+        this.ensureAndConsumeToken("(");
+        const iftest = this.parseExpression();
+        this.ensureAndConsumeToken(")");
+
+        const ifbody = this.parseExpression();
+        conds.push(new CondBranchEntry<Expression>(iftest, ifbody));
+
+        while (this.testAndConsumeTokenIf("elif")) {
+            this.ensureAndConsumeToken("(");
+            const eliftest = this.parseExpression();
+            this.ensureAndConsumeToken(")");
+            const elifbody = this.parseExpression();
+
+            conds.push(new CondBranchEntry<Expression>(eliftest, elifbody));
+        }
+
+        this.ensureAndConsumeToken("else");
+        const elsebody = this.parseExpression();
+
+        return new IfExpression(sinfo, new IfElse<Expression>(conds, elsebody));
+    }
+
+    private parseMatchExpression(): Expression {
+        const sinfo = this.getCurrentSrcInfo();
+
+        this.ensureAndConsumeToken("switch");
+
+        this.ensureAndConsumeToken("(");
+        const mexp = this.parseExpression();
+        this.ensureAndConsumeToken(")");
+
+        let entries: MatchEntry<Expression>[] = [];
+        this.ensureAndConsumeToken("{");
+        while (this.testToken("type") || this.testToken("case")) {
+            if (this.testToken("type")) {
+                entries.push(this.parseMatchEntry<Expression>(sinfo, true, () => this.parseExpression()));
+            }
+            else {
+                entries.push(this.parseMatchEntry<Expression>(sinfo, false, () => this.parseExpression()));
+            }
+        }
+        this.ensureAndConsumeToken("}");
+
+        return new MatchExpression(sinfo, mexp, entries);
     }
 
     private parseExpression(): Expression {
@@ -1749,7 +1829,6 @@ class Parser {
             this.processRecover();
             return new BlockStatement(sinfo, [new InvalidStatement(sinfo)]);
         }
-
     }
 
     private parseIfElseStatement(): Statement {
