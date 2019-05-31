@@ -42,13 +42,13 @@ function runApp(app: string) {
         process.exit(1);
     }
 
-    process.stdout.write("Emitting IR...\n");
-
     try {
+        process.stdout.write("Generating IR...\n");
+
         const irv = (masm as MIRAssembly).functionDecls.get(process.argv[3]) as MIRFunctionDecl;
         const dgml = (irv.invoke.body as MIRBody).dgmlify(irv.fkey);
 
-        process.stdout.write("Emitting IR...\n");
+        process.stdout.write("Writing IR...\n");
         FS.writeFileSync("mir_ir.dgml", dgml);
     }
     catch (ex) {

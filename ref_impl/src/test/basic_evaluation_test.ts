@@ -878,6 +878,120 @@ entrypoint function invokee4mc(): Int {
 entrypoint function invokee4mcc(): Int {
     return E4[Int]@{}->mcc[Int](3);
 }
+
+entrypoint function eblock_4(): Int {
+    return {| var x = 3; yield x + 1; |};
+}
+
+entrypoint function eblock_5(): Int {
+    return {|
+        var x = 3;
+        var y = 5;
+        if(x >= y) {
+            yield x;
+        }
+        yield y;
+    |};
+}
+
+entrypoint function eblock_3(): Int {
+    return {|
+        var x = 3;
+        var y = {| yield 5; |} == 5 ? 3 : 1;
+        yield y;
+    |};
+}
+
+entrypoint function eif_abs1(): Int {
+    var x = -3;
+    var y = if(x < 0) -x else x;
+    return y;
+}
+
+entrypoint function eif_abs2(): Int {
+    var x = 3;
+    return if(x < 0) {|
+        yield -x;
+    |}
+    else {|
+        yield x;
+    |};
+}
+
+entrypoint function eif_absy_none(): Int {
+    var x = (1 > 2) ? 1 : none;
+    return if(x == none) 0 else {|
+        var! y = x;
+        if(y < 0) {
+            y = -y;
+        }
+        yield y;
+    |};
+}
+
+entrypoint function eif_absy_1(): Int {
+    var x = (3 > 2) ? 1 : none;
+    return if(x == none)
+        0
+    else {|
+        var! y = x;
+        if(y < 0) {
+            y = -y;
+        }
+        yield y;
+    |};
+}
+
+entrypoint function enestif_abs1(): Int {
+    var x = (3 > 2) ? -3 : none;
+    var y = if(x == none) 0 else if(x > 0) x else -x;
+    return y;
+}
+
+function ematch(arg: Any, tv?: Bool): Int {
+    return switch(arg) {
+        type None => 1
+        case 2 => 2
+        case @[var x: Int, 3] => {| yield x + 1; |}
+        type {f?: Int} => switch(arg.f) {
+            case none => 0
+            case _ => -1
+        }
+        case _ => if(tv) 10 else 11
+    };
+}
+
+entrypoint function ematch_1(): Int {
+    return ematch(none);
+}
+
+entrypoint function ematch_2(): Int {
+    return ematch(2);
+}
+
+entrypoint function ematch_3(): Int {
+    return ematch(@[2, 3]);
+}
+
+entrypoint function ematch_10(): Int {
+    return ematch("yes", true);
+}
+
+entrypoint function ematch_0(): Int {
+    return ematch(@{});
+}
+
+entrypoint function ematch_n1(): Int {
+    return ematch(@{f=2});
+}
+
+entrypoint function ematch_11(): Int {
+    return ematch("no", false);
+}
+
+entrypoint function ematch_11alt(): Int {
+    return ematch("no");
+}
 `;
 
 const expression_tests: TestInfo[] = [
@@ -1078,7 +1192,26 @@ const expression_tests: TestInfo[] = [
     { name: "invokee4ii", input: ["invokee4ii"], expected: "3" },
     { name: "invokee4m3", input: ["invokee4m3"], expected: "6" },
     { name: "invokee4mc", input: ["invokee4mc"], expected: "0" },
-    { name: "invokee4mcc", input: ["invokee4mcc"], expected: "3" }
+    { name: "invokee4mcc", input: ["invokee4mcc"], expected: "3" },
+
+    { name: "eblock_4", input: ["eblock_4"], expected: "4" },
+    { name: "eblock_5", input: ["eblock_5"], expected: "5" },
+    { name: "eblock_3", input: ["eblock_3"], expected: "3" },
+
+    { name: "eif_abs1", input: ["eif_abs1"], expected: "3" },
+    { name: "eif_abs2", input: ["eif_abs2"], expected: "3" },
+    { name: "eif_absy_none", input: ["eif_absy_none"], expected: "0" },
+    { name: "eif_absy_1", input: ["eif_absy_1"], expected: "1" },
+    { name: "enestif_abs1", input: ["enestif_abs1"], expected: "3" },
+
+    { name: "ematch_1", input: ["ematch_1"], expected: "1" },
+    { name: "ematch_2", input: ["ematch_2"], expected: "2" },
+    { name: "ematch_3", input: ["ematch_3"], expected: "3" },
+    { name: "ematch_10", input: ["ematch_10"], expected: "10" },
+    { name: "ematch_0", input: ["ematch_0"], expected: "0" },
+    { name: "ematch_n1", input: ["ematch_n1"], expected: "-1" },
+    { name: "ematch_11", input: ["ematch_11"], expected: "11" },
+    { name: "ematch_11", input: ["ematch_11"], expected: "11" }
 ];
 
 function expression_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
