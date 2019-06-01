@@ -86,8 +86,8 @@ type ExpressionReturnResult = {
 class TypeEnvironment {
     readonly terms: Map<string, ResolvedType>;
 
-    readonly args: Map<string, VarInfo>;
-    readonly captured: Map<string, VarInfo>;
+    readonly args: Map<string, VarInfo> | undefined;
+    readonly captured: Map<string, VarInfo> | undefined;
     readonly locals: Map<string, VarInfo>[] | undefined;
 
     readonly expressionResult: ExpressionReturnResult | undefined;
@@ -99,7 +99,7 @@ class TypeEnvironment {
     readonly frozenVars: Set<string>;
 
     private constructor(terms: Map<string, ResolvedType>,
-        args: Map<string, VarInfo>, captured: Map<string, VarInfo>, locals: Map<string, VarInfo>[] | undefined,
+        args: Map<string, VarInfo> | undefined, captured: Map<string, VarInfo> | undefined, locals: Map<string, VarInfo>[] | undefined,
         expressionResult: ExpressionReturnResult | undefined, rflow: ResolvedType | undefined, yflow: ResolvedType | undefined,
         yieldTrgtInfo: MIRTempRegister[], frozenVars: Set<string>) {
         this.terms = terms;
@@ -122,12 +122,12 @@ class TypeEnvironment {
             let localcopy = (this.locals as Map<string, VarInfo>[]).map((frame) => frame.has(name) ? new Map<string, VarInfo>(frame).set(name, nv) : new Map<string, VarInfo>(frame));
             return new TypeEnvironment(this.terms, this.args, this.captured, localcopy, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
         }
-        else if (this.args.has(name)) {
-            const argscopy = new Map<string, VarInfo>(this.args).set(name, nv);
+        else if ((this.args as Map<string, VarInfo>).has(name)) {
+            const argscopy = new Map<string, VarInfo>(this.args as Map<string, VarInfo>).set(name, nv);
             return new TypeEnvironment(this.terms, argscopy, this.captured, this.locals, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
         }
         else {
-            const capturedcopy = new Map<string, VarInfo>(this.captured).set(name, nv);
+            const capturedcopy = new Map<string, VarInfo>(this.captured as Map<string, VarInfo>).set(name, nv);
             return new TypeEnvironment(this.terms, this.args, capturedcopy, this.locals, this.expressionResult, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
         }
     }
@@ -235,11 +235,11 @@ class TypeEnvironment {
     }
 
     isVarNameDefined(name: string): boolean {
-        return this.getLocalVarInfo(name) !== undefined || this.args.has(name) || this.captured.has(name);
+        return this.getLocalVarInfo(name) !== undefined || (this.args as Map<string, VarInfo>).has(name) || (this.captured as Map<string, VarInfo>).has(name);
     }
 
     lookupVar(name: string): VarInfo | null {
-        return this.getLocalVarInfo(name) || this.args.get(name) || this.captured.get(name) || null;
+        return this.getLocalVarInfo(name) || (this.args as Map<string, VarInfo>).get(name) || (this.captured as Map<string, VarInfo>).get(name) || null;
     }
 
     lookupVarScope(name: string): "captured" | "arg" | "local" {
@@ -248,7 +248,7 @@ class TypeEnvironment {
             return "local";
         }
 
-        return this.args.has(name) ? "arg" : "captured";
+        return (this.args as Map<string, VarInfo>).has(name) ? "arg" : "captured";
     }
 
     addVar(name: string, isConst: boolean, dtype: ResolvedType, isDefined: boolean, ftype: ResolvedType): TypeEnvironment {
@@ -318,26 +318,30 @@ class TypeEnvironment {
     static join(assembly: Assembly, ...opts: TypeEnvironment[]): TypeEnvironment {
         assert(opts.length !== 0);
 
+        const fopts = opts.filter((opt) => opt.locals !== undefined);
+
         let argnames: string[] = [];
         let capturednames: string[] = [];
-        opts.forEach((opt) => {
-            opt.args.forEach((v, k) => argnames.push(k));
-            opt.captured.forEach((v, k) => capturednames.push(k));
+        fopts.forEach((opt) => {
+            (opt.args as Map<string, VarInfo>).forEach((v, k) => argnames.push(k));
+            (opt.captured as Map<string, VarInfo>).forEach((v, k) => capturednames.push(k));
         });
 
-        let args = new Map<string, VarInfo>();
-        argnames.forEach((aname) => {
-            const vinfo = VarInfo.join(assembly, ...opts.map((opt) => opt.args.get(aname) as VarInfo));
-            args.set(aname, vinfo);
-        });
+        let args = fopts.length !== 0 ? new Map<string, VarInfo>() : undefined;
+        if (args !== undefined) {
+            argnames.forEach((aname) => {
+                const vinfo = VarInfo.join(assembly, ...fopts.map((opt) => (opt.args as Map<string, VarInfo>).get(aname) as VarInfo));
+                (args as Map<string, VarInfo>).set(aname, vinfo);
+            });
+        }
 
-        let captured = new Map<string, VarInfo>();
-        capturednames.forEach((aname) => {
-            const vinfo = VarInfo.join(assembly, ...opts.map((opt) => opt.captured.get(aname) as VarInfo));
-            captured.set(aname, vinfo);
-        });
-
-        const fopts = opts.filter((opt) => opt.locals !== undefined);
+        let captured = fopts.length !== 0 ? new Map<string, VarInfo>() : undefined;
+        if (captured !== undefined) {
+            capturednames.forEach((aname) => {
+                const vinfo = VarInfo.join(assembly, ...fopts.map((opt) => (opt.captured as Map<string, VarInfo>).get(aname) as VarInfo));
+                (captured as Map<string, VarInfo>).set(aname, vinfo);
+            });
+        }
 
         let locals = fopts.length !== 0 ? ([] as Map<string, VarInfo>[]) : undefined;
         if (locals !== undefined) {
