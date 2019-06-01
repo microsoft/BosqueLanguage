@@ -61,6 +61,18 @@ entrypoint function phimulti(): Bool {
     var r3 = phimulti_doit(3);
     return r1 == 2 && r2 == r3;
 }
+
+function argTypeFlow(x?: Int): Int {
+    if(x == none) {
+        return 0;
+    }
+
+    return x + 1;
+}
+
+entrypoint function argTypeFlow_entry(x?: Int): Int {
+    return argTypeFlow() + argTypeFlow(0);
+}
 `;
 
 const regression_tests: TestInfo[] = [
@@ -69,6 +81,7 @@ const regression_tests: TestInfo[] = [
     { name: "vInvoke1", input: ["vInvoke1"], expected: "3" },
     { name: "vInvoke2", input: ["vInvoke2"], expected: "[NO RESULT]", expectedError: true },
     { name: "phimulti", input: ["phimulti"], expected: "true" },
+    { name: "argTypeFlow_entry", input: ["argTypeFlow_entry"], expected: "1" },
 ];
 
 function regression_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {

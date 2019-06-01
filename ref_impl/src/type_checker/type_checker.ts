@@ -3064,7 +3064,7 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, !this.m_assembly.subtypeOf(evalue.getExpressionResult().etype, ofType), "Did not produce the expected type");
 
         let argNames: string[] = [];
-        env.args.forEach((arg, name) => argNames.push(name));
+        (env.args as Map<string, VarInfo>).forEach((arg, name) => argNames.push(name));
 
         return this.m_emitter.bodyEmitter.getBody(this.m_file, exp.sinfo, argNames, []);
     }
