@@ -7,7 +7,7 @@ import * as FS from "fs";
 import * as Path from "path";
 import chalk from "chalk";
 import { MIREmitter } from "../compiler/mir_emitter";
-import { PackageConfig, MIRAssembly, MIRFunctionDecl } from "../compiler/mir_assembly";
+import { PackageConfig, MIRAssembly, MIRInvokeBodyDecl } from "../compiler/mir_assembly";
 import { MIRBody } from "../compiler/mir_ops";
 
 function runApp(app: string) {
@@ -45,8 +45,8 @@ function runApp(app: string) {
     try {
         process.stdout.write("Generating IR...\n");
 
-        const irv = (masm as MIRAssembly).functionDecls.get(process.argv[3]) as MIRFunctionDecl;
-        const dgml = (irv.invoke.body as MIRBody).dgmlify(irv.fkey);
+        const irv = (masm as MIRAssembly).invokeDecls.get(process.argv[3]) as MIRInvokeBodyDecl;
+        const dgml = (irv.body as MIRBody).dgmlify(irv.iname);
 
         process.stdout.write("Writing IR...\n");
         FS.writeFileSync("mir_ir.dgml", dgml);

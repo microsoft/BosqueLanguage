@@ -3,17 +3,17 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { Value, TypedStringValue, EntityValueSimple, ValueOps, ListValue, HashSetValue, HashMapValue, TupleValue, RecordValue, LambdaValue } from "./value";
-import { Environment, PrePostError, raiseRuntimeError, FunctionScope, InvariantError, NotImplementedRuntimeError } from "./interpreter_environment";
-import { MIRAssembly, MIRTupleType, MIRTupleTypeEntry, MIRRecordTypeEntry, MIRRecordType, MIREntityType, MIREntityTypeDecl, MIRFieldDecl, MIROOTypeDecl, MIRType, MIRGlobalDecl, MIRConstDecl, MIRFunctionDecl, MIRStaticDecl, MIRConceptTypeDecl, MIRMethodDecl, MIRInvokeDecl, MIRFunctionType } from "../compiler/mir_assembly";
-import { MIRBody, MIROp, MIROpTag, MIRLoadConst, MIRArgument, MIRTempRegister, MIRRegisterArgument, MIRConstantTrue, MIRConstantString, MIRConstantInt, MIRConstantNone, MIRConstantFalse, MIRLoadConstTypedString, MIRAccessNamespaceConstant, MIRAccessConstField, MIRLoadFieldDefaultValue, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRAccessFromField, MIRProjectFromProperties, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRInvokeVirtualTarget, MIRCallLambda, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRJump, MIRJumpCond, MIRJumpNone, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRTruthyConvert, MIRDebug, MIRPhi, MIRVarLocal, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAbort } from "../compiler/mir_ops";
+import { Value, TypedStringValue, EntityValueSimple, ValueOps, ListValue, HashSetValue, HashMapValue, TupleValue, RecordValue } from "./value";
+import { Environment, PrePostError, raiseRuntimeError, FunctionScope, InvariantError, NotImplementedRuntimeError, raiseRuntimeErrorIf } from "./interpreter_environment";
+import { MIRAssembly, MIRTupleType, MIRTupleTypeEntry, MIRRecordTypeEntry, MIRRecordType, MIREntityType, MIREntityTypeDecl, MIRFieldDecl, MIROOTypeDecl, MIRType, MIRConceptTypeDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRConstantDecl } from "../compiler/mir_assembly";
+import { MIRBody, MIROp, MIROpTag, MIRLoadConst, MIRArgument, MIRTempRegister, MIRRegisterArgument, MIRConstantTrue, MIRConstantString, MIRConstantInt, MIRConstantNone, MIRConstantFalse, MIRLoadConstTypedString, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRAccessFromField, MIRProjectFromProperties, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRJump, MIRJumpCond, MIRJumpNone, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRTruthyConvert, MIRDebug, MIRPhi, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAbort, MIRInvokeKey, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRVariable } from "../compiler/mir_ops";
 
 import * as assert from "assert";
 import { BuiltinCalls, BuiltinCallSig } from "./builtins";
 
 class Interpreter {
     private m_env: Environment;
-    private m_ep: (call: LambdaValue, cargs: Value[]) => Value;
+    private m_ep: (call: MIRInvokeKey, cargs: Value[]) => Value;
 
     private m_doInvariantCheck: boolean;
     private m_doPrePostCheck: boolean;
@@ -22,7 +22,7 @@ class Interpreter {
     constructor(assembly: MIRAssembly, invCheck: boolean, prePostCheck: boolean, assertEnabled: boolean) {
         this.m_env = new Environment(assembly);
 
-        this.m_ep = (call: LambdaValue, cargs: Value[]): Value => Interpreter.evaluateReEntrantCall(this, call, cargs);
+        this.m_ep = (call: MIRInvokeKey, cargs: Value[]): Value => Interpreter.evaluateReEntrantCall(this, call, cargs);
 
         this.m_doInvariantCheck = invCheck;
         this.m_doPrePostCheck = prePostCheck;
@@ -61,7 +61,7 @@ class Interpreter {
     private checkPreConds(file: string, conds: MIRBody[], args: Map<string, Value>) {
         if (this.m_doPrePostCheck && conds.length !== 0) {
             const cok = conds.every((cond) => {
-                const cres = this.evaluateNakedMIRBody(file, cond, args);
+                const cres = this.evaluateNakedMIRBody(file, cond, new Map<string, Value>(args));
                 return typeof (cres) === "boolean" && cres;
             });
 
@@ -73,9 +73,8 @@ class Interpreter {
 
     private checkPostConds(file: string, conds: MIRBody[], args: Map<string, Value>, result: Value) {
         if (this.m_doPrePostCheck && conds.length !== 0) {
-            const argswres = new Map<string, Value>(args).set("_return_", result);
             const cok = conds.every((cond) => {
-                const cres = this.evaluateNakedMIRBody(file, cond, argswres);
+                const cres = this.evaluateNakedMIRBody(file, cond, new Map<string, Value>(args).set("_return_", result));
                 return typeof (cres) === "boolean" && cres;
             });
 
@@ -87,9 +86,8 @@ class Interpreter {
 
     private checkInvariants(entity: MIREntityTypeDecl, evalue: EntityValueSimple) {
         if (this.m_doPrePostCheck && entity.invariants.length !== 0) {
-            const args = new Map<string, Value>().set("this", evalue);
             const cok = entity.invariants.every((cond) => {
-                const cres = this.evaluateNakedMIRBody(entity.srcFile, cond, args);
+                const cres = this.evaluateNakedMIRBody(entity.srcFile, cond, new Map<string, Value>().set("this", evalue));
                 return typeof (cres) === "boolean" && cres;
             });
 
@@ -100,7 +98,7 @@ class Interpreter {
     }
 
     private evaluateNakedMIRBody(file: string, mirbody: MIRBody, args?: Map<string, Value>): Value {
-        this.m_env.pushCallFrame(args || new Map<string, Value>(), new Map<string, Value>(), mirbody, file);
+        this.m_env.pushCallFrame(args || new Map<string, Value>(), mirbody, file);
         this.evaluateOpFlows();
         const result = this.m_env.getActiveScope().lookupVar("_return_");
         this.m_env.popCallFrame();
@@ -108,47 +106,42 @@ class Interpreter {
         return result;
     }
 
-    private evaluateMirBody(invdecl: MIRInvokeDecl, args: Map<string, Value>, captured?: Map<string, Value>): Value {
+    private evaluateMirBody(invdecl: MIRInvokeDecl, args: Map<string, Value>): Value {
         let result = undefined;
 
-        const mirbody = invdecl.body as MIRBody;
-        if (typeof (mirbody.body) === "string") {
-            result = (BuiltinCalls.get(mirbody.body) as BuiltinCallSig).call(null, this.m_ep, invdecl, this.m_env.assembly, args);
+        if (invdecl instanceof MIRInvokePrimitiveDecl) {
+            result = (BuiltinCalls.get(invdecl.implkey) as BuiltinCallSig).call(null, this.m_ep, invdecl, this.m_env.assembly, args);
         }
         else {
-            this.m_env.pushCallFrame(args, captured || new Map<string, Value>(), mirbody, mirbody.file);
-            this.checkPreConds(mirbody.file, invdecl.preconditions, args);
+            const binv = invdecl as MIRInvokeBodyDecl;
+
+            this.m_env.pushCallFrame(args, binv.body, binv.body.file);
+            this.checkPreConds(binv.body.file, binv.preconditions, args);
 
             this.evaluateOpFlows();
             result = this.m_env.getActiveScope().lookupVar("_return_");
 
-            this.checkPostConds(mirbody.file, invdecl.postconditions, args, result);
+            this.checkPostConds(binv.body.file, binv.postconditions, args, result);
             this.m_env.popCallFrame();
         }
 
         return result;
     }
 
-    private static evaluateReEntrantCall(interpreter: Interpreter, v: LambdaValue, cargs: Value[]): Value {
+    private static evaluateReEntrantCall(interpreter: Interpreter, vkey: MIRInvokeKey, cargs: Value[]): Value {
+        let invoke = (interpreter.m_env.assembly.invokeDecls.get(vkey) || interpreter.m_env.assembly.primitiveInvokeDecls.get(vkey)) as MIRInvokeDecl;
+
         let args = new Map<string, Value>();
-        for (let i = 0; i < v.invoke.params.length; ++i) {
-            args.set(v.invoke.params[i].name, cargs[i]);
-        }
-        if (v.invoke.optRestName !== undefined) {
-            args.set(v.invoke.optRestName, cargs[v.invoke.params.length]);
+        for (let i = 0; i < invoke.params.length; ++i) {
+            args.set(invoke.params[i].name, cargs[i]);
         }
 
-        interpreter.m_env.pushCallFrame(args, v.capturedVars, v.invoke.body as MIRBody, v.invoke.srcFile);
-        interpreter.evaluateOpFlows();
-        const result = interpreter.m_env.getActiveScope().lookupVar("_return_");
-        interpreter.m_env.popCallFrame();
-
-        return result;
+        return interpreter.evaluateMirBody(invoke, args);
     }
 
     private evaluateCollectionConstructor_Empty(op: MIRConstructorPrimaryCollectionEmpty): Value {
         const ctype = MIREntityType.create(op.tkey);
-        const ootype = this.m_env.assembly.entityMap.get(op.tkey) as MIREntityTypeDecl;
+        const ootype = this.m_env.assembly.entityDecls.get(op.tkey) as MIREntityTypeDecl;
 
         if (ootype.name === "List") {
             return new ListValue(ctype, []);
@@ -166,7 +159,7 @@ class Interpreter {
     private evaluateCollectionConstructor_Singleton(op: MIRConstructorPrimaryCollectionSingletons, fscope: FunctionScope): Value {
         const ctype = MIREntityType.create(op.tkey);
         const args = op.args.map((arg) => this.getArgValue(fscope, arg));
-        const ootype = this.m_env.assembly.entityMap.get(op.tkey) as MIREntityTypeDecl;
+        const ootype = this.m_env.assembly.entityDecls.get(op.tkey) as MIREntityTypeDecl;
 
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
@@ -184,7 +177,7 @@ class Interpreter {
     private evaluateCollectionConstructor_Copy(op: MIRConstructorPrimaryCollectionCopies, fscope: FunctionScope): Value {
         const ctype = MIREntityType.create(op.tkey);
         const args = ([] as Value[]).concat(...op.args.map((arg) => ValueOps.getContainerContentsEnumeration(this.getArgValue(fscope, arg))));
-        const ootype = this.m_env.assembly.entityMap.get(op.tkey) as MIREntityTypeDecl;
+        const ootype = this.m_env.assembly.entityDecls.get(op.tkey) as MIREntityTypeDecl;
 
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
@@ -202,7 +195,7 @@ class Interpreter {
     private evaluateCollectionConstructor_Mixed(op: MIRConstructorPrimaryCollectionMixed, fscope: FunctionScope): Value {
         const ctype = MIREntityType.create(op.tkey);
         const args = ([] as Value[]).concat(...op.args.map((arg) => arg[0] ? ValueOps.getContainerContentsEnumeration(this.getArgValue(fscope, arg[1])) : [this.getArgValue(fscope, arg[1])]));
-        const ootype = this.m_env.assembly.entityMap.get(op.tkey) as MIREntityTypeDecl;
+        const ootype = this.m_env.assembly.entityDecls.get(op.tkey) as MIREntityTypeDecl;
 
         if (ootype.name === "List") {
             return new ListValue(ctype, args);
@@ -223,54 +216,43 @@ class Interpreter {
         fscope.setCurrentLine(op.sinfo.line);
 
         switch (op.tag) {
-            case MIROpTag.LoadConst: {
+            case MIROpTag.MIRLoadConst: {
                 const lc = op as MIRLoadConst;
                 fscope.assignTmpReg(lc.trgt.regID, this.getArgValue(fscope, lc.src));
                 break;
             }
-            case MIROpTag.LoadConstTypedString: {
+            case MIROpTag.MIRLoadConstTypedString: {
                 const lts = op as MIRLoadConstTypedString;
-                const oftype = (this.m_env.assembly.entityMap.get(lts.tkey) || this.m_env.assembly.conceptMap.get(lts.tkey)) as MIROOTypeDecl;
+                const oftype = (this.m_env.assembly.entityDecls.get(lts.tkey) || this.m_env.assembly.conceptDecls.get(lts.tkey)) as MIROOTypeDecl;
                 fscope.assignTmpReg(lts.trgt.regID, new TypedStringValue(oftype, this.m_env.assembly.typeMap.get(lts.tskey) as MIRType, ValueOps.unescapeTypedString(lts.ivalue)));
                 break;
             }
-            case MIROpTag.AccessNamespaceConstant: {
-                const lg = op as MIRAccessNamespaceConstant;
-                const gval = this.m_env.assembly.globalDecls.get(lg.gkey) as MIRGlobalDecl;
+            case MIROpTag.MIRAccessConstantValue: {
+                const lg = op as MIRAccessConstantValue;
+                const gval = this.m_env.assembly.constantDecls.get(lg.ckey) as MIRConstantDecl;
                 fscope.assignTmpReg(lg.trgt.regID, this.evaluateNakedMIRBody(gval.srcFile, gval.value));
                 break;
             }
-            case MIROpTag.AccessConstField: {
-                const lcf = op as MIRAccessConstField;
-                const cval = this.m_env.assembly.constDecls.get(lcf.ckey) as MIRConstDecl;
-                fscope.assignTmpReg(lcf.trgt.regID, this.evaluateNakedMIRBody(cval.srcFile, cval.value as MIRBody));
-                break;
-            }
-            case MIROpTag.LoadFieldDefaultValue: {
+            case MIROpTag.MIRLoadFieldDefaultValue: {
                 const lcf = op as MIRLoadFieldDefaultValue;
-                const cval = this.m_env.assembly.memberFields.get(lcf.fkey) as MIRFieldDecl;
+                const cval = this.m_env.assembly.fieldDecls.get(lcf.fkey) as MIRFieldDecl;
                 fscope.assignTmpReg(lcf.trgt.regID, this.evaluateNakedMIRBody(cval.srcFile, cval.value as MIRBody));
                 break;
             }
-            case MIROpTag.AccessCapturedVariable: {
-                const lcv = op as MIRAccessCapturedVariable;
-                fscope.assignTmpReg(lcv.trgt.regID, fscope.lookupVar(lcv.name.nameID));
-                break;
-            }
-            case MIROpTag.AccessArgVariable: {
+            case MIROpTag.MIRAccessArgVariable: {
                 const lav = op as MIRAccessArgVariable;
                 fscope.assignTmpReg(lav.trgt.regID, fscope.lookupVar(lav.name.nameID));
                 break;
             }
-            case MIROpTag.AccessLocalVariable: {
+            case MIROpTag.MIRAccessLocalVariable: {
                 const llv = op as MIRAccessLocalVariable;
                 fscope.assignTmpReg(llv.trgt.regID, fscope.lookupVar(llv.name.nameID));
                 break;
             }
-            case MIROpTag.ConstructorPrimary: {
+            case MIROpTag.MIRConstructorPrimary: {
                 const cp = op as MIRConstructorPrimary;
-                const ctype = this.m_env.assembly.entityMap.get(cp.tkey) as MIREntityTypeDecl;
-                const fvals = cp.args.map<[string, Value]>((arg, i) => [ctype.fieldLayout[i], this.getArgValue(fscope, arg)]);
+                const ctype = this.m_env.assembly.entityDecls.get(cp.tkey) as MIREntityTypeDecl;
+                const fvals = cp.args.map<[string, Value]>((arg, i) => [ctype.fields[i].name, this.getArgValue(fscope, arg)]);
                 const evalue = new EntityValueSimple(MIREntityType.create(cp.tkey), fvals);
                 if (this.m_doInvariantCheck) {
                     this.checkInvariants(ctype, evalue);
@@ -278,31 +260,31 @@ class Interpreter {
                 fscope.assignTmpReg(cp.trgt.regID, evalue);
                 break;
             }
-            case MIROpTag.ConstructorPrimaryCollectionEmpty: {
+            case MIROpTag.MIRConstructorPrimaryCollectionEmpty: {
                 const cc = op as MIRConstructorPrimaryCollectionEmpty;
                 const cvalue = this.evaluateCollectionConstructor_Empty(cc);
                 fscope.assignTmpReg(cc.trgt.regID, cvalue);
                 break;
             }
-            case MIROpTag.ConstructorPrimaryCollectionSingletons: {
+            case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
                 const cc = op as MIRConstructorPrimaryCollectionSingletons;
                 const cvalue = this.evaluateCollectionConstructor_Singleton(cc, fscope);
                 fscope.assignTmpReg(cc.trgt.regID, cvalue);
                 break;
             }
-            case MIROpTag.ConstructorPrimaryCollectionCopies: {
+            case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
                 const cc = op as MIRConstructorPrimaryCollectionCopies;
                 const cvalue = this.evaluateCollectionConstructor_Copy(cc, fscope);
                 fscope.assignTmpReg(cc.trgt.regID, cvalue);
                 break;
             }
-            case MIROpTag.ConstructorPrimaryCollectionMixed: {
+            case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
                 const cc = op as MIRConstructorPrimaryCollectionMixed;
                 const cvalue = this.evaluateCollectionConstructor_Mixed(cc, fscope);
                 fscope.assignTmpReg(cc.trgt.regID, cvalue);
                 break;
             }
-            case MIROpTag.ConstructorTuple: {
+            case MIROpTag.MIRConstructorTuple: {
                 const tc = op as MIRConstructorTuple;
                 let tentries: MIRTupleTypeEntry[] = [];
                 let tvalues: Value[] = [];
@@ -314,7 +296,7 @@ class Interpreter {
                 fscope.assignTmpReg(tc.trgt.regID, new TupleValue(MIRTupleType.create(false, tentries), tvalues));
                 break;
             }
-            case MIROpTag.ConstructorRecord: {
+            case MIROpTag.MIRConstructorRecord: {
                 const tc = op as MIRConstructorRecord;
                 let tentries: MIRRecordTypeEntry[] = [];
                 let tvalues: [string, Value][] = [];
@@ -325,44 +307,6 @@ class Interpreter {
                     tvalues.push([f, v]);
                 }
                 fscope.assignTmpReg(tc.trgt.regID, new RecordValue(MIRRecordType.create(false, tentries), tvalues));
-                break;
-            }
-            case MIROpTag.ConstructorLambda: {
-                const lc = op as MIRConstructorLambda;
-                const linvoke = this.m_env.assembly.lambdaDecls.get(lc.lkey) as MIRInvokeDecl;
-                const lsig = (this.m_env.assembly.typeMap.get(lc.lsigkey) as MIRType).options[0] as MIRFunctionType;
-                let captured = new Map<string, Value>();
-                linvoke.captured.forEach((v, k) => {
-                    captured.set(k, fscope.lookupVar(k));
-                });
-
-                fscope.assignTmpReg(lc.trgt.regID, new LambdaValue(lsig, linvoke, captured));
-                break;
-            }
-            case MIROpTag.CallNamespaceFunction: {
-                const fc = op as MIRCallNamespaceFunction;
-                const fdecl = this.m_env.assembly.functionDecls.get(fc.fkey) as MIRFunctionDecl;
-                let args = new Map<string, Value>();
-                for (let i = 0; i < fdecl.invoke.params.length; ++i) {
-                    args.set(fdecl.invoke.params[i].name, this.getArgValue(fscope, fc.args[i]));
-                }
-                if (fdecl.invoke.optRestName !== undefined) {
-                    args.set(fdecl.invoke.optRestName, this.getArgValue(fscope, fc.args[fdecl.invoke.params.length]));
-                }
-                fscope.assignTmpReg(fc.trgt.regID, this.evaluateMirBody(fdecl.invoke, args));
-                break;
-            }
-            case MIROpTag.CallStaticFunction: {
-                const fc = op as MIRCallStaticFunction;
-                const fdecl = this.m_env.assembly.staticDecls.get(fc.skey) as MIRStaticDecl;
-                let args = new Map<string, Value>();
-                for (let i = 0; i < fdecl.invoke.params.length; ++i) {
-                    args.set(fdecl.invoke.params[i].name, this.getArgValue(fscope, fc.args[i]));
-                }
-                if (fdecl.invoke.optRestName !== undefined) {
-                    args.set(fdecl.invoke.optRestName, this.getArgValue(fscope, fc.args[fdecl.invoke.params.length]));
-                }
-                fscope.assignTmpReg(fc.trgt.regID, this.evaluateMirBody(fdecl.invoke, args));
                 break;
             }
             case MIROpTag.MIRAccessFromIndex: {
@@ -464,7 +408,7 @@ class Interpreter {
                 const pc = op as MIRProjectFromTypeConcept;
                 const arg = this.getArgValue(fscope, pc.arg) as EntityValueSimple;
                 const projectfields = new Set<string>();
-                pc.ctypes.map((ckey) => this.m_env.assembly.conceptMap.get(ckey) as MIRConceptTypeDecl).forEach((cdecl) => cdecl.fieldMap.forEach((v, k) => projectfields.add(k)));
+                pc.ctypes.map((ckey) => this.m_env.assembly.conceptDecls.get(ckey) as MIRConceptTypeDecl).forEach((cdecl) => cdecl.fields.forEach((v, k) => projectfields.add(v.name)));
 
                 let rentries: MIRRecordTypeEntry[] = [];
                 let rvalues: [string, Value][] = [];
@@ -530,7 +474,7 @@ class Interpreter {
                 }
                 const evalue = new EntityValueSimple(arg.etype, fvals);
                 if (this.m_doInvariantCheck) {
-                    this.checkInvariants(this.m_env.assembly.entityMap.get(evalue.etype.ekey) as MIREntityTypeDecl, evalue);
+                    this.checkInvariants(this.m_env.assembly.entityDecls.get(evalue.etype.ekey) as MIREntityTypeDecl, evalue);
                 }
                 fscope.assignTmpReg(mf.trgt.regID, evalue);
                 break;
@@ -577,54 +521,34 @@ class Interpreter {
                 }
                 const evalue = new EntityValueSimple(arg.etype, fvals);
                 if (this.m_doInvariantCheck) {
-                    this.checkInvariants(this.m_env.assembly.entityMap.get(evalue.etype.ekey) as MIREntityTypeDecl, evalue);
+                    this.checkInvariants(this.m_env.assembly.entityDecls.get(evalue.etype.ekey) as MIREntityTypeDecl, evalue);
                 }
                 fscope.assignTmpReg(so.trgt.regID, evalue);
                 break;
             }
-            case MIROpTag.MIRInvokeKnownTarget: {
-                const invk = op as MIRInvokeKnownTarget;
-                const fdecl = this.m_env.assembly.methodDecls.get(invk.mkey) as MIRMethodDecl;
+            case MIROpTag.MIRInvokeFixedFunction: {
+                const fc = op as MIRInvokeFixedFunction;
+                const idecl = (this.m_env.assembly.invokeDecls.get(fc.mkey) || this.m_env.assembly.primitiveInvokeDecls.get(fc.mkey)) as MIRInvokeDecl;
                 let args = new Map<string, Value>();
-                for (let i = 0; i < fdecl.invoke.params.length; ++i) {
-                    args.set(fdecl.invoke.params[i].name, this.getArgValue(fscope, invk.args[i]));
+                for (let i = 0; i < idecl.params.length; ++i) {
+                    args.set(idecl.params[i].name, this.getArgValue(fscope, fc.args[i]));
                 }
-                if (fdecl.invoke.optRestName !== undefined) {
-                    args.set(fdecl.invoke.optRestName, this.getArgValue(fscope, invk.args[fdecl.invoke.params.length]));
-                }
-                fscope.assignTmpReg(invk.trgt.regID, this.evaluateMirBody(fdecl.invoke, args));
+                fscope.assignTmpReg(fc.trgt.regID, this.evaluateMirBody(idecl, args));
                 break;
             }
             case MIROpTag.MIRInvokeVirtualTarget: {
-                const invk = op as MIRInvokeVirtualTarget;
+                const invk = op as MIRInvokeVirtualFunction;
                 const tvalue = this.getArgValue(fscope, invk.args[0]);
-                const ttype = ValueOps.getValueType(tvalue).options[0] as MIREntityType;
+                const ttype = this.m_env.assembly.entityDecls.get(ValueOps.getValueType(tvalue).trkey) as MIREntityTypeDecl;
 
-                const edecl = this.m_env.assembly.entityMap.get(ttype.ekey) as MIREntityTypeDecl;
-                const fdecl = edecl.vcallMap.get(invk.vresolve) as MIRMethodDecl;
+                const fkey = ttype.vcallMap.get(invk.vresolve) as MIRInvokeKey;
+                const idecl = (this.m_env.assembly.invokeDecls.get(fkey) || this.m_env.assembly.primitiveInvokeDecls.get(fkey)) as MIRInvokeDecl;
 
                 let args = new Map<string, Value>();
-                for (let i = 0; i < fdecl.invoke.params.length; ++i) {
-                    args.set(fdecl.invoke.params[i].name, this.getArgValue(fscope, invk.args[i]));
+                for (let i = 0; i < idecl.params.length; ++i) {
+                    args.set(idecl.params[i].name, this.getArgValue(fscope, invk.args[i]));
                 }
-                if (fdecl.invoke.optRestName !== undefined) {
-                    args.set(fdecl.invoke.optRestName, this.getArgValue(fscope, invk.args[fdecl.invoke.params.length]));
-                }
-                fscope.assignTmpReg(invk.trgt.regID, this.evaluateMirBody(fdecl.invoke, args));
-                break;
-            }
-            case MIROpTag.MIRCallLambda: {
-                const cl = op as MIRCallLambda;
-                const lvalue = this.getArgValue(fscope, cl.lambda) as LambdaValue;
-                let args = new Map<string, Value>();
-                for (let i = 0; i < lvalue.invoke.params.length; ++i) {
-                    args.set(lvalue.invoke.params[i].name, this.getArgValue(fscope, cl.args[i]));
-                }
-                if (lvalue.invoke.optRestName !== undefined) {
-                    args.set(lvalue.invoke.optRestName, this.getArgValue(fscope, cl.args[lvalue.invoke.params.length]));
-                }
-                let captured = new Map<string, Value>(lvalue.capturedVars);
-                fscope.assignTmpReg(cl.trgt.regID, this.evaluateMirBody(lvalue.invoke, args, captured));
+                fscope.assignTmpReg(invk.trgt.regID, this.evaluateMirBody(idecl, args));
                 break;
             }
             case MIROpTag.MIRPrefixOp: {
@@ -699,8 +623,7 @@ class Interpreter {
             case MIROpTag.MIRIsTypeOf: {
                 const tog = op as MIRIsTypeOf;
                 const argv = this.getArgValue(fscope, tog.arg);
-                const istype = this.m_env.assembly.typeMap.get(tog.oftype) as MIRType;
-                fscope.assignTmpReg(tog.trgt.regID, this.m_env.assembly.subtypeOf(ValueOps.getValueType(argv), istype));
+                fscope.assignTmpReg(tog.trgt.regID, this.m_env.assembly.subtypeOf(ValueOps.getValueType(argv), this.m_env.assembly.typeMap.get(tog.oftype) as MIRType));
                 break;
             }
             case MIROpTag.MIRRegAssign: {
@@ -775,7 +698,7 @@ class Interpreter {
                     fscope.assignTmpReg(pop.trgt.regID, this.getArgValue(fscope, uvar));
                 }
                 else {
-                    assert(pop.trgt instanceof MIRVarLocal);
+                    assert(pop.trgt instanceof MIRVariable);
 
                     fscope.assignVar(pop.trgt.nameID, this.getArgValue(fscope, uvar));
                 }
@@ -815,14 +738,16 @@ class Interpreter {
     }
 
     evaluateRootNamespaceCall(ns: string, func: string, cargs: Value[]): Value {
-        const fdecl = this.m_env.assembly.functionDecls.get(`${ns}::${func}`) as MIRFunctionDecl;
+        const idecl = (this.m_env.assembly.invokeDecls.get(`${ns}::${func}`) || this.m_env.assembly.primitiveInvokeDecls.get(`${ns}::${func}`)) as MIRInvokeDecl;
+        raiseRuntimeErrorIf(idecl === undefined);
+        raiseRuntimeErrorIf(idecl.params.length < cargs.length);
 
         let args = new Map<string, Value>();
-        for (let i = 0; i < fdecl.invoke.params.length; ++i) {
-            args.set(fdecl.invoke.params[i].name, cargs[i]);
+        for (let i = 0; i < idecl.params.length; ++i) {
+            args.set(idecl.params[i].name, i < cargs.length ? cargs[i] : undefined);
         }
 
-        return this.evaluateMirBody(fdecl.invoke, args);
+        return this.evaluateMirBody(idecl, args);
     }
 }
 

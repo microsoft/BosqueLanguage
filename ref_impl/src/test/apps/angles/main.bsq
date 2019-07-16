@@ -28,12 +28,12 @@ entity Angle {
             degrees = 360;
         }
 
-        return Angle@{degrees=degrees, primes=primes, seconds=seconds};
+        return Angle{degrees=degrees, primes=primes, seconds=seconds};
     }
 }
 
 entrypoint function main(): Angle {
-    var angle = Angle@{degrees=220, primes=60, seconds=60};
+    var angle = Angle{degrees=220, primes=60, seconds=60};
 
     return angle->normalized();
 }

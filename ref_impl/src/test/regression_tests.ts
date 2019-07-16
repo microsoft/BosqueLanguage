@@ -17,7 +17,7 @@ entrypoint function stringTIncludes(): Bool {
     return test->includes("a");
 }
 
-function allOdd(...args: List[Int]): Bool {
+function allOdd(...args: List<Int>): Bool {
     return args->all(fn(x) => x % 2 == 1);
 }
 
@@ -26,7 +26,7 @@ entrypoint function invokeLambdaInfer(): Bool {
 }
 
 function convert(x: Any) : Int {
-    return x->as[Int]();
+    return x->as<Int>();
 }
 
 entrypoint function vInvoke1(): Int {

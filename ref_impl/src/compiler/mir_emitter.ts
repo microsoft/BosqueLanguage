@@ -4,98 +4,76 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo, Parser } from "../ast/parser";
-import { MIRTempRegister, MIROp, MIRLoadConst, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantString, MIRLoadConstTypedString, MIRTypeKey, MIRAccessNamespaceConstant, MIRAccessConstField, MIRConstKey, MIRAccessCapturedVariable, MIRAccessArgVariable, MIRAccessLocalVariable, MIRArgument, MIRLambdaKey, MIRFunctionKey, MIRStaticKey, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRMethodKey, MIRGlobalKey, MIRAccessFromIndex, MIRProjectFromIndecies, MIRProjectFromProperties, MIRProjectFromFields, MIRAccessFromProperty, MIRAccessFromField, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorPrimaryCollectionEmpty, MIRResolvedTypeKey, MIRFieldKey, MIRLoadFieldDefaultValue, MIRConstructorLambda, MIRCallNamespaceFunction, MIRCallStaticFunction, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeKnownTarget, MIRVirtualMethodKey, MIRInvokeVirtualTarget, MIRCallLambda, MIRJump, MIRJumpCond, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRBody, MIRBasicBlock, MIRTruthyConvert, MIRJumpNone, MIRDebug, MIRVarCaptured, MIRVarParameter, MIRVarLocal, MIRRegisterArgument, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAbort } from "./mir_ops";
+import { MIRTempRegister, MIROp, MIRLoadConst, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantString, MIRLoadConstTypedString, MIRAccessArgVariable, MIRAccessLocalVariable, MIRArgument, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRAccessFromIndex, MIRProjectFromIndecies, MIRProjectFromProperties, MIRProjectFromFields, MIRAccessFromProperty, MIRAccessFromField, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorPrimaryCollectionEmpty, MIRResolvedTypeKey, MIRFieldKey, MIRLoadFieldDefaultValue, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRVirtualMethodKey, MIRJump, MIRJumpCond, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRBody, MIRBasicBlock, MIRTruthyConvert, MIRJumpNone, MIRDebug, MIRVariable, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAbort, MIRInvokeKey, MIRConstantKey, MIRAccessConstantValue, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRNominalTypeKey } from "./mir_ops";
 import { OOPTypeDecl, StaticFunctionDecl, MemberMethodDecl, InvokeDecl, Assembly, NamespaceFunctionDecl, NamespaceConstDecl, StaticMemberDecl, ConceptTypeDecl, EntityTypeDecl } from "../ast/assembly";
-import { ResolvedType, ResolvedEntityAtomType, ResolvedConceptAtomType, ResolvedTupleAtomType, ResolvedRecordAtomType, ResolvedFunctionAtomType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
-import { PackageConfig, MIRAssembly, MIRType, MIRTypeOption, MIRFunctionType, MIRFunctionParameter, MIREntityType, MIRConceptType, MIRTupleTypeEntry, MIRTupleType, MIRRecordTypeEntry, MIRRecordType } from "./mir_assembly";
+import { ResolvedType, ResolvedEntityAtomType, ResolvedConceptAtomType, ResolvedTupleAtomType, ResolvedRecordAtomType, ResolvedFunctionType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
+import { PackageConfig, MIRAssembly, MIRType, MIRTypeOption, MIREntityType, MIRConceptType, MIRTupleTypeEntry, MIRTupleType, MIRRecordTypeEntry, MIRRecordType, MIRConceptTypeDecl, MIREntityTypeDecl } from "./mir_assembly";
 
 import * as Crypto from "crypto";
 import { TypeChecker } from "../type_checker/type_checker";
 import { propagateTmpAssignForBody, removeDeadTempAssignsFromBody } from "./mir_cleanup";
 import { convertBodyToSSA } from "./mir_ssa";
 
+type PCode = {
+    code: InvokeDecl,
+    captured: Map<string, ResolvedType>,
+    ftype: ResolvedFunctionType
+};
+
 class MIRKeyGenerator {
     static computeBindsKeyInfo(binds: Map<string, ResolvedType>): string {
+        if (binds.size === 0) {
+            return "";
+        }
+
         let terms: string[] = [];
         binds.forEach((v, k) => terms.push(`${k}=${v.idStr}`));
 
-        return `[${terms.sort().join(", ")}]`;
+        return `<${terms.sort().join(", ")}>`;
     }
 
-    static generateTypeKey(t: OOPTypeDecl, binds: Map<string, ResolvedType>): MIRTypeKey {
-        if (binds.size === 0) {
-            return `${t.ns}::${t.name}`;
+    static computePCodeKeyInfo(pcodes: PCode[]): string {
+        if (pcodes.length === 0) {
+            return "";
         }
-        else {
-            return `${t.ns}::${t.name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
+
+        return "[" + pcodes.map((pc) => `${pc.code.srcFile}%${pc.code.sourceLocation.line}%${pc.code.sourceLocation.column}`).join(",") + "]";
     }
 
-    static generateGlobalKey(ns: string, name: string): MIRGlobalKey {
+    static generateTypeKey(t: OOPTypeDecl, binds: Map<string, ResolvedType>): MIRResolvedTypeKey {
+        return `${t.ns}::${t.name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
+    }
+
+    static generateGlobalKey(ns: string, name: string): MIRConstantKey {
         return `${ns}::${name}`;
     }
 
-    static generateConstKey(t: OOPTypeDecl, binds: Map<string, ResolvedType>, name: string): MIRConstKey {
-        if (binds.size === 0) {
-            return `${t.ns}::${t.name}::${name}`;
-        }
-        else {
-            return `${t.ns}::${t.name}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
+    static generateConstKey(t: OOPTypeDecl, binds: Map<string, ResolvedType>, name: string): MIRConstantKey {
+        return `${MIRKeyGenerator.generateTypeKey(t, binds)}::${name}`;
     }
 
     static generateFieldKey(t: OOPTypeDecl, binds: Map<string, ResolvedType>, name: string): MIRFieldKey {
-        if (binds.size === 0) {
-            return `${t.ns}::${t.name}::${name}`;
-        }
-        else {
-            return `${t.ns}::${t.name}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
+        return `${MIRKeyGenerator.generateTypeKey(t, binds)}.${name}`;
     }
 
-    static generateLambdaKey(file: string, line: number, column: number, cpos: number, binds: Map<string, ResolvedType>): MIRLambdaKey {
-        if (binds.size === 0) {
-            return `${file}\$${line}\$${column}\$${cpos}`;
-        }
-        else {
-            return `${file}\$${line}\$${column}\$${cpos}\$${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
+    static generateFunctionKey(ns: string, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): MIRInvokeKey {
+        return `${ns}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}${MIRKeyGenerator.computePCodeKeyInfo(pcodes)}`;
     }
 
-    static generateFunctionKey(ns: string, name: string, binds: Map<string, ResolvedType>): MIRFunctionKey {
-        if (binds.size === 0) {
-            return `${ns}::${name}`;
-        }
-        else {
-            return `${ns}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
+    static generateStaticKey(t: OOPTypeDecl, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): MIRInvokeKey {
+        return `${t.ns}::${t.name}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}${MIRKeyGenerator.computePCodeKeyInfo(pcodes)}`;
     }
 
-    static generateStaticKey(t: OOPTypeDecl, name: string, binds: Map<string, ResolvedType>): MIRStaticKey {
-        if (binds.size === 0) {
-            return `${t.ns}::${t.name}::${name}`;
-        }
-        else {
-            return `${t.ns}::${t.name}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
-    }
-
-    static generateMethodKey(t: OOPTypeDecl, name: string, binds: Map<string, ResolvedType>): MIRMethodKey {
-        if (binds.size === 0) {
-            return `${t.ns}::${t.name}::${name}`;
-        }
-        else {
-            return `${t.ns}::${t.name}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
+    static generateMethodKey(t: OOPTypeDecl, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): MIRInvokeKey {
+        return `${t.ns}::${t.name}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}${MIRKeyGenerator.computePCodeKeyInfo(pcodes)}`;
     }
 
     static generateVirtualMethodKey(vname: string, binds: Map<string, ResolvedType>): MIRVirtualMethodKey {
-        if (binds.size === 0) {
-            return `${vname}`;
-        }
-        else {
-            return `${vname}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
-        }
+        return `${vname}${MIRKeyGenerator.computeBindsKeyInfo(binds)}`;
+    }
+
+    static generatePCodeKey(inv: InvokeDecl): MIRInvokeKey {
+        return `fn--${inv.srcFile}%${inv.sourceLocation.line}%${inv.sourceLocation.column}`;
     }
 }
 
@@ -112,13 +90,17 @@ class MIRBodyEmitter {
         this.m_blockMap.set("entry", new MIRBasicBlock("entry", []));
         this.m_blockMap.set("exit", new MIRBasicBlock("exit", []));
 
-        (this.m_blockMap.get("exit") as MIRBasicBlock).ops.push(new MIRVarStore(new SourceInfo(-1, 0, 0, 0), new MIRVarLocal("_ir_ret_"), new MIRVarLocal("_return_")));
+        (this.m_blockMap.get("exit") as MIRBasicBlock).ops.push(new MIRVarStore(new SourceInfo(-1, 0, 0, 0), new MIRVariable("__ir_ret__"), new MIRVariable("_return_")));
 
         this.m_currentBlock = (this.m_blockMap.get("entry") as MIRBasicBlock).ops;
     }
 
     generateTmpRegister(): MIRTempRegister {
         return new MIRTempRegister(this.m_tmpIDCtr++);
+    }
+
+    generateCapturedVarName(name: string): string {
+        return "__c_" + name;
     }
 
     createNewBlock(pfx: string): string {
@@ -148,51 +130,43 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantString(sv), trgt));
     }
 
-    emitLoadConstTypedString(sinfo: SourceInfo, sv: string, tkey: MIRTypeKey, tskey: MIRResolvedTypeKey, trgt: MIRTempRegister) {
+    emitLoadConstTypedString(sinfo: SourceInfo, sv: string, tkey: MIRNominalTypeKey, tskey: MIRResolvedTypeKey, trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRLoadConstTypedString(sinfo, sv, tkey, tskey, trgt));
     }
 
-    emitAccessNamespaceConstant(sinfo: SourceInfo, gkey: MIRGlobalKey, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessNamespaceConstant(sinfo, gkey, trgt));
-    }
-
-    emitAccessConstField(sinfo: SourceInfo, ckey: MIRConstKey, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessConstField(sinfo, ckey, trgt));
+    emitAccessConstant(sinfo: SourceInfo, gkey: MIRConstantKey, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRAccessConstantValue(sinfo, gkey, trgt));
     }
 
     emitLoadMemberFieldDefaultValue(sinfo: SourceInfo, ckey: MIRFieldKey, trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRLoadFieldDefaultValue(sinfo, ckey, trgt));
     }
 
-    emitAccessCapturedVariable(sinfo: SourceInfo, name: string, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessCapturedVariable(sinfo, new MIRVarCaptured(name), trgt));
-    }
-
     emitAccessArgVariable(sinfo: SourceInfo, name: string, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessArgVariable(sinfo, new MIRVarParameter(name), trgt));
+        this.m_currentBlock.push(new MIRAccessArgVariable(sinfo, new MIRVariable(name), trgt));
     }
 
     emitAccessLocalVariable(sinfo: SourceInfo, name: string, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRAccessLocalVariable(sinfo, new MIRVarLocal(name), trgt));
+        this.m_currentBlock.push(new MIRAccessLocalVariable(sinfo, new MIRVariable(name), trgt));
     }
 
-    emitConstructorPrimary(sinfo: SourceInfo, tkey: MIRTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
+    emitConstructorPrimary(sinfo: SourceInfo, tkey: MIRNominalTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRConstructorPrimary(sinfo, tkey, args, trgt));
     }
 
-    emitConstructorPrimaryCollectionEmpty(sinfo: SourceInfo, tkey: MIRTypeKey, trgt: MIRTempRegister) {
+    emitConstructorPrimaryCollectionEmpty(sinfo: SourceInfo, tkey: MIRNominalTypeKey, trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRConstructorPrimaryCollectionEmpty(sinfo, tkey, trgt));
     }
 
-    emitConstructorPrimaryCollectionSingletons(sinfo: SourceInfo, tkey: MIRTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
+    emitConstructorPrimaryCollectionSingletons(sinfo: SourceInfo, tkey: MIRNominalTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRConstructorPrimaryCollectionSingletons(sinfo, tkey, args, trgt));
     }
 
-    emitConstructorPrimaryCollectionCopies(sinfo: SourceInfo, tkey: MIRTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
+    emitConstructorPrimaryCollectionCopies(sinfo: SourceInfo, tkey: MIRNominalTypeKey, args: MIRArgument[], trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRConstructorPrimaryCollectionCopies(sinfo, tkey, args, trgt));
     }
 
-    emitConstructorPrimaryCollectionMixed(sinfo: SourceInfo, tkey: MIRTypeKey, args: [boolean, MIRArgument][], trgt: MIRTempRegister) {
+    emitConstructorPrimaryCollectionMixed(sinfo: SourceInfo, tkey: MIRNominalTypeKey, args: [boolean, MIRArgument][], trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRConstructorPrimaryCollectionMixed(sinfo, tkey, args, trgt));
     }
 
@@ -202,18 +176,6 @@ class MIRBodyEmitter {
 
     emitConstructorRecord(sinfo: SourceInfo, args: [string, MIRArgument][], trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRConstructorRecord(sinfo, args, trgt));
-    }
-
-    emitConstructorLambda(sinfo: SourceInfo, lkey: MIRLambdaKey, lsigkey: MIRResolvedTypeKey, captured: Map<string, MIRRegisterArgument>, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRConstructorLambda(sinfo, lkey, lsigkey, captured, trgt));
-    }
-
-    emitCallNamespaceFunction(sinfo: SourceInfo, fkey: MIRFunctionKey, args: MIRArgument[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRCallNamespaceFunction(sinfo, fkey, args, trgt));
-    }
-
-    emitCallStaticFunction(sinfo: SourceInfo, skey: MIRStaticKey, args: MIRArgument[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRCallStaticFunction(sinfo, skey, args, trgt));
     }
 
     emitLoadTupleIndex(sinfo: SourceInfo, arg: MIRArgument, idx: number, trgt: MIRTempRegister) {
@@ -248,7 +210,7 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRProjectFromTypeRecord(sinfo, arg, ptype, trgt));
     }
 
-    emitProjectFromTypeConcept(sinfo: SourceInfo, arg: MIRArgument, ctypes: MIRTypeKey[], trgt: MIRTempRegister) {
+    emitProjectFromTypeConcept(sinfo: SourceInfo, arg: MIRArgument, ctypes: MIRNominalTypeKey[], trgt: MIRTempRegister) {
         this.m_currentBlock.push(new MIRProjectFromTypeConcept(sinfo, arg, ctypes, trgt));
     }
 
@@ -276,16 +238,40 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRStructuredExtendObject(sinfo, arg, update, trgt));
     }
 
-    emitInvokeKnownTarget(sinfo: SourceInfo, mkey: MIRMethodKey, args: MIRArgument[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRInvokeKnownTarget(sinfo, mkey, args, trgt));
+    emitInvokeFixedFunction(sinfo: SourceInfo, ikey: MIRInvokeKey, args: MIRArgument[], refs: string[], trgt: MIRTempRegister) {
+        if (refs.length === 0) {
+            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, ikey, args, trgt));
+        }
+        else {
+            const rr = this.generateTmpRegister();
+            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, ikey, args, rr));
+
+            for (let i = 0; i < refs.length; ++i) {
+                const ri = this.generateTmpRegister();
+                this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rr, i + 1, ri));
+                this.m_currentBlock.push(new MIRVarStore(sinfo, ri, new MIRVariable(refs[i])));
+            }
+
+            this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rr, 0, trgt));
+        }
     }
 
-    emitInvokeVirtualTarget(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, args: MIRArgument[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRInvokeVirtualTarget(sinfo, vresolve, args, trgt));
-    }
+    emitInvokeVirtualTarget(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, args: MIRArgument[], refs: string[], trgt: MIRTempRegister) {
+        if (refs.length === 0) {
+            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, vresolve, args, trgt));
+        }
+        else {
+            const rr = this.generateTmpRegister();
+            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, vresolve, args, trgt));
 
-    emitCallLambda(sinfo: SourceInfo, lambda: MIRArgument, args: MIRArgument[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRCallLambda(sinfo, lambda, args, trgt));
+            for (let i = 0; i < refs.length; ++i) {
+                const ri = this.generateTmpRegister();
+                this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rr, i + 1, ri));
+                this.m_currentBlock.push(new MIRVarStore(sinfo, ri, new MIRVariable(refs[i])));
+            }
+
+            this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rr, 0, trgt));
+        }
     }
 
     emitPrefixOp(sinfo: SourceInfo, op: string, arg: MIRArgument, trgt: MIRTempRegister) {
@@ -333,15 +319,27 @@ class MIRBodyEmitter {
     }
 
     emitVarStore(sinfo: SourceInfo, src: MIRTempRegister, name: string) {
-        this.m_currentBlock.push(new MIRVarStore(sinfo, src, new MIRVarLocal(name)));
+        this.m_currentBlock.push(new MIRVarStore(sinfo, src, new MIRVariable(name)));
     }
 
     localLifetimeEnd(sinfo: SourceInfo, name: string) {
         this.m_currentBlock.push(new MIRVarLifetimeEnd(sinfo, name));
     }
 
-    emitReturnAssign(sinfo: SourceInfo, src: MIRArgument) {
-        this.m_currentBlock.push(new MIRReturnAssign(sinfo, src));
+    emitReturnAssign(sinfo: SourceInfo, refparams: string[], src: MIRArgument) {
+        if (refparams.length === 0) {
+            this.m_currentBlock.push(new MIRReturnAssign(sinfo, src));
+        }
+        else {
+            let args: MIRArgument[] = [src];
+            for (let i = 0; i < refparams.length; ++i) {
+                args.push(new MIRVariable(refparams[i]));
+            }
+
+            const tupreg = this.generateTmpRegister();
+            this.m_currentBlock.push(new MIRConstructorTuple(sinfo, args, tupreg));
+            this.m_currentBlock.push(new MIRReturnAssign(sinfo, tupreg));
+        }
     }
 
     emitAbort(sinfo: SourceInfo, releaseEnable: boolean, info: string) {
@@ -368,12 +366,12 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRJumpNone(sinfo, arg, noneblck, someblk));
     }
 
-    getBody(file: string, sinfo: SourceInfo, args: string[], captured: string[]): MIRBody {
+    getBody(file: string, sinfo: SourceInfo, args: string[]): MIRBody {
         let ibody = new MIRBody(file, sinfo, this.m_blockMap);
 
         propagateTmpAssignForBody(ibody);
         removeDeadTempAssignsFromBody(ibody);
-        convertBodyToSSA(ibody, args, captured);
+        convertBodyToSSA(ibody, args);
 
         return ibody;
     }
@@ -383,18 +381,18 @@ class MIREmitter {
     readonly masm: MIRAssembly;
     readonly bodyEmitter: MIRBodyEmitter = new MIRBodyEmitter();
 
-    private readonly pendingOOProcessing: [MIRTypeKey, OOPTypeDecl, Map<string, ResolvedType>][] = [];
+    private readonly pendingOOProcessing: [MIRNominalTypeKey, OOPTypeDecl, Map<string, ResolvedType>][] = [];
 
-    private readonly pendingGlobalProcessing: [MIRGlobalKey, NamespaceConstDecl][] = [];
-    private readonly pendingConstProcessing: [MIRConstKey, OOPTypeDecl, StaticMemberDecl, Map<string, ResolvedType>][] = [];
+    private readonly pendingGlobalProcessing: [MIRConstantKey, NamespaceConstDecl][] = [];
+    private readonly pendingConstProcessing: [MIRConstantKey, OOPTypeDecl, StaticMemberDecl, Map<string, ResolvedType>][] = [];
 
-    private readonly pendingOOStaticProcessing: [MIRStaticKey, OOPTypeDecl, StaticFunctionDecl, Map<string, ResolvedType>][] = [];
-    private readonly pendingOOMethodProcessing: [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>][] = [];
-    private readonly pendingFunctionProcessing: [MIRFunctionKey, NamespaceFunctionDecl, Map<string, ResolvedType>][] = [];
-    private readonly pendingLambdaProcessing: [MIRLambdaKey, InvokeDecl, Map<string, ResolvedType>, Map<string, ResolvedType>, ResolvedFunctionAtomType][] = [];
+    private readonly pendingOOStaticProcessing: [MIRInvokeKey, OOPTypeDecl, StaticFunctionDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
+    private readonly pendingOOMethodProcessing: [MIRVirtualMethodKey, MIRInvokeKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
+    private readonly pendingFunctionProcessing: [MIRInvokeKey, NamespaceFunctionDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
+    private readonly pendingPCodeProcessing: [MIRInvokeKey, InvokeDecl, ResolvedFunctionType, Map<string, ResolvedType>, [string, ResolvedType][]][] = [];
 
-    private readonly entityInstantiationInfo: [MIRTypeKey, OOPTypeDecl, Map<string, ResolvedType>][] = [];
-    private readonly allVInvokes: [MIRVirtualMethodKey, MIRTypeKey, OOPTypeDecl, Map<string, ResolvedType>, string, Map<string, ResolvedType>][] = [];
+    private readonly entityInstantiationInfo: [MIRResolvedTypeKey, OOPTypeDecl, Map<string, ResolvedType>][] = [];
+    private readonly allVInvokes: [MIRVirtualMethodKey, MIRNominalTypeKey, OOPTypeDecl, Map<string, ResolvedType>, string, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
 
     private constructor(masm: MIRAssembly) {
         this.masm = masm;
@@ -404,12 +402,12 @@ class MIREmitter {
         this.bodyEmitter.initialize();
     }
 
-    getVCallInstantiations(assembly: Assembly): [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>][] | undefined {
+    getVCallInstantiations(assembly: Assembly): [MIRVirtualMethodKey, MIRInvokeKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] | undefined {
         if (this.allVInvokes.length === 0) {
             return undefined;
         }
 
-        let resvi = new Map<string, [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>]>();
+        let resvi = new Map<string, [MIRVirtualMethodKey, MIRInvokeKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]]>();
         for (let i = 0; i < this.allVInvokes.length; ++i) {
             const vinv = this.allVInvokes[i];
 
@@ -435,14 +433,15 @@ class MIREmitter {
                     const binds = new Map<string, ResolvedType>(mcreate.binds);
                     vinv[5].forEach((v, k) => binds.set(k, v));
 
-                    if (!resvi.has(vinv[1])) {
-                        resvi.set(vinv[1], [vinv[0], vinv[1], mcreate.contiainingType, mcreate.binds, mcreate.decl as MemberMethodDecl, binds as Map<string, ResolvedType>]);
+                    const mkey = MIRKeyGenerator.generateMethodKey(mcreate.contiainingType, (mcreate.decl as MemberMethodDecl).name, mcreate.binds, vinv[6]);
+                    if (!resvi.has(mkey)) {
+                        resvi.set(mkey, [vinv[0], mkey, mcreate.contiainingType, mcreate.binds, mcreate.decl as MemberMethodDecl, binds as Map<string, ResolvedType>, vinv[6], vinv[7]]);
                     }
                 }
             }
         }
 
-        let fres: [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>][] = [];
+        let fres: [MIRVirtualMethodKey, MIRInvokeKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
         resvi.forEach((v, k) => fres.push(v));
 
         return fres;
@@ -450,7 +449,7 @@ class MIREmitter {
 
     registerTypeInstantiation(decl: OOPTypeDecl, binds: Map<string, ResolvedType>) {
         const key = MIRKeyGenerator.generateTypeKey(decl, binds);
-        if (this.masm.conceptMap.has(key) || this.masm.entityMap.has(key) || this.pendingOOProcessing.findIndex((oop) => oop[0] === key) !== -1) {
+        if (this.masm.conceptDecls.has(key) || this.masm.entityDecls.has(key) || this.pendingOOProcessing.findIndex((oop) => oop[0] === key) !== -1) {
             return;
         }
 
@@ -485,88 +484,131 @@ class MIREmitter {
                 const tatoms = sopt.types.map((entry) => new MIRTupleTypeEntry(this.registerResolvedTypeReference(entry.type), entry.isOptional));
                 rt = MIRTupleType.create(sopt.isOpen, tatoms);
             }
-            else if (sopt instanceof ResolvedRecordAtomType) {
-                const tatoms = sopt.entries.map((entry) => new MIRRecordTypeEntry(entry.name, this.registerResolvedTypeReference(entry.type), entry.isOptional));
-                rt = MIRRecordType.create(sopt.isOpen, tatoms);
-            }
             else {
-                const fopt = (sopt as ResolvedFunctionAtomType);
-                const params = fopt.params.map((p) => new MIRFunctionParameter(p.name, this.registerResolvedTypeReference(p.type), p.isOptional));
-                const optRestName = fopt.optRestParamName;
-                const optRestType = fopt.optRestParamType !== undefined ? this.registerResolvedTypeReference(fopt.optRestParamType) : undefined;
-                const resultType = this.registerResolvedTypeReference(fopt.resultType);
-
-                rt = MIRFunctionType.create(params, optRestName, optRestType, resultType);
+                const tatoms = (sopt as ResolvedRecordAtomType).entries.map((entry) => new MIRRecordTypeEntry(entry.name, this.registerResolvedTypeReference(entry.type), entry.isOptional));
+                rt = MIRRecordType.create((sopt as ResolvedRecordAtomType).isOpen, tatoms);
             }
 
-            const ft = MIRType.create([rt as MIRTypeOption]);
+            const ft = MIRType.create([(rt as MIRTypeOption)]);
             this.masm.typeMap.set(ft.trkey, ft);
             return ft;
         }
     }
 
-    registerPendingGlobalProcessing(decl: NamespaceConstDecl) {
+    registerPendingGlobalProcessing(decl: NamespaceConstDecl): MIRConstantKey {
         const key = MIRKeyGenerator.generateGlobalKey(decl.ns, decl.name);
-        if (this.masm.globalDecls.has(key) || this.pendingGlobalProcessing.findIndex((gp) => gp[0] === key) !== -1) {
-            return;
+        if (this.masm.constantDecls.has(key) || this.pendingGlobalProcessing.findIndex((gp) => gp[0] === key) !== -1) {
+            return key;
         }
 
         this.pendingGlobalProcessing.push([key, decl]);
+        return key;
     }
 
-    registerPendingConstProcessing(containingType: OOPTypeDecl, decl: StaticMemberDecl, binds: Map<string, ResolvedType>) {
+    registerPendingConstProcessing(containingType: OOPTypeDecl, decl: StaticMemberDecl, binds: Map<string, ResolvedType>): MIRConstantKey {
         const key = MIRKeyGenerator.generateConstKey(containingType, binds, decl.name);
-        if (this.masm.constDecls.has(key) || this.pendingConstProcessing.findIndex((cp) => cp[0] === key) !== -1) {
-            return;
+        if (this.masm.constantDecls.has(key) || this.pendingConstProcessing.findIndex((cp) => cp[0] === key) !== -1) {
+            return key;
         }
 
         this.pendingConstProcessing.push([key, containingType, decl, binds]);
+        return key;
     }
 
-    registerFunctionCall(ns: string, name: string, f: NamespaceFunctionDecl, binds: Map<string, ResolvedType>) {
-        const key = MIRKeyGenerator.generateFunctionKey(ns, name, binds);
-        if (this.masm.functionDecls.has(key) || this.pendingFunctionProcessing.findIndex((fp) => fp[0] === key) !== -1) {
-            return;
+    registerFunctionCall(ns: string, name: string, f: NamespaceFunctionDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
+        const key = MIRKeyGenerator.generateFunctionKey(ns, name, binds, pcodes);
+        if (this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingFunctionProcessing.findIndex((fp) => fp[0] === key) !== -1) {
+            return key;
         }
 
-        this.pendingFunctionProcessing.push([key, f, binds]);
+        this.pendingFunctionProcessing.push([key, f, binds, pcodes, cinfo]);
+        return key;
     }
 
-    registerStaticCall(containingType: OOPTypeDecl, f: StaticFunctionDecl, name: string, binds: Map<string, ResolvedType>) {
-        const key = MIRKeyGenerator.generateStaticKey(containingType, name, binds);
-        if (this.masm.staticDecls.has(key) || this.pendingOOStaticProcessing.findIndex((sp) => sp[0] === key) !== -1) {
-            return;
+    registerStaticCall(containingType: OOPTypeDecl, f: StaticFunctionDecl, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
+        const key = MIRKeyGenerator.generateStaticKey(containingType, name, binds, pcodes);
+        if (this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingOOStaticProcessing.findIndex((sp) => sp[0] === key) !== -1) {
+            return key;
         }
 
-        this.pendingOOStaticProcessing.push([key, containingType, f, binds]);
+        this.pendingOOStaticProcessing.push([key, containingType, f, binds, pcodes, cinfo]);
+        return key;
     }
 
-    registerMethodCall(containingType: OOPTypeDecl, m: MemberMethodDecl, cbinds: Map<string, ResolvedType>, name: string, binds: Map<string, ResolvedType>) {
+    registerMethodCall(containingType: OOPTypeDecl, m: MemberMethodDecl, cbinds: Map<string, ResolvedType>, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
         const vkey = MIRKeyGenerator.generateVirtualMethodKey(name, binds);
-        const key = MIRKeyGenerator.generateMethodKey(containingType, name, binds);
-        if (this.masm.methodDecls.has(key) || this.pendingOOMethodProcessing.findIndex((mp) => mp[0] === key) !== -1) {
-            return;
+        const key = MIRKeyGenerator.generateMethodKey(containingType, name, binds, pcodes);
+        if (this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingOOMethodProcessing.findIndex((mp) => mp[0] === key) !== -1) {
+            return key;
         }
 
-        this.pendingOOMethodProcessing.push([vkey, key, containingType, cbinds, m, binds]);
+        this.pendingOOMethodProcessing.push([vkey, key, containingType, cbinds, m, binds, pcodes, cinfo]);
+        return key;
     }
 
-    registerVirtualMethodCall(containingType: OOPTypeDecl, cbinds: Map<string, ResolvedType>, name: string, binds: Map<string, ResolvedType>) {
+    registerVirtualMethodCall(containingType: OOPTypeDecl, cbinds: Map<string, ResolvedType>, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
         const key = MIRKeyGenerator.generateVirtualMethodKey(name, binds);
         const tkey = MIRKeyGenerator.generateTypeKey(containingType, binds);
         if (this.allVInvokes.findIndex((vi) => vi[0] === key && vi[1] === tkey) !== -1) {
-            return;
+            return key;
         }
 
-        this.allVInvokes.push([key, tkey, containingType, cbinds, name, binds]);
+        this.allVInvokes.push([key, tkey, containingType, cbinds, name, binds, pcodes, cinfo]);
+        return key;
     }
 
-    registerLambda(lkey: MIRLambdaKey, capturedMap: Map<string, ResolvedType>, invoke: InvokeDecl, binds: Map<string, ResolvedType>, rsig: ResolvedFunctionAtomType) {
-        if (this.masm.lambdaDecls.has(lkey) || this.pendingLambdaProcessing.findIndex((lp) => lp[0] === lkey) !== -1) {
-            return;
+    registerPCode(idecl: InvokeDecl, fsig: ResolvedFunctionType, binds: Map<string, ResolvedType>, cinfo: [string, ResolvedType][]): MIRInvokeKey {
+        const key = MIRKeyGenerator.generatePCodeKey(idecl);
+        if (this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingPCodeProcessing.findIndex((fp) => fp[0] === key) !== -1) {
+            return key;
         }
 
-        this.pendingLambdaProcessing.push([lkey, invoke, capturedMap, binds, rsig]);
+        this.pendingPCodeProcessing.push([key, idecl, fsig, binds, cinfo]);
+        return key;
+    }
+
+    private closeConceptDecl(cpt: MIRConceptTypeDecl) {
+        cpt.provides.forEach((tkey) => {
+            const ccdecl = this.masm.conceptDecls.get(tkey.trkey) as MIRConceptTypeDecl;
+            this.closeConceptDecl(ccdecl);
+
+            ccdecl.invariants.forEach((inv) => cpt.invariants.push(inv));
+
+            ccdecl.fields.forEach((fd) => {
+                if (cpt.fields.findIndex((ff) => ff.name === fd.name) === -1) {
+                    cpt.fields.push(fd);
+                }
+            });
+
+            ccdecl.vcallMap.forEach((vcall, vcname) => {
+                if (!cpt.vcallMap.has(vcname)) {
+                    cpt.vcallMap.set(vcname, vcall);
+                }
+            });
+        });
+    }
+
+    private closeEntityDecl(entity: MIREntityTypeDecl) {
+        entity.provides.forEach((tkey) => {
+            const ccdecl = this.masm.conceptDecls.get(tkey.trkey) as MIRConceptTypeDecl;
+            this.closeConceptDecl(ccdecl);
+
+            ccdecl.invariants.forEach((inv) => entity.invariants.push(inv));
+
+            ccdecl.fields.forEach((fd) => {
+                if (entity.fields.findIndex((ff) => ff.name === fd.name) === -1) {
+                    entity.fields.push(fd);
+                }
+            });
+
+            ccdecl.vcallMap.forEach((vcall, vcname) => {
+                if (!entity.vcallMap.has(vcname)) {
+                    entity.vcallMap.set(vcname, vcall);
+                }
+            });
+        });
+
+        entity.fields.sort((f1, f2) => f1.name.localeCompare(f2.name));
     }
 
     static generateMASM(pckge: PackageConfig, srcFiles: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
@@ -610,7 +652,7 @@ class MIREmitter {
         nslist.forEach((nsentry) => {
             nsentry.functions.forEach((f) => {
                 if (f.attributes.indexOf("entrypoint") !== -1) {
-                    emitter.registerFunctionCall(f.ns, f.name, f, new Map<string, ResolvedType>());
+                    emitter.registerFunctionCall(f.ns, f.name, f, new Map<string, ResolvedType>(), [], []);
                 }
             });
         });
@@ -622,39 +664,39 @@ class MIREmitter {
             while (true) {
                 while (emitter.pendingOOProcessing.length !== 0 ||
                     emitter.pendingGlobalProcessing.length !== 0 || emitter.pendingConstProcessing.length !== 0 ||
-                    emitter.pendingFunctionProcessing.length !== 0 || emitter.pendingLambdaProcessing.length !== 0 ||
+                    emitter.pendingFunctionProcessing.length !== 0 || emitter.pendingPCodeProcessing.length !== 0 ||
                     emitter.pendingOOStaticProcessing.length !== 0 || emitter.pendingOOMethodProcessing.length !== 0) {
 
                     while (emitter.pendingOOProcessing.length !== 0) {
-                        const tt = emitter.pendingOOProcessing.pop() as [MIRTypeKey, OOPTypeDecl, Map<string, ResolvedType>];
+                        const tt = emitter.pendingOOProcessing.pop() as [MIRResolvedTypeKey, OOPTypeDecl, Map<string, ResolvedType>];
                         checker.processOOType(...tt);
                     }
 
                     while (emitter.pendingGlobalProcessing.length !== 0 || emitter.pendingConstProcessing.length !== 0) {
                         if (emitter.pendingGlobalProcessing.length !== 0) {
-                            const pg = emitter.pendingGlobalProcessing.pop() as [MIRGlobalKey, NamespaceConstDecl];
+                            const pg = emitter.pendingGlobalProcessing.pop() as [MIRConstantKey, NamespaceConstDecl];
                             checker.processGlobal(...pg);
                         }
                         if (emitter.pendingConstProcessing.length !== 0) {
-                            const pc = emitter.pendingConstProcessing.pop() as [MIRConstKey, OOPTypeDecl, StaticMemberDecl, Map<string, ResolvedType>];
+                            const pc = emitter.pendingConstProcessing.pop() as [MIRConstantKey, OOPTypeDecl, StaticMemberDecl, Map<string, ResolvedType>];
                             checker.processConst(...pc);
                         }
                     }
 
                     if (emitter.pendingFunctionProcessing.length !== 0) {
-                        const pf = emitter.pendingFunctionProcessing.pop() as [MIRFunctionKey, NamespaceFunctionDecl, Map<string, ResolvedType>];
+                        const pf = emitter.pendingFunctionProcessing.pop() as [MIRInvokeKey, NamespaceFunctionDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]];
                         checker.processNamespaceFunction(...pf);
                     }
-                    else if (emitter.pendingLambdaProcessing.length !== 0) {
-                        const lf = emitter.pendingLambdaProcessing.pop() as [MIRLambdaKey, InvokeDecl, Map<string, ResolvedType>, Map<string, ResolvedType>, ResolvedFunctionAtomType];
+                    else if (emitter.pendingPCodeProcessing.length !== 0) {
+                        const lf = emitter.pendingPCodeProcessing.pop() as [MIRInvokeKey, InvokeDecl, ResolvedFunctionType, Map<string, ResolvedType>, [string, ResolvedType][]];
                         checker.processLambdaFunction(...lf);
                     }
                     else if (emitter.pendingOOStaticProcessing.length !== 0) {
-                        const sf = emitter.pendingOOStaticProcessing.pop() as [MIRStaticKey, OOPTypeDecl, StaticFunctionDecl, Map<string, ResolvedType>];
+                        const sf = emitter.pendingOOStaticProcessing.pop() as [MIRInvokeKey, OOPTypeDecl, StaticFunctionDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]];
                         checker.processStaticFunction(...sf);
                     }
                     else if (emitter.pendingOOMethodProcessing.length !== 0) {
-                        const mf = emitter.pendingOOMethodProcessing.pop() as [MIRVirtualMethodKey, MIRMethodKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>];
+                        const mf = emitter.pendingOOMethodProcessing.pop() as [MIRVirtualMethodKey, MIRInvokeKey, OOPTypeDecl, Map<string, ResolvedType>, MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]];
                         checker.processMethodFunction(...mf);
                     }
                     else {
@@ -675,8 +717,8 @@ class MIREmitter {
             }
 
             //compute closed field and vtable info
-            masm.conceptMap.forEach((cpt) => masm.closeConceptDecl(cpt));
-            masm.entityMap.forEach((entity) => masm.closeEntityDecl(entity));
+            masm.conceptDecls.forEach((cpt) => emitter.closeConceptDecl(cpt));
+            masm.entityDecls.forEach((entity) => emitter.closeEntityDecl(entity));
         }
         catch (ex) {
             //ignore
@@ -692,4 +734,4 @@ class MIREmitter {
     }
 }
 
-export { MIRKeyGenerator, MIRBodyEmitter, MIREmitter };
+export { PCode, MIRKeyGenerator, MIRBodyEmitter, MIREmitter };

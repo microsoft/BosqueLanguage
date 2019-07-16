@@ -55,12 +55,11 @@ class FunctionScope {
 
     private m_lastJumpBlock: string;
 
-    private readonly m_captured: Map<string, Value>;
     private readonly m_args: Map<string, Value>;
     private readonly m_locals: Map<string, Value>;
     private readonly m_tmpRegs: Map<number, Value>;
 
-    constructor(args: Map<string, Value>, captured: Map<string, Value>, flow: Map<string, MIRBasicBlock>, file: string) {
+    constructor(args: Map<string, Value>, flow: Map<string, MIRBasicBlock>, file: string) {
         this.m_file = file;
         this.m_line = -1;
 
@@ -71,7 +70,6 @@ class FunctionScope {
         this.m_lastJumpBlock = "[NO JUMP]";
 
         this.m_args = args;
-        this.m_captured = captured;
         this.m_locals = new Map<string, Value>();
         this.m_tmpRegs = new Map<number, Value>();
     }
@@ -88,11 +86,8 @@ class FunctionScope {
         if (this.m_locals.has(name)) {
             return this.m_locals.get(name);
         }
-        else if (this.m_args.has(name)) {
-            return this.m_args.get(name);
-        }
         else {
-            return this.m_captured.get(name);
+            return this.m_args.get(name);
         }
     }
 
@@ -109,7 +104,12 @@ class FunctionScope {
     }
 
     assignVar(name: string, value: Value) {
-        this.m_locals.set(name, value);
+        if (this.m_locals.has(name)) {
+            this.m_locals.set(name, value);
+        }
+        else {
+            this.m_args.set(name, value);
+        }
     }
 
     clearVar(name: string) {
@@ -141,9 +141,6 @@ class FunctionScope {
         let args: string[] = [];
         this.m_args.forEach((v, k) => args.push(`${k} = ${ValueOps.diagnosticPrintValue(v)}`));
 
-        let captured: string[] = [];
-        this.m_captured.forEach((v, k) => captured.push(`${k} = ${ValueOps.diagnosticPrintValue(v)}`));
-
         let locals: string[] = [];
         this.m_locals.forEach((v, k) => locals.push(`${k} = ${ValueOps.diagnosticPrintValue(v)}`));
 
@@ -154,7 +151,6 @@ class FunctionScope {
             file: this.m_file,
             line: this.m_line,
             args: args,
-            captured: captured,
             locals: locals,
             tmps: tmps
         };
@@ -178,8 +174,8 @@ class Environment {
         return this.m_activeScope as FunctionScope;
     }
 
-    pushCallFrame(args: Map<string, Value>, captured: Map<string, Value>, mirbody: MIRBody, file: string) {
-        this.m_scopes.push(new FunctionScope(args, captured, mirbody.body as Map<string, MIRBasicBlock>, file));
+    pushCallFrame(args: Map<string, Value>, mirbody: MIRBody, file: string) {
+        this.m_scopes.push(new FunctionScope(args, mirbody.body as Map<string, MIRBasicBlock>, file));
         this.m_activeScope = this.m_scopes[this.m_scopes.length - 1];
     }
 

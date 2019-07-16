@@ -45,7 +45,8 @@ function runApp(app: string) {
 
     process.stdout.write("Executing app code...\n");
 
-    const ip = new Interpreter(masm as MIRAssembly, true, true, true);
+    const asm = masm as MIRAssembly;
+    const ip = new Interpreter(asm, true, true, true);
     let res: any = undefined;
     try {
         res = ValueOps.diagnosticPrintValue(ip.evaluateRootNamespaceCall("NSMain", "main", []));

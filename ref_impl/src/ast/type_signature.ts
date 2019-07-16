@@ -59,23 +59,27 @@ class RecordTypeSignature extends TypeSignature {
 class FunctionParameter {
     readonly name: string;
     readonly type: TypeSignature;
+    readonly isRef: boolean;
     readonly isOptional: boolean;
 
-    constructor(name: string, type: TypeSignature, isOpt: boolean) {
+    constructor(name: string, type: TypeSignature, isOpt: boolean, isRef: boolean) {
         this.name = name;
         this.type = type;
         this.isOptional = isOpt;
+        this.isRef = isRef;
     }
 }
 
 class FunctionTypeSignature extends TypeSignature {
+    readonly recursive: "yes" | "no" | "cond";
     readonly params: FunctionParameter[];
     readonly optRestParamName: string | undefined;
     readonly optRestParamType: TypeSignature | undefined;
     readonly resultType: TypeSignature;
 
-    constructor(params: FunctionParameter[], optRestParamName: string | undefined, optRestParamType: TypeSignature | undefined, resultType: TypeSignature) {
+    constructor(recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestParamName: string | undefined, optRestParamType: TypeSignature | undefined, resultType: TypeSignature) {
         super();
+        this.recursive = recursive;
         this.params = params;
         this.optRestParamName = optRestParamName;
         this.optRestParamType = optRestParamType;
