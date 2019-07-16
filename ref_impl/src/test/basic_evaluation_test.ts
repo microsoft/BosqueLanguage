@@ -17,7 +17,7 @@ namespace NSTestExpression;
 
 entity Foo provides Parsable {
     override static tryParse(str: String): Foo | None {
-        return str == "hello" ? Foo@{} : none;
+        return str == "hello" ? Foo{} : none;
     }
 }
 
@@ -34,28 +34,28 @@ entity E1 provides Bar, Baz {
     field f: Int;
 
     factory static create(arg: Int): {x: Any, y: Int, z: Bool, f: Int} {
-        return @{ x=none, y=1, z=true, f=3 };
+        return { x=none, y=1, z=true, f=3 };
     }
 
-    factory static creat[T](arg: T): {x: T, y: Int, z: Bool, f: Int} {
-        return @{ x=arg, y=1, z=true, f=3 };
+    factory static creat<T>(arg: T): {x: T, y: Int, z: Bool, f: Int} {
+        return { x=arg, y=1, z=true, f=3 };
     }
 }
 
-entity E2[T] {
+entity E2<T> {
     field f: T;
     field g: Any;
 
     factory static create(arg: T): {f: T, g: Int} {
-        return @{ f=arg, g=1 };
+        return { f=arg, g=1 };
     }
 
-    factory static creat[U](x: T, y: U): {f: T, g: U} {
-        return @{ f=x, g=y };
+    factory static creat<U>(x: T, y: U): {f: T, g: U} {
+        return { f=x, g=y };
     }
 }
 
-concept Fizz[T] {
+concept Fizz<T> {
     method m1(x: Int): Int {
         return x + 1;
     }
@@ -69,9 +69,7 @@ concept Fizz[T] {
     }
 }
 
-entity E3 provides Fizz[Int] {
-    field func: fn(this: E3, x: Int) -> Int = fn(this: E3, x: Int): Int => x + 1;
-
+entity E3 provides Fizz<Int> {
     override method m3(x: Int): Int {
         return 0;
     }
@@ -81,14 +79,12 @@ entity E3 provides Fizz[Int] {
     }
 }
 
-entity E4[T] provides Fizz[Int] {
-    field func: fn(this: E4[T], x?: T) -> Bool = fn(this: E4[T], x?: T): Bool => x == none;
-
+entity E4<T> provides Fizz<Int> {
     method mc(x?: T): Int {
         return x == none ? 1 : 0;
     }
 
-    method mcc[U](y: U, x?: T): U | T {
+    method mcc<U>(y: U, x?: T): U | T {
         return x == none ? y : x;
     }
 }
@@ -112,11 +108,11 @@ function mixedArgs(v1: Int, v2?: Int): Int {
     return (v2 ?& v1 + v2) ?| -1;
 }
 
-function identityAny[T](x: T): T {
+function identityAny<T>(x: T): T {
     return x;
 }
 
-function identityInt[T where Int](x: T): T {
+function identityInt<T where Int>(x: T): T {
     return x;
 }
 
@@ -131,20 +127,20 @@ function lambdaArgument(f: fn(_: Int) -> Int, x: Int): Int {
     return f(x);
 }
 
-function restArgListSimple(...arg: List[Int]): List[Int] {
+function restArgListSimple(...arg: List<Int>): List<Int> {
     return arg;
 }
 
-function restArgSetSimple[T](...arg: HashSet[T]): HashSet[T] {
+function restArgSetSimple<T>(...arg: HashSet<T>): HashSet<T> {
     return arg;
 }
 
-function restArgMapSimple(...arg: HashMap[Int, Bool]): HashMap[Int, Bool] {
+function restArgMapSimple(...arg: HashMap<Int, Bool>): HashMap<Int, Bool> {
     return arg;
 }
 
-function argListMixed(v: Bool, ...arg: List[Int]): List[Int] {
-    return v ? arg : List[Int]@{ 1 };
+function argListMixed(v: Bool, ...arg: List<Int>): List<Int> {
+    return v ? arg : List<Int>{ 1 };
 }
 
 ///////
@@ -178,72 +174,72 @@ entrypoint function literalHello(): String {
     return "hello";
 }
 
-entrypoint function literalFooString(): String[Foo] {
-    return 'hello'#Foo;
+entrypoint function literalFooString(): String<Foo> {
+    return Foo'hello';
 }
 
 entrypoint function literalFooObject(): Foo {
-    return 'hello'@Foo;
+    return Foo@'hello';
 }
 
 entrypoint function emptyTuple(): [] {
-    return @[];
+    return [];
 }
 
 entrypoint function oneTuple(): [Int] {
-    return @[ 1 ];
+    return [ 1 ];
 }
 
 entrypoint function fourTuple(): [Int, Int, None, Bool] {
-    return @[ 1, 2, none, true ];
+    return [ 1, 2, none, true ];
 }
 
 entrypoint function emptyRecord(): {} {
-    return @{};
+    return {};
 }
 
 entrypoint function oneRecord(): {f: Int} {
-    return @{ f=1 };
+    return { f=1 };
 }
 
 entrypoint function fourRecord(): {f: Int, g: Int, h: None, k: Bool} {
-    return @{ f=1, g=2, h=none, k=true };
+    return { f=1, g=2, h=none, k=true };
 }
 
 entrypoint function nestedTuples(): [Int, [None, []]] {
-    return @[ 1, @[ none, @[] ] ];
+    return [ 1, [ none, [] ] ];
 }
 
 entrypoint function nestedRecords(): {f: Int, g: {f: Int, h: {}}} {
-    return @{ f=1, g=@{ f=2, h=@{} } };
+    return { f=1, g={ f=2, h={} } };
 }
 
 entrypoint function nestedTupleRecord(): [Int, {f: Int}] {
-    return @[ 1, @{ f=1 } ];
+    return [ 1, { f=1 } ];
 }
 
 entrypoint function nestedRecordTuple(): {f: Int, g: [Int]} {
-    return @{ f=1, g=@[ 1 ] };
+    return { f=1, g=[ 1 ] };
 }
 
 entrypoint function getIndex(): Int {
-    return @[ 1 ][0];
+    return [1].0;
 }
 
 entrypoint function getIndexOpt(): Int? {
-    return @[][1];
+    return [].1;
 }
 
 entrypoint function getIndexBailout(arg?: [Int]): Int? {
-    return arg?[0];
+    return arg?.0;
 }
 
 entrypoint function getField(): Int {
-    return @{ f=1 }.f;
+    return { f=1 }.f;
 }
 
 entrypoint function getFieldOpt(): Int? {
-    return @{}.f;
+    return {}.f;
 }
 
 entrypoint function getFieldBailout(arg?: {f: Int}): Int? {
@@ -251,95 +247,95 @@ entrypoint function getFieldBailout(arg?: {f: Int}): Int? {
 }
 
 entrypoint function projectIndecies(): [Int] {
-    return @[ 1, 2 ]@[1];
+    return [ 1, 2 ].[1];
 }
 
 entrypoint function projectIndeciesOpt(): [Int, Int?] {
-    return @[ 1, 2 ]@[1, 5];
+    return [ 1, 2 ].[1, 5];
 }
 
 entrypoint function projectIndeciesBailout(arg?: [Int]): [Int]? {
-    return arg?@[0];
+    return arg?.[0];
 }
 
 entrypoint function projectProperties(): {f: Int} {
-    return @{ f=1, g=2 }@{f};
+    return { f=1, g=2 }.{f};
 }
 
 entrypoint function projectPropertiesOpt(): {f: Int, h: None} {
-    return @{ f=1, g=2 }@{f, h};
+    return { f=1, g=2 }.{f, h};
 }
 
 entrypoint function projectPropertiesBailout(arg?: {f: Int}): {f: Int}? {
-    return arg?@{f};
+    return arg?.{f};
 }
 
 entrypoint function projectTupleType(): [Bool] {
-    return @[ true, false ]@#[ Bool ];
+    return [ true, false ]->project<[Bool]>();
 }
 
 entrypoint function projectTupleTypeOptional(): [Bool, Bool, ?:Int] {
-    return @[ true, false ]@#[Bool, Bool, ?:Int];
+    return [ true, false ]->project<[Bool, Bool, ?:Int]>();
 }
 
 entrypoint function projectTupleTypeOpen(): [Bool, ...] {
-    return @[ true, false ]@#[Bool, ...];
+    return [ true, false ]->project<[Bool, ...]>();
 }
 
 entrypoint function projectRecordType(): {f: Int} {
-    return @{ f=1, g=2 }@#{f:Int};
+    return { f=1, g=2 }->project<{f:Int}>();
 }
 
 entrypoint function projectRecordTypeOptional(): {f: Int, h?: String} {
-    return @{ f=1, g=2 }@#{f:Int, h?:String};
+    return { f=1, g=2 }->project<{f:Int, h?:String}>();
 }
 
 entrypoint function projectRecordTypeOpen(): {f:Int, ...} {
-    return @{ f=1, g=2 }@#{f:Int, ...};
+    return { f=1, g=2 }->project<{f:Int, ...}>();
 }
 
 entrypoint function projectTypeBailout(arg?: {f: Int}): { f:Int, ... }? {
-    return arg?@#{ f:Int, ... };
+    return arg?->project<{ f:Int, ... }>();
 }
 
 entrypoint function modifyIndecies(): [Int, Int] {
-    return @[ 1, 2 ]<~(1=5);
+    return [ 1, 2 ]->update(1=5);
 }
 
 entrypoint function modifyIndeciesOpt(): [Int, Int, None, None, Int] {
-    return @[ 1, 2 ]<~(1=5, 4=4);
+    return [ 1, 2 ]->update(1=5, 4=4);
 }
 
 entrypoint function modifyIndeciesBailout(arg?: [Int, Int]): [Int, Int]? {
-    return arg?<~(1=5);
+    return arg?->update(1=5);
 }
 
 entrypoint function modifyProperties(): {f: Int, g: Int} {
-    return @{f=1, g=2}<~(f=5);
+    return {f=1, g=2}->update(f=5);
 }
 
 entrypoint function modifyPropertiesOpt(): {f: Int, g: Int, h: Int} {
-    return @{ f=1, g=2 }<~(f=5, h=3);
+    return { f=1, g=2 }->update(f=5, h=3);
 }
 
 entrypoint function modifyPropertiesBailout(arg?: {f: Int}): {f: Int}? {
-    return arg?<~(f=3);
+    return arg?->update(f=3);
 }
 
 entrypoint function extendTupleType(): [Bool, Bool, Int] {
-    return @[ true, false ]<+(@[ 3 ]);
+    return [ true, false ]->merge([ 3 ]);
 }
 
 entrypoint function extendTupleTypeBailout(arg?: []): [Int]? {
-    return arg?<+(@[ 3 ]);
+    return arg?->merge([ 3 ]);
 }
 
 entrypoint function extendRecordType(): {f: Int, g: Int} {
-    return @{ f=1, g=2 }<+(@{ f=5 });
+    return { f=1, g=2 }->merge({ f=5 });
 }
 
 entrypoint function extendRecordTypeWNew(): {f: Int, g: Int, h: Int} {
-    return @{ f=1, g=2 }<+(@{ f=5, h=6 });
+    return { f=1, g=2 }->merge({ f=5, h=6 });
 }
 
 entrypoint function prefixNot(): Bool {
@@ -391,7 +387,7 @@ entrypoint function eqNoneFalse(): Bool {
 }
 
 entrypoint function eqNoneTrue(): Bool {
-    return none == @{}.f;
+    return none == {}.f;
 }
 
 entrypoint function eqIntTrue(): Bool {
@@ -411,51 +407,51 @@ entrypoint function eqStringTrue(): Bool {
 }
 
 entrypoint function eqTypedStringTrue(): Bool {
-    return 'hello'#Foo == 'hello'#Foo;
+    return Foo'hello' == Foo'hello';
 }
 
 entrypoint function eqTypedStringMixedTrue(): Bool {
-    return 'hello'#Foo == "hello";
+    return Foo'hello' == "hello";
 }
 
 entrypoint function eqTypedStringMixedFalse(): Bool {
-    return 'hello'#Foo == "hi";
+    return Foo'hello' == "hi";
 }
 
 entrypoint function eqTupleTrue(): Bool {
-    return @[1, 2] == @[1, 2];
+    return [1, 2] == [1, 2];
 }
 
 entrypoint function eqTupleFalse(): Bool {
-    return @[1] == @[3];
+    return [1] == [3];
 }
 
 entrypoint function eqRecordTrue(): Bool {
-    return @{f=2} == @{f=2};
+    return {f=2} == {f=2};
 }
 
 entrypoint function eqRecordFalse(): Bool {
-    return @{f=2, g=5} == @{f=2, g=1};
+    return {f=2, g=5} == {f=2, g=1};
 }
 
 entrypoint function eqTupleTrue_Mix(): Bool {
-    var tup: [Int, Int, ?:String] = (1 != 0) ? @[1, 2] : @[1, 2, "ok"];
-    return @[1, 2] == tup;
+    var tup: [Int, Int, ?:String] = (1 != 0) ? [1, 2] : [1, 2, "ok"];
+    return [1, 2] == tup;
 }
 
 entrypoint function eqTupleFalse_Mix(): Bool {
-    var tup: [Int, Int, ?:String] = (1 == 0) ? @[1, 2] : @[1, 2, "ok"];
-    return @[1, 2] == tup;
+    var tup: [Int, Int, ?:String] = (1 == 0) ? [1, 2] : [1, 2, "ok"];
+    return [1, 2] == tup;
 }
 
 entrypoint function eqRecordTrue_Mix(): Bool {
-    var rec: {f:Int, g?:Int} = (1 != 0) ? @{f=2} : @{f=2, g=5};
-    return @{f=2} == rec;
+    var rec: {f:Int, g?:Int} = (1 != 0) ? {f=2} : {f=2, g=5};
+    return {f=2} == rec;
 }
 
 entrypoint function eqRecordFalse_Mix(): Bool {
-    var rec: {f:Int, g?:Int} = (1 == 0) ? @{f=2} : @{f=2, g=5};
-    return @{f=2} == rec;
+    var rec: {f:Int, g?:Int} = (1 == 0) ? {f=2} : {f=2, g=5};
+    return {f=2} == rec;
 }
 
 entrypoint function neqIntTrue(): Bool {
@@ -503,15 +499,15 @@ entrypoint function lteqStringTrue(): Bool {
 }
 
 entrypoint function lteqTypedStringTrue(): Bool {
-    return 'hello'#Foo <= 'hello'#Foo;
+    return Foo'hello' <= Foo'hello';
 }
 
 entrypoint function lteqTypedStringMixedTrue(): Bool {
-    return 'hello'#Foo <= "hello";
+    return Foo'hello' <= "hello";
 }
 
 entrypoint function ltTypedStringMixedFalse(): Bool {
-    return 'hello'#Foo < "h";
+    return Foo'hello' < "h";
 }
 
 entrypoint function gtIntFalse(): Bool {
@@ -671,39 +667,18 @@ entrypoint function mixedArgsNamedTest2(): Int {
 }
 
 entrypoint function identityAnyTest(): Int | String {
-    var x = identityAny[Int](3);
-    return x == 3 ? identityAny[Int | String](1) : 2;
+    var x = identityAny<Int>(3);
+    return x == 3 ? identityAny<Int | String>(1) : 2;
 }
 
 entrypoint function identityIntTest(): Int {
-    var x = identityInt[Int](3);
-    return x == 3 ? identityInt[Int](1) : 2;
+    var x = identityInt<Int>(3);
+    return x == 3 ? identityInt<Int>(1) : 2;
 }
 
 entrypoint function prePostTest(): Int?
 {
     return prePost(3);
-}
-
-entrypoint function lambdaTest():Int {
-    var f = fn(x: Int): Int => { return x * 2; };
-    return f(3);
-}
-
-entrypoint function lambdaCaptureTest(): Int {
-    var y = 2;
-    var f = fn(x: Int): Int => { return x * y; };
-    return f(3);
-}
-
-entrypoint function lambdaShortTestOk(): Int? {
-    var fobj = (1 == 1) ? @{ func=fn(x: Int): Int => { return x * 2; } } : @{ };
-    return fobj.func?(3);
-}
-
-entrypoint function lambdaShortTestOut(): Int? {
-    var fobj = (1 == 2) ? @{ func=fn(x: Int): Int => { return x * 2; } } : @{ };
-    return fobj.func?(3);
 }
 
 entrypoint function lambdaArgumentTest(): Int {
@@ -714,21 +689,16 @@ entrypoint function lambdaArgumentInferTest(): Int {
     return lambdaArgument(fn(x) => { return x * 2; }, 3);
 }
 
-entrypoint function lambdaMultiTest():Int {
-    var f = (1 == 1) ? fn(x: Int): Int => { return x * 2; } : fn(x: Any): Int => { return 2; };
-    return f(3);
-}
-
 entrypoint function createObjSimple(): E1 {
-    return E1@{ x=none, y=1, z=true, f=3 };
+    return E1{ x=none, y=1, z=true, f=3 };
 }
 
 entrypoint function createObjDefault(): E1 {
-    return E1@{ x=none, z=true, f=3 };
+    return E1{ x=none, z=true, f=3 };
 }
 
 entrypoint function createObjExpando(): E1 {
-    return E1@{ ...@{ x=none, z=true, f=3 } };
+    return E1{ ...{ x=none, z=true, f=3 } };
 }
 
 entrypoint function createObjFactory(): E1 {
@@ -736,15 +706,15 @@ entrypoint function createObjFactory(): E1 {
 }
 
 entrypoint function createObjFactoryTemplate(): E1 {
-    return E1@creat[String]("ok");
+    return E1@creat<String>("ok");
 }
 
-entrypoint function createObjTFactory(): E2[Int] {
-    return E2[Int]@create(3);
+entrypoint function createObjTFactory(): E2<Int> {
+    return E2<Int>@create(3);
 }
 
-entrypoint function createObjTFactoryTemplate(): E2[Int] {
-    return E2[Int]@creat[String](3, "ok");
+entrypoint function createObjTFactoryTemplate(): E2<Int> {
+    return E2<Int>@creat<String>(3, "ok");
 }
 
 entrypoint function getObjFieldF(): Int {
@@ -756,127 +726,115 @@ entrypoint function getObjFieldX(): Any {
 }
 
 entrypoint function getObjFields(): {f: Int, x: Any} {
-    return E1@create(3)@{f, x};
+    return E1@create(3).{f, x};
 }
 
 entrypoint function projectObjType(): {x: Any, y:Int} {
-    return E1@create(3)@#Bar;
+    return E1@create(3)->project<Bar>();
 }
 
 entrypoint function modifyObjFields(): E1 {
-    return E1@create(3)<~(f=5, x=false);
+    return E1@create(3)->update(f=5, x=false);
 }
 
 entrypoint function updateObj(): E1 {
-    return E1@create(3)<+(@{ f=5, x=false });
+    return E1@create(3)->merge({ f=5, x=false });
 }
 
-entrypoint function restCallSimpleArgsList(): List[Int] {
-    return restArgListSimple[Int](1, 1, 2);
+entrypoint function restCallSimpleArgsList(): List<Int> {
+    return restArgListSimple<Int>(1, 1, 2);
 }
 
-entrypoint function restCallSimpleArgsSet(): Set[Int] {
-    return restArgSetSimple[Int](4, ...List[Int]@{ 1, 2, 3 });
+entrypoint function restCallSimpleArgsSet(): Set<Int> {
+    return restArgSetSimple<Int>(4, ...List<Int>{ 1, 2, 3 });
 }
 
-entrypoint function restCallOverlapArgsSet(): Set[Int] {
-    return restArgSetSimple[Int](2, ...List[Int]@{ 1, 2, 3 });
+entrypoint function restCallOverlapArgsSet(): Set<Int> {
+    return restArgSetSimple<Int>(2, ...List<Int>{ 1, 2, 3 });
 }
 
-entrypoint function restCallSimpleArgsMap(): Map[Int, Bool] {
-    return restArgMapSimple[Int, Bool](@[ 1, false ], @[ 2, true ]);
+entrypoint function restCallSimpleArgsMap(): Map<Int, Bool> {
+    return restArgMapSimple<Int, Bool>([ 1, false ], [ 2, true ]);
 }
 
-entrypoint function restCallOverlapArgsMap(): Map[Int, Bool] {
-    return restArgMapSimple[Int, Bool](@[ 1, false ], @[ 1, true ]);
+entrypoint function restCallOverlapArgsMap(): Map<Int, Bool> {
+    return restArgMapSimple<Int, Bool>([ 1, false ], [ 1, true ]);
 }
 
-entrypoint function restCallMixedList1(): List[Int] {
-    return argListMixed(true, 4, ...List[Int]@{ 1, 2, 3 });
+entrypoint function restCallMixedList1(): List<Int> {
+    return argListMixed(true, 4, ...List<Int>{ 1, 2, 3 });
 }
 
-entrypoint function restCallMixedList2(): List[Int] {
-    return argListMixed(4, v=true, ...List[Int]@{ 1, 2, 3 });
+entrypoint function restCallMixedList2(): List<Int> {
+    return argListMixed(4, v=true, ...List<Int>{ 1, 2, 3 });
 }
 
-entrypoint function createList(): List[Int] {
-    return List[Int]@{ 1, 1, 2 };
+entrypoint function createList(): List<Int> {
+    return List<Int>{ 1, 1, 2 };
 }
 
-entrypoint function createListExpando(): List[Int] {
-    return List[Int]@{...List[Int]@{ 1, 1, 2 }, 4};
+entrypoint function createListExpando(): List<Int> {
+    return List<Int>{...List<Int>{ 1, 1, 2 }, 4};
 }
 
-entrypoint function createSet(): Set[Int] {
-    return HashSet[Int]@{ 1, 2, 3 };
+entrypoint function createSet(): Set<Int> {
+    return HashSet<Int>{ 1, 2, 3 };
 }
 
-entrypoint function createSetOverlap(): Set[Int] {
-    return HashSet[Int]@{ 1, 2, 3, 2 };
+entrypoint function createSetOverlap(): Set<Int> {
+    return HashSet<Int>{ 1, 2, 3, 2 };
 }
 
-entrypoint function createSetExpando(): Set[Int] {
-    return HashSet[Int]@{ ...HashSet[Int]@{ 1 }, 2, ...List[Int]@{ 4, 5 } };
+entrypoint function createSetExpando(): Set<Int> {
+    return HashSet<Int>{ ...HashSet<Int>{ 1 }, 2, ...List<Int>{ 4, 5 } };
 }
 
-entrypoint function createMap(): Map[Int, Bool] {
-    return HashMap[Int, Bool]@{ @[ 1, true ], @[ 2, true ] };
+entrypoint function createMap(): Map<Int, Bool> {
+    return HashMap<Int, Bool>{ [ 1, true ], [ 2, true ] };
 }
 
-entrypoint function createMapOverlap(): Map[Int, Bool] {
-    return HashMap[Int, Bool]@{ @[ 1, true ], @[ 2, false ], @[ 2, true ] };
+entrypoint function createMapOverlap(): Map<Int, Bool> {
+    return HashMap<Int, Bool>{ [ 1, true ], [ 2, false ], [ 2, true ] };
 }
 
-entrypoint function createMapExpando(): Map[Int, Bool] {
-    return HashMap[Int, Bool]@{ @[ 1, true ], ...HashMap[Int, Bool]@{ @[ 1, false ], @[ 2, true ] }, @[ 5, true ] };
-}
-
-entrypoint function invokee3func(): Int {
-    return E3@{}->func(3);
-}
-
-entrypoint function invokee4func(): Bool {
-    return E4[Int]@{}->func(3);
-}
-
-entrypoint function invokerecordfunc(): Int {
-    return @{ func=fn(this: Any, x: Int): Int => x + 1 }->func(3);
+entrypoint function createMapExpando(): Map<Int, Bool> {
+    return HashMap<Int, Bool>{ [ 1, true ], ...HashMap<Int, Bool>{ [ 1, false ], [ 2, true ] }, [ 5, true ] };
 }
 
 entrypoint function invokee3m1(): Int {
-    return E3@{}->m1(3);
+    return E3{}->m1(3);
 }
 
 entrypoint function invokee3ii(): Int {
-    return E3@{}->ii(3);
+    return E3{}->ii(3);
 }
 
 entrypoint function invokee3m3(): Int {
-    return E3@{}->m3(3);
+    return E3{}->m3(3);
 }
 
 entrypoint function invokee3mc(): Int {
-    return E3@{}->mc(3, 5);
+    return E3{}->mc(3, 5);
 }
 
 entrypoint function invokee4m1(): Int {
-    return E4[Int]@{}->m1(3);
+    return E4<Int>{}->m1(3);
 }
 
 entrypoint function invokee4ii(): Int {
-    return E4[Int]@{}->ii(3);
+    return E4<Int>{}->ii(3);
 }
 
 entrypoint function invokee4m3(): Int {
-    return E4[Int]@{}->m3(3);
+    return E4<Int>{}->m3(3);
 }
 
 entrypoint function invokee4mc(): Int {
-    return E4[Int]@{}->mc(3);
+    return E4<Int>{}->mc(3);
 }
 
 entrypoint function invokee4mcc(): Int {
-    return E4[Int]@{}->mcc[Int](3);
+    return E4<Int>{}->mcc<Int>(3);
 }
 
 entrypoint function eblock_4(): Int {
@@ -952,7 +910,7 @@ function ematch(arg: Any, tv?: Bool): Int {
     return switch(arg) {
         type None => 1
         case 2 => 2
-        case @[var x: Int, 3] => {| yield x + 1; |}
+        case [var x: Int, 3] => {| yield x + 1; |}
         type {f?: Int} => switch(arg.f) {
             case none => 0
             case _ => -1
@@ -970,7 +928,7 @@ entrypoint function ematch_2(): Int {
 }
 
 entrypoint function ematch_3(): Int {
-    return ematch(@[2, 3]);
+    return ematch([2, 3]);
 }
 
 entrypoint function ematch_10(): Int {
@@ -978,11 +936,11 @@ entrypoint function ematch_10(): Int {
 }
 
 entrypoint function ematch_0(): Int {
-    return ematch(@{});
+    return ematch({});
 }
 
 entrypoint function ematch_n1(): Int {
-    return ematch(@{f=2});
+    return ematch({f=2});
 }
 
 entrypoint function ematch_11(): Int {
@@ -1003,19 +961,19 @@ const expression_tests: TestInfo[] = [
     { name: "literalEmptyString", input: ["literalEmptyString"], expected: "\"\"" },
     { name: "literalHello", input: ["literalHello"], expected: "\"hello\"" },
 
-    { name: "literalFooString", input: ["literalFooString"], expected: "'hello'#NSTestExpression::Foo" },
-    { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo@{}" },
+    { name: "literalFooString", input: ["literalFooString"], expected: "NSTestExpression::Foo'hello'" },
+    { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo{}" },
 
-    { name: "emptyTuple", input: ["emptyTuple"], expected: "@[]" },
-    { name: "oneTuple", input: ["oneTuple"], expected: "@[ 1 ]" },
-    { name: "fourTuple", input: ["fourTuple"], expected: "@[ 1, 2, none, true ]" },
-    { name: "emptyRecord", input: ["emptyRecord"], expected: "@{}" },
-    { name: "oneRecord", input: ["oneRecord"], expected: "@{ f=1 }" },
-    { name: "fourRecord", input: ["fourRecord"], expected: "@{ f=1, g=2, h=none, k=true }" },
-    { name: "nestedTuples", input: ["nestedTuples"], expected: "@[ 1, @[ none, @[] ] ]" },
-    { name: "nestedRecords", input: ["nestedRecords"], expected: "@{ f=1, g=@{ f=2, h=@{} } }" },
-    { name: "nestedTupleRecord", input: ["nestedTupleRecord"], expected: "@[ 1, @{ f=1 } ]" },
-    { name: "nestedRecordTuple", input: ["nestedRecordTuple"], expected: "@{ f=1, g=@[ 1 ] }" },
+    { name: "emptyTuple", input: ["emptyTuple"], expected: "[]" },
+    { name: "oneTuple", input: ["oneTuple"], expected: "[ 1 ]" },
+    { name: "fourTuple", input: ["fourTuple"], expected: "[ 1, 2, none, true ]" },
+    { name: "emptyRecord", input: ["emptyRecord"], expected: "{}" },
+    { name: "oneRecord", input: ["oneRecord"], expected: "{ f=1 }" },
+    { name: "fourRecord", input: ["fourRecord"], expected: "{ f=1, g=2, h=none, k=true }" },
+    { name: "nestedTuples", input: ["nestedTuples"], expected: "[ 1, [ none, [] ] ]" },
+    { name: "nestedRecords", input: ["nestedRecords"], expected: "{ f=1, g={ f=2, h={} } }" },
+    { name: "nestedTupleRecord", input: ["nestedTupleRecord"], expected: "[ 1, { f=1 } ]" },
+    { name: "nestedRecordTuple", input: ["nestedRecordTuple"], expected: "{ f=1, g=[ 1 ] }" },
 
     { name: "getIndex", input: ["getIndex"], expected: "1" },
     { name: "getIndexOpt", input: ["getIndexOpt"], expected: "none" },
@@ -1024,31 +982,31 @@ const expression_tests: TestInfo[] = [
     { name: "getFieldOpt", input: ["getFieldOpt"], expected: "none" },
     { name: "getFieldBailout", input: ["getFieldBailout"], expected: "none" },
 
-    { name: "projectIndecies", input: ["projectIndecies"], expected: "@[ 2 ]" },
-    { name: "projectIndeciesOpt", input: ["projectIndeciesOpt"], expected: "@[ 2, none ]" },
+    { name: "projectIndecies", input: ["projectIndecies"], expected: "[ 2 ]" },
+    { name: "projectIndeciesOpt", input: ["projectIndeciesOpt"], expected: "[ 2, none ]" },
     { name: "projectIndeciesBailout", input: ["projectIndeciesBailout"], expected: "none" },
-    { name: "projectProperties", input: ["projectProperties"], expected: "@{ f=1 }" },
-    { name: "projectPropertiesOpt", input: ["projectPropertiesOpt"], expected: "@{ f=1, h=none }" },
+    { name: "projectProperties", input: ["projectProperties"], expected: "{ f=1 }" },
+    { name: "projectPropertiesOpt", input: ["projectPropertiesOpt"], expected: "{ f=1, h=none }" },
     { name: "projectPropertiesBailout", input: ["projectPropertiesBailout"], expected: "none" },
 
-    { name: "projectTupleType", input: ["projectTupleType"], expected: "@[ true ]" },
-    { name: "projectTupleTypeOptional", input: ["projectTupleTypeOptional"], expected: "@[ true, false ]" },
-    { name: "projectTupleTypeOpen", input: ["projectTupleTypeOpen"], expected: "@[ true, false ]" },
-    { name: "projectRecordType", input: ["projectRecordType"], expected: "@{ f=1 }" },
-    { name: "projectRecordTypeOptional", input: ["projectRecordTypeOptional"], expected: "@{ f=1 }" },
-    { name: "projectRecordTypeOpen", input: ["projectRecordTypeOpen"], expected: "@{ f=1, g=2 }" },
+    { name: "projectTupleType", input: ["projectTupleType"], expected: "[ true ]" },
+    { name: "projectTupleTypeOptional", input: ["projectTupleTypeOptional"], expected: "[ true, false ]" },
+    { name: "projectTupleTypeOpen", input: ["projectTupleTypeOpen"], expected: "[ true, false ]" },
+    { name: "projectRecordType", input: ["projectRecordType"], expected: "{ f=1 }" },
+    { name: "projectRecordTypeOptional", input: ["projectRecordTypeOptional"], expected: "{ f=1 }" },
+    { name: "projectRecordTypeOpen", input: ["projectRecordTypeOpen"], expected: "{ f=1, g=2 }" },
     { name: "projectTypeBailout", input: ["projectTypeBailout"], expected: "none" },
 
-    { name: "modifyIndecies", input: ["modifyIndecies"], expected: "@[ 1, 5 ]" },
-    { name: "modifyIndeciesOpt", input: ["modifyIndeciesOpt"], expected: "@[ 1, 5, none, none, 4 ]" },
+    { name: "modifyIndecies", input: ["modifyIndecies"], expected: "[ 1, 5 ]" },
+    { name: "modifyIndeciesOpt", input: ["modifyIndeciesOpt"], expected: "[ 1, 5, none, none, 4 ]" },
     { name: "modifyIndeciesBailout", input: ["modifyIndeciesBailout"], expected: "none" },
-    { name: "modifyProperties", input: ["modifyProperties"], expected: "@{ f=5, g=2 }" },
-    { name: "modifyPropertiesOpt", input: ["modifyPropertiesOpt"], expected: "@{ f=5, g=2, h=3 }" },
+    { name: "modifyProperties", input: ["modifyProperties"], expected: "{ f=5, g=2 }" },
+    { name: "modifyPropertiesOpt", input: ["modifyPropertiesOpt"], expected: "{ f=5, g=2, h=3 }" },
     { name: "modifyPropertiesBailout", input: ["modifyPropertiesBailout"], expected: "none" },
-    { name: "extendTupleType", input: ["extendTupleType"], expected: "@[ true, false, 3 ]" },
+    { name: "extendTupleType", input: ["extendTupleType"], expected: "[ true, false, 3 ]" },
     { name: "extendTupleTypeBailout", input: ["extendTupleTypeBailout"], expected: "none" },
-    { name: "extendRecordType", input: ["extendRecordType"], expected: "@{ f=5, g=2 }" },
-    { name: "extendRecordTypeWNew", input: ["extendRecordTypeWNew"], expected: "@{ f=5, g=2, h=6 }" },
+    { name: "extendRecordType", input: ["extendRecordType"], expected: "{ f=5, g=2 }" },
+    { name: "extendRecordTypeWNew", input: ["extendRecordTypeWNew"], expected: "{ f=5, g=2, h=6 }" },
 
     { name: "prefixNot", input: ["prefixNot"], expected: "true" },
     { name: "prefixNotNone", input: ["prefixNot"], expected: "true" },
@@ -1141,49 +1099,41 @@ const expression_tests: TestInfo[] = [
 
     { name: "prePostTest", input: ["prePostTest"], expected: "4" },
 
-    { name: "lambdaTest", input: ["lambdaTest"], expected: "6" },
-    { name: "lambdaCaptureTest", input: ["lambdaCaptureTest"], expected: "6" },
-    { name: "lambdaShortTestOk", input: ["lambdaShortTestOk"], expected: "6" },
-    { name: "lambdaShortTestOut", input: ["lambdaShortTestOut"], expected: "none" },
     { name: "lambdaArgumentTest", input: ["lambdaArgumentTest"], expected: "6" },
     { name: "lambdaArgumentInferTest", input: ["lambdaArgumentInferTest"], expected: "6" },
-    { name: "lambdaMultiTest", input: ["lambdaMultiTest"], expected: "6" },
 
-    { name: "createObjSimple", input: ["createObjSimple"], expected: "NSTestExpression::E1@{ f=3, x=none, y=1, z=true }" },
-    { name: "createObjDefault", input: ["createObjDefault"], expected: "NSTestExpression::E1@{ f=3, x=none, y=3, z=true }" },
-    { name: "createObjExpando", input: ["createObjExpando"], expected: "NSTestExpression::E1@{ f=3, x=none, y=3, z=true }" },
-    { name: "createObjFactory", input: ["createObjFactory"], expected: "NSTestExpression::E1@{ f=3, x=none, y=1, z=true }" },
-    { name: "createObjFactoryTemplate", input: ["createObjFactoryTemplate"], expected: "NSTestExpression::E1@{ f=3, x=\"ok\", y=1, z=true }" },
-    { name: "createObjTFactory", input: ["createObjTFactory"], expected: "NSTestExpression::E2[T=NSCore::Int]@{ f=3, g=1 }" },
-    { name: "createObjTFactoryTemplate", input: ["createObjTFactoryTemplate"], expected: "NSTestExpression::E2[T=NSCore::Int]@{ f=3, g=\"ok\" }" },
+    { name: "createObjSimple", input: ["createObjSimple"], expected: "NSTestExpression::E1{ f=3, x=none, y=1, z=true }" },
+    { name: "createObjDefault", input: ["createObjDefault"], expected: "NSTestExpression::E1{ f=3, x=none, y=3, z=true }" },
+    { name: "createObjExpando", input: ["createObjExpando"], expected: "NSTestExpression::E1{ f=3, x=none, y=3, z=true }" },
+    { name: "createObjFactory", input: ["createObjFactory"], expected: "NSTestExpression::E1{ f=3, x=none, y=1, z=true }" },
+    { name: "createObjFactoryTemplate", input: ["createObjFactoryTemplate"], expected: "NSTestExpression::E1{ f=3, x=\"ok\", y=1, z=true }" },
+    { name: "createObjTFactory", input: ["createObjTFactory"], expected: "NSTestExpression::E2<T=NSCore::Int>{ f=3, g=1 }" },
+    { name: "createObjTFactoryTemplate", input: ["createObjTFactoryTemplate"], expected: "NSTestExpression::E2<T=NSCore::Int>{ f=3, g=\"ok\" }" },
 
     { name: "getObjFieldF", input: ["getObjFieldF"], expected: "3" },
     { name: "getObjFieldX", input: ["getObjFieldX"], expected: "none" },
-    { name: "getObjFields", input: ["getObjFields"], expected: "@{ f=3, x=none }" },
-    { name: "projectObjType", input: ["projectObjType"], expected: "@{ x=none, y=1 }" },
-    { name: "modifyObjFields", input: ["modifyObjFields"], expected: "NSTestExpression::E1@{ f=5, x=false, y=1, z=true }" },
-    { name: "updateObj", input: ["updateObj"], expected: "NSTestExpression::E1@{ f=5, x=false, y=1, z=true }" },
+    { name: "getObjFields", input: ["getObjFields"], expected: "{ f=3, x=none }" },
+    { name: "projectObjType", input: ["projectObjType"], expected: "{ x=none, y=1 }" },
+    { name: "modifyObjFields", input: ["modifyObjFields"], expected: "NSTestExpression::E1{ f=5, x=false, y=1, z=true }" },
+    { name: "updateObj", input: ["updateObj"], expected: "NSTestExpression::E1{ f=5, x=false, y=1, z=true }" },
 
-    { name: "restCallSimpleArgsList", input: ["restCallSimpleArgsList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2 }" },
-    { name: "restCallSimpleArgsSet", input: ["restCallSimpleArgsSet"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 4, 1, 2, 3 }" },
-    { name: "restCallOverlapArgsSet", input: ["restCallOverlapArgsSet"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 2, 3 }" },
-    { name: "restCallSimpleArgsMap", input: ["restCallSimpleArgsMap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, false ], @[ 2, true ] }" },
-    { name: "restCallOverlapArgsMap", input: ["restCallOverlapArgsMap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ] }" },
-    { name: "restCallMixedList1", input: ["restCallMixedList1"], expected: "NSCore::List[T=NSCore::Int]@{ 4, 1, 2, 3 }" },
-    { name: "restCallMixedList2", input: ["restCallMixedList2"], expected: "NSCore::List[T=NSCore::Int]@{ 4, 1, 2, 3 }" },
+    { name: "restCallSimpleArgsList", input: ["restCallSimpleArgsList"], expected: "NSCore::List<T=NSCore::Int>{ 1, 1, 2 }" },
+    { name: "restCallSimpleArgsSet", input: ["restCallSimpleArgsSet"], expected: "NSCore::HashSet<T=NSCore::Int>{ 4, 1, 2, 3 }" },
+    { name: "restCallOverlapArgsSet", input: ["restCallOverlapArgsSet"], expected: "NSCore::HashSet<T=NSCore::Int>{ 1, 2, 3 }" },
+    { name: "restCallSimpleArgsMap", input: ["restCallSimpleArgsMap"], expected: "NSCore::HashMap<K=NSCore::Int, V=NSCore::Bool>{ [ 1, false ], [ 2, true ] }" },
+    { name: "restCallOverlapArgsMap", input: ["restCallOverlapArgsMap"], expected: "NSCore::HashMap<K=NSCore::Int, V=NSCore::Bool>{ [ 1, true ] }" },
+    { name: "restCallMixedList1", input: ["restCallMixedList1"], expected: "NSCore::List<T=NSCore::Int>{ 4, 1, 2, 3 }" },
+    { name: "restCallMixedList2", input: ["restCallMixedList2"], expected: "NSCore::List<T=NSCore::Int>{ 4, 1, 2, 3 }" },
 
-    { name: "createList", input: ["createList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2 }" },
-    { name: "createListExpando", input: ["createListExpando"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 2, 4 }" },
-    { name: "createSet", input: ["createSet"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 2, 3 }" },
-    { name: "createSetOverlap", input: ["createSetOverlap"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 3, 2 }" },
-    { name: "createSetExpando", input: ["createSetExpando"], expected: "NSCore::HashSet[T=NSCore::Int]@{ 1, 2, 4, 5 }" },
-    { name: "createMap", input: ["createMap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ], @[ 2, true ] }" },
-    { name: "createMapOverlap", input: ["createMapOverlap"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, true ], @[ 2, true ] }" },
-    { name: "createMapExpando", input: ["createMapExpando"], expected: "NSCore::HashMap[K=NSCore::Int, V=NSCore::Bool]@{ @[ 1, false ], @[ 2, true ], @[ 5, true ] }" },
+    { name: "createList", input: ["createList"], expected: "NSCore::List<T=NSCore::Int>{ 1, 1, 2 }" },
+    { name: "createListExpando", input: ["createListExpando"], expected: "NSCore::List<T=NSCore::Int>{ 1, 1, 2, 4 }" },
+    { name: "createSet", input: ["createSet"], expected: "NSCore::HashSet<T=NSCore::Int>{ 1, 2, 3 }" },
+    { name: "createSetOverlap", input: ["createSetOverlap"], expected: "NSCore::HashSet<T=NSCore::Int>{ 1, 3, 2 }" },
+    { name: "createSetExpando", input: ["createSetExpando"], expected: "NSCore::HashSet<T=NSCore::Int>{ 1, 2, 4, 5 }" },
+    { name: "createMap", input: ["createMap"], expected: "NSCore::HashMap<K=NSCore::Int, V=NSCore::Bool>{ [ 1, true ], [ 2, true ] }" },
+    { name: "createMapOverlap", input: ["createMapOverlap"], expected: "NSCore::HashMap<K=NSCore::Int, V=NSCore::Bool>{ [ 1, true ], [ 2, true ] }" },
+    { name: "createMapExpando", input: ["createMapExpando"], expected: "NSCore::HashMap<K=NSCore::Int, V=NSCore::Bool>{ [ 1, false ], [ 2, true ], [ 5, true ] }" },
 
-    { name: "invokee3func", input: ["invokee3func"], expected: "4" },
-    { name: "invokee4func", input: ["invokee4func"], expected: "false" },
-    { name: "invokerecordfunc", input: ["invokerecordfunc"], expected: "4" },
     { name: "invokee3m1", input: ["invokee3m1"], expected: "4" },
     { name: "invokee3ii", input: ["invokee3ii"], expected: "3" },
     { name: "invokee3m3", input: ["invokee3m3"], expected: "0" },
@@ -1211,7 +1161,8 @@ const expression_tests: TestInfo[] = [
     { name: "ematch_0", input: ["ematch_0"], expected: "0" },
     { name: "ematch_n1", input: ["ematch_n1"], expected: "-1" },
     { name: "ematch_11", input: ["ematch_11"], expected: "11" },
-    { name: "ematch_11", input: ["ematch_11"], expected: "11" }
+    { name: "ematch_11", input: ["ematch_11"], expected: "11" },
+    { name: "ematch_11alt", input: ["ematch_11alt"], expected: "11" }
 ];
 
 function expression_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
@@ -1282,12 +1233,12 @@ entrypoint function varDeclAndAssignWithNoValue(): Int? {
 }
 
 entrypoint function structuredDeclTuple(): Int {
-    @[var x: Int, var y] = @[1, 2];
+    [var x: Int, var y] = [1, 2];
     return x + y;
 }
 
 entrypoint function structuredDeclMutableTuple(): Int {
-    @[var! x: Int, var! y] = @[1, 2];
+    [var! x: Int, var! y] = [1, 2];
     x = x + 1;
     y = y + 1;
     return x + y;
@@ -1297,17 +1248,17 @@ entrypoint function structuredAssignTuple(): Int {
     var! x: Int = 4;
     var! y: Int;
 
-    @[x, y] = @[1, 2];
+    [x, y] = [1, 2];
     return x + y;
 }
 
 entrypoint function structuredDeclRecord(): Int {
-    @{f=var x: Int, g=var y} = @{f=1, g=2};
+    {f=var x: Int, g=var y} = {f=1, g=2};
     return x + y;
 }
 
 entrypoint function structuredDeclMutableRecord(): Int {
-    @{f=var! x: Int, g=var! y} = @{f=1, g=2};
+    {f=var! x: Int, g=var! y} = {f=1, g=2};
     return x + y;
 }
 
@@ -1315,61 +1266,61 @@ entrypoint function structuredAssignRecord(): Int {
     var! x: Int = 4;
     var! y: Int;
 
-    @{f=x, g=y} = @{f=1, g=2};
+    {f=x, g=y} = {f=1, g=2};
     return x + y;
 }
 
 entrypoint function structuredDeclAndAssign(): Int {
     var! y: Int;
 
-    @[var x: Int, y] = @[1, 2];
+    [var x: Int, y] = [1, 2];
     return x + y;
 }
 
 entrypoint function structuredDeclGlobal(): Int {
-    var @{f=x, g=y} = @{f=1, g=2};
+    var {f=x, g=y} = {f=1, g=2};
     return x + y;
 }
 
 entrypoint function structuredDeclGlobalMutable(): Int {
-    var! @{f=x: Int, g=y} = @{f=1, g=2};
+    var! {f=x: Int, g=y} = {f=1, g=2};
     x = x + 1;
     y = y + 1;
     return x + y;
 }
 
 entrypoint function structuredRecordWithTuple(): Int {
-    var @{f=x, g=@[y, z]} = @{f=1, g=@[2, 3]};
+    var {f=x, g=[y, z]} = {f=1, g=[2, 3]};
     return x + y + z;
 }
 
 entrypoint function structuredTupleWithRecord(): Int {
-    var @[x, @{f=y, g=z}] = @[1, @{f=2, g=3}];
+    var [x, {f=y, g=z}] = [1, {f=2, g=3}];
     return x + y + z;
 }
 
 entrypoint function structuredDeclAndAssignOptionalsMatch(): Int {
-    var @{f=x?: Int, g=y?} = @{f=1, g=2};
+    var {f=x?: Int, g=y?} = {f=1, g=2};
     return x + y;
 }
 
 entrypoint function structuredDeclAndAssignOptionalsDefault(): Int {
-    var @{f=x?: Int, g=y?} = (0 < 1) ? @{} : @{f=1, g=2};
+    var {f=x?: Int, g=y?} = (0 < 1) ? {} : {f=1, g=2};
     return (x ?| 1) + (y ?| 2);
 }
 
 entrypoint function structuredDeclAndAssignOpenTuple(): Int {
-    @[var x: Int, var y, ...] = @[1, 2, 4];
+    [var x: Int, var y, ...] = [1, 2, 4];
     return x + y;
 }
 
 entrypoint function structuredDeclAndAssignOpenRecord(): Int {
-    var @{f=x, g=y, ...} = @{f=1, h=12, g=2};
+    var {f=x, g=y, ...} = {f=1, h=12, g=2};
     return x + y;
 }
 
 entrypoint function structuredDeclAndAssignIgnores(): Int {
-    var @{f=_, g=@[y, _:Int]} = @{f=1, g=@[2, 3]};
+    var {f=_, g=[y, _:Int]} = {f=1, g=[2, 3]};
     return y;
 }
 
@@ -1460,8 +1411,8 @@ function switchCaseInt(x: Int): Int {
 function switchCaseMixedTypes(x: Any): Int {
     switch(x) {
         case none => { return 1; }
-        case @[1, 2] => { return 2; }
-        case @{f=1} => { return 3; }
+        case [1, 2] => { return 2; }
+        case {f=1} => { return 3; }
         case "ok" => { return 4; }
         case _ => { ; }
     }
@@ -1472,13 +1423,13 @@ function switchCaseMixedTypes(x: Any): Int {
 function switchCaseBindTypes(x: Any): Int {
     var! z: Int;
     switch(x) {
-        case @[1, var y: Int] => { return y; }
-        case @[2, var! y: Int] => { return y; }
-        case @[3, _:Int, var y: Int] => { return y; }
-        case @[3, _:Int, var y: Int, ...] => { return y; }
-        case @{f=1, g=var y: Int} => { return y; }
-        case var @{f=2, g=y: Int} => { return y; }
-        case @{f=3, g=z} => { return z; }
+        case [1, var y: Int] => { return y; }
+        case [2, var! y: Int] => { return y; }
+        case [3, _:Int, var y: Int] => { return y; }
+        case [3, _:Int, var y: Int, ...] => { return y; }
+        case {f=1, g=var y: Int} => { return y; }
+        case var {f=2, g=y: Int} => { return y; }
+        case {f=3, g=z} => { return z; }
         case var y: Int => { return y; }
         case _ => { ; }
     }
@@ -1489,10 +1440,10 @@ function switchCaseBindTypes(x: Any): Int {
 function switchCaseBindWhen(x: Any): Int {
     var! z: Int;
     switch(x) {
-        case @[1, var y: Int] when y > 0 => { return y; }
-        case @[1, var y: Int] when y <= 0 => { return 0; }
-        case @[2, var y?: Int] => { return y ?| 20; }
-        case @[2, var y: Int, z] => { return y + z; }
+        case [1, var y: Int] when y > 0 => { return y; }
+        case [1, var y: Int] when y <= 0 => { return 0; }
+        case [2, var y?: Int] => { return y ?| 20; }
+        case [2, var y: Int, z] => { return y + z; }
         case _ => { ; }
     }
 
@@ -1549,11 +1500,11 @@ entrypoint function switchCaseAny_none(): Int {
 }
 
 entrypoint function switchCaseAny_tup(): Int {
-    return switchCaseMixedTypes(@[1,2]);
+    return switchCaseMixedTypes([1,2]);
 }
 
 entrypoint function switchCaseAny_rec(): Int {
-    return switchCaseMixedTypes(@{f=1});
+    return switchCaseMixedTypes({f=1});
 }
 
 entrypoint function switchCaseAny_string(): Int {
@@ -1565,31 +1516,31 @@ entrypoint function switchCaseAny_x(): Int {
 }
 
 entrypoint function switchCaseBindTypes_1(): Int {
-    return switchCaseBindTypes(@[1, 1]);
+    return switchCaseBindTypes([1, 1]);
 }
 
 entrypoint function switchCaseBindTypes_2(): Int {
-    return switchCaseBindTypes(@[1, 2]);
+    return switchCaseBindTypes([1, 2]);
 }
 
 entrypoint function switchCaseBindTypes_3(): Int {
-    return switchCaseBindTypes(@[3, 5, 3]);
+    return switchCaseBindTypes([3, 5, 3]);
 }
 
 entrypoint function switchCaseBindTypes_4(): Int {
-    return switchCaseBindTypes(@[3, 5, 4, 7, 11]);
+    return switchCaseBindTypes([3, 5, 4, 7, 11]);
 }
 
 entrypoint function switchCaseBindTypes_5(): Int {
-    return switchCaseBindTypes(@{f=1, g=5});
+    return switchCaseBindTypes({f=1, g=5});
 }
 
 entrypoint function switchCaseBindTypes_6(): Int {
-    return switchCaseBindTypes(@{f=2, g=6});
+    return switchCaseBindTypes({f=2, g=6});
 }
 
 entrypoint function switchCaseBindTypes_7(): Int {
-    return switchCaseBindTypes(@{f=3, g=7});
+    return switchCaseBindTypes({f=3, g=7});
 }
 
 entrypoint function switchCaseBindTypes_8(): Int {
@@ -1597,23 +1548,23 @@ entrypoint function switchCaseBindTypes_8(): Int {
 }
 
 entrypoint function switchCaseBindWhen_1(): Int {
-    return switchCaseBindWhen(@[1, 1]);
+    return switchCaseBindWhen([1, 1]);
 }
 
 entrypoint function switchCaseBindWhen_0(): Int {
-    return switchCaseBindWhen(@[1, -1]);
+    return switchCaseBindWhen([1, -1]);
 }
 
 entrypoint function switchCaseBindWhen_5(): Int {
-    return switchCaseBindWhen(@[2, 5]);
+    return switchCaseBindWhen([2, 5]);
 }
 
 entrypoint function switchCaseBindWhen_20(): Int {
-    return switchCaseBindWhen(@[2]);
+    return switchCaseBindWhen([2]);
 }
 
 entrypoint function switchCaseBindWhen_101(): Int {
-    return switchCaseBindWhen(@[2, 1, 100]);
+    return switchCaseBindWhen([2, 1, 100]);
 }
 
 entrypoint function switchCaseType_1(): Int {
@@ -1621,15 +1572,15 @@ entrypoint function switchCaseType_1(): Int {
 }
 
 entrypoint function switchCaseType_2(): Int {
-    return switchCaseType(@[1, 2]);
+    return switchCaseType([1, 2]);
 }
 
 entrypoint function switchCaseType_3(): Int {
-    return switchCaseType(@{f=3});
+    return switchCaseType({f=3});
 }
 
 entrypoint function switchCaseType_4(): Int {
-    return switchCaseType(@{f=3, g=4});
+    return switchCaseType({f=3, g=4});
 }
 
 entrypoint function switchCaseType_31(): Int {
@@ -1645,19 +1596,19 @@ entrypoint function switchCaseTypeWhen_3(): Int {
 }
 
 entrypoint function switchCaseTypeWhen_10v1(): Int {
-    return switchCaseTypeWhen(@{f=10});
+    return switchCaseTypeWhen({f=10});
 }
 
 entrypoint function switchCaseTypeWhen_10v2(): Int {
-    return switchCaseTypeWhen(@{f=10, g=3});
+    return switchCaseTypeWhen({f=10, g=3});
 }
 
 entrypoint function switchCaseTypeWhen_31v1(): Int {
-    return switchCaseTypeWhen(@{f=10, g=true});
+    return switchCaseTypeWhen({f=10, g=true});
 }
 
 entrypoint function switchCaseTypeWhen_31v2(): Int {
-    return switchCaseTypeWhen(@{f=20});
+    return switchCaseTypeWhen({f=20});
 }
 
 entrypoint function switchCaseTypeWhen_31v3(): Int {
@@ -1673,7 +1624,7 @@ entrypoint function switchCaseEx_false(): Any {
 }
 
 entrypoint function switchCaseEx_error(): Any {
-    return switchCaseEx(@{});
+    return switchCaseEx({});
 }
 
 entrypoint function abortOk(): Int {
@@ -1742,6 +1693,96 @@ entrypoint function staticConstEval(): Int {
     else {
         return x + y;
     }
+}
+
+function pthread(ref x: Int): Int {
+    x = x + 1;
+    return 5;
+}
+
+function pthread_multi(ref x: Int, y: Int): Int {
+    var k = pthread(ref x);
+    return k + y;
+}
+
+entrypoint function pthread1(): Int {
+    var x = 1;
+    var z = pthread(ref x);
+    return x + z;
+}
+
+entrypoint function pthread2(): Int {
+    var x = 2;
+    var z = pthread(ref x);
+    var w = pthread(ref x);
+    return x + z + w;
+}
+
+entrypoint function pthread3(): Int {
+    var x = 1;
+    var z = pthread_multi(ref x, 2);
+    return x + z;
+}
+
+entrypoint function returnor1(): Int | None {
+    var y = (1 == 2) ? none : 4 or return;
+    return y + 1;
+}
+
+entrypoint function returnor11(): Int | None {
+    var y = (1 == 1) ? none : 4 or return;
+    return y + 1;
+}
+
+entrypoint function returnor2(): Int {
+    var y = (1 == 1) ? none : 4 or return 1;
+    return y + 1;
+}
+
+entrypoint function returnor3(): Int | None {
+    var y = (1 == 2) ? 0 : 4 or return when _value_ == 0;
+    return y + 1;
+}
+
+entrypoint function returnor4(): Int {
+    var y = (1 == 2) ? 0 : 4 or return when _value_ == 4;
+    return y + 1;
+}
+
+entrypoint function returnor5(): Int {
+    var y = (1 == 1) ? 0 : 4 or return 8 when _value_ == 4;
+    return y + 1;
+}
+
+entrypoint function returnor6(): Int {
+    var y = (1 == 2) ? 0 : 4 or return 8 when _value_ == 4;
+    return y + 1;
+}
+
+recursive function recf1(i: Int): Int {
+    if(i == 0) {
+        return 0;
+    }
+    else {
+        return recf1[recursive](i - 1) + 1;
+    }
+}
+
+recursive function recf2(i: Int): Int {
+    if(i == 0) {
+        return 0;
+    }
+    else {
+        return recf2[recursive](i - 1) + recf2[recursive](i - 1) + 1;
+    }
+}
+
+entrypoint function rec1(): Int {
+    return recf1[recursive](2);
+}
+
+entrypoint function rec2(): Int {
+    return recf2[recursive](2);
 }
 `;
 
@@ -1833,7 +1874,22 @@ const statement_tests: TestInfo[] = [
     { name: "checkFail", input: ["checkFail"], expected: "[NO RESULT]", expectedError: true },
 
     { name: "namespaceConstEval", input: ["namespaceConstEval"], expected: "6" },
-    { name: "staticConstEval", input: ["staticConstEval"], expected: "6" }
+    { name: "staticConstEval", input: ["staticConstEval"], expected: "6" },
+
+    { name: "pthread1", input: ["pthread1"], expected: "7" },
+    { name: "pthread2", input: ["pthread2"], expected: "14" },
+    { name: "pthread3", input: ["pthread3"], expected: "9" },
+
+    { name: "returnor1", input: ["returnor1"], expected: "5" },
+    { name: "returnor11", input: ["returnor11"], expected: "none" },
+    { name: "returnor2", input: ["returnor2"], expected: "1" },
+    { name: "returnor3", input: ["returnor3"], expected: "5" },
+    { name: "returnor4", input: ["returnor4"], expected: "4" },
+    { name: "returnor5", input: ["returnor5"], expected: "1" },
+    { name: "returnor6", input: ["returnor6"], expected: "8" },
+
+    { name: "rec1", input: ["rec1"], expected: "2" },
+    { name: "rec2", input: ["rec2"], expected: "3" }
 ];
 
 function statement_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {

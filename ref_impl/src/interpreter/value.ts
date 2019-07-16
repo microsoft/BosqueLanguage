@@ -4,10 +4,10 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert from "assert";
-import { MIRType, MIROOTypeDecl, MIRTupleType, MIRRecordType, MIRFunctionType, MIRInvokeDecl, MIREntityType } from "../compiler/mir_assembly";
+import { MIRType, MIROOTypeDecl, MIRTupleType, MIRRecordType, MIREntityType } from "../compiler/mir_assembly";
 
-type Value = undefined | boolean | number | string | FloatValue | TypedStringValue | RegexValue | GUIDValue | EntityValue | TupleValue | RecordValue | LambdaValue;
-type KeyValue = undefined | boolean | number | string | GUIDValue | EnumValue | TupleValue | RecordValue | CustomKeyValue;
+type Value = undefined | boolean | number | string | FloatValue | TypedStringValue | RegexValue | GUIDValue | EntityValue | TupleValue | RecordValue;
+type KeyValue = undefined | boolean | number | string | GUIDValue | EnumValue | TupleValue | RecordValue | IdKeyValue;
 
 class FloatValue {
     readonly value: number;
@@ -69,18 +69,6 @@ class RecordValue {
     }
 }
 
-class LambdaValue {
-    readonly ftype: MIRFunctionType;
-    readonly invoke: MIRInvokeDecl;
-    readonly capturedVars: Map<string, Value>;
-
-    constructor(ftype: MIRFunctionType, invoke: MIRInvokeDecl, capturedVars: Map<string, Value>) {
-        this.ftype = ftype;
-        this.invoke = invoke;
-        this.capturedVars = capturedVars;
-    }
-}
-
 class EntityValue {
     readonly etype: MIREntityType;
 
@@ -107,7 +95,7 @@ class EnumValue extends EntityValue {
     }
 }
 
-class CustomKeyValue extends EntityValue {
+class IdKeyValue extends EntityValue {
     readonly cvalue: undefined | boolean | number | string | GUIDValue | EnumValue | TupleValue | RecordValue;
 
     constructor(etype: MIREntityType, cvalue: undefined | boolean | number | string | GUIDValue | EnumValue | TupleValue | RecordValue) {
@@ -355,7 +343,7 @@ class ValueOps {
                 return v.value.toString();
             }
             else if (v instanceof TypedStringValue) {
-                return `${ValueOps.escapeTypedString(v.value)}#${v.oftype.tkey}`;
+                return `${v.oftype.tkey}${ValueOps.escapeTypedString(v.value)}`;
             }
             else if (v instanceof RegexValue) {
                 return v.value;
@@ -365,39 +353,36 @@ class ValueOps {
             }
             else if (v instanceof TupleValue) {
                 const vals = v.values.map((tv) => ValueOps.diagnosticPrintValue(tv));
-                return vals.length === 0 ? "@[]" : `@[ ${vals.join(", ")} ]`;
+                return vals.length === 0 ? "[]" : `[ ${vals.join(", ")} ]`;
             }
             else if (v instanceof RecordValue) {
                 let vals: string[] = [];
                 v.values.forEach((vk) => vals.push(`${vk[0]}=${ValueOps.diagnosticPrintValue(vk[1])}`));
-                return vals.length === 0 ? "@{}" : `@{ ${vals.join(", ")} }`;
-            }
-            else if (v instanceof LambdaValue) {
-                return v.ftype.trkey;
+                return vals.length === 0 ? "{}" : `{ ${vals.join(", ")} }`;
             }
             else {
                 if (v instanceof EnumValue) {
                     return v.etype.ekey + "::" + v.enumValue;
                 }
-                else if (v instanceof CustomKeyValue) {
+                else if (v instanceof IdKeyValue) {
                     return v.etype.ekey + "::" + v.cvalue;
                 }
                 else if (v instanceof EntityValueSimple) {
                     let vals: string[] = [];
                     v.fields.forEach((kv) => vals.push(`${kv[0]}=${ValueOps.diagnosticPrintValue(kv[1])}`));
-                    return v.etype.ekey + (vals.length === 0 ? "@{}" : `@{ ${vals.sort().join(", ")} }`);
+                    return v.etype.ekey + (vals.length === 0 ? "{}" : `{ ${vals.sort().join(", ")} }`);
                 }
                 else if (v instanceof ListValue) {
                     const vals = v.values.map((lv) => ValueOps.diagnosticPrintValue(lv));
-                    return v.etype.ekey + (vals.length === 0 ? "@{}" : `@{ ${vals.join(", ")} }`);
+                    return v.etype.ekey + (vals.length === 0 ? "{}" : `{ ${vals.join(", ")} }`);
                 }
                 else if (v instanceof HashSetValue) {
                     const vals = v.getEnumContents().map((sv) => ValueOps.diagnosticPrintValue(sv));
-                    return v.etype.ekey + (vals.length === 0 ? "@{}" : `@{ ${vals.join(", ")} }`);
+                    return v.etype.ekey + (vals.length === 0 ? "{}" : `{ ${vals.join(", ")} }`);
                 }
                 else if (v instanceof HashMapValue) {
                     const vals = v.getEnumContents().map((mv) => ValueOps.diagnosticPrintValue(mv));
-                    return v.etype.ekey + (vals.length === 0 ? "@{}" : `@{ ${vals.join(", ")} }`);
+                    return v.etype.ekey + (vals.length === 0 ? "{}" : `{ ${vals.join(", ")} }`);
                 }
                 else {
                     return "[NOT IMPLEMENTED YET]";
@@ -411,7 +396,7 @@ class ValueOps {
             case "undefined": return MIRType.createSingle(MIREntityType.create("NSCore::None"));
             case "boolean": return MIRType.createSingle(MIREntityType.create("NSCore::Bool"));
             case "number": return MIRType.createSingle(MIREntityType.create("NSCore::Int"));
-            case "string": return MIRType.createSingle(MIREntityType.create("NSCore::String[T=NSCore::Any]"));
+            case "string": return MIRType.createSingle(MIREntityType.create("NSCore::String<T=NSCore::Any>"));
             default: {
                 if (v instanceof FloatValue) {
                     return MIRType.createSingle(MIREntityType.create("NSCore::Float"));
@@ -430,9 +415,6 @@ class ValueOps {
                 }
                 else if (v instanceof RecordValue) {
                     return MIRType.createSingle(v.rtype);
-                }
-                else if (v instanceof LambdaValue) {
-                    return MIRType.createSingle(v.ftype);
                 }
                 else {
                     assert(v instanceof EntityValue);
@@ -521,9 +503,9 @@ class ValueOps {
                 return hv;
             }
             else {
-                assert(v instanceof CustomKeyValue);
+                assert(v instanceof IdKeyValue);
 
-                return ValueOps.keyValueHash((v as CustomKeyValue).cvalue);
+                return ValueOps.keyValueHash((v as IdKeyValue).cvalue);
             }
         }
     }
@@ -585,8 +567,8 @@ class ValueOps {
 
                 return true;
             }
-            else if (v1 instanceof CustomKeyValue && v2 instanceof CustomKeyValue) {
-                return (v1.etype.ekey === v2.etype.ekey) && ValueOps.keyValueEqualTo((v1 as CustomKeyValue).cvalue, (v2 as CustomKeyValue).cvalue);
+            else if (v1 instanceof IdKeyValue && v2 instanceof IdKeyValue) {
+                return (v1.etype.ekey === v2.etype.ekey) && ValueOps.keyValueEqualTo((v1 as IdKeyValue).cvalue, (v2 as IdKeyValue).cvalue);
             }
             else {
                 return false;
@@ -613,7 +595,7 @@ class ValueOps {
 
 export {
     Value, KeyValue, FloatValue, TypedStringValue, RegexValue, GUIDValue, ValueOps,
-    TupleValue, RecordValue, LambdaValue,
-    EntityValue, EntityValueSimple, EnumValue, CustomKeyValue,
+    TupleValue, RecordValue,
+    EntityValue, EntityValueSimple, EnumValue, IdKeyValue,
     CollectionValue, ListValue, HashSetValue, MapValue, HashMapValue
 };

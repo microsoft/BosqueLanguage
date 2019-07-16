@@ -13,74 +13,74 @@ const corelib_test = `
 namespace NSTestCoreLibraries;
 
 entrypoint function mathAbs(): Float {
-    var n: Float = '-2.0'@Float;
+    var n: Float = Float@'-2.0';
     return Math::abs(n);
 }
 
 entrypoint function mathAcos(): Float {
-    var x: Float = '0.0'@Float;
+    var x: Float = Float@'0.0';
     return Math::acos(x);
 }
 
 entrypoint function mathAsin(): Float {
-    var x: Float = '1.0'@Float;
+    var x: Float = Float@'1.0';
     return Math::asin(x);
 }
 
 entrypoint function mathAtan(): Float {
-    var x: Float = '3.0'@Float;
+    var x: Float = Float@'3.0';
     return Math::atan(x);
 }
 
 entrypoint function mathAtan2(): Float {
-    var y: Float = '3.0'@Float;
-    var x: Float = '5.0'@Float;
+    var y: Float = Float@'3.0';
+    var x: Float = Float@'5.0';
     return Math::atan2(y, x);
 }
 
 entrypoint function mathCeil(): Float {
-    var n: Float = '6.4'@Float;
+    var n: Float = Float@'6.4';
     return Math::ceil(n);
 }
 
 entrypoint function mathCos(): Float {
-    var x: Float = '90.0'@Float;
+    var x: Float = Float@'90.0';
     return Math::cos(x);
 }
 
 entrypoint function mathFloor(): Float {
-    var n: Float = '3.1'@Float;
+    var n: Float = Float@'3.1';
     return Math::floor(n);
 }
 
 entrypoint function mathLog(): Float {
-    var n: Float = '4.0'@Float;
+    var n: Float = Float@'4.0';
     return Math::log(n);
 }
 
 entrypoint function mathPow(): Float {
-    var b: Float = '3.0'@Float;
-    var e: Float = '3.0'@Float;
+    var b: Float = Float@'3.0';
+    var e: Float = Float@'3.0';
     return Math::pow(b, e);
 }
 
 entrypoint function mathRound(): Float {
-    var n: Float = '3.4'@Float;
+    var n: Float = Float@'3.4';
     return Math::round(n);
 }
 
 entrypoint function mathSin(): Float {
-    var x: Float = '90.0'@Float;
+    var x: Float = Float@'90.0';
     return Math::sin(x);
 }
 
 entrypoint function mathSqrt(): Float {
-    var x: Float = '36.0'@Float;
+    var x: Float = Float@'36.0';
     return Math::sqrt(x);
 }
 
 entrypoint function mathTan(): Float {
-    var x: Float = '60.0'@Float;
+    var x: Float = Float@'60.0';
     return Math::tan(x);
 }
 
@@ -138,28 +138,28 @@ const collectionlib_test = `
 namespace NSTestCollections;
 
 entrypoint function findLastMatchingElementInList(): { f: Int, b: Int } {
-    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->findLast(fn(x) => x.f == 2);
+    return List<{ f: Int, b: Int }>{ { f = 1, b = 2 }, { f = 2, b = 3 }, { f = 2, b = 4 } }->findLast(fn(x) => x.f == 2);
 }
 
 entrypoint function tryFindLastMatchingElementInList1(): { f: Int, b: Int } | None {
-    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 3);
+    return List<{ f: Int, b: Int }>{ { f = 1, b = 2 }, { f = 2, b = 3 }, { f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 3);
 }
 
 entrypoint function tryFindLastMatchingElementInList2(): { f: Int, b: Int } | None {
-    return List[{ f: Int, b: Int }]@{ @{ f = 1, b = 2 }, @{ f = 2, b = 3 }, @{ f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 2);
+    return List<{ f: Int, b: Int }>{ { f = 1, b = 2 }, { f = 2, b = 3 }, { f = 2, b = 4 } }->tryFindLast(fn(x) => x.f == 2);
 }
 
-entrypoint function fillList(): List[Int] {
-    var list: List[Int] = List[Int]@{1,2,3,4,5};
+entrypoint function fillList(): List<Int> {
+    var list: List<Int> = List<Int>{1,2,3,4,5};
     return list->fill(1);
 }
 `;
 
 const collectionlib_tests: TestInfo[] = [
-    { name: "findLastMatchingElementInList", input: ["findLastMatchingElementInList"], expected: "@{ b=4, f=2 }" },
+    { name: "findLastMatchingElementInList", input: ["findLastMatchingElementInList"], expected: "{ b=4, f=2 }" },
     { name: "tryFindLastMatchingElementInList1", input: ["tryFindLastMatchingElementInList1"], expected: "none" },
-    { name: "tryFindLastMatchingElementInList2", input: ["tryFindLastMatchingElementInList2"], expected: "@{ b=4, f=2 }" },
-    { name: "fillList", input: ["fillList"], expected: "NSCore::List[T=NSCore::Int]@{ 1, 1, 1, 1, 1 }" }
+    { name: "tryFindLastMatchingElementInList2", input: ["tryFindLastMatchingElementInList2"], expected: "{ b=4, f=2 }" },
+    { name: "fillList", input: ["fillList"], expected: "NSCore::List<T=NSCore::Int>{ 1, 1, 1, 1, 1 }" }
 ];
 
 function collectionlib_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
@@ -174,6 +174,5 @@ function collectionlib_action(assembly: MIRAssembly, args: any[]): any {
 }
 
 const testCollectionLibs = { name: "CollectionLibs", setup: collectionlib_setup, action: collectionlib_action, tests: collectionlib_tests, xmlid: "CollectionLibUnitTests" };
-
 
 export { testCoreLibs, testCollectionLibs };

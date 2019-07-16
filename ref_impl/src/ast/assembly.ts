@@ -3,18 +3,16 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { ResolvedType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomTypeEntry, ResolvedFunctionAtomTypeParam, ResolvedFunctionAtomType, ResolvedAtomType, ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType } from "./resolved_type";
+import { ResolvedType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomTypeEntry, ResolvedAtomType, ResolvedFunctionTypeParam, ResolvedFunctionType, ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType } from "./resolved_type";
 import { TemplateTypeSignature, NominalTypeSignature, TypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, IntersectionTypeSignature, UnionTypeSignature, ParseErrorTypeSignature, AutoTypeSignature, FunctionParameter } from "./type_signature";
 import { Expression, BodyImplementation } from "./body";
 import { SourceInfo } from "./parser";
 
 class TemplateTermDecl {
-    readonly isUnique: boolean;
     readonly name: string;
     readonly ttype: TypeSignature;
 
-    constructor(isUnique: boolean, name: string, ttype: TypeSignature) {
-        this.isUnique = isUnique;
+    constructor(name: string, ttype: TypeSignature) {
         this.name = name;
         this.ttype = ttype;
     }
@@ -34,6 +32,9 @@ class InvokeDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
+    readonly recursive: "yes" | "no" | "cond";
+    readonly pragmas: [TypeSignature, string][];
+
     readonly terms: TemplateTermDecl[];
     readonly termRestrictions: TemplateTermRestriction[];
 
@@ -49,9 +50,12 @@ class InvokeDecl {
     readonly captureSet: Set<string>;
     readonly body: BodyImplementation | undefined;
 
-    constructor(sinfo: SourceInfo, srcFile: string, terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], isLambda: boolean, captureSet: Set<string>, body: BodyImplementation | undefined) {
+    constructor(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], isLambda: boolean, captureSet: Set<string>, body: BodyImplementation | undefined) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
+
+        this.recursive = recursive;
+        this.pragmas = pragmas;
 
         this.terms = terms;
         this.termRestrictions = termRestrictions;
@@ -70,19 +74,19 @@ class InvokeDecl {
     }
 
     generateSig(): TypeSignature {
-        return new FunctionTypeSignature([...this.params], this.optRestName, this.optRestType, this.resultType);
+        return new FunctionTypeSignature(this.recursive, [...this.params], this.optRestName, this.optRestType, this.resultType);
     }
 
-    static createLambdaInvokeDecl(sinfo: SourceInfo, srcFile: string, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, captureSet: Set<string>, body: BodyImplementation) {
-        return new InvokeDecl(sinfo, srcFile, [], [], params, optRestName, optRestType, resultType, [], [], true, captureSet, body);
+    static createPCodeInvokeDecl(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, captureSet: Set<string>, body: BodyImplementation) {
+        return new InvokeDecl(sinfo, srcFile, recursive, [], [], [], params, optRestName, optRestType, resultType, [], [], true, captureSet, body);
     }
 
-    static createStaticInvokeDecl(sinfo: SourceInfo, srcFile: string, terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], body: BodyImplementation | undefined) {
-        return new InvokeDecl(sinfo, srcFile, terms, termRestrictions, params, optRestName, optRestType, resultType, preconds, postconds, false, new Set<string>(), body);
+    static createStaticInvokeDecl(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], body: BodyImplementation | undefined) {
+        return new InvokeDecl(sinfo, srcFile, recursive, pragmas, terms, termRestrictions, params, optRestName, optRestType, resultType, preconds, postconds, false, new Set<string>(), body);
     }
 
-    static createMemberInvokeDecl(sinfo: SourceInfo, srcFile: string, terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], body: BodyImplementation | undefined) {
-        return new InvokeDecl(sinfo, srcFile, terms, termRestrictions, params, optRestName, optRestType, resultType, preconds, postconds, false, new Set<string>(), body);
+    static createMemberInvokeDecl(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], body: BodyImplementation | undefined) {
+        return new InvokeDecl(sinfo, srcFile, recursive, pragmas, terms, termRestrictions, params, optRestName, optRestType, resultType, preconds, postconds, false, new Set<string>(), body);
     }
 }
 
@@ -94,15 +98,17 @@ class StaticMemberDecl implements OOMemberDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
+    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly name: string;
 
     readonly declaredType: TypeSignature;
     readonly value: Expression | undefined;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, dtype: TypeSignature, value: Expression | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], ns: string, name: string, dtype: TypeSignature, value: Expression | undefined) {
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
+        this.pragmas = pragmas;
         this.attributes = attributes;
         this.name = name;
         this.declaredType = dtype;
@@ -141,15 +147,17 @@ class MemberFieldDecl implements OOMemberDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
+    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly name: string;
 
     readonly declaredType: TypeSignature;
     readonly value: Expression | undefined;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, attributes: string[], name: string, dtype: TypeSignature, value: Expression | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], name: string, dtype: TypeSignature, value: Expression | undefined) {
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
+        this.pragmas = pragmas;
         this.attributes = attributes;
         this.name = name;
         this.declaredType = dtype;
@@ -184,8 +192,10 @@ class MemberMethodDecl implements OOMemberDecl {
 }
 
 class OOPTypeDecl {
+    readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
+    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly ns: string;
     readonly name: string;
@@ -201,11 +211,13 @@ class OOPTypeDecl {
     readonly memberFields: Map<string, MemberFieldDecl>;
     readonly memberMethods: Map<string, MemberMethodDecl>;
 
-    constructor(srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: TypeSignature[],
+    constructor(sourceLocation: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: TypeSignature[],
         invariants: Expression[],
         staticMembers: Map<string, StaticMemberDecl>, staticFunctions: Map<string, StaticFunctionDecl>,
         memberFields: Map<string, MemberFieldDecl>, memberMethods: Map<string, MemberMethodDecl>) {
+        this.sourceLocation = sourceLocation;
         this.srcFile = srcFile;
+        this.pragmas = pragmas;
         this.attributes = attributes;
         this.ns = ns;
         this.name = name;
@@ -240,11 +252,11 @@ class OOPTypeDecl {
 }
 
 class ConceptTypeDecl extends OOPTypeDecl {
-    constructor(srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: TypeSignature[],
+    constructor(sourceLocation: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: TypeSignature[],
         invariants: Expression[],
         staticMembers: Map<string, StaticMemberDecl>, staticFunctions: Map<string, StaticFunctionDecl>,
         memberFields: Map<string, MemberFieldDecl>, memberMethods: Map<string, MemberMethodDecl>) {
-        super(srcFile, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, memberFields, memberMethods);
+        super(sourceLocation, srcFile, pragmas, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, memberFields, memberMethods);
     }
 }
 
@@ -252,12 +264,12 @@ class EntityTypeDecl extends OOPTypeDecl {
     readonly isEnum: boolean;
     readonly isKey: boolean;
 
-    constructor(srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: TypeSignature[],
+    constructor(sourceLocation: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: TypeSignature[],
         invariants: Expression[],
         staticMembers: Map<string, StaticMemberDecl>, staticFunctions: Map<string, StaticFunctionDecl>,
         memberFields: Map<string, MemberFieldDecl>, memberMethods: Map<string, MemberMethodDecl>,
         isEnum: boolean, isKey: boolean) {
-        super(srcFile, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, memberFields, memberMethods);
+        super(sourceLocation, srcFile, pragmas, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, memberFields, memberMethods);
         this.isEnum = isEnum;
         this.isKey = isKey;
     }
@@ -267,6 +279,7 @@ class NamespaceConstDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
+    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly ns: string;
     readonly name: string;
@@ -274,10 +287,11 @@ class NamespaceConstDecl {
     readonly declaredType: TypeSignature;
     readonly value: Expression;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, dtype: TypeSignature, value: Expression) {
+    constructor(srcInfo: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], ns: string, name: string, dtype: TypeSignature, value: Expression) {
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
 
+        this.pragmas = pragmas;
         this.attributes = attributes;
         this.ns = ns;
         this.name = name;
@@ -392,7 +406,7 @@ class Assembly {
         const fullbinds = new Map<string, ResolvedType>();
 
         for (let i = 0; i < declterms.length; ++i) {
-            fullbinds.set(declterms[i].name, this.normalizeType(giventerms[i], binds));
+            fullbinds.set(declterms[i].name, this.normalizeTypeOnly(giventerms[i], binds));
         }
 
         return fullbinds;
@@ -402,13 +416,13 @@ class Assembly {
         return binds.has(t.name) ? binds.get(t.name) as ResolvedType : ResolvedType.createEmpty();
     }
 
-    private normalizeType_Nominal(t: NominalTypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
+    private normalizeType_Nominal(t: NominalTypeSignature, binds: Map<string, ResolvedType>): ResolvedType | ResolvedFunctionType {
         const [aliasResolvedType, aliasResolvedBinds] = this.lookupTypeDef(t, binds);
         if (aliasResolvedType === undefined) {
             return ResolvedType.createEmpty();
         }
         else if (!(aliasResolvedType instanceof NominalTypeSignature)) {
-            return this.normalizeType(aliasResolvedType, aliasResolvedBinds);
+            return this.normalizeTypeGeneral(aliasResolvedType, aliasResolvedBinds);
         }
         else {
             const fconcept = this.tryGetConceptTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.baseName);
@@ -434,7 +448,7 @@ class Assembly {
     }
 
     private normalizeType_Tuple(t: TupleTypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
-        const entries = t.entries.map((entry) => new ResolvedTupleAtomTypeEntry(this.normalizeType(entry[0], binds), entry[1]));
+        const entries = t.entries.map((entry) => new ResolvedTupleAtomTypeEntry(this.normalizeTypeOnly(entry[0], binds), entry[1]));
         if (entries.some((e) => e.type.isEmptyType())) {
             return ResolvedType.createEmpty();
         }
@@ -450,7 +464,7 @@ class Assembly {
                 return ResolvedType.createEmpty();
             }
 
-            entries.push(new ResolvedRecordAtomTypeEntry(t.entries[i][0], this.normalizeType(t.entries[i][1], binds), t.entries[i][2]));
+            entries.push(new ResolvedRecordAtomTypeEntry(t.entries[i][0], this.normalizeTypeOnly(t.entries[i][1], binds), t.entries[i][2]));
         }
         if (entries.some((e) => e.type.isEmptyType())) {
             return ResolvedType.createEmpty();
@@ -459,24 +473,12 @@ class Assembly {
         return ResolvedType.createSingle(ResolvedRecordAtomType.create(t.isOpen, entries));
     }
 
-    private normalizeType_Function(t: FunctionTypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
-        const params = t.params.map((param) => new ResolvedFunctionAtomTypeParam(param.name, param.isOptional, this.normalizeType(param.type, binds)));
-        const optRestParamType = (t.optRestParamType !== undefined) ? this.normalizeType(t.optRestParamType, binds) : undefined;
-        const resType = this.normalizeType(t.resultType, binds);
-
-        if (params.some((p) => p.type.isEmptyType()) || (optRestParamType !== undefined && optRestParamType.isEmptyType()) || resType.isEmptyType()) {
-            return ResolvedType.createEmpty();
-        }
-
-        return ResolvedType.createSingle(ResolvedFunctionAtomType.create(params, t.optRestParamName, optRestParamType, resType));
-    }
-
     private normalizeType_Intersection(t: IntersectionTypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
-        if (t.types.some((opt) => this.normalizeType(opt, binds).isEmptyType())) {
+        if (t.types.some((opt) => this.normalizeTypeOnly(opt, binds).isEmptyType())) {
             return ResolvedType.createEmpty();
         }
 
-        const ntypes: ResolvedAtomType[][] = t.types.map((opt) => this.normalizeType(opt, binds).options);
+        const ntypes: ResolvedAtomType[][] = t.types.map((opt) => this.normalizeTypeOnly(opt, binds).options);
         const flattened: ResolvedAtomType[] = ([] as ResolvedAtomType[]).concat(...ntypes);
 
         if (flattened.some((ttype) => !(ttype instanceof ResolvedConceptAtomType))) {
@@ -515,11 +517,11 @@ class Assembly {
     }
 
     private normalizeType_Union(t: UnionTypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
-        if (t.types.some((opt) => this.normalizeType(opt, binds).isEmptyType())) {
+        if (t.types.some((opt) => this.normalizeTypeOnly(opt, binds).isEmptyType())) {
             return ResolvedType.createEmpty();
         }
 
-        const utypes = t.types.map((opt) => this.normalizeType(opt, binds));
+        const utypes = t.types.map((opt) => this.normalizeTypeOnly(opt, binds));
         return this.normalizeUnionList(utypes);
     }
 
@@ -558,6 +560,18 @@ class Assembly {
         return ResolvedType.create(simplifiedTypes);
     }
 
+    private normalizeType_Function(t: FunctionTypeSignature, binds: Map<string, ResolvedType>): ResolvedFunctionType | undefined {
+        const params = t.params.map((param) => new ResolvedFunctionTypeParam(param.name, param.isOptional, param.isRef, this.normalizeTypeGeneral(param.type, binds)));
+        const optRestParamType = (t.optRestParamType !== undefined) ? this.normalizeTypeOnly(t.optRestParamType, binds) : undefined;
+        const resType = this.normalizeTypeOnly(t.resultType, binds);
+
+        if (params.some((p) => p.type instanceof ResolvedType && p.type.isEmptyType()) || params.some((p) => p.isOptional && p.isRef) || (optRestParamType !== undefined && optRestParamType.isEmptyType()) || resType.isEmptyType()) {
+            return undefined;
+        }
+
+        return ResolvedFunctionType.create(t.recursive, params, t.optRestParamName, optRestParamType, resType);
+    }
+
     private atomSubtypeOf_EntityEntity(t1: ResolvedEntityAtomType, t2: ResolvedEntityAtomType): boolean {
         if (t1.object.ns !== t2.object.ns || t1.object.name !== t2.object.name) {
             return false;
@@ -571,7 +585,7 @@ class Assembly {
     private atomSubtypeOf_EntityConcept(t1: ResolvedEntityAtomType, t2: ResolvedConceptAtomType): boolean {
         const t2type = ResolvedType.createSingle(t2);
         return t1.object.provides.some((provide) => {
-            const tt = this.normalizeType(provide, t1.binds);
+            const tt = this.normalizeTypeOnly(provide, t1.binds);
             return !tt.isEmptyType() && this.subtypeOf(tt, t2type);
         });
     }
@@ -587,7 +601,7 @@ class Assembly {
 
                 const t2type = ResolvedType.createSingle(ResolvedConceptAtomType.create([c2t]));
                 return c1t.concept.provides.some((provide) => {
-                    const tt = this.normalizeType(provide, c1t.binds);
+                    const tt = this.normalizeTypeOnly(provide, c1t.binds);
                     return !tt.isEmptyType() && this.subtypeOf(tt, t2type);
                 });
             });
@@ -656,38 +670,6 @@ class Assembly {
         return true;
     }
 
-    private atomSubtypeOf_FunctionFunction(t1: ResolvedFunctionAtomType, t2: ResolvedFunctionAtomType): boolean {
-        if (t2.params.length !== t1.params.length) {
-            return false; //need to have the same number of parameters
-        }
-
-        if ((t2.optRestParamType !== undefined) !== (t1.optRestParamType !== undefined)) {
-            return false; //should both have rest or not
-        }
-
-        if (t2.optRestParamType !== undefined && !this.subtypeOf(t2.optRestParamType, t1.optRestParamType as ResolvedType)) {
-            return false; //variance
-        }
-
-        for (let i = 0; i < t2.params.length; ++i) {
-            const t2p = t2.params[i];
-            const t1p = t1.params[i];
-            if ((t2p.isOptional !== t1p.isOptional) || !this.subtypeOf(t2p.type, t1p.type)) {
-                return false;
-            }
-
-            //check that if t2p is named then t1p has the same name
-            if (t2.params[i].name !== "_") {
-                if (t1.params.length <= i || t2.params[i].name === t1.params[i].name) {
-                    return false;
-                }
-            }
-        }
-
-        //co-variant is cool
-        return this.subtypeOf(t1.resultType, t2.resultType);
-    }
-
     private internSpecialConceptType(name: string, terms?: TypeSignature[], binds?: Map<string, ResolvedType>): ResolvedType {
         if (this.m_specialTypeMap.has("NSCore::" + name)) {
             return this.m_specialTypeMap.get("NSCore::" + name) as ResolvedType;
@@ -726,10 +708,9 @@ class Assembly {
 
     getSpecialTupleConceptType(): ResolvedType { return this.internSpecialConceptType("Tuple"); }
     getSpecialRecordConceptType(): ResolvedType { return this.internSpecialConceptType("Record"); }
-    getSpecialFunctionConceptType(): ResolvedType { return this.internSpecialConceptType("Function"); }
     getSpecialObjectConceptType(): ResolvedType { return this.internSpecialConceptType("Object"); }
     getSpecialEnumType(): ResolvedType { return this.internSpecialConceptType("Enum"); }
-    getSpecialCustomKeyType(): ResolvedType { return this.internSpecialConceptType("CustomKey"); }
+    getSpecialCustomKeyType(): ResolvedType { return this.internSpecialConceptType("IdKey"); }
 
     getSpecialParsableConcept(): ResolvedType { return this.internSpecialConceptType("Parsable"); }
     getSpecialKeyedConcept(): ResolvedType { return this.internSpecialConceptType("Keyed"); }
@@ -749,9 +730,6 @@ class Assembly {
             }
             else if (opt instanceof ResolvedRecordAtomType) {
                 return this.getSpecialRecordConceptType();
-            }
-            else if (opt instanceof ResolvedFunctionAtomType) {
-                return this.getSpecialFunctionConceptType();
             }
             else {
                 return ResolvedType.createSingle(opt);
@@ -850,7 +828,7 @@ class Assembly {
         });
 
         ooptype.provides.forEach((provide) => {
-            const tt = this.normalizeType(provide, binds);
+            const tt = this.normalizeTypeOnly(provide, binds);
             (tt.options[0] as ResolvedConceptAtomType).conceptTypes.forEach((concept) => {
                 declfields = this.getAllOOFields(concept.concept, concept.binds, declfields);
             });
@@ -866,7 +844,7 @@ class Assembly {
         });
 
         ooptype.provides.forEach((provide) => {
-            const tt = this.normalizeType(provide, binds);
+            const tt = this.normalizeTypeOnly(provide, binds);
             (tt.options[0] as ResolvedConceptAtomType).conceptTypes.forEach((concept) => {
                 declinvs = this.getAllOOInvariants(concept.concept, concept.binds, declinvs);
             });
@@ -900,7 +878,7 @@ class Assembly {
 
     private tryGetOOMemberDeclParent(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>, kind: "const" | "static" | "field" | "method", search: string): OOMemberLookupInfo | undefined {
         for (let i = 0; i < ooptype.provides.length; ++i) {
-            const tt = (this.normalizeType(ooptype.provides[i], binds).options[0] as ResolvedConceptAtomType).conceptTypes[0];
+            const tt = (this.normalizeTypeOnly(ooptype.provides[i], binds).options[0] as ResolvedConceptAtomType).conceptTypes[0];
             const res = this.tryGetOOMemberDeclThis(tt.concept, tt.binds, kind, search) || this.tryGetOOMemberDeclParent(tt.concept, tt.binds, kind, search);
             if (res !== undefined) {
                 return res;
@@ -923,7 +901,7 @@ class Assembly {
             let dopts: OOMemberLookupInfo[] = [];
 
             for (let i = 0; i < ooptype.provides.length; ++i) {
-                const tt = (this.normalizeType(ooptype.provides[i], binds).options[0] as ResolvedConceptAtomType).conceptTypes[0];
+                const tt = (this.normalizeTypeOnly(ooptype.provides[i], binds).options[0] as ResolvedConceptAtomType).conceptTypes[0];
                 const copts = this.tryGetOOMemberRootDeclarationOptions(tt.concept, tt.binds, kind, search);
                 if (copts !== undefined) {
                     dopts = dopts.concat(copts);
@@ -998,15 +976,37 @@ class Assembly {
 
         //compute the bindings to use when resolving the RHS of the typedef alias
         for (let i = 0; i < declterms.length; ++i) {
-            fullbinds.set(declterms[i].name, this.normalizeType(giventerms[i], callBinds));
+            fullbinds.set(declterms[i].name, this.normalizeTypeOnly(giventerms[i], callBinds));
         }
 
         return fullbinds;
     }
 
-    normalizeType(t: TypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
+    normalizeTypeOnly(t: TypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
+        const res = this.normalizeTypeGeneral(t, binds);
+        if (res instanceof ResolvedFunctionType) {
+            return ResolvedType.createEmpty();
+        }
+        else {
+            return res;
+        }
+    }
+
+    normalizeTypeFunction(t: TypeSignature, binds: Map<string, ResolvedType>): ResolvedFunctionType | undefined {
+        if (t instanceof ParseErrorTypeSignature || t instanceof AutoTypeSignature) {
+            return undefined;
+        }
+        else {
+            return this.normalizeType_Function(t as FunctionTypeSignature, binds);
+        }
+    }
+
+    normalizeTypeGeneral(t: TypeSignature, binds: Map<string, ResolvedType>): ResolvedType | ResolvedFunctionType {
         if (t instanceof ParseErrorTypeSignature || t instanceof AutoTypeSignature) {
             return ResolvedType.createEmpty();
+        }
+        else if (t instanceof FunctionTypeSignature) {
+            return this.normalizeTypeFunction(t, binds) || ResolvedType.createEmpty();
         }
         else if (t instanceof TemplateTypeSignature) {
             return this.normalizeType_Template(t as TemplateTypeSignature, binds);
@@ -1019,9 +1019,6 @@ class Assembly {
         }
         else if (t instanceof RecordTypeSignature) {
             return this.normalizeType_Record(t as RecordTypeSignature, binds);
-        }
-        else if (t instanceof FunctionTypeSignature) {
-            return this.normalizeType_Function(t as FunctionTypeSignature, binds);
         }
         else if (t instanceof IntersectionTypeSignature) {
             return this.normalizeType_Intersection(t as IntersectionTypeSignature, binds);
@@ -1056,83 +1053,25 @@ class Assembly {
         else if (t instanceof ResolvedRecordAtomType) {
             return this.getSpecialRecordConceptType();
         }
-        else if (t instanceof ResolvedFunctionAtomType) {
-            return this.getSpecialFunctionConceptType();
-        }
         else {
             return t;
         }
     }
 
-    computeUnifiedFunctionType(funcs: ResolvedAtomType[], rootSig?: ResolvedFunctionAtomType): ResolvedFunctionAtomType | undefined {
+    computeUnifiedFunctionType(funcs: ResolvedFunctionType[], rootSig: ResolvedFunctionType): ResolvedFunctionType | undefined {
         if (funcs.length === 0) {
             return undefined;
         }
 
-        //if it is not limited to NSCore::Function
-        if (funcs.some((atom) => atom instanceof ResolvedConceptAtomType)) {
-            return undefined;
-        }
-
-        const fatoms = funcs as ResolvedFunctionAtomType[];
-        if (fatoms.length === 1) {
-            return fatoms[0];
-        }
-        else if (rootSig !== undefined) {
-            if (funcs.some((ft) => !this.atomSubtypeOf_FunctionFunction(ft as ResolvedFunctionAtomType, rootSig))) {
-                return undefined;
-            }
-            return rootSig;
+        if (funcs.length === 1) {
+            return funcs[0];
         }
         else {
-            //compute an approximate function type that we use for emit generation
-            const ftypes = funcs.map((ft) => ft as ResolvedFunctionAtomType);
-
-            let params: ResolvedFunctionAtomTypeParam[] = [];
-            const minp = Math.min(...ftypes.map((ft) => ft.params.length));
-            for (let i = 0; i < minp; ++i) {
-                const allreq = ftypes.every((ft) => !ft.params[i].isOptional);
-
-                let uniq = "_";
-                let uniqok = true;
-                ftypes.forEach((ft) => {
-                    if (ft.params[i].name !== "_") {
-                        uniqok = uniqok && (uniq === "_" || uniq === ft.params[i].name);
-                        uniq = ft.params[i].name;
-                    }
-                });
-                if (!uniqok) {
-                    return undefined; //need to have same names in same positions in sig
-                }
-
-                //don't care about exact type since we will check the real options at call site
-                params.push(new ResolvedFunctionAtomTypeParam(uniq, allreq, this.getSpecialAnyType()));
+            if (funcs.some((ft) => !this.functionSubtypeOf(ft, rootSig))) {
+                return undefined;
             }
 
-            const allRest = ftypes.every((ft) => ft.optRestParamName !== undefined);
-            const allFixed = ftypes.every((ft) => ft.optRestParamName === undefined);
-            if (!allRest && !allFixed) {
-                return undefined; //must all agree on rest vs fixed params
-            }
-
-            let restname = allRest ? "_" : undefined;
-            let resttype: ResolvedType | undefined =  ftypes[0].optRestParamType;
-            if (allRest) {
-                let restok = true;
-                ftypes.forEach((ft) => {
-                    if (ft.optRestParamName !== "_") {
-                        restok = restok && (restname === "_");
-                        restok = restok && ((ft.optRestParamType as ResolvedType).idStr === (ft.optRestParamType as ResolvedType).idStr);
-
-                        restname = ft.optRestParamName;
-                    }
-                });
-                if (!restok) {
-                    return undefined; //must agree on rest name and type
-                }
-            }
-
-            return ResolvedFunctionAtomType.create(params, restname, resttype, this.getSpecialAnyType());
+            return rootSig;
         }
     }
 
@@ -1216,11 +1155,8 @@ class Assembly {
             else if (t1 instanceof ResolvedTupleAtomType) {
                 res = this.atomSubtypeOf_ConceptConcept(this.getSpecialTupleConceptType().options[0] as ResolvedConceptAtomType, t2 as ResolvedConceptAtomType);
             }
-            else if (t1 instanceof ResolvedRecordAtomType) {
-                res = this.atomSubtypeOf_ConceptConcept(this.getSpecialRecordConceptType().options[0] as ResolvedConceptAtomType, t2 as ResolvedConceptAtomType);
-            }
             else {
-                res = this.atomSubtypeOf_ConceptConcept(this.getSpecialFunctionConceptType().options[0] as ResolvedConceptAtomType, t2 as ResolvedConceptAtomType);
+                res = this.atomSubtypeOf_ConceptConcept(this.getSpecialRecordConceptType().options[0] as ResolvedConceptAtomType, t2 as ResolvedConceptAtomType);
             }
         }
         else {
@@ -1232,9 +1168,6 @@ class Assembly {
             }
             else if (t1 instanceof ResolvedRecordAtomType && t2 instanceof ResolvedRecordAtomType) {
                 res = this.atomSubtypeOf_RecordRecord(t1, t2);
-            }
-            else if (t1 instanceof ResolvedFunctionAtomType && t2 instanceof ResolvedFunctionAtomType) {
-                res = this.atomSubtypeOf_FunctionFunction(t1, t2);
             }
             else {
                 //fall-through
@@ -1258,6 +1191,71 @@ class Assembly {
         }
 
         const res = t1.options.every((t1opt) => t2.options.some((t2opt) => this.atomSubtypeOf(t1opt, t2opt)));
+
+        memores.set(t2.idStr, res);
+        return res;
+    }
+
+    private functionSubtypeOf_helper(t1: ResolvedFunctionType, t2: ResolvedFunctionType): boolean {
+        if (t2.params.length !== t1.params.length) {
+            return false; //need to have the same number of parameters
+        }
+
+        if ((t2.optRestParamType !== undefined) !== (t1.optRestParamType !== undefined)) {
+            return false; //should both have rest or not
+        }
+
+        if (t2.optRestParamType !== undefined && !this.subtypeOf(t2.optRestParamType, t1.optRestParamType as ResolvedType)) {
+            return false; //variance
+        }
+
+        for (let i = 0; i < t2.params.length; ++i) {
+            const t2p = t2.params[i];
+            const t1p = t1.params[i];
+            if ((t2p.isOptional !== t1p.isOptional) || (t2p.isRef !== t1p.isRef)) {
+                return false;
+            }
+
+            //We want the argument types to be the same for all cases -- no clear reason to overload to more general types
+            if (t2p.type instanceof ResolvedFunctionType && t1p.type instanceof ResolvedFunctionType) {
+                if (t2p.type.idStr !== t1p.type.idStr) {
+                    return false;
+                }
+            }
+            else if (t2p.type instanceof ResolvedType && t1p.type instanceof ResolvedType) {
+                if (t2p.type.idStr !== t1p.type.idStr) {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+
+            //check that if t2p is named then t1p has the same name
+            if (t2.params[i].name !== "_") {
+                if (t1.params.length <= i || t2.params[i].name === t1.params[i].name) {
+                    return false;
+                }
+            }
+        }
+
+        //co-variant is cool on the return type -- useful if we have a known target in overload
+        return this.subtypeOf(t1.resultType, t2.resultType);
+    }
+
+    functionSubtypeOf(t1: ResolvedFunctionType, t2: ResolvedFunctionType): boolean {
+        let memores = this.m_subtypeRelationMemo.get(t1.idStr);
+        if (memores === undefined) {
+            this.m_subtypeRelationMemo.set(t1.idStr, new Map<string, boolean>());
+            memores = this.m_subtypeRelationMemo.get(t1.idStr) as Map<string, boolean>;
+        }
+
+        let memoval = memores.get(t2.idStr);
+        if (memoval !== undefined) {
+            return memoval;
+        }
+
+        const res = this.functionSubtypeOf_helper(t1, t2);
 
         memores.set(t2.idStr, res);
         return res;

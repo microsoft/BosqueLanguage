@@ -5,13 +5,14 @@
         "name": "Mark Marron <marron@microsoft.com>"
     },
     "license": "MIT",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/Microsoft/BosqueLanguage"
     },
     "dependencies": {
-        "@types/node": "~10.12.18"
+        "@types/node": "~10.12.18",
+        "commander": "2.20.0"
     },
     "devDependencies": {
         "chalk": "~2.4.2"

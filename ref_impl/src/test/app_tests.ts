@@ -21,7 +21,19 @@ function appTestGenerator(app: string, expected: string): TestSet {
 
         const files = core.concat([{ relativePath: "corelib_tests.bsq", contents: appdata }]);
 
-        return MIREmitter.generateMASM(new PackageConfig(), files);
+        const cu = MIREmitter.generateMASM(new PackageConfig(), files);
+        if (cu.masm === undefined || cu.errors.length !== 0) {
+            return cu;
+        }
+        else {
+            const jmasm = JSON.stringify(cu.masm.jemit());
+            const rtmasm = MIRAssembly.jparse(JSON.parse(jmasm));
+            if (jmasm !== JSON.stringify(rtmasm.jemit())) {
+                return { masm: undefined, errors: ["Bad serialize round-trip"] };
+            }
+
+            return { masm: rtmasm, errors: [] };
+        }
     }
 
     function action(assembly: MIRAssembly, args: any[]): any {
@@ -33,10 +45,10 @@ function appTestGenerator(app: string, expected: string): TestSet {
 }
 
 const applist = [
-    {app: "angles", expected: "NSMain::Angle@{ degrees=221, primes=1, seconds=0 }"},
+    {app: "angles", expected: "NSMain::Angle{ degrees=221, primes=1, seconds=0 }"},
     {app: "max", expected: "20"},
     {app: "nbody", expected: "-0.16907302171469984"},
-    {app: "tictactoe", expected: "NSMain::Game@{ board=NSMain::Board@{ cells=NSCore::List[T=NSCore::None|NSCore::String[NSMain::PlayerMark]]@{ none, 'o'#NSMain::PlayerMark, 'o'#NSMain::PlayerMark, 'x'#NSMain::PlayerMark, 'x'#NSMain::PlayerMark, 'x'#NSMain::PlayerMark, none, none, none } }, winner='x'#NSMain::PlayerMark }"},
+    {app: "tictactoe", expected: "NSMain::Game{ board=NSMain::Board{ cells=NSCore::List<T=NSCore::None|NSCore::String<NSMain::PlayerMark>>{ none, NSMain::PlayerMark'o', NSMain::PlayerMark'o', NSMain::PlayerMark'x', NSMain::PlayerMark'x', NSMain::PlayerMark'x', none, none, none } }, winner=NSMain::PlayerMark'x' }"},
 ];
 
 const tests = applist.map((entry) => appTestGenerator(entry.app, entry.expected));
