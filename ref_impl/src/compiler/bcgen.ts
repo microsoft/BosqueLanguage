@@ -55,7 +55,7 @@ function compile(files: string[], trgt: string) {
 
 Commander
 .usage("--bytecode [--output file] <file ...>")
-.option("-b --bytecode", "Compile to bytecode assembly")
+.option("-j --json", "Compile to json bytecode assembly")
 .option("-o --output [file]", "Optional output file target");
 
 Commander.parse(process.argv);
