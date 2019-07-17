@@ -12,7 +12,7 @@ For a look at how the language works and flows _in the large_ please see the cod
 **Note:** This repository and code represent a project in an early state. This was done to enable academic collaboration and community participation. However, this means that the language is subject to revision, there are bugs and missing functionality, and the performance is limited. Thus, we **do not** recommend the use of the Bosque language for _any_ production work and instead encourage experimentation only with small/experimental side projects at this point in time.
 
 ## News
-**July 2019** Big changes are coming! Based on the great feedback from the community and some experience using the language we are planning a update to version 0.1.0. This change will include a range of syntax cleanup and adjustment, the addition of numerous language features, and simplifications to parts of the semantics to improve our ability to do formal analysis of Bosque programs.
+**July 2019** Big changes have arrived! Based on the great feedback from the community and some experience using the language we have  updated to version 0.1.0. This change includes a range of syntax cleanup and adjustment, the addition of numerous language features, and simplifications to parts of the semantics to improve our ability to do formal analysis of Bosque programs.
 
 ## Documentation
 
