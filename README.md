@@ -41,7 +41,7 @@ function allOdd(...args: List<Int>): Bool {
     return args->all(fn(x) => x % 2 == 1);
 }
 
-allOdd(1, 3, 4)) //false
+allOdd(1, 3, 4) //false
 ```
 
 Bulk update properties on Record
