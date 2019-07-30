@@ -18,16 +18,18 @@ function runApp(app: string) {
 
     let files: { relativePath: string, contents: string }[] = [];
     try {
-        const coredir = Path.join(bosque_dir, "src/core/core.bsq");
-        const coredata = FS.readFileSync(coredir).toString();
+        // All core files, collection files, etc.
+        const core_dir = Path.join(bosque_dir, "src/core/");
+        const core_files = FS.readdirSync(core_dir);
+        core_files.forEach(file => {
+            const abs_file = Path.join(core_dir, file);
+            files.push({ relativePath: abs_file, contents: FS.readFileSync(abs_file).toString() });
+        });
 
-        const collectionsdir = Path.join(bosque_dir, "src/core/collections.bsq");
-        const collectionsdata = FS.readFileSync(collectionsdir).toString();
-
+        // Entrypoint file
         const appdir = app;
         const appdata = FS.readFileSync(appdir).toString();
-
-        files = [{ relativePath: coredir, contents: coredata }, { relativePath: collectionsdir, contents: collectionsdata }, { relativePath: appdir, contents: appdata }];
+        files.push({ relativePath: appdir, contents: appdata });
     }
     catch (ex) {
         process.stdout.write(chalk.red(`Read failed with exception -- ${ex}\n`));
@@ -61,7 +63,7 @@ function runApp(app: string) {
 }
 
 if (!process.argv[2]) {
-    process.stdout.write(chalk.red("Error -- Please specify a source file as an argument"));
+    process.stdout.write(chalk.red("Error -- Please specify a source file as an argument\n"));
     process.exit(1);
 }
 
