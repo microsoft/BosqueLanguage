@@ -453,6 +453,14 @@ class Assembly {
             return ResolvedType.createEmpty();
         }
 
+        let seenreq = false;
+        for (let i = entries.length - 1; i >= 0; --i) {
+            seenreq = seenreq || !entries[i].isOptional;
+            if (entries[i].isOptional && seenreq) {
+                return ResolvedType.createEmpty();
+            }
+        }
+
         return ResolvedType.createSingle(ResolvedTupleAtomType.create(t.isOpen, entries));
     }
 
