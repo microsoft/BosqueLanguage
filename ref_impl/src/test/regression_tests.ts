@@ -21,8 +21,22 @@ function allOdd(...args: List<Int>): Bool {
     return args->all(fn(x) => x % 2 == 1);
 }
 
-entrypoint function invokeLambdaInfer(): Bool {
+entrypoint function invokeLambdaInfer1(): Bool {
     return allOdd(1, 3, 4);
+}
+
+entrypoint function invokeLambdaInfer2(): Bool {
+    var t = List<Int>{1, 3, 5};
+    return allOdd(...t);
+}
+
+function np(p1: Int, p2: Int): {x: Int, y: Int} {
+    return {x=p1, y=p2};
+}
+
+entrypoint function invokeLambdaInfer3(): {x: Int, y: Int} {
+    var r = {p1=1, p2=2};
+    return np(...r);
 }
 
 function convert(x: Any) : Int {
@@ -77,7 +91,9 @@ entrypoint function argTypeFlow_entry(x?: Int): Int {
 
 const regression_tests: TestInfo[] = [
     { name: "stringTIncludes", input: ["stringTIncludes"], expected: "true" },
-    { name: "invokeLambdaInfer", input: ["invokeLambdaInfer"], expected: "false" },
+    { name: "invokeLambdaInfer1", input: ["invokeLambdaInfer1"], expected: "false" },
+    { name: "invokeLambdaInfer2", input: ["invokeLambdaInfer2"], expected: "true" },
+    { name: "invokeLambdaInfer3", input: ["invokeLambdaInfer3"], expected: "{ x=1, y=2 }" },
     { name: "vInvoke1", input: ["vInvoke1"], expected: "3" },
     { name: "vInvoke2", input: ["vInvoke2"], expected: "[NO RESULT]", expectedError: true },
     { name: "phimulti", input: ["phimulti"], expected: "true" },
