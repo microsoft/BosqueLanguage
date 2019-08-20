@@ -886,7 +886,7 @@ class TypeChecker {
                 this.raiseErrorIf(sinfo, !expandInfo[0], "Type cannot be expanded as part of call");
 
                 expandInfo[2].forEach((pname) => {
-                    const fidx = sig.params.findIndex((param) => param.name === arg.name);
+                    const fidx = sig.params.findIndex((param) => param.name === pname);
                     this.raiseErrorIf(sinfo, fidx === -1, `Call does not have parameter named "${arg.name}"`);
                     this.raiseErrorIf(sinfo, filledLocations[fidx] !== undefined, `Duplicate definition of parameter name "${arg.name}"`);
 
