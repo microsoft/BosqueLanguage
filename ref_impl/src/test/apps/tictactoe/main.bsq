@@ -5,14 +5,14 @@
 
 //
 //This is a bosque test/benchmark for a tic-tac-toe program.
-//Expected output is: NSMain::Game{ board=NSMain::Board{ cells=NSCore::List<T=NSCore::None|NSCore::String<NSMain::PlayerMark>>{ none, NSMain::PlayerMark'o', NSMain::PlayerMark'o', NSMain::PlayerMark'x', NSMain::PlayerMark'x', NSMain::PlayerMark'x', none, none, none } }, winner=NSMain::PlayerMark'x' }
+//Expected output is: NSMain::Game{ board=NSMain::Board{ cells=NSCore::List<T=NSCore::None|NSCore::StringOf<NSMain::PlayerMark>>{ none, NSMain::PlayerMark'o', NSMain::PlayerMark'o', NSMain::PlayerMark'x', NSMain::PlayerMark'x', NSMain::PlayerMark'x', none, none, none } }, winner=NSMain::PlayerMark'x' }
 //
 
 namespace NSMain;
 
 entity Board {
-    const playerX: String<PlayerMark> = PlayerMark'x';
-    const playerO: String<PlayerMark> = PlayerMark'o';
+    const playerX: StringOf<PlayerMark> = PlayerMark'x';
+    const playerO: StringOf<PlayerMark> = PlayerMark'o';
 
     const allCellPositions: List<[Int, Int]> = List<[Int, Int]>{
         [ 0, 0 ], [ 1, 0 ], [ 2, 0 ],
@@ -34,10 +34,10 @@ entity Board {
     };
 
     //Board is a list of marks, indexed by x,y coords from upper left 0 based
-    field cells: List<String<PlayerMark>?>;
+    field cells: List<StringOf<PlayerMark>?>;
 
-    factory static createInitialBoard(): { cells: List<String<PlayerMark>?> } {
-        return { cells=List<String<PlayerMark>?>::createOfSize(9, none) };
+    factory static createInitialBoard(): { cells: List<StringOf<PlayerMark>?> } {
+        return { cells=List<StringOf<PlayerMark>?>::createOfSize(9, none) };
     }
 
     method getOpenCells(): List<[Int, Int]> {
@@ -46,7 +46,7 @@ entity Board {
         });
     }
 
-    method getCellContents(x: Int, y: Int): String<PlayerMark>?
+    method getCellContents(x: Int, y: Int): StringOf<PlayerMark>?
         requires 0 <= x && x < 3 && 0 <= y && y < 3;
     {
         return this.cells->at(x + y * 3);
@@ -56,13 +56,13 @@ entity Board {
         return this->getCellContents(x, y) != none;
     }
 
-    method isCellOccupiedWith(x: Int, y: Int, mark: String<PlayerMark>): Bool
+    method isCellOccupiedWith(x: Int, y: Int, mark: StringOf<PlayerMark>): Bool
         requires mark == Board::playerX || mark == Board::playerO;
     {
         return this->getCellContents(x, y) == mark;
     }
 
-    method markCellWith(x: Int, y: Int, mark: String<PlayerMark>): Board
+    method markCellWith(x: Int, y: Int, mark: StringOf<PlayerMark>): Board
         requires mark == Board::playerX || mark == Board::playerO;
         requires 0 <= x && x < 3 && 0 <= y && y < 3;
         requires !this->isCellOccupied(x, y);
@@ -70,15 +70,15 @@ entity Board {
         return this->update(cells=this.cells->set(x + y * 3, mark));
     }
 
-    hidden method checkSingleWinOption(opt: List<[Int, Int]>, mark: String<PlayerMark>): Bool {
+    hidden method checkSingleWinOption(opt: List<[Int, Int]>, mark: StringOf<PlayerMark>): Bool {
         return opt->all(fn(entry: [Int, Int]): Bool => this->isCellOccupiedWith(entry.0, entry.1, mark));
     }
 
-    hidden method checkSingleWinner(mark: String<PlayerMark>): Bool {
+    hidden method checkSingleWinner(mark: StringOf<PlayerMark>): Bool {
         return Board::winPositionOptions->any(fn(opt: List<[Int, Int]>): Bool => this->checkSingleWinOption(opt, mark));
     }
 
-    method checkForWinner(): String<PlayerMark>? {
+    method checkForWinner(): StringOf<PlayerMark>? {
         if(this->checkSingleWinner(Board::playerX)) {
             return Board::playerX;
         }
@@ -92,20 +92,20 @@ entity Board {
 }
 
 entity Game {
-    field winner: String<PlayerMark>? = none;
+    field winner: StringOf<PlayerMark>? = none;
     field board: Board = Board@createInitialBoard();
 
     method hasWinner(): Bool {
         return this.winner != none;
     }
 
-    method getWinner(): String<PlayerMark>
+    method getWinner(): StringOf<PlayerMark>
         requires this->hasWinner();
     {
-        return this.winner->as<String<PlayerMark>>();
+        return this.winner->as<StringOf<PlayerMark>>();
     }
 
-    method makeAutoMove(mark: String<PlayerMark>, rnd: Int): Game
+    method makeAutoMove(mark: StringOf<PlayerMark>, rnd: Int): Game
         requires !this->hasWinner();
     {
         var! nboard: Board;
@@ -121,7 +121,7 @@ entity Game {
         return this->update( board=nboard, winner=nboard->checkForWinner() );
     }
 
-    method makeExplicitMove(x: Int, y: Int, mark: String<PlayerMark>): Game
+    method makeExplicitMove(x: Int, y: Int, mark: StringOf<PlayerMark>): Game
         requires !this.board->isCellOccupied(x, y);
     {
         var nboard = this.board->markCellWith(x, y, mark);

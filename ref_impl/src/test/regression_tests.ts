@@ -103,7 +103,7 @@ const regression_tests: TestInfo[] = [
 function regression_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
     const files = core.concat([{ relativePath: "regression_tests.bsq", contents: regression_test }]);
 
-    return MIREmitter.generateMASM(new PackageConfig(), files);
+    return MIREmitter.generateMASM(new PackageConfig(), true, true, true, files);
 }
 
 function regression_action(assembly: MIRAssembly, args: any[]): any {

@@ -52,22 +52,13 @@ entity Int provides Some, Parsable {
 }
 
 //<summary>Primitive string value.</summary>
-entity String<T> provides Some {
+entity String provides Some {
     method isStringOf<U where Parsable>(): Bool # string_isstringof
-    method asStringOf<U where Parsable>(): String<T> # string_asstringof
-    method tryAsStringOf<U where Parsable>(): String<T> | None # string_tryasstringof
+    method asStringOf<U where Parsable>(): StringOf<U> # string_asstringof
+    method tryAsStringOf<U where Parsable>(): StringOf<U> | None # string_tryasstringof
 
-    method asString(): String # string_asstring
-
-    method tryParseAs<U where Parsable>(): U | None {
-        return U::tryParse(this);
-    }
-
-    method parseAs<U where Parsable>(): U {
-        return U::tryParse(this)->as<U>();
-    }
-
-    method toUntyped(): String # string_tountyped
+    method parseAs<U where Parsable>(): U # string_parseas
+    method tryParseAs<U where Parsable>(): U | None # string_tryparseas
 
     method length(): Int # string_length
 
@@ -89,9 +80,19 @@ entity String<T> provides Some {
     //static interpolate(fmt: String, ...args: List<String>): String # string_interpolate
 }
 
+entity StringOf<T where Parsable> provides Some {
+    method asString(): String # stringof_asstring
+
+    method length(): Int # stringof_length
+
+    method startsWith(str: String): Bool # stringof_startsWith
+    method endsWith(str: String): Bool # stringof_endsWith
+    method includes(str: String): Bool # stringof_includes
+}
+
 //<summary>Provide JSON support for (POD).</summary>
 concept JSON provides Some {
-    static stringify<T where Tuple | Record>(data: T): String<T> # json_tryparse
+    static stringify<T where Tuple | Record>(data: T): StringOf<T> # json_tryparse
     static tryParse<T where Tuple | Record>(str: String): T? # json_tryparse
 }
 
@@ -169,7 +170,7 @@ concept IdKey provides Some {
 }
 
 //<summary>Types that can be used as equality based keys.</summary>
-typedef KeyType = None | Bool | Int | String | GUID | Enum | Tuple | Record | IdKey;
+typedef KeyType = None | Bool | Int | String | StringOf<Parsable> | GUID | Enum | Tuple | Record | IdKey;
 
 //<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
 concept Keyed<T where KeyType> provides Some {

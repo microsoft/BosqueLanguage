@@ -16,8 +16,18 @@ namespace NSTestExpression;
 //These entities are not tested but are used in other tests
 
 entity Foo provides Parsable {
+    field ishello: Bool;
+
     override static tryParse(str: String): Foo | None {
-        return str == "hello" ? Foo{} : none;
+        if(str == "hello") {
+            return Foo{ishello=true};
+        }
+        elif(str == "hola") {
+            return Foo{ishello=false};
+        }
+        else {
+            return none;
+        };
     }
 }
 
@@ -174,7 +184,7 @@ entrypoint function literalHello(): String {
     return "hello";
 }
 
-entrypoint function literalFooString(): String<Foo> {
+entrypoint function literalFooString(): StringOf<Foo> {
     return Foo'hello';
 }
 
@@ -410,12 +420,8 @@ entrypoint function eqTypedStringTrue(): Bool {
     return Foo'hello' == Foo'hello';
 }
 
-entrypoint function eqTypedStringMixedTrue(): Bool {
-    return Foo'hello' == "hello";
-}
-
-entrypoint function eqTypedStringMixedFalse(): Bool {
-    return Foo'hello' == "hi";
+entrypoint function eqTypedStringFalse(): Bool {
+    return Foo'hello' == Foo'hola';
 }
 
 entrypoint function eqTupleTrue(): Bool {
@@ -502,12 +508,8 @@ entrypoint function lteqTypedStringTrue(): Bool {
     return Foo'hello' <= Foo'hello';
 }
 
-entrypoint function lteqTypedStringMixedTrue(): Bool {
-    return Foo'hello' <= "hello";
-}
-
-entrypoint function ltTypedStringMixedFalse(): Bool {
-    return Foo'hello' < "h";
+entrypoint function lteqTypedStringFalse(): Bool {
+    return Foo'hola' <= Foo'hello';
 }
 
 entrypoint function gtIntFalse(): Bool {
@@ -962,7 +964,7 @@ const expression_tests: TestInfo[] = [
     { name: "literalHello", input: ["literalHello"], expected: "\"hello\"" },
 
     { name: "literalFooString", input: ["literalFooString"], expected: "NSTestExpression::Foo'hello'" },
-    { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo{}" },
+    { name: "literalFooObject", input: ["literalFooObject"], expected: "NSTestExpression::Foo{ ishello=true }" },
 
     { name: "emptyTuple", input: ["emptyTuple"], expected: "[]" },
     { name: "oneTuple", input: ["oneTuple"], expected: "[ 1 ]" },
@@ -1027,8 +1029,7 @@ const expression_tests: TestInfo[] = [
     { name: "eqStringFalse", input: ["eqStringFalse"], expected: "false" },
     { name: "eqStringTrue", input: ["eqStringTrue"], expected: "true" },
     { name: "eqTypedStringTrue", input: ["eqTypedStringTrue"], expected: "true" },
-    { name: "eqTypedStringMixedTrue", input: ["eqTypedStringMixedTrue"], expected: "true" },
-    { name: "eqTypedStringMixedFalse", input: ["eqTypedStringMixedFalse"], expected: "false" },
+    { name: "eqTypedStringFalse", input: ["eqTypedStringFalse"], expected: "false" },
     { name: "eqTupleTrue", input: ["eqTupleTrue"], expected: "true" },
     { name: "eqTupleFalse", input: ["eqTupleFalse"], expected: "false" },
     { name: "eqRecordTrue", input: ["eqRecordTrue"], expected: "true" },
@@ -1050,8 +1051,7 @@ const expression_tests: TestInfo[] = [
     { name: "ltStringTrue", input: ["ltStringTrue"], expected: "true" },
     { name: "lteqStringTrue", input: ["lteqStringTrue"], expected: "true" },
     { name: "lteqTypedStringTrue", input: ["lteqTypedStringTrue"], expected: "true" },
-    { name: "lteqTypedStringMixedTrue", input: ["lteqTypedStringMixedTrue"], expected: "true" },
-    { name: "ltTypedStringMixedFalse", input: ["ltTypedStringMixedFalse"], expected: "false" },
+    { name: "lteqTypedStringFalse", input: ["lteqTypedStringFalse"], expected: "false" },
     { name: "gtIntFalse", input: ["gtIntFalse"], expected: "false" },
     { name: "gteqIntFalse", input: ["gteqIntFalse"], expected: "false" },
 
@@ -1168,7 +1168,7 @@ const expression_tests: TestInfo[] = [
 function expression_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
     const files = core.concat([{ relativePath: "basic_expression_test.bsq", contents: expression_test }]);
 
-    return MIREmitter.generateMASM(new PackageConfig(), files);
+    return MIREmitter.generateMASM(new PackageConfig(), true, true, true, files);
 }
 
 function expression_action(assembly: MIRAssembly, args: any[]): any {
@@ -1895,7 +1895,7 @@ const statement_tests: TestInfo[] = [
 function statement_setup(core: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
     const files = core.concat([{ relativePath: "basic_statement_test.bsq", contents: statement_test }]);
 
-    return MIREmitter.generateMASM(new PackageConfig(), files);
+    return MIREmitter.generateMASM(new PackageConfig(), true, true, true, files);
 }
 
 function statement_action(assembly: MIRAssembly, args: any[]): any {

@@ -58,10 +58,10 @@ class Interpreter {
         }
     }
 
-    private checkPreConds(file: string, conds: MIRBody[], args: Map<string, Value>) {
-        if (this.m_doPrePostCheck && conds.length !== 0) {
+    private checkPreConds(file: string, conds: [MIRBody, boolean][], args: Map<string, Value>) {
+        if (conds.length !== 0) {
             const cok = conds.every((cond) => {
-                const cres = this.evaluateNakedMIRBody(file, cond, new Map<string, Value>(args));
+                const cres = (this.m_doPrePostCheck || conds[1]) && this.evaluateNakedMIRBody(file, cond[0], new Map<string, Value>(args));
                 return typeof (cres) === "boolean" && cres;
             });
 

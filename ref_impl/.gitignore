@@ -3,3 +3,4 @@
 /.vscode
 *.xml
 *.dgml
+*.smt2
