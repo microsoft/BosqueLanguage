@@ -49,6 +49,7 @@ const KeywordStrings = [
     "ref",
     "return",
     "requires",
+    "xrequires",
     "static",
     "switch",
     "true",
@@ -706,7 +707,7 @@ class Parser {
         }
 
         const argNames = new Set<string>([...(restName ? [restName] : []), ...fparams.map((param) => param.name)]);
-        let preconds: Expression[] = [];
+        let preconds: [Expression, boolean][] = [];
         let postconds: Expression[] = [];
         let body: BodyImplementation | undefined = undefined;
         let captured = new Set<string>();
@@ -2180,12 +2181,20 @@ class Parser {
         return terms;
     }
 
-    private parsePreAndPostConditions(argnames: Set<string>): [Expression[], Expression[]] {
-        let preconds: Expression[] = [];
+    private parsePreAndPostConditions(argnames: Set<string>): [[Expression, boolean][], Expression[]] {
+        let preconds: [Expression, boolean][] = [];
         try {
             this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(argnames)));
-            while (this.testAndConsumeTokenIf("requires")) {
-                preconds.push(this.parseExpression());
+            while (this.testToken("requires") || this.testToken("xrequires")) {
+                if (this.testToken("requires")) {
+                    this.consumeToken();
+                    preconds.push([this.parseExpression(), false]);
+                }
+                else {
+                    this.consumeToken();
+                    preconds.push([this.parseExpression(), true]);
+                }
+
                 this.ensureAndConsumeToken(";");
             }
         } finally {

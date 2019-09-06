@@ -396,7 +396,7 @@ class ValueOps {
             case "undefined": return MIRType.createSingle(MIREntityType.create("NSCore::None"));
             case "boolean": return MIRType.createSingle(MIREntityType.create("NSCore::Bool"));
             case "number": return MIRType.createSingle(MIREntityType.create("NSCore::Int"));
-            case "string": return MIRType.createSingle(MIREntityType.create("NSCore::String<T=NSCore::Any>"));
+            case "string": return MIRType.createSingle(MIREntityType.create("NSCore::String"));
             default: {
                 if (v instanceof FloatValue) {
                     return MIRType.createSingle(MIREntityType.create("NSCore::Float"));
@@ -438,10 +438,6 @@ class ValueOps {
 
     static getKeyForValue(v: Value): KeyValue {
         if (typeof (v) === "object") {
-            if (v instanceof TypedStringValue) {
-                return v.value;
-            }
-
             if (v instanceof EntityValueSimple) {
                 const kidx = v.fields.findIndex((kv) => kv[0] === "key");
                 assert(kidx !== -1);
@@ -483,6 +479,9 @@ class ValueOps {
         else {
             if (v instanceof GUIDValue) {
                 return ValueOps.hashHelper(ValueOps.hashStringHelper(v.host, 31), v.tag);
+            }
+            else if (v instanceof TypedStringValue) {
+                return ValueOps.hashHelper(ValueOps.hashStringHelper(v.stype.trkey, 51), ValueOps.hashStringHelper(v.value, 37));
             }
             else if (v instanceof EnumValue) {
                 return ValueOps.hashHelper(ValueOps.hashStringHelper(v.etype.ekey as string, 43), v.enumValue);
@@ -538,6 +537,9 @@ class ValueOps {
             if (v1 instanceof GUIDValue && v2 instanceof GUIDValue) {
                 return v1.host === v2.host && v1.tag === v2.tag;
             }
+            else if (v1 instanceof TypedStringValue && v2 instanceof TypedStringValue) {
+                return (v1.stype.trkey === v2.stype.trkey) && (v1.value === v2.value);
+            }
             else if (v1 instanceof EnumValue && v2 instanceof EnumValue) {
                 return v1.etype.ekey === v2.etype.ekey && v1.enumValue === v2.enumValue;
             }
@@ -581,14 +583,16 @@ class ValueOps {
     }
 
     static valueLessThan(v1: Value, v2: Value): boolean {
-        const rv1 = (typeof(v1) === "object" && v1 instanceof TypedStringValue) ? v1.value : v1;
-        const rv2 = (typeof(v2) === "object" && v2 instanceof TypedStringValue) ? v2.value : v2;
-
-        if (typeof(rv1) === "number" && typeof(rv2) === "number") {
-            return (rv1 as number) < (rv2 as number);
+        if (typeof(v1) === "number" && typeof(v2) === "number") {
+            return (v1 as number) < (v2 as number);
+        }
+        else if (typeof(v1) === "string" && typeof(v2) === "string") {
+            return (v1 as string) < (v2 as string);
         }
         else {
-            return (rv1 as string) < (rv2 as string);
+            const tv1 = v1 as TypedStringValue;
+            const tv2 = v2 as TypedStringValue;
+            return (tv1.stype.trkey < tv2.stype.trkey) || ((tv1.stype.trkey === tv2.stype.trkey) && (tv1.value < tv2.value));
         }
     }
 }

@@ -43,14 +43,14 @@ class InvokeDecl {
     readonly optRestType: TypeSignature | undefined;
     readonly resultType: TypeSignature;
 
-    readonly preconditions: Expression[];
+    readonly preconditions: [Expression, boolean][];
     readonly postconditions: Expression[];
 
     readonly isLambda: boolean;
     readonly captureSet: Set<string>;
     readonly body: BodyImplementation | undefined;
 
-    constructor(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], isLambda: boolean, captureSet: Set<string>, body: BodyImplementation | undefined) {
+    constructor(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: [Expression, boolean][], postconds: Expression[], isLambda: boolean, captureSet: Set<string>, body: BodyImplementation | undefined) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
@@ -81,11 +81,11 @@ class InvokeDecl {
         return new InvokeDecl(sinfo, srcFile, recursive, [], [], [], params, optRestName, optRestType, resultType, [], [], true, captureSet, body);
     }
 
-    static createStaticInvokeDecl(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], body: BodyImplementation | undefined) {
+    static createStaticInvokeDecl(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: [Expression, boolean][], postconds: Expression[], body: BodyImplementation | undefined) {
         return new InvokeDecl(sinfo, srcFile, recursive, pragmas, terms, termRestrictions, params, optRestName, optRestType, resultType, preconds, postconds, false, new Set<string>(), body);
     }
 
-    static createMemberInvokeDecl(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: Expression[], postconds: Expression[], body: BodyImplementation | undefined) {
+    static createMemberInvokeDecl(sinfo: SourceInfo, srcFile: string, recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TemplateTermRestriction[], params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: [Expression, boolean][], postconds: Expression[], body: BodyImplementation | undefined) {
         return new InvokeDecl(sinfo, srcFile, recursive, pragmas, terms, termRestrictions, params, optRestName, optRestType, resultType, preconds, postconds, false, new Set<string>(), body);
     }
 }
@@ -711,7 +711,8 @@ class Assembly {
     getSpecialIntType(): ResolvedType { return this.internSpecialObjectType("Int"); }
     getSpecialFloatType(): ResolvedType { return this.internSpecialObjectType("Float"); }
     getSpecialRegexType(): ResolvedType { return this.internSpecialObjectType("Regex"); }
-    getSpecialStringType(): ResolvedType { return this.internSpecialObjectType("String", [new TemplateTypeSignature("T")], new Map<string, ResolvedType>().set("T", this.getSpecialAnyType())); }
+    getSpecialStringType(): ResolvedType { return this.internSpecialObjectType("String"); }
+    getSpecialStringOfType(): ResolvedType { return this.internSpecialObjectType("StringOf", [new TemplateTypeSignature("T")], new Map<string, ResolvedType>().set("T", this.getSpecialParsableConcept())); }
     getSpecialGUIDType(): ResolvedType { return this.internSpecialObjectType("GUID"); }
 
     getSpecialTupleConceptType(): ResolvedType { return this.internSpecialConceptType("Tuple"); }
@@ -797,12 +798,7 @@ class Assembly {
         const lname = t.nameSpace + "::" + t.baseName;
         const nsd = this.getNamespace(t.nameSpace);
         if (!nsd.typeDefs.has(lname)) {
-            if (t.nameSpace === "NSCore" && t.baseName === "String" && t.terms.length === 0) {
-                return [new NominalTypeSignature(t.nameSpace, t.baseName, [new TemplateTypeSignature("T")]), new Map<string, ResolvedType>(binds).set("T", this.getSpecialAnyType())];
-            }
-            else {
-                return [t, new Map<string, ResolvedType>(binds)];
-            }
+            return [t, new Map<string, ResolvedType>(binds)];
         }
 
         //compute the bindings to use when resolving the RHS of the typedef alias
@@ -1241,7 +1237,7 @@ class Assembly {
 
             //check that if t2p is named then t1p has the same name
             if (t2.params[i].name !== "_") {
-                if (t1.params.length <= i || t2.params[i].name === t1.params[i].name) {
+                if (t2.params[i].name !== t1.params[i].name) {
                     return false;
                 }
             }

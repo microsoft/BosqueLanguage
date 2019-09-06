@@ -34,7 +34,7 @@ function runApp(app: string) {
         process.exit(1);
     }
 
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), files);
+    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), true, true, true, files);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
