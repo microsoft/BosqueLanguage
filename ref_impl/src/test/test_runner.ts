@@ -9,6 +9,8 @@ import * as Regressions from "./regression_tests";
 
 import * as Apps from "./app_tests";
 
+import * as FMTest from "./bmc_test";
+
 import * as FS from "fs";
 import chalk from "chalk";
 import { RuntimeError } from "../interpreter/interpreter_environment";
@@ -156,6 +158,8 @@ function runAll() {
     runner.addSet(Regressions.testRegression);
 
     Apps.tests.forEach((test) => runner.addSet(test));
+
+    runner.addSet(FMTest.testBMC);
 
     runner.run();
 }

@@ -1,0 +1,122 @@
+namespace NSMain;
+
+entity Board {
+    const playerX: String = "x";
+    const playerO: String = "o";
+
+    const allCellPositions: List<[Int, Int]> = List<[Int, Int]>{
+        [ 0, 0 ], [ 1, 0 ], [ 2, 0 ],
+        [ 0, 1 ], [ 1, 1 ], [ 2, 1 ],
+        [ 0, 2 ], [ 1, 2 ], [ 2, 2 ]
+    };
+
+    const winPositionOptions: List<List<[Int, Int]>> = List<List<[Int, Int]>>{
+        List<[Int, Int]>{ [ 0, 0 ], [ 0, 1 ], [ 0, 2 ] },
+        List<[Int, Int]>{ [ 0, 1 ], [ 1, 1 ], [ 2, 1 ] },
+        List<[Int, Int]>{ [ 0, 2 ], [ 1, 2 ], [ 2, 2 ] },
+
+        List<[Int, Int]>{ [ 0, 0 ], [ 1, 0 ], [ 2, 0 ] },
+        List<[Int, Int]>{ [ 1, 0 ], [ 1, 1 ], [ 1, 2 ] },
+        List<[Int, Int]>{ [ 2, 0 ], [ 2, 1 ], [ 2, 2 ] },
+
+        List<[Int, Int]>{ [ 0, 0 ], [ 1, 1 ], [ 2, 2 ] },
+        List<[Int, Int]>{ [ 0, 2 ], [ 1, 1 ], [ 2, 0 ] }
+    };
+
+    //Board is a list of marks, indexed by x,y coords from upper left 0 based
+    field cells: List<String?>;
+
+    factory static createInitialBoard(): { cells: List<String?> } {
+        return { cells=List<String?>{none, none, none, none, none, none, none, none, none} };
+    }
+
+    method getOpenCells(): List<[Int, Int]> {
+        return Board::allCellPositions->filter(fn(pos: [Int, Int]): Bool => {
+            return !this->isCellOccupied(pos.0, pos.1);
+        });
+    }
+
+    method getCellContents(x: Int, y: Int): String?
+        requires 0 <= x && x < 3 && 0 <= y && y < 3;
+    {
+        return this.cells->at(x + y * 3);
+    }
+
+    method isCellOccupied(x: Int, y: Int): Bool {
+        return this->getCellContents(x, y) != none;
+    }
+
+    method isCellOccupiedWith(x: Int, y: Int, mark: String): Bool
+        requires mark == Board::playerX || mark == Board::playerO;
+    {
+        return this->getCellContents(x, y) == mark;
+    }
+
+    method markCellWith(x: Int, y: Int, mark: String): Board
+        requires mark == Board::playerX || mark == Board::playerO;
+        requires 0 <= x && x < 3 && 0 <= y && y < 3;
+        requires !this->isCellOccupied(x, y);
+    {
+        return this->update(cells=this.cells->set(x + y * 3, mark));
+    }
+
+    hidden method checkSingleWinOption(opt: List<[Int, Int]>, mark: String): Bool {
+        return opt->all(fn(entry: [Int, Int]): Bool => this->isCellOccupiedWith(entry.0, entry.1, mark));
+    }
+
+    hidden method checkSingleWinner(mark: String): Bool {
+        return Board::winPositionOptions->any(fn(opt: List<[Int, Int]>): Bool => this->checkSingleWinOption(opt, mark));
+    }
+
+    method checkForWinner(): String? {
+        if(this->checkSingleWinner(Board::playerX)) {
+            return Board::playerX;
+        }
+        elif(this->checkSingleWinner(Board::playerO)) {
+            return Board::playerO;
+        }
+        else {
+            return none;
+        }
+    }
+}
+
+entity Game {
+    field winner: String? = none;
+    field board: Board = Board@createInitialBoard();
+
+    method hasWinner(): Bool {
+        return this.winner != none;
+    }
+
+    method getWinner(): String
+        requires this->hasWinner();
+    {
+        return this.winner->as<String>();
+    }
+
+    method makeExplicitMove(x: Int, y: Int, mark: String): Game
+        requires !this.board->isCellOccupied(x, y);
+    {
+        var nboard = this.board->markCellWith(x, y, mark);
+        return this->update(board=nboard, winner=nboard->checkForWinner());
+    }
+}
+
+entrypoint function main(x: Int, y: Int): Int
+    requires 0 <= x && x < 3;
+    requires 0 <= y && y < 3;
+{
+    var! g = Game{}
+        ->makeExplicitMove(1, 1, "x")
+        ->makeExplicitMove(0, 1, "o")
+        ->makeExplicitMove(2, 2, "x")
+        ->makeExplicitMove(0, 2, "o");
+
+    if(!g.board->isCellOccupied(x, y)) {
+        g = g->makeExplicitMove(x, y, "x");
+        //assert !g->hasWinner(); //does x have a winning move and generate model
+    }
+
+    return g->hasWinner() ? 0 : 1;
+}

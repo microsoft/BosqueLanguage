@@ -11,6 +11,7 @@
         "outDir": "bin"
     },
     "include": [
+        "./src/analysis/**/*.ts",
         "./src/ast/*.ts",
         "./src/interpreter/*.ts",
         "./src/type_checker/*.ts",
