@@ -13,6 +13,7 @@ import * as Crypto from "crypto";
 import { TypeChecker } from "../type_checker/type_checker";
 import { propagateTmpAssignForBody, removeDeadTempAssignsFromBody } from "./mir_cleanup";
 import { convertBodyToSSA } from "./mir_ssa";
+import { computeVarTypesForInvoke } from "./mir_vartype";
 
 type PCode = {
     code: InvokeDecl,
@@ -192,8 +193,8 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, resultAccessType, arg, idx, trgt));
     }
 
-    emitProjectTupleIndecies(sinfo: SourceInfo, arg: MIRArgument, indecies: number[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRProjectFromIndecies(sinfo, arg, indecies, trgt));
+    emitProjectTupleIndecies(sinfo: SourceInfo, resultProjectType: MIRResolvedTypeKey, arg: MIRArgument, indecies: number[], trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRProjectFromIndecies(sinfo, resultProjectType, arg, indecies, trgt));
     }
 
     emitLoadProperty(sinfo: SourceInfo, resultAccessType: MIRResolvedTypeKey, arg: MIRArgument, pname: string, trgt: MIRTempRegister) {
@@ -204,24 +205,24 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRAccessFromField(sinfo, resultAccessType, arg, fname, trgt));
     }
 
-    emitProjectProperties(sinfo: SourceInfo, arg: MIRArgument, properties: string[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRProjectFromProperties(sinfo, arg, properties, trgt));
+    emitProjectProperties(sinfo: SourceInfo, resultProjectType: MIRResolvedTypeKey, arg: MIRArgument, properties: string[], trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRProjectFromProperties(sinfo, resultProjectType, arg, properties, trgt));
     }
 
-    emitProjectFields(sinfo: SourceInfo, arg: MIRArgument, fields: string[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRProjectFromFields(sinfo, arg, fields, trgt));
+    emitProjectFields(sinfo: SourceInfo, resultProjectType: MIRResolvedTypeKey, arg: MIRArgument, fields: string[], trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRProjectFromFields(sinfo, resultProjectType, arg, fields, trgt));
     }
 
-    emitProjectFromTypeTuple(sinfo: SourceInfo, arg: MIRArgument, ptype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRProjectFromTypeTuple(sinfo, arg, ptype, trgt));
+    emitProjectFromTypeTuple(sinfo: SourceInfo, resultProjectType: MIRResolvedTypeKey, arg: MIRArgument, ptype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRProjectFromTypeTuple(sinfo, resultProjectType, arg, ptype, trgt));
     }
 
-    emitProjectFromTypeRecord(sinfo: SourceInfo, arg: MIRArgument, ptype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRProjectFromTypeRecord(sinfo, arg, ptype, trgt));
+    emitProjectFromTypeRecord(sinfo: SourceInfo, resultProjectType: MIRResolvedTypeKey, arg: MIRArgument, ptype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRProjectFromTypeRecord(sinfo, resultProjectType, arg, ptype, trgt));
     }
 
-    emitProjectFromTypeConcept(sinfo: SourceInfo, arg: MIRArgument, ctypes: MIRNominalTypeKey[], trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRProjectFromTypeConcept(sinfo, arg, ctypes, trgt));
+    emitProjectFromTypeConcept(sinfo: SourceInfo, resultProjectType: MIRResolvedTypeKey, arg: MIRArgument, ctypes: MIRNominalTypeKey[], trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRProjectFromTypeConcept(sinfo, resultProjectType, arg, ctypes, trgt));
     }
 
     emitModifyWithIndecies(sinfo: SourceInfo, resultTupleType: MIRResolvedTypeKey, arg: MIRArgument, updates: [number, MIRArgument][], trgt: MIRTempRegister) {
@@ -236,51 +237,61 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRModifyWithFields(sinfo, resultNominalType, arg, updates, trgt));
     }
 
-    emitStructuredExtendTuple(sinfo: SourceInfo, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRStructuredExtendTuple(sinfo, arg, update, trgt));
+    emitStructuredExtendTuple(sinfo: SourceInfo, resultTupleType: MIRResolvedTypeKey, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRStructuredExtendTuple(sinfo, resultTupleType, arg, update, trgt));
     }
 
-    emitStructuredExtendRecord(sinfo: SourceInfo, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRStructuredExtendRecord(sinfo, arg, update, trgt));
+    emitStructuredExtendRecord(sinfo: SourceInfo, resultRecordType: MIRResolvedTypeKey, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRStructuredExtendRecord(sinfo, resultRecordType, arg, update, trgt));
     }
 
-    emitStructuredExtendObject(sinfo: SourceInfo, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRStructuredExtendObject(sinfo, arg, update, trgt));
+    emitStructuredExtendObject(sinfo: SourceInfo, resultNominalType: MIRResolvedTypeKey, arg: MIRArgument, update: MIRArgument, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRStructuredExtendObject(sinfo, resultNominalType, arg, update, trgt));
     }
 
-    emitInvokeFixedFunction(sinfo: SourceInfo, rtkey: MIRResolvedTypeKey, ikey: MIRInvokeKey, args: MIRArgument[], refs: [string, MIRResolvedTypeKey][], trgt: MIRTempRegister) {
+    emitInvokeFixedFunction(masm: MIRAssembly, sinfo: SourceInfo, rtkey: MIRType, ikey: MIRInvokeKey, args: MIRArgument[], refs: [string, MIRType][], trgt: MIRTempRegister) {
         if (refs.length === 0) {
-            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, ikey, args, trgt));
+            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, rtkey.trkey, ikey, args, trgt));
         }
         else {
+            const rtuple = MIRType.createSingle(MIRTupleType.create(false, [rtkey, ...refs.map((rf) => rf[1])].map((tt) => new MIRTupleTypeEntry(tt, false))));
+            if (!masm.typeMap.has(rtuple.trkey)) {
+                masm.typeMap.set(rtuple.trkey, rtuple);
+            }
+
             const rr = this.generateTmpRegister();
-            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, ikey, args, rr));
+            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, rtuple.trkey, ikey, args, rr));
 
             for (let i = 0; i < refs.length; ++i) {
                 const ri = this.generateTmpRegister();
-                this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, refs[i][1], rr, i + 1, ri));
+                this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, refs[i][1].trkey, rr, i + 1, ri));
                 this.m_currentBlock.push(new MIRVarStore(sinfo, ri, new MIRVariable(refs[i][0])));
             }
 
-            this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rtkey, rr, 0, trgt));
+            this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rtkey.trkey, rr, 0, trgt));
         }
     }
 
-    emitInvokeVirtualTarget(sinfo: SourceInfo, rtkey: MIRResolvedTypeKey, vresolve: MIRVirtualMethodKey, args: MIRArgument[], refs: [string, MIRResolvedTypeKey][], trgt: MIRTempRegister) {
+    emitInvokeVirtualTarget(masm: MIRAssembly, sinfo: SourceInfo, rtkey: MIRType, vresolve: MIRVirtualMethodKey, args: MIRArgument[], refs: [string, MIRType][], trgt: MIRTempRegister) {
         if (refs.length === 0) {
-            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, vresolve, args, trgt));
+            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, rtkey.trkey, vresolve, args, trgt));
         }
         else {
+            const rtuple = MIRType.createSingle(MIRTupleType.create(false, [rtkey, ...refs.map((rf) => rf[1])].map((tt) => new MIRTupleTypeEntry(tt, false))));
+            if (!masm.typeMap.has(rtuple.trkey)) {
+                masm.typeMap.set(rtuple.trkey, rtuple);
+            }
+
             const rr = this.generateTmpRegister();
-            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, vresolve, args, trgt));
+            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, rtuple.trkey, vresolve, args, trgt));
 
             for (let i = 0; i < refs.length; ++i) {
                 const ri = this.generateTmpRegister();
-                this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, refs[i][1], rr, i + 1, ri));
+                this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, refs[i][1].trkey, rr, i + 1, ri));
                 this.m_currentBlock.push(new MIRVarStore(sinfo, ri, new MIRVariable(refs[i][0])));
             }
 
-            this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rtkey, rr, 0, trgt));
+            this.m_currentBlock.push(new MIRAccessFromIndex(sinfo, rtkey.trkey, rr, 0, trgt));
         }
     }
 
@@ -376,7 +387,7 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRJumpNone(sinfo, arg, noneblck, someblk));
     }
 
-    getBody(file: string, sinfo: SourceInfo, bkey: MIRBodyKey, args: string[]): MIRBody {
+    getBody(file: string, sinfo: SourceInfo, bkey: MIRBodyKey, args: Map<string, MIRType>): MIRBody {
         let ibody = new MIRBody(file, sinfo, bkey, this.m_blockMap);
 
         propagateTmpAssignForBody(ibody);
@@ -738,6 +749,12 @@ class MIREmitter {
             //compute closed field and vtable info
             masm.conceptDecls.forEach((cpt) => emitter.closeConceptDecl(cpt));
             masm.entityDecls.forEach((entity) => emitter.closeEntityDecl(entity));
+
+            masm.invokeDecls.forEach((idecl) => {
+                const args = new Map<string, MIRType>();
+                idecl.params.forEach((param) => args.set(param.name, masm.typeMap.get(param.type) as MIRType));
+                computeVarTypesForInvoke(idecl.body, args, masm.typeMap.get(idecl.resultType) as MIRType, masm);
+            });
         }
         catch (ex) {
             //ignore

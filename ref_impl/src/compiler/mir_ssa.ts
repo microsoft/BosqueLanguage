@@ -7,6 +7,7 @@ import * as assert from "assert";
 import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRArgument, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRPhi, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAccessArgVariable, MIRInvokeVirtualFunction, MIRInvokeFixedFunction, MIRVariable } from "./mir_ops";
 import { SourceInfo } from "../ast/parser";
 import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./mir_info";
+import { MIRType } from "./mir_assembly";
 
 //
 //Convert MIR into SSA form
@@ -381,11 +382,7 @@ function computePhis(sinfo: SourceInfo, block: string, ctrs: Map<string, number>
     return [phis, remap];
 }
 
-function convertBodyToSSA(body: MIRBody, args: string[]) {
-    if (typeof (body) === "string") {
-        return;
-    }
-
+function convertBodyToSSA(body: MIRBody, args: Map<string, MIRType>) {
     const blocks = body.body as Map<string, MIRBasicBlock>;
     const links = computeBlockLinks(blocks);
     const live = computeBlockLiveVars(blocks);
@@ -399,7 +396,7 @@ function convertBodyToSSA(body: MIRBody, args: string[]) {
 
         if (block.label === "entry") {
             let remap = new Map<string, MIRRegisterArgument>();
-            args.forEach((arg) => remap.set(arg, new MIRVariable(arg)));
+            args.forEach((arg, name) => remap.set(name, new MIRVariable(name)));
             remap.set("__ir_ret__", new MIRVariable("__ir_ret__"));
 
             for (let i = 0; i < block.ops.length; ++i) {
