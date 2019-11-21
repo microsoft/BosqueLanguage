@@ -139,6 +139,7 @@ var zcbad: String<Zipcode> = Zipcode'9'; //error bad format in typed string lite
 foo(user, zc) //Type error String not convertible to String<Zipcode>
 foo(zc, user) //ok
 ```
+This implementation of safe-strings is based on concepts from the paper [SafeStrings Representing Strings as Structured Data](https://arxiv.org/pdf/1904.11254.pdf) which contains more on the theory and design space for this idea.
 
 ## <a name="0.5-Flexible-Invocations"></a>0.5 Flexible Invocations
 
