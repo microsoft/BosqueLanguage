@@ -32,4 +32,9 @@ if(process.platform === "linux") {
     sh.execSync(`chmod a+x ${z3path}`);
 }
 
+if(process.platform === "darwin") {
+    const z3path = path.join(rootbin, "/tooling/bmc/runtime/bin/macos/z3")
+    sh.execSync(`chmod a+x ${z3path}`);
+}
+
 process.stdout.write(`done!\n`);
