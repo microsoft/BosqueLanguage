@@ -35,23 +35,19 @@ class NominalTypeSignature extends TypeSignature {
 }
 
 class TupleTypeSignature extends TypeSignature {
-    readonly isOpen: boolean;
     readonly entries: [TypeSignature, boolean][];
 
-    constructor(isOpen: boolean, entries: [TypeSignature, boolean][]) {
+    constructor(entries: [TypeSignature, boolean][]) {
         super();
-        this.isOpen = isOpen;
         this.entries = entries;
     }
 }
 
 class RecordTypeSignature extends TypeSignature {
-    readonly isOpen: boolean;
-    readonly entries: [string, TypeSignature, boolean][];
+   readonly entries: [string, TypeSignature, boolean][];
 
-    constructor(isOpen: boolean, entries: [string, TypeSignature, boolean][]) {
+    constructor(entries: [string, TypeSignature, boolean][]) {
         super();
-        this.isOpen = isOpen;
         this.entries = entries;
     }
 }

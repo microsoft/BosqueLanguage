@@ -1,0 +1,4 @@
+z3 filter=lfs diff=lfs merge=lfs -text
+z3.exe filter=lfs diff=lfs merge=lfs -text
+clang filter=lfs diff=lfs merge=lfs -text
+clang.exe filter=lfs diff=lfs merge=lfs -text

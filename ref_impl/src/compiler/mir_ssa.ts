@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert from "assert";
-import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRArgument, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRPhi, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAccessArgVariable, MIRInvokeVirtualFunction, MIRInvokeFixedFunction, MIRVariable } from "./mir_ops";
+import { MIRBody, MIRRegisterArgument, MIRBasicBlock, MIROpTag, MIRJumpNone, MIRJumpCond, MIROp, MIRValueOp, MIRTempRegister, MIRArgument, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRProjectFromFields, MIRAccessFromField, MIRProjectFromProperties, MIRAccessFromProperty, MIRProjectFromIndecies, MIRAccessFromIndex, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRPhi, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAccessArgVariable, MIRInvokeVirtualFunction, MIRInvokeFixedFunction, MIRVariable, MIRGetKey } from "./mir_ops";
 import { SourceInfo } from "../ast/parser";
 import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./mir_info";
 import { MIRType } from "./mir_assembly";
@@ -237,6 +237,12 @@ function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map
             bop.lhs = processSSA_Use(bop.lhs, remap);
             bop.rhs = processSSA_Use(bop.rhs, remap);
             processValueOpTempSSA(bop, remap, ctrs);
+            break;
+        }
+        case MIROpTag.MIRGetKey: {
+            const mgk = op as MIRGetKey;
+            mgk.arg = processSSA_Use(mgk.arg, remap);
+            processValueOpTempSSA(mgk, remap, ctrs);
             break;
         }
         case MIROpTag.MIRBinEq: {

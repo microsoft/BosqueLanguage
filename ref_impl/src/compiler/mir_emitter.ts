@@ -4,10 +4,10 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo, Parser } from "../ast/parser";
-import { MIRTempRegister, MIROp, MIRLoadConst, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantString, MIRLoadConstTypedString, MIRAccessArgVariable, MIRAccessLocalVariable, MIRArgument, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRAccessFromIndex, MIRProjectFromIndecies, MIRProjectFromProperties, MIRProjectFromFields, MIRAccessFromProperty, MIRAccessFromField, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorPrimaryCollectionEmpty, MIRResolvedTypeKey, MIRFieldKey, MIRLoadFieldDefaultValue, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRVirtualMethodKey, MIRJump, MIRJumpCond, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRBody, MIRBasicBlock, MIRTruthyConvert, MIRJumpNone, MIRDebug, MIRVariable, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAbort, MIRInvokeKey, MIRConstantKey, MIRAccessConstantValue, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRNominalTypeKey, MIRBodyKey } from "./mir_ops";
+import { MIRTempRegister, MIROp, MIRLoadConst, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantString, MIRLoadConstTypedString, MIRAccessArgVariable, MIRAccessLocalVariable, MIRArgument, MIRConstructorPrimary, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRAccessFromIndex, MIRProjectFromIndecies, MIRProjectFromProperties, MIRProjectFromFields, MIRAccessFromProperty, MIRAccessFromField, MIRConstructorTuple, MIRConstructorRecord, MIRConstructorPrimaryCollectionEmpty, MIRResolvedTypeKey, MIRFieldKey, MIRLoadFieldDefaultValue, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeConcept, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRVirtualMethodKey, MIRJump, MIRJumpCond, MIRPrefixOp, MIRBinOp, MIRBinCmp, MIRBinEq, MIRRegAssign, MIRVarStore, MIRReturnAssign, MIRVarLifetimeStart, MIRVarLifetimeEnd, MIRBody, MIRBasicBlock, MIRTruthyConvert, MIRJumpNone, MIRDebug, MIRVariable, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRLogicStore, MIRAbort, MIRInvokeKey, MIRConstantKey, MIRAccessConstantValue, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRNominalTypeKey, MIRBodyKey, MIRGetKey } from "./mir_ops";
 import { OOPTypeDecl, StaticFunctionDecl, MemberMethodDecl, InvokeDecl, Assembly, NamespaceFunctionDecl, NamespaceConstDecl, StaticMemberDecl, ConceptTypeDecl, EntityTypeDecl } from "../ast/assembly";
 import { ResolvedType, ResolvedEntityAtomType, ResolvedConceptAtomType, ResolvedTupleAtomType, ResolvedRecordAtomType, ResolvedFunctionType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
-import { PackageConfig, MIRAssembly, MIRType, MIRTypeOption, MIREntityType, MIRConceptType, MIRTupleTypeEntry, MIRTupleType, MIRRecordTypeEntry, MIRRecordType, MIRConceptTypeDecl, MIREntityTypeDecl } from "./mir_assembly";
+import { PackageConfig, MIRAssembly, MIRType, MIRTypeOption, MIREntityType, MIRConceptType, MIRTupleTypeEntry, MIRTupleType, MIRRecordTypeEntry, MIRRecordType, MIRConceptTypeDecl, MIREntityTypeDecl, MIROOTypeDecl } from "./mir_assembly";
 
 import * as Crypto from "crypto";
 import { TypeChecker } from "../type_checker/type_checker";
@@ -85,6 +85,29 @@ class MIRKeyGenerator {
     //pfx::key -- pfx \in {invoke, pre, post, invariant, const, fdefault}
     static generateBodyKey(prefix: "invoke" | "pre" | "post" | "invariant" | "const" | "fdefault", data: MIRInvokeKey | MIRNominalTypeKey | MIRConstantKey | MIRFieldKey): MIRBodyKey {
         return `${prefix}::${data}`;
+    }
+
+    static computeBindsKeyInfo_MIR(binds: Map<string, MIRType>): string {
+        if (binds.size === 0) {
+            return "";
+        }
+
+        let terms: string[] = [];
+        binds.forEach((v, k) => terms.push(`${k}=${v.trkey}`));
+
+        return `<${terms.sort().join(", ")}>`;
+    }
+
+    static generateTypeKey_MIR(t: MIROOTypeDecl): MIRResolvedTypeKey {
+        return `${t.ns}::${t.name}${MIRKeyGenerator.computeBindsKeyInfo_MIR(t.terms)}`;
+    }
+
+    static generateConstKey_MIR(t: MIROOTypeDecl, name: string): MIRConstantKey {
+        return `${MIRKeyGenerator.generateTypeKey_MIR(t)}::${name}`;
+    }
+
+    static generateStaticKey_MIR(t: MIROOTypeDecl, name: string): MIRInvokeKey {
+        return `${t.ns}::${t.name}::${name}${MIRKeyGenerator.computeBindsKeyInfo_MIR(t.terms)}`;
     }
 }
 
@@ -254,7 +277,7 @@ class MIRBodyEmitter {
             this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, rtkey.trkey, ikey, args, trgt));
         }
         else {
-            const rtuple = MIRType.createSingle(MIRTupleType.create(false, [rtkey, ...refs.map((rf) => rf[1])].map((tt) => new MIRTupleTypeEntry(tt, false))));
+            const rtuple = MIRType.createSingle(MIRTupleType.create([rtkey, ...refs.map((rf) => rf[1])].map((tt) => new MIRTupleTypeEntry(tt, false))));
             if (!masm.typeMap.has(rtuple.trkey)) {
                 masm.typeMap.set(rtuple.trkey, rtuple);
             }
@@ -277,7 +300,7 @@ class MIRBodyEmitter {
             this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, rtkey.trkey, vresolve, args, trgt));
         }
         else {
-            const rtuple = MIRType.createSingle(MIRTupleType.create(false, [rtkey, ...refs.map((rf) => rf[1])].map((tt) => new MIRTupleTypeEntry(tt, false))));
+            const rtuple = MIRType.createSingle(MIRTupleType.create([rtkey, ...refs.map((rf) => rf[1])].map((tt) => new MIRTupleTypeEntry(tt, false))));
             if (!masm.typeMap.has(rtuple.trkey)) {
                 masm.typeMap.set(rtuple.trkey, rtuple);
             }
@@ -303,15 +326,19 @@ class MIRBodyEmitter {
         this.m_currentBlock.push(new MIRBinOp(sinfo, lhs, op, rhs, trgt));
     }
 
-    emitBinEq(sinfo: SourceInfo, lhs: MIRArgument, op: string, rhs: MIRArgument, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRBinEq(sinfo, lhs, op, rhs, trgt));
+    emitGetKey(sinfo: SourceInfo, argInferType: MIRResolvedTypeKey, arg: MIRArgument, resultKeyType: MIRResolvedTypeKey, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRGetKey(sinfo, argInferType, arg, resultKeyType, trgt));
     }
 
-    emitBinCmp(sinfo: SourceInfo, lhs: MIRArgument, op: string, rhs: MIRArgument, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRBinCmp(sinfo, lhs, op, rhs, trgt));
+    emitBinEq(sinfo: SourceInfo, lhsInferType: MIRResolvedTypeKey, lhs: MIRArgument, op: string, rhsInferType: MIRResolvedTypeKey, rhs: MIRArgument, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRBinEq(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt));
     }
 
-    emitTypeOf(sinfo: SourceInfo, trgt: MIRTempRegister, chktype: MIRResolvedTypeKey, src: MIRArgument) {
+    emitBinCmp(sinfo: SourceInfo, lhsInferType: MIRResolvedTypeKey, lhs: MIRArgument, op: string, rhsInferType: MIRResolvedTypeKey, rhs: MIRArgument, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRBinCmp(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt));
+    }
+
+    emitTypeOf(sinfo: SourceInfo, trgt: MIRTempRegister, chktype: MIRResolvedTypeKey, srcInferType: MIRResolvedTypeKey, src: MIRArgument) {
         if (chktype === "NSCore::None") {
             this.m_currentBlock.push(new MIRIsTypeOfNone(sinfo, src, trgt));
         }
@@ -319,7 +346,7 @@ class MIRBodyEmitter {
             this.m_currentBlock.push(new MIRIsTypeOfSome(sinfo, src, trgt));
         }
         else {
-            this.m_currentBlock.push(new MIRIsTypeOf(sinfo, src, chktype, trgt));
+            this.m_currentBlock.push(new MIRIsTypeOf(sinfo, srcInferType, src, chktype, trgt));
         }
     }
 
@@ -503,11 +530,11 @@ class MIREmitter {
             }
             else if (sopt instanceof ResolvedTupleAtomType) {
                 const tatoms = sopt.types.map((entry) => new MIRTupleTypeEntry(this.registerResolvedTypeReference(entry.type), entry.isOptional));
-                rt = MIRTupleType.create(sopt.isOpen, tatoms);
+                rt = MIRTupleType.create(tatoms);
             }
             else {
                 const tatoms = (sopt as ResolvedRecordAtomType).entries.map((entry) => new MIRRecordTypeEntry(entry.name, this.registerResolvedTypeReference(entry.type), entry.isOptional));
-                rt = MIRRecordType.create((sopt as ResolvedRecordAtomType).isOpen, tatoms);
+                rt = MIRRecordType.create(tatoms);
             }
 
             const ft = MIRType.create([(rt as MIRTypeOption)]);
@@ -590,7 +617,7 @@ class MIREmitter {
 
     private closeConceptDecl(cpt: MIRConceptTypeDecl) {
         cpt.provides.forEach((tkey) => {
-            const ccdecl = this.masm.conceptDecls.get(tkey.trkey) as MIRConceptTypeDecl;
+            const ccdecl = this.masm.conceptDecls.get(tkey) as MIRConceptTypeDecl;
             this.closeConceptDecl(ccdecl);
 
             ccdecl.invariants.forEach((inv) => cpt.invariants.push(inv));
@@ -611,7 +638,7 @@ class MIREmitter {
 
     private closeEntityDecl(entity: MIREntityTypeDecl) {
         entity.provides.forEach((tkey) => {
-            const ccdecl = this.masm.conceptDecls.get(tkey.trkey) as MIRConceptTypeDecl;
+            const ccdecl = this.masm.conceptDecls.get(tkey) as MIRConceptTypeDecl;
             this.closeConceptDecl(ccdecl);
 
             ccdecl.invariants.forEach((inv) => entity.invariants.push(inv));
@@ -668,13 +695,18 @@ class MIREmitter {
         const emitter = new MIREmitter(masm);
         const checker = new TypeChecker(assembly, true, emitter, doInvChecks, doPrePostChecks, doAssertChecks);
 
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::None") as EntityTypeDecl, new Map<string, ResolvedType>());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Any", 0) as ConceptTypeDecl, new Map<string, ResolvedType>());
+        emitter.registerResolvedTypeReference(assembly.getSpecialAnyType());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Some", 0) as ConceptTypeDecl, new Map<string, ResolvedType>());
+        emitter.registerResolvedTypeReference(assembly.getSpecialSomeType());
+
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::None", 0) as EntityTypeDecl, new Map<string, ResolvedType>());
         emitter.registerResolvedTypeReference(assembly.getSpecialNoneType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Bool") as EntityTypeDecl, new Map<string, ResolvedType>());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Bool", 0) as EntityTypeDecl, new Map<string, ResolvedType>());
         emitter.registerResolvedTypeReference(assembly.getSpecialBoolType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Int") as EntityTypeDecl, new Map<string, ResolvedType>());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Int", 0) as EntityTypeDecl, new Map<string, ResolvedType>());
         emitter.registerResolvedTypeReference(assembly.getSpecialIntType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::String") as EntityTypeDecl, new Map<string, ResolvedType>());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::String", 0) as EntityTypeDecl, new Map<string, ResolvedType>());
         emitter.registerResolvedTypeReference(assembly.getSpecialStringType());
 
         //get any entrypoint functions and initialize the checker there
@@ -754,6 +786,33 @@ class MIREmitter {
                 const args = new Map<string, MIRType>();
                 idecl.params.forEach((param) => args.set(param.name, masm.typeMap.get(param.type) as MIRType));
                 computeVarTypesForInvoke(idecl.body, args, masm.typeMap.get(idecl.resultType) as MIRType, masm);
+
+                idecl.preconditions.forEach((pre) => {
+                    computeVarTypesForInvoke(pre[0], args, masm.typeMap.get("NSCore::Bool") as MIRType, masm);
+                });
+
+                idecl.postconditions.forEach((post) => {
+                    computeVarTypesForInvoke(post, args, masm.typeMap.get("NSCore::Bool") as MIRType, masm);
+                });
+            });
+
+            masm.constantDecls.forEach((cdecl) => {
+                const args = new Map<string, MIRType>();
+                computeVarTypesForInvoke(cdecl.value, args, masm.typeMap.get(cdecl.declaredType) as MIRType, masm);
+            });
+
+            masm.fieldDecls.forEach((fdecl) => {
+                if (fdecl.value !== undefined) {
+                    const args = new Map<string, MIRType>();
+                    computeVarTypesForInvoke(fdecl.value, args, masm.typeMap.get(fdecl.declaredType) as MIRType, masm);
+                }
+            });
+
+            masm.entityDecls.forEach((edecl) => {
+                edecl.invariants.forEach((invdecl) => {
+                    const args = new Map<string, MIRType>().set("this", masm.typeMap.get(edecl.tkey) as MIRType);
+                    computeVarTypesForInvoke(invdecl, args, masm.typeMap.get("NSCore::Bool") as MIRType, masm);
+                });
             });
         }
         catch (ex) {

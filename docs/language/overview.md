@@ -147,7 +147,7 @@ Bosque provides _named arguments_ along with _rest_ and _spread_ operators. Thes
 
 ```none
 function nsum(d: Int, ...args: List<Int>): Int {
-    return args.sum(default=d);
+    return args->sum(default=d);
 }
 
 function np(p1: Int, p2: Int): {x: Int, y: Int} {
@@ -524,20 +524,16 @@ The subtype relation on nominal types `T1` and `T2` is the standard parametric i
 
 1. `T1 === T2`
 2. `T1` provides `T3` && `T3 <: T2` ([8 Concept and Entity Declarations](#8-Concept-and-Entity-Declarations))
-3. `T1 === B1<G1>` && `T2 === B2<G2>` && `B1 === B2` && `G1 <: G2`
 
-The first cases is if the two types are syntactically identical names. The second case covers the situation in which `T1` is declared to provide a concept that is, transitively, a subtype of `T2`. The final case is the standard parametric subtype relation on generic parameters. Some examples of these include:
+The first cases is if the two types are syntactically identical names. The second case covers the situation in which `T1` is declared to provide a concept that is, transitively, a subtype of `T2`. Some examples of these include:
 
 ```none
 MyType <: MyType             //true - by case 1
 Some <: Any                  //true - Some provides Any
 Int <: Bool                  //false - no suitable `T3` for case 2
-List<Int> <: List<Any>       //true - Int <: Any
-List<Int> <: List<Bool>      //false - Int <! Bool
+List<Int> <: List<Any>       //false - Int <: Any but do not do parametric polymorphism
 List<Int> <: Collection<Int> //true - List<Int> provides Collection<Int>
 ```
-
-Note that the subtype relation is _covariant_ as all generic types are subtyped on the parameters. This is always safe as all data types in Bosque are immutable ([0.1 Immutable Values](#0.1-Immutable-Values)).
 
 ### <a name="1.1.2-Typed-Strings"></a>1.1.2 Typed Strings
 
@@ -563,7 +559,7 @@ foo(zc, user) //ok
 
 ## <a name="1.2-Structural-Types"></a>1.2 Structural Types
 
-The structural type system includes Tuples and Records. These are self-describing, allow for optional entries with the `?` syntax, and can be specified as closed or open using the `...` syntax.
+The structural type system includes Tuples and Records. These are self-describing, allow for optional entries with the `?` syntax.
 
 ### <a name="1.2.1-Tuples"></a>1.2.1 Tuples
 
@@ -572,10 +568,9 @@ A tuple is a list of entries where each entry provides a type and can be marked 
 ```none
 [Int, Bool]   //Tuple of an Int and Bool
 [Int, ?:Bool] //Tuple of an Int and optionally a Bool
-[Int, ...]    //Tuple of an Int an possibly other entries
 ```
 
-The subtype relation on tuples `T1` and `T2` is a lexicographic order on the tuple entries where a required entry is always less than an optional (`?`) entry and open tuples match any suffixes of a closed tuple.
+The subtype relation on tuples `T1` and `T2` is a lexicographic order on the tuple entries where a required entry is always less than an optional (`?`) entry.
 
 ```none
 [Int] <: [Any]               //true - Int <: Any
@@ -583,12 +578,9 @@ The subtype relation on tuples `T1` and `T2` is a lexicographic order on the tup
 [Int] <: [Int, ?:Bool]       //true - omitting optional type is ok
 [Int, Bool] <: [Int, ?:Bool] //true - optional type is ok
 [Int, ?:Bool] <: [Int]       //false - missing optional type
-[Int] <: [Int, ...]          //true - prefix matches
-[Int, Bool] <: [Int, ...]    //true - prefix matches, open covers tail
-[Int, ...] <: [Int]          //false - open is not subtype of closed
 ```
 
-The tuple `[...]` is a supertype of all others and `[...]` is a subtype of the special nominal type `Tuple`.
+All tuples are a subtype of the special nominal type `Tuple`.
 
 ### <a name="1.2.2-Records"></a>1.2.2 Records
 
@@ -597,10 +589,9 @@ A record is a map of identifier names to entries where each entry provides a typ
 ```none
 {f: Int, g: Bool} //Record required f and g
 {f: Int, g?: Bool} //Record required f optional g
-{f: Int, ...} //Record required f open other
 ```
 
-The subtype relation on records `R1` and `R2` is a subset based order on the record entries where a required entry is always less than an optional (`?`) entry and open records match any suffixes of a closed record.
+The subtype relation on records `R1` and `R2` is a subset based order on the record entries where a required entry is always less than an optional (`?`) entry.
 
 ```none
 {f: Int} <: {f: Any}                    //true - Int <: Any
@@ -609,12 +600,9 @@ The subtype relation on records `R1` and `R2` is a subset based order on the rec
 {f: Int} <: {f: Any, g?: Bool}          //true - omitting optional type is ok
 {f: Int, g: Bool} <: {f: Int, g?: Bool} //true - optional type is ok
 {f: Int, g?: Bool} <: {f: Int}          //false - missing optional type
-{f: Int} <: {f: Int, ...}               //true - subset matches
-{f: Int, g: Bool} <: {f: Int, ...}      //true - subset matches, open covers rest
-{f: Int, ...} <: {f: Int}               //false - open is not subtype of closed
 ```
 
-The record `{...}` is a supertype of all others and `{...}` is a subtype of the special nominal type `Record`.
+All records are a subtype of the special nominal type `Record`.
 
 ## <a name="1.3-Parameter-Code-Block-Types"></a>1.3 Parameter Code Block Types
 
@@ -629,7 +617,7 @@ fn(x?: Int) -> Int         //pcode type optional x parameter
 fn(...l: List<Int>) -> Int //pcode type rest List parameter
 ```
 
-The subtype relation on pcode types `F1` and `F2` requires equality on parameter counts and types but allows covariance. 
+The subtype relation on pcode types `F1` and `F2` requires equality on parameter counts, types, and optionality.
 
 ```none
 fn(x: Int) -> Int <: fn(x: Int) -> Int  //true - Int == Int
@@ -651,7 +639,7 @@ fn(x: Any) -> Any <: fn(x: Any) -> Int //false - Any <! Int
 fn(...r: List<Int>) -> Int <: fn(...r: List<Int>) -> Int    //true - rest match
 fn(...r: List<Int>) -> Int <: fn(_: Int) -> Int             //false - rest mismatch
 fn(...r: List<Int>) -> Int <: fn() -> Int                   //false - rest mismatch
-fn(...r: List<Int>) -> Int <: fn(...r: HashSet<Int>) -> Int //false - rest mismatch
+fn(...r: List<Int>) -> Int <: fn(...r: Set<Int>) -> Int     //false - rest mismatch
 ```
 
 ## <a name="1.4-Combination-Types"></a>1.4 Combination Types
@@ -709,7 +697,7 @@ Bosque provides _named arguments_ along with _rest_ and _spread_ operators. Thes
 
 ```none
 function nsum(d: Int, ...args: List<Int>): Int {
-    return args.sum(default=d);
+    return args->sum(default=d);
 }
 
 function np(p1: Int, p2: Int): {x: Int, y: Int} {
@@ -1224,15 +1212,10 @@ Collections and operations on them are also defined to use this definition of eq
 
 ## <a name="5.21-Order-Comparison"></a>5.22 Order Comparison
 
-Bosque supports a range of order operators, `<`, `>`, `<=`, and `>=` which can be applied to `Int` or `String` values. For typed strings, `String<T>` the compare operator ignores the generic type and is based on the order of the underlying raw string e.g. both arguments are coerced to `String`.
+Bosque supports a range of order operators, `<`, `>`, `<=`, and `>=` which can be applied to `Int` values.
 
 ```none
 1 < 2                      //true
-"1" < ""                   //false
-"11" < "12"                //true
-Foo'hello' <= Foo'hello'   //true
-Foo'hello' <= "hello"      //true
-Foo'hello' < "h"           //false
 ```
 
 **[TODO]** Extend to tuples/records then Enums and IdKeys

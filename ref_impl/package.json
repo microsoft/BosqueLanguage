@@ -15,11 +15,12 @@
         "commander": "2.20.0"
     },
     "devDependencies": {
-        "chalk": "~2.4.2"
+        "chalk": "~2.4.2",
+        "fs-extra": "~8.1.0"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.json",
-        "test": "tsc -p tsconfig.json && node ./bin/test/test_runner.js"
+        "build": "tsc -p tsconfig.json && node ./build/resource_copy.js",
+        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./bin/test/test_runner.js"
     },
     "files": [
         "bin/*"

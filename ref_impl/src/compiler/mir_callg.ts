@@ -8,7 +8,7 @@
 //
 
 import * as assert from "assert";
-import { MIRBasicBlock, MIROpTag, MIRInvokeKey, MIRInvokeFixedFunction, MIRBodyKey, MIRLoadConstTypedString, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRConstructorPrimary, MIRBody, MIRNominalTypeKey, MIRFieldKey } from "./mir_ops";
+import { MIRBasicBlock, MIROpTag, MIRInvokeKey, MIRInvokeFixedFunction, MIRBodyKey, MIRLoadConstTypedString, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRConstructorPrimary, MIRBody, MIRNominalTypeKey, MIRFieldKey, MIRConstructorPrimaryCollectionSingletons } from "./mir_ops";
 import { MIRAssembly, MIREntityTypeDecl, MIRConstantDecl, MIRFieldDecl } from "./mir_assembly";
 import { MIRKeyGenerator } from "./mir_emitter";
 
@@ -16,6 +16,13 @@ type CallGNode = {
     invoke: MIRBodyKey,
     callees: Set<MIRBodyKey>,
     callers: Set<MIRBodyKey>
+};
+
+type CallGInfo = {
+    invokes: Map<MIRBodyKey, CallGNode>,
+    topologicalOrder: CallGNode[],
+    roots: CallGNode[],
+    recursive: (Set<MIRBodyKey>)[]
 };
 
 function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: CallGNode, assembly: MIRAssembly) {
@@ -47,6 +54,31 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                     }
                     break;
                 }
+               case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
+                    const cop = op as MIRConstructorPrimaryCollectionSingletons;
+                    const ctype = assembly.entityDecls.get(cop.tkey) as MIREntityTypeDecl;
+
+                    if (ctype.name === "List") {
+                        //all handled inline
+                    }
+                    else if (ctype.name === "Set") {
+                        const invkey = MIRKeyGenerator.generateBodyKey("invoke", MIRKeyGenerator.generateStaticKey_MIR(ctype, "_cons_insert"));
+                        invokeNode.callees.add(invkey);
+                    }
+                    else {
+                        const invkey = MIRKeyGenerator.generateBodyKey("invoke", MIRKeyGenerator.generateStaticKey_MIR(ctype, "_cons_insert"));
+                        invokeNode.callees.add(invkey);
+                    }
+                    break;
+                }
+                case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
+                    assert(false);
+                    break;
+                }
+                case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
+                    assert(false);
+                    break;
+                }
                 case MIROpTag.MIRInvokeFixedFunction: {
                     const iop = op as MIRInvokeFixedFunction;
                     const ikey = MIRKeyGenerator.generateBodyKey("invoke", iop.mkey);
@@ -67,36 +99,38 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
     });
 }
 
-function sccVisit(cn: CallGNode, scc: Set<CallGNode>, marked: Set<MIRInvokeKey>, invokes: Map<MIRInvokeKey, CallGNode>) {
+function sccVisit(cn: CallGNode, scc: Set<MIRBodyKey>, marked: Set<MIRBodyKey>, invokes: Map<MIRBodyKey, CallGNode>) {
     if (marked.has(cn.invoke)) {
         return;
     }
 
-    scc.add(cn);
+    scc.add(cn.invoke);
     marked.add(cn.invoke);
     cn.callers.forEach((pred) => sccVisit(invokes.get(pred) as CallGNode, scc, marked, invokes));
 }
 
-function topoVisit(cn: CallGNode, tordered: CallGNode[], invokes: Map<MIRInvokeKey, CallGNode>) {
-    if (tordered.findIndex((vn) => vn.invoke === cn.invoke) !== -1) {
+function topoVisit(cn: CallGNode, pending: CallGNode[], tordered: CallGNode[], invokes: Map<MIRBodyKey, CallGNode>) {
+    if (pending.findIndex((vn) => vn.invoke === cn.invoke) !== -1 || tordered.findIndex((vn) => vn.invoke === cn.invoke) !== -1) {
         return;
     }
 
+    pending.push(cn);
+
     cn.callees.forEach((succ) => (invokes.get(succ) as CallGNode).callers.add(cn.invoke));
-    cn.callees.forEach((succ) => topoVisit(invokes.get(succ) as CallGNode, tordered, invokes));
+    cn.callees.forEach((succ) => topoVisit(invokes.get(succ) as CallGNode, pending, tordered, invokes));
 
     tordered.push(cn);
 }
 
 function processBodyInfo(bkey: MIRBodyKey, binfo: MIRBody[], assembly: MIRAssembly): CallGNode {
-    let cn = { invoke: bkey, callees: new Set<MIRInvokeKey>(), callers: new Set<MIRInvokeKey>() };
+    let cn = { invoke: bkey, callees: new Set<MIRBodyKey>(), callers: new Set<MIRBodyKey>() };
     binfo.forEach((b) => {
         computeCalleesInBlocks(b.body, cn, assembly);
     });
     return cn;
 }
 
-function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssembly): { invokes: Map<MIRBodyKey, CallGNode>, topologicalOrder: CallGNode[], roots: CallGNode[], recursive: (Set<CallGNode>)[] } {
+function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssembly): CallGInfo {
     let invokes = new Map<MIRBodyKey, CallGNode>();
 
     assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
@@ -155,17 +189,17 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
         const ikey = MIRKeyGenerator.generateBodyKey("invoke", ivk);
 
         roots.push(invokes.get(ikey) as CallGNode);
-        topoVisit(invokes.get(ikey) as CallGNode, tordered, invokes);
+        topoVisit(invokes.get(ikey) as CallGNode, [], tordered, invokes);
     });
     tordered = tordered.reverse();
 
     let marked = new Set<MIRInvokeKey>();
-    let recursive: (Set<CallGNode>)[] = [];
+    let recursive: (Set<MIRBodyKey>)[] = [];
     for (let i = 0; i < tordered.length; ++i) {
-        let scc = new Set<CallGNode>();
+        let scc = new Set<MIRBodyKey>();
         sccVisit(tordered[i], scc, marked, invokes);
 
-        if (scc.size > 1) {
+        if (scc.size > 1 || tordered[i].callees.has(tordered[i].invoke)) {
             recursive.push(scc);
         }
     }
@@ -173,4 +207,8 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
     return { invokes: invokes, topologicalOrder: tordered, roots: roots, recursive: recursive };
 }
 
-export { constructCallGraphInfo };
+export {
+    CallGNode,
+    CallGInfo,
+    constructCallGraphInfo
+};
