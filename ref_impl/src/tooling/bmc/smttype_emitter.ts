@@ -416,10 +416,10 @@ class SMTTypeEmitter {
             if(this.isUCollectionType(from)) {
                 let nonnone: SMTExp | undefined = undefined;
                 if(this.isListType(from)) {
-                    nonnone = new SMTValue(`(bsqterm_list ${exp})`);
+                    nonnone = new SMTValue(`(bsqterm_list ${exp.emit()})`);
                 }
                 else {
-                    nonnone = new SMTValue(`(bsqterm_kvcontainer ${exp})`);
+                    nonnone = new SMTValue(`(bsqterm_kvcontainer ${exp.emit()})`);
                 }
 
                 if (!this.assembly.subtypeOf(this.noneType, into)) {
@@ -430,8 +430,8 @@ class SMTTypeEmitter {
                     return new SMTValue(`bsqkey_none`);
                 }
                 else {
-                    const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp})`);
-                    return new SMTCond(isnonetest, this.coerce(new SMTValue("bsqkey_none"), this.anyType, into), nonnone as SMTExp);
+                    const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp.emit()})`);
+                    return new SMTCond(isnonetest, new SMTValue("(bsqterm_key bsqkey_none)"), nonnone as SMTExp);
                 }
             }
             else {
@@ -452,8 +452,8 @@ class SMTTypeEmitter {
                     return new SMTValue(`bsqkey_none`);
                 }
                 else {
-                    const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp})`);
-                    return new SMTCond(isnonetest, this.coerce(new SMTValue("bsqkey_none"), this.anyType, into), nonnone);
+                    const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp.emit()})`);
+                    return new SMTCond(isnonetest, new SMTValue("(bsqterm_key bsqkey_none)"), nonnone);
                 }
             }
         }
@@ -496,17 +496,17 @@ class SMTTypeEmitter {
                 if(this.isUCollectionType(into)) {
                     let nonnone: SMTExp | undefined = undefined;
                     if(this.isListType(into)) {
-                        nonnone = new SMTValue(`(bsqterm_list_entry ${exp})`);
+                        nonnone = new SMTValue(`(bsqterm_list_entry ${exp.emit()})`);
                     }
                     else {
-                        nonnone = new SMTValue(`(bsqterm_bsqkvcontainer_entry ${exp})`);
+                        nonnone = new SMTValue(`(bsqterm_bsqkvcontainer_entry ${exp.emit()})`);
                     }
 
                     if (!this.assembly.subtypeOf(this.noneType, into)) {
                         return nonnone;
                     }
                     else {
-                        const isnonetest = new SMTValue(`(= (bsqterm_key_value ${exp}) bsqkey_none)`);
+                        const isnonetest = new SMTValue(`(= (bsqterm_key_value ${exp.emit()}) bsqkey_none)`);
                         return new SMTCond(isnonetest, new SMTValue(this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(into).ekey)), nonnone);
                     }
                 }
@@ -522,7 +522,7 @@ class SMTTypeEmitter {
                         return nonnone;
                     }
                     else {
-                        const isnonetest = new SMTValue(`(= (bsqterm_key_value ${exp}) bsqkey_none)`);
+                        const isnonetest = new SMTValue(`(= (bsqterm_key_value ${exp.emit()}) bsqkey_none)`);
                         return new SMTCond(isnonetest, new SMTValue(this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(into).ekey)), nonnone);
                     }
                 }
