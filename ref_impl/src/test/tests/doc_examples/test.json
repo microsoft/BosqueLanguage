@@ -51,9 +51,14 @@
                 "expected": "false"
             },
             {
-                "kind": "aot",
+                "kind": "symexec",
+                "entrypoint": "tryGetPropertyC2",
+                "expected": "2"
+            },
+            {
+                "kind": "symexec",
                 "entrypoint": "tryGetPropertyCnone",
-                "expected": "none"
+                "expected": "bsqkey_none"
             },
             {
                 "kind": "symexec",

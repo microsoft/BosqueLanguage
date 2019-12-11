@@ -64,7 +64,8 @@ function generateMASM(files: string[], corelibpath: string): MIRAssembly {
 Commander
     .option("-e --entrypoint [entrypoint]", "Entrypoint to symbolically test", "NSMain::main")
     .option("-m --model", "Try to get model for failing inputs", false)
-    .option("-b --bound [size]", "Bound for testing", 4);
+    .option("-b --bound [size]", "Bound for testing", 4)
+    .option("-o --output [file]", "Output the model to a given file");
 
 Commander.parse(process.argv);
 
@@ -112,6 +113,16 @@ setImmediate(() => {
 
         console.log(`Running z3 on SMT encoding...`);
 
+        if (Commander.output) {
+            try {
+                console.log(`Writing SMT output to "${Commander.output}..."`)
+                FS.writeFileSync(Commander.output, contents);
+            }
+            catch (fex) {
+                console.log(chalk.red(`Failed to write file -- ${fex}.`));
+            }
+        }
+
         try {
             const res = execSync(`${z3path} -smt2 -in`, { input: contents }).toString().trim();
 
@@ -126,7 +137,6 @@ setImmediate(() => {
                 else {
                     console.log("Attempting to extract inputs...");
 
-                    console.log(res);
                     const splits = res.split("\n");
                     const inputs = entrypoint.params.map((p) => {
                         const ridx = splits.findIndex((str) => str.trim().startsWith(`(define-fun @${p.name}`));

@@ -175,8 +175,11 @@ class SMTBodyEmitter {
         else if (this.typegen.isUEntityType(argtype)) {
             return new SMTValue(`(is-${this.typegen.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(argtype).ekey)} ${this.argToSMT(arg, argtype).emit()})`);
         }
-        else {
+        else if(this.typegen.isKeyType(argtype)) {
             return new SMTValue(`(= ${this.argToSMT(arg, this.typegen.keyType).emit()} bsqkey_none)`);
+        }
+        else {
+            return new SMTValue(`(and (is-bsqterm_key ${this.argToSMT(arg, argtype).emit()}) (= ${this.argToSMT(arg, this.typegen.keyType).emit()} bsqkey_none))`);
         }
     }
 
