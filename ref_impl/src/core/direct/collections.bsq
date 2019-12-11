@@ -21,13 +21,14 @@ entity List<T> provides Object {
         if(idx == List<T>::_size(l)) {
             return true;
         }
-
-        var val = List<T>::_unsafe_at(l, idx);
-        if(!p[recursive?](val)) {
-            return false;
-        }
         else {
-            return List<T>::_all[recursive](l, idx + 1, p);
+            var val = List<T>::_unsafe_at(l, idx);
+            if(!p[recursive?](val)) {
+                return false;
+            }
+            else {
+                return List<T>::_all[recursive](l, idx + 1, p);
+            }
         }
     }
 
@@ -35,13 +36,14 @@ entity List<T> provides Object {
         if(idx == List<T>::_size(l)) {
             return lp;
         }
-
-        var val = List<T>::_unsafe_at(l, idx);
-        if(p[recursive?](val)) {
-            return List<T>::_filter[recursive](l, idx + 1, List<T>::_destructive_add(lp, val), p);
-        }
         else {
-            return List<T>::_filter[recursive](l, idx + 1, lp, p);
+            var val = List<T>::_unsafe_at(l, idx);
+            if(p[recursive?](val)) {
+                return List<T>::_filter[recursive](l, idx + 1, List<T>::_destructive_add(lp, val), p);
+            }
+            else {
+                return List<T>::_filter[recursive](l, idx + 1, lp, p);
+            }
         }
     }
 
@@ -49,9 +51,10 @@ entity List<T> provides Object {
         if(idx == List<T>::_size(l)) {
             return lp;
         }
-
-        var val = f[recursive?](List<T>::_unsafe_at(l, idx));
-        return List<T>::_map<U>[recursive](l, idx + 1, List<U>::_destructive_add(lp, val), f);
+        else {
+            var val = f[recursive?](List<T>::_unsafe_at(l, idx));
+            return List<T>::_map<U>[recursive](l, idx + 1, List<U>::_destructive_add(lp, val), f);
+        }
     }
 
     method size(): Int {
