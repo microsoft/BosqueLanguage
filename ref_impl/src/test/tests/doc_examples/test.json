@@ -1,0 +1,75 @@
+[
+    {
+        "src": "readme.bsq",
+        "tests": [
+            {
+                "kind": "compile"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "add2C",
+                "expected": "5"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "allOddC",
+                "expected": "false"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "tryGetPropertyC2",
+                "expected": "2"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "tryGetPropertyCnone",
+                "expected": "none"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "signC5",
+                "expected": "1"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "signCm5",
+                "expected": "-1"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "signCnone",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "add2C",
+                "expected": "5"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "allOddC",
+                "expected": "false"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "tryGetPropertyCnone",
+                "expected": "none"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "signC5",
+                "expected": "1"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "signCm5",
+                "expected": "(- 1)"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "signCnone",
+                "expected": "0"
+            }
+        ]
+    }
+]

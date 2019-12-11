@@ -1,0 +1,195 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive types used in the Bosque language
+namespace NSCore;
+
+//<summary>Special type which all values are instances of.</summary>
+concept Any {
+    method is<T>(): Bool # special_method
+    method as<T>(): T # special_method
+
+    method tryAs<T>(): T? # special_method
+    method defaultAs<T>(default: T): T # special_method
+
+    method isNone(): Bool # special_method
+    method isSome(): Bool # special_method
+}
+
+//<summary>Special type for representing all non-none values.</summary>
+concept Some provides Any {
+    method update(): Some # special_method
+    method merge(): Some # special_method
+    method project<T>(): Some # special_method
+}
+
+//<summary>Types that can be used in equality operations or in key based containers.</summary>
+concept Indexable provides Any {
+//
+//TODO: want to add type gen macro T % KeyType that expands to the type of getKey(v)
+//
+    static getKey(a: Indexable): KeyType # special_method
+    static equal(a: Indexable, b: Indexable): Bool # special_method
+}
+
+//<summary>Special type for indicating a value can be used as a key in a collection.</summary>
+concept KeyType provides Any, Indexable {
+}
+
+//<summary>Special type for indicating this type supports typed string use.</summary>
+concept Parsable provides Any {
+    abstract static tryParse(str: String): Result<Any>;
+}
+
+//<summary>Type for indicating that a datatype is Plain-Old-Data.</summary>
+concept POD provides Any, Parsable {
+    static stringify<T where POD>(data: T): String # pod_stringify
+    static parseString<T where POD>(str: StringOf<T>): T # pod_tryparseas
+
+    static bufferify<T where POD>(data: T): PODBuffer<T> # pod_bufferify
+    static parseBuffer<T where POD>(data: PODBuffer<T>): T # pod_parsebuffer
+
+    override static tryParse(str: String): Result<Any> # pod_tryparse
+}
+
+//<summary>Type for representing the none-value.</summary>
+concept Truthy provides POD {
+    override static tryParse(str: String): Result<Any> # truthy_tryparse
+}
+
+//<summary>Type for representing the none-value.</summary>
+entity None provides KeyType, Truthy {
+    override static tryParse(str: String): Result<Any> # none_tryparse
+}
+
+//<summary>Primitive boolean value.</summary>
+entity Bool provides KeyType, Some, Truthy {
+    override static tryParse(str: String): Result<Any> # bool_tryparse
+}
+
+//<summary>Primitive integer value.</summary>
+entity Int provides KeyType, POD, Some {
+    override static tryParse(str: String): Result<Any> # int_tryparse
+
+    static max(v1: Int, v2: Int): Int {
+        return v1 > v2 ? v1 : v2;
+    }
+
+    static min(v1: Int, v2: Int): Int {
+        return v1 < v2 ? v1 : v2;
+    }
+}
+
+//<summary>Primitive string value.</summary>
+entity String provides KeyType, POD, Some {
+    override static tryParse(str: String): Result<Any> # string_tryparse
+}
+
+//<summary>Primitive stringof value.</summary>
+entity StringOf<T where Parsable> provides KeyType, Some {
+    method rawString(): String # stringof_rawstring
+
+    //
+    //TODO: this is where we want to use the when super/sub action
+    //
+    method convert<U where Parsable>(): StringOf<U> # stringof_convert
+    method tryConvert<U where Parsable>(): StringOf<U>? # stringof_tryconvert
+}
+
+//<summary>An efficient buffer encoding for POD data.</summary>
+entity PODBuffer<T where POD> provides Some {
+    //
+    //TODO: this is where we want to use the when super/sub action
+    //
+    method convert<U where POD>(): PODBuffer<U> # podbuffer_convert
+    method tryConvert<U where POD>(): PODBuffer<U>? # podbuffer_tryconvert
+}
+
+//<summary>Primitive GUID value.</summary>
+entity GUID provides KeyType, POD, Some {
+    override static tryParse(str: String): Result<Any> # guid_tryparse
+}
+
+//<summary>All actual enums implicitly provide this.</summary>
+concept Enum provides KeyType, Some {
+}
+
+//<summary>All actual custom keys implicitly provide this.</summary>
+concept IdKey provides KeyType, Some {
+}
+
+//<summary>Primitive regex value.</summary>
+entity Regex provides Some {
+    method match(str: String, start?: Int, end?: Int): { start: Int, end: Int }? # regex_match
+
+    //
+    //TODO: this is pretty boring right now
+    //
+}
+
+//<summary>All actual tuples implicitly provide this concept.</summary>
+concept Tuple provides Some {
+}
+
+//<summary>All actual POD tuples implicitly provide this concept.</summary>
+concept PODTuple provides POD, Tuple {
+    override static tryParse(str: String): Result<Any> # podtuple_tryparse
+}
+
+//<summary>All actual records implicitly provide this concept.</summary>
+concept Record provides Some {
+}
+
+//<summary>All actual POD records implicitly provide this concept.</summary>
+concept PODRecord provides POD, Record {
+    override static tryParse(str: String): Result<Any> # podrecord_tryparse
+}
+
+//<summary>All actual entities/concepts implicitly provide this concept.</summary>
+concept Object provides Some {
+}
+
+//<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
+entity Result<T> provides Some {
+    hidden field _success: Bool;
+    hidden field _result: T?;
+
+    factory static error(): { _success: Bool, _result: T? } {
+        return { _success=false, _result=none };
+    }
+
+    factory static success(result: T): { _success: Bool, _result: T? } {
+        return { _success=true, _result=result };
+    }
+
+    method isError(): Bool {
+        return !this._success;
+    }
+
+    method isSuccess(): Bool {
+        return this._success;
+    }
+
+    method getResult(): T {
+        check this.success;
+        return this.result->as<T>();
+    }
+
+    //
+    //TODO: this is where we want to use the when super/sub action
+    //
+    method convert<U>(): Result<U> # result_convert
+    method tryConvert<U>(): Result<U>? # result_tryconvert
+}
+
+//<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
+concept Keyed<T where KeyType> provides Indexable, Some {
+    field key_value: T;
+}
+
+//<summary>A lightweight tagging class for values.</summary>
+entity Tagged<T where KeyType, U> provides Keyed<T>, Object {
+    field tagged_value: U;
+}

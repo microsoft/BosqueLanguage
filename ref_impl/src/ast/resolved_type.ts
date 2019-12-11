@@ -82,42 +82,16 @@ class ResolvedTupleAtomTypeEntry {
 
 class ResolvedTupleAtomType extends ResolvedAtomType {
     readonly types: ResolvedTupleAtomTypeEntry[];
-    readonly isOpen: boolean;
 
-    constructor(rstr: string, types: ResolvedTupleAtomTypeEntry[], isOpen: boolean) {
+    constructor(rstr: string, types: ResolvedTupleAtomTypeEntry[]) {
         super(rstr);
         this.types = types;
-        this.isOpen = isOpen;
     }
 
-    static create(isOpen: boolean, entries: ResolvedTupleAtomTypeEntry[]): ResolvedTupleAtomType {
+    static create(entries: ResolvedTupleAtomTypeEntry[]): ResolvedTupleAtomType {
         let simplifiedEntries = [...entries];
-
-        //if Open then drop all tailing [, ?: Any ] entries since they are already covered more compactly with the open specifier
-        if (isOpen) {
-            let pos: number = simplifiedEntries.length - 1;
-            while (pos >= 0 && simplifiedEntries[pos].isOptional && simplifiedEntries[pos].type.isAnyType()) {
-                --pos;
-            }
-            pos++;
-
-            simplifiedEntries = simplifiedEntries.slice(0, pos);
-        }
-
         let cvalue = simplifiedEntries.map((entry) => (entry.isOptional ? "?:" : "") + entry.type.idStr).join(", ");
-        if (isOpen) {
-            cvalue += (simplifiedEntries.length !== 0 ? ", " : "") + "...";
-        }
-
-        return new ResolvedTupleAtomType("[" + cvalue + "]", simplifiedEntries, isOpen);
-    }
-
-    static createGenericOpen(): ResolvedTupleAtomType {
-        return new ResolvedTupleAtomType("[...]", [], true);
-    }
-
-    isAllOpenType(): boolean {
-        return this.isOpen && this.types.length === 0;
+        return new ResolvedTupleAtomType("[" + cvalue + "]", simplifiedEntries);
     }
 }
 
@@ -135,38 +109,18 @@ class ResolvedRecordAtomTypeEntry {
 
 class ResolvedRecordAtomType extends ResolvedAtomType {
     readonly entries: ResolvedRecordAtomTypeEntry[];
-    readonly isOpen: boolean;
 
-    constructor(rstr: string, entries: ResolvedRecordAtomTypeEntry[], isOpen: boolean) {
+    constructor(rstr: string, entries: ResolvedRecordAtomTypeEntry[]) {
         super(rstr);
         this.entries = entries;
-        this.isOpen = isOpen;
     }
 
-    static create(isOpen: boolean, entries: ResolvedRecordAtomTypeEntry[]): ResolvedRecordAtomType {
-        let simplifiedEntries: ResolvedRecordAtomTypeEntry[] = [];
-        if (!isOpen) {
-            simplifiedEntries = entries;
-        }
-        else {
-            simplifiedEntries = entries.filter((entry) => !entry.isOptional || !entry.type.isAnyType());
-        }
+    static create(entries: ResolvedRecordAtomTypeEntry[]): ResolvedRecordAtomType {
+        let simplifiedEntries: ResolvedRecordAtomTypeEntry[] = [...entries];
         simplifiedEntries.sort((a, b) => a.name.localeCompare(b.name));
-
         let cvalue = simplifiedEntries.map((entry) => entry.name + (entry.isOptional ? "?:" : ":") + entry.type.idStr).join(", ");
-        if (isOpen) {
-            cvalue += (simplifiedEntries.length !== 0 ? ", " : "") + "...";
-        }
 
-        return new ResolvedRecordAtomType("{" + cvalue + "}", simplifiedEntries, isOpen);
-    }
-
-    static createGenericOpen(): ResolvedRecordAtomType {
-        return new ResolvedRecordAtomType("{...}", [], true);
-    }
-
-    isAllOpenType(): boolean {
-        return this.isOpen && this.entries.length === 0;
+        return new ResolvedRecordAtomType("{" + cvalue + "}", simplifiedEntries);
     }
 }
 

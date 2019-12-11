@@ -1,0 +1,246 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the fluent core language
+namespace NSCore;
+
+//<summary>A List entity.</summary>
+//
+//TODO: this is where we want to use POD when T POD
+//
+entity List<T> provides Object {
+    hidden static _size(l: List<T>): Int # list_size
+    hidden static _unsafe_at(l: List<T>, i: Int): T # list_unsafe_at
+    hidden static _unsafe_add(l: List<T>, v: T): List<T> # list_unsafe_add
+    hidden static _unsafe_set(l: List<T>, i: Int, v: T): List<T> # list_unsafe_set
+    hidden static _destructive_add(l: List<T>, v: T): List<T> # list_destructive_add
+
+    hidden recursive static _all(l: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): Bool {
+        if(idx == List<T>::_size(l)) {
+            return true;
+        }
+
+        var val = List<T>::_unsafe_at(l, idx);
+        if(!p[recursive?](val)) {
+            return false;
+        }
+        else {
+            return List<T>::_all[recursive](l, idx + 1, p);
+        }
+    }
+
+    hidden recursive static _filter(l: List<T>, idx: Int, lp: List<T>, p: recursive? fn(_: T) -> Bool): List<T> {
+        if(idx == List<T>::_size(l)) {
+            return lp;
+        }
+
+        var val = List<T>::_unsafe_at(l, idx);
+        if(p[recursive?](val)) {
+            return List<T>::_filter[recursive](l, idx + 1, List<T>::_destructive_add(lp, val), p);
+        }
+        else {
+            return List<T>::_filter[recursive](l, idx + 1, lp, p);
+        }
+    }
+
+    hidden recursive static _map<U>(l: List<T>, idx: Int, lp: List<U>, f: recursive? fn(_: T) -> U): List<U> {
+        if(idx == List<T>::_size(l)) {
+            return lp;
+        }
+
+        var val = f[recursive?](List<T>::_unsafe_at(l, idx));
+        return List<T>::_map<U>[recursive](l, idx + 1, List<U>::_destructive_add(lp, val), f);
+    }
+
+    method size(): Int {
+        return List<T>::_size(this);
+    }
+    
+    method empty(): Bool {
+        return List<T>::_size(this) == 0;
+    }
+
+    method at(idx: Int): T {
+        check 0 <= idx && idx < List<T>::_size(this);
+
+        return List<T>::_unsafe_at(this, idx);
+    }
+
+    method push(v: T): List<T> {
+        return List<T>::_unsafe_add(this, v);
+    }
+
+    method set(idx: Int, v: T): List<T> {
+        check 0 <= idx && idx < List<T>::_size(this);
+
+        return List<T>::_unsafe_set(this, idx, v);
+    }
+
+    method all(p: recursive? fn(_: T) -> Bool): Bool {
+        return List<T>::_all[recursive](this, 0, p);
+    }
+
+    method filter(p: recursive? fn(_: T) -> Bool): List<T> {
+        return List<T>::_filter[recursive](this, 0, List<T>{}, p);
+    }
+
+    method map<U>(f: recursive? fn(_: T) -> U): List<U> {
+        return List<T>::_map<U>[recursive](this, 0, List<U>{}, f);
+    }
+}
+
+//TODO: this is where we want to use POD when T POD
+entity KeyList provides Object {
+    field key: KeyType;
+    field tail: KeyList?;
+
+    method removeKey(k: KeyType): KeyList? {
+        if (this.tail == none || k == this.key) {
+            return this.tail;
+        }
+        else {
+            return KeyList{key=this.key, tail=this.tail->as<KeyList>()->removeKey(k)};
+        }
+    }
+}
+
+//<summary>A Set entity.</summary>
+//
+//TODO: this is where we want to use POD when T POD
+//TODO: want to add type gen macro T % KeyType that expands to the type of getKey(v) -- also should update the sig of Indexable::getKey
+//
+entity Set<T where Indexable> provides Object {
+    hidden static _size(s: Set<T>): Int # set_size
+    hidden static _has_key(s: Set<T>, key: KeyType): Bool # set_has_key
+    hidden static _at_val(s: Set<T>, key: KeyType): T # set_at_val
+
+    hidden static _get_keylist(s: Set<T>): KeyList? # set_get_keylist
+    hidden static _clear_val(s: Set<T>, key: KeyType, newkl: KeyList?): Set<T> # set_clear_val
+    
+    hidden static _unsafe_update(s: Set<T>, k: KeyType, v: T): Set<T> # set_unsafe_update
+    hidden static _destructive_update(s: Set<T>, k: KeyType, v: T): Set<T> # set_destuctive_update
+    hidden static _unsafe_add(s: Set<T>, k: KeyType, v: T, newkl: KeyList): Set<T> # set_unsafe_add
+    hidden static _destructive_add(s: Set<T>, k: KeyType, v: T, newkl: KeyList): Set<T> # set_destuctive_add
+
+    hidden static _cons_insert(s: Set<T>, v: T): Set<T> {
+        var key = Indexable::getKey(v);
+        if(Set<T>::_has_key(s, key)) {
+            return Set<T>::_destructive_update(s, key, v);
+        }
+        else {
+            var kle = Set<T>::_get_keylist(s);
+            return Set<T>::_destructive_add(s, key, v, KeyList{key=key, tail=kle});
+        }
+    }
+
+    method size(): Int {
+        return Set<T>::_size(this);
+    }
+    
+    method empty(): Bool {
+        return Set<T>::_size(this) == 0;
+    }
+    
+    method has(v: T): Bool {
+        return Set<T>::_has_key(this, Indexable::getKey(v));
+    }
+
+    method insert(v: T): Set<T> {
+        var key = Indexable::getKey(v);
+        if(Set<T>::_has_key(this, key)) {
+            return Set<T>::_unsafe_update(this, key, v);
+        }
+        else {
+            var kle = Set<T>::_get_keylist(this);
+            return Set<T>::_unsafe_add(this, key, v, KeyList{key=key, tail=kle});
+        }
+    }
+
+    method remove(v: T): Set<T> {
+        var key = Indexable::getKey(v);
+        if(!Set<T>::_has_key(this, key)) {
+            return this;
+        }
+        else {
+            var kle = Set<T>::_get_keylist(this);
+            return Set<T>::_clear_val(this, key, kle != none ? kle->removeKey(key) : none);
+        }
+    }
+}
+
+//<summary>A Map entity.</summary>
+//
+//TODO: this is where we want to use POD when T POD
+//
+entity Map<K where Indexable, V> provides Object {
+    hidden static _size(m: Map<K, V>): Int # map_size
+    hidden static _has_key(m: Map<K, V>, key: KeyType): Bool # map_has_key
+    hidden static _at_val(m: Map<K, V>, key: KeyType): [K, V] # map_at_val
+
+    hidden static _get_keylist(m: Map<K, V>): KeyList? # map_get_keylist
+    hidden static _clear_val(m: Map<K, V>, key: KeyType, newkl: KeyList?): Map<K, V> # map_clear_val
+    
+    hidden static _unsafe_update(m: Map<K, V>, k: KeyType, mp: [K, V]): Map<K, V> # map_unsafe_update
+    hidden static _destructive_update(m: Map<K, V>, k: KeyType, mp: [K, V]): Map<K, V> # map_destuctive_update
+    hidden static _unsafe_add(m: Map<K, V>, k: KeyType, mp: [K, V], newkl: KeyList): Map<K, V> # map_unsafe_add
+    hidden static _destructive_add(m: Map<K, V>, k: KeyType, mp: [K, V], newkl: KeyList): Map<K, V> # map_destuctive_add
+
+    hidden static _cons_insert(m: Map<K, V>, mp: [K, V]): Map<K, V> {
+        var key = Indexable::getKey(mp.0);
+        if(Map<K, V>::_has_key(m, key)) {
+            return Map<K, V>::_destructive_update(m, key, mp);
+        }
+        else {
+            var kle = Map<K, V>::_get_keylist(m);
+            return Map<K, V>::_destructive_add(m, key, mp, KeyList{key=key, tail=kle});
+        }
+    }
+
+    method size(): Int {
+        return Map<K, V>::_size(this);
+    }
+    
+    method empty(): Bool {
+        return Map<K, V>::_size(this) == 0;
+    }
+    
+    method has(key: K): Bool {
+        return Map<K, V>::_has_key(this, Indexable::getKey(key));
+    }
+
+    method get(key: K): V {
+        var k = Indexable::getKey(key);
+        check Map<K, V>::_has_key(this, k);
+
+        return Map<K,V>::_at_val(this, k).1;
+    }
+
+    method tryGet(key: K): V? {
+        var k = Indexable::getKey(key);
+        return Map<K, V>::_has_key(this, k) ? Map<K,V>::_at_val(this, k).1 : none;
+    }
+
+    method insert(key: K, val: V): Map<K, V> {
+        var k = Indexable::getKey(key);
+        if(Map<K, V>::_has_key(this, k)) {
+            return  Map<K, V>::_unsafe_update(this, k, [key, val]);
+        }
+        else {
+            var kle = Map<K, V>::_get_keylist(this);
+            return Map<K, V>::_unsafe_add(this, k, [key, val], KeyList{key=k, tail=kle});
+        }
+    }
+
+    method remove(key: K): Map<K, V> {
+        var k = Indexable::getKey(key);
+        if(!Map<K, V>::_has_key(this, k)) {
+            return this;
+        }
+        else {
+            var kle = Map<K, V>::_get_keylist(this);
+            return Map<K, V>::_clear_val(this, k, kle != none ? kle->removeKey(k) : none);
+        }
+    }
+}

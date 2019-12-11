@@ -3,6 +3,9 @@ pool:
   vmImage: 'Ubuntu 16.04'
 
 steps:
+- checkout: self
+  lfs: true
+
 - script: npm install
   displayName: 'npm install'
   workingDirectory: 'ref_impl'

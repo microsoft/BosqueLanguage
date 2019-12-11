@@ -775,23 +775,19 @@ class VariableAssignmentStructuredAssignment extends StructuredAssignment {
 
 class TupleStructuredAssignment extends StructuredAssignment {
     readonly assigns: StructuredAssignment[];
-    readonly isOpen: boolean;
 
-    constructor(assigns: StructuredAssignment[], isOpen: boolean) {
+    constructor(assigns: StructuredAssignment[]) {
         super();
         this.assigns = assigns;
-        this.isOpen = isOpen;
     }
 }
 
 class RecordStructuredAssignment extends StructuredAssignment {
     readonly assigns: [string, StructuredAssignment][];
-    readonly isOpen: boolean;
 
-    constructor(assigns: [string, StructuredAssignment][], isOpen: boolean) {
+    constructor(assigns: [string, StructuredAssignment][]) {
         super();
         this.assigns = assigns;
-        this.isOpen = isOpen;
     }
 }
 

@@ -1,0 +1,38 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace NSTest;
+
+function maybeTuple(b: Bool): [Int]? {
+    return b ? [ 3 ] : none;
+}
+
+entrypoint function emptyTuple(): [] {
+    return [];
+}
+
+entrypoint function oneTuple(): [Int] {
+    return [ 1 ];
+}
+
+entrypoint function fourTuple(): [Int, Int, None, Bool] {
+    return [ 1, 2, none, true ];
+}
+
+entrypoint function nestedTuples(): [Int, [None, []]] {
+    return [ 1, [ none, [] ] ];
+}
+
+entrypoint function getIndex(): Int {
+    return [1].0;
+}
+
+entrypoint function getIndexOpt(): Int? {
+    return [].1;
+}
+
+entrypoint function getIndexBailout(b: Bool): Int? {
+    return maybeTuple(b)?.0;
+}
