@@ -347,7 +347,16 @@ public:
         return v;
     }
 
-    inline static Value checkedIncrement(Value v)
+    inline static void checkedIncrementNop(Value v)
+    {
+        if(BSQ_IS_VALUE_PTR(v) & BSQ_IS_VALUE_NONNONE(v))
+        {
+            BSQRef::increment(BSQ_GET_VALUE_PTR(v, BSQRef));
+        }
+    }
+
+    template <typename T>
+    inline static T checkedIncrementOf(T v)
     {
         if(BSQ_IS_VALUE_PTR(v) & BSQ_IS_VALUE_NONNONE(v))
         {
@@ -576,7 +585,7 @@ public:
     {
         for(uint16_t i = 0; i < this->size; ++i)
         {
-            BSQRef::checkedIncrement(this->entries[i]);
+            BSQRef::checkedIncrementNop(this->entries[i]);
         }
         return *this;
     }
@@ -611,7 +620,7 @@ public:
     {
         for(uint16_t i = 0; i < k; ++i)
         {
-            BSQRef::checkedIncrement(this->entries[i]);
+            BSQRef::checkedIncrementNop(this->entries[i]);
         }
         return *this;
     }
@@ -736,7 +745,7 @@ public:
     {
         for(uint16_t i = 0; i < this->size; ++i)
         {
-            BSQRef::checkedIncrement(this->entries[i].second);
+            BSQRef::checkedIncrementNop(this->entries[i].second);
         }
         return *this;
     }
@@ -780,7 +789,7 @@ public:
     {
         for(uint16_t i = 0; i < k; ++i)
         {
-            BSQRef::checkedIncrement(this->entries[i]);
+            BSQRef::checkedIncrementNop(this->entries[i]);
         }
         return *this;
     }
@@ -807,7 +816,7 @@ namespace StructuralCoercionOps
         std::vector<Value> rvals(src.size, nullptr);
         for(uint16_t i = 0; i < src.size; ++i)
         {
-            rvals[i] = BSQRef::checkedIncrement(src.entries[i]);
+            rvals[i] = BSQRef::checkedIncrementOf<Value>(src.entries[i]);
         }
         return new BSQTuple(move(rvals));
     }
@@ -876,7 +885,7 @@ namespace StructuralCoercionOps
         std::vector<Value> rvals(k, nullptr);
         for(uint16_t i = 0; i < k; ++i)
         {
-            rvals[i] = BSQRef::checkedIncrement(src.entries[i]);
+            rvals[i] = BSQRef::checkedIncrementOf<Value>(src.entries[i]);
         }
         return new BSQTuple(move(rvals));
     }
@@ -949,7 +958,7 @@ namespace StructuralCoercionOps
         std::vector<std::pair<MIRPropertyEnum, Value>> rvals(src.size, std::make_pair(MIRPropertyEnum::Invalid, nullptr));
         for(uint16_t i = 0; i < src.size; ++i)
         {
-            rvals[i] = std::make_pair(src.entries[i].first, BSQRef::checkedIncrement(src.entries[i].second));
+            rvals[i] = std::make_pair(src.entries[i].first, BSQRef::checkedIncrementOf<Value>(src.entries[i].second));
         }
         return new BSQRecord(move(rvals));
     }
@@ -1018,7 +1027,7 @@ namespace StructuralCoercionOps
         std::vector<std::pair<MIRPropertyEnum, Value>> rvals(k, std::make_pair(MIRPropertyEnum::Invalid, nullptr));
         for(uint16_t i = 0; i < k; ++i)
         {
-            rvals[i] = std::make_pair(properties[i], BSQRef::checkedIncrement(src.entries[i]));
+            rvals[i] = std::make_pair(properties[i], BSQRef::checkedIncrementOf<Value>(src.entries[i]));
         }
         return new BSQRecord(move(rvals));
     }
@@ -1134,9 +1143,9 @@ public:
         std::vector<Value> nv(this->entries.size(), nullptr);
         for(size_t i = 0; i < this->entries.size(); ++i)
         {
-            nv[i] = BSQRef::checkedIncrement(this->entries[i]);
+            nv[i] = BSQRef::checkedIncrementOf<Value>(this->entries[i]);
         }
-        nv.push_back(BSQRef::checkedIncrement(v));
+        nv.push_back(BSQRef::checkedIncrementOf<Value>(v));
 
         return new BSQList(this->ntype, move(nv));
     }
@@ -1148,11 +1157,11 @@ public:
         {
             if(i == idx)
             {
-                nv[i] = BSQRef::checkedIncrement(v);
+                nv[i] = BSQRef::checkedIncrementOf<Value>(v);
             }
             else
             {
-                nv[i] = BSQRef::checkedIncrement(this->entries[i]);
+                nv[i] = BSQRef::checkedIncrementOf<Value>(this->entries[i]);
             }
         }
 
@@ -1161,7 +1170,7 @@ public:
 
     BSQList* destructiveAdd(Value v)
     {
-        this->entries.push_back(BSQRef::checkedIncrement(v));
+        this->entries.push_back(BSQRef::checkedIncrementOf<Value>(v));
         return this;
     }
 
@@ -1355,12 +1364,12 @@ public:
         std::unordered_map<Value, Value, BSQIndexableHash, BSQIndexableEqual> entries;
         for(auto iter = this->entries.begin(); iter != this->entries.end(); ++iter)
         {
-            BSQRef::checkedIncrement(iter->first);
-            BSQRef::checkedIncrement(iter->second);
+            BSQRef::checkedIncrementNop(iter->first);
+            BSQRef::checkedIncrementNop(iter->second);
             entries.insert(*iter);
         }
-        BSQRef::checkedIncrement(key);
-        BSQRef::checkedIncrement(val);
+        BSQRef::checkedIncrementNop(key);
+        BSQRef::checkedIncrementNop(val);
         entries.insert(std::make_pair(key, val));
 
         BSQRef::checkedIncrementNoneable(nkeys);
@@ -1370,8 +1379,8 @@ public:
 
     BSQSet* destructiveAdd(Value key, Value val, BSQKeyList* nkeys)
     {
-        BSQRef::checkedIncrement(key);
-        BSQRef::checkedIncrement(val);
+        BSQRef::checkedIncrementNop(key);
+        BSQRef::checkedIncrementNop(val);
         entries.insert(std::make_pair(key, val));
 
         BSQRef::checkedDecrementNoneable(this->keys);
@@ -1389,14 +1398,14 @@ public:
         {
             if(eq(key, iter->first))
             {
-                BSQRef::checkedIncrement(key);
-                BSQRef::checkedIncrement(val);
+                BSQRef::checkedIncrementNop(key);
+                BSQRef::checkedIncrementNop(val);
                 entries.insert(std::make_pair(key, val));
             }
             else
             {
-                BSQRef::checkedIncrement(iter->first);
-                BSQRef::checkedIncrement(iter->second);
+                BSQRef::checkedIncrementNop(iter->first);
+                BSQRef::checkedIncrementNop(iter->second);
                 entries.insert(*iter);
             }
         }
@@ -1411,8 +1420,8 @@ public:
         auto oldkey = iter->first;
         auto oldval = iter->second;
 
-        BSQRef::checkedIncrement(key);
-        BSQRef::checkedIncrement(val);
+        BSQRef::checkedIncrementNop(key);
+        BSQRef::checkedIncrementNop(val);
 
         entries.erase(iter);
         entries.emplace(std::make_pair(key, val));
@@ -1431,8 +1440,8 @@ public:
         {
             if(!eq(key, iter->first)) 
             {
-                BSQRef::checkedIncrement(iter->first);
-                BSQRef::checkedIncrement(iter->second);
+                BSQRef::checkedIncrementNop(iter->first);
+                BSQRef::checkedIncrementNop(iter->second);
                 entries.insert(*iter);
             }
         }
@@ -1471,12 +1480,12 @@ public:
         std::unordered_map<Value, Value, BSQIndexableHash, BSQIndexableEqual> entries;
         for(auto iter = this->entries.begin(); iter != this->entries.end(); ++iter)
         {
-            BSQRef::checkedIncrement(iter->first);
-            BSQRef::checkedIncrement(iter->second);
+            BSQRef::checkedIncrementNop(iter->first);
+            BSQRef::checkedIncrementNop(iter->second);
             entries.insert(*iter);
         }
-        BSQRef::checkedIncrement(key);
-        BSQRef::checkedIncrement(val);
+        BSQRef::checkedIncrementNop(key);
+        BSQRef::checkedIncrementNop(val);
         entries.insert(std::make_pair(key, val));
 
         BSQRef::checkedIncrementNoneable(nkeys);
@@ -1486,8 +1495,8 @@ public:
 
     BSQMap* destructiveAdd(Value key, Value val, BSQKeyList* nkeys)
     {
-        BSQRef::checkedIncrement(key);
-        BSQRef::checkedIncrement(val);
+        BSQRef::checkedIncrementNop(key);
+        BSQRef::checkedIncrementNop(val);
         entries.insert(std::make_pair(key, val));
 
         BSQRef::checkedDecrementNoneable(this->keys);
@@ -1505,14 +1514,14 @@ public:
         {
             if(eq(key, iter->first))
             {
-                BSQRef::checkedIncrement(key);
-                BSQRef::checkedIncrement(val);
+                BSQRef::checkedIncrementNop(key);
+                BSQRef::checkedIncrementNop(val);
                 entries.insert(std::make_pair(key, val));
             }
             else
             {
-                BSQRef::checkedIncrement(iter->first);
-                BSQRef::checkedIncrement(iter->second);
+                BSQRef::checkedIncrementNop(iter->first);
+                BSQRef::checkedIncrementNop(iter->second);
                 entries.insert(*iter);
             }
         }
@@ -1527,8 +1536,8 @@ public:
         auto oldkey = iter->first;
         auto oldval = iter->second;
 
-        BSQRef::checkedIncrement(key);
-        BSQRef::checkedIncrement(val);
+        BSQRef::checkedIncrementNop(key);
+        BSQRef::checkedIncrementNop(val);
 
         entries.erase(iter);
         entries.emplace(std::make_pair(key, val));
@@ -1547,8 +1556,8 @@ public:
         {
             if(!eq(key, iter->first)) 
             {
-                BSQRef::checkedIncrement(iter->first);
-                BSQRef::checkedIncrement(iter->second);
+                BSQRef::checkedIncrementNop(iter->first);
+                BSQRef::checkedIncrementNop(iter->second);
                 entries.insert(*iter);
             }
         }

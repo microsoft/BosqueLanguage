@@ -14,7 +14,7 @@ import { MIREmitter } from "../../compiler/mir_emitter";
 import { CPPEmitter } from "../../tooling/aot/cppdecls_emitter";
 import chalk from "chalk";
 
-const scratchroot = Path.normalize(Path.join(__dirname, "../scratch/"));
+const scratchroot = Path.normalize(Path.join(__dirname, "../../scratch/"));
 const binroot = Path.normalize(Path.join(__dirname, "../../"));
 
 function generateMASM(files: string[], corelibpath: string): MIRAssembly {

@@ -484,7 +484,7 @@ class CPPTypeEmitter {
             }
         }
         else {
-            return `BSQRef::checkedIncrement(${arg})`;
+            return `BSQRef::checkedIncrementOf<${this.typeToCPPType(argtype, "parameter")}>(${arg})`;
         }
     }
 

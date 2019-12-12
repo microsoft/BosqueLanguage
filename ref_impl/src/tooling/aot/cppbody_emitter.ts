@@ -1420,7 +1420,7 @@ class CPPBodyEmitter {
             });
 
             const decl = `bool ${this.invokenameToCPP(postkey)}${i}(${args.join(", ")})`;
-            const scopestrs = this.generateCPPVarDecls(pc, idecl.params);
+            const scopestrs = this.generateCPPVarDecls(pc, [...idecl.params, new MIRFunctionParameter("__result__", idecl.resultType)]);
 
             const call = `${this.invokenameToCPP(postkey)}${i}(${[...idecl.params.map((p) => this.varNameToCppName(p.name)), "__result__"].join(", ")})`;
 
@@ -1462,13 +1462,13 @@ class CPPBodyEmitter {
                 }
             });
 
-            const decl = `bool ${this.invokenameToCPP(invkey)}${i}(${this.typegen.typeToCPPType(this.typegen.getMIRType(idecl.tkey), "parameter")} ${this.typegen.mangleStringForCpp("this")})`;
-            const scopestrs = this.generateCPPVarDecls(idecl.invariants[0], [new MIRFunctionParameter(this.typegen.mangleStringForCpp("this"), idecl.tkey)]);
+            const decl = `bool ${this.invokenameToCPP(invkey)}${i}(${this.typegen.typeToCPPType(this.typegen.getMIRType(idecl.tkey), "parameter")} ${this.varNameToCppName("this")})`;
+            const scopestrs = this.generateCPPVarDecls(idecl.invariants[0], [new MIRFunctionParameter("this", idecl.tkey)]);
 
-            return [`${decl}\n{\n${scopestrs}\n\n${blockstrs.join("\n\n")}\n}\n`, `${this.invokenameToCPP(invkey)}${i}(${this.typegen.mangleStringForCpp("this")})`];
+            return [`${decl}\n{\n${scopestrs}\n\n${blockstrs.join("\n\n")}\n}\n`, `${this.invokenameToCPP(invkey)}${i}(${this.varNameToCppName("this")})`];
         });
 
-        const declroot = `void ${this.invokenameToCPP(invkey)}(${this.typegen.typeToCPPType(this.typegen.getMIRType(idecl.tkey), "parameter")} ${this.typegen.mangleStringForCpp("this")})`;
+        const declroot = `void ${this.invokenameToCPP(invkey)}(${this.typegen.typeToCPPType(this.typegen.getMIRType(idecl.tkey), "parameter")} ${this.varNameToCppName("this")})`;
         const declbody = `if(!(${decls.map((cc) => cc[1]).join(" && ")})) { BSQ_ABORT("Invariant Failure: ${idecl.ns}::${idecl.name}", "${filenameClean(this.currentFile)}", ${idecl.sourceLocation.line}); }`
         return `${decls.map((cc) => cc[0]).join("\n")}\n\n${declroot}\n{\n    ${declbody}\n}`;
     }
