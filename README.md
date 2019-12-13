@@ -113,6 +113,8 @@ The `ref_impl` directory contains the reference implementation parser, type chec
 npm install && npm test
 ```
 
+Note: the Z3 theorem prover is provided as a binary dependency in the repo via git LFS. To ensure these are present you will need to have [git LFS](https://git-lfs.github.com/) installed, run `git lfs install` to setup the needed hooks, and pull. 
+
 ### Executable Generation
 
 Bosque supports the generation of standalone command-line executables via the `ExeGen` tool. Details on this tool can be found in the [readme](./ref_impl/src/runtimes/exegen/README.md).
