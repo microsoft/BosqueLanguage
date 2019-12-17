@@ -96,15 +96,23 @@ entity List<T> provides Object {
 
 //TODO: this is where we want to use POD when T POD
 entity KeyList provides Object {
-    field key: KeyType;
-    field tail: KeyList?;
+    hidden static _cons(k: KeyType, kl: KeyList?): KeyList # keylist_cons
+    hidden static _get_key(kl: KeyList): KeyType # keylist_getkey
+    hidden static _get_tail(kl: KeyList): KeyList? # keylist_gettail
 
-    method removeKey(k: KeyType): KeyList? {
-        if (this.tail == none || k == this.key) {
-            return this.tail;
+    recursive static removeKey(kl: KeyList, k: KeyType): KeyList? {
+        var tkey = KeyList::_get_key(kl);
+        var ttail = KeyList::_get_tail(kl);
+
+        if (ttail == none) {
+            return none;
+        }
+        elif(k == tkey) {
+            return ttail;
         }
         else {
-            return KeyList{key=this.key, tail=this.tail->as<KeyList>()->removeKey(k)};
+            var newtail = KeyList::removeKey[recursive](ttail, k);
+            return KeyList::_cons(tkey, newtail);
         }
     }
 }
@@ -134,7 +142,7 @@ entity Set<T where Indexable> provides Object {
         }
         else {
             var kle = Set<T>::_get_keylist(s);
-            return Set<T>::_destructive_add(s, key, v, KeyList{key=key, tail=kle});
+            return Set<T>::_destructive_add(s, key, v, KeyList::_cons(key, kle));
         }
     }
 
@@ -157,7 +165,7 @@ entity Set<T where Indexable> provides Object {
         }
         else {
             var kle = Set<T>::_get_keylist(this);
-            return Set<T>::_unsafe_add(this, key, v, KeyList{key=key, tail=kle});
+            return Set<T>::_unsafe_add(this, key, v, KeyList::_cons(key, kle));
         }
     }
 
@@ -168,7 +176,7 @@ entity Set<T where Indexable> provides Object {
         }
         else {
             var kle = Set<T>::_get_keylist(this);
-            return Set<T>::_clear_val(this, key, kle != none ? kle->removeKey(key) : none);
+            return Set<T>::_clear_val(this, key, kle != none ? KeyList::removeKey[recursive](kle, key) : none);
         }
     }
 }
@@ -197,7 +205,7 @@ entity Map<K where Indexable, V> provides Object {
         }
         else {
             var kle = Map<K, V>::_get_keylist(m);
-            return Map<K, V>::_destructive_add(m, key, mp, KeyList{key=key, tail=kle});
+            return Map<K, V>::_destructive_add(m, key, mp, KeyList::_cons(key, kle));
         }
     }
 
@@ -232,7 +240,7 @@ entity Map<K where Indexable, V> provides Object {
         }
         else {
             var kle = Map<K, V>::_get_keylist(this);
-            return Map<K, V>::_unsafe_add(this, k, [key, val], KeyList{key=k, tail=kle});
+            return Map<K, V>::_unsafe_add(this, k, [key, val], KeyList::_cons(k, kle));
         }
     }
 
@@ -243,7 +251,7 @@ entity Map<K where Indexable, V> provides Object {
         }
         else {
             var kle = Map<K, V>::_get_keylist(this);
-            return Map<K, V>::_clear_val(this, k, kle != none ? kle->removeKey(k) : none);
+            return Map<K, V>::_clear_val(this, k, kle != none ? KeyList::removeKey[recursive](kle, key) : none);
         }
     }
 }

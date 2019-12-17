@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRType, MIREntityTypeDecl, MIRTupleType, MIRRecordType, MIREntityType, MIRConceptType } from "../../compiler/mir_assembly";
 
-import { MIRResolvedTypeKey, MIRNominalTypeKey } from "../../compiler/mir_ops";
+import { MIRResolvedTypeKey, MIRNominalTypeKey, MIRFieldKey } from "../../compiler/mir_ops";
 import { SMTExp, SMTValue, SMTLet, SMTCond } from "./smt_exp";
 
 import * as assert from "assert";
@@ -439,8 +439,8 @@ class SMTTypeEmitter {
                 let entarray = "bsqentity_array_empty";
                 for (let i = 0; i < fromtype.fields.length; ++i) {
                     const fd = fromtype.fields[i];
-                    const access = `(${this.generateEntityAccessor(fromtype.tkey, fd.name)} ${temp})`;
-                    entarray = `(store ${entarray} "${fd.name}" ${this.coerce(new SMTValue(access), this.getMIRType(fd.declaredType), this.anyType).emit()})`;
+                    const access = `(${this.generateEntityAccessor(fromtype.tkey, fd.fkey)} ${temp})`;
+                    entarray = `(store ${entarray} "${fd.fkey}" ${this.coerce(new SMTValue(access), this.getMIRType(fd.declaredType), this.anyType).emit()})`;
                 }
 
                 const nonnone = new SMTLet(temp, exp, new SMTValue(`(bsqterm_object "${fromtype.tkey}" ${entarray})`));
@@ -514,7 +514,7 @@ class SMTTypeEmitter {
                     let temp = `@tmpconv_${this.tempconvctr++}`;
                     let args: string[] = [];
                     for (let i = 0; i < intotype.fields.length; ++i) {
-                        args.push(this.coerce(new SMTValue(`(select ${temp} "${intotype.fields[i].name}")`), this.anyType, this.getMIRType(intotype.fields[i].declaredType)).emit());
+                        args.push(this.coerce(new SMTValue(`(select ${temp} "${intotype.fields[i].fkey}")`), this.anyType, this.getMIRType(intotype.fields[i].declaredType)).emit());
                     }
                     const nonnone = new SMTLet(temp, new SMTValue(`(bsqterm_object_entries ${exp.emit()})`), new SMTValue(`(${this.generateEntityConstructor(intotype.tkey)} ${args.join(" ")})`));
 
@@ -556,7 +556,7 @@ class SMTTypeEmitter {
 
         const ename = this.mangleStringForSMT(entity.tkey);
         const fargs = entity.fields.map((fd) => {
-            return `(${ename}@${fd.name} ${this.typeToSMTCategory(this.getMIRType(fd.declaredType))})`;
+           return `(${ename}@${this.mangleStringForSMT(fd.fkey)} ${this.typeToSMTCategory(this.getMIRType(fd.declaredType))})`;
         });
 
         return {
@@ -601,13 +601,8 @@ class SMTTypeEmitter {
         }
     }
 
-    generateEntityAccessor(ekey: MIRNominalTypeKey, f: string): string {
-        if(ekey === "NSCore::KeyList") {
-            return "bsqkeylist@" + f;
-        }
-        else {
-            return `${this.mangleStringForSMT(ekey)}@${f}`;
-        }
+    generateEntityAccessor(ekey: MIRNominalTypeKey, f: MIRFieldKey): string {
+        return `${this.mangleStringForSMT(ekey)}@${this.mangleStringForSMT(f)}`;
     }
 }
 

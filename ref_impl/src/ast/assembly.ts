@@ -1040,10 +1040,7 @@ class Assembly {
     }
 
     restrictNone(from: ResolvedType): ResolvedType {
-        const hasany = from.options.some((atom) => ResolvedType.createSingle(atom).isAnyType());
-        const hasnone = from.options.some((atom) => ResolvedType.createSingle(atom).isNoneType());
-
-        return (hasany || hasnone) ? this.getSpecialNoneType() : ResolvedType.createEmpty();
+        return (this.subtypeOf(this.getSpecialNoneType(), from)) ? this.getSpecialNoneType() : ResolvedType.createEmpty();
     }
 
     restrictSome(from: ResolvedType): ResolvedType {

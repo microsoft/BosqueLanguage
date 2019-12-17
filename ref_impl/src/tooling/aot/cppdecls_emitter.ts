@@ -41,6 +41,8 @@ class CPPEmitter {
         let typedecls_fwd: string[] = [];
         let typedecls: string[] = [];
         let nominalenums: string[] = [];
+        let vfieldaccesses: string[] = [];
+        let vcalls: string[] = [];
         assembly.entityDecls.forEach((edecl) => {
             const cppdecl = typeemitter.generateCPPEntity(edecl);
             if (cppdecl !== undefined) {
@@ -51,6 +53,31 @@ class CPPEmitter {
             if(!typeemitter.isSpecialRepType(edecl)) {
                 nominalenums.push(typeemitter.mangleStringForCpp(edecl.tkey));
             }
+
+            edecl.fields.forEach((fd) => {
+                if (fd.enclosingDecl !== edecl.tkey) {
+                    const rftype = typeemitter.typeToCPPType(typeemitter.getMIRType(fd.declaredType) , "return");
+                    const isig = `virtual ${rftype} get$${typeemitter.mangleStringForCpp(fd.fkey)}() { printf("%s\\n", "Bad v-field resolve -- ${fd.fkey}"); exit(1); return ${typeemitter.typeToCPPDefaultValue(typeemitter.getMIRType(fd.declaredType))}; }`;
+
+                    if (!vfieldaccesses.includes(isig)) {
+                        vfieldaccesses.push(isig);
+                    }
+                }
+            });
+
+            [...edecl.vcallMap].map((callp) => {
+                const rcall = (typeemitter.assembly.invokeDecls.get(callp[1]) || typeemitter.assembly.primitiveInvokeDecls.get(callp[1])) as MIRInvokeDecl;
+                if (rcall.enclosingDecl !== edecl.tkey) {
+                    const rtype = typeemitter.typeToCPPType(typeemitter.getMIRType(rcall.resultType), "return");
+    
+                    const vargs = rcall.params.slice(1).map((fp) => `${typeemitter.typeToCPPType(typeemitter.getMIRType(fp.type), "parameter")} ${fp.name}`);
+                    const vcall = `virtual ${rtype} ${typeemitter.mangleStringForCpp(callp[0])}(${vargs.join(", ")}) { printf("%s\\n", "Bad v-call resolve ${callp[1]}"); exit(1); return ${typeemitter.typeToCPPDefaultValue(typeemitter.getMIRType(rcall.resultType))}; }`;
+
+                    if(!vcalls.includes(vcall)) {
+                        vcalls.push(vcall);
+                    }
+                }
+            });
         });
 
         const cginfo = constructCallGraphInfo(assembly.entryPoints, assembly);
@@ -240,8 +267,8 @@ class CPPEmitter {
             propertyenums: [...propertyenums].sort().join(",\n  "),
             propertynames: [...propertynames].sort().join(",\n  "),
             known_property_lists_declare: known_property_lists_declare.sort().join("\n"),
-            vfield_decls: "//NOT IMPLEMENTED YET -- NEED TO UPDATE MIR TO DO EXACT V-FIELD RESOLUTION",
-            vmethod_decls: "//NOT IMPLEMENTED YET -- NEED TO UPDATE MIR TO DO EXACT V-METHOD RESOLUTION",
+            vfield_decls: [...vfieldaccesses].sort().join("\n"),
+            vmethod_decls: [...vcalls].sort().join("\n"),
             maincall: maincall
         };
     }

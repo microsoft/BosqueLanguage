@@ -200,6 +200,95 @@
             }
         ]
     },
+
+    {
+        "src": "objs.bsq",
+        "tests": [
+            {
+                "kind": "compile"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "createObjSimple",
+                "expected": "true"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "createObjDefault",
+                "expected": "true"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "createObjExpando",
+                "expected": "true"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "createObjFactory",
+                "expected": "true"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "createObjFactoryTemplate",
+                "expected": "true"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "createObjTFactory",
+                "expected": "true"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "createObjNested",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "createObjSimple",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "createObjDefault",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "createObjExpando",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "createObjFactory",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "createObjFactoryTemplate",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "createObjTFactory",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "createObjNested",
+                "expected": "true"
+            },
+            {
+                "kind": "symtest",
+                "entrypoint": "puzzle1",
+                "error": true
+            },
+            {
+                "kind": "symtest",
+                "entrypoint": "puzzle2"
+            }
+        ]
+    },
+
     {
         "src": "valueops.bsq",
         "tests": [
