@@ -408,17 +408,16 @@ class SMTBodyEmitter {
 
     generateMIRAccessFromField(op: MIRAccessFromField, resultAccessType: MIRType): SMTExp {
         const argtype = this.getArgType(op.arg);
+        const fdecl = this.assembly.fieldDecls.get(op.field) as MIRFieldDecl;
 
         if (this.typegen.isUEntityType(argtype)) {
             const etype = SMTTypeEmitter.getUEntityType(argtype);
-            const entity = this.assembly.entityDecls.get(etype.ekey) as MIREntityTypeDecl;
-            const field = entity.fields.find((f) => f.name === op.field) as MIRFieldDecl;
-
             const access = new SMTValue(`(${this.typegen.generateEntityAccessor(etype.ekey, op.field)} ${this.argToSMT(op.arg, argtype).emit()})`);
-            return new SMTLet(this.varToSMTName(op.trgt), this.typegen.coerce(access, this.typegen.getMIRType(field.declaredType), resultAccessType));
+
+            return new SMTLet(this.varToSMTName(op.trgt), this.typegen.coerce(access, this.typegen.getMIRType(fdecl.declaredType), resultAccessType));
         }
         else {
-            const access = new SMTValue(`(select (bsqterm_object_entries ${this.argToSMT(op.arg, this.typegen.anyType)}) "${op.field}")`);
+            const access = new SMTValue(`(select (bsqterm_object_entries ${this.argToSMT(op.arg, this.typegen.anyType).emit()}) "${op.field}")`);
             return new SMTLet(this.varToSMTName(op.trgt), this.typegen.coerce(access, this.typegen.anyType, resultAccessType));
         }
     }
@@ -1479,6 +1478,18 @@ class SMTBodyEmitter {
             case "list_destructive_add": {
                 const storeval = this.typegen.coerce(new SMTValue(params[1]), this.typegen.getMIRType(idecl.params[1].type), this.typegen.anyType).emit();
                 bodyres = new SMTValue(`(cons@bsqlist (+ (bsqlist@size ${params[0]}) 1) (store (bsqlist@entries ${params[0]}) (bsqlist@size ${params[0]}) ${storeval}))`);
+                break;
+            }
+            case "keylist_cons": {
+                bodyres = new SMTValue(`(cons@bsqkeylist ${params[0]} ${params[1]})`);
+                break;
+            }
+            case "keylist_getkey": {
+                bodyres = new SMTValue(`(bsqkeylist@key ${params[0]})`);
+                break;
+            }
+            case "keylist_gettail": {
+                bodyres = new SMTValue(`(bsqkeylist@tail ${params[0]})`);
                 break;
             }
             case "set_size":
