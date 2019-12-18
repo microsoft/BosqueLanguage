@@ -68,3 +68,19 @@ entrypoint function lpushok(i: Int): Int {
     var lint = List<Int>{1, 3};
     return lint->push(i)->at(1);
 }
+
+entrypoint function lallyes(): Bool {
+    return List<Int>{1, 3}->all(fn(x) => x > 0);
+}
+
+entrypoint function lallno(): Bool {
+    return List<Int>{1, -1}->all(fn(x) => x > 0);
+}
+
+entrypoint function loftype(): Int {
+    return List<Int?>{1, none}->ofType<Int>()->at(0) + List<Int | String>{3, "ok"}->ofType<Int>()->at(0);
+}
+
+entrypoint function lsum(): Int {
+    return List<Int>{1, 3}->sum();
+}

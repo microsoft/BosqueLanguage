@@ -41,6 +41,26 @@
                 "expected": "6"
             },
             {
+                "kind": "aot",
+                "entrypoint": "lallyes",
+                "expected": "true"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "lallno",
+                "expected": "false"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "loftype",
+                "expected": "4"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "lsum",
+                "expected": "4"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "lsize",
                 "expected": "3"
@@ -74,6 +94,26 @@
                 "kind": "symexec",
                 "entrypoint": "lmap",
                 "expected": "6"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "lallyes",
+                "expected": "true"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "lallno",
+                "expected": "false"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "loftype",
+                "expected": "4"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "lsum",
+                "expected": "4"
             },
             {
                 "kind": "symtest",
@@ -252,6 +292,11 @@
                 "expected": null
             },
             {
+                "kind": "aot",
+                "entrypoint": "tox",
+                "expected": "true"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "empty",
                 "expected": "4"
@@ -300,6 +345,11 @@
                 "kind": "symexec",
                 "entrypoint": "removeCno",
                 "expected": "3"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "tox",
+                "expected": "true"
             },
             {
                 "kind": "symtest",
