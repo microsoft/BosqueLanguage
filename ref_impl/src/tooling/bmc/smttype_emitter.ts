@@ -416,22 +416,24 @@ class SMTTypeEmitter {
             if(this.isUCollectionType(from)) {
                 let nonnone: SMTExp | undefined = undefined;
                 if(this.isListType(from)) {
-                    nonnone = new SMTValue(`(bsqterm_list ${exp.emit()})`);
+                    nonnone = new SMTValue(`(bsqterm_list "${fromtype.tkey}" ${exp.emit()})`);
                 }
                 else {
-                    nonnone = new SMTValue(`(bsqterm_kvcontainer ${exp.emit()})`);
+                    nonnone = new SMTValue(`(bsqterm_kvcontainer "${fromtype.tkey}" ${exp.emit()})`);
                 }
 
-                if (!this.assembly.subtypeOf(this.noneType, into)) {
-                    return nonnone as SMTExp;
-                }
-                else if(this.isKeyType(into)) {
+                if(this.isKeyType(into)) {
                     //the only possible overlap is in the none type so just provide that
                     return new SMTValue(`bsqkey_none`);
                 }
                 else {
-                    const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp.emit()})`);
-                    return new SMTCond(isnonetest, new SMTValue("(bsqterm_key bsqkey_none)"), nonnone as SMTExp);
+                    if (!this.assembly.subtypeOf(this.noneType, from)) {
+                        return nonnone as SMTExp;
+                    }
+                    else {
+                        const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp.emit()})`);
+                        return new SMTCond(isnonetest, new SMTValue("(bsqterm_key bsqkey_none)"), nonnone as SMTExp);
+                    }
                 }
             }
             else {
@@ -444,16 +446,19 @@ class SMTTypeEmitter {
                 }
 
                 const nonnone = new SMTLet(temp, exp, new SMTValue(`(bsqterm_object "${fromtype.tkey}" ${entarray})`));
-                if (!this.assembly.subtypeOf(this.noneType, into)) {
-                    return nonnone;
-                }
-                else if(this.isKeyType(into)) {
+
+                if(this.isKeyType(into)) {
                     //the only possible overlap is in the none type so just provide that
                     return new SMTValue(`bsqkey_none`);
                 }
                 else {
-                    const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp.emit()})`);
-                    return new SMTCond(isnonetest, new SMTValue("(bsqterm_key bsqkey_none)"), nonnone);
+                    if (!this.assembly.subtypeOf(this.noneType, from)) {
+                        return nonnone;
+                    }
+                    else {
+                        const isnonetest = new SMTValue(`(is-${this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(from).ekey)} ${exp.emit()})`);
+                        return new SMTCond(isnonetest, new SMTValue("(bsqterm_key bsqkey_none)"), nonnone);
+                    }
                 }
             }
         }
@@ -506,7 +511,7 @@ class SMTTypeEmitter {
                         return nonnone;
                     }
                     else {
-                        const isnonetest = new SMTValue(`(= (bsqterm_key_value ${exp.emit()}) bsqkey_none)`);
+                        const isnonetest = new SMTValue(`(= (bsqterm_key bsqkey_none) ${exp.emit()})`);
                         return new SMTCond(isnonetest, new SMTValue(this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(into).ekey)), nonnone);
                     }
                 }
@@ -518,11 +523,11 @@ class SMTTypeEmitter {
                     }
                     const nonnone = new SMTLet(temp, new SMTValue(`(bsqterm_object_entries ${exp.emit()})`), new SMTValue(`(${this.generateEntityConstructor(intotype.tkey)} ${args.join(" ")})`));
 
-                    if (!this.assembly.subtypeOf(this.noneType, from)) {
+                    if (!this.assembly.subtypeOf(this.noneType, into)) {
                         return nonnone;
                     }
                     else {
-                        const isnonetest = new SMTValue(`(= (bsqterm_key_value ${exp.emit()}) bsqkey_none)`);
+                        const isnonetest = new SMTValue(`(= (bsqterm_key bsqkey_none) ${exp.emit()})`);
                         return new SMTCond(isnonetest, new SMTValue(this.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(into).ekey)), nonnone);
                     }
                 }

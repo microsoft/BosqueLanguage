@@ -1217,6 +1217,10 @@ struct BSQIndexableHash {
                 auto bi = dynamic_cast<BSQBoxedInt*>(ptr);
                 return bi->data.isInt() ? bi->data.getInt64() : bi->data.getBigInt()->hash();
             }
+            else if(dynamic_cast<BSQString*>(ptr) != nullptr)
+            {
+                return std::hash<std::u32string>{}(dynamic_cast<BSQString*>(ptr)->sdata);
+            }
             else if(dynamic_cast<BSQStringOf*>(ptr) != nullptr)
             {
                 return std::hash<std::u32string>{}(dynamic_cast<BSQStringOf*>(ptr)->sdata);
@@ -1294,6 +1298,10 @@ struct BSQIndexableEqual {
             if(dynamic_cast<BSQBoxedInt*>(ptr1) != nullptr && dynamic_cast<BSQBoxedInt*>(ptr2) != nullptr)
             {
                 return dynamic_cast<BSQBoxedInt*>(ptr1)->data == dynamic_cast<BSQBoxedInt*>(ptr2)->data;
+            }
+            else if(dynamic_cast<BSQString*>(ptr1) != nullptr && dynamic_cast<BSQString*>(ptr2) != nullptr)
+            {
+                return dynamic_cast<BSQString*>(ptr1)->sdata == dynamic_cast<BSQString*>(ptr2)->sdata;
             }
             else if(dynamic_cast<BSQStringOf*>(ptr1) != nullptr && dynamic_cast<BSQStringOf*>(ptr2) != nullptr)
             {

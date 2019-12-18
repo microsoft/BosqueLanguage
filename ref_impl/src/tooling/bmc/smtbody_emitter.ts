@@ -158,8 +158,11 @@ class SMTBodyEmitter {
         else if (this.assembly.subtypeOf(argtype, this.typegen.boolType)) {
             return this.argToSMT(arg, this.typegen.boolType);
         }
-        else {
+        else if (this.typegen.isKeyType(argtype)) {
             return new SMTValue(`(= ${this.argToSMT(arg, this.typegen.keyType).emit()} (bsqkey_bool true))`);
+        }
+        else {
+            return new SMTValue(`(= ${this.argToSMT(arg, this.typegen.anyType).emit()} (bsqterm_key (bsqkey_bool true)))`);
         }
     }
 
@@ -179,7 +182,7 @@ class SMTBodyEmitter {
             return new SMTValue(`(= ${this.argToSMT(arg, this.typegen.keyType).emit()} bsqkey_none)`);
         }
         else {
-            return new SMTValue(`(and (is-bsqterm_key ${this.argToSMT(arg, argtype).emit()}) (= ${this.argToSMT(arg, this.typegen.keyType).emit()} bsqkey_none))`);
+            return new SMTValue(`(= ${this.argToSMT(arg, this.typegen.anyType).emit()} (bsqterm_key bsqkey_none))`);
         }
     }
 
@@ -417,8 +420,16 @@ class SMTBodyEmitter {
             return new SMTLet(this.varToSMTName(op.trgt), this.typegen.coerce(access, this.typegen.getMIRType(fdecl.declaredType), resultAccessType));
         }
         else {
-            const access = new SMTValue(`(select (bsqterm_object_entries ${this.argToSMT(op.arg, this.typegen.anyType).emit()}) "${op.field}")`);
-            return new SMTLet(this.varToSMTName(op.trgt), this.typegen.coerce(access, this.typegen.anyType, resultAccessType));
+            if (this.typegen.getMIRType(fdecl.enclosingDecl).options[0] instanceof MIREntityType) {
+                const etype = SMTTypeEmitter.getUEntityType(this.typegen.getMIRType(fdecl.enclosingDecl));
+                const access = new SMTValue(`(${this.typegen.generateEntityAccessor(etype.ekey, op.field)} ${this.argToSMT(op.arg, this.typegen.getMIRType(fdecl.enclosingDecl)).emit()})`);
+                
+                return new SMTLet(this.varToSMTName(op.trgt), this.typegen.coerce(access, this.typegen.getMIRType(fdecl.declaredType), resultAccessType));
+            }
+            else {
+                const access = new SMTValue(`(select (bsqterm_object_entries ${this.argToSMT(op.arg, this.typegen.anyType).emit()}) "${op.field}")`);
+                return new SMTLet(this.varToSMTName(op.trgt), this.typegen.coerce(access, this.typegen.anyType, resultAccessType));
+            }
         }
     }
 
@@ -776,7 +787,7 @@ class SMTBodyEmitter {
             const ofdecl = this.typegen.assembly.entityDecls.get(oftype.ekey) as MIREntityTypeDecl;
 
             if(oftype.ekey === "NSCore::None") {
-                return `(and (is-bsqterm_key ${arg}) (= (bsqterm_key_value ${arg}) bsqkey_none))`;
+                return `(= (bsqterm_key bsqkey_none) ${arg})`;
             }
             else if(oftype.ekey === "NSCore::Bool") {
                 return `(and (is-bsqterm_key ${arg}) (is-bsqkey_bool (bsqterm_key_value ${arg})))`;
