@@ -74,7 +74,7 @@ entity List<T> provides Object {
             }
         }
     }
-
+    
     hidden recursive static _ofType<U>(l: List<T>, idx: Int, lp: List<U>): List<U> {
         if(idx == List<T>::_size(l)) {
             return lp;
@@ -351,6 +351,7 @@ entity Map<K where Indexable, V> provides Object {
         var k = Indexable::getKey(key);
         check !Map<K, V>::_has_key(this, k);
         
+        var kle = Map<K, V>::_get_keylist(this);
         return Map<K, V>::_unsafe_add(this, k, [key, val], KeyList::_cons(k, kle));
     }
 

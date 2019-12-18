@@ -362,8 +362,14 @@ class CPPBodyEmitter {
             return `${this.varToCppName(op.trgt)} = ${this.typegen.coerce(access, ftype, resultAccessType)};`;
         }
         else {
-            const access = `BSQ_GET_VALUE_PTR(${this.argToCpp(op.arg, argtype)}, BSQObject)->get$${this.typegen.mangleStringForCpp(op.field)}()`;
-            return `${this.varToCppName(op.trgt)} = ${this.typegen.coerce(access, ftype, resultAccessType)};`;
+            if (this.typegen.getMIRType(fdecl.enclosingDecl).options[0] instanceof MIREntityType) {
+                const access = `${this.argToCpp(op.arg, this.typegen.getMIRType(fdecl.enclosingDecl))}->${this.typegen.mangleStringForCpp(op.field)}`;
+                return `${this.varToCppName(op.trgt)} = ${this.typegen.coerce(access, ftype, resultAccessType)};`;
+            }
+            else {
+                const access = `BSQ_GET_VALUE_PTR(${this.argToCpp(op.arg, argtype)}, BSQObject)->get$${this.typegen.mangleStringForCpp(op.field)}()`;
+                return `${this.varToCppName(op.trgt)} = ${this.typegen.coerce(access, ftype, resultAccessType)};`;
+            }
         }
     }
 

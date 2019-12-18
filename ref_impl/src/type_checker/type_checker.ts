@@ -693,6 +693,7 @@ class TypeChecker {
         }
 
         if (this.m_emitEnabled) {
+            this.m_emitter.registerResolvedTypeReference(ResolvedType.createSingle(oftype));
             this.m_emitter.registerTypeInstantiation(oftype.object, oftype.binds);
             const tkey = MIRKeyGenerator.generateTypeKey(oftype.object, oftype.binds);
 
@@ -793,6 +794,7 @@ class TypeChecker {
         }
 
         if (this.m_emitEnabled) {
+            this.m_emitter.registerResolvedTypeReference(ResolvedType.createSingle(oftype));
             this.m_emitter.registerTypeInstantiation(oftype.object, oftype.binds);
             const tkey = MIRKeyGenerator.generateTypeKey(oftype.object, oftype.binds);
 
@@ -1074,6 +1076,7 @@ class TypeChecker {
         const aoftype = this.checkTypedStringCommon(exp.sinfo, env, exp.stype);
 
         if (this.m_emitEnabled) {
+            this.m_emitter.registerResolvedTypeReference(aoftype.stringtype);
             this.m_emitter.registerTypeInstantiation(...aoftype.oftype);
             const stype = this.m_emitter.registerResolvedTypeReference(aoftype.stringtype);
 
@@ -1098,6 +1101,7 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, sdecl === undefined, "Missing static function 'tryParse'");
 
         if (this.m_emitEnabled) {
+            this.m_emitter.registerResolvedTypeReference(aoftype.stringtype);
             this.m_emitter.registerTypeInstantiation(...aoftype.oftype);
             const stype = this.m_emitter.registerResolvedTypeReference(aoftype.stringtype);
 
@@ -1142,6 +1146,7 @@ class TypeChecker {
         const rtype = this.resolveAndEnsureTypeOnly(exp.sinfo, (cdecl.decl as StaticMemberDecl).declaredType, cdecl.binds);
 
         if (this.m_emitEnabled) {
+            this.m_emitter.registerResolvedTypeReference(baseType);
             this.m_emitter.registerTypeInstantiation(cdecl.contiainingType, cdecl.binds);
             const skey = this.m_emitter.registerPendingConstProcessing(cdecl.contiainingType, cdecl.decl as StaticMemberDecl, cdecl.binds);
             this.m_emitter.bodyEmitter.emitAccessConstant(exp.sinfo, skey, trgt);
@@ -1225,6 +1230,7 @@ class TypeChecker {
 
         const etreg = this.m_emitter.bodyEmitter.generateTmpRegister();
         if (this.m_emitEnabled) {
+            this.m_emitter.registerResolvedTypeReference(baseType);
             this.m_emitter.registerTypeInstantiation(oodecl, oobinds);
             const skey = this.m_emitter.registerStaticCall(oodecl, oobinds, fdecl as StaticFunctionDecl, exp.factoryName, binds as Map<string, ResolvedType>, rargs.pcodes, rargs.cinfo);
 
@@ -1362,6 +1368,7 @@ class TypeChecker {
                 this.m_emitter.bodyEmitter.emitBinCmp(exp.sinfo, mirargtypeinferlhs.trkey, lhs, mirargtypeinferrhs.trkey, "<", rhs, trgt);
             }
             else {
+                this.m_emitter.registerResolvedTypeReference(baseType);
                 this.m_emitter.registerTypeInstantiation(fdecl.contiainingType, fdecl.binds);
                 const skey = this.m_emitter.registerStaticCall(fdecl.contiainingType, fdecl.binds, fdecl.decl as StaticFunctionDecl, (fdecl.decl as StaticFunctionDecl).name, binds as Map<string, ResolvedType>, margs.pcodes, margs.cinfo);
 
@@ -1701,6 +1708,7 @@ class TypeChecker {
             this.checkRecursion(op.sinfo, fsig as ResolvedFunctionType, margs.pcodes, op.pragmas.recursive);
 
             if (this.m_emitEnabled) {
+                this.m_emitter.registerResolvedTypeReference(resolveType);
                 this.m_emitter.registerTypeInstantiation(mdecl.contiainingType, mdecl.binds);
                 const mkey = this.m_emitter.registerMethodCall(mdecl.contiainingType, mdecl.decl as MemberMethodDecl, mdecl.binds, (mdecl.decl as MemberMethodDecl).name, binds as Map<string, ResolvedType>, margs.pcodes, margs.cinfo);
 
