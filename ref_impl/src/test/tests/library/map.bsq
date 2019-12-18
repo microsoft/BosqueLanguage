@@ -81,3 +81,14 @@ entrypoint function puzzle(x: Int, y: Int): Int {
     check mint->size() == 2 && mint->get(x) != 11;
     return 0;
 }
+
+entrypoint function tox(): Bool {
+    var mint = Map<Int, Int>{[1, 2], [3, 4]};
+    
+    var kl = mint->getKeyList();
+    var ks = mint->getKeySet();
+    var vl = mint->getValues();
+    var el = mint->getEntries();
+
+    return kl->size() == 2 && ks->has(3) && vl->size() == 2 && el->size() == 2;
+}

@@ -1095,7 +1095,7 @@ class CPPBodyEmitter {
                     return "assert(false);";
                 }
                 else {
-                    return `printf("%s\\n", Runtime::diagnostic_format(${this.argToCpp(dbgop.value, this.typegen.anyType)}).c_str());`;
+                    return `{ std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv; std::cout << conv.to_bytes(Runtime::diagnostic_format(${this.argToCpp(dbgop.value, this.typegen.anyType)})) << "\\n"; }`;
                 }
             }
             case MIROpTag.MIRJump: {

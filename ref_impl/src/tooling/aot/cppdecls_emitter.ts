@@ -15,6 +15,7 @@ type CPPCode = {
     typedecls_fwd: string,
     typedecls: string,
     nominalenums: string,
+    nomnialdisplaynames: string,
     conceptSubtypeRelation: string,
     typechecks: string,
     funcdecls_fwd: string,
@@ -40,7 +41,7 @@ class CPPEmitter {
 
         let typedecls_fwd: string[] = [];
         let typedecls: string[] = [];
-        let nominalenums: string[] = [];
+        let nominaltypeinfo: {enum: string, display: string}[] = [];
         let vfieldaccesses: string[] = [];
         let vcalls: string[] = [];
         assembly.entityDecls.forEach((edecl) => {
@@ -50,8 +51,10 @@ class CPPEmitter {
                 typedecls.push(cppdecl.fulldecl);
             }
 
-            if(!typeemitter.isSpecialRepType(edecl)) {
-                nominalenums.push(typeemitter.mangleStringForCpp(edecl.tkey));
+            if (!typeemitter.isSpecialRepType(edecl)) {
+                const enumv = typeemitter.mangleStringForCpp(edecl.tkey);
+                const displayv = edecl.tkey;
+                nominaltypeinfo.push({ enum: enumv, display: displayv });
             }
 
             edecl.fields.forEach((fd) => {
@@ -79,6 +82,7 @@ class CPPEmitter {
                 }
             });
         });
+        nominaltypeinfo = nominaltypeinfo.sort((a, b) => a.enum.localeCompare(b.enum));
 
         const cginfo = constructCallGraphInfo(assembly.entryPoints, assembly);
         const rcg = [...cginfo.topologicalOrder].reverse();
@@ -255,7 +259,8 @@ class CPPEmitter {
         return {
             typedecls_fwd: typedecls_fwd.sort().join("\n"),
             typedecls: typedecls.sort().join("\n"),
-            nominalenums: nominalenums.sort().join(",\n    "),
+            nominalenums: nominaltypeinfo.map((nti) => nti.enum).join(",\n    "),
+            nomnialdisplaynames: nominaltypeinfo.map((nti) => `"${nti.display}"`).join(",\n  "),
             conceptSubtypeRelation: conceptSubtypes.sort().join("\n"),
             typechecks: typechecks.join("\n"),
             funcdecls_fwd: funcdecls_fwd.join("\n"),
