@@ -601,8 +601,8 @@ class Assembly {
     }
 
     private atomSubtypeOf_ConceptConcept(t1: ResolvedConceptAtomType, t2: ResolvedConceptAtomType): boolean {
-        return t1.conceptTypes.every((c1t) => {
-            return t2.conceptTypes.some((c2t) => {
+        return t2.conceptTypes.every((c2t) => {
+            return t1.conceptTypes.some((c1t) => {
                 if (c1t.concept.ns === c2t.concept.ns && c1t.concept.name === c2t.concept.name) {
                     let allBindsOk = true;
                     c1t.binds.forEach((v, k) => { allBindsOk = allBindsOk && v.idStr === (c2t.binds.get(k) as ResolvedType).idStr; });

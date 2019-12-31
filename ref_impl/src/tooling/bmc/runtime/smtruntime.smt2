@@ -98,7 +98,7 @@
 (declare-fun div_op (Int Int) Int)
 (declare-fun mod_op (Int Int) Int)
 
-;;STRING_DECLS;;
+;;CONCEPT_SUBTYPE_RELATION_DECLARE;;
 
 ;;SUBTYPE_DECLS;;
 

@@ -504,10 +504,10 @@ class SMTBodyEmitter {
         return `(${op} ${lhsint} ${rhsint})`;
     }
 
-    generateSubtypeTupleCheck(argv: string, argt: string, accessor_macro: string, has_macro: string, argtype: MIRType, oftype: MIRTupleType, gas: number): string {
-        const subtypesig = `(@subtypeFROM_${this.typegen.mangleStringForSMT(argtype.trkey)}_TO_${this.typegen.mangleStringForSMT(oftype.trkey)}@gas${gas} ((atuple ${argt})) Bool`;
+    generateSubtypeTupleCheck(argv: string, argt: string, accessor_macro: string, nothas_macro: string, argtype: MIRType, oftype: MIRTupleType, gas: number): string {
+        const subtypesig = `subtypeFROM_${this.typegen.mangleStringForSMT(argtype.trkey)}_TO_${this.typegen.mangleStringForSMT(oftype.trkey)}@gas${gas} ((atuple ${argt})) Bool`;
 
-        if (this.subtypeFMap.has(subtypesig)) {
+        if (!this.subtypeFMap.has(subtypesig)) {
             const order = this.subtypeOrderCtr++;
 
             let reqlen = oftype.entries.findIndex((entry) => entry.isOptional);
@@ -516,9 +516,12 @@ class SMTBodyEmitter {
             }
 
             let checks: string[] = [];
-            const maxlength = SMTTypeEmitter.getTupleTypeMaxLength(argtype);
+            const maxlength = this.typegen.isTupleType(argtype) ? SMTTypeEmitter.getTupleTypeMaxLength(argtype) : -1;
 
-            checks.push(`(not (< ${maxlength} ${reqlen}))`);
+            if (maxlength !== -1) {
+                checks.push(`(not (< ${maxlength} ${reqlen}))`);
+            }
+
             for (let i = 0; i < oftype.entries.length; ++i) {
                 if (!oftype.entries[i].isOptional) {
                     if (!(this.typegen.isKnownLayoutTupleType(argtype) && this.typegen.assembly.subtypeOf(SMTTypeEmitter.getKnownLayoutTupleType(argtype).entries[i].type, oftype.entries[i].type))) {
@@ -528,14 +531,23 @@ class SMTBodyEmitter {
                 else {
                     if (maxlength <= i) {
                         const chk = this.generateTypeCheck(`${accessor_macro.replace("ARG", "atuple").replace("IDX", i.toString())}`, this.typegen.anyType, oftype.entries[i].type, true, gas - 1);
-                        checks.push(`(or (not ${has_macro.replace("ARG", "atuple").replace("IDX", i.toString())}) ${chk})`);
+                        checks.push(`(or ${nothas_macro.replace("ARG", "atuple").replace("IDX", i.toString())} ${chk})`);
                     }
                 }
             }
 
-            if (maxlength > oftype.entries.length) {
-                for (let i = oftype.entries.length; i < maxlength; ++i) {
-                    checks.push(`(not ${has_macro.replace("ARG", "atuple").replace("IDX", i.toString())})`);
+            if(maxlength === -1) {
+                let nv = "bsqtuple_array_empty";
+                for (let i = 0; i < oftype.entries.length; ++i) {
+                    nv = `(store ${nv} ${i} (select (bsqterm_tuple_entries atuple) ${i}))`;
+                }
+                checks.push(`(= ${nv} (bsqterm_tuple_entries atuple))`);
+            }
+            else {
+                if (maxlength > oftype.entries.length) {
+                    for (let i = oftype.entries.length; i < maxlength; ++i) {
+                        checks.push(nothas_macro.replace("ARG", "atuple").replace("IDX", i.toString()));
+                    }
                 }
             }
 
@@ -556,8 +568,8 @@ class SMTBodyEmitter {
                 }
             }
 
-            const decl = subtypesig
-            + "\n  " + op;
+            const decl = "(define-fun " + subtypesig
+            + "\n  " + op
             + ")\n"; 
 
             this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
@@ -566,10 +578,10 @@ class SMTBodyEmitter {
         return `(subtypeFROM_${this.typegen.mangleStringForSMT(argtype.trkey)}_TO_${this.typegen.mangleStringForSMT(oftype.trkey)}@gas${gas} ${argv})`;
     }
 
-    generateSubtypeRecordCheck(argv: string, argt: string, accessor_macro: string, has_macro: string, argtype: MIRType, oftype: MIRRecordType, gas: number): string {
-        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForSMT(argtype.trkey)}_TO_${this.typegen.mangleStringForSMT(oftype.trkey)}@gas${gas} ((arecord ${argt})) Bool`;
+    generateSubtypeRecordCheck(argv: string, argt: string, accessor_macro: string, nothas_macro: string, argtype: MIRType, oftype: MIRRecordType, gas: number): string {
+        const subtypesig = `subtypeFROM_${this.typegen.mangleStringForSMT(argtype.trkey)}_TO_${this.typegen.mangleStringForSMT(oftype.trkey)}@gas${gas} ((arecord ${argt})) Bool`;
 
-        if (this.subtypeFMap.has(subtypesig)) {
+        if (!this.subtypeFMap.has(subtypesig)) {
             const order = this.subtypeOrderCtr++;
 
             let checks: string[] = [];
@@ -581,18 +593,29 @@ class SMTBodyEmitter {
                     }
                 }
                 else {
-                    const chk = this.generateTypeCheck(`${accessor_macro.replace("ARG", "arecord").replace("PNAME", pname)}`, this.typegen.anyType, oftype.entries[i].type, true, gas - 1);
-                    checks.push(`(or (not${has_macro.replace("ARG", "arecord").replace("PNAME", pname)}) ${chk})`);
+                    if (!this.typegen.isRecordType(argtype) || SMTTypeEmitter.getRecordTypeMaxPropertySet(argtype).includes(pname)) {
+                        const chk = this.generateTypeCheck(`${accessor_macro.replace("ARG", "arecord").replace("PNAME", pname)}`, this.typegen.anyType, oftype.entries[i].type, true, gas - 1);
+                        checks.push(`(or ${nothas_macro.replace("ARG", "arecord").replace("PNAME", pname)} ${chk})`);
+                    }
                 }
             }
 
-            const possibleargproperties = SMTTypeEmitter.getRecordTypeMaxPropertySet(argtype);
-
-            for(let i = 0; i < possibleargproperties.length; ++i) {
-                const pname = possibleargproperties[i];
-                if(oftype.entries.find((p) => p.name === pname) === undefined) {
-                    checks.push(`(not ${has_macro.replace("ARG", "arecord").replace("PNAME", pname)})`);
+            if (this.typegen.isRecordType(argtype)) {
+                const possibleargproperties = SMTTypeEmitter.getRecordTypeMaxPropertySet(argtype);
+                for (let i = 0; i < possibleargproperties.length; ++i) {
+                    const pname = possibleargproperties[i];
+                    if (oftype.entries.find((p) => p.name === pname) === undefined) {
+                        checks.push(nothas_macro.replace("ARG", "arecord").replace("PNAME", pname));
+                    }
                 }
+            }
+            else {
+                let nv = "bsqrecord_array_empty";
+                for(let i = 0; i < oftype.entries.length; ++i) {
+                    const pname = oftype.entries[i].name;
+                    nv = `(store ${nv} "${pname}" (select (bsqterm_record_entries arecord) "${pname}"))`;
+                }
+                checks.push(`(= ${nv} (bsqterm_record_entries arecord))`);
             }
 
             let op = "";
@@ -612,8 +635,8 @@ class SMTBodyEmitter {
                 }
             }
 
-            const decl = subtypesig
-            + "\n  " + op;
+            const decl = "(define-fun " + subtypesig
+            + "\n  " + op
             + ")\n"; 
 
             this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
@@ -629,10 +652,7 @@ class SMTBodyEmitter {
         if (this.typegen.isTupleType(argtype)) {
             if (this.typegen.isKnownLayoutTupleType(argtype)) {
                 const atuple = SMTTypeEmitter.getKnownLayoutTupleType(argtype);
-                if(atuple.entries.length === 0) {
-                    return "true";
-                }
-                else if(oftype.entries.length < atuple.entries.length) {
+                if(oftype.entries.length < atuple.entries.length) {
                     return "false";
                 }
                 else if(oftype.entries.length > atuple.entries.length && !oftype.entries[atuple.entries.length].isOptional) {
@@ -673,7 +693,7 @@ class SMTBodyEmitter {
         else {
             assert(this.typegen.typeToSMTCategory(argtype) === "BTerm"); 
 
-            const tsc = this.generateSubtypeTupleCheck(`(bsqterm_tuple_entries ${arg})`, "BTerm", "(select ARG IDX)", "(is-bsqterm@clear (select ARG IDX))", argtype, oftype, gas);
+            const tsc = this.generateSubtypeTupleCheck(arg, "BTerm", "(select (bsqterm_tuple_entries ARG) IDX)", "(is-bsqterm@clear (select (bsqterm_tuple_entries ARG) IDX))", argtype, oftype, gas);
             return `(and (is-bsqterm_tuple ${arg}) ${tsc})`
         }
     }
@@ -685,10 +705,7 @@ class SMTBodyEmitter {
         else if (this.typegen.isRecordType(argtype)) {
             if (this.typegen.isKnownLayoutRecordType(argtype)) {
                 const arecord = SMTTypeEmitter.getKnownLayoutRecordType(argtype);
-                if(arecord.entries.length === 0) {
-                    return "true";
-                }
-                else if(arecord.entries.some((entry) => oftype.entries.find((oe) => entry.name ===  oe.name) === undefined)) {
+                if(arecord.entries.some((entry) => oftype.entries.find((oe) => entry.name ===  oe.name) === undefined)) {
                     return "false";
                 }
                 else if(oftype.entries.some((entry) => !entry.isOptional && arecord.entries.find((ae) => entry.name ===  ae.name) === undefined)) {
@@ -727,10 +744,13 @@ class SMTBodyEmitter {
                 return this.generateSubtypeRecordCheck(arg, this.typegen.typeToSMTCategory(argtype), `(bsqrecord_${this.typegen.generateRecordTypePropertyName(argtype)}@PNAME ARG)`, `(is-bsqterm@clear  (bsqrecord_${this.typegen.generateRecordTypePropertyName(argtype)}@PNAME ARG))`, argtype, oftype, gas);
             }
         }
+        else if(this.typegen.isUEntityType(argtype)) {
+            return "false"
+        }
         else {
             assert(this.typegen.typeToSMTCategory(argtype) === "BTerm"); 
 
-            const tsc = this.generateSubtypeTupleCheck(`(bsqterm_record_entries ${arg})`, "BTerm", "(select ARG PNAME)", "(is-bsqterm@clear (select ARG PNAME))", argtype, oftype, gas);
+            const tsc = this.generateSubtypeRecordCheck(arg, "BTerm", "(select (bsqterm_record_entries ARG) \"PNAME\")", "(is-bsqterm@clear (select (bsqterm_record_entries ARG) \"PNAME\"))", argtype, oftype, gas);
             return `(and (is-bsqterm_record ${arg}) ${tsc})`
         }
     }
@@ -774,11 +794,22 @@ class SMTBodyEmitter {
             return "false";
         }
         else if (this.typegen.isUEntityType(argtype)) {
+            const ut = SMTTypeEmitter.getUEntityType(argtype);
             if(oftype.ekey === "NSCore::None") {
-                return `(is-${this.typegen.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(argtype).ekey)} ${arg})`;
+                return `(is-${this.typegen.generateEntityNoneConstructor(ut.ekey)} ${arg})`;
             }
             else {
-                return `(is-${this.typegen.generateEntityConstructor(oftype.ekey)} ${arg})`;
+                if(ut.ekey !== oftype.ekey) {
+                    return "false";
+                }
+                else {
+                    if(argtype.options.length === 1) {
+                        return "true";
+                    }
+                    else {
+                        return `(is-${this.typegen.generateEntityConstructor(ut.ekey)} ${arg})`;
+                    }
+                }
             }
         }
         else {
@@ -831,124 +862,241 @@ class SMTBodyEmitter {
     }
 
     generateFastConceptTypeCheck(arg: string, argtype: MIRType, oftype: MIRConceptType): string {
-        let tests: string[] = [];
-
-        //
-        //TODO: should flip this were we can lookup the possible entity->concept[] subtype relations and check inclusion of oftype in them
-        //
+        const cpttype = this.typegen.getMIRType(oftype.trkey);
 
         if(oftype.trkey === "NSCore::Any") {
-            tests.push("true");
-        }
-        else if(oftype.trkey === "NSCore::Some") {
-            if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype) || this.typegen.isTupleType(argtype) || this.typegen.isRecordType(argtype)) {
-                tests.push("true");
-            }
-            else if (this.typegen.isUEntityType(argtype)) {
-                if(this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
-                    tests.push(`(is-${this.typegen.generateEntityConstructor(SMTTypeEmitter.getUEntityType(argtype).ekey)} ${arg})`)
-                }
-            }
-            else {
-                tests.push(`(not (= ${arg} (bsqterm_key bsqkey_none)))`);
-            }
-        }
-        else if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype)) {
-            tests.push(...[this.typegen.boolType, this.typegen.intType, this.typegen.stringType].map((spe) => this.generateFastEntityTypeCheck(arg, argtype, spe.options[0] as MIREntityType)));
-        }
-        else if(this.typegen.isTupleType(argtype)) {
-            tests.push(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), this.typegen.getMIRType(oftype.trkey)) ? "true" : "false");
-        }
-        else if(this.typegen.isRecordType(argtype)) {
-            tests.push(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), this.typegen.getMIRType(oftype.trkey)) ? "true" : "false");
-        }
-        else if (this.typegen.isUEntityType(argtype)) {
-            if(this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype) && this.typegen.assembly.subtypeOf(this.typegen.noneType, this.typegen.getMIRType(oftype.trkey))) {
-                tests.push(`(is-${this.typegen.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(argtype).ekey)} ${arg})`)
-            }
-            else {
-                const nonesafe = this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype) ? `and (not (is-${this.typegen.generateEntityNoneConstructor(SMTTypeEmitter.getUEntityType(argtype).ekey)} ${arg})) ` : "";
-                tests.push(`(${nonesafe}($select MIRConceptSubtypeArray__${this.typegen.mangleStringForSMT(oftype.trkey)} "${this.typegen.mangleStringForSMT(SMTTypeEmitter.getUEntityType(argtype).ekey)}"))`);
-            }
-        }
-        else {
-            assert(this.typegen.typeToSMTCategory(argtype) === "BTerm");
-
-            let allspecialentities: MIREntityType[] = [];
-            this.typegen.assembly.entityDecls.forEach((etd) => {
-                if(this.typegen.isSpecialRepType(etd) && oftype.ckeys.every((ct) => this.assembly.subtypeOf(this.typegen.getMIRType(etd.tkey), this.typegen.getMIRType(ct)))) {
-                    allspecialentities.push(this.typegen.getMIRType(etd.tkey).options[0] as MIREntityType);
-                }
-            });
-
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::None") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::None") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::Bool") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::Bool") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::Int") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::Int") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::String") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::String") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey.startsWith("NSCore::StringOf<")) !== undefined) {
-                tests.push(`(is-bsqterm_typedstring ${arg})`);
-            }
-            if(allspecialentities.find((stype) => stype.ekey.startsWith("NSCore::POBBuffer<")) !== undefined) {
-                tests.push(`(is-bsqterm_podbuffer ${arg})`);
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::GUID") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::GUID") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => (this.assembly.entityDecls.get(stype.ekey) as MIREntityTypeDecl).provides.includes("NSCore::Enum")) !== undefined) {
-                tests.push(`(is-bsqterm_enum ${arg})`);
-            }
-            if(allspecialentities.find((stype) => (this.assembly.entityDecls.get(stype.ekey) as MIREntityTypeDecl).provides.includes("NSCore::IdKey")) !== undefined) {
-                tests.push(`(is-bsqterm_idkey ${arg})`);
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::Regex") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::Regex") as MIREntityType));
-            }
-
-            if(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), this.typegen.getMIRType(oftype.trkey))) {
-                tests.push(`(is-bsqterm_tuple ${arg})`);
-            }
-            if(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), this.typegen.getMIRType(oftype.trkey))) {
-                tests.push(`(is-bsqterm_record ${arg})`);
-            }
-
-            //TODO: podX
-
-            if(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Object"), this.typegen.getMIRType(oftype.trkey))) {
-                //
-                //TODO: should handle List, Set, Map here
-                //
-                
-                tests.push(`(is-bsqterm_object ${arg})`);
-            }
-            else {
-                //
-                //TODO: should handle List, Set, Map here
-                //
-
-                tests.push(`(and (is-bsqterm_object ${arg}) (select MIRConceptSubtypeArray__${this.typegen.mangleStringForSMT(oftype.trkey)} (bsqterm_object_type ${arg})))`);
-            }
-        }
-
-        tests = tests.filter((t) => t !== "false");
-        if(tests.includes("true")) {
             return "true";
         }
-        else if(tests.length === 0) {
-            return "false";
+
+        if(oftype.trkey === "NSCore::Some") {
+            if (!this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
+                return "true";
+            }
+            else if (this.typegen.isKeyType(argtype)) {
+                return `(not (= ${arg} bsqkey_none))`;
+            }
+            else if (this.typegen.isUEntityType(argtype)) {
+                return `(is-${this.typegen.generateEntityConstructor(SMTTypeEmitter.getUEntityType(argtype).ekey)} ${arg})`;
+            }
+            else {
+                return `(not (= (bsqterm_key bsqkey_none) ${arg}))`;
+            }
         }
-        else if(tests.length === 1) {
-            return tests[0];
+
+        if(this.typegen.isSimpleBoolType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.boolType, cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isSimpleIntType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.intType, cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isSimpleStringType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.stringType, cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isKeyType(argtype)) {
+            if(oftype.trkey === "NSCore::KeyType") {
+                return "true";
+            }
+            
+            let checks: string[] = [];
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
+                    checks.push(`(= bsqkey_none ${arg})`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.boolType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.boolType, argtype)) {
+                    checks.push(`(is-bsqkey_bool ${arg})`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.intType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.intType, argtype)) {
+                    checks.push(`(is-bsqkey_int ${arg})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.stringType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.stringType, argtype)) {
+                    checks.push(`(is-bsqkey_string ${arg})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_StringOf(cpttype)) {
+                if (this.typegen.maybeOfType_StringOf(argtype)) {
+                    const taccess = `(bsqkey_typedstring_type ${arg})`;
+                    checks.push(`(and (is-bsqkey_typedstring ${arg}) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), argtype)) {
+                    checks.push(`(is-bsqkey_guid ${arg})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Enum(cpttype)) {
+                if (this.typegen.maybeOfType_Enum(argtype)) {
+                    const taccess = `(bsqkey_enum_type ${arg})`;
+                    checks.push(`(and (is-bsqkey_enum ${arg}) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_IdKey(cpttype)) {
+                if (this.typegen.maybeOfType_IdKey(argtype)) {
+                    const taccess = `(bsqkey_idkey_type ${arg})`;
+                    checks.push(`(and (is-bsqkey_idkey ${arg}) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            
+            if (checks.length === 0) {
+                return "false";
+            }
+            else if (checks.length === 1) {
+                return checks[0];
+            }
+            else {
+                return `(or ${checks.join(" ")})`;
+            }
+        }
+        else if(this.typegen.isTupleType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isRecordType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), cpttype) ? "true" : "false";
+        }
+        else if (this.typegen.isUEntityType(argtype)) {
+            const etype = this.typegen.getMIRType(SMTTypeEmitter.getUEntityType(argtype).trkey);
+            if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype) && this.typegen.assembly.subtypeOf(etype, cpttype)) {
+                return "true";
+            }
+            else if(!this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype) && this.typegen.assembly.subtypeOf(etype, cpttype)) {
+                if(this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
+                    return `(is-${this.typegen.generateEntityConstructor(etype.trkey)} ${arg})`;
+                }
+                else {
+                    return "true";
+                }
+            }
+            else if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype) && !this.typegen.assembly.subtypeOf(etype, cpttype)) {
+                return `(is-${this.typegen.generateEntityConstructor(etype.trkey)} ${arg})`;
+            }
+            else {
+                return "false";
+            }
         }
         else {
-            return `(or ${tests.join(" ")})`;
+            let checks: string[] = [];
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
+                    checks.push(`(= (bsqterm_key bsqkey_none) ${arg})`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.boolType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.boolType, argtype)) {
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_bool (bsqterm_key_value ${arg})))`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.intType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.intType, argtype)) {
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_int (bsqterm_key_value ${arg})))`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.stringType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.stringType, argtype)) {
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_string (bsqterm_key_value ${arg})))`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_StringOf(cpttype)) {
+                if (this.typegen.maybeOfType_StringOf(argtype)) {
+                    const taccess = `(bsqkey_typedstring_type (bsqterm_key_value ${arg}))`;
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_typedstring (bsqterm_key_value ${arg})) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_PODBuffer(cpttype)) {
+                if (this.typegen.maybeOfType_PODBuffer(argtype)) {
+                    const taccess = `(bsqkey_podbuffer_type (bsqterm_key_value ${arg}))`;
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_podbuffer (bsqterm_key_value ${arg})) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), argtype)) {
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_guid (bsqterm_key_value ${arg})))`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Enum(cpttype)) {
+                if (this.typegen.maybeOfType_Enum(argtype)) {
+                    const taccess = `(bsqkey_enum_type (bsqterm_key_value ${arg}))`;
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_enum (bsqterm_key_value ${arg})) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_IdKey(cpttype)) {
+                if (this.typegen.maybeOfType_IdKey(argtype)) {
+                    const taccess = `(bsqkey_idkey_type (bsqterm_key_value ${arg}))`;
+                    checks.push(`(and (is-bsqterm_key ${arg}) (is-bsqkey_idkey (bsqterm_key_value ${arg})) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), cpttype)) {
+                if (argtype.options.some((topt) => topt instanceof MIRTupleType)) {
+                    checks.push(`(is-bsqterm_tuple ${arg})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), cpttype)) {
+                if (argtype.options.some((topt) => topt instanceof MIRTupleType)) {
+                    checks.push(`(is-bsqterm_record ${arg})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Object(cpttype)) {
+                if (this.typegen.maybeOfType_Object(argtype)) {
+                    const taccess = `(bsqterm_object_type ${arg})`;
+                    checks.push(`(and (is-bsqterm_object ${arg}) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_List(cpttype)) {
+                if (this.typegen.maybeOfType_List(argtype)) {
+                    const taccess = `(bsqterm_list_type ${arg})`;
+                    checks.push(`(and (is-bsqterm_list ${arg}) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Set(cpttype)) {
+                if (this.typegen.maybeOfType_Set(argtype)) {
+                    const taccess = `(bsqterm_kvcontainer_type ${arg})`;
+                    checks.push(`(and (is-bsqterm_kvcontainer ${arg}) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Map(cpttype)) {
+                if (this.typegen.maybeOfType_Map(argtype)) {
+                    const taccess = `(bsqterm_kvcontainer_type ${arg})`;
+                    checks.push(`(and (is-bsqterm_kvcontainer ${arg}) ${this.typegen.generateCheckSubtype(taccess, oftype)})`);
+                }
+            }
+
+            if (checks.length === 0) {
+                return "false";
+            }
+            else if (checks.length === 1) {
+                return checks[0];
+            }
+            else {
+                return `(or ${checks.join(" ")})`;
+            }
         }
     }
 
@@ -978,8 +1126,14 @@ class SMTBodyEmitter {
         })
         .filter((test) => test !== "false");
 
-        if(tests.includes("true") || tests.length === 0) {
+        if(tests.length === 0) {
+            return "false";
+        }
+        else if(tests.includes("true")) {
             return "true";
+        }
+        else if(tests.length === 1) {
+            return tests[0];
         }
         else {
             return `(or ${tests.join(" ")})`

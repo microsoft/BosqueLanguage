@@ -713,6 +713,9 @@ class MIREmitter {
         emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::String", 0) as EntityTypeDecl, new Map<string, ResolvedType>());
         emitter.registerResolvedTypeReference(assembly.getSpecialStringType());
 
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::GUID", 0) as EntityTypeDecl, new Map<string, ResolvedType>());
+        emitter.registerResolvedTypeReference(assembly.getSpecialGUIDType());
+
         //get any entrypoint functions and initialize the checker there
         const nslist = assembly.getNamespaces();
         nslist.forEach((nsentry) => {

@@ -1832,8 +1832,13 @@ class TypeChecker {
 
                 if (opname === "isNone" || opname === "isSome") {
                     const [enone, esome] = TypeEnvironment.convertToNoneSomeFlowsOnExpressionResult(this.m_assembly, [env]);
-                    this.raiseErrorIf(op.sinfo, enone.length === 0, "Value is never equal to none");
-                    this.raiseErrorIf(op.sinfo, esome.length === 0, "Value is always equal to none");
+
+                    //
+                    //TODO: we are not going to warn here since template instantiation can be annoying 
+                    //      should have one mode for TypeCheck -- only on un-templated code and one for compile
+                    //
+                    //this.raiseErrorIf(op.sinfo, enone.length === 0, "Value is never equal to none");
+                    //this.raiseErrorIf(op.sinfo, esome.length === 0, "Value is always equal to none");
 
                     if (optArgVar === undefined) {
                         const eqnone = enone.map((opt) => opt.setExpressionResult(this.m_assembly, this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.True : FlowTypeTruthValue.False));
@@ -1868,8 +1873,12 @@ class TypeChecker {
                             .assumeVar(optArgVar, this.m_assembly.restrictNotT(opt.getExpressionResult().etype, ttype))
                             .setExpressionResult(this.m_assembly, this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False));
 
-                    this.raiseErrorIf(op.sinfo, tvals.length === 0, "Value is never of type");
-                    this.raiseErrorIf(op.sinfo, ntvals.length === 0, "Value is always of type");
+                    //
+                    //TODO: we are not going to warn here since template instantiation can be annoying 
+                    //      should have one mode for TypeCheck -- only on un-templated code and one for compile
+                    //
+                    //this.raiseErrorIf(op.sinfo, tvals.length === 0, "Value is never of type");
+                    //this.raiseErrorIf(op.sinfo, ntvals.length === 0, "Value is always of type");
 
                     return [...tvals, ...ntvals];
                 }

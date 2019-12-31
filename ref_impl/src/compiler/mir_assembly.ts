@@ -544,8 +544,8 @@ class MIRAssembly {
     }
 
     private atomSubtypeOf_ConceptConcept(t1: MIRConceptType, t2: MIRConceptType): boolean {
-        return t1.ckeys.every((c1t) => {
-            return t2.ckeys.some((c2t) => {
+        return t2.ckeys.every((c2t) => {
+            return t1.ckeys.some((c1t) => {
                 const c1 = this.conceptDecls.get(c1t) as MIRConceptTypeDecl;
                 const c2 = this.conceptDecls.get(c2t) as MIRConceptTypeDecl;
 

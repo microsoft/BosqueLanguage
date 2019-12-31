@@ -196,14 +196,16 @@ class SMTEmitter {
 
         let conceptSubtypes: string[] = [];
         typeemitter.conceptSubtypeRelation.forEach((stv, cpt) => {
-            const nemums = stv.map((ek) => typeemitter.mangleStringForSMT(ek)).sort();
-            const sta = `(declare-const MIRConceptSubtypeArray__${typeemitter.mangleStringForSMT(cpt)} (Array String Bool))`;
-            let iv = "mirconceptsubtypearray_empty";
-            for (let i = 0; i < nemums.length; ++i) {
-                iv = `(store ${iv} ${nemums[i]}, true)`;
-            }
+            const nemums = stv.map((ek) => `"${ek}"`).sort();
+            if (nemums.length !== 0) {
+                const sta = `(declare-const MIRConceptSubtypeArray__${typeemitter.mangleStringForSMT(cpt)} (Array String Bool))`;
+                let iv = "mirconceptsubtypearray_empty";
+                for (let i = 0; i < nemums.length; ++i) {
+                    iv = `(store ${iv} ${nemums[i]} true)`;
+                }
 
-            conceptSubtypes.push(sta + "\n" + `(assert (= MIRConceptSubtypeArray__${typeemitter.mangleStringForSMT(cpt)} ${iv}))`);
+                conceptSubtypes.push(sta + "\n" + `(assert (= MIRConceptSubtypeArray__${typeemitter.mangleStringForSMT(cpt)} ${iv}))`);
+            }
         });
 
         const typechecks = [...bodyemitter.subtypeFMap].map(tcp => tcp[1]).sort((tc1, tc2) => tc1.order - tc2.order).map((tc) => tc.decl);

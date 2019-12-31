@@ -1119,7 +1119,7 @@ public:
     template<int32_t k>
     static bool checkSubtypeSlow(MIRNominalTypeEnum tt, const MIRNominalTypeEnum(&etypes)[k])
     {
-        return std::binary_search(&etypes[0], &etypes[k], tt) != &etypes[k]; 
+        return std::binary_search(&etypes[0], &etypes[k], tt); 
     }
 };
 
