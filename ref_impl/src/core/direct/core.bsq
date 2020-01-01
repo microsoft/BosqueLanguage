@@ -173,8 +173,8 @@ entity Result<T> provides Some {
     }
 
     method getResult(): T {
-        check this.success;
-        return this.result->as<T>();
+        check this._success;
+        return this._result->as<T>();
     }
 
     //
@@ -186,10 +186,10 @@ entity Result<T> provides Some {
 
 //<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
 concept Keyed<T where KeyType> provides Indexable, Some {
-    field key_value: T;
+    field key: T;
 }
 
 //<summary>A lightweight tagging class for values.</summary>
 entity Tagged<T where KeyType, U> provides Keyed<T>, Object {
-    field tagged_value: U;
+    field value: U;
 }

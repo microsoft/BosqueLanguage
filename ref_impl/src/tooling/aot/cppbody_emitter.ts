@@ -457,7 +457,7 @@ class CPPBodyEmitter {
     generateSubtypeTupleCheck(argv: string, argt: string, size_macro: string, accessor_macro: string, argtype: MIRType, oftype: MIRTupleType): string {
         const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(${argt} atuple)`;
 
-        if (this.subtypeFMap.has(subtypesig)) {
+        if (!this.subtypeFMap.has(subtypesig)) {
             const order = this.subtypeOrderCtr++;
 
             let reqlen = oftype.entries.findIndex((entry) => entry.isOptional);
@@ -515,12 +515,12 @@ class CPPBodyEmitter {
     generateSubtypeRecordCheck(argv: string, argt: string, size_macro: string, accessor_macro: string, has_macro: string, argtype: MIRType, oftype: MIRRecordType): string {
         const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(${argt} arecord)`;
 
-        if (this.subtypeFMap.has(subtypesig)) {
+        if (!this.subtypeFMap.has(subtypesig)) {
             const order = this.subtypeOrderCtr++;
 
             let reqlen = oftype.entries.filter((entry) => !entry.isOptional);
             const alength = size_macro.replace("ARG", "arecord");
-            const lenchk = `if(${alength} < ${reqlen} || ${oftype.entries.length} < ${alength}) return false;`;
+            const lenchk = `if(${alength} < ${reqlen.length} || ${oftype.entries.length} < ${alength}) return false;`;
 
             let checks: string[] = [];
             for (let i = 0; i < oftype.entries.length; ++i) {
@@ -574,16 +574,13 @@ class CPPBodyEmitter {
     }
 
     generateFastTupleTypeCheck(arg: string, argtype: MIRType, oftype: MIRTupleType, inline: boolean): string {
-        if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype)) {
+        if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype) || this.typegen.isKeyType(argtype)) {
             return "false";
         }
         else if (this.typegen.isTupleType(argtype)) {
             if (this.typegen.isKnownLayoutTupleType(argtype)) {
                 const atuple = CPPTypeEmitter.getKnownLayoutTupleType(argtype);
-                if(atuple.entries.length === 0) {
-                    return "true";
-                }
-                else if(oftype.entries.length < atuple.entries.length) {
+                if(oftype.entries.length < atuple.entries.length) {
                     return "false";
                 }
                 else if(oftype.entries.length > atuple.entries.length && !oftype.entries[atuple.entries.length].isOptional) {
@@ -624,22 +621,19 @@ class CPPBodyEmitter {
         else {
             assert(this.typegen.typeToCPPType(argtype, "base") === "Value"); 
 
-            const tsc = this.generateSubtypeTupleCheck(`BSQ_GET_VALUE_PTR(${arg}, BSQTuple)`, "BSQTuple*", "ARG->size", "ARG->atFixed<IDX>()", argtype, oftype);
+            const tsc = this.generateSubtypeTupleCheck(`BSQ_GET_VALUE_PTR(${arg}, BSQTuple)`, "BSQTuple*", "ARG->entries.size()", "ARG->atFixed<IDX>()", argtype, oftype);
             return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQTuple*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${tsc})`
         }
     }
 
     generateFastRecordTypeCheck(arg: string, argtype: MIRType, oftype: MIRRecordType, inline: boolean): string {
-        if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype) || this.typegen.isTupleType(argtype)) {
-            return "false;"
+        if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype)  || this.typegen.isKeyType(argtype) || this.typegen.isTupleType(argtype)) {
+            return "false"
         }
         else if (this.typegen.isRecordType(argtype)) {
             if (this.typegen.isKnownLayoutRecordType(argtype)) {
                 const arecord = CPPTypeEmitter.getKnownLayoutRecordType(argtype);
-                if(arecord.entries.length === 0) {
-                    return "true";
-                }
-                else if(arecord.entries.some((entry) => oftype.entries.find((oe) => entry.name ===  oe.name) === undefined)) {
+                if(arecord.entries.some((entry) => oftype.entries.find((oe) => entry.name ===  oe.name) === undefined)) {
                     return "false";
                 }
                 else if(oftype.entries.some((entry) => !entry.isOptional && arecord.entries.find((ae) => entry.name ===  ae.name) === undefined)) {
@@ -669,13 +663,13 @@ class CPPBodyEmitter {
                         }
                     }
                     else {
-                        const pmacro = `${this.typegen.typeToCPPType(argtype, "base")}::hasProperty<PNAME>(${this.typegen.getKnownPropertyRecordArrayName(argtype)})`;
-                        return this.generateSubtypeRecordCheck(arg, this.typegen.typeToCPPType(argtype, "parameter"), CPPTypeEmitter.getKnownLayoutRecordType(argtype).entries.length.toString(), "ARG.atFixed<PNAME>()", pmacro, argtype, oftype);
+                        const pmacro = `${this.typegen.typeToCPPType(argtype, "base")}::hasProperty<MIRPropertyEnum::PNAME>(${this.typegen.getKnownPropertyRecordArrayName(argtype)})`;
+                        return this.generateSubtypeRecordCheck(arg, this.typegen.typeToCPPType(argtype, "parameter"), CPPTypeEmitter.getKnownLayoutRecordType(argtype).entries.length.toString(), "ARG.atFixed<MIRPropertyEnum::PNAME>()", pmacro, argtype, oftype);
                     }
                 }
             }
             else {
-                return this.generateSubtypeRecordCheck(arg, this.typegen.typeToCPPType(argtype, "parameter"), "ARG.size", "ARG.atFixed<PNAME>()", "ARG.hasProperty<PNAME>()", argtype, oftype);
+                return this.generateSubtypeRecordCheck(arg, this.typegen.typeToCPPType(argtype, "parameter"), "ARG.size", "ARG.atFixed<MIRPropertyEnum::PNAME>()", "ARG.hasProperty<MIRPropertyEnum::PNAME>()", argtype, oftype);
             }
         }
         else if(this.typegen.isUEntityType(argtype)) {
@@ -684,7 +678,7 @@ class CPPBodyEmitter {
         else {
             assert(this.typegen.typeToCPPType(argtype, "base") === "Value"); 
 
-            const tsc = this.generateSubtypeRecordCheck(`BSQ_GET_VALUE_PTR(${arg}, BSQRecord)`, "BSQRecord*", "ARG->size", "ARG->atFixed<PNAME>()", "ARG->hasProperty<PNAME>()", argtype, oftype);
+            const tsc = this.generateSubtypeRecordCheck(`BSQ_GET_VALUE_PTR(${arg}, BSQRecord)`, "BSQRecord*", "ARG->entries.size()", "ARG->atFixed<MIRPropertyEnum::PNAME>()", "ARG->hasProperty<MIRPropertyEnum::PNAME>()", argtype, oftype);
             return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQRecord*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${tsc})`
 
         }
@@ -694,15 +688,57 @@ class CPPBodyEmitter {
         if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype)) {
             return argtype.options[0].trkey === oftype.trkey ? "true" : "false";
         }
+        else if (this.typegen.isKeyType(argtype)) {
+            const ofdecl = this.typegen.assembly.entityDecls.get(oftype.ekey) as MIREntityTypeDecl;
+
+            if(oftype.ekey === "NSCore::None") {
+                return `BSQ_IS_VALUE_NONE(${arg})`;
+            }
+            else if(oftype.ekey === "NSCore::Bool") {
+                return `BSQ_IS_VALUE_BOOL(${arg})`;
+            }
+            else if(oftype.ekey === "NSCore::Int") {
+                return `BSQ_IS_VALUE_INT(${arg})`;
+            }
+            else if(oftype.ekey === "NSCore::String") {
+                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQString*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`;
+            }
+            else if(oftype.ekey.startsWith("NSCore::StringOf<")) {
+                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQStringOf*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && dynamic_cast<BSQStringOf*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef))->oftype == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)})`;
+            }
+            else if(oftype.ekey === "NSCore::GUID") {
+                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQGUID*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`;
+            }
+            else if (ofdecl.provides.includes("NSCore::Enum")) {
+                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQEnum*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && dynamic_cast<BSQEnum*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef))->oftype == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)})`;
+            }
+            else if (ofdecl.provides.includes("NSCore::IdKey")) {
+                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQIdKey*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && dynamic_cast<BSQIdKey*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef))->oftype == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)})`;
+            }
+            else {
+                return "false";
+            }
+        }
         else if(this.typegen.isTupleType(argtype) || this.typegen.isRecordType(argtype)) {
             return "false";
         }
         else if (this.typegen.isUEntityType(argtype)) {
+            const ut = CPPTypeEmitter.getUEntityType(argtype);
             if(oftype.ekey === "NSCore::None") {
-                return `${arg} == nullptr`;
+                return `BSQ_IS_VALUE_NONE(${arg})`;
             }
             else {
-                return `(${arg})->ntype == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)}`;
+                if(ut.ekey !== oftype.ekey) {
+                    return "false";
+                }
+                else {
+                    if(argtype.options.length === 1) {
+                        return "true";
+                    }
+                    else {
+                        return `BSQ_IS_VALUE_NONNONE(${arg})`;
+                    }
+                }
             }
         }
         else {
@@ -746,113 +782,225 @@ class CPPBodyEmitter {
         }
     }
 
-    generateFastConceptTypeCheck(arg: string, argtype: MIRType, oftype: MIRConceptType): string {
-        let tests: string[] = [];
+    generateConceptArrayLookup(access: string, oftype: MIRConceptType): string {
+        const lookups = oftype.ckeys.map((ckey) => {
+            const sizestr = this.typegen.getSubtypesArrayCount(ckey);
+            const arraystr = `MIRConceptSubtypeArray__${this.typegen.mangleStringForCpp(ckey)}`;
 
-        //
-        //TODO: should flip this were we can lookup the possible entity->concept[] subtype relations and check inclusion of oftype in them
-        //
+            return `BSQObject::checkSubtype<${sizestr}>(${access}, ${arraystr})`;
+        });
+
+        if(lookups.length === 1) {
+            return lookups[0];
+        }
+        else {
+            return lookups.join(" && ");
+        }
+    }
+
+    generateFastConceptTypeCheck(arg: string, argtype: MIRType, oftype: MIRConceptType): string {
+        const cpttype = this.typegen.getMIRType(oftype.trkey);
 
         if(oftype.trkey === "NSCore::Any") {
-            tests.push("true");
-        }
-        else if(oftype.trkey === "NSCore::Some") {
-            if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype) || this.typegen.isTupleType(argtype) || this.typegen.isRecordType(argtype)) {
-                tests.push("true");
-            }
-            else if (this.typegen.isUEntityType(argtype)) {
-                if(this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
-                    tests.push(`${arg} != nullptr`)
-                }
-            }
-            else {
-                tests.push(`BSQ_IS_VALUE_NONNONE(${arg})`);
-            }
-        }
-        else if(this.typegen.isSimpleBoolType(argtype) || this.typegen.isSimpleIntType(argtype) || this.typegen.isSimpleStringType(argtype)) {
-            tests.push(...[this.typegen.boolType, this.typegen.intType, this.typegen.stringType].map((spe) => this.generateFastEntityTypeCheck(arg, argtype, spe.options[0] as MIREntityType)));
-        }
-        else if(this.typegen.isTupleType(argtype)) {
-            tests.push(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), this.typegen.getMIRType(oftype.trkey)) ? "true" : "false");
-        }
-        else if(this.typegen.isRecordType(argtype)) {
-            tests.push(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), this.typegen.getMIRType(oftype.trkey)) ? "true" : "false");
-        }
-        else if (this.typegen.isUEntityType(argtype)) {
-            if(this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype) && this.typegen.assembly.subtypeOf(this.typegen.noneType, this.typegen.getMIRType(oftype.trkey))) {
-                tests.push(`${arg} == nullptr`)
-            }
-            else {
-                const nonesafe = this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype) ? `${arg} != nullptr && ` : ""; 
-                tests.push(`(${nonesafe}BSQObject::checkSubtype<${this.typegen.getSubtypesArrayCount(oftype)}>((${arg})->ntype, MIRConceptSubtypeArray__${this.typegen.mangleStringForCpp(oftype.trkey)}))`);
-            }
-        }
-        else {
-            assert(this.typegen.typeToCPPType(argtype, "base") === "Value");
-
-            let allspecialentities: MIREntityType[] = [];
-            this.typegen.assembly.entityDecls.forEach((etd) => {
-                if(this.typegen.isSpecialRepType(etd) && oftype.ckeys.every((ct) => this.assembly.subtypeOf(this.typegen.getMIRType(etd.tkey), this.typegen.getMIRType(ct)))) {
-                    allspecialentities.push(this.typegen.getMIRType(etd.tkey).options[0] as MIREntityType);
-                }
-            });
-
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::None") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::None") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::Bool") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::Bool") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::Int") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::Int") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::String") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::String") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => stype.ekey.startsWith("NSCore::StringOf<")) !== undefined) {
-                tests.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQStringOf*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
-            }
-            if(allspecialentities.find((stype) => stype.ekey.startsWith("NSCore::POBBuffer<")) !== undefined) {
-                tests.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQPODBuffer*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::GUID") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::GUID") as MIREntityType));
-            }
-            if(allspecialentities.find((stype) => (this.assembly.entityDecls.get(stype.ekey) as MIREntityTypeDecl).provides.includes("NSCore::Enum")) !== undefined) {
-                tests.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQEnum*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
-            }
-            if(allspecialentities.find((stype) => (this.assembly.entityDecls.get(stype.ekey) as MIREntityTypeDecl).provides.includes("NSCore::IdKey")) !== undefined) {
-                tests.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQIdKey*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
-            }
-            if(allspecialentities.find((stype) => stype.ekey === "NSCore::Regex") !== undefined) {
-                tests.push(this.generateFastEntityTypeCheck(arg, argtype, allspecialentities.find((stype) => stype.trkey === "NSCore::Regex") as MIREntityType));
-            }
-
-            //TODO: INDEXABLE HERE -- special case for tuples
-
-            if(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), this.typegen.getMIRType(oftype.trkey))) {
-                tests.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQTuple*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
-            }
-            if(this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), this.typegen.getMIRType(oftype.trkey))) {
-                tests.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQRecord*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
-            }
-            //TODO: podX
-
-            tests.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQObject*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && BSQObject::checkSubtype<${this.typegen.getSubtypesArrayCount(oftype)}>(BSQ_GET_VALUE_PTR(${arg}, BSQObject)->ntype, MIRConceptSubtypeArray__${this.typegen.mangleStringForCpp(oftype.trkey)}))`);
-        }
-
-        tests = tests.filter((t) => t !== "false");
-        if(tests.includes("true")) {
             return "true";
         }
-        else if(tests.length === 0) {
-            return "false";
+
+        if(oftype.trkey === "NSCore::Some") {
+            return !this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype) ? "true" : `BSQ_IS_VALUE_NONNONE(${arg})`;
         }
-        else if(tests.length === 1) {
-            return tests[0];
+
+        if(this.typegen.isSimpleBoolType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.boolType, cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isSimpleIntType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.intType, cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isSimpleStringType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.stringType, cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isKeyType(argtype)) {
+            if(oftype.trkey === "NSCore::KeyType") {
+                return "true";
+            }
+            
+            let checks: string[] = [];
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
+                    checks.push(`BSQ_IS_VALUE_NONE(${arg})`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.boolType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.boolType, argtype)) {
+                    checks.push(`BSQ_IS_VALUE_BOOL(${arg})`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.intType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.intType, argtype)) {
+                    checks.push(`BSQ_IS_VALUE_INT(${arg})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.stringType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.stringType, argtype)) {
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQString*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_StringOf(cpttype)) {
+                if (this.typegen.maybeOfType_StringOf(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQStringOf)->oftype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQStringOf*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), argtype)) {
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQGUID*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Enum(cpttype)) {
+                if (this.typegen.maybeOfType_Enum(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQEnum)->oftype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQEnum*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_IdKey(cpttype)) {
+                if (this.typegen.maybeOfType_IdKey(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQIdKey)->oftype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQIdKey*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (checks.length === 0) {
+                return "false";
+            }
+            else if (checks.length === 1) {
+                return checks[0];
+            }
+            else {
+                return `(${checks.join(" || ")})`;
+            }
+        }
+        else if(this.typegen.isTupleType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), cpttype) ? "true" : "false";
+        }
+        else if(this.typegen.isRecordType(argtype)) {
+            return this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), cpttype) ? "true" : "false";
+        }
+        else if (this.typegen.isUEntityType(argtype)) {
+            const etype = this.typegen.getMIRType(CPPTypeEmitter.getUEntityType(argtype).trkey);
+            if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype) && this.typegen.assembly.subtypeOf(etype, cpttype)) {
+                return `true`
+            }
+            else if(!this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype) && this.typegen.assembly.subtypeOf(etype, cpttype)) {
+                if(this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
+                    return `BSQ_IS_VALUE_PTR(${arg})`;
+                }
+                else {
+                    return `true`;
+                }
+            }
+            else if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype) && !this.typegen.assembly.subtypeOf(etype, cpttype)) {
+                return `BSQ_IS_VALUE_NONE(${arg})`;
+            }
+            else {
+                return "false";
+            }
         }
         else {
-            return `(${tests.join(" || ")})`;
+            let checks: string[] = [];
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.noneType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype)) {
+                    checks.push(`BSQ_IS_VALUE_NONE(${arg})`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.boolType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.boolType, argtype)) {
+                    checks.push(`BSQ_IS_VALUE_BOOL(${arg})`);
+                }
+            }
+
+            if(this.typegen.assembly.subtypeOf(this.typegen.intType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.intType, argtype)) {
+                    checks.push(`BSQ_IS_VALUE_INT(${arg})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.stringType, cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.stringType, argtype)) {
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQString*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_StringOf(cpttype)) {
+                if (this.typegen.maybeOfType_StringOf(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQStringOf)->oftype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQStringOf*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_PODBuffer(cpttype)) {
+                if (this.typegen.maybeOfType_PODBuffer(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQPODBuffer)->oftype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQPODBuffer*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), cpttype)) {
+                if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::GUID"), argtype)) {
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQGUID*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Enum(cpttype)) {
+                if (this.typegen.maybeOfType_Enum(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQEnum)->oftype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQEnum*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_IdKey(cpttype)) {
+                if (this.typegen.maybeOfType_IdKey(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQIdKey)->oftype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQIdKey*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Tuple"), cpttype)) {
+                if (argtype.options.some((topt) => topt instanceof MIRTupleType)) {
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQTuple*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
+                }
+            }
+
+            if (this.typegen.assembly.subtypeOf(this.typegen.getMIRType("NSCore::Record"), cpttype)) {
+                if (argtype.options.some((topt) => topt instanceof MIRTupleType)) {
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQRecord*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr)`);
+                }
+            }
+
+            if (this.typegen.maybeOfType_Object(cpttype)) {
+                if (this.typegen.maybeOfType_Object(argtype)) {
+                    const access = `BSQ_GET_VALUE_PTR(${arg}, BSQObject)->ntype`;
+                    checks.push(`(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQObject*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${this.generateConceptArrayLookup(access, oftype)})`);
+                }
+            }
+
+            if (checks.length === 0) {
+                return "false";
+            }
+            else if (checks.length === 1) {
+                return checks[0];
+            }
+            else {
+                return `(${checks.join(" || ")})`;
+            }
         }
     }
 
@@ -882,8 +1030,14 @@ class CPPBodyEmitter {
         })
         .filter((test) => test !== "false");
 
-        if(tests.includes("true") || tests.length === 0) {
+        if(tests.length === 0) {
+            return "false";
+        }
+        else if(tests.includes("true")) {
             return "true";
+        }
+        else if(tests.length === 1) {
+            return tests[0];
         }
         else {
             return `(${tests.join(" || ")})`

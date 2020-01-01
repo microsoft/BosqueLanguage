@@ -51,11 +51,9 @@ class CPPEmitter {
                 typedecls.push(cppdecl.fulldecl);
             }
 
-            if (!typeemitter.isSpecialRepType(edecl)) {
-                const enumv = typeemitter.mangleStringForCpp(edecl.tkey);
-                const displayv = edecl.tkey;
-                nominaltypeinfo.push({ enum: enumv, display: displayv });
-            }
+            const enumv = typeemitter.mangleStringForCpp(edecl.tkey);
+            const displayv = edecl.tkey;
+            nominaltypeinfo.push({ enum: enumv, display: displayv });
 
             edecl.fields.forEach((fd) => {
                 if (fd.enclosingDecl !== edecl.tkey) {
@@ -148,9 +146,10 @@ class CPPEmitter {
         let conceptSubtypes: string[] = [];
         typeemitter.conceptSubtypeRelation.forEach((stv, cpt) => {
             const nemums = stv.map((ek) => `MIRNominalTypeEnum::${typeemitter.mangleStringForCpp(ek)}`).sort();
-            const sta = `constexpr MIRNominalTypeEnum MIRConceptSubtypeArray__${typeemitter.mangleStringForCpp(cpt)}[${nemums.length}] = {${nemums.join(", ")}};`;
-
-            conceptSubtypes.push(sta);
+            if (nemums.length !== 0) {
+                const sta = `constexpr MIRNominalTypeEnum MIRConceptSubtypeArray__${typeemitter.mangleStringForCpp(cpt)}[${nemums.length}] = {${nemums.join(", ")}};`;
+                conceptSubtypes.push(sta);
+            }
         });
 
         const typechecks = [...bodyemitter.subtypeFMap].map(tcp => tcp[1]).sort((tc1, tc2) => tc1.order - tc2.order).map((tc) => tc.decl);
