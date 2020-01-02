@@ -100,11 +100,11 @@ entrypoint function prePostTest(): Int?
 }
 
 entrypoint function lambdaArgumentTest(): Int {
-    return lambdaArgument(fn(x: Int): Int => { return x * 2; }, 3);
+    return lambdaArgument(fn(x: Int): Int => { return Math::mult(x, 2); }, 3);
 }
 
 entrypoint function lambdaArgumentInferTest(): Int {
-    return lambdaArgument(fn(x) => { return x * 2; }, 3);
+    return lambdaArgument(fn(x) => Math::mult(x, 2), 3);
 }
 
 entrypoint function prePostCheck(i: Int): Int

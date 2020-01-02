@@ -55,7 +55,7 @@ entrypoint function lfilter(): Int {
 
 entrypoint function lmap(): Int {
     var lint = List<Int>{1, 2, 3};
-    var lup = lint->map<Int>(fn(x) => x * 3);
+    var lup = lint->map<Int>(fn(x) => Math::mult(x, 3));
     return lup->at(1);
 }
 

@@ -42,23 +42,23 @@ entrypoint function infixSub(x: Int, y: Int): Int {
 }
 
 entrypoint function infixMult(x: Int, y: Int): Int {
-    return x * y;
+    return Math::mult(x, y);
 }
 
 entrypoint function infixDiv(x: Int, y: Int): Int {
-    return x / y;
+    return Math::div(x, y);
 }
 
 entrypoint function infixMod(x: Int, y: Int): Int {
-    return x % y;
+    return Math::mod(x, y);
 }
 
 entrypoint function infixPrecedence1(): Int {
-    return 2 * 3 - 3;
+    return Math::mult(2, 3) - 3;
 }
 
 entrypoint function infixPrecedence2(): Int {
-    return 1 + 2 / 2;
+    return 1 + Math::div(2, 2);
 }
 
 entrypoint function notBoolC(): Bool {

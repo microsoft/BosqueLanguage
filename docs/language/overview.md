@@ -99,7 +99,7 @@ function abs(x: Int): Int {
         sign = -1; //update the variable
     }
 
-    return x * sign;
+    return Math::mult(x, sign);
 }
 ```
 
@@ -249,9 +249,9 @@ entity Foo {
         ensures _return_ > 0; //postcondition
     {
         check this.x - y > 0;   //sanity check - enabled on optimized builds
-        assert this.x * y != 0; //diagnostic assert - only for test/debug
+        assert Math::mult(this.x, y) != 0; //diagnostic assert - only for test/debug
 
-        return x * y;
+        return Math::mult(x, y);
     }
 }
 ```
@@ -1148,18 +1148,18 @@ Examples include:
 
 ## <a name="5.19-Binary-Operators"></a>5.20 Binary Operators
 
-Bosque supports a range of binary operators which can be applied to `Int` values including `+`, `-`, `*`, `/`, and `%`. Examples include:
+Bosque supports a range of binary operators which can be applied to `Int` values including `+`, `-`, `Math::mult`, `Math::div`, and `Math::mod`. Examples include:
 
 ```none
-5 + 6 //11
-3 - 1 //2
-2 * 3 //6
-3 / 2 //1
-4 / 2 //2
-4 / 0 //error
-3 % 2 //1
-4 % 2 //0
-4 % 0 //error
+5 + 6            //11
+3 - 1            //2
+Math::mult(2, 3) //6
+Math::div(3, 2)  //1
+Math::div(4, 2)  //2
+Math::div(4, 0)  //error
+Math::mod(3, 2)  //1
+Math::mod(4, 2)  //0
+Math::mod(4, 0)  //error
 ```
 
 ## <a name="5.20-Equality-Comparison"></a>5.21 Equality Comparison
@@ -1225,13 +1225,13 @@ Bosque supports a range of order operators, `<`, `>`, `<=`, and `>=` which can b
 Bosque provides the standard short-circuiting `&&` and `||` operators as well as a implies `==>` operator. These operators all work on `Bool` typed values and will implicitly convert `none` into false. Examples include:
 
 ```none
-true || (1 / 0 == 0)  //true
-false || (1 / 0 == 0) //error
+true || (Math.div(1, 0) == 0)  //true
+false || (Math.div(1, 0) == 0) //error
 none || false         //false
 1 || true             //error
 
-false && (1 / 0 == 0) //false
-true && (1 / 0 == 0)  //error
+false && (Math.div(1, 0) == 0) //false
+true && (Math.div(1, 0) == 0)  //error
 none && true          //false
 1 && true             //error
 
@@ -1240,8 +1240,8 @@ false ==> false       //true
 true ==> true         //true
 true ==> false        //false
 
-false ==> (1 / 0 == 0) //true
-true ==> (1 / 0 == 0)  //error
+false ==> (Math.div(1, 0) == 0) //true
+true ==> (Math.div(1, 0) == 0)  //error
 true ==> none          //false
 1 ==> true             //error
 ```
@@ -1273,12 +1273,12 @@ The `?|` operator short-circuits on non-none values while the `?&` operator shor
 The select operator uses a condition which may return a `Bool` or `None` and uses this to select between to lazily evaluated alternative expressions. The `none` value is automatically coerced to `false`.
 
 ```none
-true ? 1 : 2      //1
-false ? 1 : 2     //2
-true ? 1 : 2 / 0  //1
-false ? 1 : 2 / 0 //error
-none ? 1 : 2      //2
-"" ? 1 : 2        //error
+true ? 1 : 2               //1
+false ? 1 : 2              //2
+true ? 1 : Math.div(2, 0)  //1
+false ? 1 : Math.div(2, 0) //error
+none ? 1 : 2               //2
+"" ? 1 : 2                 //error
 ```
 
 ## <a name="5.25-Statement-Expressions"></a>5.26 Statement Expressions
