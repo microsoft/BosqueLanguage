@@ -44,7 +44,7 @@ All odd check using rest parameters and lambda:
 
 ```none
 function allOdd(...args: List<Int>): Bool {
-    return args->all(fn(x) => x % 2 == 1);
+    return args->all(fn(x) => Math::mod(x, 2) == 1);
 }
 
 allOdd(1, 3, 4) //false

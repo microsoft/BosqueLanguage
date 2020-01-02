@@ -1308,6 +1308,8 @@ class TypeChecker {
             const keytype = this.m_assembly.getSpecialKeyTypeConcept();
             const mirkeytype = this.m_emitter.registerResolvedTypeReference(keytype);
 
+            const ismathop = fdecl.contiainingType.ns === "NSCore" && fdecl.contiainingType.name === "Math";
+
             if (isindexableop && exp.name === "getKey") {
                 const mirargtypeinfer = this.m_emitter.registerResolvedTypeReference(margs.types[0]);
 
@@ -1332,7 +1334,7 @@ class TypeChecker {
                     mirargtypeinferlhs = mirkeytype;
                 }
 
-                let rhs = margs.args[0];
+                let rhs = margs.args[1];
                 if (!this.m_assembly.subtypeOf(margs.types[1], keytype)) {
                     rhs = this.m_emitter.bodyEmitter.generateTmpRegister();
                     this.m_emitter.bodyEmitter.emitGetKey(exp.sinfo, mirargtypeinferrhs.trkey, margs.args[1], mirkeytype.trkey, rhs as MIRTempRegister);
@@ -1344,28 +1346,19 @@ class TypeChecker {
                 //
                 this.m_emitter.bodyEmitter.emitBinEq(exp.sinfo, mirargtypeinferlhs.trkey, lhs, mirargtypeinferrhs.trkey, "==", rhs, trgt);
             }
-            else if (isindexableop && exp.name === "less") {
-                let mirargtypeinferlhs = this.m_emitter.registerResolvedTypeReference(margs.types[0]);
-                let mirargtypeinferrhs = this.m_emitter.registerResolvedTypeReference(margs.types[1]);
+            else if (ismathop && (exp.name === "mult" || exp.name === "div" || exp.name === "mod")) {
+                const lhs = margs.args[0];
+                const rhs = margs.args[1];
 
-                let lhs = margs.args[0];
-                if (!this.m_assembly.subtypeOf(margs.types[0], keytype)) {
-                    lhs = this.m_emitter.bodyEmitter.generateTmpRegister();
-                    this.m_emitter.bodyEmitter.emitGetKey(exp.sinfo, mirargtypeinferlhs.trkey, margs.args[0], mirkeytype.trkey, lhs as MIRTempRegister);
-                    mirargtypeinferlhs = mirkeytype;
+                if(exp.name === "mult") {
+                    this.m_emitter.bodyEmitter.emitBinOp(exp.sinfo, lhs, "*", rhs, trgt);
                 }
-
-                let rhs = margs.args[0];
-                if (!this.m_assembly.subtypeOf(margs.types[1], keytype)) {
-                    rhs = this.m_emitter.bodyEmitter.generateTmpRegister();
-                    this.m_emitter.bodyEmitter.emitGetKey(exp.sinfo, mirargtypeinferrhs.trkey, margs.args[1], mirkeytype.trkey, rhs as MIRTempRegister);
-                    mirargtypeinferrhs = mirkeytype;
+                else if (exp.name === "div") {
+                    this.m_emitter.bodyEmitter.emitBinOp(exp.sinfo, lhs, "/", rhs, trgt);
                 }
-
-                //
-                // TODO: we should infer the keytype from the Indexable info to do a better emit and type inference
-                //
-                this.m_emitter.bodyEmitter.emitBinCmp(exp.sinfo, mirargtypeinferlhs.trkey, lhs, mirargtypeinferrhs.trkey, "<", rhs, trgt);
+                else {
+                    this.m_emitter.bodyEmitter.emitBinOp(exp.sinfo, lhs, "%", rhs, trgt);
+                }
             }
             else {
                 this.m_emitter.registerResolvedTypeReference(baseType);

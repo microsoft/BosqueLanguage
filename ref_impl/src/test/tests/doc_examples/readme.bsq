@@ -14,7 +14,7 @@ entrypoint function add2C(): Int {
 }
 
 function allOdd(...args: List<Int>): Bool {
-    return args->all(fn(x) => x % 2 == 1);
+    return args->all(fn(x) => Math::mod(x, 2) == 1);
 }
 
 entrypoint function allOddC(): Bool {

@@ -92,9 +92,6 @@ const SymbolStrings = [
     "|",
     "||",
     "+",
-    "*",
-    "/",
-    "%",
     "?",
     "?&",
     "?|",
@@ -1473,22 +1470,9 @@ class Parser {
         }
     }
 
-    private parseMultiplicativeExpression(): Expression {
-        const sinfo = this.getCurrentSrcInfo();
-        const exp = this.parsePrefixExpression();
-
-        if (this.testToken("*") || this.testToken("/") || this.testToken("%")) {
-            const op = this.consumeTokenAndGetValue();
-            return new BinOpExpression(sinfo, exp, op, this.parseMultiplicativeExpression());
-        }
-        else {
-            return exp;
-        }
-    }
-
     private parseAdditiveExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
-        const exp = this.parseMultiplicativeExpression();
+        const exp = this.parsePrefixExpression();
 
         if (this.testToken("+") || this.testToken("-")) {
             const op = this.consumeTokenAndGetValue();
