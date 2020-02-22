@@ -88,7 +88,7 @@ class SMTCond extends SMTExp {
         return new SMTCond(this.test.bind(sval, svar), this.iftrue.bind(sval, svar), this.iffalse.bind(sval, svar));
     }
 
-    emit(indent: string | undefined): string {
+    emit(indent?: string): string {
         if (indent === undefined) {
             return `(ite ${this.test.emit()} ${this.iftrue.emit()} ${this.iffalse.emit()})`;
         }

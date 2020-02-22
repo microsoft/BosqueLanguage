@@ -47,21 +47,21 @@ entity ENested {
 }
 
 entrypoint function createObjSimple(): Bool {
-    var o = E1{ x=none, y=1, z=true, f=3 };
+    var o = E1@{ x=none, y=1, z=true, f=3 };
 
     check o.x == none && o.y == 1 && o.z && o.f == 3;
     return true;
 }
 
 entrypoint function createObjDefault(): Bool {
-    var o = E1{ x=none, z=true, f=3 };
+    var o = E1@{ x=none, z=true, f=3 };
 
     check o.x == none && o.y == 3 && o.z && o.f == 3;
     return true;
 }
 
 entrypoint function createObjExpando(): Bool {
-    var o = E1{ ...{ x=none, z=true, f=3 } };
+    var o = E1@{ ...{ x=none, z=true, f=3 } };
 
     check o.x == none && o.y == 3 && o.z && o.f == 3;
     return true;
@@ -96,7 +96,7 @@ entrypoint function createObjTFactoryTemplate(): Bool {
 }
 
 entrypoint function createObjNested(): Bool {
-    var o = ENested{r={f=1}, o=E2<Int>@create(3)};
+    var o = ENested@{r={f=1}, o=E2<Int>@create(3)};
 
     check !o.t.1 && o.r.f == 1 && o.o.f == 3;
     return true;
@@ -104,15 +104,15 @@ entrypoint function createObjNested(): Bool {
 
 
 entrypoint function puzzle1(x: Int, b: Bool): Int {
-    var o: Bar = b ? E0{x=none} : E1{x=none, z=true, f=3};
+    var o: Bar = b ? E0@{x=none} : E1@{x=none, z=true, f=3};
 
     check x != o.y;
     return 0;
 }
 
 entrypoint function puzzle2(x: Int, b: Bool): Int {
-    var o1: Bar = E0{x=none, y=x};
-    var o2 = b ? E0{x=none, y=x} : E1{x=none, y=x, z=true, f=3};
+    var o1: Bar = E0@{x=none, y=x};
+    var o2 = b ? E0@{x=none, y=x} : E1@{x=none, y=x, z=true, f=3};
 
     check o1.y == o2.y;
     return 0;

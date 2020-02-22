@@ -11,7 +11,7 @@
 namespace NSMain;
 
 function max(x: Int, y: Int): Int
-    ensures _return_ == x || _return_ == y;
+    ensures $return == x || $return == y;
 {
     if (x >= y) {
         return x; 

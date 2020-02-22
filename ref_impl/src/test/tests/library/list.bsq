@@ -6,23 +6,23 @@
 namespace NSTest;
 
 entrypoint function lsize(): Int {
-    return List<Any>{}->size() + List<Int>{1}->size() + List<Any>{none, true}->size();
+    return List<Any>@{}->size() + List<Int>@{1}->size() + List<Any>@{none, true}->size();
 }
 
 entrypoint function lvals(): Int {
-    var lint = List<Int>{1, 2, 3};
-    var lmixed = List<Int | String | None>{1, "one", none};
+    var lint = List<Int>@{1, 2, 3};
+    var lmixed = List<Int | String | None>@{1, "one", none};
     return lmixed->at(1) == none ? 5 : lint->at(1);
 }
 
 entrypoint function lpush(): Int {
-    var lint = List<Int>{1, 2, 3};
+    var lint = List<Int>@{1, 2, 3};
     var lup = lint->push(4);
     return lup->at(3);
 }
 
 entrypoint function lset(): Int {
-    var lint = List<Int>{1, 2, 3};
+    var lint = List<Int>@{1, 2, 3};
     var lup = lint->set(1, 5);
     return lup->at(1);
 }
@@ -48,39 +48,39 @@ entrypoint function restCallMixedList2(): Int {
 }
 */
 entrypoint function lfilter(): Int {
-    var lint = List<Int>{1, 2, 3};
+    var lint = List<Int>@{1, 2, 3};
     var lup = lint->filter<Int>(fn(x) => x > 1);
     return lup->at(0);
 }
 
 entrypoint function lmap(): Int {
-    var lint = List<Int>{1, 2, 3};
+    var lint = List<Int>@{1, 2, 3};
     var lup = lint->map<Int>(fn(x) => Math::mult(x, 3));
     return lup->at(1);
 }
 
 entrypoint function latbounds(i: Int): Int {
-    var lint = List<Int>{1, 3};
+    var lint = List<Int>@{1, 3};
     return lint->at(i);
 }
 
 entrypoint function lpushok(i: Int): Int {
-    var lint = List<Int>{1, 3};
+    var lint = List<Int>@{1, 3};
     return lint->push(i)->at(1);
 }
 
 entrypoint function lallyes(): Bool {
-    return List<Int>{1, 3}->all(fn(x) => x > 0);
+    return List<Int>@{1, 3}->all(fn(x) => x > 0);
 }
 
 entrypoint function lallno(): Bool {
-    return List<Int>{1, -1}->all(fn(x) => x > 0);
+    return List<Int>@{1, -1}->all(fn(x) => x > 0);
 }
 
 entrypoint function loftype(): Int {
-    return List<Int?>{1, none}->ofType<Int>()->at(0) + List<Int | String>{3, "ok"}->ofType<Int>()->at(0);
+    return List<Int?>@{1, none}->ofType<Int>()->at(0) + List<Int | String>@{3, "ok"}->ofType<Int>()->at(0);
 }
 
 entrypoint function lsum(): Int {
-    return List<Int>{1, 3}->sum();
+    return List<Int>@{1, 3}->sum();
 }

@@ -31,7 +31,7 @@ function identityInt<T where Int>(x: T): T {
 
 function prePost(arg: Int): Int?
     requires 2 < arg && arg < 10;
-    ensures _return_ != none;
+    ensures $return != none;
 {
     return arg + 1;
 }

@@ -105,6 +105,67 @@
                 "expected": "none"
             },
             {
+                "kind": "aot",
+                "entrypoint": "projectIndecies",
+                "expected": "[2]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "projectIndeciesOpt",
+                "expected": "[2, none]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "projectIndeciesBailout",
+                "args": ["true"],
+                "expected": "[3, none]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "projectIndeciesBailout",
+                "args": ["false"],
+                "expected": "none"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "modifyIndecies",
+                "expected": "[1, 5]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "modifyIndeciesOpt",
+                "expected": "[1, 5, none, none, 4]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "modifyIndeciesBailout",
+                "args": ["true"],
+                "expected": "[5]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "modifyIndeciesBailout",
+                "args": ["false"],
+                "expected": "none"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "extendTupleType",
+                "expected": "[true, false, 3]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "extendTupleTypeBailout",
+                "args": ["true"],
+                "expected": "[3, 3, 4]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "extendTupleTypeBailout",
+                "args": ["false"],
+                "expected": "none"
+            },
+            {
                 "kind": "symtest",
                 "entrypoint": "emptyTuple"
             },
@@ -125,6 +186,21 @@
                 "kind": "symexec",
                 "entrypoint": "getIndexOpt",
                 "expected": "bsqkey_none"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "projectIndeciesC",
+                "expected": "2"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "modifyIndeciesC",
+                "expected": "5"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "extendTupleTypeC",
+                "expected": "3"
             }
         ]
     },

@@ -94,11 +94,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.bosque",
-					"match": "\\b(abort|assert|case|check|elif|else|if|return|switch|type|when|yield)\\b"
+					"match": "\\b(abort|assert|case|check|elif|else|ensures|if|requires|return|switch|type|validate|when|yield)\\b"
 				},
 				{
 					"name": "keyword.bosque",
-					"match": "\\b(abort|abstract|assert|case|check|concept|const|_debug|elif|else|entrypoint|enum|entity|ensures|factory|false|field|fn|from|function|global|hidden|identifier|if|invariant|method|namespace|none|or|override|pragma|provides|recursive|recursive?|ref|return|_return_|requires|switch|static|this|true|type|typedef|using|var|virtual)\\b"
+					"match": "\\b(abort|abstract|assert|case|check|clock|composite|concept|const|_debug|elif|else|entrypoint|enum|entity|ensures|factory|false|field|fn|from|function|global|grounded|guid|hash|hidden|identifier|if|invariant|method|namespace|none|or|override|private|pragma|provides|recursive|recursive?|ref|return|requires|switch|static|this|true|type|typedef|using|var|virtual)\\b"
 				}
 			]
 		},
@@ -134,7 +134,7 @@
 			"patterns": [
 				{
 					"name": "variable.name",
-					"match": "\\b[_a-z][_a-zA-Z0-9]*\\b"
+					"match": "\\b[$][_a-z][_a-zA-Z0-9]*\\b"
 				}
 			]
 		}

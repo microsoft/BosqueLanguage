@@ -7,7 +7,6 @@
 //Some handy helpers for computing IR info
 //
 
-import * as assert from "assert";
 import { MIRBasicBlock, MIROpTag, MIRJump, MIRJumpCond, MIRJumpNone, MIROp } from "./mir_ops";
 
 type FlowLink = {
@@ -56,7 +55,7 @@ function computeBlockLinks(blocks: Map<string, MIRBasicBlock>): Map<string, Flow
 
         }
         else {
-            assert(block.label === "exit");
+            //nothing to do here
         }
 
         done.add(bb);

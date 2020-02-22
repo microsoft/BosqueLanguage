@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <cstdint>
+#include <stdarg.h>
 
 #include <string>
 #include <iostream>
@@ -36,6 +37,9 @@
 #else
 #define HANDLE_BSQ_ABORT(abrt) { printf("ABORT\n"); exit(1); }
 #endif
+
+#define BSQ_NEW(T, ...) (new T(__VA_ARGS__))
+#define BSQ_DELETE(ELEM) (delete ELEM)
 
 namespace BSQ
 {

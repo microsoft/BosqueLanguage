@@ -16,9 +16,9 @@ entity Angle {
     field seconds: Int = 0;
 
     method normalized(over360?: Bool): Angle
-        ensures _return_.degrees >= 0;
-        ensures _return_.primes < 60 && _return_.primes >= 0;
-        ensures _return_.seconds < 60 && _return_.seconds >= 0;
+        ensures $return.degrees >= 0;
+        ensures $return.primes < 60 && $return.primes >= 0;
+        ensures $return.seconds < 60 && $return.seconds >= 0;
     {
         var seconds = this.seconds % 60;
         var primes = (this.primes + ((this.seconds - seconds) / 60)) % 60;

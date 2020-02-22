@@ -47,7 +47,7 @@ entity TED provides TD {
 }
 
 entrypoint function simpleEntityAnyTests(): Int {
-    var nv = makeValue<Simple>(Simple{});
+    var nv = makeValue<Simple>(Simple@{});
 
     check checkerAny<Simple>(nv);
     check checkerAny<Any>(nv);
@@ -69,7 +69,7 @@ entrypoint function simpleEntityAnyTests(): Int {
 }
 
 entrypoint function simpleEntityOrNoneTests(): Int {
-    var nv = Simple{};
+    var nv = Simple@{};
 
     check checker<Simple, Simple>(nv);
     check checker<Simple, Any>(nv);
@@ -91,7 +91,7 @@ entrypoint function simpleEntityOrNoneTests(): Int {
 }
 
 entrypoint function ebEntityAnyTests(): Int {
-    var nv = makeValue<TEB>(TEB{});
+    var nv = makeValue<TEB>(TEB@{});
 
     check checkerAny<TEB>(nv);
     check checkerAny<Any>(nv);
@@ -117,7 +117,7 @@ entrypoint function ebEntityAnyTests(): Int {
 }
 
 entrypoint function ebEntityOrNoneTests(): Int {
-    var nv = makeOrNone<TEB>(TEB{});
+    var nv = makeOrNone<TEB>(TEB@{});
 
     check checker<TEB?, TEB>(nv);
     check checker<TEB?, Any>(nv);
@@ -143,7 +143,7 @@ entrypoint function ebEntityOrNoneTests(): Int {
 }
 
 entrypoint function edEntityAnyTests(): Int {
-    var nv = makeValue<Any>(TED{});
+    var nv = makeValue<Any>(TED@{});
 
     check checkerAny<TED>(nv);
     check checkerAny<Any>(nv);
@@ -168,7 +168,7 @@ entrypoint function edEntityAnyTests(): Int {
 }
 
 entrypoint function ebConceptTests(): Int {
-    var nv = makeConcept<TA, TEB>(TEB{});
+    var nv = makeConcept<TA, TEB>(TEB@{});
 
     check checker<TA, TEB>(nv);
     check checker<TA, Any>(nv);
@@ -194,7 +194,7 @@ entrypoint function ebConceptTests(): Int {
 }
 
 entrypoint function edConceptTests(): Int {
-    var nv = makeConcept<TB&TC, TED>(TED{});
+    var nv = makeConcept<TB&TC, TED>(TED@{});
 
     check checker<TB&TC, TED>(nv);
     check checker<TB&TC, Any>(nv);

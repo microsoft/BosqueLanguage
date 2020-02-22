@@ -50,21 +50,21 @@ entrypoint function returnor2(): Int {
 }
 
 entrypoint function returnor3(): Int | None {
-    var y = (1 == 2) ? 0 : 4 or return when _value_ == 0;
+    var y = (1 == 2) ? 0 : 4 or return when $value == 0;
     return y + 1;
 }
 
 entrypoint function returnor4(): Int {
-    var y = (1 == 2) ? 0 : 4 or return when _value_ == 4;
+    var y = (1 == 2) ? 0 : 4 or return when $value == 4;
     return y + 1;
 }
 
 entrypoint function returnor5(): Int {
-    var y = (1 == 1) ? 0 : 4 or return 8 when _value_ == 4;
+    var y = (1 == 1) ? 0 : 4 or return 8 when $value == 4;
     return y + 1;
 }
 
 entrypoint function returnor6(): Int {
-    var y = (1 == 2) ? 0 : 4 or return 8 when _value_ == 4;
+    var y = (1 == 2) ? 0 : 4 or return 8 when $value == 4;
     return y + 1;
 }

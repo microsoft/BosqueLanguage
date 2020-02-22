@@ -6,7 +6,7 @@
 namespace NSTest;
 
 entrypoint function empty(): Int {
-    return Set<KeyType>{}->size() + Set<Int>{1}->size() + Set<Int>{1, 1, 1}->size() + Set<Int>{1, 2}->size();
+    return Set<KeyType>@{}->size() + Set<Int>@{1}->size() + Set<Int>@{1, 1, 1}->size() + Set<Int>@{1, 2}->size();
 }
 
 
@@ -36,7 +36,7 @@ entrypoint function restCallOverlapArgsSet(): Int {
 }
 */
 function hasop(x: Int): Bool {
-    return Set<Int>{1, 5}->has(x);
+    return Set<Int>@{1, 5}->has(x);
 }
 
 entrypoint function hasCyes(): Bool {
@@ -48,7 +48,7 @@ entrypoint function hasCno(): Bool {
 }
 
 function insertOp(x: Int): Int {
-    var sint = Set<Int>{1, 2, 3};
+    var sint = Set<Int>@{1, 2, 3};
     var sup = sint->insert(x);
 
     check sup->has(x);
@@ -64,7 +64,7 @@ entrypoint function insertCno(): Int {
 }
 
 function removeOp(x: Int): Int {
-    var sint = Set<Int>{1, 2, 3};
+    var sint = Set<Int>@{1, 2, 3};
     var sup = sint->remove(x);
 
     check !sup->has(x);
@@ -80,7 +80,7 @@ entrypoint function removeCno(): Int {
 }
 
 entrypoint function puzzle(x: Int, y: Int): Int {
-    var sint = Set<Int>{1, 2, y};
+    var sint = Set<Int>@{1, 2, y};
 
     check !(sint->size() == 2 && sint->insert(x)->has(11));
     return 0;
