@@ -49,7 +49,7 @@ function generateMASM(files: string[], corelibpath: string): MIRAssembly {
         process.exit(1);
     }
 
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), true, true, true, code);
+    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", true, code);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
@@ -64,7 +64,6 @@ function generateMASM(files: string[], corelibpath: string): MIRAssembly {
 Commander
     .option("-e --entrypoint [entrypoint]", "Entrypoint to symbolically test", "NSMain::main")
     .option("-m --model", "Try to get model for failing inputs", false)
-    .option("-b --bound [size]", "Bound for testing", 4)
     .option("-o --output [file]", "Output the model to a given file");
 
 Commander.parse(process.argv);
@@ -93,22 +92,24 @@ setImmediate(() => {
             process.exit(1);
         }
 
-        const sparams = SMTEmitter.emit(massembly, entrypoint, Commander.bound, true);
+        const sparams = SMTEmitter.emit(massembly, entrypoint, true);
         const lsrc = FS.readFileSync(smt_runtime).toString();
         const contents = lsrc
-            .replace(";;FIXED_TUPLE_DECLS_FWD;;", "  " + sparams.fixedtupledecls_fwd)
-            .replace(";;FIXED_RECORD_DECLS_FWD;;", "  " + sparams.fixedrecorddecls_fwd)
-            .replace(";;FIXED_TUPLE_DECLS;;", "  " + sparams.fixedtupledecls)
-            .replace(";;FIXED_RECORD_DECLS;;", "  " + sparams.fixedrecorddecls)
-            .replace(";;NOMINAL_DECLS_FWD;;", "  " + sparams.typedecls_fwd)
-            .replace(";;NOMINAL_DECLS;;", "  " + sparams.typedecls)
-            .replace(";;CONCEPT_SUBTYPE_RELATION_DECLARE;;", sparams.conceptSubtypeRelation)
-            .replace(";;NOMINAL_RESULT_FWD;;", "  " + sparams.resultdecls_fwd)
-            .replace(";;NOMINAL_RESULT;;", "  " + sparams.resultdecls)
-            .replace(";;SUBTYPE_DECLS;;", sparams.typechecks)
-            .replace(";;FUNCTION_DECLS;;", "  " + sparams.function_decls)
-            .replace(";;ARG_VALUES;;", sparams.args_info)
-            .replace(";;INVOKE_ACTION;;", sparams.main_info)
+            .replace(";;NOMINAL_DECLS_FWD;;", sparams.NOMINAL_DECLS_FWD)
+            .replace(";;NOMINAL_CONSTRUCTORS;;", sparams.NOMINAL_CONSTRUCTORS)
+            .replace(";;NOMINAL_OBJECT_CONSTRUCTORS;;", sparams.NOMINAL_OBJECT_CONSTRUCTORS)
+            .replace(";;NOMINAL_TYPE_TO_DATA_KIND_ASSERTS;;", sparams.NOMINAL_TYPE_TO_DATA_KIND_ASSERTS)
+            .replace(";;SPECIAL_NAME_BLOCK_ASSERTS;;", sparams.SPECIAL_NAME_BLOCK_ASSERTS)
+            .replace(";;EPHEMERAL_DECLS;;", sparams.EPHEMERAL_DECLS)
+            .replace(";;EMPTY_CONTENT_ARRAY_DECLS;;", sparams.EMPTY_CONTENT_ARRAY_DECLS)
+            .replace(";;RESULTS_FWD;;", sparams.RESULTS_FWD)
+            .replace(";;RESULTS;;", sparams.RESULTS)
+            .replace(";;CONCEPT_SUBTYPE_RELATION_DECLARE;;", sparams.CONCEPT_SUBTYPE_RELATION_DECLARE)
+            .replace(";;SUBTYPE_DECLS;;", sparams.SUBTYPE_DECLS)
+            .replace(";;VFIELD_ACCESS;;", sparams.VFIELD_ACCESS)
+            .replace(";;FUNCTION_DECLS;;", sparams.FUNCTION_DECLS)
+            .replace(";;ARG_VALUES;;", sparams.ARG_VALUES)
+            .replace(";;INVOKE_ACTION;;", sparams.INVOKE_ACTION)
             .replace(";;GET_MODEL;;", Commander.model ? "(get-model)" : "");
 
         console.log(`Running z3 on SMT encoding...`);

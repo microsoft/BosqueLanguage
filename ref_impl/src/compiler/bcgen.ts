@@ -36,7 +36,7 @@ function compile(files: string[], trgt: string) {
 
     process.stdout.write("Compiling assembly...\n");
 
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), true, true, true, code);
+    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", true, code);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(`Parse error -- ${errors[i]}\n`);

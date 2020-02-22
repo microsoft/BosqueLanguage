@@ -124,6 +124,21 @@ class ResolvedRecordAtomType extends ResolvedAtomType {
     }
 }
 
+class ResolvedEphemeralListType extends ResolvedAtomType {
+    readonly types: ResolvedType[];
+
+    constructor(rstr: string, types: ResolvedType[]) {
+        super(rstr);
+        this.types = types;
+    }
+
+    static create(entries: ResolvedType[]): ResolvedEphemeralListType {
+        const simplifiedEntries = [...entries];
+        const cvalue = simplifiedEntries.map((entry) => entry.idStr).join(", ");
+        return new ResolvedEphemeralListType("(|" + cvalue + "|)", simplifiedEntries);
+    }
+}
+
 class ResolvedType {
     readonly idStr: string;
     readonly options: ResolvedAtomType[];
@@ -195,19 +210,23 @@ class ResolvedType {
     isAnyType(): boolean {
         return this.options.length === 1 && this.options[0].idStr === "NSCore::Any";
     }
+
+    isEphemeralListType(): boolean {
+        return this.options.length === 1 && this.options[0] instanceof ResolvedEphemeralListType;
+    }
 }
 
 class ResolvedFunctionTypeParam {
     readonly name: string;
-    readonly isOptional: boolean;
-    readonly isRef: boolean;
     readonly type: ResolvedType | ResolvedFunctionType;
+    readonly isRef: boolean;
+    readonly isOptional: boolean;
 
-    constructor(name: string, isOptional: boolean, isRef: boolean, type: ResolvedType | ResolvedFunctionType) {
+    constructor(name: string, type: ResolvedType | ResolvedFunctionType, isOpt: boolean, isRef: boolean) {
         this.name = name;
-        this.isOptional = isOptional;
-        this.isRef = isRef;
         this.type = type;
+        this.isOptional = isOpt;
+        this.isRef = isRef;
     }
 }
 
@@ -221,7 +240,7 @@ class ResolvedFunctionType {
 
     readonly allParamNames: Set<string>;
 
-    constructor(rstr: string, recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType, allParamNames: Set<string>) {
+    constructor(rstr: string, recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType) {
         this.idStr = rstr;
         this.recursive = recursive;
         this.params = params;
@@ -233,14 +252,7 @@ class ResolvedFunctionType {
     }
 
     static create(recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType): ResolvedFunctionType {
-        let cvalues: string[] = [];
-        let allNames = new Set<string>();
-        params.forEach((param) => {
-            if (param.name !== "_") {
-                allNames.add(param.name);
-            }
-            cvalues.push((param.isRef ? "ref " : "") + param.name + (param.isOptional ? "?: " : ": ") + param.type.idStr);
-        });
+        const cvalues = params.map((param) => (param.isRef ? "ref " : "") + param.name + (param.isOptional ? "?: " : ": ") + param.type.idStr);
         let cvalue = cvalues.join(", ");
 
         let recstr = "";
@@ -255,8 +267,16 @@ class ResolvedFunctionType {
             cvalue += ((cvalues.length !== 0 ? ", " : "") + ("..." + optRestParamName + ": " + optRestParamType.idStr));
         }
 
-        return new ResolvedFunctionType(recstr + "(" + cvalue + ") -> " + resultType.idStr, recursive, params, optRestParamName, optRestParamType, resultType, allNames);
+        return new ResolvedFunctionType(recstr + "(" + cvalue + ") -> " + resultType.idStr, recursive, params, optRestParamName, optRestParamType, resultType);
     }
 }
 
-export { ResolvedAtomType, ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType, ResolvedTupleAtomTypeEntry, ResolvedTupleAtomType, ResolvedRecordAtomTypeEntry, ResolvedRecordAtomType, ResolvedType, ResolvedFunctionTypeParam, ResolvedFunctionType };
+export { 
+    ResolvedAtomType, 
+    ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType, 
+    ResolvedTupleAtomTypeEntry, ResolvedTupleAtomType, 
+    ResolvedRecordAtomTypeEntry, ResolvedRecordAtomType, 
+    ResolvedEphemeralListType,
+    ResolvedType, 
+    ResolvedFunctionTypeParam, ResolvedFunctionType
+};

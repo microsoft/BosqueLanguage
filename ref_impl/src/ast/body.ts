@@ -35,6 +35,15 @@ class PositionalArgument extends InvokeArgument {
     }
 }
 
+class MapArgument extends InvokeArgument {
+    readonly key: Expression;
+
+    constructor(key: Expression, value: Expression) {
+        super(value, false);
+        this.key = key;
+    }
+}
+
 class Arguments {
     readonly argList: InvokeArgument[];
 
@@ -133,6 +142,7 @@ enum ExpressionTag {
     LiteralBoolExpression = "LiteralBoolExpression",
     LiteralIntegerExpression = "LiteralIntegerExpression",
     LiteralStringExpression = "LiteralStringExpression",
+    LiteralRegexExpression = "LiteralRegexExpression",
     LiteralTypedStringExpression = "LiteralTypedStringExpression",
     LiteralTypedStringConstructorExpression = "LiteralTypedStringConstructorExpression",
 
@@ -144,6 +154,7 @@ enum ExpressionTag {
     ConstructorPrimaryWithFactoryExpression = "ConstructorPrimaryWithFactoryExpression",
     ConstructorTupleExpression = "ConstructorTupleExpression",
     ConstructorRecordExpression = "ConstructorRecordExpression",
+    ConstructorEphemeralValueList = "ConstructorEphemeralValueList",
     ConstructorPCodeExpression = "ConstructorPCodeExpression",
 
     PCodeInvokeExpression = "PCodeInvokeExpression",
@@ -168,8 +179,7 @@ enum ExpressionTag {
     BlockStatementExpression = "BlockStatementExpression",
     IfExpression = "IfExpression",
     MatchExpression = "MatchExpression",
-    //    ProroguedExpression,
-    //    MLExpression
+    //    ProroguedExpression
 }
 
 abstract class Expression {
@@ -221,6 +231,15 @@ class LiteralStringExpression extends Expression {
     }
 }
 
+class LiteralRegexExpression extends Expression {
+    readonly value: string;
+
+    constructor(sinfo: SourceInfo, value: string) {
+        super(ExpressionTag.LiteralRegexExpression, sinfo);
+        this.value = value;
+    }
+}
+
 class LiteralTypedStringExpression extends Expression {
     readonly value: string;
     readonly stype: TypeSignature;
@@ -234,11 +253,13 @@ class LiteralTypedStringExpression extends Expression {
 
 class LiteralTypedStringConstructorExpression extends Expression {
     readonly value: string;
+    readonly asValue: boolean;
     readonly stype: TypeSignature;
 
-    constructor(sinfo: SourceInfo, value: string, stype: TypeSignature) {
+    constructor(sinfo: SourceInfo, value: string, asValue: boolean, stype: TypeSignature) {
         super(ExpressionTag.LiteralTypedStringConstructorExpression, sinfo);
         this.value = value;
+        this.asValue = asValue;
         this.stype = stype;
     }
 }
@@ -276,25 +297,29 @@ class AccessVariableExpression extends Expression {
 
 class ConstructorPrimaryExpression extends Expression {
     readonly ctype: TypeSignature;
+    readonly asValue: boolean;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, ctype: TypeSignature, args: Arguments) {
+    constructor(sinfo: SourceInfo, ctype: TypeSignature, asvalue: boolean, args: Arguments) {
         super(ExpressionTag.ConstructorPrimaryExpression, sinfo);
         this.ctype = ctype;
+        this.asValue = asvalue;
         this.args = args;
     }
 }
 
 class ConstructorPrimaryWithFactoryExpression extends Expression {
     readonly ctype: TypeSignature;
+    readonly asValue: boolean;
     readonly factoryName: string;
     readonly terms: TemplateArguments;
     readonly pragmas: PragmaArguments;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, ctype: TypeSignature, factory: string, pragmas: PragmaArguments, terms: TemplateArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, ctype: TypeSignature, asvalue: boolean, factory: string, pragmas: PragmaArguments, terms: TemplateArguments, args: Arguments) {
         super(ExpressionTag.ConstructorPrimaryWithFactoryExpression, sinfo);
         this.ctype = ctype;
+        this.asValue = asvalue;
         this.factoryName = factory;
         this.pragmas = pragmas;
         this.terms = terms;
@@ -316,6 +341,15 @@ class ConstructorRecordExpression extends Expression {
 
     constructor(sinfo: SourceInfo, args: Arguments) {
         super(ExpressionTag.ConstructorRecordExpression, sinfo);
+        this.args = args;
+    }
+}
+
+class ConstructorEphemeralValueList extends Expression {
+    readonly args: Arguments;
+
+    constructor(sinfo: SourceInfo, args: Arguments) {
+        super(ExpressionTag.ConstructorEphemeralValueList, sinfo);
         this.args = args;
     }
 }
@@ -430,10 +464,12 @@ class PostfixAccessFromIndex extends PostfixOperation {
 }
 
 class PostfixProjectFromIndecies extends PostfixOperation {
+    readonly isEphemeralListResult: boolean;
     readonly indecies: number[];
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, indecies: number[]) {
+    constructor(sinfo: SourceInfo, isElvis: boolean, isEphemeralListResult: boolean ,indecies: number[]) {
         super(sinfo, isElvis, PostfixOpTag.PostfixProjectFromIndecies);
+        this.isEphemeralListResult = isEphemeralListResult
         this.indecies = indecies;
     }
 }
@@ -448,19 +484,23 @@ class PostfixAccessFromName extends PostfixOperation {
 }
 
 class PostfixProjectFromNames extends PostfixOperation {
+    readonly isEphemeralListResult: boolean;
     readonly names: string[];
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, names: string[]) {
+    constructor(sinfo: SourceInfo, isElvis: boolean, isEphemeralListResult: boolean, names: string[]) {
         super(sinfo, isElvis, PostfixOpTag.PostfixProjectFromNames);
+        this.isEphemeralListResult = isEphemeralListResult;
         this.names = names;
     }
 }
 
 class PostfixProjectFromType extends PostfixOperation {
+    readonly istry: boolean;
     readonly ptype: TypeSignature;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, ptype: TypeSignature) {
+    constructor(sinfo: SourceInfo, isElvis: boolean, istry: boolean, ptype: TypeSignature) {
         super(sinfo, isElvis, PostfixOpTag.PostfixProjectFromType);
+        this.istry = istry;
         this.ptype = ptype;
     }
 }
@@ -658,7 +698,9 @@ enum StatementTag {
     EmptyStatement = "EmptyStatement",
 
     VariableDeclarationStatement = "VariableDeclarationStatement",
+    VariablePackDeclarationStatement = "VariablePackDeclarationStatement",
     VariableAssignmentStatement = "VariableAssignmentStatement",
+    VariablePackAssignmentStatement = "VariablePackAssignmentStatement",
     StructuredVariableAssignmentStatement = "StructuredVariableAssignmentStatement",
 
     ReturnStatement = "ReturnStatement",
@@ -670,8 +712,10 @@ enum StatementTag {
     AbortStatement = "AbortStatement",
     AssertStatement = "AssertStatement", //assert(x > 0)
     CheckStatement = "CheckStatement", //check(x > 0)
+    ValidateStatement = "ValidateStatement", //validate exp or err -> if (!exp) return Result<INVOKE_RESULT>@error(err);
 
     DebugStatement = "DebugStatement", //print an arg or if empty attach debugger
+    NakedCallStatement = "NakedCallStatement",
 
     BlockStatement = "BlockStatement"
 }
@@ -713,6 +757,19 @@ class VariableDeclarationStatement extends Statement {
     }
 }
 
+class VariablePackDeclarationStatement extends Statement {
+    readonly isConst: boolean;
+    readonly vars: {name: string, vtype: TypeSignature /*may be auto*/}[];
+    readonly exp: Expression[] | undefined; //may be undef
+
+    constructor(sinfo: SourceInfo, isConst: boolean, vars: {name: string, vtype: TypeSignature /*may be auto*/}[], exp: Expression[] | undefined) {
+        super(StatementTag.VariablePackDeclarationStatement, sinfo);
+        this.isConst = isConst;
+        this.vars = vars;
+        this.exp = exp;
+    }
+}
+
 class VariableAssignmentStatement extends Statement {
     readonly name: string;
     readonly exp: Expression;
@@ -720,6 +777,17 @@ class VariableAssignmentStatement extends Statement {
     constructor(sinfo: SourceInfo, name: string, exp: Expression) {
         super(StatementTag.VariableAssignmentStatement, sinfo);
         this.name = name;
+        this.exp = exp;
+    }
+}
+
+class VariablePackAssignmentStatement extends Statement {
+    readonly names: string[];
+    readonly exp: Expression[];
+
+    constructor(sinfo: SourceInfo, names: string[], exp: Expression[]) {
+        super(StatementTag.VariablePackAssignmentStatement, sinfo);
+        this.names = names;
         this.exp = exp;
     }
 }
@@ -791,6 +859,28 @@ class RecordStructuredAssignment extends StructuredAssignment {
     }
 }
 
+class NominalStructuredAssignment extends StructuredAssignment {
+    readonly atype: TypeSignature;
+    readonly isValue: boolean;
+    readonly assigns: [string, StructuredAssignment][];
+
+    constructor(atype: TypeSignature, isValue: boolean, assigns: [string, StructuredAssignment][]) {
+        super();
+        this.atype = atype;
+        this.isValue = isValue;
+        this.assigns = assigns;
+    }
+}
+
+class ValueListStructuredAssignment extends StructuredAssignment {
+    readonly assigns: StructuredAssignment[];
+
+    constructor(assigns: StructuredAssignment[]) {
+        super();
+        this.assigns = assigns;
+    }
+}
+
 class StructuredVariableAssignmentStatement extends Statement {
     readonly assign: StructuredAssignment;
     readonly exp: Expression;
@@ -803,20 +893,20 @@ class StructuredVariableAssignmentStatement extends Statement {
 }
 
 class ReturnStatement extends Statement {
-    readonly value: Expression;
+    readonly values: Expression[];
 
-    constructor(sinfo: SourceInfo, value: Expression) {
+    constructor(sinfo: SourceInfo, values: Expression[]) {
         super(StatementTag.ReturnStatement, sinfo);
-        this.value = value;
+        this.values = values;
     }
 }
 
 class YieldStatement extends Statement {
-    readonly value: Expression;
+    readonly values: Expression[];
 
-    constructor(sinfo: SourceInfo, value: Expression) {
+    constructor(sinfo: SourceInfo, values: Expression[]) {
         super(StatementTag.YieldStatement, sinfo);
-        this.value = value;
+        this.values = values;
     }
 }
 
@@ -864,12 +954,32 @@ class CheckStatement extends Statement {
     }
 }
 
+class ValidateStatement extends Statement {
+    readonly cond: Expression;
+    readonly err: Expression;
+
+    constructor(sinfo: SourceInfo, cond: Expression, err: Expression) {
+        super(StatementTag.ValidateStatement, sinfo);
+        this.cond = cond;
+        this.err = err;
+    }
+}
+
 class DebugStatement extends Statement {
     readonly value: Expression | undefined;
 
     constructor(sinfo: SourceInfo, value: Expression | undefined) {
         super(StatementTag.DebugStatement, sinfo);
         this.value = value;
+    }
+}
+
+class NakedCallStatement extends Statement {
+    readonly call: CallNamespaceFunctionExpression | CallStaticFunctionExpression;
+
+    constructor(sinfo: SourceInfo, call: CallNamespaceFunctionExpression | CallStaticFunctionExpression) {
+        super(StatementTag.NakedCallStatement, sinfo);
+        this.call = call;
     }
 }
 
@@ -895,11 +1005,11 @@ class BodyImplementation {
 }
 
 export {
-    InvokeArgument, NamedArgument, PositionalArgument, Arguments, TemplateArguments, PragmaArguments, CondBranchEntry, IfElse,
+    InvokeArgument, NamedArgument, PositionalArgument, MapArgument, Arguments, TemplateArguments, PragmaArguments, CondBranchEntry, IfElse,
     ExpressionTag, Expression, InvalidExpression,
-    LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression,
+    LiteralNoneExpression, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, LiteralRegexExpression, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression,
     AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression,
-    ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPCodeExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression,
+    ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorEphemeralValueList, ConstructorPCodeExpression, CallNamespaceFunctionExpression, CallStaticFunctionExpression,
     PostfixOpTag, PostfixOperation, PostfixOp,
     PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend,
     PostfixInvoke, PCodeInvokeExpression,
@@ -907,10 +1017,11 @@ export {
     NonecheckExpression, CoalesceExpression, SelectExpression, ExpOrExpression,
     BlockStatementExpression, IfExpression, MatchExpression,
     StatementTag, Statement, InvalidStatement, EmptyStatement,
-    VariableDeclarationStatement, VariableAssignmentStatement,
-    StructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, StructuredVariableAssignmentStatement,
+    VariableDeclarationStatement, VariablePackDeclarationStatement, VariableAssignmentStatement, VariablePackAssignmentStatement,
+    StructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, 
+    TupleStructuredAssignment, RecordStructuredAssignment, NominalStructuredAssignment, ValueListStructuredAssignment,
     ReturnStatement, YieldStatement,
-    IfElseStatement, AbortStatement, AssertStatement, CheckStatement, DebugStatement,
+    IfElseStatement, AbortStatement, AssertStatement, CheckStatement, ValidateStatement, DebugStatement, NakedCallStatement,
     MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, MatchEntry, MatchStatement,
     BlockStatement, BodyImplementation
 };

@@ -6,11 +6,11 @@
 namespace NSTest;
 
 entrypoint function empty(): Int {
-    return Map<KeyType, Any>{}->size() + Map<Int, Int>{[1, 1]}->size() + Map<Int, Int>{[1, 1], [1, 2], [1, 1]}->size() + Map<Int, Int>{[1, 1], [2, 1]}->size();
+    return Map<KeyType, Any>@{}->size() + Map<Int, Int>@{1=>1}->size() + Map<Int, Int>@{1=>1, 1=>2, 1=>1}->size() + Map<Int, Int>@{1=>1, 2=>1}->size();
 }
 
 entrypoint function dupkey(): Int {
-    return Map<Int, Int>{[1, 1], [1, 2]}->get(1);
+    return Map<Int, Int>@{1=>1, 1=>2}->get(1);
 }
 
 function restArgMapSimple<K, V>(...arg: Map<K, V>): Int {
@@ -18,15 +18,15 @@ function restArgMapSimple<K, V>(...arg: Map<K, V>): Int {
 }
 
 entrypoint function restCallSimpleArgsMap(): Int {
-    return restArgMapSimple<Int, Bool>([ 1, false ], [ 2, true ]);
+    return restArgMapSimple<Int, Bool>(1=>false, 2=>true);
 }
 
 entrypoint function restCallOverlapArgsMap(): Int {
-    return restArgMapSimple<Int, Bool>([ 1, false ], [ 1, true ]);
+    return restArgMapSimple<Int, Bool>(1=>false, 1=>true);
 }
 
 function hasop(x: Int): Int {
-    var m = Map<Int, Int>{[1, 1], [5, 2]};
+    var m = Map<Int, Int>@{1=>1, 5=>2};
     return m->has(x) ? m->get(x) : -1;
 }
 
@@ -39,7 +39,7 @@ entrypoint function hasCno(): Int {
 }
 
 entrypoint function insertOp(x: Int, y: Int): Int {
-    var mint = Map<Int, Int>{[1, 1], [3, 3], [2, 2]};
+    var mint = Map<Int, Int>@{1=>1, 3=>3, 2=>2};
     var mup = mint->insert(x, y);
 
     check mup->has(x) && mup->get(x) == y;
@@ -55,7 +55,7 @@ entrypoint function insertCno(): Int {
 }
 
 entrypoint function removeOp(x: Int): Int {
-    var mint = Map<Int, Int>{[1, 1], [2, 2], [3, 3]};
+    var mint = Map<Int, Int>@{1=>1, 2=>2, 3=>3};
     var mup = mint->remove(x);
 
     check !mup->has(x);
@@ -71,19 +71,19 @@ entrypoint function removeCno(): Int {
 }
 
 entrypoint function getFail(x: Int): Int {
-    var mint = Map<Int, Int>{[1, 1], [2, 2], [3, 3]};
+    var mint = Map<Int, Int>@{1=>1, 2=>2, 3=>3};
     return mint->get(x);
 }
 
 entrypoint function puzzle(x: Int, y: Int): Int {
-    var mint = Map<Int, Int>{[1, 1], [2, 2], [x, y]};
+    var mint = Map<Int, Int>@{1=>1, 2=>2, x=>y};
 
     check mint->size() == 2 && mint->get(x) != 11;
     return 0;
 }
 
 entrypoint function tox(): Bool {
-    var mint = Map<Int, Int>{[1, 2], [3, 4]};
+    var mint = Map<Int, Int>@{1=>2, 3=>4};
     
     var kl = mint->getKeyList();
     var ks = mint->getKeySet();

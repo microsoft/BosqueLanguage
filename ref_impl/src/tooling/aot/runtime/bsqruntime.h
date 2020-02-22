@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "bsqvalue.h"
+#include "bsqkeyvalues.h"
 
 #pragma once
 
@@ -17,8 +18,6 @@ public:
 
 //%%STATIC_INT_DECLARE%%
 
-static const char* propertyNames[];
-
-static std::u32string diagnostic_format(Value v);
+//%%EPHEMERAL_LIST_DECLARE
 };
 } // namespace BSQ

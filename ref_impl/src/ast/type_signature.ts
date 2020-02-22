@@ -52,6 +52,15 @@ class RecordTypeSignature extends TypeSignature {
     }
 }
 
+class EphemeralListTypeSignature extends TypeSignature {
+    readonly entries: TypeSignature[];
+
+    constructor(entries: TypeSignature[]) {
+        super();
+        this.entries = entries;
+    }
+}
+
 class FunctionParameter {
     readonly name: string;
     readonly type: TypeSignature;
@@ -83,6 +92,17 @@ class FunctionTypeSignature extends TypeSignature {
     }
 }
 
+class ProjectTypeSignature extends TypeSignature {
+    readonly fromtype: TypeSignature;
+    readonly oftype: TypeSignature;
+
+    constructor(fromtype: TypeSignature, oftype: TypeSignature) {
+        super();
+        this.fromtype = fromtype;
+        this.oftype = oftype;
+    }
+}
+
 class IntersectionTypeSignature extends TypeSignature {
     readonly types: TypeSignature[];
 
@@ -101,4 +121,9 @@ class UnionTypeSignature extends TypeSignature {
     }
 }
 
-export { TypeSignature, ParseErrorTypeSignature, AutoTypeSignature, TemplateTypeSignature, NominalTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionParameter, FunctionTypeSignature, IntersectionTypeSignature, UnionTypeSignature };
+export { 
+    TypeSignature, ParseErrorTypeSignature, AutoTypeSignature, 
+    TemplateTypeSignature, NominalTypeSignature, 
+    TupleTypeSignature, RecordTypeSignature, EphemeralListTypeSignature,
+    FunctionParameter, FunctionTypeSignature, ProjectTypeSignature, IntersectionTypeSignature, UnionTypeSignature
+};
