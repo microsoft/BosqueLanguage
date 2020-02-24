@@ -243,14 +243,14 @@ The **symtest** tool implements the symbolic testing algorithm and works as foll
 ```
 namespace NSMain;
 
-global _ops: List<String> = List<String>@{
+global _ops: Set<String> = Set<String>@{
     "negate",
     "add",
     "sub"
 };
 
-entrypoint function processOp(op: string, arg1: Int, arg2: Int?): Int 
-    requires#release _ops.has(op);
+entrypoint function processOp(op: String, arg1: Int, arg2: Int?): Int 
+    requires#release NSMain::_ops->has(op);
     //requires#release (op == "add" || op == "sub") ==> arg2 != none;
 {
     if(op == "negate") {
@@ -267,7 +267,6 @@ entrypoint function processOp(op: string, arg1: Int, arg2: Int?): Int
         }
     }
 }
-
 ```
 
 Assuming this code is in a file called `process_op.bsq` then we can run the following command to check for errors:

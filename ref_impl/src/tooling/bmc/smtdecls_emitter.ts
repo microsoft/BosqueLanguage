@@ -155,17 +155,22 @@ class SMTEmitter {
 
             argscall.push(`@${param.name}`);
             argsdecls.push(`(declare-const @${param.name} ${typeemitter.getSMTTypeFor(paramtype)})`);
-            argsdecls.push(`(assert ${bodyemitter.generateTypeCheck(param.name, paramtype, paramtype, typeemitter.getMIRType(param.type))})`);
+            const tcops = paramtype.options.map((opt) => bodyemitter.generateTypeCheck("@" + param.name, paramtype, paramtype, typeemitter.getMIRType(opt.trkey)));
+            if(!tcops.some((tcr) => tcr === "true")) {
+                argsdecls.push(`(assert (or ${tcops.join(" ")}))`);
+            }
         }
 
         if(entrypoint.preconditions !== undefined) {
             const params = entrypoint.params.map((param) => `@${param.name}`);
+            argsdecls.push("(declare-const @icheck Result@Bool)")
             if(params.length === 0) {
-                argsdecls.push(`${entrypoint.preconditions}`);
+                argsdecls.push(`(assert (= @icheck ${typeemitter.mangleStringForSMT(entrypoint.preconditions)}))`);
             }
             else {
-                argsdecls.push(`(${entrypoint.preconditions} ${params.join(" ")})`);
+                argsdecls.push(`(assert (= @icheck (${typeemitter.mangleStringForSMT(entrypoint.preconditions)} ${params.join(" ")})))`);
             }
+            argsdecls.push("(assert (and (is-result_success@Bool @icheck) (result_success_value@Bool @icheck)))")
         }
 
         let conceptSubtypes: string[] = [];
