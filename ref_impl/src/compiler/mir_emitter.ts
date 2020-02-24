@@ -573,7 +573,7 @@ class MIREmitter {
     registerMethodCall(containingType: OOPTypeDecl, m: MemberMethodDecl, cbinds: Map<string, ResolvedType>, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
         const vkey = MIRKeyGenerator.generateVirtualMethodKey(name, binds);
         const key = MIRKeyGenerator.generateMethodKey(containingType, name, binds, pcodes);
-        if (this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingOOMethodProcessing.findIndex((mp) => mp[0] === key) !== -1) {
+        if (this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingOOMethodProcessing.findIndex((mp) => mp[1] === key) !== -1) {
             return key;
         }
 
