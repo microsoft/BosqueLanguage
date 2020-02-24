@@ -4422,7 +4422,8 @@ class TypeChecker {
             let cargs = new Map<string, VarInfo>();
             let argTypes = new Map<string, MIRType>();
             args.forEach((arg) => {
-                    const ptype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
+                    const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
+                    const ptype = arg.isOptional ? this.m_assembly.typeUnion([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
                     const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
 
                     fps.push(new MIRFunctionParameter(arg.name, mirptype.trkey));
@@ -4475,7 +4476,8 @@ class TypeChecker {
             let cargs = new Map<string, VarInfo>();
             let argTypes = new Map<string, MIRType>();
             args.forEach((arg) => {
-                    const ptype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
+                    const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
+                    const ptype = arg.isOptional ? this.m_assembly.typeUnion([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
                     const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
 
                     fps.push(new MIRFunctionParameter(arg.name, mirptype.trkey));
@@ -4714,7 +4716,7 @@ class TypeChecker {
                     realbody = this.processGenerateSpecialPreFunction_ResultT(sinfo, preconds, invoke.body as BodyImplementation);
                 }
                 else {
-                    const fkey = MIRKeyGenerator.generateFunctionKey(namespace, `${ikey}@@pre`, binds, []);
+                    const fkey = `${ikey}@@pre`;
                     this.processGenerateSpecialPreFunction_FailFast(fkey, `${iname}@@pre`, invoke.params, binds, preconds, binds, invoke.srcFile, invoke.sourceLocation);
 
                     preject = [fkey, prepostargs];
@@ -4723,9 +4725,9 @@ class TypeChecker {
 
             let postconds = invoke.postconditions.filter((post) => isBuildLevelEnabled(post.level, this.m_buildLevel));
             if(postconds.length !== 0) {
-                const fkey = MIRKeyGenerator.generateFunctionKey(namespace, `${ikey}@@post`, binds, []);
+                const fkey = `${ikey}@@post`;
                 const retv = new FunctionParameter("$return", invoke.resultType, false, false);
-                this.processGenerateSpecialPostFunction(fkey, `${iname}@@ppost`, [retv, ...invoke.params], binds, postconds, binds, invoke.srcFile, invoke.sourceLocation);
+                this.processGenerateSpecialPostFunction(fkey, `${iname}@@post`, [retv, ...invoke.params], binds, postconds, binds, invoke.srcFile, invoke.sourceLocation);
 
                 postject = [fkey, prepostargs];
             }
@@ -4740,7 +4742,7 @@ class TypeChecker {
             let preconds = (absconds !== undefined ? absconds.pre[0] : invoke.preconditions).filter((pre) => isBuildLevelEnabled(pre.level, this.m_buildLevel));
             if(preconds.length !== 0) {
                 const prebinds = absconds !== undefined ? absconds.pre[1] : binds;
-                const fkey = MIRKeyGenerator.generateFunctionKey(namespace, `${ikey}@@pre`, binds, []);
+                const fkey = `${ikey}@@pre`;
                 this.processGenerateSpecialPreFunction_FailFast(fkey, `${iname}@@pre`, invoke.params, binds, preconds, prebinds, invoke.srcFile, invoke.sourceLocation);
 
                 preject = [fkey, prepostargs];
@@ -4749,9 +4751,9 @@ class TypeChecker {
             let postconds = (absconds !== undefined ? absconds.post[0] : invoke.postconditions).filter((post) => isBuildLevelEnabled(post.level, this.m_buildLevel));
             if(postconds.length !== 0) {
                 const postbinds = absconds !== undefined ? absconds.post[1] : binds;
-                const fkey = MIRKeyGenerator.generateFunctionKey(namespace, `${ikey}@@post`, binds, []);
+                const fkey = `${ikey}@@post`;
                 const retv = new FunctionParameter("$return", invoke.resultType, false, false);
-                this.processGenerateSpecialPostFunction(fkey, `${iname}@@ppost`, [retv, ...invoke.params], binds, postconds, postbinds, invoke.srcFile, invoke.sourceLocation);
+                this.processGenerateSpecialPostFunction(fkey, `${iname}@@post`, [retv, ...invoke.params], binds, postconds, postbinds, invoke.srcFile, invoke.sourceLocation);
 
                 postject = [fkey, prepostargs];
             }

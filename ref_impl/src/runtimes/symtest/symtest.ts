@@ -9,7 +9,7 @@ import { execSync } from "child_process";
 
 import * as Commander from "commander";
 
-import { MIRAssembly, PackageConfig, MIRInvokeBodyDecl } from "../../compiler/mir_assembly";
+import { MIRAssembly, PackageConfig, MIRInvokeBodyDecl, MIRType } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";
 import { SMTEmitter } from "../../tooling/bmc/smtdecls_emitter";
 import chalk from "chalk";
@@ -87,8 +87,8 @@ setImmediate(() => {
         }
 
         const entrypoint = massembly.invokeDecls.get(Commander.entrypoint) as MIRInvokeBodyDecl;
-        if (entrypoint.params.some((p) => p.type !== "NSCore::Bool" && p.type !== "NSCore::Int" && p.type !== "NSCore::String")) {
-            process.stderr.write("Only Bool/Int/String are supported as inputs for symbolic testing of Bosque programs.\n");
+        if (entrypoint.params.some((p) => !massembly.subtypeOf(massembly.typeMap.get(p.type) as MIRType, massembly.typeMap.get("NSCore::APIValue") as MIRType))) {
+            process.stderr.write("Only APIValue types are supported as inputs of Bosque programs.\n");
             process.exit(1);
         }
 
