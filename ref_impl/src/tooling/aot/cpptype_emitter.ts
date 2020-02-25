@@ -668,6 +668,7 @@ class CPPTypeEmitter {
         + `#define T ${this.getCPPTypeFor(typet, "storage")}\n`
         + `#define INC_RC_T(X) ${this.getIncOpForType(typet, "X")}\n`
         + `#define DEC_RC_T(X) ${this.getDecOpForType(typet, "X")}\n`
+        + `#define BSCOPE ${this.mangleStringForCpp("$scope$")}\n`
         + `#define FDisplay(X) diagnostic_format(${this.coerce("X", typet, this.anyType)})\n`
         + "\n"
         + `#include ${templatefile}\n`;
@@ -695,6 +696,7 @@ class CPPTypeEmitter {
         + `#define KLCONS(K, KL) ${this.mangleStringForCpp(typekl[0])}$cons(K, KL)\n`
         + `#define K_CMP ${this.getGetCMPOpsForKeyType(typekp).cmp}\n`
         + `#define K_EQ(X, Y) ${this.getGetCMPOpsForKeyType(typekp).eq}(X, Y)\n`
+        + `#define BSCOPE ${this.mangleStringForCpp("$scope$")}\n`
         + `#define FDisplay(X) diagnostic_format(${this.coerce("X", typet, this.anyType)})\n`
         + "\n"
         + `#include ${templatefile}\n`;
@@ -728,6 +730,7 @@ class CPPTypeEmitter {
         + `#define KLCONS(K, KL) ${this.mangleStringForCpp(typekl.tkey)}$cons(K, KL)\n`
         + `#define K_CMP ${this.getGetCMPOpsForKeyType(typekp).cmp}\n`
         + `#define K_EQ(X, Y) ${this.getGetCMPOpsForKeyType(typekp).eq}(X, Y)\n`
+        + `#define BSCOPE ${this.mangleStringForCpp("$scope$")}\n`
         + `#define TDisplay(X) diagnostic_format(${this.coerce("X", typet, this.anyType)})\n`
         + `#define UDisplay(X) diagnostic_format(${this.coerce("X", typeu, this.anyType)})\n`
         + "\n"

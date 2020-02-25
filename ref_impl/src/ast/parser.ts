@@ -2943,7 +2943,7 @@ class Parser {
             const memberMethods = new Map<string, MemberMethodDecl>();
 
             for(let i = 0; i < enums.length; ++i) {
-                const enminit = new ConstructorPrimaryExpression(sinfo, etype, true, new Arguments([new PositionalArgument(false, false, new LiteralIntegerExpression(sinfo, i.toString()))]));
+                const enminit = new CallStaticFunctionExpression(sinfo, etype, "create", new TemplateArguments([]), new PragmaArguments("no", []), new Arguments([new PositionalArgument(false, false, new LiteralIntegerExpression(sinfo, i.toString()))]));
                 const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], [], enums[i], etype, enminit);
                 staticMembers.set(enums[i], enm);
             }

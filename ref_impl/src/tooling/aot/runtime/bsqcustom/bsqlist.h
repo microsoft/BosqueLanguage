@@ -13,6 +13,7 @@
 #define INC_RC_T(X)
 #define DEC_RC_T(X)
 #define FDisplay(X)
+#define BSCOPE
 #endif
 
 class Ty : public BSQObject {
@@ -87,6 +88,7 @@ public:
                 ls += U", ";
             }
 
+            BSQRefScope BSCOPE;
             ls += FDisplay(this->entries.at(i));
         }
         ls += U"}";
@@ -99,4 +101,5 @@ public:
 #undef T
 #undef INC_RC_T
 #undef DEC_RC_T
+#undef BSCOPE
 #undef FDisplay

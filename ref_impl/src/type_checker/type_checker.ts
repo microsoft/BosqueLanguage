@@ -231,24 +231,27 @@ class TypeChecker {
         return tj;
     }
 
-    private checkValueEq(lhs: ResolvedType, rhs: ResolvedType): boolean {
+    private checkValueEq(lhs: ResolvedType, rhs: ResolvedType): { isok: boolean, isstrict: boolean } {
         if(lhs.isNoneType() || rhs.isNoneType()) {
-            return true;
+            return { isok: true, isstrict: lhs.isNoneType() && rhs.isNoneType() };
         }
 
         if (!this.m_assembly.subtypeOf(lhs, this.m_assembly.getSpecialKeyTypeConceptType())) {
-            return false;
+            return { isok: true, isstrict:false };
         }
 
         if (!this.m_assembly.subtypeOf(rhs, this.m_assembly.getSpecialKeyTypeConceptType())) {
-            return false;
+            return { isok: true, isstrict:false };
         }
 
         const isstrictlhs = lhs.options.length === 1 && lhs.options[0] instanceof ResolvedEntityAtomType;
         const isstrictrhs = rhs.options.length === 1 && rhs.options[0] instanceof ResolvedEntityAtomType;
         const isstrict = isstrictlhs && isstrictrhs && lhs.idStr === rhs.idStr;
 
-        return isstrict;
+        const nonnulllhs = lhs.options.filter((opt) => opt.idStr !== "NSCore::None");
+        const nonnullrhs = rhs.options.filter((opt) => opt.idStr !== "NSCore::None");
+        const isok = nonnulllhs.length == 1 && nonnullrhs.length == 1 && nonnulllhs[0].idStr === nonnullrhs[0].idStr;
+        return { isok: isok, isstrict: isstrict };
     }
     
     private checkValueLess(lhs: ResolvedType, rhs: ResolvedType): boolean {
@@ -2060,27 +2063,30 @@ class TypeChecker {
             if (this.m_emitEnabled) {
                 this.m_emitter.bodyEmitter.emitModifyWithFields(op.sinfo, this.m_emitter.registerResolvedTypeReference(texp).trkey, arg, this.m_emitter.registerResolvedTypeReference(texp).trkey, fieldupdates, trgt);
 
-                const ttreg = this.m_emitter.bodyEmitter.generateTmpRegister();
+                const noinvcheck = texp.options.length === 1 && texp.options[0] instanceof ResolvedEntityAtomType && !this.m_assembly.hasInvariants((texp.options[0] as ResolvedEntityAtomType).object, (texp.options[0] as ResolvedEntityAtomType).binds);
+                if (!noinvcheck) {
+                    const ttreg = this.m_emitter.bodyEmitter.generateTmpRegister();
 
-                if (texp.options.length === 1 && texp.options[0] instanceof ResolvedEntityAtomType && this.m_assembly.hasInvariants((texp.options[0] as ResolvedEntityAtomType).object, (texp.options[0] as ResolvedEntityAtomType).binds)) {
-                    const oftype = texp.options[0] as ResolvedEntityAtomType;
-                    const tkey = MIRKeyGenerator.generateTypeKey(oftype.object, oftype.binds);
-                    const ikey = MIRKeyGenerator.generateStaticKey(oftype.object, "@@invariant", oftype.binds, []);
-                    this.m_emitter.bodyEmitter.emitInvokeInvariantCheckDirect(op.sinfo, ikey, tkey, trgt, ttreg);
+                    if (texp.options.length === 1 && texp.options[0] instanceof ResolvedEntityAtomType && this.m_assembly.hasInvariants((texp.options[0] as ResolvedEntityAtomType).object, (texp.options[0] as ResolvedEntityAtomType).binds)) {
+                        const oftype = texp.options[0] as ResolvedEntityAtomType;
+                        const tkey = MIRKeyGenerator.generateTypeKey(oftype.object, oftype.binds);
+                        const ikey = MIRKeyGenerator.generateStaticKey(oftype.object, "@@invariant", oftype.binds, []);
+                        this.m_emitter.bodyEmitter.emitInvokeInvariantCheckDirect(op.sinfo, ikey, tkey, trgt, ttreg);
+                    }
+                    else {
+                        const mirotype = this.m_emitter.registerResolvedTypeReference(texp);
+                        this.m_emitter.bodyEmitter.emitInvokeInvariantCheckVirtualTarget(op.sinfo, mirotype.trkey, trgt, ttreg);
+                    }
+
+                    const okblock = this.m_emitter.bodyEmitter.createNewBlock("invariantok");
+                    const failblock = this.m_emitter.bodyEmitter.createNewBlock("invariantfail");
+                    this.m_emitter.bodyEmitter.emitBoolJump(op.sinfo, ttreg, okblock, failblock);
+
+                    this.m_emitter.bodyEmitter.setActiveBlock(failblock);
+                    this.m_emitter.bodyEmitter.emitAbort(op.sinfo, "Invariant Failure");
+
+                    this.m_emitter.bodyEmitter.setActiveBlock(okblock);
                 }
-                else {
-                    const mirotype = this.m_emitter.registerResolvedTypeReference(texp);
-                    this.m_emitter.bodyEmitter.emitInvokeInvariantCheckVirtualTarget(op.sinfo, mirotype.trkey, trgt, ttreg);
-                }
-
-                const okblock = this.m_emitter.bodyEmitter.createNewBlock("invariantok");
-                const failblock = this.m_emitter.bodyEmitter.createNewBlock("invariantfail");
-                this.m_emitter.bodyEmitter.emitBoolJump(op.sinfo, ttreg, okblock, failblock);
-
-                this.m_emitter.bodyEmitter.setActiveBlock(failblock);
-                this.m_emitter.bodyEmitter.emitAbort(op.sinfo, "Invariant Failure");
-
-                this.m_emitter.bodyEmitter.setActiveBlock(okblock);
             }
 
             return [env.setExpressionResult(texp)];
@@ -2152,27 +2158,31 @@ class TypeChecker {
 
             if (this.m_emitEnabled) {
                 this.m_emitter.bodyEmitter.emitStructuredExtendObject(op.sinfo, this.m_emitter.registerResolvedTypeReference(texp).trkey, arg, this.m_emitter.registerResolvedTypeReference(texp).trkey, etreg, this.m_emitter.registerResolvedTypeReference(mergeValue).trkey, fieldResolves, trgt);
-                const ttreg = this.m_emitter.bodyEmitter.generateTmpRegister();
 
-                if (texp.options.length === 1 && texp.options[0] instanceof ResolvedEntityAtomType && this.m_assembly.hasInvariants((texp.options[0] as ResolvedEntityAtomType).object, (texp.options[0] as ResolvedEntityAtomType).binds)) {
-                    const oftype = texp.options[0] as ResolvedEntityAtomType;
-                    const tkey = MIRKeyGenerator.generateTypeKey(oftype.object, oftype.binds);
-                    const ikey = MIRKeyGenerator.generateStaticKey(oftype.object, "@@invariant", oftype.binds, []);
-                    this.m_emitter.bodyEmitter.emitInvokeInvariantCheckDirect(op.sinfo, ikey, tkey, trgt, ttreg);
+                const noinvcheck = texp.options.length === 1 && texp.options[0] instanceof ResolvedEntityAtomType && !this.m_assembly.hasInvariants((texp.options[0] as ResolvedEntityAtomType).object, (texp.options[0] as ResolvedEntityAtomType).binds);
+                if (!noinvcheck) {
+                    const ttreg = this.m_emitter.bodyEmitter.generateTmpRegister();
+
+                    if (texp.options.length === 1 && texp.options[0] instanceof ResolvedEntityAtomType && this.m_assembly.hasInvariants((texp.options[0] as ResolvedEntityAtomType).object, (texp.options[0] as ResolvedEntityAtomType).binds)) {
+                        const oftype = texp.options[0] as ResolvedEntityAtomType;
+                        const tkey = MIRKeyGenerator.generateTypeKey(oftype.object, oftype.binds);
+                        const ikey = MIRKeyGenerator.generateStaticKey(oftype.object, "@@invariant", oftype.binds, []);
+                        this.m_emitter.bodyEmitter.emitInvokeInvariantCheckDirect(op.sinfo, ikey, tkey, trgt, ttreg);
+                    }
+                    else {
+                        const mirotype = this.m_emitter.registerResolvedTypeReference(texp);
+                        this.m_emitter.bodyEmitter.emitInvokeInvariantCheckVirtualTarget(op.sinfo, mirotype.trkey, trgt, ttreg);
+                    }
+
+                    const okblock = this.m_emitter.bodyEmitter.createNewBlock("invariantok");
+                    const failblock = this.m_emitter.bodyEmitter.createNewBlock("invariantfail");
+                    this.m_emitter.bodyEmitter.emitBoolJump(op.sinfo, ttreg, okblock, failblock);
+
+                    this.m_emitter.bodyEmitter.setActiveBlock(failblock);
+                    this.m_emitter.bodyEmitter.emitAbort(op.sinfo, "Invariant Failure");
+
+                    this.m_emitter.bodyEmitter.setActiveBlock(okblock);
                 }
-                else {
-                    const mirotype = this.m_emitter.registerResolvedTypeReference(texp);
-                    this.m_emitter.bodyEmitter.emitInvokeInvariantCheckVirtualTarget(op.sinfo, mirotype.trkey, trgt, ttreg);
-                }
-
-                const okblock = this.m_emitter.bodyEmitter.createNewBlock("invariantok");
-                const failblock = this.m_emitter.bodyEmitter.createNewBlock("invariantfail");
-                this.m_emitter.bodyEmitter.emitBoolJump(op.sinfo, ttreg, okblock, failblock);
-
-                this.m_emitter.bodyEmitter.setActiveBlock(failblock);
-                this.m_emitter.bodyEmitter.emitAbort(op.sinfo, "Invariant Failure");
-
-                this.m_emitter.bodyEmitter.setActiveBlock(okblock);
             }
 
             return [env.setExpressionResult(texp)];
@@ -2222,7 +2232,7 @@ class TypeChecker {
         }
         else {
             const vinfo = this.m_assembly.tryGetOOMemberDeclOptions(texp, "method", op.name);
-            this.raiseErrorIf(op.sinfo, vinfo.root === undefined, "Multiple possible declarations of this method");
+            this.raiseErrorIf(op.sinfo, vinfo.root === undefined, `Missing (or multiple possible) declarations of "${op.name}" method`);
 
             const vopts = (vinfo.decls as OOMemberLookupInfo[]).map((opt) => {
                 const mdecl = (opt.decl as MemberMethodDecl);
@@ -2546,7 +2556,7 @@ class TypeChecker {
         const rhs = this.checkExpression(env, exp.rhs, rhsreg);
 
         const pairwiseok = this.checkValueEq(lhs.getExpressionResult().etype, rhs.getExpressionResult().etype);
-        this.raiseErrorIf(exp.sinfo, !pairwiseok, "Types are incompatible for equality compare");
+        this.raiseErrorIf(exp.sinfo, !pairwiseok.isok, "Types are incompatible for equality compare");
 
         if (this.m_emitEnabled) {
             if (exp.lhs instanceof LiteralNoneExpression && exp.rhs instanceof LiteralNoneExpression) {
@@ -2561,7 +2571,7 @@ class TypeChecker {
                 this.m_emitter.bodyEmitter.emitTypeOf(exp.sinfo, trgt, chktype.trkey, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().etype).trkey, lhsreg);
             }
             else {
-                this.m_emitter.bodyEmitter.emitBinEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().etype).trkey, lhsreg, exp.op, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().etype).trkey, rhsreg, trgt, false);
+                this.m_emitter.bodyEmitter.emitBinEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().etype).trkey, lhsreg, exp.op, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().etype).trkey, rhsreg, trgt, !pairwiseok.isstrict);
             }
         }
 
@@ -3682,6 +3692,18 @@ class TypeChecker {
 
             return [ntype, false];
         }
+        else if (assign instanceof ValueListStructuredAssignment) {
+            const eltype = expt.options[0] as ResolvedEphemeralListType;
+            this.raiseErrorIf(sinfo, eltype.types.length !== assign.assigns.length, "More values in ephemeral list than assignment");
+            this.raiseErrorIf(sinfo, expt.options.length !== 1 || !(expt.options[0] instanceof ResolvedEphemeralListType), "Assign value is not subtype of declared variable type");
+            
+            for (let i = 0; i < assign.assigns.length; ++i) {
+                const step = createEphemeralStructuredAssignmentPathStep(expt, eltype.types[i], i);
+                this.checkStructuredMatch(sinfo, env, [...cpath, step], assign.assigns[i], eltype.types[i], allDeclared, allAssigned, allChecks);
+            }
+
+            return [expt, false];
+        }
         else if (assign instanceof TupleStructuredAssignment) {
             const tupopts = expt.options.filter((opt) => opt instanceof ResolvedTupleAtomType);
             this.raiseErrorIf(sinfo, tupopts.length === 0, "Check will always fail");
@@ -3769,7 +3791,13 @@ class TypeChecker {
             if (this.m_emitEnabled) {
                 const oft = this.m_emitter.registerResolvedTypeReference(oftype);
                 const tcreg = this.m_emitter.bodyEmitter.generateTmpRegister();
-                this.m_emitter.bodyEmitter.emitTypeOf(sinfo, tcreg, oft.trkey, this.m_emitter.registerResolvedTypeReference(sexp).trkey, vreg);
+
+                if(oftype.isEphemeralListType()) {
+                    this.m_emitter.bodyEmitter.emitLoadConstBool(sinfo, true, tcreg);
+                }
+                else {
+                    this.m_emitter.bodyEmitter.emitTypeOf(sinfo, tcreg, oft.trkey, this.m_emitter.registerResolvedTypeReference(sexp).trkey, vreg);
+                }
 
                 const filllabel = this.m_emitter.bodyEmitter.createNewBlock(`match${midx}_scfill`);
                 if (allChecks.length === 0) {
@@ -3840,7 +3868,12 @@ class TypeChecker {
                 opts = [tval, ntval];
             }
 
-            nexttype = this.m_assembly.restrictNotT(sexp, oftype);
+            if(oftype.isNoneType()) {
+                nexttype = this.m_assembly.restrictSome(sexp);
+            }
+            else {
+                nexttype = sexp;
+            }
         }
 
         if (guard.optionalWhen === undefined) {
@@ -4634,13 +4667,10 @@ class TypeChecker {
         const env = TypeEnvironment.createInitialEnvForCall(ikey, bodybinds, [], new Map<string, { pcode: PCode, captured: string[] }>(), cargs, resolvedResult);
 
         const mirbody = this.checkBody(env, bbody as BodyImplementation, argTypes, resolvedResult, resolvedResult, undefined, undefined);
-        this.raiseErrorIf(sinfo, mirbody === undefined, "Type check of body failed");
-
         return new MIRInvokeBodyDecl(enclosingDecl, iname, ikey, attributes, false, [], sinfo, srcFile, params, resultType.trkey, undefined, undefined, mirbody as MIRBody);
     }
 
     private processInvokeInfo(namespace: string, fname: string | undefined, enclosingDecl: [MIRNominalTypeKey, OOPTypeDecl, Map<string, ResolvedType>] | undefined, kind: "namespace" | "static" | "member", iname: string, ikey: MIRInvokeKey, sinfo: SourceInfo, invoke: InvokeDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], pargs: [string, ResolvedType][]): MIRInvokeDecl {
-        
         this.checkInvokeDecl(sinfo, invoke, binds, pcodes);
 
         let terms = new Map<string, MIRType>();
@@ -4771,8 +4801,6 @@ class TypeChecker {
         }
         else {
             const mirbody = this.checkBody(env, realbody as BodyImplementation, argTypes, declaredResult, resolvedResult, preject, postject);
-            this.raiseErrorIf(sinfo, mirbody === undefined, "Type check of body failed");
-
             return new MIRInvokeBodyDecl(encdecl, iname, ikey, invoke.attributes, recursive, pragmas, sinfo, invoke.srcFile, params, resultType.trkey, preject !== undefined ? preject[0] : undefined, postject !== undefined ? postject[0] : undefined, mirbody as MIRBody);
         }
     }
@@ -4827,8 +4855,6 @@ class TypeChecker {
 
         const env = TypeEnvironment.createInitialEnvForCall(ikey, binds, refNames, fargs, cargs, fsig.resultType);
         const mirbody = this.checkBody(env, pci.body as BodyImplementation, argTypes, fsig.resultType, resolvedResult, undefined, undefined);
-        this.raiseErrorIf(sinfo, mirbody === undefined, "Type check of body failed");
-
         return new MIRInvokeBodyDecl(undefined, iname, ikey, pci.attributes, pci.recursive === "yes", pragmas, sinfo, pci.srcFile, params, resultType.trkey, undefined, undefined, mirbody as MIRBody);
     }
 
