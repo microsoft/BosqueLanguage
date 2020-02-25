@@ -681,7 +681,7 @@ class CPPBodyEmitter {
             coreop = `EqualFunctor_${this.typegen.getCPPTypeFor(lhsinfertype, "base")}{}(${this.argToCpp(lhs, lhsinfertype)}, ${this.argToCpp(rhs, rhsinfertype)})`;
         }
         else {
-            coreop = `BSQIndexableEqual{}(${this.argToCpp(lhs, this.typegen.keyType)}, ${this.argToCpp(rhs, this.typegen.keyType)})`;
+            coreop = `EqualFunctor_KeyValue{}(${this.argToCpp(lhs, this.typegen.keyType)}, ${this.argToCpp(rhs, this.typegen.keyType)})`;
         }
 
         return op === "!=" ? `!${coreop}` : coreop; 
@@ -1572,6 +1572,10 @@ class CPPBodyEmitter {
 
         let bodystr = ";";
         switch (idecl.implkey) {
+            case "enum_create": {
+                bodystr = `auto _return_ = BSQEnum{ (uint32_t)BSQ_GET_VALUE_TAGGED_INT(${params[0]}), MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
+                break;
+            }
             case "list_size":
             case "set_size":
             case "map_size": {
