@@ -12,23 +12,23 @@ entrypoint function lsize(): Int {
 entrypoint function lvals(): Int {
     var lint = List<Int>@{1, 2, 3};
     var lmixed = List<Int | String | None>@{1, "one", none};
-    return lmixed->at(1) == none ? 5 : lint->at(1);
+    return lmixed->get(1) == none ? 5 : lint->get(1);
 }
 
 entrypoint function lpush(): Int {
     var lint = List<Int>@{1, 2, 3};
     var lup = lint->push(4);
-    return lup->at(3);
+    return lup->get(3);
 }
 
 entrypoint function lset(): Int {
     var lint = List<Int>@{1, 2, 3};
     var lup = lint->set(1, 5);
-    return lup->at(1);
+    return lup->get(1);
 }
 
 function restArgListSimple<T>(...args: List<T>): T {
-    return args->at(args->size() - 1);
+    return args->get(args->size() - 1);
 }
 
 entrypoint function restCallSimpleArgsList(): Int {
@@ -40,33 +40,33 @@ function argListMixed(v: Bool, ...arg: List<Int>): List<Int> {
 }
 
 entrypoint function restCallMixedList1(): Int {
-    return argListMixed(true, 4, ...List<Int>{ 1, 2, 3 })->at(1);
+    return argListMixed(true, 4, ...List<Int>{ 1, 2, 3 })->get(1);
 }
 
 entrypoint function restCallMixedList2(): Int {
-    return argListMixed(4, v=true, ...List<Int>{ 1, 2, 3 })->at(1);
+    return argListMixed(4, v=true, ...List<Int>{ 1, 2, 3 })->get(1);
 }
 */
 entrypoint function lfilter(): Int {
     var lint = List<Int>@{1, 2, 3};
     var lup = lint->filter<Int>(fn(x) => x > 1);
-    return lup->at(0);
+    return lup->get(0);
 }
 
 entrypoint function lmap(): Int {
     var lint = List<Int>@{1, 2, 3};
     var lup = lint->map<Int>(fn(x) => Math::mult(x, 3));
-    return lup->at(1);
+    return lup->get(1);
 }
 
 entrypoint function latbounds(i: Int): Int {
     var lint = List<Int>@{1, 3};
-    return lint->at(i);
+    return lint->get(i);
 }
 
 entrypoint function lpushok(i: Int): Int {
     var lint = List<Int>@{1, 3};
-    return lint->push(i)->at(1);
+    return lint->push(i)->get(1);
 }
 
 entrypoint function lallyes(): Bool {
@@ -78,7 +78,7 @@ entrypoint function lallno(): Bool {
 }
 
 entrypoint function loftype(): Int {
-    return List<Int?>@{1, none}->ofType<Int>()->at(0) + List<Int | String>@{3, "ok"}->ofType<Int>()->at(0);
+    return List<Int?>@{1, none}->ofType<Int>()->get(0) + List<Int | String>@{3, "ok"}->ofType<Int>()->get(0);
 }
 
 entrypoint function lsum(): Int {

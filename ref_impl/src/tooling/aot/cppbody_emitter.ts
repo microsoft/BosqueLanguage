@@ -1582,7 +1582,7 @@ class CPPBodyEmitter {
                 bodystr = `auto _return_ = BSQ_ENCODE_VALUE_TAGGED_INT(${params[0]}->entries.size());`
                 break;
             }
-            case "list_unsafe_at": {
+            case "list_unsafe_get": {
                 bodystr = `auto _return_ = ${params[0]}->entries[BSQ_GET_VALUE_TAGGED_INT(${params[1]})];`;
                 break;
             }

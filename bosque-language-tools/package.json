@@ -9,17 +9,44 @@
     "categories": [
         "Programming Languages"
     ],
+    "activationEvents": [
+        "onCommand:extension.typecheck"
+    ],
+    "main": "./out/extension.js",
     "contributes": {
-        "languages": [{
-            "id": "bosque",
-            "aliases": ["Bosque", "bosque"],
-            "extensions": [".bsq"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "bosque",
-            "scopeName": "source.bsq",
-            "path": "./syntaxes/bosque.tmLanguage.json"
-        }]
+        "languages": [
+            {
+                "id": "bosque",
+                "aliases": [
+                    "Bosque",
+                    "bosque"
+                ],
+                "extensions": [
+                    ".bsq"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "bosque",
+                "scopeName": "source.bsq",
+                "path": "./syntaxes/bosque.tmLanguage.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "extension.typecheck",
+                "title": "TypeCheck"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./"
+    },
+    "devDependencies": {
+        "@types/node": ">10.0.0",
+        "@types/vscode": "^1.32.0"
     }
 }
