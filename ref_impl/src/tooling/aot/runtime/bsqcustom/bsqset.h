@@ -20,6 +20,7 @@
 #define KLCONS(K, KL) TCNAME
 #define K_CMP(X, Y) false
 #define K_EQ(X, Y) false
+#define BSCOPE
 #define TDisplay(X)
 #endif
 
@@ -133,6 +134,7 @@ public:
             }
             first = false;
 
+            BSQRefScope BSCOPE;
             ss += FDisplay(iter->second);
         }
         ss += U"}";
@@ -153,4 +155,5 @@ public:
 #undef KLCONS
 #undef K_CMP
 #undef K_EQ
+#undef BSCOPE
 #undef TDisplay
