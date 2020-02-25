@@ -13,7 +13,7 @@ hidden entity IntList provides Object {
             return acc;
         }
         else {
-            var val = List<Int>::_unsafe_at(l, idx);
+            var val = List<Int>::_unsafe_get(l, idx);
             return IntList::_sum[recursive](l, idx + 1, acc + val);
         }
     }
@@ -22,7 +22,7 @@ hidden entity IntList provides Object {
 //<summary>A List entity.</summary>
 entity List<T> provides Object, PODType when T grounded PODType, APIType when T grounded APIType {
     hidden static _size(l: List<T>): Int # list_size
-    hidden static _unsafe_at(l: List<T>, i: Int): T # list_unsafe_at
+    hidden static _unsafe_get(l: List<T>, i: Int): T # list_unsafe_get
     hidden static _unsafe_add(l: List<T>, v: T): List<T> # list_unsafe_add
     hidden static _unsafe_set(l: List<T>, i: Int, v: T): List<T> # list_unsafe_set
 
@@ -31,7 +31,7 @@ entity List<T> provides Object, PODType when T grounded PODType, APIType when T 
             return false;
         }
         else {
-            var val = List<T>::_unsafe_at(l, idx);
+            var val = List<T>::_unsafe_get(l, idx);
             if(p[recursive?](val)) {
                 return true;
             }
@@ -46,7 +46,7 @@ entity List<T> provides Object, PODType when T grounded PODType, APIType when T 
             return true;
         }
         else {
-            var val = List<T>::_unsafe_at(l, idx);
+            var val = List<T>::_unsafe_get(l, idx);
             if(!p[recursive?](val)) {
                 return false;
             }
@@ -61,7 +61,7 @@ entity List<T> provides Object, PODType when T grounded PODType, APIType when T 
             return lp;
         }
         else {
-            var val = List<T>::_unsafe_at(l, idx);
+            var val = List<T>::_unsafe_get(l, idx);
             if(p[recursive?](val)) {
                 return List<T>::_filter[recursive](l, idx + 1, List<T>::_unsafe_add(lp, val), p);
             }
@@ -76,7 +76,7 @@ entity List<T> provides Object, PODType when T grounded PODType, APIType when T 
             return lp;
         }
         else {
-            var val = List<T>::_unsafe_at(l, idx);
+            var val = List<T>::_unsafe_get(l, idx);
             if(val->is<U>()) {
                 return List<T>::_ofType<U>[recursive](l, idx + 1, List<U>::_unsafe_add(lp, val));
             }
@@ -91,7 +91,7 @@ entity List<T> provides Object, PODType when T grounded PODType, APIType when T 
             return lp;
         }
         else {
-            var val = f[recursive?](List<T>::_unsafe_at(l, idx));
+            var val = f[recursive?](List<T>::_unsafe_get(l, idx));
             return List<T>::_map<U>[recursive](l, idx + 1, List<U>::_unsafe_add(lp, val), f);
         }
     }
@@ -104,10 +104,10 @@ entity List<T> provides Object, PODType when T grounded PODType, APIType when T 
         return List<T>::_size(this) == 0;
     }
 
-    method at(idx: Int): T {
+    method get(idx: Int): T {
         check 0 <= idx && idx < List<T>::_size(this);
 
-        return List<T>::_unsafe_at(this, idx);
+        return List<T>::_unsafe_get(this, idx);
     }
 
     method push(v: T): List<T> {

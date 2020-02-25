@@ -296,34 +296,34 @@ class SMTTypeEmitter {
                 ctoval = `(bsq_safestring ${exp.emit()})`;
             }
             else if (this.typecheckIsName(from, /^NSCore::StringOf<.*>$/)) {
-                ctoval = `(bsq_stringof ${exp.emit()})`;
+                ctoval = `(bsqkey_stringof ${exp.emit()})`;
             }
             else if (this.typecheckIsName(from, /^NSCore::GUID$/)) {
-                ctoval = `(bsq_guid ${exp.emit()})`;
+                ctoval = `(bsqkey_guid ${exp.emit()})`;
             }
             else if (this.typecheckIsName(from, /^NSCore::LogicalTime$/)) {
-                ctoval = `(bsq_logicaltime ${exp.emit()})`;
+                ctoval = `(bsqkey_logicaltime ${exp.emit()})`;
             }
             else if (this.typecheckIsName(from, /^NSCore::DataHash$/)) {
-                ctoval = `(bsq_datahash ${exp.emit()})`;
+                ctoval = `(bsqkey_datahash ${exp.emit()})`;
             }
             else if (this.typecheckIsName(from, /^NSCore::CryptoHash$/)) {
-                ctoval = `(bsq_cryptohash ${exp.emit()})`;
+                ctoval = `(bsqkey_cryptohash ${exp.emit()})`;
             }
             else if (this.typecheckEntityAndProvidesName(from, this.enumtype)) {
-                ctoval = `(bsq_enum ${exp.emit()})`;
+                ctoval = `(bsqkey_enum ${exp.emit()})`;
             }
             else if (this.typecheckEntityAndProvidesName(from, this.idkeytype)) {
-                ctoval = `(bsq_idkey ${exp.emit()})`;
+                ctoval = `(bsqkey_idkey ${exp.emit()})`;
             }
             else if (this.typecheckEntityAndProvidesName(from, this.guididkeytype)) {
-                ctoval = `(bsq_idkey_guid ${exp.emit()})`;
+                ctoval = `(bsqkey_idkey_guid ${exp.emit()})`;
             }
             else if (this.typecheckEntityAndProvidesName(from, this.logicaltimeidkeytype)) {
-                ctoval = `(bsq_idkey_logicaltime ${exp.emit()})`;
+                ctoval = `(bsqkey_idkey_logicaltime ${exp.emit()})`;
             }
             else {
-                ctoval = `(bsq_idkey_cryptohash ${exp.emit()})`;
+                ctoval = `(bsqkey_idkey_cryptohash ${exp.emit()})`;
             }
 
             return (intotype === "BKeyValue") ? new SMTValue(ctoval) : new SMTValue(`(bsqterm_key ${ctoval})`);

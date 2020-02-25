@@ -1713,13 +1713,17 @@ class SMTBodyEmitter {
         let bodyres: SMTExp | undefined = undefined;
         const enclkey = (idecl.enclosingDecl || "[NA]") as MIRNominalTypeKey
         switch (idecl.implkey) {
+            case "enum_create": {
+                bodyres = new SMTValue(`(bsq_enum@cons "${this.typegen.mangleStringForSMT(enclkey)}" ${params[0]})`);
+                break;
+            }
             case "list_size":
             case "set_size":
             case "map_size": {
                 bodyres = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "size", params[0]);
                 break;
             }
-            case "list_unsafe_at": {
+            case "list_unsafe_get": {
                 bodyres = new SMTValue(`(select ${this.typegen.generateSpecialTypeFieldAccess(enclkey, "entries", params[0])} ${params[1]})`);
                 break;
             }
@@ -1813,8 +1817,8 @@ class SMTBodyEmitter {
                 const keys = this.typegen.generateSpecialTypeFieldAccess(enclkey, "keys", params[0]);
                 const entries = this.typegen.generateSpecialTypeFieldAccess(enclkey, "values", params[0]);
                 const klctype = this.typegen.getKeyListTypeForMap(this.typegen.assembly.entityDecls.get(enclkey) as MIREntityTypeDecl);
-                const kll = this.typegen.coerce(new SMTValue(params[3]), this.typegen.getMIRType(idecl.params[3].type), klctype);
-                bodyres = new SMTValue(`(${cons}(+ ${size} 1) (store ${has} ${params[1]} true) (store ${keys} ${params[1]} ${params[2]}) (store ${entries} ${params[1]} ${params[3]}) ${kll.emit()})`);
+                const kll = this.typegen.coerce(new SMTValue(params[4]), this.typegen.getMIRType(idecl.params[4].type), klctype);
+                bodyres = new SMTValue(`(${cons} (+ ${size} 1) (store ${has} ${params[1]} true) (store ${keys} ${params[1]} ${params[2]}) (store ${entries} ${params[1]} ${params[3]}) ${kll.emit()})`);
                 break;
             }
             default: {
