@@ -1,0 +1,372 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the fluent core language
+namespace NSCore;
+
+//<summary>Type for representing all non-none values.</summary>
+concept Collection<T> provides Object {
+    //<summary>True if the collection is empty.</summary>
+    abstract method empty(): Bool;
+
+    //<summary>Number of elements in the collection.</summary>
+    abstract method size(): Int;
+
+    //<summary>Number of elements in the collection that satisfy the predicate.</summary>
+    abstract recursive? method count(p: Predicate<T>): Int;
+
+    //<summary>Check if an element is in the collection.</summary>
+    abstract method {when T Indexable} has(v: T): Bool;
+
+    //<summary>Check if any element matches the predicate in the collection -- false if collection is empty.</summary>
+    abstract recursive? method any(p: Predicate<T>): Bool;
+
+    //<summary>Check if all elements match the predicate in the collection -- true if the collection is empty.</summary>
+    abstract recursive? method all(p: Predicate<T>): Bool;
+
+    //<summary>Find the element in the collection that match the predicate -- error if no matching element.</summary>
+    abstract recursive? method find(p: Predicate<T>): T;
+
+    //<summary>Find the element in the collection that match the predicate -- none if no matching element.</summary>
+    abstract recursive? method tryFind(p: Predicate<T>): T?;
+
+    //<summary>Find the element in the collection that match the predicate -- default if no matching element.</summary>
+    abstract recursive? method defaultFind(p: Predicate<T>, default: T): T;
+
+    //<summary>Filter all the elements in the collection that match the predicate.</summary>
+    abstract recursive? method filter(p: Predicate<T>): Collection<T>;
+
+    //<summary>Filter all the elements in the collection that are of the given subtype.</summary>
+    abstract method ofType<U where T>(): Collection<U>;
+
+    //<summary>Map the elements in the collection according to the given transform.</summary>
+    abstract recursive? method map<U>(f: Transform<T, U>): List<U>;
+
+    //<summary>Map the elements in the collection according to the given transform -- if the result is 'none' ignore the value.</summary>
+    abstract recursive? method skipMap<U>(f: Transform<T, U?>): List<U>;
+
+    //<summary>Map the elements in the collection according to the given transform -- flatten the results.</summary>
+    abstract recursive? method flatMap<U>(f: Transform<T, Collection<U>>): List<U>;
+
+    //<summary>Map the elements in the collection according to the given transform -- target type is same as existing collection type.</summary>
+    abstract recursive? method transform(f: Transform<T, T>): List<T>;
+
+    //<summary>Project the elements in the collection according to the given map.</summary>
+    abstract method {when T Indexable} project<U>(map: Map<T, U>): List<U>;
+
+    //<summary>All the distinct pairs in the collection -- optionally skip the identity pair values.</summary>
+    abstract method pairs(skipIdentity?: Bool): List<[T, T]>;
+
+    //<summary>Min value in the collection -- error if empty and no default.</summary>
+    abstract method {when T Int} min(default?: Int): Int;
+
+    //<summary>Max value in the collection -- error if empty and no default.</summary>
+    abstract method {when T Int} max(default?: Int): Int;
+
+    //<summary>Sum of values in the collection -- error if empty and no default.</summary>
+    abstract method {when T Int} sum(default?: Int): Int;
+}
+
+//<summary>A List entity.</summary>
+entity List<T> provides Collection<T> {
+
+    //
+    //TODO: May want to add optional ranges for these -- e.g. any(p: Predicate<T>, start? Int, end?: Int)
+    //         This works nicely with our override concepts with the Collection definitions!
+    //      Add map with index
+    //      Maybe powerset for collections in general?
+    //
+
+    static createOfSize(size: Int, with: T): List<T> # list_createofsize
+
+    override method empty(): Bool # list_empty
+    override method size(): Int # list_size
+    override recursive? method count(p: Predicate<T>): Int # list_count
+    override method {when T Indexable} has(v: T): Bool # list_has
+    override recursive? method any(p: Predicate<T>): Bool # list_any
+    override recursive? method all(p: Predicate<T>): Bool # list_all
+    override recursive? method find(p: Predicate<T>): T # list_find
+    override recursive? method tryFind(p: Predicate<T>): T? # list_tryfind
+    override recursive? method defaultFind(p: Predicate<T>, default: T): T # list_defaultfind
+    override recursive? method filter(p: Predicate<T>): List<T> # list_filter
+    override method ofType<U where T>(): List<U> # list_ofType
+    override recursive? method map<U>(f: Transform<T, U>): List<U> # list_map
+    override recursive? method skipMap<U>(f: Transform<T, U?>): List<U> # list_skipMap
+    override recursive? method flatMap<U>(f: Transform<T, Collection<U>>): List<U> # list_flatMap
+    override recursive? method transform(f: Transform<T, T>): List<T> # list_transform
+    override method {when T Indexable} project<U>(map: Map<T, U>): List<U> # list_project
+    override method pairs(skipIdentity?: Bool): List<[T, T]> # list_pairs
+    override method {when T Int} min(default?: Int): Int # list_min
+    override method {when T Int} max(default?: Int): Int # list_max
+    override method {when T Int} sum(default?: Int): Int # list_sum
+
+    //<summary>Get the element at the given index -- error if idx is out-of-bounds.</summary>
+    method at(idx: Int): T # list_at
+
+    //<summary>Get the element at the given index -- none if idx is out-of-bounds.</summary>
+    method tryAt(idx: Int): T? # list_tryat
+
+    //<summary>Get the element at the given index -- default if idx is out-of-bounds.</summary>
+    method defaultAt(idx: Int, default: T): T # list_defaultat
+
+    //<summary>Get first element in the list -- error if list is empty.</summary>
+    method first(): T # list_first
+
+    //<summary>Get last element in the list -- error if list is empty.</summary>
+    method last(): T # list_last
+
+    //<summary>Find the last element in the list that match the predicate -- error if list is empty.</summary>
+    recursive? method findLast(p: Predicate<T>): T # list_findLast
+
+    //<summary>Find the last element in the list that match the predicate -- return none if list is empty.</summary>
+    recursive? method tryFindLast(p: Predicate<T>): T # list_tryFindLast
+
+    //<summary>Get an element at uniform from the list using the rnd value -- error if list is empty.</summary>
+    method uniform(rnd: Int): T # list_uniform
+
+    //<summary>Find the first index containing the given element in the list [start, end) -- return -1 if no such index.</summary>
+    method {when T Indexable} indexOf(v: T, start?: Int, end?: Int): Int # list_indexof
+
+    //<summary>Find the last index containing the given element in the list [start, end) -- return -1 if no such index.</summary>
+    method {when T Indexable} indexOfLast(v: T, start?: Int, end?: Int): Int # list_indexoflast
+
+    //<summary>Find the first index containing an element satisfying p in the list [start, end) -- return -1 if no such index.</summary>
+    recursive? method findIndexOf(p: Predicate<T>, start?: Int, end?: Int): Int # list_findindexof
+
+    //<summary>Find the last index containing an element satisfying p in the list [start, end) -- return -1 if no such index.</summary>
+    recursive? method findIndexOfLast(p: Predicate<T>, start?: Int, end?: Int): Int # list_findindexoflast
+
+    //<summary>Get a sublist from the list [start, end).</summary>
+    method sublist(start?: Int, end?: Int): List<T> # list_sublist
+
+    //<summary>Reverse the list.</summary>
+    method reverse(): List<T> # list_reverse
+
+    //<summary>Zip the lists into lists of elements at same index -- stop at shortest list.</summary>
+    static zip(...args: List<List<T>>): List<List<T>> # list_zip
+
+    //<summary>Zip the lists into lists of elements at same index call f to merge elements -- stop at shortest list.</summary>
+    static zipWith<U>(f: fn(...elems: List<T>) -> U, ...args: List<List<T>>): List<U> # list_zipwith
+
+    //<summary>Concatenate argument lists in order.</summary>
+    static concat(...args: List<Collection<T>>): List<T> # list_concat
+
+    //<summary>Set the element at the given index -- error if idx is out-of-bounds.</summary>
+    method set(idx: Int, v: T): List<T> # list_set
+
+    //<summary>Fill the list with the given value</summary>
+    method fill(v: T): List<T> # list_fill
+}
+
+//<summary>A Linked-List entity.</summary>
+//entity LinkedList<T> provides Collection<T> {
+//    override method empty(): Bool # linkedlist_empty
+//    override method size(): Int # linkedlist_size
+//
+//    //<summary>Get the first element in the list -- error if list is empty.</summary>
+//    method first(): T # linkedlist_first
+//
+//    //<summary>Get the last element in the list -- error if list is empty.</summary>
+//    method last(): T # linkedlist_last
+//
+//    //<summary>Get the tail of the list -- error if list is empty.</summary>
+//    method tail(): LinkedList<T> # linkedlist_tail
+//}
+
+//<summary>A Set concept.</summary>
+concept Set<T where Indexable> provides Collection<T> {
+    abstract recursive? method filter(p: Predicate<T>): Set<T>;
+    abstract method ofType<U where T>(): Set<U>;
+
+    //<summary>True if this is a subset of other.</summary>
+    method subsetOf(other: Set<T>): Bool # set_subsetof
+
+    //<summary>True if this overlaps with other.</summary>
+    method overlapWith(other: Set<T>): Bool # set_overlapwith
+
+    //<summary>True if this is disjoint from other.</summary>
+    method disjointWith(other: Set<T>): Bool # set_disjointwith
+
+    //<summary>Union this with other -- if duplicate values are encountered the first is kept.</summary>
+    abstract method unionWith(other: Set<T>): Set<T>;
+
+    //<summary>Delete all the values in the argument from this.</summary>
+    abstract method difference(other: Set<T>): Set<T>;
+
+    //<summary>True if all argument sets are pairwise disjoint.</summary>
+    static disjoint(...args: List<Set<T>>): Bool # set_disjoint
+
+    //<summary>Union the set arguments -- duplicate elements keep only the first in argument & enumeration order.</summary>
+    virtual static union(...args: List<Set<T>>): Set<T> # set_union
+
+    //<summary>Intersect the set arguments.</summary>
+    virtual static intersection(...args: List<Set<T>>): Set<T> # set_intersection
+}
+
+//<summary>A HashSet entity.</summary>
+entity HashSet<T where Indexable> provides Set<T> {
+    override method empty(): Bool # hashset_empty
+    override method size(): Int # hashset_size
+    override recursive? method count(p: Predicate<T>): Int # hashset_count
+    override method has(v: T): Bool # hashset_has
+    override recursive? method any(p: Predicate<T>): Bool # hashset_any
+    override recursive? method all(p: Predicate<T>): Bool # hashset_all
+    override recursive? method find(p: Predicate<T>): T # hashset_find
+    override recursive? method tryFind(p: Predicate<T>): T? # hashset_tryfind
+    override recursive? method defaultFind(p: Predicate<T>, default: T): T # hashset_defaultfind
+    override recursive? method filter(p: Predicate<T>): HashSet<T> # hashset_filter
+    override method ofType<U where T>(): HashSet<U> # hashset_ofType
+    override recursive? method map<U>(f: Transform<T, U>): List<U> # hashset_map
+    override recursive? method skipMap<U>(f: Transform<T, U?>): List<U> # hashset_skipMap
+    override recursive? method flatMap<U>(f: Transform<T, Collection<U>>): List<U> # hashset_flatMap
+    override recursive? method transform(f: Transform<T, T>): List<T> # hashset_transform
+    override method project<U>(map: Map<T, U>): List<U> # hashset_project
+    override method {when T Int} min(default?: Int): Int # hashset_min
+    override method {when T Int} max(default?: Int): Int # hashset_max
+    override method {when T Int} sum(): Int # hashset_sum
+
+    override method unionWith(other: Set<T>): HashSet<T> # hashset_unionwith
+    override method difference(other: Set<T>): HashSet<T> # hashset_difference
+
+    override static union(...args: List<Set<T>>): HashSet<T> # hashset_union
+    override static intersection(...args: List<HashSet<T>>): HashSet<T> # hashset_intersection
+
+    //<summary>Add a single element to the set -- only available on HashSet for performance.</summary>
+    method add(...elems: Collection<T>): HashSet<T> # hashset_add
+}
+
+//<summary>A CompactSet entity.</summary>
+//entity CompactSet<T where Indexable> provides Set<T> {
+//}
+
+//<summary>A Map concept.</summary>
+concept Map<K where Indexable, V> provides Object {
+    //<summary>True if the map is empty.</summary>
+    abstract method empty(): Bool;
+
+    //<summary>Number of entries in the map.</summary>
+    abstract method size(): Int;
+
+    //<summary>Check if a key is in the map.</summary>
+    abstract method has(k: K): Bool;
+
+    //<summary>Check if a key, value tuple is in the map.</summary>
+    abstract method {when V Indexable} hasEntry(entry: [K, V]): Bool;
+
+    //<summary>Lookup a key in the map -- error if key is not defined.</summary>
+    abstract method get(k: K): V;
+
+    //<summary>Lookup a key in the map -- none if key is not defined.</summary>
+    abstract method tryGet(k: K): V?;
+
+    //<summary>Lookup a key in the map -- default if key is not defined.</summary>
+    abstract method defaultGet(k: K, default: V): V;
+
+    //<summary>Get all the entries in the map as tuples.</summary>
+    abstract method entries(): List<[K, V]>;
+
+    //<summary>Get all the keys in the map.</summary>
+    abstract method keys(): List<K>;
+
+    //<summary>Get all the values in the map.</summary>
+    abstract method values(): List<V>;
+
+    //<summary>Number of elements in the map that satisfy the predicate.</summary>
+    abstract recursive? method count(p: Predicate<[K, V]>): Int;
+
+    //<summary>Check if any element matches the predicate in the map -- false if map is empty.</summary>
+    abstract recursive? method any(p: Predicate<[K, V]>): Bool;
+
+    //<summary>Check if all elements match the predicate in the map -- true if the map is empty.</summary>
+    abstract recursive? method all(p: Predicate<[K, V]>): Bool;
+
+    //<summary>Find the element in the map that match the predicate -- error if no matching element.</summary>
+    abstract recursive? method find(p: Predicate<[K, V]>): [K, V];
+
+    //<summary>Find the element in the map that match the predicate -- none if no matching element.</summary>
+    abstract recursive? method tryFind(p: Predicate<[K, V]>): [K, V]?;
+
+    //<summary>Find the element in the map that match the predicate -- default if no matching element.</summary>
+    abstract recursive? method defaultFind(p: Predicate<[K, V]>, default: [K, V]): [K, V];
+
+    //<summary>Filter all the elements in the map that match the predicate.</summary>
+    abstract recursive? method filter(p: Predicate<[K, V]>): Map<K, V>;
+
+    //<summary>Filter all the elements in the map that are of the given subtype.</summary>
+    abstract method ofType<U where K, W where V>(): Map<U, W>;
+
+    //<summary>Map the elements in the map according to the given transform.</summary>
+    abstract recursive? method map<U where Indexable, W>(f: Transform<[K, V], [U, W]>): List<[U, W]>;
+
+    //<summary>Map the elements in the map according to the given transform -- if the result is 'none' ignore the value.</summary>
+    abstract recursive? method skipMap<U>(f: Transform<[K, V], [ U, W ]?>): List<[U, W]>;
+
+    //<summary>Map the elements in the map according to the given transform -- target type is same as existing Map type.</summary>
+    abstract recursive? method transform(f: Transform<[K, V], [K, V]>): List<[K, V]>;
+
+    //<summary>True if the keys in this are a subset of other.</summary>
+    method subsetOf(other: Collection<K> | Map<K, V>): Bool # map_subsetof
+
+    //<summary>True the keys in this overlaps with other.</summary>
+    method overlapWith(other: Collection<K> | Map<K, V>): Bool # map_overlapwith
+
+    //<summary>True if the keys in this are disjoint from other.</summary>
+    method disjointWith(other: Collection<K> | Map<K, V>): Bool # map_disjointwith
+
+    //<summary>Union this with other -- if duplicate values are encountered the first is kept.</summary>
+    abstract method unionWith(other: Map<K, V>): Map<K, V>;
+
+    //<summary>Delete all the keys in the argument from this.</summary>
+    abstract method difference(other: Collection<K> | Map<K, V>): Map<K, V>;
+
+    //<summary>True if all argument maps are pairwise disjoint.</summary>
+    static disjoint(...args: List<Map<K, V>>): Bool # map_disjoint
+
+    //<summary>Union the map arguments -- duplicate elements keep only the first in argument & enumeration order.</summary>
+    virtual static union(...args: List<Map<K, V>>): Map<K, V> # map_union
+
+    //<summary>Intersect the map arguments.</summary>
+    virtual static intersection(...args: List<Map<K, V>>): Map<K, V> # map_intersection
+}
+
+//<summary>A HashMap entity.</summary>
+entity HashMap<K where Indexable, V> provides Map<K, V> {
+    override method empty(): Bool # hashmap_empty
+    override method size(): Int # hashmap_size
+    override method has(k: K): Bool # hashmap_haskey
+    override method {when V Indexable} hasEntry(entry: [K, V]): Bool # hashmap_has
+    override method get(k: K): V # hashmap_get
+    override method tryGet(k: K): V? # hashmap_tryget
+    override method defaultGet(k: K, default: V): V # hashmap_defaultget
+    override method entries(): List<[K, V]> # hashmap_entries
+    override method keys(): List<K> # hashmap_keys
+    override method values(): List<V> # hashmap_values
+    override recursive? method count(p: Predicate<[K, V]>): Int # hashmap_count
+    override recursive? method any(p: Predicate<[K, V]>): Bool # hashmap_any
+    override recursive? method all(p: Predicate<[K, V]>): Bool # hashmap_all
+    override recursive? method find(p: Predicate<[K, V]>): [K, V] # hashmap_find
+    override recursive? method tryFind(p: Predicate<[K, V]>): [K, V]? # hashmap_tryfind
+    override recursive? method defaultFind(p: Predicate<[K, V]>, default: [K, V]): [K, V] # hashmap_defaultfind
+    override recursive? method filter(p: Predicate<[K, V]>): Map<K, V> # hashmap_filter
+    override method ofType<U where K, W where V>(): Map<U, W> # hashmap_oftype
+    override recursive? method map<U where Indexable, W>(f: Transform<[K, V], [U, W]>): List<[U, W]> # hashmap_map
+    override recursive? method skipMap<U>(f: Transform<[K, V], [U, W]?>): List<[U, W]> # hashmap_skipMap
+    override recursive? method transform(f: Transform<[K, V], [K, V]>): List<[K, V]> # hashmap_transform
+    override method subsetOf(other: Collection<K> | Map<K, V>): Bool # hashmap_subsetof
+    override method overlapWith(other: Collection<K> | Map<K, V>): Bool # hashmap_overlapwith
+    override method disjointWith(other: Collection<K> | Map<K, V>): Bool # hashmap_disjointwith
+    override method unionWith(other: Map<K, V>): Map<K, V> # hashmap_unionWith
+    override method difference(other: Collection<K> | Map<K, V>): Map<K, V> # hashmap_difference
+
+    override static union(...args: List<Map<K, V>>): Map<K, V> # hashmap_union
+    override static intersection(...args: List<Map<K, V>>): Map<K, V> # hashmap_intersection
+
+    //<summary>Add a single element to the set -- only available on HashMap for performance.</summary>
+    method add(...elems: Collection<[K, V]>): HashMap<K, V> # hashmap_add
+}
+
+//<summary>A CompactMap entity.</summary>
+//entity CompactMap<K where Indexable, V> provides Map<K, V> {
+//}

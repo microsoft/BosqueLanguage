@@ -1,0 +1,310 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive types used in the Bosque language
+namespace NSCore;
+
+//<summary>Special type which all values are instances of.</summary>
+concept Any {
+    method is<T>(): Bool # special_method
+    method as<T>(): T # special_method
+
+    method tryAs<T>(): T? # special_method
+    method defaultAs<T>(default: T): T # special_method
+
+    method isNone(): Bool # special_method
+    method isSome(): Bool # special_method
+}
+
+//<summary>Special type for representing all non-none values.</summary>
+concept Some provides Any {
+    method update(): Some # special_method
+    method merge(): Some # special_method
+    method project<T>(): Some # special_method
+    method tryProject<T>(): Some? # special_method
+}
+
+//<summary>Types that can be used in equality operations or in key based containers.</summary>
+concept Indexable provides Any {
+    static getKey(a: Indexable): KeyType # special_method
+}
+
+//<summary>Special type for indicating this type supports typed string use.</summary>
+concept Parsable provides Any {
+    abstract static tryParse(str: String): Result<Any, String>;
+}
+
+//<summary>Special type that all Validator (regex etc.) types provide.</summary>
+concept Validator provides Any {
+    abstract static accepts(str: String): Bool; 
+}
+
+//<summary>Special type for indicating a value can be used as a key in a collection.</summary>
+concept KeyType provides Any, Indexable {
+    static equal(a: KeyType, b: KeyType): Bool # special_method
+}
+
+//<summary>Type for indicating that a datatype is Plain-Old-Data.</summary>
+concept PODType provides APIType {
+    static bufferify<T where grounded PODType>(data: T, format?: BufferFormat, encoding?: BufferEncoding, compression?: BufferCompression): Buffer<T> # pod_bufferify
+    static parseBuffer<T where grounded PODType>(data: Buffer<T>): T # pod_parsebuffer
+    static tryParseBuffer<T where grounded PODType>(data: Buffer<T>): Result<T, String> # pod_tryparsebuffer
+}
+
+//<summary>Type to unify Buffers and APITypes at top level for checking</summary>
+concept APIValue provides Any {
+}
+
+//<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
+concept APIType provides APIValue {
+    static bufferify<T where grounded APIType>(data: T, format?: BufferFormat, encoding?: BufferEncoding, compression?: BufferCompression): Buffer<T> # api_bufferify
+    static parseBuffer<T where grounded APIType>(data: Buffer<T>): T # api_parsebuffer
+    static tryParseBuffer<T where grounded APIType>(data: Buffer<T>): Result<T, String> # api_tryparsebuffer
+}
+
+//<summary>Type for representing the none-value.</summary>
+concept Truthy provides KeyType, Parsable {
+    override static tryParse(str: String): Result<Any, String> # truthy_tryparse
+}
+
+//<summary>Type for representing the none-value.</summary>
+entity None provides Truthy, PODType, APIType {
+    override static tryParse(str: String): Result<Any, String> # none_tryparse
+}
+
+//<summary>Primitive boolean value.</summary>
+entity Bool provides Some, Truthy, PODType, APIType {
+    override static tryParse(str: String): Result<Any, String> # bool_tryparse
+
+    static stringify(b: Bool): String # bool_tostring
+    static parse(str: String): Bool # bool_parse
+}
+
+//<summary>Primitive integer value.</summary>
+entity Int provides KeyType, Parsable, PODType, APIType, Some {
+    override static tryParse(str: String): Result<Any, String> # int_tryparse
+
+    static stringify(i: Int): String # int_tostring
+    static parse(str: String): Int # int_parse
+
+    static max(v1: Int, v2: Int): Int {
+        return v1 > v2 ? v1 : v2;
+    }
+
+    static min(v1: Int, v2: Int): Int {
+        return v1 < v2 ? v1 : v2;
+    }
+}
+
+//<summary>Primitive string value.</summary>
+entity String provides KeyType, PODType, APIType, Some {
+    method length(): Int # string_count
+
+    static concat(...args: List<String>): String # string_concat
+    method substring(start?: Int, end?: Int): String # string_substring
+
+    method includes(str: String): Bool # string_includes
+    method startsWith(str: String): Bool # string_startswith
+    method endsWith(str: String): Bool # string_endswith
+}
+
+//<summary>Primitive safe string value.</summary>
+entity SafeString<T where Validator> provides KeyType, Some, PODType, APIType {
+    method string(): String # safestring_string
+
+    static as(str: String): SafeString<T> # safestring_as
+    static tryAs(str: String): SafeString<T>? # safestring_tryas
+
+    method convert<U where Validator>(): SafeString<U> # stringof_convert
+    method tryConvert<U where Validator>(): SafeString<U>? # stringof_tryconvert
+}
+
+//<summary>Primitive stringof value.</summary>
+entity StringOf<T where Parsable> provides APIValue, KeyType, Some {
+    method string(): String # stringof_string
+
+    static as(str: String): StringOf<T> # stringof_as
+    static tryAs(str: String): StringOf<T>? # stringof_tryas
+
+    method convert<U where Parsable>(): StringOf<U> # stringof_convert
+    method tryConvert<U where Parsable>(): StringOf<U>? # stringof_tryconvert
+}
+
+enum BufferFormat {
+    fluent,
+    json,
+    binary
+}
+
+enum BufferEncoding {
+    utf8,
+    uri,
+    base64
+}
+
+enum BufferCompression {
+    off,
+    rle,
+    time,
+    space
+}
+
+//<summary>An efficient buffer encoding for data.</summary>
+entity Buffer<T where grounded PODType | APIType> provides APIValue, Some {
+}
+
+//
+//TODO: maybe want to add a generic ByteBuffer type that can manage a system that just gets bytes from some other source
+//      analogy is String <-> StringOf
+//
+
+//<summary>Primitive ISO standard date time value.</summary>
+entity ISOTime provides Parsable, PODType, APIType, Some {
+    override static tryParse(str: String): Result<Any, String> # time_tryparse
+}
+
+//<summary>Primitive GUID value.</summary>
+entity GUID provides KeyType, Parsable, PODType, APIType, Some {
+    static create(gval: String): GUID # guid_create 
+
+    override static tryParse(str: String): Result<Any, String> # guid_tryparse
+}
+
+//<summary>All actual ordered event times implicitly provide this.</summary>
+entity LogicalTime provides KeyType, Parsable, PODType, APIType, Some {
+    override static tryParse(str: String): Result<Any, String> # logicaltime_tryparse
+
+    static zero(): LogicalTime # logicaltime_zero
+    static tick(t: LogicalTime): LogicalTime # logicaltime_tick
+}
+
+//<summary>Primitive hash value suitable for keys in maps or other associative containers.</summary>
+entity DataHash provides KeyType, Parsable, PODType, APIType, Some {
+    static compute<T>(value: T): DataHash # datahash_compute
+
+    override static tryParse(str: String): Result<Any, String> # datahash_tryparse
+}
+
+//<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
+entity CryptoHash provides KeyType, Parsable, PODType, APIType, Some {
+    static compute<T>(value: T): CryptoHash # cryptohash_compute
+
+    override static tryParse(str: String): Result<Any, String> # cryptohash_tryparse
+}
+
+//<summary>All actual enums implicitly provide this.</summary>
+concept Enum provides KeyType, Some {
+}
+
+//<summary>All actual custom keys implicitly provide this.</summary>
+concept IdKey provides KeyType, Some {
+}
+
+//<summary>A concept for dealing with guid ids.</summary>
+concept GUIDIdKey provides KeyType, Some {
+}
+
+//<summary>A concept for dealing with eventime ids.</summary>
+concept LogicalTimeIdKey provides KeyType, Some {
+}
+
+//<summary>A concept for dealing with hashes -- is an API type if underlying type is an API type.</summary>
+concept ContentHashIdKey provides KeyType, Some {
+}
+
+//<summary>Primitive regex value.</summary>
+entity Regex provides Some {
+    method accepts(str: String, start?: Int, end?: Int): Bool # regex_match
+
+    //
+    //TODO: this is pretty boring right now
+    //
+}
+
+//<summary>All actual tuples implicitly provide this concept.</summary>
+concept Tuple provides Some {
+}
+
+//<summary>All actual records implicitly provide this concept.</summary>
+concept Record provides Some {
+}
+
+entity MapEntry<K where Indexable, V> provides Some {
+    field key: K;
+    field value: V;
+
+    static create(k: K, v: V): MapEntry<K, V> {
+        return MapEntry<K, V>@{ key=key, value=value };
+    }
+}
+
+//<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
+concept Result<T, E> provides Some {
+    static ok(result: T): Result<T, E> {
+        return Ok<T, E>::create(result);
+    }
+
+    static err(info: E): Result<T, E> {
+        return Err<T, E>::create(info);
+    }
+
+    method isOk(): Bool {
+        return this->is<Ok<T, E>>();
+    }
+
+    method isErr(): Bool {
+        return this->is<Err<T, E>>();
+    }
+
+    method value(): T # result_result
+    method error(): E # result_error
+
+    method convert<U, V>(): Result<U, V> {
+        return this->ok() ? Result<U, V>::ok(this.value->as<U>()) : Result<U, V>::err(this.error);
+    }
+}
+
+entity Ok<T, E> provides Result<T, E> {
+    field value: T;
+
+    static of(value: T): Ok<T, E> {
+        return Ok<T, E>@{ value=value };
+    }
+}
+
+entity Err<T, E> provides Result<T, E> {
+    field error: E;
+
+    static of(info: E): Err<T, E> {
+        return Err<T, E>@{ error=info };
+    }
+}
+
+//<summary>A lightweight tagging class for values.</summary>
+entity Tagged<T where KeyType, U> provides Indexable, Some {
+    field key: K;
+    field value: U;
+
+    static create(key: T, value: U): Tagged<T, U> {
+        return Tagged<T, U>@{ key=key, value=value };
+    }
+}
+
+//<summary>All actual entities/concepts implicitly provide this concept.</summary>
+concept Object provides Some {
+}
+
+//<summary>A pure concept defining useful static numerical operations.</summary>
+concept Math {
+    static mult(a: Int, b: Int): Int # math_mult
+    static div(a: Int, b: Int): Int # math_div
+    static mod(a: Int, b: Int): Int # math_mod
+}
+
+//<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
+concept Keyed<T where KeyType> provides Indexable, Some {
+    field key: T;
+}
+

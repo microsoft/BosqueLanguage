@@ -333,7 +333,7 @@ entity Foo {
 
     method m(y: Int): Int
         requires y >= 0;               //precondition -- only enabled in debug
-        requires # release this.x > 1; //precondition enabled in release as well as debug
+        requires release this.x > 1;   //precondition enabled in release as well as debug
         ensures $return > 0;           //postcondition
     {
         check this.x - y > 0;   //sanity check - enabled on optimized builds

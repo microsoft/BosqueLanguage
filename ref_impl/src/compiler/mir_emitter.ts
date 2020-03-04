@@ -662,7 +662,7 @@ class MIREmitter {
 
         const parseErrors = p.getParseErrors();
         if (parseErrors !== undefined) {
-            return { masm: undefined, errors: [...parseErrors] };
+            return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
         }
 
         ////////////////

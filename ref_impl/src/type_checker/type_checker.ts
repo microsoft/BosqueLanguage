@@ -4064,7 +4064,7 @@ class TypeChecker {
         const trueflow = TypeEnvironment.convertToBoolFlowsOnExpressionResult(this.m_assembly, test)[0];
         //this.raiseErrorIf(stmt.sinfo, trueflow.length === 0 || falseflow.length === 0, "Expression is always true/false assert is redundant");
 
-        if (this.m_emitEnabled && this.m_buildLevel !== "release") {
+        if (this.m_emitEnabled && isBuildLevelEnabled(stmt.level, this.m_buildLevel)) {
             const doneblck = this.m_emitter.bodyEmitter.createNewBlock("Lassert_done");
             const failblck = this.m_emitter.bodyEmitter.createNewBlock("Lassert_fail");
             this.m_emitter.bodyEmitter.emitBoolJump(stmt.sinfo, testreg, doneblck, failblck);

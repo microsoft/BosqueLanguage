@@ -5,7 +5,7 @@
 
 import { SourceInfo } from "./parser";
 import { TypeSignature } from "./type_signature";
-import { InvokeDecl } from "./assembly";
+import { InvokeDecl, BuildLevel } from "./assembly";
 
 class InvokeArgument {
     readonly value: Expression;
@@ -938,10 +938,12 @@ class AbortStatement extends Statement {
 
 class AssertStatement extends Statement {
     readonly cond: Expression;
+    readonly level: BuildLevel;
 
-    constructor(sinfo: SourceInfo, cond: Expression) {
+    constructor(sinfo: SourceInfo, cond: Expression, level: BuildLevel) {
         super(StatementTag.AssertStatement, sinfo);
         this.cond = cond;
+        this.level = level;
     }
 }
 
