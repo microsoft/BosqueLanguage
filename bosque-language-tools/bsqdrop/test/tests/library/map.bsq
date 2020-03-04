@@ -1,0 +1,94 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace NSTest;
+
+entrypoint function empty(): Int {
+    return Map<KeyType, Any>@{}->size() + Map<Int, Int>@{1=>1}->size() + Map<Int, Int>@{1=>1, 1=>2, 1=>1}->size() + Map<Int, Int>@{1=>1, 2=>1}->size();
+}
+
+entrypoint function dupkey(): Int {
+    return Map<Int, Int>@{1=>1, 1=>2}->get(1);
+}
+
+function restArgMapSimple<K, V>(...arg: Map<K, V>): Int {
+    return arg->size();
+}
+
+entrypoint function restCallSimpleArgsMap(): Int {
+    return restArgMapSimple<Int, Bool>(1=>false, 2=>true);
+}
+
+entrypoint function restCallOverlapArgsMap(): Int {
+    return restArgMapSimple<Int, Bool>(1=>false, 1=>true);
+}
+
+function hasop(x: Int): Int {
+    var m = Map<Int, Int>@{1=>1, 5=>2};
+    return m->has(x) ? m->get(x) : -1;
+}
+
+entrypoint function hasCyes(): Int {
+    return hasop(5);
+}
+
+entrypoint function hasCno(): Int {
+    return hasop(2);
+}
+
+entrypoint function insertOp(x: Int, y: Int): Int {
+    var mint = Map<Int, Int>@{1=>1, 3=>3, 2=>2};
+    var mup = mint->insert(x, y);
+
+    check mup->has(x) && mup->get(x) == y;
+    return mup->size();
+}
+
+entrypoint function insertCyes(): Int {
+    return insertOp(5, 11);
+}
+
+entrypoint function insertCno(): Int {
+    return insertOp(2, 11);
+}
+
+entrypoint function removeOp(x: Int): Int {
+    var mint = Map<Int, Int>@{1=>1, 2=>2, 3=>3};
+    var mup = mint->remove(x);
+
+    check !mup->has(x);
+    return mup->size();
+}
+
+entrypoint function removeCyes(): Int {
+    return removeOp(2);
+}
+
+entrypoint function removeCno(): Int {
+    return removeOp(5);
+}
+
+entrypoint function getFail(x: Int): Int {
+    var mint = Map<Int, Int>@{1=>1, 2=>2, 3=>3};
+    return mint->get(x);
+}
+
+entrypoint function puzzle(x: Int, y: Int): Int {
+    var mint = Map<Int, Int>@{1=>1, 2=>2, x=>y};
+
+    check mint->size() == 2 && mint->get(x) != 11;
+    return 0;
+}
+
+entrypoint function tox(): Bool {
+    var mint = Map<Int, Int>@{1=>2, 3=>4};
+    
+    var kl = mint->getKeyList();
+    var ks = mint->getKeySet();
+    var vl = mint->getValues();
+    var el = mint->getEntries();
+
+    return kl->size() == 2 && ks->has(3) && vl->size() == 2 && el->size() == 2;
+}

@@ -19,6 +19,7 @@
         "./src/tooling/aot/*.ts",
         "./src/tooling/bmc/*.ts",
         "./src/runtimes/exegen/*.ts",
-        "./src/runtimes/symtest/*.ts"
+        "./src/runtimes/symtest/*.ts",
+        "./src/runtimes/vscmd/*.ts"
     ]
 }

@@ -126,7 +126,7 @@ entity Game {
     }
 
     method makeExplicitMove(x: Int, y: Int, mark: PlayerMark): Game
-        requires#release this->isMoveLegal(x, y);
+        requires release this->isMoveLegal(x, y);
     {
         var nboard = this.board->markCellWith(x, y, mark);
         return Game@{ board=nboard, winner=nboard->checkAnyWinner() };

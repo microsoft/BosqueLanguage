@@ -435,7 +435,7 @@ class Parser {
 
     private m_penv: ParserEnvironment;
 
-    private m_errors: [number, string][];
+    private m_errors: [string, number, string][];
     private m_recoverStack: number[];
 
     constructor(assembly: Assembly) {
@@ -483,7 +483,7 @@ class Parser {
     }
 
     private raiseError(line: number, msg: string) {
-        this.m_errors.push([line, msg]);
+        this.m_errors.push([this.m_penv.getCurrentFile(), line, msg]);
         throw new ParseError(line, msg);
     }
 
@@ -670,6 +670,15 @@ class Parser {
         }
 
         return result;
+    }
+
+    parseBuildInfo(cb: BuildLevel): BuildLevel {
+        if(this.testToken("debug") || this.testToken("test") || this.testToken("release")) {
+            return this.consumeTokenAndGetValue() as "debug" | "test" | "release";
+        }
+        else {
+            return cb;
+        }
     }
 
     ////
@@ -2191,11 +2200,13 @@ class Parser {
         }
         else if (tk === "assert") {
             this.consumeToken();
+            let level = "debug" as BuildLevel;
+            level = this.parseBuildInfo(level);
 
             const exp = this.parseExpression();
 
             this.ensureAndConsumeToken(";");
-            return new AssertStatement(sinfo, exp);
+            return new AssertStatement(sinfo, exp, level);
         }
         else if (tk === "check") {
             this.consumeToken();
@@ -2541,8 +2552,8 @@ class Parser {
                 this.consumeToken();
                 
                 let level: BuildLevel = isvalidate ? "release" : "debug";
-                if (!isvalidate && this.testAndConsumeTokenIf("#")) {
-                    level = this.consumeTokenAndGetValue() as BuildLevel;
+                if (!isvalidate) {
+                    level = this.parseBuildInfo(level);
                 }
 
                 const exp = this.parseExpression();
@@ -2780,8 +2791,8 @@ class Parser {
                 this.consumeToken();
 
                 let level: BuildLevel = ischeck ? "release" : "debug";
-                if (!ischeck && this.testAndConsumeTokenIf("#")) {
-                    level = this.consumeTokenAndGetValue() as BuildLevel;
+                if (!ischeck) {
+                    level = this.parseBuildInfo(level);
                 }
 
                 const sinfo = this.getCurrentSrcInfo();
@@ -3293,8 +3304,8 @@ class Parser {
         return parseok;
     }
 
-    getParseErrors(): string[] | undefined {
-        return this.m_errors.length !== 0 ? this.m_errors.map((err) => `${err[1]} on line ${err[0]}`) : undefined;
+    getParseErrors(): [string, number, string][] | undefined {
+        return this.m_errors.length !== 0 ? this.m_errors : undefined;
     }
 }
 

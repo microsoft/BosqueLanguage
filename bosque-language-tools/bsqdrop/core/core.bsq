@@ -1,0 +1,200 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the fluent core language
+namespace NSCore;
+
+//<summary>The special concept which all values are instances of.</summary>
+concept Any {
+    method is<T>(): Bool # special_method
+    method as<T>(): T # special_method
+
+    method tryAs<T>(): T? # special_method
+    method defaultAs<T>(default: T): T # special_method
+
+    method isNone(): Bool # special_method
+    method isSome(): Bool # special_method
+}
+
+//<summary>Type for representing all non-none values.</summary>
+concept Some provides Any {
+    method update(): Some # special_method
+    method merge(): Some # special_method
+    method project<T>(): Some # special_method
+}
+
+//<summary>Type for representing the none-value.</summary>
+concept Truthy provides Any {
+}
+
+//<summary>Type for representing the none-value.</summary>
+entity None provides Any, Truthy {
+}
+
+concept Parsable provides Some {
+    abstract static tryParse(str: String): Some | None;
+}
+
+//<summary>Primitive boolean value.</summary>
+entity Bool provides Some, Truthy, Parsable {
+    override static tryParse(str: String): Bool | None {
+        if(str == "true") {
+            return true;
+        }
+        else if(str == "false") {
+            return false;
+        }
+        else {
+            return None;
+        }
+    }
+}
+
+//<summary>Primitive integer value.</summary>
+entity Int provides Some, Parsable {
+    override static tryParse(str: String): Int | None # int_tryparse
+
+    static max(v1: Int, v2: Int): Int {
+        return v1 > v2 ? v1 : v2;
+    }
+
+    static min(v1: Int, v2: Int): Int {
+        return v1 < v2 ? v1 : v2;
+    }
+}
+
+//<summary>Primitive string value.</summary>
+entity String provides Some {
+    method isStringOf<U where Parsable>(): Bool # string_isstringof
+    method asStringOf<U where Parsable>(): StringOf<U> # string_asstringof
+    method tryAsStringOf<U where Parsable>(): StringOf<U> | None # string_tryasstringof
+
+    method parseAs<U where Parsable>(): U # string_parseas
+    method tryParseAs<U where Parsable>(): U | None # string_tryparseas
+
+    method length(): Int # string_length
+
+    method startsWith(str: String): Bool # string_startsWith
+    method endsWith(str: String): Bool # string_endsWith
+    method includes(str: String): Bool # string_includes
+
+    method replace(str: String, with: String): String # string_replace
+    method trim(): String # string_trim
+    method split(token: String): List<String> # string_split
+
+    // Useful string methods
+    method reverse(): String # string_reverse
+    method upperCase(): String # string_upperCase
+    method lowerCase(): String # string_lowerCase
+
+    static concat(...args: List<String>): String # string_concat
+
+    //static interpolate(fmt: String, ...args: List<String>): String # string_interpolate
+}
+
+//<summary>Concept that all StringOf instances inherit from.</summary>
+concept StringOf provides Some {
+    abstract method asString(): String # stringof_asstring
+
+    method length(): Int {
+        return this->asString()->length();
+    }
+
+    method startsWith(str: String): Bool {
+        return this->asString->startsWith(str);
+    }
+
+    method endsWith(str: String): Bool {
+        return this->asString->endsWith(str);
+    }
+
+    method includes(str: String): Bool {
+        return this->asString->includes(str);
+    }
+}
+
+entity StringOf<T where Parsable> provides StringOf {
+}
+
+//<summary>Provide JSON support for (POD).</summary>
+concept JSON provides Some {
+    static stringify<T where Tuple | Record>(data: T): StringOf<T> # json_tryparse
+    static tryParse<T where Tuple | Record>(str: String): T? # json_tryparse
+}
+
+//<summary>Primitive GUID value.</summary>
+entity GUID provides Some {
+}
+
+//<summary>Primitive regex value.</summary>
+entity Regex provides Some, Parsable {
+    override static tryParse(str: String): Regex # regex_tryparse
+
+    method match(str: String, start?: Int, end?: Int): {start: Int, end: Int} | None # regex_match
+
+    //
+    //TODO: this is pretty boring right now
+    //
+}
+
+//<summary>All actual tuples implicitly provide this concept.</summary>
+concept Tuple provides Some {
+}
+
+//<summary>All actual records implicitly provide this concept.</summary>
+concept Record provides Some {
+}
+
+//<summary>All actual entities/concepts implicitly provide this concept.</summary>
+concept Object provides Some {
+}
+
+//<summary>All actual enums implicitly provide this.</summary>
+concept Enum provides Some {
+}
+
+//<summary>All actual custom keys implicitly provide this.</summary>
+concept IdKey provides Some {
+}
+
+//<summary>Types that can be used as equality based keys.</summary>
+typedef KeyType = None | Bool | Int | String | StringOf | GUID | Enum | Tuple | Record | IdKey;
+
+//<summary>Concept that all Keyed instances inherit from.</summary>
+concept Keyed provides Some {
+    abstract method getKey(): KeyType;
+}
+
+//<summary>Providing this concept allows for an entity to be compared or stored in a key based container using the key field.</summary>
+concept Keyed<T where KeyType> provides Keyed {
+    field key: T;
+
+    override method getKey(): T {
+        return this->key;
+    }
+}
+
+//<summary>Types that can be used in equality operations or in key based containers.</summary>
+typedef Indexable = KeyType | Keyed;
+
+//<summary>Concept that all Tagged instances inherit from.</summary>
+concept Tagged provides Some, Keyed {
+    abstract method getValue(): Any;
+}
+
+//<summary>A lightweight tagging class for values.</summary>
+entity Tagged<T where KeyType, U> provides Tagged {
+    field value: U;
+
+    override method getValue(): U {
+        return this->value;
+    }
+}
+
+//<summary>Shorthand for predicate function types.</summary>
+typedef Predicate<T> = fn(_: T) -> Bool;
+
+//<summary>Shorthand for transform function types.</summary>
+typedef Transform<T, U> = fn(_: T) -> U;

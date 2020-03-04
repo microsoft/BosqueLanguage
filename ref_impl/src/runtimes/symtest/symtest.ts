@@ -73,11 +73,11 @@ if (Commander.args.length === 0) {
     process.exit(1);
 }
 
-console.log(`Symbolic testing of Bosque sources in files:\n${Commander.args.join("\n")}\n...\n`);
+process.stdout.write(`Symbolic testing of Bosque sources in files:\n${Commander.args.join("\n")}\n...\n`);
 const massembly = generateMASM(Commander.args, Path.normalize(Path.join(__dirname, "../../", "core/direct/")));
 
 setImmediate(() => {
-    console.log(`Transpiling Bosque assembly to bytecode with entrypoint of ${Commander.entrypoint}...`);
+    process.stdout.write(`Transpiling Bosque assembly to bytecode with entrypoint of ${Commander.entrypoint}...\n`);
     const smt_runtime = Path.join(binroot, "tooling/bmc/runtime/smtruntime.smt2");
 
     try {
@@ -112,15 +112,15 @@ setImmediate(() => {
             .replace(";;INVOKE_ACTION;;", sparams.INVOKE_ACTION)
             .replace(";;GET_MODEL;;", Commander.model ? "(get-model)" : "");
 
-        console.log(`Running z3 on SMT encoding...`);
+        process.stdout.write(`Running z3 on SMT encoding...\n`);
 
         if (Commander.output) {
             try {
-                console.log(`Writing SMT output to "${Commander.output}..."`)
+                process.stdout.write(`Writing SMT output to "${Commander.output}..."\n`)
                 FS.writeFileSync(Commander.output, contents);
             }
             catch (fex) {
-                console.log(chalk.red(`Failed to write file -- ${fex}.`));
+                process.stderr.write(chalk.red(`Failed to write file -- ${fex}\n`));
             }
         }
 
@@ -128,15 +128,15 @@ setImmediate(() => {
             const res = execSync(`${z3path} -smt2 -in`, { input: contents }).toString().trim();
 
             if (res === "unsat") {
-                console.log(chalk.green("Verified up to bound -- no errors found!"));
+                process.stdout.write(chalk.green("Verified up to bound -- no errors found!\n"));
             }
             else {
-                console.log(chalk.red("Detected possible errors!"));
+                process.stdout.write(chalk.red("Detected possible errors!\n"));
                 if (!Commander.model) {
-                    console.log("Rerun with '-m' flag to attempt to generate failing inputs.")
+                    process.stdout.write("Rerun with '-m' flag to attempt to generate failing inputs.\n");
                 }
                 else {
-                    console.log("Attempting to extract inputs...");
+                    process.stdout.write("Attempting to extract inputs...\n");
 
                     const splits = res.split("\n");
                     const inputs = entrypoint.params.map((p) => {
@@ -150,13 +150,13 @@ setImmediate(() => {
                         }
                     });
 
-                    console.log(inputs.join("\n"));
+                    process.stdout.write(`${inputs.join("\n")}\n`);
                 }
             }
         }
         catch (exx) {
             if(Commander.model) {
-                console.log("Cannot generate model '-m' as errors were not found?")
+                process.stdout.write("Cannot generate model '-m' as errors were not found?\n");
             }
             else {
                 throw exx;

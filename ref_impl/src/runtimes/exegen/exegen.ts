@@ -9,7 +9,7 @@ import { execSync } from "child_process";
 
 import * as Commander from "commander";
 
-import { MIRAssembly, PackageConfig, MIRInvokeBodyDecl } from "../../compiler/mir_assembly";
+import { MIRAssembly, PackageConfig, MIRInvokeBodyDecl, MIRType } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";
 import { CPPEmitter } from "../../tooling/aot/cppdecls_emitter";
 import chalk from "chalk";
@@ -67,11 +67,11 @@ if(!["debug", "test", "release"].includes(Commander.level)) {
     process.exit(1);
 }
 
-console.log(`Compiling Bosque sources in files:\n${Commander.args.join("\n")}\n...\n`);
+process.stdout.write(`Compiling Bosque sources in files:\n${Commander.args.join("\n")}\n...\n`);
 const massembly = generateMASM(Commander.args, Commander.level, Path.normalize(Path.join(__dirname, "../../", "core/direct/")));
 
 setImmediate(() => {
-    console.log(`Transpiling Bosque assembly to C++ with entrypoint of ${Commander.entrypoint}...`);
+    process.stdout.write(`Transpiling Bosque assembly to C++ with entrypoint of ${Commander.entrypoint}...\n`);
     const cpp_runtime = Path.join(binroot, "tooling/aot/runtime/");
 
     try {
@@ -107,8 +107,8 @@ setImmediate(() => {
         }
 
         const entrypoint = massembly.invokeDecls.get(Commander.entrypoint) as MIRInvokeBodyDecl;
-        if (entrypoint.params.some((p) => p.type !== "NSCore::Bool" && p.type !== "NSCore::Int" && p.type !== "NSCore::String")) {
-            process.stderr.write("Only Bool/Int/String are supported as inputs for Bosque binaries.\n");
+        if (entrypoint.params.some((p) => !massembly.subtypeOf(massembly.typeMap.get(p.type) as MIRType, massembly.typeMap.get("NSCore::APIValue") as MIRType))) {
+            process.stderr.write("Only APIValue types are supported as inputs of Bosque programs.\n");
             process.exit(1);
         }
 
@@ -139,7 +139,7 @@ setImmediate(() => {
             + cparams.MAIN_CALL
         linked.push({ file: "main.cpp", contents: maincpp });
 
-        console.log(`Writting C++ files...`);
+        process.stdout.write(`Writting C++ files...\n`);
         const cpppath = Path.join(scratchroot, "cpp");
         FS.mkdirSync(cpppath, { recursive: true });
 
@@ -161,7 +161,7 @@ setImmediate(() => {
             FS.writeFileSync(outfile, contents);
         });
 
-        console.log(`Compiling C++ code with ${Commander.compiler} into exe file "${chalk.bold(Commander.outfile)}"...`);
+        process.stdout.write(`Compiling C++ code with ${Commander.compiler} into exe file "${chalk.bold(Commander.outfile)}"...\n`);
         let buildOpts = "";
         if(Commander.level === "debug") {
             buildOpts = " -g -DBDEBUG";
@@ -178,5 +178,5 @@ setImmediate(() => {
     catch (ex) {
         process.stderr.write(chalk.red(`Error -- ${ex}\n`));
     }
-    console.log(chalk.green(`Done with executable -- ${Commander.outfile}`));
+    process.stdout.write(chalk.green(`Done with executable -- ${Commander.outfile}\n`));
 });

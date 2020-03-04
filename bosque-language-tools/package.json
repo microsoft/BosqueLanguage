@@ -10,7 +10,8 @@
         "Programming Languages"
     ],
     "activationEvents": [
-        "onCommand:extension.typecheck"
+        "onCommand:extension.typecheck",
+        "onCommand:extension.symtest"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -37,7 +38,15 @@
         "commands": [
             {
                 "command": "extension.typecheck",
-                "title": "TypeCheck"
+                "title": "Bosque TypeCheck"
+            },
+            {
+                "command": "extension.symtest",
+                "title": "Bosque SymTest"
+            },
+            {
+                "command": "extension.bsqcompile",
+                "title": "Bosque Compile"
             }
         ]
     },

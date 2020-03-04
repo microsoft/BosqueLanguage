@@ -203,7 +203,7 @@ function createAnimal(catchPhrase: String): Animal
 }
 
 function createAnimalPreSafe(catchPhrase: String): Animal
-    requires#release catchPhrase != "";
+    requires release catchPhrase != "";
 {
     return Animal@{says=catchPhrase};
 }
@@ -250,8 +250,8 @@ global _ops: Set<String> = Set<String>@{
 };
 
 entrypoint function processOp(op: String, arg1: Int, arg2: Int?): Int 
-    requires#release NSMain::_ops->has(op);
-    //requires#release (op == "add" || op == "sub") ==> arg2 != none;
+    requires release NSMain::_ops->has(op);
+    //requires release (op == "add" || op == "sub") ==> arg2 != none;
 {
     if(op == "negate") {
         return -arg1;
@@ -283,7 +283,7 @@ Will report that an error is possible when `op == "negate"` and `arg2 == none`. 
 
 Un-commenting the second requires line tells the tester that this, and similar errors are excluded by the API definition, and re-running the tester will now report that the code has been verified up to the bound.
 
-Note: we recommend specifying preconditions as always checked, `requires#release`, on entrypoint functions to ensure that these externally exposed API endpdoints are not misused.
+Note: we recommend specifying preconditions as always checked, `requires release`, on entrypoint functions to ensure that these externally exposed API endpdoints are not misused.
 
 More details on this symbolic checker can be found in the [readme](./ref_impl/src/runtimes/symtest/README.md).
 
