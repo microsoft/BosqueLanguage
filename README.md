@@ -11,6 +11,10 @@ For a look at how the language works and flows _in the large_ please see the cod
 
 **Note:** This repository and code represent an alpha state. This means that the language is subject to revision, there are bugs and missing functionality, and the performance is limited. Thus, we **do not** recommend the use of the Bosque language for _any_ production work and instead encourage experimentation only with small/experimental side projects at this point in time.
 
+## News
+
+**May 2020:** We will be running a Bosque Webinar with Live Q&A on May 14th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
+
 ## Documentation
 
 * [Language Docs](docs/language/overview.md)
