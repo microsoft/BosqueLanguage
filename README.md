@@ -247,8 +247,6 @@ getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
 
 Bosque provides a powerful new way to test your applications. Unit-testing is a great way to ensure that code works as expected and to prevent accidental changes to behavior when adding new features or fixing bugs. However, writing and maintaining large numbers of tests can be a tedious and time consuming task. To help with this Bosque provides a *symbolic testing* harness that augments unit-testing and provides high coverage for bugs that result in runtime failures -- arising either as builtin language errors or from failed user provided pre/post/invariant/assert conditions.
 
-[TESTS NEEDED]
-
 The **symtest** tool implements the symbolic testing algorithm and works as follows. Given the application shown below:
 ```
 namespace NSMain;
