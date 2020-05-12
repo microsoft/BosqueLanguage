@@ -196,7 +196,6 @@ class CPPEmitter {
             FUNC_DECLS_FWD: funcdecls_fwd.join("\n"),
             FUNC_DECLS: funcdecls.join("\n"),
             VFIELD_DECLS: [...vfieldaccesses].sort().join("\n"),
-            VMETHOD_DECLS: [...vcalls].sort().join("\n"),
             MAIN_CALL: maincall
         };
     }

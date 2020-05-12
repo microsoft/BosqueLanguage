@@ -45,7 +45,7 @@ entrypoint function eif_absy_1(b: Bool): Int {
 
 entrypoint function enestif_abs1(b: Bool): Int {
     var x = b ? -3 : none;
-    var y = if(x == none) 0 else if(x > 0) x else -x;
+    var y = if(x == none) 0 elif(x > 0) x else -x;
     return y;
 }
 

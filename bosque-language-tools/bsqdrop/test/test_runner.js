@@ -126,7 +126,7 @@ class TestRunner {
         try {
             child_process_1.execSync(`node ${runnerapp} -c "NSTest::${test.entrypoint}" ${testsrc}`);
             process.chdir(cppscratch);
-            child_process_1.execSync(`${clangpath} -std=c++14 -g -DBDEBUG -o ${cppexe} *.cpp`);
+            child_process_1.execSync(`${clangpath} -std=c++17 -g -DBDEBUG -o ${cppexe} *.cpp`);
             const res = child_process_1.execSync(`${cppexe} ${test.args.join(" ")}`).toString().trim();
             return res;
         }

@@ -37,8 +37,8 @@ class CPPBodyEmitter {
         if (name === "this") {
             return this.typegen.mangleStringForCpp("$this");
         }
-        else if (name === "_return_") {
-            return "_return_";
+        else if (name === "$$return") {
+            return "$$return";
         }
         else {
             return this.typegen.mangleStringForCpp(name);

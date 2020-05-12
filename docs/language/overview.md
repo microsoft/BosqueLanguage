@@ -84,11 +84,11 @@ Reasoning about and understanding the effect of a statement or block of code is 
 
 ## <a name="0.2-Block-Scoping"></a>0.2 Block Scoping
 
-Local variables with block structured code is a very appealing model for structuring code. The Bosque language fuses functional programming with block scopes and `{...}` braces by allowing multiple assignments to updatable variables `var!` ([6.3 Variable Assignment](#6.3-Variable-Assignment)). This supports functional style programming in a block-scoped language and allows developers to write code such as:
+Local variables with block structured code is a very appealing model for structuring code. The Bosque language fuses functional programming with block scopes and `{...}` braces by allowing multiple assignments to updatable variables `var` ([6.3 Variable Assignment](#6.3-Variable-Assignment)). This supports functional style programming in a block-scoped language and allows developers to write code such as:
 
 ```none
 function abs(x: Int): Int {
-    var! sign = 1; //declare updatable variable with initial value
+    var sign = 1; //declare updatable variable with initial value
     if(x < 0) {
         sign = -1; //update the variable
     }
@@ -111,17 +111,17 @@ function np(p1: Int, p2: Int): {x: Int, y: Int} {
 }
 
 //calls with explicit arguments
-var x = nsum(0, 1, 2, 3); //returns 6
+let x = nsum(0, 1, 2, 3); //returns 6
 
-var a = np(1, 2);         //returns {x=1, y=2}
-var b = np(p2=2, 1);      //also returns {x=1, y=2}
+let a = np(1, 2);         //returns {x=1, y=2}
+let b = np(p2=2, 1);      //also returns {x=1, y=2}
 
 //calls with spread arguments
-var t = [1, 2, 3];
-var p = nsum(0, ...t);    //returns 6 -- same as explicit call
+let t = [1, 2, 3];
+let p = nsum(0, ...t);    //returns 6 -- same as explicit call
 
-var r = {p1=1, p2=2};
-var q = np(...r);         //returns {x=1, y=2} -- same as explicit call
+let r = {p1=1, p2=2};
+let q = np(...r);         //returns {x=1, y=2} -- same as explicit call
 ```
 
 ## <a name="0.4-Reference-Parameter-Threading"></a>0.4 Reference Parameter Threading
@@ -140,7 +140,7 @@ function internString(ref env: Map<String, Int>, str: String): Int {
 
 
 ...
-var nameid = internString(ref env, "hello");
+let nameid = internString(ref env, "hello");
 ```
 
 ## <a name="0.5-Typed-Strings"></a>0.5 Typed Strings
@@ -152,8 +152,8 @@ The `SafeString<T>` type is parameterized with a `Validator` regular expression 
 typedef SizeFormat = /(\d)+(em|px)/; //declare Validator type the size formats
 
 entrypoint function convertToPX(size: SafeString<SizeFormat>): Int {
-    var dvalstr = /?<digits>\d+/.match(size->string()).digits;
-    var dval = Int::parse(dvalstr);
+    let dvalstr = /?<digits>\d+/.match(size->string()).digits;
+    let dval = Int::parse(dvalstr);
     
     if(size->string()->endsWith("px")) {
         return dval;
@@ -187,14 +187,14 @@ entity EMailAddress provides Parsable {
     }
 
     override static tryParse(str: String): Result<Any, String> {
-        var localResult = EMailAddress::parseLocal(str);
-        var domainResult = EMailAddress::parseDomain(str);
+        let localResult = EMailAddress::parseLocal(str);
+        let domainResult = EMailAddress::parseDomain(str);
 
         if(localResult.isErr() || domainResult.isErr()) {
             return Result<Any, String>::err("Invalid Email Address");
         }
         else {
-            var addr = EMailAddress@{local=localResult->value(), domain=domainResult->value()};
+            let addr = EMailAddress@{local=localResult->value(), domain=domainResult->value()};
             return Result<Any, String>::ok(addr);
         }
     }
@@ -217,8 +217,8 @@ function generateNotifications(users: List<StringOf<UserName>>,
     contactInfo: Map<StringOf<UserName>, StringOf<EMailAddress>>, 
     msg: String): List<{addr: StringOf<EMailAdress>, msg: String}> {
         return users->map<{addr: StringOf<EMailAdress>, msg: String}>(fn(uname) => {
-            var uaddr = contactInfo->get(uname);
-            var umsg = String::concat("Dear ", uname->string(), ", ", msg);
+            let uaddr = contactInfo->get(uname);
+            let umsg = String::concat("Dear ", uname->string(), ", ", msg);
 
             return {addr: uaddr, msg: umsg};
         });
@@ -234,15 +234,15 @@ In addition to improving the clarity of the code in these examples the Typed Str
 Bulk algebraic operations in Bosque start with support for bulk reads and updates to data values. Consider the common case of having a struct with 3 fields where 2 of them need to be updated. In most languages this would need to be done on a field-by-field basis. However with the bulk data operations it is possible to perform the update as an atomic operation (unlike in an imperative style) and without manually extracting and copying fields (like in a functional style).
 
 ```none
-var x = {f=1, g=2, h=3};
+let x = {f=1, g=2, h=3};
 x->update(f=-1, g=-2); //{f=-1, @g=-2, h=3}
 ```
 
 In addition to eliminating opportunities to forget or confuse a field these operators help focus the code on the overall intent, instead of being hidden in the individual steps, and allow a developer to perform algebraic reasoning on the data structure operations. Bosque provides several flavors of these algebraic operations for various data types, tuples, records, and nominal types, and for various operations including projection, multi-update, and merge.
 
 ```none
-var l = [7, 8, 9];
-var r = {f=7, g=8};
+let l = [7, 8, 9];
+let r = {f=7, g=8};
 
 l.[0, 2]               //[7, 9]
 l->merge([5, 6])       //[7, 8, 9, 5, 6]
@@ -268,7 +268,7 @@ function foo(val?: {tag: Int, value?: String}): String {
 A fundamental concept in a programming language is the iteration construct and a critical question is should this construct be provided as high-level functors, such as filter/map/reduce, or do programmers benefit from the flexibility available with iterative, while or for, looping constructs. To answer this question in a definitive manner the authors of [Mining Semantic Loop Idioms](https://www.microsoft.com/en-us/research/uploads/prod/2018/10/LoopIdioms.pdf) engaged in a study of all the loops "idioms" found in real-world code. The categorization and coverage results showed that almost every loop a developer would want to write falls into a small number of idiomatic patterns which correspond to higher level concepts developers are using in the code, e.g., filter, find, group, map, etc. With this result in mind the Bosque language trades structured loops for a set of high-level iterative processing constructs ([3 Collections](#3-Collections)).
 
 ```none
-var v: List<Int?> = List<Int?>{1, 2, none, 4};
+let v: List<Int?> = List<Int?>{1, 2, none, 4};
 
 //Chained - List<Int>{1, 4, 16}
 v->filter(fn(x) => x != none)->map<Int>(fn(x) => x*x)
@@ -370,11 +370,11 @@ entity Baz provides Bar {
     }
 }
 
-var x = Baz{f=1, g=2};
-var y = Baz{f=1, g=2, h=false};
+let x = Baz{f=1, g=2};
+let y = Baz{f=1, g=2, h=false};
 
-var p = Baz@identity(1); //equivalent to Baz{...Baz::identity(1)}
-var q = Baz{...Bar::default(), g=2};
+let p = Baz@identity(1); //equivalent to Baz{...Baz::identity(1)}
+let q = Baz{...Bar::default(), g=2};
 ```
 
 In this code the two `Baz` entities are allocated via the atomic initialization constructor. In the first case the omitted `h` field is set to the provided default value of `true`. The `identity` factory defines `f` and `g` values for the entity via the returned record. When invoked with the constructor syntax
@@ -465,8 +465,8 @@ The `SafeString<T>` type is parameterized with a `Validator` regular expression 
 typedef SizeFormat = /(\d)+(em|px)/; //declare Validator type the size formats
 
 entrypoint function convertToPX(size: SafeString<SizeFormat>): Int {
-    var dvalstr = /?<digits>\d+/.match(size->string()).digits;
-    var dval = Int::parse(dvalstr);
+    let dvalstr = /?<digits>\d+/.match(size->string()).digits;
+    let dval = Int::parse(dvalstr);
     
     if(size->string()->endsWith("px")) {
         return dval;
@@ -500,14 +500,14 @@ entity EMailAddress provides Parsable {
     }
 
     override static tryParse(str: String): Result<Any, String> {
-        var localResult = EMailAddress::parseLocal(str);
-        var domainResult = EMailAddress::parseDomain(str);
+        let localResult = EMailAddress::parseLocal(str);
+        let domainResult = EMailAddress::parseDomain(str);
 
         if(localResult.isErr() || domainResult.isErr()) {
             return Result<Any, String>::err("Invalid Email Address");
         }
         else {
-            var addr = EMailAddress@{local=localResult->value(), domain=domainResult->value()};
+            let addr = EMailAddress@{local=localResult->value(), domain=domainResult->value()};
             return Result<Any, String>::ok(addr);
         }
     }
@@ -530,8 +530,8 @@ function generateNotifications(users: List<StringOf<UserName>>,
     contactInfo: Map<StringOf<UserName>, StringOf<EMailAddress>>, 
     msg: String): List<{addr: StringOf<EMailAdress>, msg: String}> {
         return users->map<{addr: StringOf<EMailAdress>, msg: String}>(fn(uname) => {
-            var uaddr = contactInfo->get(uname);
-            var umsg = String::concat("Dear ", uname->string(), ", ", msg);
+            let uaddr = contactInfo->get(uname);
+            let umsg = String::concat("Dear ", uname->string(), ", ", msg);
 
             return {addr: uaddr, msg: umsg};
         });
@@ -694,18 +694,18 @@ function np(p1: Int, p2: Int): {x: Int, y: Int} {
 }
 
 //calls with explicit arguments
-var x = nsum(0, 1, 2, 3); //returns 6
+let x = nsum(0, 1, 2, 3); //returns 6
 
-var a = np(1, 2);         //returns {x=1, y=2}
-var b = np(p2=2, 1);      //also returns {x=1, y=2}
-var c = np(p2=2, p1=1);   //also returns {x=1, y=2}
+let a = np(1, 2);         //returns {x=1, y=2}
+let b = np(p2=2, 1);      //also returns {x=1, y=2}
+let c = np(p2=2, p1=1);   //also returns {x=1, y=2}
 
 //calls with spread arguments
-var t = [1, 2, 3];
-var p = nsum(0, ...t);    //returns 6 -- same as explicit call
+let t = [1, 2, 3];
+let p = nsum(0, ...t);    //returns 6 -- same as explicit call
 
-var r = {p1=1, p2=2};
-var q = np(...r);         //returns {x=1, y=2} -- same as explicit call
+let r = {p1=1, p2=2};
+let q = np(...r);         //returns {x=1, y=2} -- same as explicit call
 ```
 
 The first of the examples show the use of rest and named arguments in call signatures. The call to `nsum` takes an arbitrary number of arguments which are automatically converted into a List. The calls to `np` show how named parameters can be used and mixed with positional parameters.
@@ -715,7 +715,7 @@ The next set of examples show how _spread_ arguments can be used. In the first c
 For creating Maps we also provide a key/value argument notation `kexp => vexp` where `kexp` is an expression of the map key type and `vexp` is the value expression:
 
 ```
-var m = Map<Int, Bool>@{ 0=>false, 1=>true };
+let m = Map<Int, Bool>@{ 0=>false, 1=>true };
 ```
 
 ## <a name="5.2-Constants"></a>5.2 Constants
@@ -783,8 +783,8 @@ entity Baz provides Bar {
     field h: Bool = true;
 }
 
-var y = Baz@{f=1, g=2, h=false}; //Create a Baz entity with the given field values
-var x = Baz@{f=1, g=2};          //Create a Baz entity with default value for h
+let y = Baz@{f=1, g=2, h=false}; //Create a Baz entity with the given field values
+let x = Baz@{f=1, g=2};          //Create a Baz entity with default value for h
 ```
 
 In this code snippet two `Baz` entities are allocated via the atomic initialization constructor. In the second case the omitted `h` field is set to the provided default value of true.
@@ -811,8 +811,8 @@ entity Baz provides Bar {
     }
 }
 
-var p = Baz@identity(1);              //Factory provides all arguments for constructor
-var q = Baz{...Bar::default(), g=2}; //Use super factory + specific values in direct constructor
+let p = Baz@identity(1);              //Factory provides all arguments for constructor
+let q = Baz{...Bar::default(), g=2}; //Use super factory + specific values in direct constructor
 ```
 
 The result of this inverted constructor logic is that _only_ the arguments needed for internal computation of initialization values must be propagated while all others can be directly set in the initializer. The elimination of the constructor boilerplate code and reduction in argument passing simplifies the definition of new nominal types as well as the impact of cascading changes when a field (or constructor argument) is added/removed in a base definition.
@@ -827,8 +827,8 @@ fn(): Int => 1;                                       //No arguments expression 
 fn(x: Int): Int => x;                                 //One required argument
 fn(x: Int, y?: Int): {a: Int, b: Int?} => {a=x, b=y}; //One required and one optional argument
 
-var c = 1;
-var res = foo(fn(): Int => c); //Captured variable c
+let c = 1;
+let res = foo(fn(): Int => c); //Captured variable c
 ```
 
 In the above examples the type of the pcode expression is explicitly declared via the explicit type declarations for the arguments and return value. However, we also allow these types to be inferred automatically.
@@ -838,7 +838,7 @@ function foo(f: fn(_: Int, _: Int) -> Int, a: [Int, Int]): Int {
     return f(...a);
 }
 
-var ir = foo(fn(x, y) => x + y, [1, 2]); //Types inferred
+let ir = foo(fn(x, y) => x + y, [1, 2]); //Types inferred
 ```
 
 ## <a name="5.7-Scoped-Invokes"></a>5.7 Scoped Invokes
@@ -885,7 +885,7 @@ The tuple typed chainable operators include:
 Examples of these include:
 
 ```none
-var t = [ 1, 2, 3 ];
+let t = [ 1, 2, 3 ];
 
 t.0         //1
 t?.0        //1
@@ -911,7 +911,7 @@ The record typed chainable operators include:
 Examples of these include:
 
 ```none
-var r = { f=1, g=2, k=true };
+let r = { f=1, g=2, k=true };
 
 r.f         //1
 r?.f        //1
@@ -943,7 +943,7 @@ entity Baz {
     field k: Bool
 }
 
-var e = Baz@{ f=1, g=2, k=true };
+let e = Baz@{ f=1, g=2, k=true };
 
 e.f         //1
 e?.f        //1
@@ -977,19 +977,19 @@ entity Baz provides Bar {
     field k: Bool
 }
 
-var t = [ 1, 2, 3 ];
+let t = [ 1, 2, 3 ];
 t->project<[Int]>()       //[1]
 t->project<[Bool]()       //error type mismatch
 t->project<[Int, ?:Int]() //[1, 2]
 t->project<[Int, Any]()   //[1, 2]
 
-var r = { f=1, g=2, k=true };
+let r = { f=1, g=2, k=true };
 r->project<{f: Int}>()          //{f=1}
 r->project<{f: Bool}>()         //error type mismatch
 r->project<{f: Int, g?: Int}>() //{f=1, g=2}
 r->project<{f: Int, g: Any}>()  //{f=1, g=2}
 
-var e = Baz{ f=1, g=2, k=true };
+let e = Baz{ f=1, g=2, k=true };
 e->project<Bar>()       //{f=1}
 e->project<{f: Bool}>() //error type projection requires same kinds
 e->project<T3>()        //error type mismatch
@@ -1008,17 +1008,17 @@ entity Baz {
     field k: Bool
 }
 
-var t = [ 1, 2, 3 ];
+let t = [ 1, 2, 3 ];
 t->update(1=5)      //[1, 5, 2]
 t->update(0=3, 1=5) //[3, 5, 3]
 t->update(1=5, 4=0) //[1, 5, 3, none, 0]
 
-var r = { f=1, g=2, k=true };
+let r = { f=1, g=2, k=true };
 r->update(g=5)          //{f=1, g=5, k=true}
 r->update(g=3, k=false) //{f=1, g=3, k=false}
 r->update(g=5, h=0)     //{f=1, g=5, k=true, h=0}
 
-var e = Baz{ f=1, g=2, k=true };
+let e = Baz{ f=1, g=2, k=true };
 e->update(g=5)          //Baz{f=1, g=5, k=true}
 e->update(g=3, k=false) //Baz{f=1, g=3, k=false}
 e->update(g=5, h=0)     //error invalid field name
@@ -1037,16 +1037,16 @@ entity Baz {
     field k: Bool
 }
 
-var t = [ 1, 2, 3 ];
+let t = [ 1, 2, 3 ];
 t->merge([5])       //[1, 2, 3, 5]
 t->merge([3, 5])    //[1, 2, 3, 3, 5]
 
-var r = { f=1, g=2, k=true };
+let r = { f=1, g=2, k=true };
 r->merge({g=5})          //{f=1, g=5, k=true}
 r->merge({g=3, k=false}) //{f=1, g=3, k=false}
 r->merge({g=5, h=0})     //{f=1, g=5, k=true, h=0}
 
-var e = Baz{ f=1, g=2, k=true };
+let e = Baz{ f=1, g=2, k=true };
 e->merge({g=5})          //{f=1, g=5, k=true}
 e->merge({g=3, k=false}) //{f=1, g=3, k=false}
 e->merge({g=5, h=0})     //error field not defined
@@ -1097,8 +1097,8 @@ entity Biz provides Fizz {
     }
 }
 
-var bar = Bar{v=10};
-var biz = Biz{v=3};
+let bar = Bar{v=10};
+let biz = Biz{v=3};
 
 bar->m1(5) //15
 biz->m1(5) //8
@@ -1195,12 +1195,12 @@ Identifier keys are compared using the type of the key and the pairwise equality
 identifier SimpleKey = Int;
 composite identifier CompoundKey = { f: Int, g: String };
 
-var sk = SimpleKey@create(1);
-var osk = SimpleKey@create(2);
+let sk = SimpleKey@create(1);
+let osk = SimpleKey@create(2);
 
-var a = CompoundKey@create(1, "yes");
-var b = CompoundKey@create(f=1, g="yes");
-var c = CompoundKey@create(1, "no");
+let a = CompoundKey@create(1, "yes");
+let b = CompoundKey@create(f=1, g="yes");
+let c = CompoundKey@create(1, "no");
 
 
 a == a    //true
@@ -1290,11 +1290,11 @@ none ? 1 : 2               //2
 Bosque includes _Switch_, _If_, and _Block_ statements ([section 6 Statements](#6-Statements)) which can be used as both expressions and statements. It also allows these to be used in expression positions where the action blocks in If/Switch are treated as expressions and, instead of `return`, a block will `yield` a result:
 
 ```none
-var a = if(true) 3 else 4;    //3
-var b = {| var x = 3; yield x; |} //3
-var c = switch("yes") {
+let a = if(true) 3 else 4;    //3
+let b = {| let x = 3; yield x; |} //3
+let c = switch("yes") {
     case "yes" => 5
-    case "no" => {| var x = 5; yield x - 3; |}
+    case "no" => {| let x = 5; yield x - 3; |}
     case _ => if(true) 11 else 17
 } //5
 ```
@@ -1323,55 +1323,55 @@ The empty statement is simply the `;` which has no effect but is a legal stateme
 
 ## <a name="6.2-Variable-Declaration"></a>6.2 Variable Declaration
 
-Variable declarations in Bosque can be declared as constant in the scope using the `var` declaration form:
+Variable declarations in Bosque can be declared as constant in the scope using the `let` declaration form:
 
 Examples of these declarations are:
 
-- `var` _Identifier_ `=` _Exp_`;`
-- `var` _Identifier_`:`_Type_ `=` _Exp_`;`
+- `let` _Identifier_ `=` _Exp_`;`
+- `let` _Identifier_`:`_Type_ `=` _Exp_`;`
 
 Multi-decls using explicit initialization or assignment from a value pack are also supported:
 
-- `var x, y: Int = true, 3;` 
-- `var x, y = foo(5);` //where foo is defined as function foo(v: Int): Int, Int {...}
+- `let x, y: Int = true, 3;` 
+- `let x, y = foo(5);` //where foo is defined as function foo(v: Int): Int, Int {...}
 
 If the type is omitted in the declaration it is inferred from the type of the expression used to initialize the variable.
 
 ```none
-var x: Int = 3; //Int variable introduced and initialized
-var y = 3;      //variable introduced and inferred to be of type Int
+let x: Int = 3; //Int variable introduced and initialized
+let y = 3;      //variable introduced and inferred to be of type Int
 ```
 
-Alternatively variables can be declared as updatable in the scope using the `var!` declaration form. In the `var!` form an initializer expression can be used to set the initial value for the variable or it can be omitted to leave the variable uninitialized.
+Alternatively variables can be declared as updatable in the scope using the `var` declaration form. In the `var` form an initializer expression can be used to set the initial value for the variable or it can be omitted to leave the variable uninitialized.
 
-- `var!` _Identifier_`:` _Type_`;`
-- `var!` _Identifier_ `=` _Exp_`;`
-- `var!` _Identifier_`:`_Type_ `=` _Exp_`;`
+- `var` _Identifier_`:` _Type_`;`
+- `var` _Identifier_ `=` _Exp_`;`
+- `var` _Identifier_`:`_Type_ `=` _Exp_`;`
 
-Using the `var!` form allows for later assignment statements ([6.3 Variable Assignment](#6.3-Variable-Assignment)) to update the value of the variable. It is an error to use an uninitialized variable unless all possible paths flowing to the use _must_ have assigned it a value.
+Using the `var` form allows for later assignment statements ([6.3 Variable Assignment](#6.3-Variable-Assignment)) to update the value of the variable. It is an error to use an uninitialized variable unless all possible paths flowing to the use _must_ have assigned it a value.
 
 Examples of these declarations are:
 
 ```none
-var! x: Int;     //uninitialized mutable variable of type Int introduced
-var! x: Int = 3; //mutable variable of type Int introduced
-var! x = 3;      //mutable variable of inferred type Int introduced
+var x: Int;     //uninitialized mutable variable of type Int introduced
+var x: Int = 3; //mutable variable of type Int introduced
+var x = 3;      //mutable variable of inferred type Int introduced
 ```
 
 ## <a name="6.3-Variable-Assignment"></a>6.3 Variable Assignment
 
-Variables declared as mutable, using the `var!` syntax, can be modified by later assignment statements.
+Variables declared as mutable, using the `var` syntax, can be modified by later assignment statements.
 
 ```none
-var! x: Int;
-var! y = 7;
+var x: Int;
+var y = 7;
 
-var a = x; //error undefined use
+let a = x; //error undefined use
 
 x = 3;
 y = x;     //ok x is defined now
 
-var z = 5;
+let z = 5;
 z = y;     //error z is not updatable
 
 ```
@@ -1381,12 +1381,12 @@ Similar to declaration multi assignment is allowed either with an explicit value
 Updates can occur in different blocks of code as well:
 
 ```none
-var! x = 0;
+var x = 0;
 if(true) {
     x = 1;
 }
 
-var! y: Int;
+var y: Int;
 if(true) {
     y = 1;
 }
@@ -1400,59 +1400,59 @@ else {
 In addition to single variable declarations and assignments the Bosque language also supports de-structuring values with declaration/assignment to multiple variables simultaneously.
 
 ```none
-[var x: Int, var y: Int] = [1, 2];               //declare and assign x=1, y=2 (explicit types)
-{f=var x, g=var y} = {f=1, g=2};                 //declare and assign x=1, y=2 (infer types)
-{f=var x, g=@[var y, var z]} = {f=1, g=@[2, 3]}; //declare x=1, y=2, and z=3
-Pair@{f=var x, s=var y} = Pair@{f=1, s=2};       //declare x, y and assign from entity or concept
-(|var x, var y|) = foo(5)                        //declare x, y and assign from value pack typed expression
+[let x: Int, let y: Int] = [1, 2];               //declare and assign x=1, y=2 (explicit types)
+{f=let x, g=let y} = {f=1, g=2};                 //declare and assign x=1, y=2 (infer types)
+{f=let x, g=@[let y, let z]} = {f=1, g=@[2, 3]}; //declare x=1, y=2, and z=3
+Pair@{f=let x, s=let y} = Pair@{f=1, s=2};       //declare x, y and assign from entity or concept
+(|let x, let y|) = foo(5)                        //declare x, y and assign from value pack typed expression
 ```
 
 Just as with single variable declaration, variables can be declared as mutable:
 
 ```none
-[var! x, var! y] = [1, 2]; //declare and assign x=1, y=2 (mutable)
-[var! x, var y] = [1, 2];  //declare and assign x=1, y=2 (x is mutable but y is not)
+[var x, var y] = [1, 2]; //declare and assign x=1, y=2 (mutable)
+[var x, let y] = [1, 2];  //declare and assign x=1, y=2 (x is mutable but y is not)
 ```
 
-Since including `var` or `var!` for each variable is often redundant and cluttered you can do a single global declaration for all variables in the assignment:
+Since including `let` or `var` for each variable is often redundant and cluttered you can do a single global declaration for all variables in the assignment:
 
 ```none
-var {f=x, g=y} = {f=1, g=2};  //declare and assign x=1, y=2
-var! {f=x, g=y} = {f=1, g=2}; //declare and assign x=1, y=2 (mutable)
+let {f=x, g=y} = {f=1, g=2};  //declare and assign x=1, y=2
+var {f=x, g=y} = {f=1, g=2}; //declare and assign x=1, y=2 (mutable)
 ```
 
 In addition to declaration variables can also be updated as part of a structured assignment:
 
 ```none
-var! x: Int;
-var! y: Int;
+var x: Int;
+var y: Int;
 {f=x, g=y} = {f=1, g=2}; //assign x=1, y=2
 ```
 
 It is possible to mix declarations and assignments:
 
 ```none
-var! x: Int;
-[x, var y] = [1, 2]; //assign x=1 and declare y=2
+var x: Int;
+[x, let y] = [1, 2]; //assign x=1 and declare y=2
 ```
 
 Finally, as in many cases there are parts of a structure that are not useful, Bosque provides ways to ignore these values:
 
 ```none
 //declare and assign x, y but ignore the h property
-var {f=x, h=_, g=y} = {f=1, g=2};
+let {f=x, h=_, g=y} = {f=1, g=2};
 
 //declare and assign x, y but ignore the h property which must be an Int
-var {f=x, h=_:Int, g=y} = {f=1, g=2};
+let {f=x, h=_:Int, g=y} = {f=1, g=2};
 
 //declare and assign x, y -- since g property is missing y=none
-var {f=x, g=y?: Int} = {f=1};
+let {f=x, g=y?: Int} = {f=1};
 
 //declare and assign x -- ignore optional g property
-var {f=x, g=_?} = {f=1};
+let {f=x, g=_?} = {f=1};
 
 //declare and assign x -- ignore any other tuple values
-var [x, ...] = [1, 2, 3];
+let [x, ...] = [1, 2, 3];
 
 ```
 
@@ -1476,7 +1476,7 @@ function absy(x?: Int): Int {
     }
 
     return {
-        var! y = x;
+        var y = x;
         if(y < 0) {
             y = -y;
         }
@@ -1496,9 +1496,9 @@ function bar(v: Int): Int, Int {
 }
 
 function baz(opt: Bool): Bool {
-    var x, y = foo(0); //x=0 and y=1
+    let x, y = foo(0); //x=0 and y=1
 
-    var p, q = if(opt) {|
+    let p, q = if(opt) {|
         yield bar(0);
     |}
     else {|
@@ -1511,7 +1511,7 @@ Error code return checking and handling can frequently obscure the core flow of 
 
 ```none
 function tryit(arg?: Int): Int | None {
-    var y = arg or return;
+    let y = arg or return;
     return y + 1;
 }
 
@@ -1519,7 +1519,7 @@ tryit(2) //3
 tryit()  //none
 
 function try0(arg: Int): Int {
-    var y = arg or return when _value_ == 0;
+    let y = arg or return when _value_ == 0;
     return y + 1;
 }
 
@@ -1527,7 +1527,7 @@ try0(2) //3
 try0(0) //0
 
 function trydec(arg: Int): Int {
-    var y = arg or return (_value_ - 1) when (_value_ == 0);
+    let y = arg or return (_value_ - 1) when (_value_ == 0);
     return y + 1;
 }
 
@@ -1569,7 +1569,7 @@ function foo(x: Int): Result<Int, String> {
 The conditional if statements in Bosque are classical conditional control flow structures.
 
 ```none
-var x = 3;
+let x = 3;
 
 //if with fall through
 if(x == none) {
@@ -1615,10 +1615,10 @@ switch(x) {
 The case statement uses the same syntax as structured assignments (plus checking literal values) and can bind variables:
 
 ```none
-var! z: Int;
+var z: Int;
 switch(x) {
-    case [1, var y: Int] => { return y; }     //on match define, bind, and use y
-    case var {f=2, g=y: Int} => { return y; } //on match define all new vars in the match
+    case [1, let y: Int] => { return y; }     //on match define, bind, and use y
+    case let {f=2, g=y: Int} => { return y; } //on match define all new vars in the match
     case {f=3, g=z} => { return z; }          //on match bind the mutable outer variable z
     case _ => { return none; }
 }
@@ -1642,7 +1642,7 @@ The `switch` statement supports additional conditions with the use of a `when` c
 switch(x) {
     case Int when x >= 0 => { return x; }
     case Int when x < 0 => { return -x; }
-    case {f=_: Int, g=var y: Int} when y != 0 => { return y; }
+    case {f=_: Int, g=let y: Int} when y != 0 => { return y; }
     case _ => { return -1; }
 }
 ```
@@ -1658,11 +1658,11 @@ In rare cases a function does not have an explicit return result, perhaps just *
 Block statements in Bosque are sequences of statements. The block introduces a new lexical scope for any variables declared inside.
 
 ```none
-var x = 3;
+let x = 3;
 {
-    var y = 5;
+    let y = 5;
 
-    var! z: Int;
+    var z: Int;
     if(x != 3) {
         z = 0;
     }

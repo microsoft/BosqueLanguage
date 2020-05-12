@@ -10,11 +10,8 @@
 ////
 //Value ops
 
-#define MIN_TAGGED -9007199254740991
-#define MAX_TAGGED 9007199254740991
-
-#define MIN_TAGGED_MULT -2147483648
-#define MAX_TAGGED_MULT  2147483647
+#define MIN_BSQINT -9007199254740991
+#define MAX_BSQINT 9007199254740991
 
 #define BSQ_IS_VALUE_NONE(V) ((V) == nullptr)
 #define BSQ_IS_VALUE_NONNONE(V) ((V) != nullptr)
@@ -35,10 +32,6 @@
 #define BSQ_VALUE_NONE nullptr
 #define BSQ_VALUE_TRUE BSQ_ENCODE_VALUE_BOOL(true)
 #define BSQ_VALUE_FALSE BSQ_ENCODE_VALUE_BOOL(false)
-
-#define BSQ_VALUE_0 BSQ_ENCODE_VALUE_TAGGED_INT(0)
-#define BSQ_VALUE_POS_1 BSQ_ENCODE_VALUE_TAGGED_INT(1)
-#define BSQ_VALUE_NEG_1 BSQ_ENCODE_VALUE_TAGGED_INT(-1)
 
 #define HASH_COMBINE(H1, H2) (((527 + H1) * 31) + H2)
 
@@ -107,7 +100,6 @@ constexpr DATA_KIND_FLAG nominalDataKinds[] = {
 #define MIRNominalTypeEnum_Record MIRNominalTypeEnum::Invalid
 //%%SPECIAL_NAME_BLOCK_END%%
 
-typedef void* IntValue;
 typedef void* KeyValue;
 typedef void* Value;
 
@@ -240,7 +232,7 @@ struct LessFunctor_bool
 };
 struct DisplayFunctor_bool
 {
-    std::u32string operator()(bool b) const { return b ? U"true" : U"false"; }
+    std::string operator()(bool b) const { return b ? "true" : "false"; }
 };
 
 //A big integer class for supporting Bosque -- right now it does not do much
@@ -265,9 +257,9 @@ public:
         return 0;
     }
 
-    std::u32string display() const
+    std::string display() const
     {
-        return U"[NOT IMPLEMENTED]";
+        return "[NOT IMPLEMENTED]";
     }
 
     static BSQBigInt* negate(BSQRefScope& scope, const BSQBigInt* v)
@@ -319,10 +311,6 @@ public:
     {
         return nullptr;
     }
-};
-struct HashFunctor_IntValue
-{
-    size_t operator()(IntValue i) const { return BSQ_IS_VALUE_TAGGED_INT(i) ? BSQ_GET_VALUE_TAGGED_INT(i) : BSQ_GET_VALUE_PTR(i, BSQBigInt)->hash(); }
 };
 struct EqualFunctor_IntValue
 {
@@ -406,7 +394,7 @@ struct DisplayFunctor_KeyValue
 };
 
 enum class BSQBufferFormat {
-    Fluent,
+    Bosque,
     JSON,
     Binary
 };

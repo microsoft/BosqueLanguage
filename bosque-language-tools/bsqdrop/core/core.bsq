@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-//The core namespace implements the primitive concepts used in the fluent core language
+//The core namespace implements the primitive concepts used in the bosuqe core language
 namespace NSCore;
 
 //<summary>The special concept which all values are instances of.</summary>
@@ -43,7 +43,7 @@ entity Bool provides Some, Truthy, Parsable {
         if(str == "true") {
             return true;
         }
-        else if(str == "false") {
+        elif(str == "false") {
             return false;
         }
         else {

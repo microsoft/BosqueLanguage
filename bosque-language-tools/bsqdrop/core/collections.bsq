@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-//The core namespace implements the primitive concepts used in the fluent core language
+//The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
 //<summary>Type for representing all non-none values.</summary>
