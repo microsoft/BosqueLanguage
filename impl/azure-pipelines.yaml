@@ -1,6 +1,6 @@
 # Build config for Azure Pipelines
 pool:
-  vmImage: 'Ubuntu 16.04'
+  vmImage: 'windows-latest'
 
 steps:
 - checkout: self
