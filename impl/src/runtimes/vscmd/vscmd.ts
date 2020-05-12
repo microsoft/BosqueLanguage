@@ -27,7 +27,7 @@ else {
 }
 
 const z3path = Path.normalize(Path.join(__dirname, "../../tooling/bmc/runtime", platpathsmt));
-const compilerpath = (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "g++";
+const compilerpath = (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "clang++";
 const binext = (process.platform === "win32") ? "exe" : "out";
 
 function checkMASM(files: string[], corelibpath: string, doemit: boolean): boolean {

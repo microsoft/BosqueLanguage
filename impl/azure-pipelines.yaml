@@ -1,6 +1,6 @@
 # Build config for Azure Pipelines
 pool:
-  vmImage: 'macOS-latest'
+  vmImage: 'ubuntu-latest'
 
 steps:
 - checkout: self
