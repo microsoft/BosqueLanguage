@@ -11,18 +11,13 @@ namespace BSQ
 class BSQString : public BSQRef
 {
 public:
-    const std::u32string sdata;
+    const std::string sdata;
 
-    BSQString(const std::u32string& str) : BSQRef(MIRNominalTypeEnum_String), sdata(str) { ; }
-    BSQString(const char* str, int64_t excount) : BSQRef(excount, MIRNominalTypeEnum_String), sdata(std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>().from_bytes(str)) { ; }
+    BSQString(const std::string& str) : BSQRef(MIRNominalTypeEnum_String), sdata(str) { ; }
+    BSQString(const std::string& str, int64_t excount) : BSQRef(excount, MIRNominalTypeEnum_String), sdata(str) { ; }
 
     virtual ~BSQString() = default;
     virtual void destroy() { ; }
-
-    inline static size_t hash(const BSQString* str)
-    {
-        return std::hash<std::u32string>{}(str->sdata);
-    }
     
     inline static bool keyEqual(const BSQString* l, const BSQString* r)
     {
@@ -34,10 +29,6 @@ public:
         return l->sdata < r->sdata;
     }
 };
-struct HashFunctor_BSQString
-{
-    size_t operator()(const BSQString* s) const { return BSQString::hash(s); }
-};
 struct EqualFunctor_BSQString
 {
     bool operator()(const BSQString* l, const BSQString* r) const { return BSQString::keyEqual(l, r); }
@@ -48,23 +39,18 @@ struct LessFunctor_BSQString
 };
 struct DisplayFunctor_BSQString
 {
-    std::u32string operator()(const BSQString* s) const { return std::u32string(U"\"") + std::u32string(s->sdata.cbegin(), s->sdata.cend()) + std::u32string(U"\""); }
+    std::string operator()(const BSQString* s) const { return std::string("\"") + std::string(s->sdata.cbegin(), s->sdata.cend()) + std::string("\""); }
 };
 
 class BSQSafeString : public BSQRef
 {
 public:
-    const std::u32string sdata;
+    const std::string sdata;
   
-    BSQSafeString(const std::u32string& str, MIRNominalTypeEnum oftype) : BSQRef(oftype), sdata(str) { ; }
+    BSQSafeString(const std::string& str, MIRNominalTypeEnum oftype) : BSQRef(oftype), sdata(str) { ; }
 
     virtual ~BSQSafeString() = default;
     virtual void destroy() { ; }
-
-    inline static size_t hash(const BSQSafeString* str)
-    {
-        return HASH_COMBINE((size_t)str->nominalType, std::hash<std::u32string>{}(str->sdata));
-    }
 
     inline static bool keyEqual(const BSQSafeString* l, const BSQSafeString* r)
     {
@@ -76,10 +62,6 @@ public:
         return (l->nominalType != r->nominalType) ? (l->nominalType < r->nominalType) : (l->sdata < r->sdata);
     }
 };
-struct HashFunctor_BSQSafeString
-{
-    size_t operator()(const BSQSafeString* s) const { return BSQSafeString::hash(s); }
-};
 struct EqualFunctor_BSQSafeString
 {
     bool operator()(const BSQSafeString* l, const BSQSafeString* r) const { return BSQSafeString::keyEqual(l, r); }
@@ -90,27 +72,21 @@ struct LessFunctor_BSQSafeString
 };
 struct DisplayFunctor_BSQSafeString
 {
-    std::u32string operator()(const BSQSafeString* s) const 
+    std::string operator()(const BSQSafeString* s) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return conv.from_bytes(nominaltypenames[(uint32_t)s->nominalType]) + std::u32string(U"'") + s->sdata + std::u32string(U"'"); 
+        return std::string(nominaltypenames[(uint32_t)s->nominalType]) + std::string("'") + s->sdata + std::string("'"); 
     }
 };
 
 class BSQStringOf : public BSQRef
 {
 public:
-    const std::u32string sdata;
+    const std::string sdata;
   
-    BSQStringOf(const std::u32string& str, MIRNominalTypeEnum oftype) : BSQRef(oftype), sdata(str) { ; }
+    BSQStringOf(const std::string& str, MIRNominalTypeEnum oftype) : BSQRef(oftype), sdata(str) { ; }
 
     virtual ~BSQStringOf() = default;
     virtual void destroy() { ; }
-
-    inline static size_t hash(const BSQStringOf* str)
-    {
-        return HASH_COMBINE((size_t)str->nominalType, std::hash<std::u32string>{}(str->sdata));
-    }
 
     inline static bool keyEqual(const BSQStringOf* l, const BSQStringOf* r)
     {
@@ -122,10 +98,6 @@ public:
         return (l->nominalType != r->nominalType) ? (l->nominalType < r->nominalType) : (l->sdata < r->sdata);
     }
 };
-struct HashFunctor_BSQStringOf
-{
-    size_t operator()(const BSQStringOf* s) const { return BSQStringOf::hash(s); }
-};
 struct EqualFunctor_BSQStringOf
 {
     bool operator()(const BSQStringOf* l, const BSQStringOf* r) const { return BSQStringOf::keyEqual(l, r); }
@@ -136,10 +108,9 @@ struct LessFunctor_BSQStringOf
 };
 struct DisplayFunctor_BSQStringOf
 {
-    std::u32string operator()(const BSQStringOf* s) const 
+    std::string operator()(const BSQStringOf* s) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return conv.from_bytes(nominaltypenames[(uint32_t)s->nominalType]) + std::u32string(U"'") + s->sdata + std::u32string(U"'"); 
+        return std::string(nominaltypenames[(uint32_t)s->nominalType]) + std::string("'") + s->sdata + std::string("'"); 
     }
 };
 
@@ -183,7 +154,7 @@ struct LessFunctor_BSQGUID
 };
 struct DisplayFunctor_BSQGUID
 {
-    std::u32string operator()(const BSQGUID* g) const { return std::u32string(U"DataHash@") + std::u32string(g->sdata, g->sdata + 16); }
+    std::string operator()(const BSQGUID* g) const { return std::string("DataHash@") + std::string(g->sdata, g->sdata + 16); }
 };
 
 class BSQLogicalTime : public BSQRef
@@ -237,10 +208,9 @@ struct LessFunctor_BSQLogicalTime
 };
 struct DisplayFunctor_BSQLogicalTime
 {
-    std::u32string operator()(const BSQLogicalTime& et) const 
+    std::string operator()(const BSQLogicalTime& et) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return std::u32string(U"LogicalTime@") + conv.from_bytes(std::to_string(et.timestamp)); 
+        return std::string("LogicalTime@") + std::to_string(et.timestamp); 
     }
 };
 
@@ -295,10 +265,9 @@ struct LessFunctor_BSQDataHash
 };
 struct DisplayFunctor_BSQDataHash
 {
-    std::u32string operator()(const BSQDataHash& h) const 
+    std::string operator()(const BSQDataHash& h) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return std::u32string(U"DataHash@") + conv.from_bytes(std::to_string(h.hdata)); 
+        return std::string("DataHash@") + std::to_string(h.hdata); 
     }
 };
 
@@ -343,7 +312,7 @@ struct LessFunctor_BSQCryptoHash
 };
 struct DisplayFunctor_BSQCryptoHash
 {
-    std::u32string operator()(const BSQCryptoHash* h) const { return std::u32string(U"CryptoHash@") + std::u32string(h->hdata, h->hdata + 64); }
+    std::string operator()(const BSQCryptoHash* h) const { return std::string("CryptoHash@") + std::string(h->hdata, h->hdata + 64); }
 };
 
 class BSQEnum : public BSQRef
@@ -398,10 +367,9 @@ struct LessFunctor_BSQEnum
 };
 struct DisplayFunctor_BSQEnum
 {
-    std::u32string operator()(const BSQEnum& e) const 
+    std::string operator()(const BSQEnum& e) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return conv.from_bytes(nominaltypenames[(uint32_t)e.nominalType]) + std::u32string(U"::") + conv.from_bytes(std::to_string(e.value)); 
+        return std::string(nominaltypenames[(uint32_t)e.nominalType]) + std::string("::") + std::to_string(e.value); 
     }
 };
 
@@ -504,27 +472,26 @@ struct LessFunctor_BSQIdKey
 };
 struct DisplayFunctor_BSQIdKey
 {
-    std::u32string operator()(const BSQIdKey* idk) const 
+    std::string operator()(const BSQIdKey* idk) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        std::u32string rvals = conv.from_bytes(nominaltypenames[(uint32_t)idk->nominalType]);
+        std::string rvals = std::string(nominaltypenames[(uint32_t)idk->nominalType]);
         if(idk->keys.size() == 1) 
         {
-            return rvals + U" of " + diagnostic_format(idk->keys[0].second);
+            return rvals + " of " + diagnostic_format(idk->keys[0].second);
         }
         else
         {
-            rvals +=  U" of { ";
+            rvals +=  " of { ";
             for(size_t i = 0; i < idk->keys.size(); ++i)
             {
                 if(i != 0)
                 {
-                    rvals += U", ";
+                    rvals += ", ";
                 }
 
-                rvals += conv.from_bytes(propertyNames[(int32_t)idk->keys[i].first]) + U"=" + diagnostic_format(idk->keys[i].second);
+                rvals += conv.from_bytes(propertyNames[(int32_t)idk->keys[i].first]) + "=" + diagnostic_format(idk->keys[i].second);
             }
-            rvals += U" }"; 
+            rvals += " }"; 
 
             return rvals;
         }
@@ -571,10 +538,9 @@ struct LessFunctor_BSQGUIDIdKey
 };
 struct DisplayFunctor_BSQGUIDIdKey
 {
-    std::u32string operator()(const BSQGUIDIdKey* idg) const 
+    std::string operator()(const BSQGUIDIdKey* idg) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return conv.from_bytes(nominaltypenames[(uint32_t)idg->nominalType]) + std::u32string(U"::") + std::u32string(idg->sdata, idg->sdata + 16); 
+        return std::string(nominaltypenames[(uint32_t)idg->nominalType]) + std::string("::") + std::string(idg->sdata, idg->sdata + 16); 
     }
 };
 
@@ -630,10 +596,9 @@ struct LessFunctor_BSQLogicalTimeIdKey
 };
 struct DisplayFunctor_BSQLogicalTimeIdKey
 {
-    std::u32string operator()(const BSQLogicalTimeIdKey& idt) const 
+    std::string operator()(const BSQLogicalTimeIdKey& idt) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return conv.from_bytes(nominaltypenames[(uint32_t)idt.nominalType]) + std::u32string(U"::") + conv.from_bytes(std::to_string(idt.timestamp)); 
+        return std::string(nominaltypenames[(uint32_t)idt.nominalType]) + std::string("::") + std::to_string(idt.timestamp); 
     }
 };
 
@@ -679,10 +644,9 @@ struct LessFunctor_BSQContentHashIdKey
 };
 struct DisplayFunctor_BSQContentHashIdKey
 {
-    std::u32string operator()(const BSQContentHashIdKey* ihc) const 
+    std::string operator()(const BSQContentHashIdKey* ihc) const 
     { 
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        return conv.from_bytes(nominaltypenames[(uint32_t)ihc->nominalType]) + std::u32string(U"::") + std::u32string(ihc->hdata, ihc->hdata + 64); 
+        return std::string(nominaltypenames[(uint32_t)ihc->nominalType]) + std::string("::") + std::string(ihc->hdata, ihc->hdata + 64); 
     }
 };
 }

@@ -133,7 +133,7 @@ entity StringOf<T where Parsable> provides APIValue, KeyType, Some {
 }
 
 enum BufferFormat {
-    fluent,
+    bosque,
     json,
     binary
 }

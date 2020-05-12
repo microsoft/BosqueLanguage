@@ -1563,7 +1563,7 @@ class Parser {
             return new body_1.ValueListStructuredAssignment(assigns);
         }
         else {
-            if (this.testToken("var")) {
+            if (this.testToken("let")) {
                 if (vars !== undefined) {
                     this.raiseError(sinfo.line, "Cannot mix var decl before and inside structured assign");
                 }
