@@ -4,7 +4,7 @@ ExeGen is a simple command line tool for producing self contained executable bin
 
 * `-e --entrypoint [entrypoint]` to optionally specify the entrypoint function for the executable -- defaults to `"NSMain::main"`
 * `-o --outfile [outfile]` to set the name of the output exe -- defaults to `a.exe` or `a.out`
-* `-c --compiler [compiler]` to select the compiler to invoke -- defaults to `clang` on Windows and `g++` on Linux/MacOS
+* `-c --compiler [compiler]` to select the compiler to invoke -- defaults to `clang` on Windows and on Linux/MacOS
 * `-l --level"` which can be used to set the compiler build level at:
     - debug -- all asserts/pre/post/invariant checks are enabled, debug symbols are produced, and no optimization is done
     - test -- only test/release checks are enabled, debug symbols are produced, and light optimization is performed

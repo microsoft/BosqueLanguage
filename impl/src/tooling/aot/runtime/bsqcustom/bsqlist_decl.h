@@ -26,7 +26,7 @@ public:
 
     virtual void destroy()
     {
-        std::for_each(this->entries.begin(), this->entries.end(), [](T& v) -> void {
+        std::for_each(this->entries.begin(), this->entries.end(), [](T& v) {
             RCDecF{}(v);
         });
     }

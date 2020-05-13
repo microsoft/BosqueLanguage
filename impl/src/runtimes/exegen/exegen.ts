@@ -54,7 +54,7 @@ function generateMASM(files: string[], blevel: "debug" | "test" | "release", cor
 Commander
     .option("-e --entrypoint [entrypoint]", "Entrypoint of the exe", "NSMain::main")
     .option("-o --outfile [outfile]", "Optional name of the output exe", (process.platform === "win32") ? "a.exe" : "a.out")
-    .option("-c --compiler [compiler]", "Compiler to use", (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "g++")
+    .option("-c --compiler [compiler]", "Compiler to use", (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "clang++")
     .option("-l --level [level]", "Build level version", "debug");
 
 Commander.parse(process.argv);

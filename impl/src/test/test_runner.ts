@@ -18,12 +18,12 @@ if (process.platform === "win32") {
     platexe = "doit.exe";
 }
 else if (process.platform === "linux") {
-    platpathcpp = "g++";
+    platpathcpp = "clang++";
     platpathsmt = "bin/linux/z3";
     platexe = "doit.out";
 }
 else {
-    platpathcpp = "clang";
+    platpathcpp = "clang++";
     platpathsmt = "bin/macos/z3";
     platexe = "doit.out";
 }

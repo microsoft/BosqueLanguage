@@ -121,7 +121,7 @@ public:
     static Ty* list_filter(Ty* l)
     {
         std::vector<T> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) -> void {
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
             if(LambdaP{}(v))
             {
                 entries.push_back(RCIncF{}(v));
@@ -135,7 +135,7 @@ public:
     static Ty* list_filternot(Ty* l)
     {
         std::vector<T> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) -> void {
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
             if(!LambdaP{}(v))
             {
                 entries.push_back(RCIncF{}(v));
@@ -149,7 +149,7 @@ public:
     static BSQList<U, U_RCDecF, U_DisplayF>* list_oftype(Ty* l)
     {
         std::vector<U> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) -> void {
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
             if(LambdaTC{}(v))
             {
                 entries.push_back(LambdaCC{}(v));
@@ -190,28 +190,28 @@ public:
     static Ty* list_takewhile(Ty* l)
     {
         auto uend = std::find_if_not(l->entries.begin(), l->entries.end(), LambdaP{});
-        return TOps::list_slice(l, 0, (int64_t)std::distance(l->entries.begin(), uend));
+        return BSQListOps::list_slice(l, 0, (int64_t)std::distance(l->entries.begin(), uend));
     }
 
     template <typename LambdaP>
     static Ty* list_discardwhile(Ty* l)
     {
         auto uend = std::find_if_not(l->entries.begin(), l->entries.end(), LambdaP{});
-        return TOps::list_slice(l, (int64_t)std::distance(l->entries.begin(), uend), (int64_t)l->entries.size());
+        return BSQListOps::list_slice(l, (int64_t)std::distance(l->entries.begin(), uend), (int64_t)l->entries.size());
     }
 
     template <typename LambdaP>
     static Ty* list_takeuntil(Ty* l)
     {
         auto uend = std::find_if(l->entries.begin(), l->entries.end(), LambdaP{});
-        return TOps::list_slice(l, 0, (int64_t)std::distance(l->entries.begin(), uend));
+        return BSQListOps::list_slice(l, 0, (int64_t)std::distance(l->entries.begin(), uend));
     }
 
     template <typename LambdaP>
     static Ty* list_discarduntil(Ty* l)
     {
-        auto uend = std::find_if(std::execution::par_unseq, l->entries.begin(), l->entries.end(), LambdaP{});
-        return TOps::list_slice(l, (int64_t)std::distance(l->entries.begin(), uend), (int64_t)l->entries.size());
+        auto uend = std::find_if(l->entries.begin(), l->entries.end(), LambdaP{});
+        return BSQListOps::list_slice(l, (int64_t)std::distance(l->entries.begin(), uend), (int64_t)l->entries.size());
     }
 
     template <typename LambdaCMP, typename LambdaEQ>
@@ -227,7 +227,7 @@ public:
             RCIncF{}(v);
         });
 
-        return BSQ_NEW_NO_RC(Ty, l->nominalType, move(entries));
+        return BSQ_NEW_NO_RC(Ty, l->nominalType, move(vv));
     }
 
     static Ty* list_reverse(Ty* l)
@@ -248,11 +248,11 @@ public:
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), (T& v) -> U {
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [](T& v) -> U {
             return LambdaF{}(v);
         });
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>)), ntype, move(entries));
+        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
     }
 
     template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaF>
@@ -263,7 +263,7 @@ public:
 
         for(int64_t i = 0; i < (int64_t)l->entries.size(); ++i)
         {
-            entries.push_back(LambdaF{}(i, v));
+            entries.push_back(LambdaF{}(i, l->entries[i]));
         }
 
         return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
@@ -303,7 +303,7 @@ public:
 
         for(int64_t i = 0; i < (int64_t)l->entries.size(); ++i)
         {
-            entries.push_back(LambdaZip{}(i, v));
+            entries.push_back(LambdaZip{}(i, l->entries[i]));
         }
 
         return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
@@ -314,8 +314,8 @@ public:
     {
         std::vector<RT> entries;
 
-        std::for_each(l->entries.begin(), l->entries.end(), [ol](T& v) -> void {
-            std::for_each(ol->entries.begin(), ol->entries.end(), [](U& u) -> void {
+        std::for_each(l->entries.begin(), l->entries.end(), [ol, &entries](T& v) {
+            std::for_each(ol->entries.begin(), ol->entries.end(), [&v, &entries](U& u) {
                 if(LambdaP{}(v, u))
                 {
                     entries.push_back(LambdaZip{}(v, u));
@@ -323,7 +323,7 @@ public:
             });
         });
 
-        return BSQ_NEW_NO_RC((BSQList<RT, RT_RCDecF, RT_DisplayF>)), ntype, move(entries));
+        return BSQ_NEW_NO_RC((BSQList<RT, RT_RCDecF, RT_DisplayF>), ntype, move(entries));
     }
 
     template <typename U, typename U_RCIncF, typename U_RCDecF, typename U_DisplayF, typename RT, typename RT_RCDecF, typename RT_DisplayF, MIRNominalTypeEnum ntype, typename LambdaP, typename LambdaZip>
@@ -331,10 +331,10 @@ public:
     {
         std::vector<RT> entries;
 
-        std::for_each(l->entries.begin(), l->entries.end(), [ol](T& v) -> void {
+        std::for_each(l->entries.begin(), l->entries.end(), [ol, &entries](T& v) {
             std::vector<U> ue;
 
-            std::for_each(ol->entries.begin(), ol->entries.end(), [](U& u) -> void {
+            std::for_each(ol->entries.begin(), ol->entries.end(), [&v, &ue](U& u) {
                 if(LambdaP{}(v, u))
                 {
                     ue.push_back(U_RCIncF{}(u));
@@ -344,7 +344,7 @@ public:
             entries.push_back(LambdaZip{}(v, ue));
         });
 
-        return BSQ_NEW_NO_RC((BSQList<RT, RT_RCDecF, RT_DisplayF>)), ntype, move(entries));
+        return BSQ_NEW_NO_RC((BSQList<RT, RT_RCDecF, RT_DisplayF>), ntype, move(entries));
     }
 
     static Ty* list_append(Ty* l, Ty* lp)
@@ -367,7 +367,7 @@ public:
     static MType* list_partition(Ty* l)
     {
         std::map<K, std::vector<T>, K_CMP> partitions;
-        std::for_each(l->entries.begin(), l->entries.end(), [&partitions](T& v) -> void {
+        std::for_each(l->entries.begin(), l->entries.end(), [&partitions](T& v) {
             auto k = LambdaPF{}(v);
             auto pp = partitions.find(k);
 
@@ -398,7 +398,7 @@ public:
         std::vector<T> entries;
         entries.reserve(l->entries.size());
 
-        std::for_each(l->begin(), l->end(), [&entries](T& v) -> void {
+        std::for_each(l->begin(), l->end(), [&entries](T& v) {
             entries.push_back(RCIncF{}(v));
         });
         std::stable_sort(entries.begin(), entries.end(), LambdaCMP{});
@@ -411,9 +411,9 @@ public:
     {
         std::map<K, V, K_CMP> mentries;
         
-        std::transform(l->entries.begin(), l->entries.end(), std::inserter(mentries, mentries.end()), [&partitions](T& v) -> void {
+        std::transform(l->entries.begin(), l->entries.end(), std::inserter(mentries, mentries.end()), [&mentries](T& v) {
             auto k = LambdaKF{}(v);
-            auto v = LambdaVF{}(v);
+            auto vv = LambdaVF{}(v);
 
             auto epos = mentries.find(k);
             if(epos != mentries.end())
@@ -424,7 +424,7 @@ public:
                 V_RCDecF{}(epos->second); 
             }
 
-            mentries.push_back(std::make_pair(k, v));
+            mentries.push_back(std::make_pair(k, vv));
         });
 
         return LambdaMC{}(move(mentries));
@@ -469,10 +469,10 @@ public:
         std::vector<VType> ventries;
         ventries.reserve(l->entries.size());
 
-        std::vector<ZUype> uentries;
+        std::vector<UType> uentries;
         uentries.reserve(l->entries.size());
 
-        for(size_t i = 0; i < l1->entries.size(); ++i)
+        for(size_t i = 0; i < l->entries.size(); ++i)
         {
             std::pair<VType, UType> rr = LambdaUZ{}(l->entries[i]);
 
@@ -502,7 +502,7 @@ public:
         return BSQ_NEW_NO_RC((BSQList<T, RCDecF, DisplayF>), ntype, move(entries));
     }
 
-    template <typename T, typename RCIncF, typename RCDecF, typename DisplayF>
+    template <typename T, typename RCIncF, typename RCDecF, typename DisplayF, MIRNominalTypeEnum ntype>
     static BSQList<T, RCDecF, DisplayF>* list_fill(int64_t k, T val)
     {
         std::vector<T> entries;
@@ -513,7 +513,7 @@ public:
             entries.push_back(RCIncF{}(val));
         }
 
-        return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int, DisplayFunctor_int>), ntype, move(entries));
+        return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int64_t, DisplayFunctor_int64_t>), ntype, move(entries));
     }
 
     template <MIRNominalTypeEnum ntype>
@@ -527,7 +527,7 @@ public:
             entries.push_back(start + i);
         }
 
-        return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int, DisplayFunctor_int>), ntype, move(entries));
+        return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int64_t, DisplayFunctor_int64_t>), ntype, move(entries));
     }
 };
 

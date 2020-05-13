@@ -68,7 +68,7 @@ public:
 
     virtual void destroy()
     {
-        std::for_each(this->entries.begin(), this->entries.end(), [](T& e) -> void {
+        std::for_each(this->entries.begin(), this->entries.end(), [](MEntry<K, V>& e) {
             K_RCDecF{}(e.key);
             V_RCDecF{}(e.value);
         });
