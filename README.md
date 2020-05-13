@@ -37,14 +37,14 @@ add2(x=2, y=3) //5
 add2(y=2, 5)   //7
 ```
 
-**All odd check using rest parameters and lambda:**
+**All positive check using rest parameters and lambda:**
 
 ```none
 function allPositive(...args: List<Int>): Bool {
     return args->allof(fn(x) => x >= 0);
 }
 
-allOdd(1, 3, 4) //false
+allPositive(1, 3, 4) //true
 ```
 
 **Tuples and Records:**
