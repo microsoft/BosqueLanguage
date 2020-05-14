@@ -21,6 +21,12 @@ function getArgType(arg, vtypes, assembly) {
         else if (arg instanceof mir_ops_1.MIRConstantInt) {
             return assembly.typeMap.get("NSCore::Int");
         }
+        else if (arg instanceof mir_ops_1.MIRConstantBigInt) {
+            return assembly.typeMap.get("NSCore::BigInt");
+        }
+        else if (arg instanceof mir_ops_1.MIRConstantFloat64) {
+            return assembly.typeMap.get("NSCore::Float64");
+        }
         else {
             return assembly.typeMap.get("NSCore::String");
         }
@@ -223,12 +229,12 @@ function extendVariableTypeMapForOp(op, vtypes, assembly, cinvokeResult) {
             vtypes.set(bop.trgt.nameID, assembly.typeMap.get("NSCore::Int"));
             break;
         }
-        case mir_ops_1.MIROpTag.MIRGetKey: {
-            const mgk = op;
-            vtypes.set(mgk.trgt.nameID, assembly.typeMap.get(mgk.resultKeyType));
+        case mir_ops_1.MIROpTag.MIRBinEq: {
+            const beq = op;
+            vtypes.set(beq.trgt.nameID, assembly.typeMap.get("NSCore::Bool"));
             break;
         }
-        case mir_ops_1.MIROpTag.MIRBinEq: {
+        case mir_ops_1.MIROpTag.MIRBinLess: {
             const beq = op;
             vtypes.set(beq.trgt.nameID, assembly.typeMap.get("NSCore::Bool"));
             break;
@@ -268,18 +274,14 @@ function extendVariableTypeMapForOp(op, vtypes, assembly, cinvokeResult) {
             vtypes.set(vsop.name.nameID, getArgType(vsop.src, vtypes, assembly)); //ok since we are in SSA!
             break;
         }
-        case mir_ops_1.MIROpTag.MIRPackStore: {
-            const vspack = op;
-            let srctypes = [];
-            if (Array.isArray(vspack.src)) {
-                srctypes = vspack.src.map((sc) => getArgType(sc, vtypes, assembly));
-            }
-            else {
-                srctypes = getArgType(vspack.src, vtypes, assembly).options[0].entries;
-            }
-            for (let i = 0; i < vspack.names.length; ++i) {
-                vtypes.set(vspack.names[i].nameID, srctypes[i]); //ok since we are in SSA -- like above for single var
-            }
+        case mir_ops_1.MIROpTag.MIRPackSlice: {
+            const pso = op;
+            vtypes.set(pso.trgt.nameID, assembly.typeMap.get(pso.sltype));
+            break;
+        }
+        case mir_ops_1.MIROpTag.MIRPackExtend: {
+            const pse = op;
+            vtypes.set(pse.trgt.nameID, assembly.typeMap.get(pse.sltype));
             break;
         }
         case mir_ops_1.MIROpTag.MIRReturnAssign: {
@@ -322,7 +324,7 @@ function extendVarTypeMapForBody(body, invresult, vtypes, assembly) {
 }
 function computeVarTypesForInvoke(body, params, resulttype, assembly) {
     let vmirtypes = new Map();
-    vmirtypes.set("_return_", resulttype);
+    vmirtypes.set("$$return", resulttype);
     params.forEach((vtype, vname) => vmirtypes.set(vname, vtype));
     extendVarTypeMapForBody(body, resulttype, vmirtypes, assembly);
     let vtypes = new Map();

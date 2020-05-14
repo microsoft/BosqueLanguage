@@ -5,6 +5,10 @@
 
 #pragma once
 
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+
+#include <assert.h>
+
 #include <cstdlib>
 #include <cstdint>
 #include <stdarg.h>
@@ -19,6 +23,7 @@
 #include <map>
 
 #include <algorithm>
+#include <numeric>
 
 #ifdef BDEBUG
 #define BSQ_ASSERT(C, MSG) (bsqassert(C, MSG, __FILE__, __LINE__))
@@ -61,4 +66,5 @@ public:
 BSQAbort() { ; }
 #endif
 };
+
 } // namespace BSQ

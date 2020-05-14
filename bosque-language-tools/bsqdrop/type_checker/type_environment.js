@@ -58,7 +58,7 @@ class VarInfo {
     }
     static join(assembly, ...values) {
         assert(values.length !== 0);
-        return new VarInfo(values[0].declaredType, values[0].isConst, values[0].isCaptured, values.every((vi) => vi.mustDefined), assembly.typeUnion(values.map((vi) => vi.flowType)));
+        return new VarInfo(values[0].declaredType, values[0].isConst, values[0].isCaptured, values.every((vi) => vi.mustDefined), assembly.typeUpperBound(values.map((vi) => vi.flowType)));
     }
 }
 exports.VarInfo = VarInfo;
@@ -106,7 +106,7 @@ class TypeEnvironment {
         return new TypeEnvironment(this.scope, this.terms, this.refparams, this.pcodes, this.args, this.locals, this.result, { etype: etype, value: rvalue }, this.returnResult, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
     }
     static convertToBoolFlowsOnExpressionResult(assembly, options) {
-        assert(options.every((opt) => assembly.subtypeOf(opt.getExpressionResult().etype, assembly.typeUnion([assembly.getSpecialNoneType(), assembly.getSpecialBoolType()]))));
+        assert(options.every((opt) => assembly.subtypeOf(opt.getExpressionResult().etype, assembly.typeUpperBound([assembly.getSpecialNoneType(), assembly.getSpecialBoolType()]))));
         const tvals = options.filter((opt) => opt.getExpressionResult().value !== FlowTypeTruthValue.False)
             .map((opt) => opt.setExpressionResult(assembly.getSpecialBoolType(), FlowTypeTruthValue.True));
         const fvals = options.filter((opt) => opt.getExpressionResult().value !== FlowTypeTruthValue.True)
@@ -126,12 +126,12 @@ class TypeEnvironment {
     }
     setReturn(assembly, rtype) {
         assert(this.hasNormalFlow());
-        const rrtype = this.returnResult !== undefined ? assembly.typeUnion([this.returnResult, rtype]) : rtype;
+        const rrtype = this.returnResult !== undefined ? assembly.typeUpperBound([this.returnResult, rtype]) : rtype;
         return new TypeEnvironment(this.scope, this.terms, this.refparams, this.pcodes, this.args, undefined, this.result, this.expressionResult, rrtype, this.yieldResult, this.yieldTrgtInfo, this.frozenVars);
     }
     setYield(assembly, ytype) {
         assert(this.hasNormalFlow());
-        const rytype = this.yieldResult !== undefined ? assembly.typeUnion([this.yieldResult, ytype]) : ytype;
+        const rytype = this.yieldResult !== undefined ? assembly.typeUpperBound([this.yieldResult, ytype]) : ytype;
         return new TypeEnvironment(this.scope, this.terms, this.refparams, this.pcodes, this.args, undefined, this.result, this.expressionResult, this.returnResult, rytype, this.yieldTrgtInfo, this.frozenVars);
     }
     pushLocalScope() {
@@ -253,13 +253,13 @@ class TypeEnvironment {
         assert(expresall.length === 0 || expresall.length === fopts.length);
         let expres = undefined;
         if (expresall.length !== 0) {
-            const retype = assembly.typeUnion(expresall.map((opt) => opt.etype));
+            const retype = assembly.typeUpperBound(expresall.map((opt) => opt.etype));
             const rflow = FlowTypeTruthOps.join(...expresall.map((opt) => opt.value));
             expres = { etype: retype, value: rflow };
         }
         const rflow = opts.filter((opt) => opt.returnResult !== undefined).map((opt) => opt.returnResult);
         const yflow = opts.filter((opt) => opt.yieldResult !== undefined).map((opt) => opt.yieldResult);
-        return new TypeEnvironment(opts[0].scope, opts[0].terms, opts[0].refparams, opts[0].pcodes, args, locals, opts[0].result, expres, rflow.length !== 0 ? assembly.typeUnion(rflow) : undefined, yflow.length !== 0 ? assembly.typeUnion(yflow) : undefined, opts[0].yieldTrgtInfo, opts[0].frozenVars);
+        return new TypeEnvironment(opts[0].scope, opts[0].terms, opts[0].refparams, opts[0].pcodes, args, locals, opts[0].result, expres, rflow.length !== 0 ? assembly.typeUpperBound(rflow) : undefined, yflow.length !== 0 ? assembly.typeUpperBound(yflow) : undefined, opts[0].yieldTrgtInfo, opts[0].frozenVars);
     }
 }
 exports.TypeEnvironment = TypeEnvironment;

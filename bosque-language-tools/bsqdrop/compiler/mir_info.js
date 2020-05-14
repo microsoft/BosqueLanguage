@@ -106,13 +106,13 @@ function topologicalOrder(blocks) {
 }
 exports.topologicalOrder = topologicalOrder;
 function computeLiveVarsInBlock(ops, liveOnExit) {
-    let live = new Set(liveOnExit);
+    let live = new Map(liveOnExit);
     for (let i = ops.length - 1; i >= 0; --i) {
         const op = ops[i];
         const mod = op.getModVars().map((arg) => arg.nameID);
         mod.forEach((v) => live.delete(v));
-        const use = op.getUsedVars().map((v) => v.nameID);
-        use.forEach((v) => live.add(v));
+        const use = op.getUsedVars();
+        use.forEach((v) => live.set(v.nameID, v));
     }
     return live;
 }
@@ -125,10 +125,10 @@ function computeBlockLiveVars(blocks) {
         const finfo = flow.get(bb.label);
         let linfo = [];
         finfo.succs.forEach((succ) => linfo.push(liveInfo.get(succ)));
-        let lexit = new Set();
-        linfo.forEach((ls) => ls.liveEntry.forEach((lv) => lexit.add(lv)));
+        let lexit = new Map();
+        linfo.forEach((ls) => ls.liveEntry.forEach((v, n) => lexit.set(n, v)));
         if (bb.label === "exit") {
-            lexit.add("_return_");
+            lexit.set("$$return", new mir_ops_1.MIRVariable("$$return"));
         }
         const lentry = computeLiveVarsInBlock(bb.ops, lexit);
         liveInfo.set(bb.label, { label: bb.label, liveEntry: lentry, liveExit: lexit });

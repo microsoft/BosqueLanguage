@@ -6,7 +6,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const type_signature_1 = require("./type_signature");
 class FunctionScope {
-    constructor(args) {
+    constructor(args, rtype) {
+        this.m_rtype = rtype;
         this.m_captured = new Set();
         this.m_args = args;
         this.m_locals = [];
@@ -33,6 +34,9 @@ class FunctionScope {
     }
     getCaptureVars() {
         return this.m_captured;
+    }
+    getReturnType() {
+        return this.m_rtype;
     }
 }
 exports.FunctionScope = FunctionScope;

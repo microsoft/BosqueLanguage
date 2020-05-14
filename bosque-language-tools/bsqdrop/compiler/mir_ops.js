@@ -29,7 +29,15 @@ class MIRArgument {
         }
         else {
             if (typeof (jobj) === "string") {
-                return new MIRConstantInt(jobj);
+                if (jobj.endsWith("n")) {
+                    return new MIRConstantBigInt(jobj);
+                }
+                else if (jobj.includes(".")) {
+                    return new MIRConstantFloat64(jobj);
+                }
+                else {
+                    return new MIRConstantInt(jobj);
+                }
             }
             else if (Array.isArray(jobj)) {
                 return new MIRConstantString(jobj[0]);
@@ -137,6 +145,38 @@ class MIRConstantInt extends MIRConstantArgument {
     }
 }
 exports.MIRConstantInt = MIRConstantInt;
+class MIRConstantBigInt extends MIRConstantArgument {
+    constructor(value) {
+        super(`=bigint=${value}`);
+        this.value = value;
+    }
+    digits() {
+        return this.value.slice(0, this.value.length - 1);
+    }
+    stringify() {
+        return this.value;
+    }
+    jemit() {
+        return this.value;
+    }
+}
+exports.MIRConstantBigInt = MIRConstantBigInt;
+class MIRConstantFloat64 extends MIRConstantArgument {
+    constructor(value) {
+        super(`=float64=${value}`);
+        this.value = value;
+    }
+    digits() {
+        return this.value.slice(0, this.value.length - 1);
+    }
+    stringify() {
+        return this.value;
+    }
+    jemit() {
+        return this.value;
+    }
+}
+exports.MIRConstantFloat64 = MIRConstantFloat64;
 class MIRConstantString extends MIRConstantArgument {
     constructor(value) {
         super(`=string=${value}`);
@@ -190,8 +230,8 @@ var MIROpTag;
     MIROpTag["MIRInvokeVirtualTarget"] = "MIRInvokeVirtualTarget";
     MIROpTag["MIRPrefixOp"] = "MIRPrefixOp";
     MIROpTag["MIRBinOp"] = "MIRBinOp";
-    MIROpTag["MIRGetKey"] = "MIRGetKey";
     MIROpTag["MIRBinEq"] = "MIRBinEq";
+    MIROpTag["MIRBinLess"] = "MIRBinLess";
     MIROpTag["MIRBinCmp"] = "MIRBinCmp";
     MIROpTag["MIRIsTypeOfNone"] = "MIRIsTypeOfNone";
     MIROpTag["MIRIsTypeOfSome"] = "MIRIsTypeOfSome";
@@ -199,7 +239,8 @@ var MIROpTag;
     MIROpTag["MIRRegAssign"] = "MIRRegAssign";
     MIROpTag["MIRTruthyConvert"] = "MIRTruthyConvert";
     MIROpTag["MIRVarStore"] = "MIRVarStore";
-    MIROpTag["MIRPackStore"] = "MIRPackStore";
+    MIROpTag["MIRPackSlice"] = "MIRPackSlice";
+    MIROpTag["MIRPackExtend"] = "MIRPackExtend";
     MIROpTag["MIRReturnAssign"] = "MIRReturnAssign";
     MIROpTag["MIRAbort"] = "MIRAbort";
     MIROpTag["MIRDebug"] = "MIRDebug";
@@ -300,10 +341,10 @@ class MIROp {
                 return MIRPrefixOp.jparse(jobj);
             case MIROpTag.MIRBinOp:
                 return MIRBinOp.jparse(jobj);
-            case MIROpTag.MIRGetKey:
-                return MIRGetKey.jparse(jobj);
             case MIROpTag.MIRBinEq:
                 return MIRBinEq.jparse(jobj);
+            case MIROpTag.MIRBinLess:
+                return MIRBinLess.jparse(jobj);
             case MIROpTag.MIRBinCmp:
                 return MIRBinCmp.jparse(jobj);
             case MIROpTag.MIRIsTypeOfNone:
@@ -318,8 +359,10 @@ class MIROp {
                 return MIRTruthyConvert.jparse(jobj);
             case MIROpTag.MIRVarStore:
                 return MIRVarStore.jparse(jobj);
-            case MIROpTag.MIRPackStore:
-                return MIRPackStore.jparse(jobj);
+            case MIROpTag.MIRPackSlice:
+                return MIRPackSlice.jparse(jobj);
+            case MIROpTag.MIRPackExtend:
+                return MIRPackExtend.jparse(jobj);
             case MIROpTag.MIRReturnAssign:
                 return MIRReturnAssign.jparse(jobj);
             case MIROpTag.MIRAbort:
@@ -401,42 +444,42 @@ class MIRLoadConstRegex extends MIRValueOp {
 }
 exports.MIRLoadConstRegex = MIRLoadConstRegex;
 class MIRLoadConstSafeString extends MIRValueOp {
-    constructor(sinfo, ivalue, tkey, tskey, vfunckey, trgt) {
+    constructor(sinfo, ivalue, tkey, tskey, trgt) {
         super(MIROpTag.MIRLoadConstSafeString, sinfo, trgt);
         this.ivalue = ivalue;
         this.tkey = tkey;
         this.tskey = tskey;
-        this.vfunckey = vfunckey;
     }
     getUsedVars() { return []; }
     stringify() {
         return `${this.trgt.stringify()} = ${this.ivalue}#${this.tkey}`;
     }
     jemit() {
-        return Object.assign(Object.assign({}, this.jbemit()), { ivalue: this.ivalue, tkey: this.tkey, tskey: this.tskey, vfunckey: this.vfunckey });
+        return Object.assign(Object.assign({}, this.jbemit()), { ivalue: this.ivalue, tkey: this.tkey, tskey: this.tskey });
     }
     static jparse(jobj) {
-        return new MIRLoadConstSafeString(jparsesinfo(jobj.sinfo), jobj.ivalue, jobj.tkey, jobj.tskey, jobj.vfunckey, MIRTempRegister.jparse(jobj.trgt));
+        return new MIRLoadConstSafeString(jparsesinfo(jobj.sinfo), jobj.ivalue, jobj.tkey, jobj.tskey, MIRTempRegister.jparse(jobj.trgt));
     }
 }
 exports.MIRLoadConstSafeString = MIRLoadConstSafeString;
 class MIRLoadConstTypedString extends MIRValueOp {
-    constructor(sinfo, ivalue, tkey, tskey, pfunckey, trgt) {
+    constructor(sinfo, ivalue, tkey, tskey, pfunckey, errtype, trgt) {
         super(MIROpTag.MIRLoadConstTypedString, sinfo, trgt);
         this.ivalue = ivalue;
         this.tkey = tkey;
         this.tskey = tskey;
         this.pfunckey = pfunckey;
+        this.errtype = errtype;
     }
     getUsedVars() { return []; }
     stringify() {
         return `${this.trgt.stringify()} = ${this.ivalue}#${this.tkey}`;
     }
     jemit() {
-        return Object.assign(Object.assign({}, this.jbemit()), { ivalue: this.ivalue, tkey: this.tkey, tskey: this.tskey, pfunckey: this.pfunckey });
+        return Object.assign(Object.assign({}, this.jbemit()), { ivalue: this.ivalue, tkey: this.tkey, tskey: this.tskey, pfunckey: this.pfunckey, errtype: this.errtype });
     }
     static jparse(jobj) {
-        return new MIRLoadConstTypedString(jparsesinfo(jobj.sinfo), jobj.ivalue, jobj.tkey, jobj.tskey, jobj.pfunckey, MIRTempRegister.jparse(jobj.trgt));
+        return new MIRLoadConstTypedString(jparsesinfo(jobj.sinfo), jobj.ivalue, jobj.tkey, jobj.tskey, jobj.pfunckey, jobj.errtype, MIRTempRegister.jparse(jobj.trgt));
     }
 }
 exports.MIRLoadConstTypedString = MIRLoadConstTypedString;
@@ -546,21 +589,20 @@ class MIRInvokeInvariantCheckVirtualTarget extends MIRValueOp {
 }
 exports.MIRInvokeInvariantCheckVirtualTarget = MIRInvokeInvariantCheckVirtualTarget;
 class MIRConstructorPrimary extends MIRValueOp {
-    constructor(sinfo, isValue, tkey, args, trgt) {
+    constructor(sinfo, tkey, args, trgt) {
         super(MIROpTag.MIRConstructorPrimary, sinfo, trgt);
-        this.isValue = isValue;
         this.tkey = tkey;
         this.args = args;
     }
     getUsedVars() { return varsOnlyHelper([...this.args]); }
     stringify() {
-        return `${this.trgt.stringify()} = ${this.tkey}${this.isValue ? "#" : "@"}(${this.args.map((arg) => arg.stringify()).join(", ")})`;
+        return `${this.trgt.stringify()} = ${this.tkey}@(${this.args.map((arg) => arg.stringify()).join(", ")})`;
     }
     jemit() {
-        return Object.assign(Object.assign({}, this.jbemit()), { isValue: this.isValue, tkey: this.tkey, args: this.args.map((arg) => arg.jemit()) });
+        return Object.assign(Object.assign({}, this.jbemit()), { tkey: this.tkey, args: this.args.map((arg) => arg.jemit()) });
     }
     static jparse(jobj) {
-        return new MIRConstructorPrimary(jparsesinfo(jobj.sinfo), jobj.isValue, jobj.tkey, jobj.args.map((jarg) => MIRArgument.jparse(jarg)), MIRTempRegister.jparse(jobj.trgt));
+        return new MIRConstructorPrimary(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg) => MIRArgument.jparse(jarg)), MIRTempRegister.jparse(jobj.trgt));
     }
 }
 exports.MIRConstructorPrimary = MIRConstructorPrimary;
@@ -1074,10 +1116,12 @@ class MIRPrefixOp extends MIRValueOp {
 }
 exports.MIRPrefixOp = MIRPrefixOp;
 class MIRBinOp extends MIRValueOp {
-    constructor(sinfo, lhs, op, rhs, trgt) {
+    constructor(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt) {
         super(MIROpTag.MIRBinOp, sinfo, trgt);
+        this.lhsInferType = lhsInferType;
         this.lhs = lhs;
         this.op = op;
+        this.rhsInferType = rhsInferType;
         this.rhs = rhs;
     }
     getUsedVars() { return varsOnlyHelper([this.lhs, this.rhs]); }
@@ -1085,32 +1129,13 @@ class MIRBinOp extends MIRValueOp {
         return `${this.trgt.stringify()} = ${this.lhs.stringify()}${this.op}${this.rhs.stringify()}`;
     }
     jemit() {
-        return Object.assign(Object.assign({}, this.jbemit()), { lhs: this.lhs.jemit(), op: this.op, rhs: this.rhs.jemit() });
+        return Object.assign(Object.assign({}, this.jbemit()), { lhsInferType: this.lhsInferType, lhs: this.lhs.jemit(), op: this.op, rhsInferType: this.rhsInferType, rhs: this.rhs.jemit() });
     }
     static jparse(jobj) {
-        return new MIRBinOp(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.lhs), jobj.op, MIRArgument.jparse(jobj.rhs), MIRTempRegister.jparse(jobj.trgt));
+        return new MIRBinOp(jparsesinfo(jobj.sinfo), jobj.lhsInferType, MIRArgument.jparse(jobj.lhs), jobj.op, jobj.rhsInferType, MIRArgument.jparse(jobj.rhs), MIRTempRegister.jparse(jobj.trgt));
     }
 }
 exports.MIRBinOp = MIRBinOp;
-class MIRGetKey extends MIRValueOp {
-    constructor(sinfo, argInferType, arg, resultKeyType, trgt) {
-        super(MIROpTag.MIRGetKey, sinfo, trgt);
-        this.argInferType = argInferType;
-        this.arg = arg;
-        this.resultKeyType = resultKeyType;
-    }
-    getUsedVars() { return varsOnlyHelper([this.arg]); }
-    stringify() {
-        return `${this.trgt.stringify()} = Indexable::getKey(${this.arg.stringify()})`;
-    }
-    jemit() {
-        return Object.assign(Object.assign({}, this.jbemit()), { argInferType: this.argInferType, arg: this.arg.jemit(), resultKeyType: this.resultKeyType });
-    }
-    static jparse(jobj) {
-        return new MIRGetKey(jparsesinfo(jobj.sinfo), jobj.argInferType, MIRArgument.jparse(jobj.arg), jobj.resultKeyType, MIRTempRegister.jparse(jobj.trgt));
-    }
-}
-exports.MIRGetKey = MIRGetKey;
 class MIRBinEq extends MIRValueOp {
     constructor(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt, relaxed) {
         super(MIROpTag.MIRBinEq, sinfo, trgt);
@@ -1133,6 +1158,27 @@ class MIRBinEq extends MIRValueOp {
     }
 }
 exports.MIRBinEq = MIRBinEq;
+class MIRBinLess extends MIRValueOp {
+    constructor(sinfo, lhsInferType, lhs, rhsInferType, rhs, trgt, relaxed) {
+        super(MIROpTag.MIRBinLess, sinfo, trgt);
+        this.lhsInferType = lhsInferType;
+        this.lhs = lhs;
+        this.rhsInferType = rhsInferType;
+        this.rhs = rhs;
+        this.relaxed = relaxed;
+    }
+    getUsedVars() { return varsOnlyHelper([this.lhs, this.rhs]); }
+    stringify() {
+        return `${this.trgt.stringify()} = ${this.lhs.stringify()} < ${this.rhs.stringify()}${this.relaxed ? " | relaxed" : ""}`;
+    }
+    jemit() {
+        return Object.assign(Object.assign({}, this.jbemit()), { lhsInferType: this.lhsInferType, lhs: this.lhs.jemit(), rhsInferType: this.rhsInferType, rhs: this.rhs.jemit(), relaxed: this.relaxed });
+    }
+    static jparse(jobj) {
+        return new MIRBinLess(jparsesinfo(jobj.sinfo), jobj.lhsInferType, MIRArgument.jparse(jobj.lhs), jobj.rhsInferType, MIRArgument.jparse(jobj.rhs), MIRTempRegister.jparse(jobj.trgt), jobj.relaxed);
+    }
+}
+exports.MIRBinLess = MIRBinLess;
 class MIRBinCmp extends MIRValueOp {
     constructor(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt) {
         super(MIROpTag.MIRBinCmp, sinfo, trgt);
@@ -1264,31 +1310,52 @@ class MIRVarStore extends MIRFlowOp {
     }
 }
 exports.MIRVarStore = MIRVarStore;
-class MIRPackStore extends MIRFlowOp {
-    constructor(sinfo, src, names) {
-        super(MIROpTag.MIRPackStore, sinfo);
+class MIRPackSlice extends MIRFlowOp {
+    constructor(sinfo, src, sltype, trgt) {
+        super(MIROpTag.MIRPackSlice, sinfo);
         this.src = src;
-        this.names = names;
+        this.sltype = sltype;
+        this.trgt = trgt;
     }
-    getUsedVars() { return varsOnlyHelper(Array.isArray(this.src) ? this.src : [this.src]); }
-    getModVars() { return [...this.names]; }
+    getUsedVars() { return varsOnlyHelper([this.src]); }
+    getModVars() { return [this.trgt]; }
     stringify() {
-        return `${this.names.map((name) => name.stringify()).join(", ")} = ${Array.isArray(this.src) ? this.src.map((arg) => arg.stringify()).join(",") : this.src.stringify()}`;
+        return `${this.trgt.stringify()} = ${this.src.stringify()}[${this.sltype}]`;
     }
     jemit() {
-        return Object.assign(Object.assign({}, this.jbemit()), { src: (Array.isArray(this.src) ? this.src.map((arg) => arg.jemit()) : this.src.jemit()), names: this.names.map((name) => name.jemit()) });
+        return Object.assign(Object.assign({}, this.jbemit()), { src: this.src.jemit(), sltype: this.sltype, trgt: this.trgt.jemit() });
     }
     static jparse(jobj) {
-        const src = Array.isArray(jobj.src) ? jobj.src.map((jo) => MIRArgument.jparse(jo.src)) : MIRArgument.jparse(jobj.src);
-        return new MIRPackStore(jparsesinfo(jobj.sinfo), src, jobj.names.map((name) => MIRArgument.jparse(name)));
+        return new MIRPackSlice(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.src), jobj.sltype, MIRTempRegister.jparse(jobj.trgt));
     }
 }
-exports.MIRPackStore = MIRPackStore;
+exports.MIRPackSlice = MIRPackSlice;
+class MIRPackExtend extends MIRFlowOp {
+    constructor(sinfo, basepack, ext, sltype, trgt) {
+        super(MIROpTag.MIRPackExtend, sinfo);
+        this.basepack = basepack;
+        this.ext = ext;
+        this.sltype = sltype;
+        this.trgt = trgt;
+    }
+    getUsedVars() { return varsOnlyHelper([this.basepack, ...this.ext]); }
+    getModVars() { return [this.trgt]; }
+    stringify() {
+        return `${this.trgt.stringify()} = ${this.sltype}@(|${this.basepack.stringify()}, ${this.ext.map((e) => e.stringify()).join(", ")}|)`;
+    }
+    jemit() {
+        return Object.assign(Object.assign({}, this.jbemit()), { basepack: this.basepack.jemit(), ext: this.ext.map((e) => e.jemit()), sltype: this.sltype, trgt: this.trgt.jemit() });
+    }
+    static jparse(jobj) {
+        return new MIRPackExtend(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.basepack), jobj.ext.map((e) => MIRArgument.jparse(e)), jobj.sltype, MIRTempRegister.jparse(jobj.trgt));
+    }
+}
+exports.MIRPackExtend = MIRPackExtend;
 class MIRReturnAssign extends MIRFlowOp {
     constructor(sinfo, src, name) {
         super(MIROpTag.MIRReturnAssign, sinfo);
         this.src = src;
-        this.name = name || new MIRVariable("__ir_ret__");
+        this.name = name || new MIRVariable("$__ir_ret__");
     }
     getUsedVars() { return varsOnlyHelper([this.src]); }
     getModVars() { return [this.name]; }

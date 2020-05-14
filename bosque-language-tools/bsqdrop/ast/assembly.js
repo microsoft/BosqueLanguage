@@ -20,17 +20,17 @@ function isBuildLevelEnabled(check, enabled) {
 }
 exports.isBuildLevelEnabled = isBuildLevelEnabled;
 class TemplateTermDecl {
-    constructor(name, isgrounded, constraint) {
+    constructor(name, constraint, isinfer, defaulttype) {
         this.name = name;
-        this.isGrounded = isgrounded;
         this.constraint = constraint;
+        this.isInfer = isinfer;
+        this.defaultType = defaulttype;
     }
 }
 exports.TemplateTermDecl = TemplateTermDecl;
 class TemplateTypeRestriction {
-    constructor(t, isGrounded, constraint) {
+    constructor(t, constraint) {
         this.t = t;
-        this.isGrounded = isGrounded;
         this.constraint = constraint;
     }
 }
@@ -172,11 +172,11 @@ class OOPTypeDecl {
         this.memberFields = memberFields;
         this.memberMethods = memberMethods;
     }
-    isTypeACollectionEntity() {
+    isTypeAnExpandoableCollection() {
         if (this.ns !== "NSCore") {
             return false;
         }
-        return this.name === "List" || this.name === "Set";
+        return this.name === "List" || this.name === "Set" || this.name === "DynamicSet" || this.name === "Map" || this.name === "DynamicMap";
     }
     isTypeAListEntity() {
         if (this.ns !== "NSCore") {
@@ -184,17 +184,29 @@ class OOPTypeDecl {
         }
         return this.name === "List";
     }
+    isTypeAQueueEntity() {
+        if (this.ns !== "NSCore") {
+            return false;
+        }
+        return this.name === "Queue";
+    }
+    isTypeAStackEntity() {
+        if (this.ns !== "NSCore") {
+            return false;
+        }
+        return this.name === "Stack";
+    }
     isTypeASetEntity() {
         if (this.ns !== "NSCore") {
             return false;
         }
-        return this.name === "Set";
+        return this.name === "Set" || this.name === "DynamicSet";
     }
     isTypeAMapEntity() {
         if (this.ns !== "NSCore") {
             return false;
         }
-        return this.name === "Map";
+        return this.name === "Map" || this.name === "DynamicMap";
     }
     static attributeSetContains(attr, attrSet) {
         return attrSet.indexOf(attr) !== -1;
@@ -287,13 +299,26 @@ class Assembly {
         this.m_namespaceMap = new Map();
         this.m_conceptMap = new Map();
         this.m_objectMap = new Map();
+        this.m_literalRegexs = new Set();
+        this.m_validatorRegexs = new Map();
         this.m_subtypeRelationMemo = new Map();
         this.m_atomSubtypeRelationMemo = new Map();
     }
     resolveTemplateBinds(declterms, giventerms, binds) {
         const fullbinds = new Map();
+        //Later may want to extend this to allow non-literal binds Foo<T, E=Bar<T>> and equality instantiation Foo<E=Int, String>
         for (let i = 0; i < declterms.length; ++i) {
-            fullbinds.set(declterms[i].name, this.normalizeTypeOnly(giventerms[i], binds));
+            if (giventerms.length <= i) {
+                if (declterms[i].defaultType !== undefined) {
+                    fullbinds.set(declterms[i].name, this.normalizeTypeOnly(declterms[i].defaultType, new Map()));
+                }
+                else {
+                    return undefined;
+                }
+            }
+            else {
+                fullbinds.set(declterms[i].name, this.normalizeTypeOnly(giventerms[i], binds));
+            }
         }
         return fullbinds;
     }
@@ -522,25 +547,10 @@ class Assembly {
             return resolved_type_1.ResolvedType.createEmpty();
         }
         const opttypes = oft.options.map((opt) => this.restrictAtomWithType(opt, witht));
-        return this.typeUnion(opttypes);
+        return this.typeUpperBound(opttypes);
     }
     getTypeProjection(fromtype, oftype) {
-        if (oftype.idStr === "NSCore::KeyType") {
-            if (this.subtypeOf(fromtype, this.getSpecialKeyTypeConceptType())) {
-                return fromtype;
-            }
-            else if (this.subtypeOf(fromtype, this.getSpecialIndexableConceptType())) {
-                //
-                //NOT IMPLEMENTED YET -- we will need to look up the "key" field value and resolve it
-                //
-                assert(false);
-                return resolved_type_1.ResolvedType.createEmpty();
-            }
-            else {
-                return resolved_type_1.ResolvedType.createEmpty();
-            }
-        }
-        else if (oftype.idStr === "NSCore::APIType") {
+        if (oftype.idStr === "NSCore::APIType") {
             //
             //NOT IMPLEMENTED YET
             //
@@ -570,19 +580,21 @@ class Assembly {
             return this.normalizeTypeGeneral(aliasResolvedType, aliasResolvedBinds);
         }
         else {
-            const fconcept = this.tryGetConceptTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.baseName, aliasResolvedType.terms.length);
+            const fconcept = this.tryGetConceptTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.baseName);
             if (fconcept !== undefined) {
                 if (fconcept.terms.length !== aliasResolvedType.terms.length) {
                     return resolved_type_1.ResolvedType.createEmpty();
                 }
-                return resolved_type_1.ResolvedType.createSingle(this.createConceptTypeAtom(fconcept, aliasResolvedType, aliasResolvedBinds));
+                const cta = this.createConceptTypeAtom(fconcept, aliasResolvedType, aliasResolvedBinds);
+                return cta !== undefined ? resolved_type_1.ResolvedType.createSingle(cta) : resolved_type_1.ResolvedType.createEmpty();
             }
-            const fobject = this.tryGetObjectTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.baseName, aliasResolvedType.terms.length);
+            const fobject = this.tryGetObjectTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.baseName);
             if (fobject !== undefined) {
                 if (fobject.terms.length !== aliasResolvedType.terms.length) {
                     return resolved_type_1.ResolvedType.createEmpty();
                 }
-                return resolved_type_1.ResolvedType.createSingle(this.createObjectTypeAtom(fobject, aliasResolvedType, aliasResolvedBinds));
+                const ota = this.createObjectTypeAtom(fobject, aliasResolvedType, aliasResolvedBinds);
+                return ota !== undefined ? resolved_type_1.ResolvedType.createSingle(ota) : resolved_type_1.ResolvedType.createEmpty();
             }
             return resolved_type_1.ResolvedType.createEmpty();
         }
@@ -668,6 +680,20 @@ class Assembly {
         const utypes = t.types.map((opt) => this.normalizeTypeOnly(opt, binds));
         return this.normalizeUnionList(utypes);
     }
+    normalizeEphemerals(ephemerals) {
+        const lidx = Math.max(...ephemerals.map((tt) => tt.types.length));
+        const uidx = Math.min(...ephemerals.map((tt) => tt.types.length));
+        if (lidx !== uidx) {
+            return undefined; //can't have different lengths!!!
+        }
+        let nte = [];
+        for (let i = 0; i < lidx; ++i) {
+            const ttypes = ephemerals.map((tt) => tt.types[i]);
+            const ttype = this.typeUpperBound(ttypes);
+            nte.push(ttype);
+        }
+        return resolved_type_1.ResolvedEphemeralListType.create(nte);
+    }
     normalizeUnionList(types) {
         //flatten any union types
         const ntypes = types.map((opt) => opt.options);
@@ -676,7 +702,18 @@ class Assembly {
         if (flattened.some((atom) => atom.idStr === "NSCore::None") && flattened.some((atom) => atom.idStr === "NSCore::Some")) {
             flattened.push(this.getSpecialAnyConceptType().options[0]);
         }
-        const utypes = flattened.sort((cte1, cte2) => cte1.idStr.localeCompare(cte2.idStr));
+        const teph = flattened.filter((tt) => tt instanceof resolved_type_1.ResolvedEphemeralListType);
+        let merged = flattened.filter((tt) => !(tt instanceof resolved_type_1.ResolvedEphemeralListType));
+        if (teph.length !== 0) {
+            const eet = this.normalizeEphemerals(teph);
+            if (eet === undefined || merged.length !== 0) {
+                return resolved_type_1.ResolvedType.createEmpty();
+            }
+            else {
+                merged.push(eet);
+            }
+        }
+        const utypes = merged.sort((cte1, cte2) => cte1.idStr.localeCompare(cte2.idStr));
         //do a simplification based on A | B when A \Subtypeeq B is B
         let simplifiedTypes = [];
         for (let i = 0; i < utypes.length; ++i) {
@@ -694,9 +731,6 @@ class Assembly {
             if (docopy) {
                 simplifiedTypes.push(utypes[i]);
             }
-        }
-        if (simplifiedTypes.some((opt) => opt instanceof resolved_type_1.ResolvedEphemeralListType) && simplifiedTypes.length !== 1) {
-            return resolved_type_1.ResolvedType.createEmpty(); //epemeral lists must always be uniquely typed
         }
         return resolved_type_1.ResolvedType.create(simplifiedTypes);
     }
@@ -748,13 +782,19 @@ class Assembly {
         if (this.subtypeOf(this.getSpecialTupleConceptType(), resolved_type_1.ResolvedType.createSingle(t2))) {
             return true;
         }
-        if (this.subtypeOf(resolved_type_1.ResolvedType.createSingle(t2), this.getSpecialAPITypeConceptType()) && this.checkAllTupleEntriesOfType(t1, this.getSpecialAPITypeConceptType())) {
-            return true;
+        let tci = [...this.getSpecialTupleConceptType().options[0].conceptTypes];
+        if (this.checkAllTupleEntriesOfType(t1, this.getSpecialParsableConceptType())) {
+            tci.push(...this.getSpecialParsableConceptType().options[0].conceptTypes);
         }
-        if (this.subtypeOf(resolved_type_1.ResolvedType.createSingle(t2), this.getSpecialPODTypeConceptType()) && this.checkAllTupleEntriesOfType(t1, this.getSpecialPODTypeConceptType())) {
-            return true;
+        if (this.checkAllTupleEntriesOfType(t1, this.getSpecialAPITypeConceptType())) {
+            if (this.checkAllTupleEntriesOfType(t1, this.getSpecialPODTypeConceptType())) {
+                tci.push(...this.getSpecialPODTypeConceptType().options[0].conceptTypes);
+            }
+            else {
+                tci.push(...this.getSpecialAPITypeConceptType().options[0].conceptTypes);
+            }
         }
-        return false;
+        return this.subtypeOf(resolved_type_1.ResolvedType.createSingle(resolved_type_1.ResolvedConceptAtomType.create(tci)), resolved_type_1.ResolvedType.createSingle(t2));
     }
     checkAllRecordEntriesOfType(t1, t2) {
         return t1.entries.every((entry) => this.subtypeOf(entry.type, t2));
@@ -763,13 +803,19 @@ class Assembly {
         if (this.subtypeOf(this.getSpecialRecordConceptType(), resolved_type_1.ResolvedType.createSingle(t2))) {
             return true;
         }
-        if (this.subtypeOf(resolved_type_1.ResolvedType.createSingle(t2), this.getSpecialAPITypeConceptType()) && this.checkAllRecordEntriesOfType(t1, this.getSpecialAPITypeConceptType())) {
-            return true;
+        let tci = [...this.getSpecialRecordConceptType().options[0].conceptTypes];
+        if (this.checkAllRecordEntriesOfType(t1, this.getSpecialParsableConceptType())) {
+            tci.push(...this.getSpecialParsableConceptType().options[0].conceptTypes);
         }
-        if (this.subtypeOf(resolved_type_1.ResolvedType.createSingle(t2), this.getSpecialPODTypeConceptType()) && this.checkAllRecordEntriesOfType(t1, this.getSpecialPODTypeConceptType())) {
-            return true;
+        if (this.checkAllRecordEntriesOfType(t1, this.getSpecialAPITypeConceptType())) {
+            if (this.checkAllRecordEntriesOfType(t1, this.getSpecialPODTypeConceptType())) {
+                tci.push(...this.getSpecialPODTypeConceptType().options[0].conceptTypes);
+            }
+            else {
+                tci.push(...this.getSpecialAPITypeConceptType().options[0].conceptTypes);
+            }
         }
-        return false;
+        return this.subtypeOf(resolved_type_1.ResolvedType.createSingle(resolved_type_1.ResolvedConceptAtomType.create(tci)), resolved_type_1.ResolvedType.createSingle(t2));
     }
     atomSubtypeOf_ConceptConcept(t1, t2) {
         return t2.conceptTypes.every((c2t) => {
@@ -843,7 +889,7 @@ class Assembly {
             return this.m_specialTypeMap.get("NSCore::" + name);
         }
         const rsig = new type_signature_1.NominalTypeSignature("NSCore", name, terms || []);
-        const tconcept = this.createConceptTypeAtom(this.tryGetConceptTypeForFullyResolvedName("NSCore::" + name, terms ? terms.length : 0), rsig, binds || new Map());
+        const tconcept = this.createConceptTypeAtom(this.tryGetConceptTypeForFullyResolvedName("NSCore::" + name), rsig, binds || new Map());
         const rtype = resolved_type_1.ResolvedType.createSingle(tconcept);
         this.m_specialTypeMap.set("NSCore::" + name, rtype);
         return rtype;
@@ -853,7 +899,7 @@ class Assembly {
             return this.m_specialTypeMap.get("NSCore::" + name);
         }
         const rsig = new type_signature_1.NominalTypeSignature("NSCore", name, terms || []);
-        const tobject = this.createObjectTypeAtom(this.tryGetObjectTypeForFullyResolvedName("NSCore::" + name, terms ? terms.length : 0), rsig, binds || new Map());
+        const tobject = this.createObjectTypeAtom(this.tryGetObjectTypeForFullyResolvedName("NSCore::" + name), rsig, binds || new Map());
         const rtype = resolved_type_1.ResolvedType.createSingle(tobject);
         this.m_specialTypeMap.set("NSCore::" + name, rtype);
         return rtype;
@@ -861,18 +907,21 @@ class Assembly {
     getSpecialNoneType() { return this.internSpecialObjectType("None"); }
     getSpecialBoolType() { return this.internSpecialObjectType("Bool"); }
     getSpecialIntType() { return this.internSpecialObjectType("Int"); }
+    getSpecialBigIntType() { return this.internSpecialObjectType("BigInt"); }
+    getSpecialFloat64Type() { return this.internSpecialObjectType("Float64"); }
     getSpecialStringType() { return this.internSpecialObjectType("String"); }
-    getSpecialGUIDType() { return this.internSpecialObjectType("GUID"); }
-    getSpecialLogicalTimeType() { return this.internSpecialObjectType("LogicalTime"); }
-    getSpecialISOTimeType() { return this.internSpecialObjectType("ISOTime"); }
-    getSpecialDataHashType() { return this.internSpecialObjectType("DataHash"); }
-    getSpecialCryptoHashType() { return this.internSpecialObjectType("CryptoHash"); }
-    getSpecialRegexType() { return this.internSpecialObjectType("Regex"); }
     getSpecialBufferFormatType() { return this.internSpecialObjectType("BufferFormat"); }
     getSpecialBufferEncodingType() { return this.internSpecialObjectType("BufferEncoding"); }
     getSpecialBufferCompressionType() { return this.internSpecialObjectType("BufferCompression"); }
+    getSpecialByteBufferType() { return this.internSpecialObjectType("ByteBuffer"); }
+    getSpecialISOTimeType() { return this.internSpecialObjectType("ISOTime"); }
+    getSpecialUUIDType() { return this.internSpecialObjectType("UUID"); }
+    getSpecialLogicalTimeType() { return this.internSpecialObjectType("LogicalTime"); }
+    getSpecialCryptoHashType() { return this.internSpecialObjectType("CryptoHash"); }
+    getSpecialRegexType() { return this.internSpecialObjectType("Regex"); }
     getSpecialAnyConceptType() { return this.internSpecialConceptType("Any"); }
     getSpecialSomeConceptType() { return this.internSpecialConceptType("Some"); }
+    getSpecialConvertableConceptType() { return this.internSpecialConceptType("Convertable"); }
     getSpecialIndexableConceptType() { return this.internSpecialConceptType("Indexable"); }
     getSpecialParsableConceptType() { return this.internSpecialConceptType("Parsable"); }
     getSpecialValidatorConceptType() { return this.internSpecialConceptType("Validator"); }
@@ -883,21 +932,19 @@ class Assembly {
     getSpecialTruthyConceptType() { return this.internSpecialConceptType("Truthy"); }
     getSpecialEnumConceptType() { return this.internSpecialConceptType("Enum"); }
     getSpecialIdKeyConceptType() { return this.internSpecialConceptType("IdKey"); }
-    getSpecialLogicalTimeIdKeyConceptType() { return this.internSpecialConceptType("LogicalTimeIdKey"); }
-    getSpecialGUIDIdKeyConceptType() { return this.internSpecialConceptType("GUIDIdKey"); }
-    getSpecialContentHashIdKeyConceptType() { return this.internSpecialConceptType("ContentHashIdKey"); }
     getSpecialTupleConceptType() { return this.internSpecialConceptType("Tuple"); }
     getSpecialRecordConceptType() { return this.internSpecialConceptType("Record"); }
     getSpecialObjectConceptType() { return this.internSpecialConceptType("Object"); }
+    isSafeStringType(ty) { return ty.idStr.startsWith("NSCore::SafeString<"); }
     isStringOfType(ty) { return ty.idStr.startsWith("NSCore::StringOf<"); }
     isBufferType(ty) { return ty.idStr.startsWith("NSCore::Buffer<"); }
-    isResultType(ty) { return ty.idStr.startsWith("NSCore::Result<") || ty.idStr.startsWith("NSCore::Ok<") || ty.idStr.startsWith("NSCore::Err<"); }
-    isKeyedType(ty) { return ty.idStr.startsWith("NSCore::Keyed<"); }
-    isTaggedType(ty) { return ty.idStr.startsWith("NSCore::Tagged<"); }
+    isBufferOfType(ty) { return ty.idStr.startsWith("NSCore::BufferOf<"); }
+    isResultConceptType(ty) { return ty.idStr.startsWith("NSCore::Result<"); }
+    isResultEntityType(ty) { return ty.idStr.startsWith("NSCore::Ok<") || ty.idStr.startsWith("NSCore::Err<"); }
     isListType(ty) { return ty.idStr.startsWith("NSCore::List<"); }
-    isSetType(ty) { return ty.idStr.startsWith("NSCore::Set<"); }
+    isSetType(ty) { return ty.idStr.startsWith("NSCore::Set<") || ty.idStr.startsWith("NSCore::DynamicSet<"); }
     isMapEntryType(ty) { return ty.idStr.startsWith("NSCore::MapEntry<"); }
-    isMapType(ty) { return ty.idStr.startsWith("NSCore::Map<"); }
+    isMapType(ty) { return ty.idStr.startsWith("NSCore::Map<") || ty.idStr.startsWith("NSCore::DynamicMap<"); }
     ensureNominalRepresentation(t) {
         const opts = t.options.map((opt) => {
             if (opt instanceof resolved_type_1.ResolvedTupleAtomType) {
@@ -910,13 +957,16 @@ class Assembly {
                 return resolved_type_1.ResolvedType.createSingle(opt);
             }
         });
-        return this.typeUnion(opts);
+        return this.typeUpperBound(opts);
     }
-    tryGetConceptTypeForFullyResolvedName(name, templatecount) {
-        return this.m_conceptMap.get(name + templatecount);
+    tryGetConceptTypeForFullyResolvedName(name) {
+        return this.m_conceptMap.get(name);
     }
-    tryGetObjectTypeForFullyResolvedName(name, templatecount) {
-        return this.m_objectMap.get(name + templatecount);
+    tryGetObjectTypeForFullyResolvedName(name) {
+        return this.m_objectMap.get(name);
+    }
+    tryGetValidatorForFullyResolvedName(name) {
+        return this.m_validatorRegexs.get(name);
     }
     hasNamespace(ns) {
         return this.m_namespaceMap.has(ns);
@@ -937,11 +987,27 @@ class Assembly {
         });
         return decls;
     }
-    addConceptDecl(resolvedName, templatecount, concept) {
-        this.m_conceptMap.set(resolvedName + templatecount, concept);
+    addConceptDecl(resolvedName, concept) {
+        this.m_conceptMap.set(resolvedName, concept);
     }
-    addObjectDecl(resolvedName, templatecount, object) {
-        this.m_objectMap.set(resolvedName + templatecount, object);
+    addObjectDecl(resolvedName, object) {
+        this.m_objectMap.set(resolvedName, object);
+    }
+    addValidatorRegex(resolvedName, validator) {
+        this.m_literalRegexs.add(validator);
+        this.m_validatorRegexs.set(resolvedName, validator);
+    }
+    addLiteralRegex(re) {
+        this.m_literalRegexs.add(re);
+    }
+    getAllLiteralRegexs() {
+        return this.m_literalRegexs;
+    }
+    getAllValidators() {
+        return [...this.m_validatorRegexs].map((vre) => {
+            const ve = resolved_type_1.ResolvedEntityAtomType.create(this.m_objectMap.get(vre[0]), new Map());
+            return [ve, vre[1]];
+        });
     }
     ////
     //Type representation, normalization, and operations
@@ -957,6 +1023,9 @@ class Assembly {
         //compute the bindings to use when resolving the RHS of the typedef alias
         const typealias = nsd.typeDefs.get(lname);
         const updatedbinds = this.resolveTemplateBinds(typealias.terms, t.terms, binds);
+        if (updatedbinds === undefined) {
+            return [undefined, new Map()];
+        }
         if (typealias.boundType instanceof type_signature_1.NominalTypeSignature) {
             return this.lookupTypeDef(typealias.boundType, updatedbinds);
         }
@@ -966,10 +1035,16 @@ class Assembly {
     }
     createConceptTypeAtom(concept, t, binds) {
         const fullbinds = this.resolveTemplateBinds(concept.terms, t.terms, binds);
+        if (fullbinds === undefined) {
+            return undefined;
+        }
         return resolved_type_1.ResolvedConceptAtomType.create([resolved_type_1.ResolvedConceptAtomTypeEntry.create(concept, fullbinds)]);
     }
     createObjectTypeAtom(object, t, binds) {
         const fullbinds = this.resolveTemplateBinds(object.terms, t.terms, binds);
+        if (fullbinds === undefined) {
+            return undefined;
+        }
         return resolved_type_1.ResolvedEntityAtomType.create(object, fullbinds);
     }
     getAllOOFields(ooptype, binds, fmap) {
@@ -986,6 +1061,21 @@ class Assembly {
             });
         });
         return declfields;
+    }
+    getExpandoProvides(ooptype, binds) {
+        if (ooptype.ns === "NSCore" && ooptype.name === "Expandoable") {
+            return resolved_type_1.ResolvedType.createSingle(resolved_type_1.ResolvedConceptAtomType.create([resolved_type_1.ResolvedConceptAtomTypeEntry.create(ooptype, binds)]));
+        }
+        const rtypes = this.resolveProvides(ooptype, binds);
+        for (let i = 0; i < rtypes.length; ++i) {
+            const tt = this.normalizeTypeOnly(rtypes[i], binds);
+            const ct = tt.options[0].conceptTypes[0];
+            const ep = this.getExpandoProvides(ct.concept, ct.binds);
+            if (ep !== undefined) {
+                return ep;
+            }
+        }
+        return undefined;
     }
     getAllInvariantProvidingTypes(ooptype, binds, invprovs) {
         let declinvs = [...(invprovs || [])];
@@ -1142,9 +1232,19 @@ class Assembly {
         implicitBinds.forEach((v, k) => {
             fullbinds.set(k, v);
         });
-        //compute the bindings to use when resolving the RHS of the typedef alias
+        //Later may want to extend this to allow non-literal binds Foo<T, E=Bar<T>> and equality instantiation Foo<E=Int, String>
         for (let i = 0; i < declterms.length; ++i) {
-            fullbinds.set(declterms[i].name, this.normalizeTypeOnly(giventerms[i], callBinds));
+            if (giventerms.length <= i) {
+                if (declterms[i].defaultType !== undefined) {
+                    fullbinds.set(declterms[i].name, this.normalizeTypeOnly(declterms[i].defaultType, implicitBinds));
+                }
+                else {
+                    return undefined;
+                }
+            }
+            else {
+                fullbinds.set(declterms[i].name, this.normalizeTypeOnly(giventerms[i], callBinds));
+            }
         }
         return fullbinds;
     }
@@ -1243,7 +1343,7 @@ class Assembly {
             return notttypes.length !== 0 ? resolved_type_1.ResolvedType.create(notttypes) : resolved_type_1.ResolvedType.createEmpty();
         }
     }
-    typeUnion(types) {
+    typeUpperBound(types) {
         return this.normalizeUnionList(types);
     }
     atomSubtypeOf(t1, t2) {
@@ -1325,9 +1425,7 @@ class Assembly {
             else {
                 const allok = pcond.constraints.every((consinfo) => {
                     const constype = this.normalizeTypeOnly(consinfo.t, binds);
-                    const boundsok = this.subtypeOf(constype, this.normalizeTypeOnly(consinfo.constraint, binds));
-                    const groundok = !consinfo.isGrounded || this.isGroundedType(constype);
-                    return boundsok && groundok;
+                    return this.subtypeOf(constype, this.normalizeTypeOnly(consinfo.constraint, binds));
                 });
                 if (allok) {
                     oktypes.push(psig);
