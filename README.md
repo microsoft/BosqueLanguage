@@ -206,7 +206,7 @@ function createAnimal(catchPhrase: String): Animal
     return Animal@{says=catchPhrase};
 }
 
-function createAnimal(catchPhrase: String): Animal
+function createAnimalPre(catchPhrase: String): Animal
     requires catchPhrase != "";
 {
     return Animal@{says=catchPhrase};
