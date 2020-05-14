@@ -405,7 +405,7 @@ class Lexer {
     }
 }
 Lexer._s_whitespaceRe = /\s+/y;
-Lexer._s_commentRe = /(\/\/.*)|(\/\*[\s\S]*?\/\*)/y;
+Lexer._s_commentRe = /(\/\/.*)|(\/\*[\s\S]*?\*\/)/y;
 Lexer._s_intRe = /(0|[1-9][0-9]*)/y;
 Lexer._s_bigintRe = /(0|[1-9][0-9]*)n/y;
 Lexer._s_floatRe = /[0-9]+\.[0-9]+f/y;
