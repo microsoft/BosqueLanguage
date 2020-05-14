@@ -24,16 +24,18 @@ else {
     platpathsmt = "bin/macos/z3";
 }
 const z3path = Path.normalize(Path.join(__dirname, "../../tooling/bmc/runtime", platpathsmt));
-const compilerpath = (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "g++";
+const compilerpath = (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "clang++";
 const binext = (process.platform === "win32") ? "exe" : "out";
 function checkMASM(files, corelibpath, doemit) {
+    let bosque_dir = Path.normalize(Path.join(__dirname, "../../"));
     let code = [];
     try {
-        const coredir = Path.join(corelibpath, "/core.bsq");
-        const coredata = FS.readFileSync(coredir).toString();
-        const collectionsdir = Path.join(corelibpath, "/collections.bsq");
-        const collectionsdata = FS.readFileSync(collectionsdir).toString();
-        code = [{ relativePath: coredir, contents: coredata }, { relativePath: collectionsdir, contents: collectionsdata }];
+        const coredir = Path.join(bosque_dir, "core/", corelibpath);
+        const corefiles = FS.readdirSync(coredir);
+        for (let i = 0; i < corefiles.length; ++i) {
+            const cfpath = Path.join(coredir, corefiles[i]);
+            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+        }
         for (let i = 0; i < files.length; ++i) {
             const file = { relativePath: files[i], contents: FS.readFileSync(files[i]).toString() };
             code.push(file);
@@ -42,20 +44,22 @@ function checkMASM(files, corelibpath, doemit) {
     catch (ex) {
         return false;
     }
-    const errors = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), "debug", true, code).errors;
+    const errors = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), "debug", true, false, code).errors;
     if (doemit) {
         process.stdout.write(JSON.stringify(errors));
     }
     return errors.length === 0;
 }
-function generateMASM(files, corelibpath) {
+function generateMASM(files, corelibpath, functionalize) {
+    let bosque_dir = Path.normalize(Path.join(__dirname, "../../"));
     let code = [];
     try {
-        const coredir = Path.join(corelibpath, "/core.bsq");
-        const coredata = FS.readFileSync(coredir).toString();
-        const collectionsdir = Path.join(corelibpath, "/collections.bsq");
-        const collectionsdata = FS.readFileSync(collectionsdir).toString();
-        code = [{ relativePath: coredir, contents: coredata }, { relativePath: collectionsdir, contents: collectionsdata }];
+        const coredir = Path.join(bosque_dir, "core/", corelibpath);
+        const corefiles = FS.readdirSync(coredir);
+        for (let i = 0; i < corefiles.length; ++i) {
+            const cfpath = Path.join(coredir, corefiles[i]);
+            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+        }
         for (let i = 0; i < files.length; ++i) {
             const file = { relativePath: files[i], contents: FS.readFileSync(files[i]).toString() };
             code.push(file);
@@ -64,7 +68,7 @@ function generateMASM(files, corelibpath) {
     catch (ex) {
         process.exit(1);
     }
-    const masm = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), "debug", true, code).masm;
+    const masm = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), "debug", true, functionalize, code).masm;
     return masm;
 }
 function compile(masm, wsroot, config) {
@@ -107,19 +111,15 @@ function compile(masm, wsroot, config) {
             + cparams.TYPEDECLS_FWD
             + "\n\n/*ephemeral decls*/\n"
             + cparams.EPHEMERAL_LIST_DECLARE
-            + "\n\n/*vable decls*/\n"
-            + "\n\nclass BSQVable"
-            + "\n{"
-            + "\npublic:"
-            + "\n  " + cparams.VFIELD_DECLS
-            + "\n  " + cparams.VMETHOD_DECLS
-            + "\n};"
+            + "\n\n/*forward vable decls*/\n"
             + "\n\n/*forward function decls*/\n"
             + cparams.FUNC_DECLS_FWD
             + "\n\n/*type decls*/\n"
             + cparams.TYPEDECLS
             + "\n\n/*typecheck decls*/\n"
             + cparams.TYPECHECKS
+            + "\n\n/*vable decls*/\n"
+            + cparams.VFIELD_ACCESS
             + "\n\n/*function decls*/\n"
             + cparams.FUNC_DECLS
             + "}\n\n"
@@ -144,7 +144,7 @@ function compile(masm, wsroot, config) {
             FS.writeFileSync(outfile, contents);
         });
         const binfile = Path.join(wsroot, config.outdir, `${config.app}.${binext}`);
-        child_process_1.execSync(`${compilerpath} -Os -march=native -std=c++14 -o ${binfile} ${cpppath}/*.cpp`);
+        child_process_1.execSync(`${compilerpath} -Os -march=native -std=c++17 -o ${binfile} ${cpppath}/*.cpp`);
     }
     catch (ex) {
         process.stdout.write(ex);
@@ -214,27 +214,24 @@ const projectdir = Path.normalize(process.argv[3]);
 const config = JSON.parse(FS.readFileSync(Path.join(projectdir, "config.json")).toString());
 const pfiles = config.files.map((f) => Path.normalize(Path.join(projectdir, f)));
 if (command === "typecheck") {
-    const tccore = Path.normalize(Path.join(__dirname, "../../", "core/direct/"));
-    checkMASM(pfiles, tccore, true);
+    checkMASM(pfiles, "cpp", true);
     process.exit(0);
 }
 else if (command === "compile") {
-    const ccore = Path.normalize(Path.join(__dirname, "../../", "core/direct/"));
-    const checkok = checkMASM(pfiles, ccore, false);
+    const checkok = checkMASM(pfiles, "cpp", false);
     if (!checkok) {
         process.exit(1);
     }
-    const masm = generateMASM(pfiles, ccore);
+    const masm = generateMASM(pfiles, "cpp", false);
     const compileok = compile(masm, projectdir, config);
     process.exit(compileok ? 0 : 1);
 }
 else if (command === "verify") {
-    const ccore = Path.normalize(Path.join(__dirname, "../../", "core/direct/"));
-    const checkok = checkMASM(pfiles, ccore, false);
+    const checkok = checkMASM(pfiles, "symbolic", false);
     if (!checkok) {
         process.exit(1);
     }
-    const masm = generateMASM(pfiles, ccore);
+    const masm = generateMASM(pfiles, "symbolic", true);
     const verifyyes = verify(masm, config, false);
     if (verifyyes[0] === false) {
         process.exit(1);

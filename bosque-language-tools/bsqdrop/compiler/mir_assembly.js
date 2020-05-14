@@ -35,6 +35,19 @@ class MIRFunctionParameter {
     }
 }
 exports.MIRFunctionParameter = MIRFunctionParameter;
+class MIRRegex {
+    //TODO: later we want to have the parsed regex IR here too
+    constructor(re) {
+        this.re = re;
+    }
+    jemit() {
+        return { re: this.re };
+    }
+    static jparse(jobj) {
+        return new MIRRegex(jobj.re);
+    }
+}
+exports.MIRRegex = MIRRegex;
 class MIRConstantDecl {
     constructor(enclosingDecl, cname, key, pragmas, sinfo, srcFile, declaredType, value) {
         this.enclosingDecl = enclosingDecl;
@@ -55,8 +68,9 @@ class MIRConstantDecl {
 }
 exports.MIRConstantDecl = MIRConstantDecl;
 class MIRInvokeDecl {
-    constructor(enclosingDecl, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, preconds, postconds) {
+    constructor(enclosingDecl, name, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, preconds, postconds) {
         this.enclosingDecl = enclosingDecl;
+        this.name = name;
         this.iname = iname;
         this.key = key;
         this.sourceLocation = sinfo;
@@ -71,37 +85,37 @@ class MIRInvokeDecl {
     }
     static jparse(jobj) {
         if (jobj.body) {
-            return new MIRInvokeBodyDecl(jobj.enclosingDecl, jobj.iname, jobj.key, jobj.attributes, jobj.recursive, jparsepragmas(jobj.pragmas), jparsesinfo(jobj.sinfo), jobj.file, jobj.params.map((p) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.preconditions || undefined, jobj.postconditions || undefined, mir_ops_1.MIRBody.jparse(jobj.body));
+            return new MIRInvokeBodyDecl(jobj.enclosingDecl, jobj.name, jobj.iname, jobj.key, jobj.attributes, jobj.recursive, jparsepragmas(jobj.pragmas), jparsesinfo(jobj.sinfo), jobj.file, jobj.params.map((p) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.preconditions || undefined, jobj.postconditions || undefined, mir_ops_1.MIRBody.jparse(jobj.body));
         }
         else {
             let binds = new Map();
             jobj.binds.forEach((bind) => binds.set(bind[0], bind[1]));
             let pcodes = new Map();
             jobj.pcodes.forEach((pc) => pcodes.set(pc[0], pc[1]));
-            return new MIRInvokePrimitiveDecl(jobj.enclosingDecl, jobj.iname, jobj.key, jobj.attributes, jobj.recursive, jparsepragmas(jobj.pragmas), jparsesinfo(jobj.sinfo), jobj.file, binds, jobj.params.map((p) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.implkey, pcodes);
+            return new MIRInvokePrimitiveDecl(jobj.enclosingDecl, jobj.name, jobj.iname, jobj.key, jobj.attributes, jobj.recursive, jparsepragmas(jobj.pragmas), jparsesinfo(jobj.sinfo), jobj.file, binds, jobj.params.map((p) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.implkey, pcodes);
         }
     }
 }
 exports.MIRInvokeDecl = MIRInvokeDecl;
 class MIRInvokeBodyDecl extends MIRInvokeDecl {
-    constructor(enclosingDecl, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, preconds, postconds, body) {
-        super(enclosingDecl, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, preconds, postconds);
+    constructor(enclosingDecl, name, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, preconds, postconds, body) {
+        super(enclosingDecl, name, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, preconds, postconds);
         this.body = body;
     }
     jemit() {
-        return { enclosingDecl: this.enclosingDecl, iname: this.iname, key: this.key, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, pragmas: jemitpragmas(this.pragmas), params: this.params.map((p) => p.jemit()), resultType: this.resultType, preconditions: this.preconditions, postconditions: this.postconditions, body: this.body.jemit() };
+        return { enclosingDecl: this.enclosingDecl, name: this.name, iname: this.iname, key: this.key, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, pragmas: jemitpragmas(this.pragmas), params: this.params.map((p) => p.jemit()), resultType: this.resultType, preconditions: this.preconditions, postconditions: this.postconditions, body: this.body.jemit() };
     }
 }
 exports.MIRInvokeBodyDecl = MIRInvokeBodyDecl;
 class MIRInvokePrimitiveDecl extends MIRInvokeDecl {
-    constructor(enclosingDecl, iname, key, attributes, recursive, pragmas, sinfo, srcFile, binds, params, resultType, implkey, pcodes) {
-        super(enclosingDecl, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, undefined, undefined);
+    constructor(enclosingDecl, name, iname, key, attributes, recursive, pragmas, sinfo, srcFile, binds, params, resultType, implkey, pcodes) {
+        super(enclosingDecl, name, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, undefined, undefined);
         this.implkey = implkey;
         this.binds = binds;
         this.pcodes = pcodes;
     }
     jemit() {
-        return { enclosingDecl: this.enclosingDecl, iname: this.iname, key: this.key, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, pragmas: jemitpragmas(this.pragmas), params: this.params.map((p) => p.jemit()), resultType: this.resultType, implkey: this.implkey, binds: [...this.binds], pcodes: [...this.pcodes] };
+        return { enclosingDecl: this.enclosingDecl, name: this.name, iname: this.iname, key: this.key, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, pragmas: jemitpragmas(this.pragmas), params: this.params.map((p) => p.jemit()), resultType: this.resultType, implkey: this.implkey, binds: [...this.binds], pcodes: [...this.pcodes] };
     }
 }
 exports.MIRInvokePrimitiveDecl = MIRInvokePrimitiveDecl;
@@ -360,6 +374,8 @@ class PackageConfig {
 exports.PackageConfig = PackageConfig;
 class MIRAssembly {
     constructor(pckge, srcFiles, srcHash) {
+        this.literalRegexs = new Map();
+        this.validatorRegexs = new Map();
         this.constantDecls = new Map();
         this.fieldDecls = new Map();
         this.entryPoints = [];
@@ -400,21 +416,24 @@ class MIRAssembly {
         return t1.entries.every((entry) => this.subtypeOf(entry.type, t2));
     }
     atomSubtypeOf_TupleConcept(t1, t2) {
-        const tupleconcept = this.typeMap.get("NSCore::Tuple").options[0];
-        if (this.atomSubtypeOf_ConceptConcept(tupleconcept, t2)) {
+        const t2type = this.typeMap.get(t2.trkey);
+        if (this.subtypeOf(this.typeMap.get("NSCore::Tuple"), t2type)) {
             return true;
         }
-        const podconcept = this.typeMap.get("NSCore::PODType");
-        const podconceptatom = podconcept.options[0];
-        if (this.atomSubtypeOf_ConceptConcept(podconceptatom, t2) && this.checkAllTupleEntriesOfType(t1, podconcept)) {
-            return true;
+        let tci = ["NSCore::Tuple"];
+        if (this.checkAllTupleEntriesOfType(t1, this.typeMap.get("NSCore::Parsable"))) {
+            tci.push("NSCore::Parsable");
         }
-        const apiconcept = this.typeMap.get("NSCore::APIType");
-        const apiconceptatom = apiconcept.options[0];
-        if (this.atomSubtypeOf_ConceptConcept(apiconceptatom, t2) && this.checkAllTupleEntriesOfType(t1, apiconcept)) {
-            return true;
+        if (this.checkAllTupleEntriesOfType(t1, this.typeMap.get("NSCore::APIType"))) {
+            if (this.checkAllTupleEntriesOfType(t1, this.typeMap.get("NSCore::PODType"))) {
+                tci.push("NSCore::PODType");
+            }
+            else {
+                tci.push("NSCore::APIType");
+            }
         }
-        return false;
+        const tcitype = MIRType.createSingle(MIRConceptType.create(tci));
+        return this.subtypeOf(tcitype, t2type);
     }
     atomSubtypeOf_TupleTuple(t1, t2) {
         for (let i = 0; i < t1.entries.length; ++i) {
@@ -439,21 +458,24 @@ class MIRAssembly {
         return t1.entries.every((entry) => this.subtypeOf(entry.type, t2));
     }
     atomSubtypeOf_RecordConcept(t1, t2) {
-        const recordconcept = this.typeMap.get("NSCore::Record").options[0];
-        if (this.atomSubtypeOf_ConceptConcept(recordconcept, t2)) {
+        const t2type = this.typeMap.get(t2.trkey);
+        if (this.subtypeOf(this.typeMap.get("NSCore::Record"), t2type)) {
             return true;
         }
-        const podconcept = this.typeMap.get("NSCore::PODType");
-        const podconceptatom = podconcept.options[0];
-        if (this.atomSubtypeOf_ConceptConcept(podconceptatom, t2) && this.checkAllRecordEntriesOfType(t1, podconcept)) {
-            return true;
+        let tci = ["NSCore::Tuple"];
+        if (this.checkAllRecordEntriesOfType(t1, this.typeMap.get("NSCore::Parsable"))) {
+            tci.push("NSCore::Parsable");
         }
-        const apiconcept = this.typeMap.get("NSCore::APIType");
-        const apiconceptatom = apiconcept.options[0];
-        if (this.atomSubtypeOf_ConceptConcept(apiconceptatom, t2) && this.checkAllRecordEntriesOfType(t1, apiconcept)) {
-            return true;
+        if (this.checkAllRecordEntriesOfType(t1, this.typeMap.get("NSCore::APIType"))) {
+            if (this.checkAllRecordEntriesOfType(t1, this.typeMap.get("NSCore::PODType"))) {
+                tci.push("NSCore::PODType");
+            }
+            else {
+                tci.push("NSCore::APIType");
+            }
         }
-        return false;
+        const tcitype = MIRType.createSingle(MIRConceptType.create(tci));
+        return this.subtypeOf(tcitype, t2type);
     }
     atomSubtypeOf_RecordRecord(t1, t2) {
         let badEntry = false;
@@ -577,6 +599,8 @@ class MIRAssembly {
             package: this.package.jemit(),
             srcFiles: this.srcFiles,
             srcHash: this.srcHash,
+            literalRegexs: [...this.literalRegexs].map((lre) => [lre[0], lre[1].jemit()]),
+            validatorRegexs: [...this.validatorRegexs].map((vre) => [vre[0], vre[1]]),
             constantDecls: [...this.constantDecls].map((cd) => [cd[0], cd[1].jemit()]),
             fieldDecls: [...this.fieldDecls].map((fd) => [fd[0], fd[1].jemit()]),
             entryPoints: this.entryPoints,
@@ -589,6 +613,8 @@ class MIRAssembly {
     }
     static jparse(jobj) {
         let masm = new MIRAssembly(PackageConfig.jparse(jobj.package), jobj.srcFiles, jobj.srcHash);
+        jobj.literalRegexs.forEach((lre) => masm.literalRegexs.set(lre[0], MIRRegex.jparse(lre[1])));
+        jobj.validatorRegexs.forEach((vre) => masm.validatorRegexs.set(vre[0], vre[1]));
         jobj.constantDecls.forEach((cd) => masm.constantDecls.set(cd[0], MIRConstantDecl.jparse(cd[1])));
         jobj.fieldDecls.forEach((fd) => masm.fieldDecls.set(fd[0], MIRFieldDecl.jparse(fd[1])));
         jobj.entryPoints.forEach((ep) => masm.entryPoints.push(ep));

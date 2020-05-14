@@ -8,6 +8,8 @@ const mir_assembly_1 = require("../../compiler/mir_assembly");
 const mir_ops_1 = require("../../compiler/mir_ops");
 const mir_info_1 = require("../../compiler/mir_info");
 const assert = require("assert");
+const type_repr_1 = require("./type_repr");
+const cpp_regex_1 = require("./cpp_regex");
 function NOT_IMPLEMENTED(msg) {
     throw new Error(`Not Implemented: ${msg}`);
 }
@@ -24,11 +26,17 @@ class CPPBodyEmitter {
         this.generatedBlocks = new Map();
         this.subtypeOrderCtr = 0;
         this.subtypeFMap = new Map();
+        this.checkedConcepts = new Set();
+        this.vfieldLookups = [];
+        this.vfieldProjects = [];
         this.vfieldUpdates = [];
         this.vobjmerges = [];
         this.assembly = assembly;
         this.typegen = typegen;
         this.currentRType = typegen.noneType;
+    }
+    static cleanStrRepr(s) {
+        return "\"" + s.substring(1, s.length - 1) + "\"";
     }
     labelToCpp(label) {
         return label;
@@ -80,33 +88,22 @@ class CPPBodyEmitter {
             return this.typegen.coerce("false", this.typegen.boolType, into);
         }
         else if (cval instanceof mir_ops_1.MIRConstantInt) {
-            let bint = "";
-            if (cval.value === "0") {
-                bint = "BSQ_VALUE_0";
+            return this.typegen.coerce(cval.value, this.typegen.intType, into);
+        }
+        else if (cval instanceof mir_ops_1.MIRConstantBigInt) {
+            const sname = "BIGINT__" + this.allConstBigInts.size;
+            if (!this.allConstBigInts.has(cval.value)) {
+                this.allConstBigInts.set(cval.value, sname);
             }
-            else if (cval.value === "1") {
-                bint = "BSQ_VALUE_POS_1";
-            }
-            else if (cval.value === "-1") {
-                bint = "BSQ_VALUE_NEG_1";
-            }
-            else {
-                if (Number.isSafeInteger(Number.parseInt(cval.value))) {
-                    bint = `BSQ_ENCODE_VALUE_TAGGED_INT(${cval.value})`;
-                }
-                else {
-                    const sname = "BIGINT__" + this.allConstStrings.size;
-                    if (!this.allConstBigInts.has(cval.value)) {
-                        this.allConstBigInts.set(cval.value, sname);
-                    }
-                    bint = `(Runtime::${this.allConstBigInts.get(cval.value)})`;
-                }
-            }
-            return this.typegen.coerce(bint, this.typegen.intType, into);
+            const bint = `(Runtime::${this.allConstBigInts.get(cval.value)})`;
+            return this.typegen.coerce(bint, this.typegen.bigIntType, into);
+        }
+        else if (cval instanceof mir_ops_1.MIRConstantFloat64) {
+            return this.typegen.coerce(cval.digits(), this.typegen.float64Type, into);
         }
         else {
             assert(cval instanceof mir_ops_1.MIRConstantString);
-            const sval = cval.value;
+            const sval = CPPBodyEmitter.cleanStrRepr(cval.value);
             const sname = "STR__" + this.allConstStrings.size;
             if (!this.allConstStrings.has(sval)) {
                 this.allConstStrings.set(sval, sname);
@@ -148,33 +145,32 @@ class CPPBodyEmitter {
         }
     }
     generateLoadConstSafeString(op) {
+        const sval = CPPBodyEmitter.cleanStrRepr(op.ivalue);
         const sname = "STR__" + this.allConstStrings.size;
-        if (!this.allConstStrings.has(op.ivalue)) {
-            this.allConstStrings.set(op.ivalue, sname);
+        if (!this.allConstStrings.has(sval)) {
+            this.allConstStrings.set(sval, sname);
         }
-        const strval = `Runtime::${this.allConstStrings.get(op.ivalue)}`;
-        let opstrs = [];
-        if (op.vfunckey !== undefined) {
-            const chkexp = `${this.invokenameToCPP(op.vfunckey)}(${strval})`;
-            opstrs.push(`if(!${chkexp}) { BSQ_ABORT("Failed string validation", "${filenameClean(this.currentFile)}", ${op.sinfo.line}); }`);
-        }
+        const strval = `Runtime::${this.allConstStrings.get(sval)}`;
         const scopevar = this.varNameToCppName("$scope$");
-        opstrs.push(`${this.varToCppName(op.trgt)} =  BSQ_NEW_ADD_SCOPE(${scopevar}, BSQStringOf, ${strval}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(op.tskey)});`);
-        return opstrs.join(" ");
+        return `${this.varToCppName(op.trgt)} =  BSQ_NEW_ADD_SCOPE(${scopevar}, BSQSafeString, ${strval}.sdata, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(op.tskey)});`;
     }
     generateLoadConstTypedString(op) {
+        const sval = CPPBodyEmitter.cleanStrRepr(op.ivalue);
         const sname = "STR__" + this.allConstStrings.size;
-        if (!this.allConstStrings.has(op.ivalue)) {
-            this.allConstStrings.set(op.ivalue, sname);
+        if (!this.allConstStrings.has(sval)) {
+            this.allConstStrings.set(sval, sname);
         }
-        const strval = `Runtime::${this.allConstStrings.get(op.ivalue)}`;
+        const strval = `Runtime::${this.allConstStrings.get(sval)}`;
         const scopevar = this.varNameToCppName("$scope$");
         let opstrs = [];
         if (op.pfunckey !== undefined) {
-            const chkexp = `${this.invokenameToCPP(op.pfunckey)}(${strval}, ${scopevar})`;
-            opstrs.push(`if(!${chkexp}.success) { BSQ_ABORT("Failed string validation", "${filenameClean(this.currentFile)}", ${op.sinfo.line}); }`);
+            const pfunc = (this.typegen.assembly.invokeDecls.get(op.pfunckey) || this.typegen.assembly.primitiveInvokeDecls.get(op.pfunckey));
+            const errtype = this.typegen.getMIRType(op.errtype);
+            const pexp = `${this.invokenameToCPP(op.pfunckey)}(&${strval}, ${scopevar})`;
+            const tcexp = this.generateTypeCheck(pexp, this.typegen.getMIRType(pfunc.resultType), this.typegen.getMIRType(pfunc.resultType), errtype);
+            opstrs.push(`if(${tcexp}) { BSQ_ABORT("Failed string validation", "${filenameClean(this.currentFile)}", ${op.sinfo.line}); }`);
         }
-        opstrs.push(`${this.varToCppName(op.trgt)} =  BSQ_NEW_ADD_SCOPE(${scopevar}, BSQStringOf, ${strval}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(op.tskey)});`);
+        opstrs.push(`${this.varToCppName(op.trgt)} =  BSQ_NEW_ADD_SCOPE(${scopevar}, BSQStringOf, ${strval}.sdata, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(op.tskey)});`);
         return opstrs.join(" ");
     }
     generateAccessConstantValue(cp) {
@@ -194,45 +190,74 @@ class CPPBodyEmitter {
     }
     generateMIRConstructorPrimary(cp) {
         const ctype = this.assembly.entityDecls.get(cp.tkey);
-        let fvals = cp.args.map((arg, i) => {
-            const ftype = this.typegen.getMIRType(ctype.fields[i].declaredType);
-            return this.typegen.generateConstructorArgInc(ftype, this.argToCpp(arg, ftype));
-        });
-        const cppctype = this.typegen.getCPPTypeFor(this.typegen.getMIRType(cp.tkey), "base");
-        const scopevar = this.varNameToCppName("$scope$");
-        return `${this.varToCppName(cp.trgt)} = BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""});`;
+        const cppcrepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(cp.tkey));
+        if (cppcrepr instanceof type_repr_1.StructRepr) {
+            const fvals = cp.args.map((arg, i) => {
+                const ftype = this.typegen.getMIRType(ctype.fields[i].declaredType);
+                return this.argToCpp(arg, ftype);
+            });
+            return `${this.varToCppName(cp.trgt)} = std::move(${cppcrepr.base}(${fvals.join(", ")}));`;
+        }
+        else {
+            const fvals = cp.args.map((arg, i) => {
+                const ftype = this.typegen.getMIRType(ctype.fields[i].declaredType);
+                return this.typegen.generateConstructorArgInc(ftype, this.argToCpp(arg, ftype));
+            });
+            const scopevar = this.varNameToCppName("$scope$");
+            return `${this.varToCppName(cp.trgt)} = BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppcrepr.base}${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""});`;
+        }
     }
     generateMIRConstructorPrimaryCollectionEmpty(cpce) {
         const cpetype = this.typegen.getMIRType(cpce.tkey);
-        const cppctype = this.typegen.getCPPTypeFor(cpetype, "base");
+        const cppctype = this.typegen.getCPPReprFor(cpetype).base;
         const scopevar = this.varNameToCppName("$scope$");
         const conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(cpce.tkey)})`;
         return `${this.varToCppName(cpce.trgt)} = ${conscall};`;
     }
     generateMIRConstructorPrimaryCollectionSingletons(cpcs) {
         const cpcstype = this.typegen.getMIRType(cpcs.tkey);
-        const cppctype = this.typegen.getCPPTypeFor(cpcstype, "base");
+        const cppctype = this.typegen.getCPPReprFor(cpcstype).base;
         let conscall = "";
         const scopevar = this.varNameToCppName("$scope$");
+        const ntype = `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(cpcs.tkey)}`;
         if (this.typegen.typecheckIsName(cpcstype, /NSCore::List<.*>/)) {
             const oftype = this.assembly.entityDecls.get(cpcs.tkey).terms.get("T");
-            const cvals = cpcs.args.map((arg) => this.argToCpp(arg, oftype));
-            conscall = `${cppctype}::createFromSingle<${cvals.length}>(${scopevar}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(cpcs.tkey)}, { ${cvals.join(", ")} })`;
+            const cvals = cpcs.args.map((arg) => this.typegen.generateConstructorArgInc(oftype, this.argToCpp(arg, oftype)));
+            conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, { ${cvals.join(", ")} })`;
         }
-        else if (this.typegen.typecheckIsName(cpcstype, /NSCore::Set<.*>/)) {
+        else if (this.typegen.typecheckIsName(cpcstype, /NSCore::Stack<.*>/)) {
+            const oftype = this.assembly.entityDecls.get(cpcs.tkey).terms.get("T");
+            const cvals = cpcs.args.map((arg) => this.typegen.generateConstructorArgInc(oftype, this.argToCpp(arg, oftype)));
+            conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, { ${cvals.join(", ")} })`;
+        }
+        else if (this.typegen.typecheckIsName(cpcstype, /NSCore::Queue<.*>/)) {
+            const oftype = this.assembly.entityDecls.get(cpcs.tkey).terms.get("T");
+            const cvals = cpcs.args.map((arg) => this.typegen.generateConstructorArgInc(oftype, this.argToCpp(arg, oftype)));
+            conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, { ${cvals.join(", ")} })`;
+        }
+        else if (this.typegen.typecheckIsName(cpcstype, /NSCore::Set<.*>/) || this.typegen.typecheckIsName(cpcstype, /NSCore::DynamicSet<.*>/)) {
             const oftype = this.assembly.entityDecls.get(cpcs.tkey).terms.get("T");
             const cvals = cpcs.args.map((arg) => this.argToCpp(arg, oftype));
-            conscall = `${cppctype}::createFromSingle<${cvals.length}>(${scopevar}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(cpcs.tkey)}, { ${cvals.join(", ")} })`;
+            const trepr = this.typegen.getCPPReprFor(oftype);
+            const tops = this.typegen.getFunctorsForType(oftype);
+            const pvals = `BSQSet<${trepr.std}, ${tops.dec}, ${tops.display}, ${tops.less}, ${tops.eq}>::processSingletonSetInit<${tops.inc}>({ ${cvals} })`;
+            conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, ${pvals})`;
         }
         else {
             const ktype = this.assembly.entityDecls.get(cpcs.tkey).terms.get("K");
             const vtype = this.assembly.entityDecls.get(cpcs.tkey).terms.get("V");
             const entrytype = [...this.typegen.assembly.entityDecls].find((edecl) => edecl[1].ns === "NSCore" && edecl[1].name === "MapEntry" && edecl[1].terms.get("K").trkey === ktype.trkey && edecl[1].terms.get("V").trkey === vtype.trkey);
             const entryentity = entrytype[1];
-            const oftype = this.assembly.typeMap.get(entryentity.tkey);
-            const mkeys = cpcs.args.map((arg) => `${this.argToCpp(arg, oftype)}->${this.typegen.mangleStringForCpp(entryentity.fields.find((f) => f.name === "key").fkey)}`);
-            const mvals = cpcs.args.map((arg) => `${this.argToCpp(arg, oftype)}->${this.typegen.mangleStringForCpp(entryentity.fields.find((f) => f.name === "value").fkey)}`);
-            conscall = `${cppctype}::createFromSingle<${mkeys.length}>(${scopevar}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(cpcs.tkey)}, { ${mkeys.join(", ")} }, { ${mvals.join(", ")} })`;
+            const oftype = this.typegen.getMIRType(entryentity.tkey);
+            const entrykaccess = this.typegen.mangleStringForCpp(entryentity.fields.find((fd) => fd.name === "key").fkey);
+            const entryvaccess = this.typegen.mangleStringForCpp(entryentity.fields.find((fd) => fd.name === "value").fkey);
+            const cvals = cpcs.args.map((arg) => `std::make_pair(${this.argToCpp(arg, oftype)}.${entrykaccess}, ${this.argToCpp(arg, oftype)}.${entryvaccess})`);
+            const krepr = this.typegen.getCPPReprFor(ktype);
+            const kops = this.typegen.getFunctorsForType(ktype);
+            const vrepr = this.typegen.getCPPReprFor(vtype);
+            const vops = this.typegen.getFunctorsForType(vtype);
+            const pvals = `BSQMap<${krepr.std}, ${kops.dec}, ${kops.display}, ${kops.less}, ${kops.eq}, ${vrepr.std}, ${vops.dec}, ${vops.display}>::processSingletonMapInit<${kops.inc}, ${vops.inc}>({ ${cvals} })`;
+            conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, ${pvals})`;
         }
         return `${this.varToCppName(cpcs.trgt)} = ${conscall};`;
     }
@@ -242,9 +267,8 @@ class CPPBodyEmitter {
             return `${this.varToCppName(op.trgt)} = BSQTuple::_empty;`;
         }
         else {
-            const scopevar = this.varNameToCppName("$scope$");
             const iflag = this.typegen.generateInitialDataKindFlag(this.typegen.getMIRType(op.resultTupleType));
-            return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${args.length}>(${scopevar}, ${iflag}, { ${args.join(", ")} });`;
+            return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${args.join(", ")} });`;
         }
     }
     generateMIRConstructorRecord(op) {
@@ -253,9 +277,8 @@ class CPPBodyEmitter {
             return `${this.varToCppName(op.trgt)} = BSQRecord::_empty;`;
         }
         else {
-            const scopevar = this.varNameToCppName("$scope$");
             const iflag = this.typegen.generateInitialDataKindFlag(this.typegen.getMIRType(op.resultRecordType));
-            return `${this.varToCppName(op.trgt)} = BSQRecord::createFromSingle<${args.length}>(${scopevar}, ${iflag}, { ${args.join(", ")} });`;
+            return `${this.varToCppName(op.trgt)} = BSQRecord::createFromSingle<${iflag}>({ ${args.join(", ")} });`;
         }
     }
     generateMIRConstructorEphemeralValueList(op) {
@@ -273,7 +296,14 @@ class CPPBodyEmitter {
             return `${this.typegen.coerce("BSQ_VALUE_NONE", this.typegen.noneType, resultAccessType)}`;
         }
         else {
-            const select = `BSQ_GET_VALUE_PTR(${this.varToCppName(arg)}, BSQTuple)->atFixed(${idx})`;
+            const trepr = this.typegen.getCPPReprFor(tuptype);
+            let select = "";
+            if (trepr instanceof type_repr_1.StructRepr) {
+                select = `${this.varToCppName(arg)}.atFixed<${idx}>()`;
+            }
+            else {
+                select = `BSQ_GET_VALUE_PTR(${this.varToCppName(arg)}, BSQTuple)->atFixed<${idx}>()`;
+            }
             return `${this.typegen.coerce(select, this.typegen.anyType, resultAccessType)}`;
         }
     }
@@ -287,9 +317,8 @@ class CPPBodyEmitter {
             return `${this.varToCppName(op.trgt)} = ${this.typegen.mangleStringForCpp(resultAccessType.trkey)}{${vals.join(", ")}};`;
         }
         else {
-            const scopevar = this.varNameToCppName("$scope$");
             const iflag = this.typegen.generateInitialDataKindFlag(resultAccessType);
-            return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${vals.length}>(${scopevar}, ${iflag}, { ${vals.join(", ")} });`;
+            return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${vals.join(", ")} });`;
         }
     }
     generateMIRModifyWithIndecies(op, resultTupleType) {
@@ -309,9 +338,8 @@ class CPPBodyEmitter {
             //may put none in the constructor list but ok since we note correct length and will ignore these if extranious
             cvals.push(this.generateMIRAccessFromIndexExpression(op.arg, i, this.typegen.anyType));
         }
-        const scopevar = this.varNameToCppName("$scope$");
         const iflag = this.typegen.generateInitialDataKindFlag(resultTupleType);
-        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingleDynamic(${scopevar}, ${iflag}, { ${cvals.join(", ")} });`;
+        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${cvals.join(", ")} });`;
     }
     generateMIRStructuredExtendTuple(op, resultTupleType) {
         //this is the exact number of indecies in arg -- see typecheck
@@ -325,9 +353,17 @@ class CPPBodyEmitter {
             //may put none in the constructor list but ok since we note correct length and will ignore these if extranious
             cvals.push(this.generateMIRAccessFromIndexExpression(op.update, i - btuple, this.typegen.anyType));
         }
-        const scopevar = this.varNameToCppName("$scope$");
         const iflag = this.typegen.generateInitialDataKindFlag(resultTupleType);
-        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingleDynamic(${scopevar}, ${iflag}, { ${cvals.join(", ")} });`;
+        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${cvals.join(", ")} });`;
+    }
+    generateMIRHasPropertyExpression(arg, property) {
+        const rrepr = this.typegen.getCPPReprFor(this.getArgType(arg));
+        if (rrepr instanceof type_repr_1.StructRepr) {
+            return `${this.varToCppName(arg)}.hasProperty<MIRPropertyEnum::${property}>()`;
+        }
+        else {
+            return `BSQ_GET_VALUE_PTR(${this.varToCppName(arg)}, BSQRecord)->hasProperty<MIRPropertyEnum::${property}>()`;
+        }
     }
     generateMIRAccessFromPropertyExpression(arg, property, resultAccessType) {
         const rectype = this.getArgType(arg);
@@ -336,7 +372,14 @@ class CPPBodyEmitter {
             return `${this.typegen.coerce("BSQ_VALUE_NONE", this.typegen.noneType, resultAccessType)}`;
         }
         else {
-            const select = `BSQ_GET_VALUE_PTR(${this.varToCppName(arg)}, BSQRecord)->atFixed(MIRPropertyEnum::${property})`;
+            const rrepr = this.typegen.getCPPReprFor(rectype);
+            let select = "";
+            if (rrepr instanceof type_repr_1.StructRepr) {
+                select = `${this.varToCppName(arg)}.atFixed<MIRPropertyEnum::${property}>()`;
+            }
+            else {
+                select = `BSQ_GET_VALUE_PTR(${this.varToCppName(arg)}, BSQRecord)->atFixed<MIRPropertyEnum::${property}>()`;
+            }
             return `${this.typegen.coerce(select, this.typegen.anyType, resultAccessType)}`;
         }
     }
@@ -352,11 +395,20 @@ class CPPBodyEmitter {
         else {
             const rargs = [];
             for (let i = 0; i < op.properties.length; ++i) {
-                rargs.push(`std::make_tuple<MIRRecordEnum, Value>(MIRRecordEnum::${op.properties[i]}, ${vals[i]})`);
+                rargs.push(`{ MIRRecordEnum::${op.properties[i]}, ${vals[i]} }`);
             }
-            const scopevar = this.varNameToCppName("$scope$");
             const iflag = this.typegen.generateInitialDataKindFlag(resultAccessType);
-            return `${this.varToCppName(op.trgt)} = BSQRecord::createFromSingle<${rargs.length}>(${scopevar}, ${iflag}, { ${rargs.join(", ")} });`;
+            return `${this.varToCppName(op.trgt)} = BSQRecord::createFromSingle<${iflag}>({ ${rargs.join(", ")} });`;
+        }
+    }
+    generateAccessRecordPtr(argv) {
+        const arg = this.varToCppName(argv);
+        const rrepr = this.typegen.getCPPReprFor(this.getArgType(argv));
+        if (rrepr instanceof type_repr_1.StructRepr) {
+            return `&(${arg})`;
+        }
+        else {
+            return `BSQ_GET_VALUE_PTR(${arg}, BSQRecord)`;
         }
     }
     generateMIRModifyWithProperties(op, resultRecordType) {
@@ -366,12 +418,11 @@ class CPPBodyEmitter {
             const pname = pmax[i];
             const upd = op.updates.find((update) => update[0] === pname);
             if (upd !== undefined) {
-                cvals.push(`std::make_pair<MIRRecordEnum, Value>(MIRRecordEnum::${pname}, ${this.argToCpp(upd[1], this.typegen.anyType)})`);
+                cvals.push(`{ MIRRecordEnum::${pname}, ${this.argToCpp(upd[1], this.typegen.anyType)} }`);
             }
         }
-        const scopevar = this.varNameToCppName("$scope$");
         const iflag = this.typegen.generateInitialDataKindFlag(resultRecordType);
-        return `${this.varToCppName(op.trgt)} = BSQRecord::createFromUpdate<${cvals.length}(${scopevar}, BSQ_GET_VALUE_PTR(${this.varToCppName(op.arg)}, BSQRecord), ${iflag}, { ${cvals.join(", ")} });`;
+        return `${this.varToCppName(op.trgt)} = BSQRecord::createFromUpdate<${iflag}>(${this.generateAccessRecordPtr(op.arg)}, { ${cvals.join(", ")} });`;
     }
     generateMIRStructuredExtendRecord(op, resultRecordType) {
         const rprops = this.typegen.getMaxPropertySet(resultRecordType);
@@ -384,74 +435,98 @@ class CPPBodyEmitter {
                 //nothing to do
             }
             else if (uhas === "yes") {
-                cvals.push(`std::make_pair<MIRRecordEnum, Value>(MIRRecordEnum::${pname}, ${this.generateMIRAccessFromPropertyExpression(op.update, pname, this.typegen.anyType)})`);
+                cvals.push(`{ MIRRecordEnum::${pname}, ${this.generateMIRAccessFromPropertyExpression(op.update, pname, this.typegen.anyType)} }`);
             }
             else {
-                const check = `BSQ_GET_VALUE_PTR(${this.varToCppName(op.update)}, BSQRecord)->hasProperty(MIRPropertyEnum::${pname})`;
+                const check = `${this.generateAccessRecordPtr(op.update)}->hasProperty(MIRPropertyEnum::${pname})`;
                 cvals.push(`${check} ? ${this.generateMIRAccessFromPropertyExpression(op.update, pname, this.typegen.anyType)}) : ${this.generateMIRAccessFromPropertyExpression(op.arg, pname, this.typegen.anyType)})`);
             }
         }
-        const scopevar = this.varNameToCppName("$scope$");
         const iflag = this.typegen.generateInitialDataKindFlag(resultRecordType);
-        return `${this.varToCppName(op.trgt)} = BSQRecord::createFromUpdate<${cvals.length}>(${scopevar}, BSQ_GET_VALUE_PTR(${this.varToCppName(op.arg)}, BSQRecord), ${iflag}, { ${cvals.join(", ")} });`;
+        return `${this.varToCppName(op.trgt)} = BSQRecord::createFromUpdate<${iflag}>(${this.generateAccessRecordPtr(op.arg)}, { ${cvals.join(", ")} });`;
+    }
+    generateVFieldLookup(arg, tag, infertype, fdecl) {
+        const lname = `resolve_${fdecl.fkey}_from_${infertype.trkey}`;
+        let decl = this.vfieldLookups.find((lookup) => lookup.lname === lname);
+        if (decl === undefined) {
+            this.vfieldLookups.push({ infertype: infertype, fdecl: fdecl, lname: lname });
+        }
+        return `${this.typegen.mangleStringForCpp(lname)}(${tag}, ${this.argToCpp(arg, infertype)})`;
+    }
+    generateMIRAccessFromFieldExpression(arg, inferargtype, field, resultAccessType) {
+        const nrepr = this.typegen.getCPPReprFor(inferargtype);
+        let select = "";
+        if (this.typegen.typecheckUEntity(inferargtype)) {
+            if (nrepr instanceof type_repr_1.RefRepr) {
+                select = `${this.argToCpp(arg, inferargtype)}->${this.typegen.mangleStringForCpp(field)}`;
+            }
+            else {
+                select = `${this.argToCpp(arg, inferargtype)}.${this.typegen.mangleStringForCpp(field)}`;
+            }
+        }
+        else {
+            let tag = "";
+            if (nrepr instanceof type_repr_1.KeyValueRepr || nrepr instanceof type_repr_1.ValueRepr) {
+                tag = `BSQ_GET_VALUE_PTR(${this.argToCpp(arg, inferargtype)}, BSQRef)->nominalType`;
+            }
+            else {
+                tag = `${this.argToCpp(arg, inferargtype)}.nominalType`;
+            }
+            select = this.generateVFieldLookup(arg, tag, inferargtype, this.assembly.fieldDecls.get(field));
+        }
+        const ftype = this.typegen.getMIRType(this.assembly.fieldDecls.get(field).declaredType);
+        return `${this.typegen.coerce(select, ftype, resultAccessType)}`;
     }
     generateMIRAccessFromField(op, resultAccessType) {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
-        const fdecl = this.assembly.fieldDecls.get(op.field);
-        const ftype = this.typegen.getMIRType(fdecl.declaredType);
-        if (this.typegen.typecheckUEntity(inferargtype)) {
-            const access = `${this.argToCpp(op.arg, inferargtype)}->${this.typegen.mangleStringForCpp(op.field)}`;
-            return `${this.varToCppName(op.trgt)} = ${this.typegen.coerce(access, ftype, resultAccessType)};`;
+        return `${this.varToCppName(op.trgt)} = ${this.generateMIRAccessFromFieldExpression(op.arg, inferargtype, op.field, resultAccessType)};`;
+    }
+    generateVFieldProject(arg, infertype, fprojs, resultAccessType) {
+        const upnames = fprojs.map((fp) => fp.fkey);
+        const uname = `project_${upnames.sort().join("*")}_in_${infertype.trkey}`;
+        let decl = this.vfieldProjects.find((lookup) => lookup.uname === uname);
+        if (decl === undefined) {
+            this.vfieldProjects.push({ infertype: infertype, fprojs: fprojs, resultAccessType: resultAccessType, uname: uname });
         }
-        else {
-            const access = `BSQ_GET_VALUE_PTR(${this.argToCpp(op.arg, inferargtype)}, BSQVable)->get$${this.typegen.mangleStringForCpp(op.field)}()`;
-            return `${this.varToCppName(op.trgt)} = ${this.typegen.coerce(access, ftype, resultAccessType)};`;
-        }
+        return `${this.typegen.mangleStringForCpp(uname)}(${this.argToCpp(arg, infertype)})`;
     }
     generateMIRProjectFromFields(op, resultAccessType) {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
-        if (this.typegen.typecheckEphemeral(resultAccessType)) {
-            let cvals = [];
-            op.fields.map((f) => {
-                const fdecl = this.assembly.fieldDecls.get(f);
-                if (this.typegen.typecheckUEntity(inferargtype)) {
-                    cvals.push(`${this.argToCpp(op.arg, inferargtype)}->${this.typegen.mangleStringForCpp(fdecl.fkey)}`);
-                }
-                else {
-                    cvals.push(`BSQ_GET_VALUE_PTR(${this.argToCpp(op.arg, inferargtype)}, BSQVable)->get$${this.typegen.mangleStringForCpp(fdecl.fkey)}()`);
-                }
-            });
-            return `${this.varToCppName(op.trgt)} = ${this.typegen.mangleStringForCpp(op.resultProjectType)}{${cvals.join(", ")}};`;
+        if (this.typegen.typecheckUEntity(inferargtype)) {
+            if (this.typegen.typecheckEphemeral(resultAccessType)) {
+                let cvals = [];
+                op.fields.map((f, i) => {
+                    const rtype = this.typegen.getEpehmeralType(resultAccessType).entries[i];
+                    cvals.push(this.generateMIRAccessFromFieldExpression(op.arg, inferargtype, f, rtype));
+                });
+                return `${this.varToCppName(op.trgt)} = ${this.typegen.mangleStringForCpp(op.resultProjectType)}{${cvals.join(", ")}};`;
+            }
+            else {
+                let cvals = [];
+                op.fields.map((f) => {
+                    const fdecl = this.assembly.fieldDecls.get(f);
+                    const val = this.generateMIRAccessFromFieldExpression(op.arg, inferargtype, f, this.typegen.anyType);
+                    cvals.push(`{ MIRRecordEnum::${fdecl.name}, ${val} }`);
+                });
+                const iflag = this.typegen.generateInitialDataKindFlag(this.typegen.getMIRType(op.resultProjectType));
+                return `${this.varToCppName(op.trgt)} = BSQRecord::createFromSingle<${iflag}>({ ${cvals.join(", ")} });`;
+            }
         }
         else {
-            let cvals = [];
-            op.fields.map((f) => {
-                const fdecl = this.assembly.fieldDecls.get(f);
-                const ftype = this.typegen.getMIRType(fdecl.declaredType);
-                if (this.typegen.typecheckUEntity(inferargtype)) {
-                    const access = `${this.argToCpp(op.arg, inferargtype)}->${this.typegen.mangleStringForCpp(fdecl.fkey)}`;
-                    cvals.push(`std::make_pair<MIRRecordEnum, Value>(MIRRecordEnum::${fdecl.name}, ${this.typegen.coerce(access, ftype, this.typegen.anyType)})`);
-                }
-                else {
-                    const access = `BSQ_GET_VALUE_PTR(${this.argToCpp(op.arg, inferargtype)}, BSQObject)->get$${this.typegen.mangleStringForCpp(fdecl.fkey)}()`;
-                    cvals.push(`std::make_pair<MIRRecordEnum, Value>(MIRRecordEnum::${fdecl.name}, ${this.typegen.coerce(access, ftype, this.typegen.anyType)})`);
-                }
-            });
-            const scopevar = this.varNameToCppName("$scope$");
-            const iflag = this.typegen.generateInitialDataKindFlag(this.typegen.getMIRType(op.resultProjectType));
-            return `${this.varToCppName(op.trgt)} = BSQRecord::createFromSingle<${cvals.length}>(${scopevar}, ${iflag}, { ${cvals.join(", ")} });`;
+            const vproject = this.generateVFieldProject(op.arg, inferargtype, op.fields.map((f) => this.assembly.fieldDecls.get(f)), resultAccessType);
+            return `${this.varToCppName(op.trgt)} = ${vproject};`;
         }
     }
-    generateVFieldUpdates(arg, infertype, fupds) {
+    generateVFieldUpdate(arg, infertype, fupds, resultAccessType) {
         const upnames = fupds.map((fud) => `${fud[0].fkey}->${this.getArgType(fud[1])}`);
         const uname = `update_${upnames.sort().join("*")}_in_${infertype.trkey}`;
         let decl = this.vfieldUpdates.find((lookup) => lookup.uname === uname);
         if (decl === undefined) {
-            this.vfieldUpdates.push({ arg: arg, infertype: infertype, fupds: fupds, uname: uname });
+            this.vfieldUpdates.push({ infertype: infertype, fupds: fupds, resultAccessType: resultAccessType, uname: uname });
         }
         return `${this.typegen.mangleStringForCpp(uname)}(${this.argToCpp(arg, infertype)}, ${fupds.map((upd) => this.argToCpp(upd[1], this.getArgType(upd[1]))).join(", ")})`;
     }
-    generateMIRModifyWithFields(op) {
+    generateMIRModifyWithFields(op, resultAccessType) {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
         if (this.typegen.typecheckUEntity(inferargtype)) {
             const ekey = this.typegen.getEntityEKey(inferargtype);
@@ -468,35 +543,36 @@ class CPPBodyEmitter {
                     cvals.push([`${this.argToCpp(op.arg, inferargtype)}->${this.typegen.mangleStringForCpp(fdecl.fkey)}`, ftype]);
                 }
             }
-            let fvals = cvals.map((val) => {
-                return this.typegen.generateConstructorArgInc(val[1], val[0]);
-            });
-            const cppctype = this.typegen.getCPPTypeFor(inferargtype, "base");
-            const scopevar = this.varNameToCppName("$scope$");
-            const cexp = `${this.varToCppName(op.trgt)} = BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""});`;
-            if (utype.invariants.length === 0) {
-                return cexp;
+            const cppcrepr = this.typegen.getCPPReprFor(inferargtype);
+            if (cppcrepr instanceof type_repr_1.StructRepr) {
+                const fvals = cvals.map((val) => {
+                    return val[0];
+                });
+                return `${this.varToCppName(op.trgt)} = std::move(${cppcrepr.base}(${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""}));`;
             }
             else {
-                const testexp = `${this.typegen.mangleStringForCpp("invariant::" + ekey)}(${this.varToCppName(op.trgt)});`;
-                return cexp + " " + testexp;
+                const fvals = cvals.map((val) => {
+                    return this.typegen.generateConstructorArgInc(val[1], val[0]);
+                });
+                const scopevar = this.varNameToCppName("$scope$");
+                return `${this.varToCppName(op.trgt)} = BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppcrepr.base}${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""});`;
             }
         }
         else {
-            const access = this.generateVFieldUpdates(op.arg, inferargtype, op.updates.map((upd) => [this.assembly.fieldDecls.get(upd[0]), upd[1]]));
+            const access = this.generateVFieldUpdate(op.arg, inferargtype, op.updates.map((upd) => [this.assembly.fieldDecls.get(upd[0]), upd[1]]), resultAccessType);
             return `${this.varToCppName(op.trgt)} = ${access};`;
         }
     }
-    generateVFieldExtend(arg, infertype, merge, infermerge, fieldResolves) {
+    generateVFieldExtend(arg, infertype, merge, infermerge, fieldResolves, resultAccessType) {
         const upnames = fieldResolves.map((fr) => `${fr[0]}->${fr[1].fkey}`);
         const mname = `merge_${infertype.trkey}_${upnames.join("*")}_with_${infermerge.trkey}`;
         let decl = this.vobjmerges.find((lookup) => lookup.mname === mname);
         if (decl === undefined) {
-            this.vobjmerges.push({ arg: arg, infertype: infertype, merge: merge, infermergetype: infermerge, fieldResolves: fieldResolves, mname: mname });
+            this.vobjmerges.push({ infertype: infertype, merge: merge, infermergetype: infermerge, fieldResolves: fieldResolves, resultAccessType: resultAccessType, mname: mname });
         }
         return `${this.typegen.mangleStringForCpp(mname)}(${this.argToCpp(arg, infertype)}, ${this.argToCpp(merge, infermerge)})`;
     }
-    generateMIRStructuredExtendObject(op) {
+    generateMIRStructuredExtendObject(op, resultAccessType) {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
         const mergeargtype = this.typegen.getMIRType(op.updateInferType);
         if (this.typegen.typecheckUEntity(inferargtype)) {
@@ -520,33 +596,33 @@ class CPPBodyEmitter {
                         cvals.push([this.generateMIRAccessFromPropertyExpression(op.arg, fp[0], ftype), ftype]);
                     }
                     else {
-                        const check = `BSQ_GET_VALUE_PTR(${this.varToCppName(op.update)}, BSQRecord)->hasProperty(MIRPropertyEnum::${fp[0]})`;
+                        const check = this.generateMIRHasPropertyExpression(op.update, fp[0]);
                         const update = `(${check} ? ${this.generateMIRAccessFromPropertyExpression(op.update, fp[0], ftype)}) : ${faccess})`;
                         cvals.push([update, ftype]);
                     }
                 }
             }
-            let fvals = cvals.map((val) => {
-                return this.typegen.generateConstructorArgInc(val[1], val[0]);
-            });
-            const cppctype = this.typegen.getCPPTypeFor(inferargtype, "base");
-            const scopevar = this.varNameToCppName("$scope$");
-            const cexp = `${this.varToCppName(op.trgt)} = BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""});`;
-            if (utype.invariants.length === 0) {
-                return cexp;
+            const cppcrepr = this.typegen.getCPPReprFor(inferargtype);
+            if (cppcrepr instanceof type_repr_1.StructRepr) {
+                const fvals = cvals.map((val) => {
+                    return val[0];
+                });
+                return `${this.varToCppName(op.trgt)} = std::move(${cppcrepr.base}(${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""}));`;
             }
             else {
-                const testexp = `${this.typegen.mangleStringForCpp("invariant::" + ekey)}(${this.varToCppName(op.trgt)});`;
-                return cexp + " " + testexp;
+                const fvals = cvals.map((val) => {
+                    return this.typegen.generateConstructorArgInc(val[1], val[0]);
+                });
+                const scopevar = this.varNameToCppName("$scope$");
+                return `${this.varToCppName(op.trgt)} = BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppcrepr.base}${fvals.length !== 0 ? (", " + fvals.join(", ")) : ""});`;
             }
         }
         else {
-            const access = this.generateVFieldExtend(op.arg, inferargtype, op.update, mergeargtype, op.fieldResolves.map((fr) => [fr[0], this.assembly.fieldDecls.get(fr[1])]));
+            const access = this.generateVFieldExtend(op.arg, inferargtype, op.update, mergeargtype, op.fieldResolves.map((fr) => [fr[0], this.assembly.fieldDecls.get(fr[1])]), resultAccessType);
             return `${this.varToCppName(op.trgt)} = ${access};`;
         }
     }
     generateMIRLoadFromEpehmeralList(op) {
-        //should never need to coearce op
         return `${this.varToCppName(op.trgt)} = ${this.varToCppName(op.arg)}.entry_${op.idx};`;
     }
     generateMIRInvokeFixedFunction(ivop) {
@@ -564,41 +640,59 @@ class CPPBodyEmitter {
     generateEquals(op, lhsinfertype, lhs, rhsinfertype, rhs, isstrict) {
         let coreop = "";
         if (isstrict) {
-            coreop = `EqualFunctor_${this.typegen.getCPPTypeFor(lhsinfertype, "base")}{}(${this.argToCpp(lhs, lhsinfertype)}, ${this.argToCpp(rhs, rhsinfertype)})`;
+            const repr = this.typegen.getCPPReprFor(lhsinfertype);
+            coreop = `EqualFunctor_${repr.base}{}(${this.argToCpp(lhs, lhsinfertype)}, ${this.argToCpp(rhs, rhsinfertype)})`;
         }
         else {
             coreop = `EqualFunctor_KeyValue{}(${this.argToCpp(lhs, this.typegen.keyType)}, ${this.argToCpp(rhs, this.typegen.keyType)})`;
         }
         return op === "!=" ? `!${coreop}` : coreop;
     }
-    generateCompare(op, lhsinfertype, lhs, rhsinfertype, rhs) {
-        if (op === "<") {
-            return `LessFunctor_IntValue{}(${this.argToCpp(lhs, lhsinfertype)}, ${this.argToCpp(rhs, rhsinfertype)})`;
-        }
-        else if (op === "<=") {
-            return `LessFunctor_IntValue{}(${this.argToCpp(lhs, lhsinfertype)}, ${this.argToCpp(rhs, rhsinfertype)}) || EqualFunctor_IntValue{}(${this.argToCpp(lhs, lhsinfertype)}, ${this.argToCpp(rhs, rhsinfertype)})`;
-        }
-        else if (op === ">") {
-            return `LessFunctor_IntValue{}(${this.argToCpp(rhs, rhsinfertype)}, ${this.argToCpp(lhs, lhsinfertype)})`;
+    generateLess(lhsinfertype, lhs, rhsinfertype, rhs, isstrict) {
+        if (isstrict) {
+            const repr = this.typegen.getCPPReprFor(lhsinfertype);
+            return `LessFunctor_${repr.base}{}(${this.argToCpp(lhs, lhsinfertype)}, ${this.argToCpp(rhs, rhsinfertype)})`;
         }
         else {
-            return `LessFunctor_IntValue{}(${this.argToCpp(rhs, rhsinfertype)}, ${this.argToCpp(lhs, lhsinfertype)}) || EqualFunctor_IntValue{}(${this.argToCpp(rhs, rhsinfertype)}, ${this.argToCpp(lhs, lhsinfertype)})`;
+            return `LessFunctor_KeyValue{}(${this.argToCpp(lhs, this.typegen.keyType)}, ${this.argToCpp(rhs, this.typegen.keyType)})`;
+        }
+    }
+    generateCompare(op, lhsinfertype, lhs, rhsinfertype, rhs) {
+        if (op === "<") {
+            return this.generateLess(lhsinfertype, lhs, rhsinfertype, rhs, true);
+        }
+        else if (op === "<=") {
+            return `${this.generateLess(lhsinfertype, lhs, rhsinfertype, rhs, true)} || ${this.generateEquals("=", lhsinfertype, lhs, rhsinfertype, rhs, true)}`;
+        }
+        else if (op === ">") {
+            return this.generateLess(rhsinfertype, rhs, lhsinfertype, lhs, true);
+        }
+        else {
+            return `${this.generateLess(rhsinfertype, rhs, lhsinfertype, lhs, true)} || ${this.generateEquals("=", rhsinfertype, rhs, lhsinfertype, lhs, true)}`;
         }
     }
     generateSubtypeTupleCheck(argv, argtype, oftype) {
-        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(const BSQTuple* atuple)`;
+        const argrepr = this.typegen.getCPPReprFor(argtype);
+        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_TTC(${argrepr.std} arg)`;
         if (!this.subtypeFMap.has(subtypesig)) {
             const order = this.subtypeOrderCtr++;
+            let ttuple = "";
+            if (argrepr instanceof type_repr_1.StructRepr) {
+                ttuple = `BSQTuple* tt = &arg;`;
+            }
+            else {
+                ttuple = `BSQTuple* tt = BSQ_GET_VALUE_PTR(arg, BSQTuple);`;
+            }
             let checks = [];
-            checks.push(`(atuple->entries.size() <= ${oftype.entries.length})`);
+            checks.push(`(tt->entries.size() <= ${oftype.entries.length})`);
             //do all the checks that argtype satisfies all the requirements of oftype -- maybe a bit inefficiently
             for (let i = 0; i < oftype.entries.length; ++i) {
-                const chk = this.generateTypeCheck(`atuple->atFixed(${i})`, this.typegen.anyType, this.typegen.anyType, oftype.entries[i].type);
+                const chk = this.generateTypeCheck(`tt->atFixed<${i}>()`, this.typegen.anyType, this.typegen.anyType, oftype.entries[i].type);
                 if (oftype.entries[i].isOptional) {
-                    checks.push(`(!atuple->hasIndex(${i}) || ${chk})`);
+                    checks.push(`(!tt->hasIndex<${i}>() || ${chk})`);
                 }
                 else {
-                    checks.push(`atuple->hasIndex(${i})`);
+                    checks.push(`tt->hasIndex<${i}>()`);
                     checks.push(chk);
                 }
             }
@@ -620,26 +714,67 @@ class CPPBodyEmitter {
             }
             const decl = subtypesig
                 + "\n{\n"
+                + `    ${ttuple}\n`
                 + `    return ${op};\n`
                 + `}\n`;
             this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
         }
-        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(${argv})`;
+        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_TTC(${argv})`;
     }
-    generateSubtypeRecordCheck(argv, argtype, oftype) {
-        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(const BSQRecord* arecord)`;
+    generateTupleSpecialConceptCheck(argv, argtype, oftype) {
+        const argrepr = this.typegen.getCPPReprFor(argtype);
+        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_TSC(${argrepr.std} arg)`;
         if (!this.subtypeFMap.has(subtypesig)) {
             const order = this.subtypeOrderCtr++;
+            let ttuple = "";
+            if (argrepr instanceof type_repr_1.StructRepr) {
+                ttuple = `BSQTuple* tt = &arg;`;
+            }
+            else {
+                ttuple = `BSQTuple* tt = BSQ_GET_VALUE_PTR(arg, BSQTuple);`;
+            }
+            const checks = [];
+            if (oftype.ckeys.some((cc) => this.typegen.assembly.subtypeOf(this.typegen.parsableType, this.typegen.getMIRType(cc)))) {
+                checks.push(`DATA_KIND_PARSABLE_FLAG`);
+            }
+            if (oftype.ckeys.some((cc) => this.typegen.assembly.subtypeOf(this.typegen.podType, this.typegen.getMIRType(cc)))) {
+                checks.push(`DATA_KIND_POD_FLAG`);
+            }
+            if (oftype.ckeys.some((cc) => this.typegen.assembly.subtypeOf(this.typegen.apiType, this.typegen.getMIRType(cc)))) {
+                checks.push(`DATA_KIND_POD_FLAG`);
+            }
+            const decl = subtypesig
+                + "\n{\n"
+                + `    ${ttuple}\n`
+                + `    DATA_KIND_FLAG cf = (${checks.join(" | ")});\n`
+                + `    return cf == (cf & tt->flag);\n`
+                + `}\n`;
+            this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
+        }
+        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_TSC(${argv})`;
+    }
+    generateSubtypeRecordCheck(argv, argtype, oftype) {
+        const argrepr = this.typegen.getCPPReprFor(argtype);
+        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_TRC(${argrepr.std} arg)`;
+        if (!this.subtypeFMap.has(subtypesig)) {
+            const order = this.subtypeOrderCtr++;
+            let trecord = "";
+            if (argrepr instanceof type_repr_1.StructRepr) {
+                trecord = `BSQRecord* tr = &arg;`;
+            }
+            else {
+                trecord = `BSQRecord* tr = BSQ_GET_VALUE_PTR(arg, BSQRecord);`;
+            }
             let checks = [];
             //do all the checks that argtype satisfies all the requirements of oftype -- maybe a bit inefficiently
             for (let i = 0; i < oftype.entries.length; ++i) {
                 const pname = oftype.entries[i].name;
-                const chk = this.generateTypeCheck(`arecord->atFixed(MIRPropertyEnum::${pname})`, this.typegen.anyType, this.typegen.anyType, oftype.entries[i].type);
+                const chk = this.generateTypeCheck(`tr->atFixed<MIRPropertyEnum::${pname}>()`, this.typegen.anyType, this.typegen.anyType, oftype.entries[i].type);
                 if (oftype.entries[i].isOptional) {
-                    checks.push(`(!arecord->hasProperty(MIRPropertyEnum::${pname}) || ${chk})`);
+                    checks.push(`(!tr->hasProperty<MIRPropertyEnum::${pname}>() || ${chk})`);
                 }
                 else {
-                    checks.push(`arecord->hasProperty(MIRPropertyEnum::${pname})`);
+                    checks.push(`tr->hasProperty<MIRPropertyEnum::${pname}>()`);
                     checks.push(chk);
                 }
             }
@@ -649,13 +784,189 @@ class CPPBodyEmitter {
                 for (let i = 0; i < allprops.length; ++i) {
                     const pname = allprops[i];
                     if (oftype.entries.find((entry) => entry.name === pname) === undefined) {
-                        checks.push(`!arecord->hasProperty(MIRPropertyEnum::${pname})`);
+                        checks.push(`!tr->hasProperty<MIRPropertyEnum::${pname}>()`);
                     }
                 }
             }
             else {
                 const pprops = oftype.entries.map((entry) => `MIRPropertyEnum::${entry.name}`);
-                checks.push(`arecord->checkPropertySet(${oftype.entries.length}${oftype.entries.length !== 0 ? ", " : ""} ${pprops.join(", ")})`);
+                checks.push(`tr->checkPropertySet(${oftype.entries.length}${oftype.entries.length !== 0 ? ", " : ""} ${pprops.join(", ")})`);
+            }
+            let op = "";
+            if (checks.includes("false")) {
+                op = "false";
+            }
+            else {
+                checks = checks.filter((chk) => chk !== "true");
+                if (checks.length === 0) {
+                    op = "true";
+                }
+                else if (checks.length === 1) {
+                    op = checks[0];
+                }
+                else {
+                    op = `(${checks.join(" && ")})`;
+                }
+            }
+            const decl = subtypesig
+                + "\n{\n"
+                + `    ${trecord}\n`
+                + `    return ${op};\n`
+                + `}\n`;
+            this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
+        }
+        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_TRC(${argv})`;
+    }
+    generateRecordSpecialConceptCheck(argv, argtype, oftype) {
+        const argrepr = this.typegen.getCPPReprFor(argtype);
+        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_RSC(${argrepr.std} arg)`;
+        if (!this.subtypeFMap.has(subtypesig)) {
+            const order = this.subtypeOrderCtr++;
+            let ttuple = "";
+            if (argrepr instanceof type_repr_1.StructRepr) {
+                ttuple = `BSQRecord* tr = &arg;`;
+            }
+            else {
+                ttuple = `BSQRecord* tr = BSQ_GET_VALUE_PTR(arg, BSQRecord);`;
+            }
+            const checks = [];
+            if (oftype.ckeys.some((cc) => this.typegen.assembly.subtypeOf(this.typegen.parsableType, this.typegen.getMIRType(cc)))) {
+                checks.push(`DATA_KIND_PARSABLE_FLAG`);
+            }
+            if (oftype.ckeys.some((cc) => this.typegen.assembly.subtypeOf(this.typegen.podType, this.typegen.getMIRType(cc)))) {
+                checks.push(`DATA_KIND_POD_FLAG`);
+            }
+            if (oftype.ckeys.some((cc) => this.typegen.assembly.subtypeOf(this.typegen.apiType, this.typegen.getMIRType(cc)))) {
+                checks.push(`DATA_KIND_POD_FLAG`);
+            }
+            const decl = subtypesig
+                + "\n{\n"
+                + `    ${ttuple}\n`
+                + `    DATA_KIND_FLAG cf = (${checks.join(" | ")});\n`
+                + `    return cf == (cf & tr->flag);\n`
+                + `}\n`;
+            this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
+        }
+        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_RSC(${argv})`;
+    }
+    generateFastTupleTypeCheck(arg, argtype, inferargtype, oftype) {
+        if (!inferargtype.options.some((opt) => opt instanceof mir_assembly_1.MIRTupleType)) {
+            return "false";
+        }
+        else {
+            const argrepr = this.typegen.getCPPReprFor(argtype);
+            const tsc = this.generateSubtypeTupleCheck(arg, argtype, oftype);
+            if (argrepr instanceof type_repr_1.StructRepr) {
+                return tsc;
+            }
+            else {
+                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQTuple*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${tsc})`;
+            }
+        }
+    }
+    generateFastRecordTypeCheck(arg, argtype, inferargtype, oftype) {
+        if (!inferargtype.options.some((opt) => opt instanceof mir_assembly_1.MIRRecordType)) {
+            return "false";
+        }
+        else {
+            const argrepr = this.typegen.getCPPReprFor(argtype);
+            const tsc = this.generateSubtypeTupleCheck(arg, argtype, oftype);
+            if (argrepr instanceof type_repr_1.StructRepr) {
+                return tsc;
+            }
+            else {
+                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQRecord*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${tsc})`;
+            }
+        }
+    }
+    generateSubtypeArrayLookup(typeenum, oftype) {
+        this.checkedConcepts.add(oftype.trkey);
+        const arraystr = `MIRConceptSubtypeArray__${this.typegen.mangleStringForCpp(oftype.trkey)}`;
+        return `BSQObject::checkSubtype(${typeenum}, ${arraystr})`;
+    }
+    generateFastConceptTypeCheck(arg, argtype, inferargtype, oftype) {
+        if (this.typegen.typecheckIsName(inferargtype, /^NSCore::None$/) || this.typegen.typecheckUEntity(inferargtype)) {
+            return this.typegen.assembly.subtypeOf(inferargtype, this.typegen.getMIRType(oftype.trkey)) ? "true" : "false";
+        }
+        else {
+            let enumacc = "";
+            if (this.typegen.typecheckTuple(inferargtype)) {
+                enumacc = "MIRNominalTypeEnum_Tuple";
+            }
+            else if (this.typegen.typecheckRecord(inferargtype)) {
+                enumacc = "MIRNominalTypeEnum_Record";
+            }
+            else {
+                const argrepr = this.typegen.getCPPReprFor(argtype);
+                if (argrepr instanceof type_repr_1.KeyValueRepr) {
+                    enumacc = `getNominalTypeOf_KeyValue(${arg})`;
+                }
+                else {
+                    enumacc = `getNominalTypeOf_Value(${arg})`;
+                }
+            }
+            let ttest = "false";
+            if (inferargtype.options.some((iopt) => iopt instanceof mir_assembly_1.MIRTupleType)) {
+                const tupmax = mir_assembly_1.MIRType.createSingle(mir_assembly_1.MIRConceptType.create([this.typegen.tupleType.trkey, this.typegen.podType.trkey, this.typegen.parsableType.trkey]));
+                const maybespecial = this.typegen.assembly.subtypeOf(tupmax, this.typegen.getMIRType(oftype.trkey)); //if this isn't true then special subtype will never be true
+                const trival = this.typegen.assembly.subtypeOf(this.typegen.tupleType, this.typegen.getMIRType(oftype.trkey)); //if this is true then the default subtypeArray is enough
+                if (maybespecial && !trival) {
+                    ttest = `(enumacc == MIRNominalTypeEnum_Tuple) && ${this.generateTupleSpecialConceptCheck(arg, argtype, oftype)}`;
+                }
+            }
+            let rtest = "false";
+            if (inferargtype.options.some((iopt) => iopt instanceof mir_assembly_1.MIRRecordType)) {
+                const recmax = mir_assembly_1.MIRType.createSingle(mir_assembly_1.MIRConceptType.create([this.typegen.recordType.trkey, this.typegen.podType.trkey, this.typegen.parsableType.trkey]));
+                const maybespecial = this.typegen.assembly.subtypeOf(recmax, this.typegen.getMIRType(oftype.trkey)); //if this isn't true then special subtype will never be true
+                const trival = this.typegen.assembly.subtypeOf(this.typegen.recordType, this.typegen.getMIRType(oftype.trkey)); //if this is true then the default subtypeArray is enough
+                if (maybespecial && !trival) {
+                    rtest = `(enumacc == MIRNominalTypeEnum_Record) && ${this.generateRecordSpecialConceptCheck(arg, argtype, oftype)})`;
+                }
+            }
+            const ntest = this.generateSubtypeArrayLookup(enumacc, oftype);
+            const tests = [ntest, ttest, rtest].filter((test) => test !== "false");
+            if (tests.length === 0) {
+                return "false";
+            }
+            else if (tests.includes("true")) {
+                return "true";
+            }
+            else if (tests.length === 1) {
+                return tests[0];
+            }
+            else {
+                return `(${tests.join(" || ")})`;
+            }
+        }
+    }
+    generateFastEntityTypeCheck(arg, argtype, inferargtype, oftype) {
+        if (this.typegen.typecheckIsName(inferargtype, /^NSCore::None$/) || this.typegen.typecheckUEntity(inferargtype)) {
+            return inferargtype.trkey == oftype.trkey ? "true" : "false";
+        }
+        else {
+            const argrepr = this.typegen.getCPPReprFor(argtype);
+            if (argrepr instanceof type_repr_1.StructRepr) {
+                //could be a tuple or record
+                return "false";
+            }
+            else if (argrepr instanceof type_repr_1.KeyValueRepr) {
+                return `(getNominalTypeOf_KeyValue(${arg}) == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)})`;
+            }
+            else {
+                return `(getNominalTypeOf_Value(${arg}) == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)})`;
+            }
+        }
+    }
+    generateEphemeralTypeCheck(argv, argtype, oftype) {
+        const argrepr = this.typegen.getCPPReprFor(argtype);
+        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_EL(${argrepr.std} arg)`;
+        if (!this.subtypeFMap.has(subtypesig)) {
+            const order = this.subtypeOrderCtr++;
+            let checks = [];
+            //do all the checks that argtype satisfies all the requirements of oftype 
+            for (let i = 0; i < oftype.entries.length; ++i) {
+                const etype = argtype.options[0].entries[i];
+                checks.push(this.generateTypeCheck(`arg.entry_${i}`, etype, etype, oftype.entries[i]));
             }
             let op = "";
             if (checks.includes("false")) {
@@ -679,296 +990,48 @@ class CPPBodyEmitter {
                 + `}\n`;
             this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
         }
-        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(${argv})`;
-    }
-    generateSubtypeConceptCheck(argv, argtype, oftype) {
-        const subtypesig = `bool subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(Value val)`;
-        if (!this.subtypeFMap.has(subtypesig)) {
-            const order = this.subtypeOrderCtr++;
-            const moftype = this.typegen.getMIRType(oftype.trkey);
-            let getenum = `auto nenum = getNominalTypeOf_Value(val);`;
-            let tchk = "[INVALID]";
-            if (this.typegen.assembly.subtypeOf(this.typegen.tupleType, moftype)) {
-                tchk = "true";
-            }
-            else if (this.typegen.assembly.subtypeOf(moftype, this.typegen.apiType)) {
-                tchk = `((BSQ_GET_VALUE_PTR(val, BSQTuple)->flag & DATA_KIND_API_FLAG) != DATA_KIND_CLEAR_FLAG)`;
-            }
-            else if (this.typegen.assembly.subtypeOf(moftype, this.typegen.podType)) {
-                tchk = `((BSQ_GET_VALUE_PTR(val, BSQTuple)->flag & DATA_KIND_POD_FLAG) != DATA_KIND_CLEAR_FLAG)`;
-            }
-            else {
-                tchk = "false";
-            }
-            let chktuple = `if (nenum == MIRNominalTypeEnum_Tuple) { return ${tchk}; }`;
-            let rchk = "[INVALID]";
-            if (this.typegen.assembly.subtypeOf(this.typegen.recordType, moftype)) {
-                rchk = "true";
-            }
-            else if (this.typegen.assembly.subtypeOf(moftype, this.typegen.apiType)) {
-                rchk = `((BSQ_GET_VALUE_PTR(val, BSQRecord)->flag & DATA_KIND_API_FLAG) != DATA_KIND_CLEAR_FLAG))`;
-            }
-            else if (this.typegen.assembly.subtypeOf(moftype, this.typegen.podType)) {
-                rchk = `((BSQ_GET_VALUE_PTR(val, BSQRecord)->flag & DATA_KIND_POD_FLAG) != DATA_KIND_CLEAR_FLAG)`;
-            }
-            else {
-                rchk = "false";
-            }
-            let chkrecord = `else if (nenum == MIRNominalTypeEnum_Record) { return ${rchk}; }`;
-            let fchk = this.generateConceptArrayLookup(`getNominalTypeOf_Value(${argv})`, oftype);
-            let chkrest = `else { return ${fchk}; }`;
-            const decl = subtypesig
-                + "\n{\n"
-                + `    ${getenum}\n`
-                + `    ${chktuple}\n`
-                + `    ${chkrecord}\n`
-                + `    ${chkrest}\n`
-                + `}\n`;
-            this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
-        }
-        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}(${argv})`;
-    }
-    generateFastTupleTypeCheck(arg, argtype, oftype) {
-        if (this.typegen.typecheckIsName(argtype, /^NSCore::Bool$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Int$/) || this.typegen.typecheckIsName(argtype, /^NSCore::String$/)) {
-            return "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::SafeString<.*>$/) || this.typegen.typecheckIsName(argtype, /^NSCore::StringOf<.*>$/)) {
-            return "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::GUID$/) || this.typegen.typecheckIsName(argtype, /^NSCore::LogicalTime$/)
-            || this.typegen.typecheckIsName(argtype, /^NSCore::DataHash$/) || this.typegen.typecheckIsName(argtype, /^NSCore::CryptoHash$/)) {
-            return "false";
-        }
-        else if (this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.enumtype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.idkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.guididkeytype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.logicaltimeidkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.contenthashidkeytype)) {
-            return "false";
-        }
-        else {
-            if (this.typegen.typecheckAllKeys(argtype)) {
-                return "false";
-            }
-            if (this.typegen.typecheckAllKeys(argtype)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::Buffer<.*>$/)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::ISOTime$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Regex$/)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckRecord(argtype)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckUEntity(argtype)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckTuple(argtype)) {
-                return this.generateSubtypeTupleCheck(arg, argtype, oftype);
-            }
-            else {
-                const tsc = this.generateSubtypeTupleCheck(`BSQ_GET_VALUE_PTR(${arg}, BSQTuple)`, argtype, oftype);
-                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQTuple*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${tsc})`;
-            }
-        }
-    }
-    generateFastRecordTypeCheck(arg, argtype, oftype) {
-        if (this.typegen.typecheckIsName(argtype, /^NSCore::Bool$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Int$/) || this.typegen.typecheckIsName(argtype, /^NSCore::String$/)) {
-            return "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::SafeString<.*>$/) || this.typegen.typecheckIsName(argtype, /^NSCore::StringOf<.*>$/)) {
-            return "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::GUID$/) || this.typegen.typecheckIsName(argtype, /^NSCore::LogicalTime$/)
-            || this.typegen.typecheckIsName(argtype, /^NSCore::DataHash$/) || this.typegen.typecheckIsName(argtype, /^NSCore::CryptoHash$/)) {
-            return "false";
-        }
-        else if (this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.enumtype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.idkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.guididkeytype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.logicaltimeidkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.contenthashidkeytype)) {
-            return "false";
-        }
-        else {
-            if (this.typegen.typecheckAllKeys(argtype)) {
-                return "false";
-            }
-            if (this.typegen.typecheckAllKeys(argtype)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::Buffer<.*>$/)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::ISOTime$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Regex$/)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckTuple(argtype)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckUEntity(argtype)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckRecord(argtype)) {
-                return this.generateSubtypeRecordCheck(arg, argtype, oftype);
-            }
-            else {
-                const tsc = this.generateSubtypeRecordCheck(`BSQ_GET_VALUE_PTR(${arg}, BSQRecord)`, argtype, oftype);
-                return `(BSQ_IS_VALUE_PTR(${arg}) && dynamic_cast<BSQRecord*>(BSQ_GET_VALUE_PTR(${arg}, BSQRef)) != nullptr && ${tsc})`;
-            }
-        }
-    }
-    generateFastEntityTypeCheck(arg, argtype, oftype) {
-        if (this.typegen.typecheckIsName(argtype, /^NSCore::Bool$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Int$/) || this.typegen.typecheckIsName(argtype, /^NSCore::String$/)) {
-            return oftype.ekey === argtype.trkey ? "true" : "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::SafeString<.*>$/) || this.typegen.typecheckIsName(argtype, /^NSCore::StringOf<.*>$/)) {
-            return oftype.ekey === argtype.trkey ? "true" : "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::GUID$/) || this.typegen.typecheckIsName(argtype, /^NSCore::LogicalTime$/)
-            || this.typegen.typecheckIsName(argtype, /^NSCore::DataHash$/) || this.typegen.typecheckIsName(argtype, /^NSCore::CryptoHash$/)) {
-            return oftype.ekey === argtype.trkey ? "true" : "false";
-        }
-        else if (this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.enumtype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.idkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.guididkeytype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.logicaltimeidkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.contenthashidkeytype)) {
-            return oftype.ekey === argtype.trkey ? "true" : "false";
-        }
-        else {
-            if (this.typegen.typecheckAllKeys(argtype)) {
-                return `(getNominalTypeOf_KeyValue(${arg}) == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)})`;
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::Buffer<.*>$/)) {
-                return oftype.ekey === argtype.trkey ? "true" : "false";
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::ISOTime$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Regex$/)) {
-                return oftype.ekey === argtype.trkey ? "true" : "false";
-            }
-            else if (this.typegen.typecheckTuple(argtype) || this.typegen.typecheckRecord(argtype)) {
-                return "false";
-            }
-            else if (this.typegen.typecheckUEntity(argtype)) {
-                return oftype.ekey === argtype.trkey ? "true" : "false";
-            }
-            else {
-                return `(getNominalTypeOf_Value(${arg}) == MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(oftype.ekey)})`;
-            }
-        }
-    }
-    generateConceptArrayLookup(access, oftype) {
-        const lookups = oftype.ckeys.map((ckey) => {
-            const sizestr = this.typegen.getSubtypesArrayCount(ckey);
-            const arraystr = `MIRConceptSubtypeArray__${this.typegen.mangleStringForCpp(ckey)}`;
-            return sizestr === 0 ? "false" : `BSQObject::checkSubtype<${sizestr}>(${access}, ${arraystr})`;
-        });
-        if (lookups.find((op) => op === "false")) {
-            return "false";
-        }
-        else if (lookups.length === 1) {
-            return lookups[0];
-        }
-        else {
-            return lookups.join(" && ");
-        }
-    }
-    generateFastConceptTypeCheck(arg, argtype, oftype) {
-        if (oftype.trkey === "NSCore::Any") {
-            return "true";
-        }
-        if (oftype.trkey === "NSCore::Some") {
-            return !this.typegen.assembly.subtypeOf(this.typegen.noneType, argtype) ? "true" : `BSQ_IS_VALUE_NONNONE(${arg})`;
-        }
-        const moftype = this.typegen.getMIRType(oftype.trkey);
-        if (this.typegen.typecheckIsName(argtype, /^NSCore::Bool$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Int$/) || this.typegen.typecheckIsName(argtype, /^NSCore::String$/)) {
-            return this.typegen.assembly.subtypeOf(argtype, moftype) ? "true" : "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::SafeString<.*>$/) || this.typegen.typecheckIsName(argtype, /^NSCore::StringOf<.*>$/)) {
-            return this.typegen.assembly.subtypeOf(argtype, moftype) ? "true" : "false";
-        }
-        else if (this.typegen.typecheckIsName(argtype, /^NSCore::GUID$/) || this.typegen.typecheckIsName(argtype, /^NSCore::LogicalTime$/)
-            || this.typegen.typecheckIsName(argtype, /^NSCore::DataHash$/) || this.typegen.typecheckIsName(argtype, /^NSCore::CryptoHash$/)) {
-            return this.typegen.assembly.subtypeOf(argtype, moftype) ? "true" : "false";
-        }
-        else if (this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.enumtype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.idkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.guididkeytype) || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.logicaltimeidkeytype)
-            || this.typegen.typecheckEntityAndProvidesName(argtype, this.typegen.contenthashidkeytype)) {
-            return this.typegen.assembly.subtypeOf(argtype, moftype) ? "true" : "false";
-        }
-        else {
-            if (this.typegen.typecheckAllKeys(argtype)) {
-                return this.generateConceptArrayLookup(`getNominalTypeOf_KeyValue(${arg})`, oftype);
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::Buffer<.*>$/)) {
-                return this.typegen.assembly.subtypeOf(argtype, moftype) ? "true" : "false";
-            }
-            else if (this.typegen.typecheckIsName(argtype, /^NSCore::ISOTime$/) || this.typegen.typecheckIsName(argtype, /^NSCore::Regex$/)) {
-                return this.typegen.assembly.subtypeOf(argtype, moftype) ? "true" : "false";
-            }
-            else if (this.typegen.typecheckTuple(argtype)) {
-                if (this.typegen.assembly.subtypeOf(this.typegen.tupleType, moftype)) {
-                    return "true";
-                }
-                if (this.typegen.assembly.subtypeOf(moftype, this.typegen.apiType)) {
-                    return `((BSQ_GET_VALUE_PTR(${arg}, BSQTuple)->flag & DATA_KIND_API_FLAG) != DATA_KIND_CLEAR_FLAG)`;
-                }
-                if (this.typegen.assembly.subtypeOf(moftype, this.typegen.podType)) {
-                    return `((BSQ_GET_VALUE_PTR(${arg}, BSQTuple)->flag & DATA_KIND_POD_FLAG) != DATA_KIND_CLEAR_FLAG)`;
-                }
-                return "false";
-            }
-            else if (this.typegen.typecheckRecord(argtype)) {
-                if (this.typegen.assembly.subtypeOf(this.typegen.tupleType, moftype)) {
-                    return "true";
-                }
-                if (this.typegen.assembly.subtypeOf(moftype, this.typegen.apiType)) {
-                    return `((BSQ_GET_VALUE_PTR(${arg}, BSQRecord)->flag & DATA_KIND_API_FLAG) != DATA_KIND_CLEAR_FLAG)`;
-                }
-                if (this.typegen.assembly.subtypeOf(moftype, this.typegen.podType)) {
-                    return `((BSQ_GET_VALUE_PTR(${arg}, BSQRecord)->flag & DATA_KIND_POD_FLAG) != DATA_KIND_CLEAR_FLAG)`;
-                }
-                return "false";
-            }
-            else if (this.typegen.typecheckUEntity(argtype)) {
-                return this.typegen.assembly.subtypeOf(argtype, moftype) ? "true" : "false";
-            }
-            else {
-                const simplenominalok = moftype.options.every((copt) => {
-                    const cc = this.typegen.getMIRType(copt.trkey);
-                    const maybetuple = this.typegen.assembly.subtypeOf(this.typegen.tupleType, cc);
-                    const mayberecord = this.typegen.assembly.subtypeOf(this.typegen.recordType, cc);
-                    const maybepod = this.typegen.assembly.subtypeOf(this.typegen.podType, cc);
-                    const maybeapi = this.typegen.assembly.subtypeOf(this.typegen.apiType, cc);
-                    return !(maybetuple || mayberecord || maybepod || maybeapi);
-                });
-                if (simplenominalok) {
-                    return this.generateConceptArrayLookup(`getNominalTypeOf_Value(${arg})`, oftype);
-                }
-                else {
-                    return this.generateSubtypeConceptCheck(arg, argtype, oftype);
-                }
-            }
-        }
+        return `subtypeFROM_${this.typegen.mangleStringForCpp(argtype.trkey)}_TO_${this.typegen.mangleStringForCpp(oftype.trkey)}_EL(${argv})`;
     }
     generateTypeCheck(arg, argtype, inferargtype, oftype) {
-        if (inferargtype.trkey !== argtype.trkey) {
-            arg = this.typegen.coerce(arg, argtype, inferargtype);
-        }
         if (this.typegen.assembly.subtypeOf(inferargtype, oftype)) {
+            //this case also include oftype == Any
             return "true";
+        }
+        const argrepr = this.typegen.getCPPReprFor(argtype);
+        if (oftype.trkey === "NSCore::Some") {
+            if (!this.typegen.assembly.subtypeOf(this.typegen.noneType, inferargtype)) {
+                return "true";
+            }
+            else {
+                if (argrepr instanceof type_repr_1.NoneRepr) {
+                    return "false";
+                }
+                else if (argrepr instanceof type_repr_1.RefRepr || argrepr instanceof type_repr_1.StructRepr) {
+                    return "true";
+                }
+                else {
+                    return `BSQ_IS_VALUE_NONNONE(${arg})`;
+                }
+            }
         }
         const tests = oftype.options.map((topt) => {
             const mtype = this.typegen.getMIRType(topt.trkey);
             assert(mtype !== undefined, "We should generate all the component types by default??");
             if (topt instanceof mir_assembly_1.MIREntityType) {
-                return this.generateFastEntityTypeCheck(arg, inferargtype, topt);
+                return this.generateFastEntityTypeCheck(arg, argtype, inferargtype, topt);
             }
             else if (topt instanceof mir_assembly_1.MIRConceptType) {
-                return this.generateFastConceptTypeCheck(arg, inferargtype, topt);
+                return this.generateFastConceptTypeCheck(arg, argtype, inferargtype, topt);
             }
             else if (topt instanceof mir_assembly_1.MIRTupleType) {
-                return this.generateFastTupleTypeCheck(arg, inferargtype, topt);
+                return this.generateFastTupleTypeCheck(arg, argtype, inferargtype, topt);
+            }
+            else if (topt instanceof mir_assembly_1.MIRRecordType) {
+                return this.generateFastRecordTypeCheck(arg, argtype, inferargtype, topt);
             }
             else {
-                assert(topt instanceof mir_assembly_1.MIRRecordType);
-                return this.generateFastRecordTypeCheck(arg, inferargtype, topt);
+                assert(topt instanceof mir_assembly_1.MIREphemeralListType);
+                return this.generateEphemeralTypeCheck(arg, argtype, topt);
             }
         })
             .filter((test) => test !== "false");
@@ -985,22 +1048,25 @@ class CPPBodyEmitter {
             return `(${tests.join(" || ")})`;
         }
     }
-    generateMIRPackStore(op) {
-        if (Array.isArray(op.src)) {
-            let ops = [];
-            for (let i = 0; i < op.src.length; ++i) {
-                ops.push(`${this.varToCppName(op.names[i])} = ${this.argToCpp(op.src[i], this.getArgType(op.names[i]))}`);
-            }
-            return ops.join(", ") + ";";
+    generateMIRPackSlice(op) {
+        const etype = this.typegen.getMIRType(op.sltype).options[0];
+        let args = [];
+        for (let i = 0; i < etype.entries.length; ++i) {
+            args.push(`${this.varToCppName(op.src)}.entry_${i}`);
         }
-        else {
-            const tlist = this.getArgType(op.src).options[0].entries;
-            let ops = [];
-            for (let i = 0; i < tlist.length; ++i) {
-                ops.push(`${this.varToCppName(op.names[i])} = ${this.varToCppName(op.src)}.entry_${i}`);
-            }
-            return ops.join(", ") + ";";
+        return `${this.varToCppName(op.trgt)} = ${this.typegen.mangleStringForCpp(etype.trkey)}{${args.join(", ")}};`;
+    }
+    generateMIRPackSliceExtend(op) {
+        const fromtype = this.getArgType(op.basepack).options[0];
+        const etype = this.typegen.getMIRType(op.sltype).options[0];
+        let args = [];
+        for (let i = 0; i < fromtype.entries.length; ++i) {
+            args.push(`${this.varToCppName(op.basepack)}.entry_${i}`);
         }
+        for (let i = 0; i < op.ext.length; ++i) {
+            args.push(this.argToCpp(op.ext[i], etype.entries[fromtype.entries.length + i]));
+        }
+        return `${this.varToCppName(op.trgt)} = ${this.typegen.mangleStringForCpp(etype.trkey)}{${args.join(", ")}};`;
     }
     generateStmt(op) {
         switch (op.tag) {
@@ -1112,7 +1178,7 @@ class CPPBodyEmitter {
             }
             case mir_ops_1.MIROpTag.MIRModifyWithFields: {
                 const mf = op;
-                return this.generateMIRModifyWithFields(mf);
+                return this.generateMIRModifyWithFields(mf, this.typegen.getMIRType(mf.resultNominalType));
             }
             case mir_ops_1.MIROpTag.MIRStructuredExtendTuple: {
                 const si = op;
@@ -1124,7 +1190,7 @@ class CPPBodyEmitter {
             }
             case mir_ops_1.MIROpTag.MIRStructuredExtendObject: {
                 const so = op;
-                return this.generateMIRStructuredExtendObject(so);
+                return this.generateMIRStructuredExtendObject(so, this.typegen.getMIRType(so.resultNominalType));
             }
             case mir_ops_1.MIROpTag.MIRLoadFromEpehmeralList: {
                 const le = op;
@@ -1140,40 +1206,68 @@ class CPPBodyEmitter {
             case mir_ops_1.MIROpTag.MIRPrefixOp: {
                 const pfx = op;
                 if (pfx.op === "!") {
-                    const tval = this.generateTruthyConvert(pfx.arg);
-                    return `${this.varToCppName(pfx.trgt)} = !${tval};`;
+                    return `${this.varToCppName(pfx.trgt)} = !${this.argToCpp(pfx.arg, this.typegen.boolType)};`;
                 }
                 else {
                     if (pfx.op === "-") {
-                        const scope = this.typegen.mangleStringForCpp("$scope$");
-                        return `${this.varToCppName(pfx.trgt)} = op_intNegate(${scope}, ${this.argToCpp(pfx.arg, this.typegen.intType)});`;
+                        if (pfx.arg instanceof mir_ops_1.MIRConstantInt) {
+                            return `${this.varToCppName(pfx.trgt)} = -${pfx.arg.value};`;
+                        }
+                        else if (pfx.arg instanceof mir_ops_1.MIRConstantBigInt) {
+                            const scope = this.typegen.mangleStringForCpp("$scope$");
+                            return `${this.varToCppName(pfx.trgt)} = BSQ_NEW_ADD_SCOPE(${scope}, BSQBigInt, "-${pfx.arg.digits()}");`;
+                        }
+                        else if (pfx.arg instanceof mir_ops_1.MIRConstantFloat64) {
+                            return `${this.varToCppName(pfx.trgt)} = -${pfx.arg.digits()};`;
+                        }
+                        else {
+                            const opt = this.getArgType(pfx.trgt);
+                            if (this.typegen.typecheckIsName(opt, /^NSCore::Int$/)) {
+                                return `${this.varToCppName(pfx.trgt)} = -${this.argToCpp(pfx.arg, this.typegen.intType)};`;
+                            }
+                            else if (this.typegen.typecheckIsName(opt, /^NSCore::BigInt$/)) {
+                                const scope = this.typegen.mangleStringForCpp("$scope$");
+                                return `${this.varToCppName(pfx.trgt)} = BSQBigInt::negate(${scope}, ${this.argToCpp(pfx.arg, this.typegen.bigIntType)});`;
+                            }
+                            else {
+                                return `${this.varToCppName(pfx.trgt)} = -${this.argToCpp(pfx.arg, this.typegen.float64Type)};`;
+                            }
+                        }
                     }
                     else {
-                        return `${this.varToCppName(pfx.trgt)} = ${this.argToCpp(pfx.arg, this.typegen.intType)};`;
+                        return `${this.varToCppName(pfx.trgt)} = ${this.argToCpp(pfx.arg, this.getArgType(pfx.trgt))};`;
                     }
                 }
             }
             case mir_ops_1.MIROpTag.MIRBinOp: {
                 const bop = op;
-                const scope = this.typegen.mangleStringForCpp("$scope$");
-                if (bop.op === "+") {
-                    return `${this.varToCppName(bop.trgt)} = op_intAdd(${scope}, ${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)});`;
+                const opt = this.getArgType(bop.trgt);
+                if (this.typegen.typecheckIsName(opt, /^NSCore::Int$/)) {
+                    if (bop.op !== "/") {
+                        const chkedop = new Map().set("+", "__builtin_add_overflow").set("-", "__builtin_sub_overflow").set("*", "__builtin_mul_overflow").get(bop.op);
+                        const opp = `if(${chkedop}(${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)}, &${this.varToCppName(bop.trgt)}) || INT_OOF_BOUNDS(${this.varToCppName(bop.trgt)})) { BSQ_ABORT("INT Overflow", "${filenameClean(this.currentFile)}", ${bop.sinfo.line}); }`;
+                        return opp;
+                    }
+                    else {
+                        const chk = `if(${this.argToCpp(bop.rhs, this.typegen.intType)} == 0) { BSQ_ABORT("Div by 0", "${filenameClean(this.currentFile)}", ${bop.sinfo.line}); }`;
+                        const opp = `${this.varToCppName(bop.trgt)} = ${this.argToCpp(bop.lhs, this.typegen.intType)} / ${this.argToCpp(bop.rhs, this.typegen.intType)};`;
+                        return chk + " " + opp;
+                    }
                 }
-                if (bop.op === "-") {
-                    return `${this.varToCppName(bop.trgt)} = op_intSub(${scope}, ${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)});`;
-                }
-                if (bop.op === "*") {
-                    return `${this.varToCppName(bop.trgt)} = op_intMult(${scope}, ${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)});`;
-                }
-                else if (bop.op === "/") {
-                    return `${this.varToCppName(bop.trgt)} = op_intDiv(${scope}, ${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)}); if(${this.varToCppName(bop.trgt)} == nullptr) { BSQ_ABORT("Div by 0", "${filenameClean(this.currentFile)}", ${op.sinfo.line}); }`;
+                else if (this.typegen.typecheckIsName(opt, /^NSCore::BigInt$/)) {
+                    const bigop = new Map().set("+", "add").set("-", "sub").set("*", "mult").set("/", "div").get(bop.op);
+                    const opp = `${this.varToCppName(bop.trgt)} = BSQBigInt::${bigop}(${this.argToCpp(bop.lhs, this.typegen.bigIntType)}, ${this.argToCpp(bop.rhs, this.typegen.bigIntType)});`;
+                    if (bop.op !== "/") {
+                        return opp;
+                    }
+                    else {
+                        const chk = `if(${this.argToCpp(bop.rhs, this.typegen.bigIntType)}->eqI64(0)) { BSQ_ABORT("Div by 0", "${filenameClean(this.currentFile)}", ${bop.sinfo.line}); }`;
+                        return chk + " " + opp;
+                    }
                 }
                 else {
-                    return ` ${this.varToCppName(bop.trgt)} = op_intMod(${scope}, ${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)}); if(${this.varToCppName(bop.trgt)} == nullptr) { BSQ_ABORT("Mod by 0 or Negative Mod Values", "${filenameClean(this.currentFile)}", ${op.sinfo.line}); }`;
+                    return `${this.varToCppName(bop.trgt)} = ${this.argToCpp(bop.lhs, this.typegen.float64Type)} ${bop.op} ${this.argToCpp(bop.rhs, this.typegen.float64Type)};`;
                 }
-            }
-            case mir_ops_1.MIROpTag.MIRGetKey: {
-                return NOT_IMPLEMENTED("MIRGetKey");
             }
             case mir_ops_1.MIROpTag.MIRBinEq: {
                 const beq = op;
@@ -1214,9 +1308,13 @@ class CPPBodyEmitter {
                 const vsop = op;
                 return `${this.varToCppName(vsop.name)} = ${this.argToCpp(vsop.src, this.getArgType(vsop.name))};`;
             }
-            case mir_ops_1.MIROpTag.MIRPackStore: {
+            case mir_ops_1.MIROpTag.MIRPackSlice: {
                 const vps = op;
-                return this.generateMIRPackStore(vps);
+                return this.generateMIRPackSlice(vps);
+            }
+            case mir_ops_1.MIROpTag.MIRPackExtend: {
+                const vpe = op;
+                return this.generateMIRPackSliceExtend(vpe);
             }
             case mir_ops_1.MIROpTag.MIRReturnAssign: {
                 const raop = op;
@@ -1233,7 +1331,7 @@ class CPPBodyEmitter {
                     return "assert(false);";
                 }
                 else {
-                    return `{ std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv; std::cout << conv.to_bytes(diagnostic_format(${this.argToCpp(dbgop.value, this.typegen.anyType)})) << "\\n"; }`;
+                    return `{ std::cout << diagnostic_format(${this.argToCpp(dbgop.value, this.typegen.anyType)}) << "\\n"; }`;
                 }
             }
             case mir_ops_1.MIROpTag.MIRJump: {
@@ -1242,7 +1340,7 @@ class CPPBodyEmitter {
             }
             case mir_ops_1.MIROpTag.MIRJumpCond: {
                 const cjop = op;
-                return `if(${this.generateTruthyConvert(cjop.arg)}) {goto ${this.labelToCpp(cjop.trueblock)};} else {goto ${cjop.falseblock};}`;
+                return `if(${this.argToCpp(cjop.arg, this.typegen.boolType)}) {goto ${this.labelToCpp(cjop.trueblock)};} else {goto ${cjop.falseblock};}`;
             }
             case mir_ops_1.MIROpTag.MIRJumpNone: {
                 const njop = op;
@@ -1284,22 +1382,10 @@ class CPPBodyEmitter {
         }
         if (block.label === "exit") {
             const rctype = this.typegen.getRefCountableStatus(this.currentRType);
-            if (rctype === "no") {
-                //nothing needed
+            if (rctype !== "no") {
+                gblock.push(this.typegen.buildReturnOpForType(this.currentRType, "$$return", "$callerscope$"));
             }
-            else if (rctype === "int") {
-                gblock.push("$callerscope$.processReturnChecked(_return_);");
-            }
-            else if (rctype === "direct") {
-                gblock.push("$callerscope$.callReturnDirect(_return_);");
-            }
-            else if (rctype === "checked") {
-                gblock.push("$callerscope$.processReturnChecked(_return_);");
-            }
-            else {
-                gblock.push("_return_.processForCallReturn($callerscope$);");
-            }
-            gblock.push("return _return_;");
+            gblock.push("return $$return;");
         }
         this.generatedBlocks.set(block.label, gblock);
     }
@@ -1309,7 +1395,7 @@ class CPPBodyEmitter {
         let vdecls = new Map();
         body.vtypes.forEach((tkey, name) => {
             if (params.findIndex((p) => p.name === name) === -1) {
-                const declt = this.typegen.getCPPTypeFor(this.typegen.getMIRType(tkey), "storage");
+                const declt = this.typegen.getCPPReprFor(this.typegen.getMIRType(tkey)).std;
                 if (!vdecls.has(declt)) {
                     vdecls.set(declt, []);
                 }
@@ -1330,8 +1416,8 @@ class CPPBodyEmitter {
     generateCPPInvoke(idecl) {
         this.currentFile = idecl.srcFile;
         this.currentRType = this.typegen.getMIRType(idecl.resultType);
-        const args = idecl.params.map((arg) => `${this.typegen.getCPPTypeFor(this.typegen.getMIRType(arg.type), "parameter")} ${this.varNameToCppName(arg.name)}`);
-        const restype = this.typegen.getCPPTypeFor(this.typegen.getMIRType(idecl.resultType), "return");
+        const args = idecl.params.map((arg) => `${this.typegen.getCPPReprFor(this.typegen.getMIRType(arg.type)).std} ${this.varNameToCppName(arg.name)}`);
+        const restype = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.resultType)).std;
         if (this.typegen.getRefCountableStatus(this.typegen.getMIRType(idecl.resultType)) !== "no") {
             args.push(`BSQRefScope& $callerscope$`);
         }
@@ -1365,101 +1451,317 @@ class CPPBodyEmitter {
             return { fwddecl: decl + ";", fulldecl: `${decl} { ${this.generateBuiltinBody(idecl, params)} }\n` };
         }
     }
+    getEnclosingListTypeForListOp(idecl) {
+        return this.typegen.getMIRType(idecl.enclosingDecl);
+    }
+    getListContentsInfoForListOp(idecl) {
+        return this.typegen.assembly.entityDecls.get(idecl.enclosingDecl).terms.get("T");
+    }
+    getListResultTypeFor(idecl) {
+        const le = this.typegen.assembly.entityDecls.get(idecl.resultType);
+        const ltype = this.typegen.getMIRType(le.tkey);
+        const ctype = le.terms.get("T");
+        return [this.typegen.getCPPReprFor(ltype).base, this.typegen.getCPPReprFor(ctype).base, `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(le.tkey)}`];
+    }
+    getSetContentsInfoForListOp(idecl) {
+        return this.typegen.assembly.entityDecls.get(idecl.enclosingDecl).terms.get("T");
+    }
+    createListOpsFor(ltype, ctype) {
+        const lrepr = this.typegen.getCPPReprFor(ltype).base;
+        const crepr = this.typegen.getCPPReprFor(ctype);
+        const cops = this.typegen.getFunctorsForType(ctype);
+        return `BSQListOps<${lrepr}, ${crepr.std}, ${cops.inc}, ${cops.dec}, ${cops.display}>`;
+    }
+    createLambdaFor(pc) {
+        const pci = this.assembly.invokeDecls.get(pc.code) || this.assembly.primitiveInvokeDecls.get(pc.code);
+        let params = [];
+        let args = [];
+        for (let i = 0; i < pci.params.length - pc.cargs.length; ++i) {
+            const prepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(pci.params[i].type));
+            params.push(`${prepr.std} $arg_${i}`);
+            args.push(`$arg_${i}`);
+        }
+        const cargs = pc.cargs.map((ca) => this.typegen.mangleStringForCpp(ca));
+        const rrepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(pci.resultType));
+        return `[&](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`;
+    }
     generateBuiltinBody(idecl, params) {
         const scopevar = this.varNameToCppName("$scope$");
         let bodystr = ";";
         switch (idecl.implkey) {
-            case "enum_create": {
-                bodystr = `auto _return_ = BSQEnum{ (uint32_t)BSQ_GET_VALUE_TAGGED_INT(${params[0]}), MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
+            case "validator_accepts": {
+                const rs = this.assembly.literalRegexs.get(this.assembly.validatorRegexs.get(idecl.enclosingDecl));
+                bodystr = cpp_regex_1.compileRegexCppMatch(rs, params[0], "$$return");
                 break;
             }
-            case "list_size":
-            case "set_size":
-            case "map_size": {
-                bodystr = `auto _return_ = BSQ_ENCODE_VALUE_TAGGED_INT(${params[0]}->entries.size());`;
+            case "enum_create": {
+                bodystr = `auto $$return = BSQEnum{ (uint32_t)BSQ_GET_VALUE_TAGGED_INT(${params[0]}), MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
+                break;
+            }
+            case "string_count": {
+                bodystr = `auto $$return = ${params[0]}->sdata.size();`;
+                break;
+            }
+            case "string_charat": {
+                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQString, ${params[0]}->sdata[${params[1]}]);`;
+                break;
+            }
+            case "string_concat": {
+                const body = `acc.append((*iter)->sdata);`;
+                const sstr = `std::string acc; for(auto iter = ${params[0]}->entries.cbegin(); iter != ${params[0]}->entries.cend(); ++iter) { ${body} }`;
+                bodystr = `${sstr}; auto $$return = BSQ_NEW_NO_RC(BSQString, std::move(acc));`;
+                break;
+            }
+            case "string_substring": {
+                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQString, ${params[0]}->substr(${params[1]}, ${params[2]} - ${params[1]});`;
+                break;
+            }
+            case "safestring_string": {
+                bodystr = `auto $$return =  BSQ_NEW_NO_RC(BSQString, BSQ_GET_VALUE_PTR(${params[0]}, BSQSafeString)->sdata);`;
+                break;
+            }
+            case "safestring_unsafe_from": {
+                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQSafeString, ${params[0]}->sdata, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)});`;
+                break;
+            }
+            case "stringof_string": {
+                bodystr = `auto $$return =  BSQ_NEW_NO_RC(BSQString, BSQ_GET_VALUE_PTR(${params[0]}, BSQStringOf)->sdata);`;
+                break;
+            }
+            case "stringof_unsafe_from": {
+                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQStringOf, ${params[0]}->sdata, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)});`;
+                break;
+            }
+            case "list_size": {
+                bodystr = `auto $$return = (int64_t)(${params[0]}->entries.size());`;
                 break;
             }
             case "list_unsafe_get": {
-                bodystr = `auto _return_ = ${params[0]}->entries[BSQ_GET_VALUE_TAGGED_INT(${params[1]})];`;
+                bodystr = `auto $$return = ${params[0]}->entries[${params[1]}];`;
                 break;
             }
+            case "list_all": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_all(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_any": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_any(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_none": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_none(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_count": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_count(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_countnot": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_countnot(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_indexof": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexof(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`;
+                break;
+            }
+            case "list_indexoflast": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexoflast(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`;
+                break;
+            }
+            case "list_indexofnot": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexofnot(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`;
+                break;
+            }
+            case "list_indexofnotlast": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexofnotlast(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`;
+                break;
+            }
+            case "list_count_keytype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_indexof_keytype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_indexoflast_keytype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_min": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_max": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_sum": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_filter": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_filter(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_filternot": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_filternot(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_oftype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_cast": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_slice": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_takewhile": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_discardwhile": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_takeuntil": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_discarduntil": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_unique": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_reverse": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_map": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("f"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_map<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_mapindex": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("f"));
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "set_has_key": {
+                const tcmp = this.typegen.getFunctorsForType(this.getSetContentsInfoForListOp(idecl)).eq;
+                bodystr = `auto $$return = std::binary_search(${params[0]}->entries.begin(), ${params[0]}->entries.end(), ${params[1]}, ${tcmp}{});`;
+                break;
+            }
+            /*
             case "list_unsafe_add": {
-                bodystr = `auto _return_ = ${params[0]}->unsafeAdd(${scopevar}, ${params[1]});`;
+                bodystr = `auto $$return = ${params[0]}->unsafeAdd(${scopevar}, ${params[1]});`
                 break;
             }
             case "list_unsafe_set": {
-                bodystr = `auto _return_ = ${params[0]}->unsafeSet(${scopevar}, BSQ_GET_VALUE_TAGGED_INT(${params[1]}), ${params[2]});`;
+                bodystr = `auto $$return = ${params[0]}->unsafeSet(${scopevar}, BSQ_GET_VALUE_TAGGED_INT(${params[1]}), ${params[2]});`
                 break;
             }
             case "set_has_key":
             case "map_has_key": {
-                bodystr = `auto _return_ = ${params[0]}->entries.find(${params[1]}) != ${params[0]}->entries.cend();`;
+                bodystr = `auto $$return = ${params[0]}->entries.find(${params[1]}) != ${params[0]}->entries.cend();`;
                 break;
             }
             case "map_at_key": {
-                bodystr = `auto _return_ = (${params[0]}->entries.find(${params[1]}))->second.first;`;
+                bodystr = `auto $$return = (${params[0]}->entries.find(${params[1]}))->second.first;`;
                 break;
             }
             case "set_at_val": {
-                bodystr = `auto _return_ = (${params[0]}->entries.find(${params[1]}))->second;`;
+                bodystr = `auto $$return = (${params[0]}->entries.find(${params[1]}))->second;`;
                 break;
             }
             case "map_at_val": {
-                bodystr = `auto _return_ = (${params[0]}->entries.find(${params[1]}))->second.second;`;
+                bodystr = `auto $$return = (${params[0]}->entries.find(${params[1]}))->second.second;`;
                 break;
             }
             case "set_get_keylist":
             case "map_get_keylist": {
-                bodystr = "auto _return_ = " + `${params[0]}->keys` + ";";
+                bodystr = "auto $$return = " + `${params[0]}->keys` + ";";
                 break;
             }
             case "set_clear_val":
             case "map_clear_val": {
-                bodystr = "auto _return_ = " + `${params[0]}->clearKey(${params[1]}, ${params[2]}, ${scopevar});`;
+                bodystr = "auto $$return = " + `${params[0]}->clearKey(${params[1]}, ${params[2]}, ${scopevar});`;
                 break;
             }
             case "set_unsafe_update": {
-                bodystr = `auto _return_ = ${params[0]}->update(${params[1]}, ${params[2]}, ${scopevar});`;
+                bodystr = `auto $$return = ${params[0]}->update(${params[1]}, ${params[2]}, ${scopevar});`;
                 break;
             }
             case "map_unsafe_update": {
-                bodystr = `auto _return_ = ${params[0]}->update(${params[1]}, ${params[2]}, ${params[3]}, ${scopevar});`;
+                bodystr = `auto $$return = ${params[0]}->update(${params[1]}, ${params[2]}, ${params[3]}, ${scopevar});`;
                 break;
             }
             case "set_unsafe_add": {
-                bodystr = `auto _return_ = ${params[0]}->add(${params[1]}, ${params[2]}, ${params[3]}, ${scopevar});`;
+                bodystr = `auto $$return = ${params[0]}->add(${params[1]}, ${params[2]}, ${params[3]}, ${scopevar});`;
                 break;
             }
             case "map_unsafe_add": {
-                bodystr = `auto _return_ = ${params[0]}->add(${params[1]}, ${params[2]}, ${params[3]}, ${params[4]}, ${scopevar});`;
+                bodystr = `auto $$return = ${params[0]}->add(${params[1]}, ${params[2]}, ${params[3]}, ${params[4]}, ${scopevar});`;
                 break;
             }
+            */
             default: {
-                bodystr = `[Builtin not defined -- ${idecl.iname}]`;
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
         }
         const refscope = `BSQRefScope ${scopevar};`;
         let returnmgr = "";
         if (this.typegen.getRefCountableStatus(this.currentRType) !== "no") {
-            const rctype = this.typegen.getRefCountableStatus(this.currentRType);
-            if (rctype === "no") {
-                //nothing needed
-            }
-            else if (rctype === "int") {
-                returnmgr = "$callerscope$.processReturnChecked(_return_);";
-            }
-            else if (rctype === "direct") {
-                returnmgr = "$callerscope$.callReturnDirect(_return_);";
-            }
-            else if (rctype === "checked") {
-                returnmgr = "$callerscope$.processReturnChecked(_return_);";
-            }
-            else {
-                returnmgr = "_return_.processForCallReturn($callerscope$);";
-            }
+            returnmgr = this.typegen.buildReturnOpForType(this.currentRType, "$$return", "$callerscope$");
         }
-        return "\n    " + refscope + "\n    " + bodystr + "\n    " + returnmgr + "\n    " + "return _return_;\n";
+        return "\n    " + refscope + "\n    " + bodystr + "\n    " + returnmgr + "\n    " + "return $$return;\n";
     }
 }
 exports.CPPBodyEmitter = CPPBodyEmitter;

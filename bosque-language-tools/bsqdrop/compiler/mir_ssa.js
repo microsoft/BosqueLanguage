@@ -253,17 +253,18 @@ function assignSSA(op, remap, ctrs) {
             processValueOpTempSSA(bop, remap, ctrs);
             break;
         }
-        case mir_ops_1.MIROpTag.MIRGetKey: {
-            const mgk = op;
-            mgk.arg = processSSA_Use(mgk.arg, remap);
-            processValueOpTempSSA(mgk, remap, ctrs);
-            break;
-        }
         case mir_ops_1.MIROpTag.MIRBinEq: {
             const beq = op;
             beq.lhs = processSSA_Use(beq.lhs, remap);
             beq.rhs = processSSA_Use(beq.rhs, remap);
             processValueOpTempSSA(beq, remap, ctrs);
+            break;
+        }
+        case mir_ops_1.MIROpTag.MIRBinLess: {
+            const bl = op;
+            bl.lhs = processSSA_Use(bl.lhs, remap);
+            bl.rhs = processSSA_Use(bl.rhs, remap);
+            processValueOpTempSSA(bl, remap, ctrs);
             break;
         }
         case mir_ops_1.MIROpTag.MIRBinCmp: {
@@ -309,15 +310,17 @@ function assignSSA(op, remap, ctrs) {
             vs.name = convertToSSA(vs.name, remap, ctrs);
             break;
         }
-        case mir_ops_1.MIROpTag.MIRPackStore: {
-            const pvs = op;
-            if (Array.isArray(pvs.src)) {
-                pvs.src = processSSAUse_RemapArgs(pvs.src, remap);
-            }
-            else {
-                pvs.src = processSSA_Use(pvs.src, remap);
-            }
-            pvs.names = pvs.names.map((name) => convertToSSA(name, remap, ctrs));
+        case mir_ops_1.MIROpTag.MIRPackSlice: {
+            const pso = op;
+            pso.src = processSSA_Use(pso.src, remap);
+            pso.trgt = convertToSSA(pso.trgt, remap, ctrs);
+            break;
+        }
+        case mir_ops_1.MIROpTag.MIRPackExtend: {
+            const pse = op;
+            pse.basepack = processSSA_Use(pse.basepack, remap);
+            pse.ext = processSSAUse_RemapArgs(pse.ext, remap);
+            pse.trgt = convertToSSA(pse.trgt, remap, ctrs);
             break;
         }
         case mir_ops_1.MIROpTag.MIRReturnAssign: {
@@ -374,24 +377,24 @@ function generatePhi(sinfo, lv, opts, ctrs) {
 function computePhis(sinfo, block, ctrs, remapped, links, live) {
     let remap = new Map();
     let phis = [];
-    live.get(block).liveEntry.forEach((lv) => {
+    live.get(block).liveEntry.forEach((v, n) => {
         const preds = links.get(block).preds;
         let phiOpts = [];
         let uniqueOpts = new Map();
         preds.forEach((pred) => {
             const pm = remapped.get(pred);
-            const mreg = pm.get(lv);
+            const mreg = pm.get(n);
             uniqueOpts.set(mreg.nameID, mreg);
             phiOpts.push([pred, mreg]);
         });
         if (uniqueOpts.size === 1) {
             const rmp = [...uniqueOpts][0][1];
-            remap.set(lv, rmp);
+            remap.set(n, rmp);
         }
         else {
-            const phi = generatePhi(sinfo, lv, phiOpts, ctrs);
+            const phi = generatePhi(sinfo, n, phiOpts, ctrs);
             phis.push(phi);
-            remap.set(lv, phi.trgt);
+            remap.set(n, phi.trgt);
         }
     });
     return [phis, remap];
@@ -408,8 +411,8 @@ function convertBodyToSSA(body, args) {
         if (block.label === "entry") {
             let remap = new Map();
             args.forEach((arg, name) => remap.set(name, new mir_ops_1.MIRVariable(name)));
-            remap.set("__ir_ret__", new mir_ops_1.MIRVariable("__ir_ret__"));
-            remap.set("_return_", new mir_ops_1.MIRVariable("_return_"));
+            remap.set("$__ir_ret__", new mir_ops_1.MIRVariable("$__ir_ret__"));
+            remap.set("$$return", new mir_ops_1.MIRVariable("$$return"));
             for (let i = 0; i < block.ops.length; ++i) {
                 assignSSA(block.ops[i], remap, ctrs);
             }

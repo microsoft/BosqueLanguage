@@ -25,13 +25,6 @@ class PositionalArgument extends InvokeArgument {
     }
 }
 exports.PositionalArgument = PositionalArgument;
-class MapArgument extends InvokeArgument {
-    constructor(key, value) {
-        super(value, false);
-        this.key = key;
-    }
-}
-exports.MapArgument = MapArgument;
 class Arguments {
     constructor(args) {
         this.argList = args;
@@ -106,6 +99,8 @@ var ExpressionTag;
     ExpressionTag["LiteralNoneExpression"] = "LiteralNoneExpression";
     ExpressionTag["LiteralBoolExpression"] = "LiteralBoolExpression";
     ExpressionTag["LiteralIntegerExpression"] = "LiteralIntegerExpression";
+    ExpressionTag["LiteralBigIntegerExpression"] = "LiteralBigIntegerExpression";
+    ExpressionTag["LiteralFloatExpression"] = "LiteralFloatExpression";
     ExpressionTag["LiteralStringExpression"] = "LiteralStringExpression";
     ExpressionTag["LiteralRegexExpression"] = "LiteralRegexExpression";
     ExpressionTag["LiteralTypedStringExpression"] = "LiteralTypedStringExpression";
@@ -120,14 +115,17 @@ var ExpressionTag;
     ExpressionTag["ConstructorEphemeralValueList"] = "ConstructorEphemeralValueList";
     ExpressionTag["ConstructorPCodeExpression"] = "ConstructorPCodeExpression";
     ExpressionTag["PCodeInvokeExpression"] = "PCodeInvokeExpression";
+    ExpressionTag["ResultExpression"] = "ResultExpression";
     ExpressionTag["CallNamespaceFunctionExpression"] = "CallNamespaceFunctionExpression";
     ExpressionTag["CallStaticFunctionExpression"] = "CallStaticFunctionExpression";
     ExpressionTag["PostfixOpExpression"] = "PostfixOpExpression";
     ExpressionTag["PrefixOpExpression"] = "PrefixOpExpression";
+    ExpressionTag["TailTypeExpression"] = "TailTypeExpression";
     ExpressionTag["BinOpExpression"] = "BinOpExpression";
     ExpressionTag["BinCmpExpression"] = "BinCmpExpression";
     ExpressionTag["BinEqExpression"] = "BinEqExpression";
     ExpressionTag["BinLogicExpression"] = "BinLogicExpression";
+    ExpressionTag["MapEntryConstructorExpression"] = "MapEntryConstructorExpression";
     ExpressionTag["NonecheckExpression"] = "NonecheckExpression";
     ExpressionTag["CoalesceExpression"] = "CoalesceExpression";
     ExpressionTag["SelectExpression"] = "SelectExpression";
@@ -171,6 +169,20 @@ class LiteralIntegerExpression extends Expression {
     }
 }
 exports.LiteralIntegerExpression = LiteralIntegerExpression;
+class LiteralBigIntegerExpression extends Expression {
+    constructor(sinfo, value) {
+        super(ExpressionTag.LiteralBigIntegerExpression, sinfo);
+        this.value = value;
+    }
+}
+exports.LiteralBigIntegerExpression = LiteralBigIntegerExpression;
+class LiteralFloatExpression extends Expression {
+    constructor(sinfo, value) {
+        super(ExpressionTag.LiteralFloatExpression, sinfo);
+        this.value = value;
+    }
+}
+exports.LiteralFloatExpression = LiteralFloatExpression;
 class LiteralStringExpression extends Expression {
     constructor(sinfo, value) {
         super(ExpressionTag.LiteralStringExpression, sinfo);
@@ -194,10 +206,9 @@ class LiteralTypedStringExpression extends Expression {
 }
 exports.LiteralTypedStringExpression = LiteralTypedStringExpression;
 class LiteralTypedStringConstructorExpression extends Expression {
-    constructor(sinfo, value, asValue, stype) {
+    constructor(sinfo, value, stype) {
         super(ExpressionTag.LiteralTypedStringConstructorExpression, sinfo);
         this.value = value;
-        this.asValue = asValue;
         this.stype = stype;
     }
 }
@@ -226,19 +237,17 @@ class AccessVariableExpression extends Expression {
 }
 exports.AccessVariableExpression = AccessVariableExpression;
 class ConstructorPrimaryExpression extends Expression {
-    constructor(sinfo, ctype, asvalue, args) {
+    constructor(sinfo, ctype, args) {
         super(ExpressionTag.ConstructorPrimaryExpression, sinfo);
         this.ctype = ctype;
-        this.asValue = asvalue;
         this.args = args;
     }
 }
 exports.ConstructorPrimaryExpression = ConstructorPrimaryExpression;
 class ConstructorPrimaryWithFactoryExpression extends Expression {
-    constructor(sinfo, ctype, asvalue, factory, pragmas, terms, args) {
+    constructor(sinfo, ctype, factory, pragmas, terms, args) {
         super(ExpressionTag.ConstructorPrimaryWithFactoryExpression, sinfo);
         this.ctype = ctype;
-        this.asValue = asvalue;
         this.factoryName = factory;
         this.pragmas = pragmas;
         this.terms = terms;
@@ -284,6 +293,15 @@ class PCodeInvokeExpression extends Expression {
     }
 }
 exports.PCodeInvokeExpression = PCodeInvokeExpression;
+class ResultExpression extends Expression {
+    constructor(sinfo, rtype, rop, arg) {
+        super(ExpressionTag.ResultExpression, sinfo);
+        this.rtype = rtype;
+        this.rop = rop;
+        this.arg = arg;
+    }
+}
+exports.ResultExpression = ResultExpression;
 class CallNamespaceFunctionExpression extends Expression {
     constructor(sinfo, ns, name, terms, pragmas, args) {
         super(ExpressionTag.CallNamespaceFunctionExpression, sinfo);
@@ -416,6 +434,15 @@ class PrefixOp extends Expression {
     }
 }
 exports.PrefixOp = PrefixOp;
+class TailTypeExpression extends Expression {
+    constructor(sinfo, exp, op, ttype) {
+        super(ExpressionTag.TailTypeExpression, sinfo);
+        this.exp = exp;
+        this.op = op;
+        this.ttype = ttype;
+    }
+}
+exports.TailTypeExpression = TailTypeExpression;
 class BinOpExpression extends Expression {
     constructor(sinfo, lhs, op, rhs) {
         super(ExpressionTag.BinOpExpression, sinfo);
@@ -452,6 +479,14 @@ class BinLogicExpression extends Expression {
     }
 }
 exports.BinLogicExpression = BinLogicExpression;
+class MapEntryConstructorExpression extends Expression {
+    constructor(sinfo, kexp, vexp) {
+        super(ExpressionTag.MapEntryConstructorExpression, sinfo);
+        this.kexp = kexp;
+        this.vexp = vexp;
+    }
+}
+exports.MapEntryConstructorExpression = MapEntryConstructorExpression;
 class NonecheckExpression extends Expression {
     constructor(sinfo, lhs, rhs) {
         super(ExpressionTag.NonecheckExpression, sinfo);
@@ -637,10 +672,9 @@ class RecordStructuredAssignment extends StructuredAssignment {
 }
 exports.RecordStructuredAssignment = RecordStructuredAssignment;
 class NominalStructuredAssignment extends StructuredAssignment {
-    constructor(atype, isValue, assigns) {
+    constructor(atype, assigns) {
         super();
         this.atype = atype;
-        this.isValue = isValue;
         this.assigns = assigns;
     }
 }

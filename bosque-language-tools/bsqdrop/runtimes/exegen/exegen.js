@@ -15,23 +15,25 @@ const chalk_1 = require("chalk");
 const scratchroot = Path.normalize(Path.join(__dirname, "../../scratch/"));
 const binroot = Path.normalize(Path.join(__dirname, "../../"));
 function generateMASM(files, blevel, corelibpath) {
+    let bosque_dir = Path.normalize(Path.join(__dirname, "../../"));
     let code = [];
     try {
-        const coredir = Path.join(corelibpath, "/core.bsq");
-        const coredata = FS.readFileSync(coredir).toString();
-        const collectionsdir = Path.join(corelibpath, "/collections.bsq");
-        const collectionsdata = FS.readFileSync(collectionsdir).toString();
-        code = [{ relativePath: coredir, contents: coredata }, { relativePath: collectionsdir, contents: collectionsdata }];
+        const coredir = Path.join(bosque_dir, "core/", corelibpath);
+        const corefiles = FS.readdirSync(coredir);
+        for (let i = 0; i < corefiles.length; ++i) {
+            const cfpath = Path.join(coredir, corefiles[i]);
+            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+        }
         for (let i = 0; i < files.length; ++i) {
             const file = { relativePath: files[i], contents: FS.readFileSync(files[i]).toString() };
             code.push(file);
         }
     }
     catch (ex) {
-        process.stdout.write(chalk_1.default.red(`Read failed with exception -- ${ex}\n`));
+        process.stdout.write(`Read failed with exception -- ${ex}\n`);
         process.exit(1);
     }
-    const { masm, errors } = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), blevel, true, code);
+    const { masm, errors } = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), blevel, true, false, code);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk_1.default.red(`Parse error -- ${errors[i]}\n`));
@@ -43,7 +45,7 @@ function generateMASM(files, blevel, corelibpath) {
 Commander
     .option("-e --entrypoint [entrypoint]", "Entrypoint of the exe", "NSMain::main")
     .option("-o --outfile [outfile]", "Optional name of the output exe", (process.platform === "win32") ? "a.exe" : "a.out")
-    .option("-c --compiler [compiler]", "Compiler to use", (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "g++")
+    .option("-c --compiler [compiler]", "Compiler to use", (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "clang++")
     .option("-l --level [level]", "Build level version", "debug");
 Commander.parse(process.argv);
 if (Commander.args.length === 0) {
@@ -55,7 +57,7 @@ if (!["debug", "test", "release"].includes(Commander.level)) {
     process.exit(1);
 }
 process.stdout.write(`Compiling Bosque sources in files:\n${Commander.args.join("\n")}\n...\n`);
-const massembly = generateMASM(Commander.args, Commander.level, Path.normalize(Path.join(__dirname, "../../", "core/direct/")));
+const massembly = generateMASM(Commander.args, Commander.level, "cpp");
 setImmediate(() => {
     process.stdout.write(`Transpiling Bosque assembly to C++ with entrypoint of ${Commander.entrypoint}...\n`);
     const cpp_runtime = Path.join(binroot, "tooling/aot/runtime/");
@@ -97,19 +99,15 @@ setImmediate(() => {
             + cparams.TYPEDECLS_FWD
             + "\n\n/*ephemeral decls*/\n"
             + cparams.EPHEMERAL_LIST_DECLARE
-            + "\n\n/*vable decls*/\n"
-            + "\n\nclass BSQVable"
-            + "\n{"
-            + "\npublic:"
-            + "\n  " + cparams.VFIELD_DECLS
-            + "\n  " + cparams.VMETHOD_DECLS
-            + "\n};"
+            + "\n\n/*forward vable decls*/\n"
             + "\n\n/*forward function decls*/\n"
             + cparams.FUNC_DECLS_FWD
             + "\n\n/*type decls*/\n"
             + cparams.TYPEDECLS
             + "\n\n/*typecheck decls*/\n"
             + cparams.TYPECHECKS
+            + "\n\n/*vable decls*/\n"
+            + cparams.VFIELD_ACCESS
             + "\n\n/*function decls*/\n"
             + cparams.FUNC_DECLS
             + "}\n\n"
@@ -145,7 +143,7 @@ setImmediate(() => {
         else {
             buildOpts = " -Os -march=native";
         }
-        child_process_1.execSync(`${Commander.compiler}${buildOpts} -std=c++14 -o ${Commander.outfile} ${cpppath}/*.cpp`);
+        child_process_1.execSync(`${Commander.compiler}${buildOpts} -std=c++17 -o ${Commander.outfile} ${cpppath}/*.cpp`);
     }
     catch (ex) {
         process.stderr.write(chalk_1.default.red(`Error -- ${ex}\n`));

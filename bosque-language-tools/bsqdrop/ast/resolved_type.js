@@ -160,9 +160,6 @@ class ResolvedType {
     isAnyType() {
         return this.options.length === 1 && this.options[0].idStr === "NSCore::Any";
     }
-    isEphemeralListType() {
-        return this.options.length === 1 && this.options[0] instanceof ResolvedEphemeralListType;
-    }
 }
 exports.ResolvedType = ResolvedType;
 class ResolvedFunctionTypeParam {

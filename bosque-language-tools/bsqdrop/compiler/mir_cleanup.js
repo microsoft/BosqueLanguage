@@ -219,15 +219,16 @@ function propagateTmpAssignForOp(op, propMap) {
             bop.rhs = propagateTmpAssign_Remap(bop.rhs, propMap);
             break;
         }
-        case mir_ops_1.MIROpTag.MIRGetKey: {
-            const mgk = op;
-            mgk.arg = propagateTmpAssign_Remap(mgk.arg, propMap);
-            break;
-        }
         case mir_ops_1.MIROpTag.MIRBinEq: {
             const beq = op;
             beq.lhs = propagateTmpAssign_Remap(beq.lhs, propMap);
             beq.rhs = propagateTmpAssign_Remap(beq.rhs, propMap);
+            break;
+        }
+        case mir_ops_1.MIROpTag.MIRBinLess: {
+            const bl = op;
+            bl.lhs = propagateTmpAssign_Remap(bl.lhs, propMap);
+            bl.rhs = propagateTmpAssign_Remap(bl.rhs, propMap);
             break;
         }
         case mir_ops_1.MIROpTag.MIRBinCmp: {
@@ -267,14 +268,15 @@ function propagateTmpAssignForOp(op, propMap) {
             vs.src = propagateTmpAssign_Remap(vs.src, propMap);
             break;
         }
-        case mir_ops_1.MIROpTag.MIRPackStore: {
-            const pvs = op;
-            if (Array.isArray(pvs.src)) {
-                pvs.src = propagateTmpAssign_RemapArgs(pvs.src, propMap);
-            }
-            else {
-                pvs.src = propagateTmpAssign_Remap(pvs.src, propMap);
-            }
+        case mir_ops_1.MIROpTag.MIRPackSlice: {
+            const pso = op;
+            pso.src = propagateTmpAssign_Remap(pso.src, propMap);
+            break;
+        }
+        case mir_ops_1.MIROpTag.MIRPackExtend: {
+            const pse = op;
+            pse.basepack = propagateTmpAssign_Remap(pse.basepack, propMap);
+            pse.ext = propagateTmpAssign_RemapArgs(pse.ext, propMap);
             break;
         }
         case mir_ops_1.MIROpTag.MIRReturnAssign: {

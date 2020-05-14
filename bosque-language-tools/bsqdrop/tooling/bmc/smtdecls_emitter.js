@@ -8,7 +8,6 @@ const mir_assembly_1 = require("../../compiler/mir_assembly");
 const smttype_emitter_1 = require("./smttype_emitter");
 const smtbody_emitter_1 = require("./smtbody_emitter");
 const mir_callg_1 = require("../../compiler/mir_callg");
-const smt_exp_1 = require("./smt_exp");
 class SMTEmitter {
     static emit(assembly, entrypoint, errorcheck) {
         const typeemitter = new smttype_emitter_1.SMTTypeEmitter(assembly);
@@ -74,29 +73,9 @@ class SMTEmitter {
         }
         let vfieldaccess = [];
         for (let i = 0; i < bodyemitter.vfieldLookups.length; ++i) {
-            const vl = bodyemitter.vfieldLookups[i];
-            const opts = [...assembly.entityDecls].filter((edcl) => {
-                const etype = typeemitter.getMIRType(edcl[0]);
-                return assembly.subtypeOf(etype, vl.infertype) && assembly.subtypeOf(etype, typeemitter.getMIRType(vl.fdecl.enclosingDecl));
-            });
-            const ttl = assembly.typeMap.get(opts[opts.length - 1][0]);
-            const cargl = typeemitter.coerce(new smt_exp_1.SMTValue("$arg$"), vl.infertype, ttl).emit();
-            let body = `(${typeemitter.generateEntityAccessor(typeemitter.getEntityEKey(ttl), vl.fdecl.fkey)} ${cargl})`;
-            for (let i = opts.length - 2; i >= 0; --i) {
-                const tti = assembly.typeMap.get(opts[i][0]);
-                const testi = `(= $objtype$ "${typeemitter.mangleStringForSMT(tti.trkey)}")`;
-                const cargi = typeemitter.coerce(new smt_exp_1.SMTValue("$arg$"), vl.infertype, tti).emit();
-                body = `  (ite ${testi} (${typeemitter.generateEntityAccessor(typeemitter.getEntityEKey(tti), vl.fdecl.fkey)} ${cargi})\n`
-                    + `  ${body})`;
-            }
-            const cdcl = `(define-fun ${typeemitter.mangleStringForSMT(vl.lname)} (($arg$ ${typeemitter.getSMTTypeFor(vl.infertype)})) ${typeemitter.getSMTTypeFor(typeemitter.getMIRType(vl.fdecl.declaredType))}\n`;
-            if (opts.length === 1) {
-                vfieldaccess.push(cdcl + body + "\n)");
-            }
-            else {
-                body = `(let (($objtype$ (bsqterm_get_nominal_type $arg$)))\n` + body + "\n)";
-                vfieldaccess.push(cdcl + body + "\n)");
-            }
+            //
+            //TODO: generate vfield switches
+            //
         }
         const rrtype = typeemitter.getSMTTypeFor(typeemitter.getMIRType(entrypoint.resultType));
         let argscall = [];
@@ -106,8 +85,21 @@ class SMTEmitter {
             const paramtype = typeemitter.getMIRType(param.type);
             argscall.push(`@${param.name}`);
             argsdecls.push(`(declare-const @${param.name} ${typeemitter.getSMTTypeFor(paramtype)})`);
-            const tcops = paramtype.options.map((opt) => bodyemitter.generateTypeCheck("@" + param.name, paramtype, paramtype, typeemitter.getMIRType(opt.trkey)));
-            if (!tcops.some((tcr) => tcr === "true")) {
+            if (paramtype.options.length !== 1) {
+                const tcops = paramtype.options.map((opt) => {
+                    if (opt.trkey === "NSCore::None") {
+                        return `(= @${param.name} bsqkey_none)`;
+                    }
+                    else if (opt.trkey === "NSCore::Bool") {
+                        return `(is-bsqkey_bool @${param.name})`;
+                    }
+                    else if (opt.trkey === "NSCore::Int") {
+                        return `(is-bsqkey_int @${param.name})`;
+                    }
+                    else {
+                        return `(is-bsqkey_string @${param.name})`;
+                    }
+                });
                 argsdecls.push(`(assert (or ${tcops.join(" ")}))`);
             }
         }
@@ -141,9 +133,8 @@ class SMTEmitter {
         let ephdecls = [];
         [...typeemitter.assembly.typeMap].forEach((te) => {
             const tt = te[1];
-            if (typeemitter.typecheckIsName(tt, /^NSCore::None$/) || typeemitter.typecheckIsName(tt, /^NSCore::Bool$/) || typeemitter.typecheckIsName(tt, /^NSCore::Int$/) || typeemitter.typecheckIsName(tt, /^NSCore::String$/)
-                || typeemitter.typecheckIsName(tt, /^NSCore::GUID$/) || typeemitter.typecheckIsName(tt, /^NSCore::LogicalTime$/)
-                || typeemitter.typecheckIsName(tt, /^NSCore::DataHash$/) || typeemitter.typecheckIsName(tt, /^NSCore::CryptoHash$/)
+            if (typeemitter.typecheckIsName(tt, /^NSCore::None$/) || typeemitter.typecheckIsName(tt, /^NSCore::Bool$/) || typeemitter.typecheckIsName(tt, /^NSCore::Int$/) || typeemitter.typecheckIsName(tt, /^NSCore::BigInt$/) || typeemitter.typecheckIsName(tt, /^NSCore::Float64$/)
+                || typeemitter.typecheckIsName(tt, /^NSCore::String$/) || typeemitter.typecheckIsName(tt, /^NSCore::UUID$/) || typeemitter.typecheckIsName(tt, /^NSCore::LogicalTime$/) || typeemitter.typecheckIsName(tt, /^NSCore::CryptoHash$/) || typeemitter.typecheckIsName(tt, /^NSCore::ByteBuffer$/)
                 || typeemitter.typecheckIsName(tt, /^NSCore::ISOTime$/) || typeemitter.typecheckIsName(tt, /^NSCore::Regex$/)) {
                 special_name_decls.push(`(assert (= MIRNominalTypeEnum_${tt.trkey.substr(8)} "${typeemitter.mangleStringForSMT(tt.trkey)}"))`);
             }

@@ -9,16 +9,17 @@ const Path = require("path");
 const mir_emitter_1 = require("../compiler/mir_emitter");
 const mir_assembly_1 = require("../compiler/mir_assembly");
 const Commander = require("commander");
-function compile(files, trgt) {
+function compile(files, core, trgt) {
     process.stdout.write("Reading app code...\n");
-    let bosque_dir = Path.normalize(Path.join(__dirname, "../../"));
+    let bosque_dir = Path.normalize(Path.join(__dirname, "../"));
     let code = [];
     try {
-        const coredir = Path.join(bosque_dir, "src/core/core.bsq");
-        const coredata = FS.readFileSync(coredir).toString();
-        const collectionsdir = Path.join(bosque_dir, "src/core/collections.bsq");
-        const collectionsdata = FS.readFileSync(collectionsdir).toString();
-        code = [{ relativePath: coredir, contents: coredata }, { relativePath: collectionsdir, contents: collectionsdata }];
+        const coredir = Path.join(bosque_dir, "core/", core);
+        const corefiles = FS.readdirSync(coredir);
+        for (let i = 0; i < corefiles.length; ++i) {
+            const cfpath = Path.join(coredir, corefiles[i]);
+            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+        }
         for (let i = 0; i < files.length; ++i) {
             const file = { relativePath: files[i], contents: FS.readFileSync(files[i]).toString() };
             code.push(file);
@@ -29,7 +30,7 @@ function compile(files, trgt) {
         process.exit(1);
     }
     process.stdout.write("Compiling assembly...\n");
-    const { masm, errors } = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), "debug", true, code);
+    const { masm, errors } = mir_emitter_1.MIREmitter.generateMASM(new mir_assembly_1.PackageConfig(), "debug", true, Commander.functionalize !== undefined ? Commander.functionalize : false, code);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(`Parse error -- ${errors[i]}\n`);
@@ -42,7 +43,9 @@ function compile(files, trgt) {
     process.exit(0);
 }
 Commander
-    .usage("--bytecode [--output file] <file ...>")
+    .usage("[--output file] <file ...>")
+    .option("-s --symbolic [boolean]", "Core library version to use")
+    .option("-f --functionalize [boolean]")
     .option("-j --json", "Compile to json bytecode assembly")
     .option("-o --output [file]", "Optional output file target");
 Commander.parse(process.argv);
@@ -50,9 +53,5 @@ if (Commander.args.length === 0) {
     process.stdout.write("Error -- Please specify at least one source file as an argument");
     process.exit(1);
 }
-if (Commander.bytecode === undefined) {
-    process.stdout.write("Error -- Please specify a compiler target (--assembly)");
-    process.exit(1);
-}
-setImmediate(() => compile(Commander.args, Commander.output || "a.json"));
+setImmediate(() => compile(Commander.args, Commander.symbolic ? "symbolic" : "cpp", Commander.output || "a.json"));
 //# sourceMappingURL=bcgen.js.map

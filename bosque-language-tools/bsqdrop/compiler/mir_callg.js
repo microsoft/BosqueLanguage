@@ -14,13 +14,6 @@ function computeCalleesInBlocks(blocks, invokeNode, assembly) {
         for (let i = 0; i < block.ops.length; ++i) {
             const op = block.ops[i];
             switch (op.tag) {
-                case mir_ops_1.MIROpTag.MIRLoadConstSafeString: {
-                    const lvs = op;
-                    if (lvs.vfunckey !== undefined) {
-                        invokeNode.callees.add(lvs.vfunckey);
-                    }
-                    break;
-                }
                 case mir_ops_1.MIROpTag.MIRLoadConstTypedString: {
                     const lcs = op;
                     if (lcs.pfunckey !== undefined) {

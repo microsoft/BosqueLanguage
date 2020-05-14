@@ -14,6 +14,7 @@ const type_checker_1 = require("../type_checker/type_checker");
 const mir_cleanup_1 = require("./mir_cleanup");
 const mir_ssa_1 = require("./mir_ssa");
 const mir_vartype_1 = require("./mir_vartype");
+const functionalize_1 = require("./functionalize");
 class MIRKeyGenerator {
     static computeBindsKeyInfo(binds) {
         if (binds.size === 0) {
@@ -74,7 +75,6 @@ class MIRBodyEmitter {
         this.m_blockMap.set("entry", new mir_ops_1.MIRBasicBlock("entry", []));
         this.m_blockMap.set("returnassign", new mir_ops_1.MIRBasicBlock("returnassign", []));
         this.m_blockMap.set("exit", new mir_ops_1.MIRBasicBlock("exit", []));
-        this.m_blockMap.get("returnassign").ops.push(new mir_ops_1.MIRVarStore(new parser_1.SourceInfo(-1, 0, 0, 0), new mir_ops_1.MIRVariable("__ir_ret__"), new mir_ops_1.MIRVariable("_return_")));
         this.m_currentBlock = this.m_blockMap.get("entry").ops;
     }
     generateTmpRegister() {
@@ -100,17 +100,23 @@ class MIRBodyEmitter {
     emitLoadConstInt(sinfo, iv, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRLoadConst(sinfo, new mir_ops_1.MIRConstantInt(iv), trgt));
     }
+    emitLoadConstBigInt(sinfo, iv, trgt) {
+        this.m_currentBlock.push(new mir_ops_1.MIRLoadConst(sinfo, new mir_ops_1.MIRConstantBigInt(iv), trgt));
+    }
+    emitLoadConstFloat(sinfo, fv, trgt) {
+        this.m_currentBlock.push(new mir_ops_1.MIRLoadConst(sinfo, new mir_ops_1.MIRConstantFloat64(fv), trgt));
+    }
     emitLoadConstString(sinfo, sv, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRLoadConst(sinfo, new mir_ops_1.MIRConstantString(sv), trgt));
     }
     emitLoadLiteralRegex(sinfo, restr, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRLoadConstRegex(sinfo, restr, trgt));
     }
-    emitLoadValidatedTypedString(sinfo, sv, tkey, tskey, pfunckey, trgt) {
-        this.m_currentBlock.push(new mir_ops_1.MIRLoadConstSafeString(sinfo, sv, tkey, tskey, pfunckey, trgt));
+    emitLoadValidatedTypedString(sinfo, sv, tkey, tskey, trgt) {
+        this.m_currentBlock.push(new mir_ops_1.MIRLoadConstSafeString(sinfo, sv, tkey, tskey, trgt));
     }
-    emitLoadConstTypedString(sinfo, sv, tkey, tskey, pfunckey, trgt) {
-        this.m_currentBlock.push(new mir_ops_1.MIRLoadConstTypedString(sinfo, sv, tkey, tskey, pfunckey, trgt));
+    emitLoadConstTypedString(sinfo, sv, tkey, tskey, pfunckey, errtype, trgt) {
+        this.m_currentBlock.push(new mir_ops_1.MIRLoadConstTypedString(sinfo, sv, tkey, tskey, pfunckey, errtype, trgt));
     }
     emitAccessConstant(sinfo, gkey, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRAccessConstantValue(sinfo, gkey, trgt));
@@ -124,8 +130,8 @@ class MIRBodyEmitter {
     emitAccessLocalVariable(sinfo, name, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRAccessLocalVariable(sinfo, new mir_ops_1.MIRVariable(name), trgt));
     }
-    emitConstructorPrimary(sinfo, tkey, asValue, args, trgt) {
-        this.m_currentBlock.push(new mir_ops_1.MIRConstructorPrimary(sinfo, asValue, tkey, args, trgt));
+    emitConstructorPrimary(sinfo, tkey, args, trgt) {
+        this.m_currentBlock.push(new mir_ops_1.MIRConstructorPrimary(sinfo, tkey, args, trgt));
     }
     emitInvokeInvariantCheckDirect(sinfo, ikey, tkey, rcvr, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRInvokeInvariantCheckDirect(sinfo, ikey, tkey, rcvr, trgt));
@@ -202,45 +208,67 @@ class MIRBodyEmitter {
     emitLoadFromEpehmeralList(sinfo, arg, argInferType, idx, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRLoadFromEpehmeralList(sinfo, arg, argInferType, idx, trgt));
     }
-    emitInvokeFixedFunction(masm, sinfo, rtkey, ikey, args, refs, trgt) {
-        if (refs.length === 0) {
-            this.m_currentBlock.push(new mir_ops_1.MIRInvokeFixedFunction(sinfo, rtkey.trkey, ikey, args, trgt));
+    emitInvokeFixedFunction(sinfo, ikey, args, retinfo, trgt) {
+        if (retinfo[3].length === 0) {
+            this.m_currentBlock.push(new mir_ops_1.MIRInvokeFixedFunction(sinfo, retinfo[0].trkey, ikey, args, trgt));
         }
         else {
-            const rpack = mir_assembly_1.MIRType.createSingle(mir_assembly_1.MIREphemeralListType.create([rtkey, ...refs.map((rf) => rf[1])]));
-            if (!masm.typeMap.has(rpack.trkey)) {
-                masm.typeMap.set(rpack.trkey, rpack);
-            }
             const rr = this.generateTmpRegister();
-            this.m_currentBlock.push(new mir_ops_1.MIRInvokeFixedFunction(sinfo, rpack.trkey, ikey, args, rr));
-            this.m_currentBlock.push(new mir_ops_1.MIRPackStore(sinfo, rr, [trgt, ...refs.map((ref) => new mir_ops_1.MIRVariable(ref[0]))]));
+            this.m_currentBlock.push(new mir_ops_1.MIRInvokeFixedFunction(sinfo, retinfo[1].trkey, ikey, args, rr));
+            if (retinfo[2] === -1) {
+                this.m_currentBlock.push(new mir_ops_1.MIRLoadFromEpehmeralList(sinfo, rr, retinfo[1].trkey, 0, trgt));
+            }
+            else {
+                this.m_currentBlock.push(new mir_ops_1.MIRPackSlice(sinfo, rr, retinfo[0].trkey, trgt));
+            }
+            for (let i = 0; i < retinfo[3].length; ++i) {
+                const tr = this.generateTmpRegister();
+                this.m_currentBlock.push(new mir_ops_1.MIRLoadFromEpehmeralList(sinfo, rr, retinfo[3][i][1].trkey, retinfo[2] + i, tr));
+                this.m_currentBlock.push(new mir_ops_1.MIRVarStore(sinfo, tr, new mir_ops_1.MIRVariable(retinfo[3][i][0])));
+            }
         }
     }
-    emitInvokeVirtualTarget(masm, sinfo, rtkey, vresolve, args, thisInferType, refs, trgt) {
-        if (refs.length === 0) {
-            this.m_currentBlock.push(new mir_ops_1.MIRInvokeVirtualFunction(sinfo, rtkey.trkey, vresolve, args, thisInferType, trgt));
+    emitInvokeVirtualTarget(sinfo, vresolve, args, thisInferType, retinfo, trgt) {
+        if (retinfo[3].length === 0) {
+            this.m_currentBlock.push(new mir_ops_1.MIRInvokeVirtualFunction(sinfo, retinfo[0].trkey, vresolve, args, thisInferType, trgt));
         }
         else {
-            const rpack = mir_assembly_1.MIRType.createSingle(mir_assembly_1.MIREphemeralListType.create([rtkey, ...refs.map((rf) => rf[1])]));
-            if (!masm.typeMap.has(rpack.trkey)) {
-                masm.typeMap.set(rpack.trkey, rpack);
-            }
             const rr = this.generateTmpRegister();
-            this.m_currentBlock.push(new mir_ops_1.MIRInvokeVirtualFunction(sinfo, rpack.trkey, vresolve, args, thisInferType, rr));
-            this.m_currentBlock.push(new mir_ops_1.MIRPackStore(sinfo, rr, [trgt, ...refs.map((ref) => new mir_ops_1.MIRVariable(ref[0]))]));
+            this.m_currentBlock.push(new mir_ops_1.MIRInvokeVirtualFunction(sinfo, retinfo[1].trkey, vresolve, args, thisInferType, rr));
+            if (retinfo[2] === -1) {
+                this.m_currentBlock.push(new mir_ops_1.MIRLoadFromEpehmeralList(sinfo, rr, retinfo[1].trkey, 0, trgt));
+            }
+            else {
+                this.m_currentBlock.push(new mir_ops_1.MIRPackSlice(sinfo, rr, retinfo[0].trkey, trgt));
+            }
+            for (let i = 0; i < retinfo[3].length; ++i) {
+                const tr = this.generateTmpRegister();
+                this.m_currentBlock.push(new mir_ops_1.MIRLoadFromEpehmeralList(sinfo, rr, retinfo[3][i][1].trkey, retinfo[2] + i, tr));
+                this.m_currentBlock.push(new mir_ops_1.MIRVarStore(sinfo, tr, new mir_ops_1.MIRVariable(retinfo[3][i][0])));
+            }
+        }
+    }
+    emitPrefixNot(sinfo, op, isstrict, arg, trgt) {
+        if (isstrict) {
+            this.m_currentBlock.push(new mir_ops_1.MIRPrefixOp(sinfo, op, arg, trgt));
+        }
+        else {
+            const tr = this.generateTmpRegister();
+            this.m_currentBlock.push(new mir_ops_1.MIRTruthyConvert(sinfo, arg, tr));
+            this.m_currentBlock.push(new mir_ops_1.MIRPrefixOp(sinfo, op, tr, trgt));
         }
     }
     emitPrefixOp(sinfo, op, arg, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRPrefixOp(sinfo, op, arg, trgt));
     }
-    emitBinOp(sinfo, lhs, op, rhs, trgt) {
-        this.m_currentBlock.push(new mir_ops_1.MIRBinOp(sinfo, lhs, op, rhs, trgt));
-    }
-    emitGetKey(sinfo, argInferType, arg, resultKeyType, trgt) {
-        this.m_currentBlock.push(new mir_ops_1.MIRGetKey(sinfo, argInferType, arg, resultKeyType, trgt));
+    emitBinOp(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt) {
+        this.m_currentBlock.push(new mir_ops_1.MIRBinOp(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt));
     }
     emitBinEq(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt, relaxed) {
         this.m_currentBlock.push(new mir_ops_1.MIRBinEq(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt, relaxed));
+    }
+    emitBinLess(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt, relaxed) {
+        this.m_currentBlock.push(new mir_ops_1.MIRBinLess(sinfo, lhsInferType, lhs, rhsInferType, rhs, trgt, relaxed));
     }
     emitBinCmp(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt) {
         this.m_currentBlock.push(new mir_ops_1.MIRBinCmp(sinfo, lhsInferType, lhs, op, rhsInferType, rhs, trgt));
@@ -268,24 +296,19 @@ class MIRBodyEmitter {
     emitVarStore(sinfo, src, name) {
         this.m_currentBlock.push(new mir_ops_1.MIRVarStore(sinfo, src, new mir_ops_1.MIRVariable(name)));
     }
+    emitArgVarStore(sinfo, src, name) {
+        this.m_currentBlock.push(new mir_ops_1.MIRVarStore(sinfo, new mir_ops_1.MIRVariable(src), new mir_ops_1.MIRVariable(name)));
+    }
+    emitVarMove(sinfo, src, name) {
+        this.m_currentBlock.push(new mir_ops_1.MIRVarStore(sinfo, new mir_ops_1.MIRVariable(src), new mir_ops_1.MIRVariable(name)));
+    }
+    emitMIRPackExtend(sinfo, basepack, ext, sltype, trgt) {
+        this.m_currentBlock.push(new mir_ops_1.MIRPackExtend(sinfo, basepack, ext, sltype, trgt));
+    }
     localLifetimeEnd(sinfo, name) {
         this.m_currentBlock.push(new mir_ops_1.MIRVarLifetimeEnd(sinfo, name));
     }
-    emitReturnAssign(sinfo, resultEphemeralListType, refparams, src) {
-        if (refparams.length === 0) {
-            this.m_currentBlock.push(new mir_ops_1.MIRReturnAssign(sinfo, src));
-        }
-        else {
-            let args = [src];
-            for (let i = 0; i < refparams.length; ++i) {
-                args.push(new mir_ops_1.MIRVariable(refparams[i]));
-            }
-            const elreg = this.generateTmpRegister();
-            this.m_currentBlock.push(new mir_ops_1.MIRConstructorEphemeralValueList(sinfo, resultEphemeralListType, args, elreg));
-            this.m_currentBlock.push(new mir_ops_1.MIRReturnAssign(sinfo, elreg));
-        }
-    }
-    emitReturnAssignPack(sinfo, src) {
+    emitReturnAssign(sinfo, src) {
         this.m_currentBlock.push(new mir_ops_1.MIRReturnAssign(sinfo, src));
     }
     emitAbort(sinfo, info) {
@@ -300,8 +323,15 @@ class MIRBodyEmitter {
     emitDirectJump(sinfo, blck) {
         this.m_currentBlock.push(new mir_ops_1.MIRJump(sinfo, blck));
     }
-    emitBoolJump(sinfo, arg, trueblck, falseblck) {
-        this.m_currentBlock.push(new mir_ops_1.MIRJumpCond(sinfo, arg, trueblck, falseblck));
+    emitBoolJump(sinfo, arg, isstrict, trueblck, falseblck) {
+        if (isstrict) {
+            this.m_currentBlock.push(new mir_ops_1.MIRJumpCond(sinfo, arg, trueblck, falseblck));
+        }
+        else {
+            const tr = this.generateTmpRegister();
+            this.m_currentBlock.push(new mir_ops_1.MIRTruthyConvert(sinfo, arg, tr));
+            this.m_currentBlock.push(new mir_ops_1.MIRJumpCond(sinfo, tr, trueblck, falseblck));
+        }
     }
     emitNoneJump(sinfo, arg, noneblck, someblk) {
         this.m_currentBlock.push(new mir_ops_1.MIRJumpNone(sinfo, arg, noneblck, someblk));
@@ -506,7 +536,7 @@ class MIREmitter {
         });
         entity.fields.sort((f1, f2) => f1.name.localeCompare(f2.name));
     }
-    static generateMASM(pckge, buildLevel, validateLiteralStrings, srcFiles) {
+    static generateMASM(pckge, buildLevel, validateLiteralStrings, functionalize, srcFiles) {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new assembly_1.Assembly();
@@ -537,68 +567,66 @@ class MIREmitter {
         const masm = new mir_assembly_1.MIRAssembly(pckge, srcFiles, hash.digest("hex"));
         const emitter = new MIREmitter(masm);
         const checker = new type_checker_1.TypeChecker(assembly, true, emitter, buildLevel, validateLiteralStrings);
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Any", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Any"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialAnyConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Some", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Some"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialSomeConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Tuple", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Record", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Object", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Indexable", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialIndexableConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Parsable", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Convertable"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialConvertableConceptType());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Parsable"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialParsableConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Validator", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Validator"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialValidatorConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::KeyType", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::KeyType"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialKeyTypeConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::PODType", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::PODType"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialPODTypeConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::APIType", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::APIType"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialAPITypeConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::APIValue", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::APIValue"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialAPIValueConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Truthy", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Truthy"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialTruthyConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Enum", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Enum"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialEnumConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::IdKey", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::IdKey"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialIdKeyConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::GUIDIdKey", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialGUIDIdKeyConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::LogicalTimeIdKey", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeIdKeyConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::ContentHashIdKey", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialContentHashIdKeyConceptType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::None", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Tuple"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Record"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
+        emitter.registerTypeInstantiation(assembly.tryGetConceptTypeForFullyResolvedName("NSCore::Object"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::None"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialNoneType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Bool", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Bool"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialBoolType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Int", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Int"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialIntType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::String", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::BigInt"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialBigIntType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Float64"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialFloat64Type());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::String"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialStringType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Regex", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::GUID", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialGUIDType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::LogicalTime", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::ISOTime", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::DataHash", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialDataHashType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::CryptoHash", 0), new Map());
-        emitter.registerResolvedTypeReference(assembly.getSpecialCryptoHashType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::BufferFormat", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::BufferFormat"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferFormatType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::BufferEncoding", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::BufferEncoding"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferEncodingType());
-        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::BufferCompression", 0), new Map());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::BufferCompression"), new Map());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferCompressionType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::ByteBuffer"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialByteBufferType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::ISOTime"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::UUID"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialUUIDType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::LogicalTime"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::CryptoHash"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialCryptoHashType());
+        emitter.registerTypeInstantiation(assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Regex"), new Map());
+        emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
         //get any entrypoint functions and initialize the checker there
         const nslist = assembly.getNamespaces();
         nslist.forEach((nsentry) => {
@@ -661,14 +689,21 @@ class MIREmitter {
                     checker.processMethodFunction(...vcgens[i]);
                 }
             }
-            //compute closed field and vtable info
-            masm.conceptDecls.forEach((cpt) => emitter.closeConceptDecl(cpt));
-            masm.entityDecls.forEach((entity) => emitter.closeEntityDecl(entity));
-            masm.invokeDecls.forEach((idecl) => {
-                const args = new Map();
-                idecl.params.forEach((param) => args.set(param.name, masm.typeMap.get(param.type)));
-                mir_vartype_1.computeVarTypesForInvoke(idecl.body, args, masm.typeMap.get(idecl.resultType), masm);
-            });
+            if (checker.getErrorList().length === 0) {
+                checker.processRegexInfo();
+                checker.runFinalExhaustiveChecks();
+                //compute closed field and vtable info
+                masm.conceptDecls.forEach((cpt) => emitter.closeConceptDecl(cpt));
+                masm.entityDecls.forEach((entity) => emitter.closeEntityDecl(entity));
+                masm.invokeDecls.forEach((idecl) => {
+                    const args = new Map();
+                    idecl.params.forEach((param) => args.set(param.name, masm.typeMap.get(param.type)));
+                    mir_vartype_1.computeVarTypesForInvoke(idecl.body, args, masm.typeMap.get(idecl.resultType), masm);
+                });
+                if (functionalize) {
+                    functionalize_1.functionalizeInvokes(masm);
+                }
+            }
         }
         catch (ex) {
             //ignore
