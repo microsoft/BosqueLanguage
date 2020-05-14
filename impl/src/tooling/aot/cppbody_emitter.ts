@@ -1694,18 +1694,30 @@ class CPPBodyEmitter {
         }
     }
 
+    getEnclosingListTypeForListOp(idecl: MIRInvokePrimitiveDecl): MIRType {
+        return this.typegen.getMIRType(idecl.enclosingDecl as string);
+    }
+
     getListContentsInfoForListOp(idecl: MIRInvokePrimitiveDecl): MIRType {
         return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("T") as MIRType;
+    }
+
+    getListResultTypeFor(idecl: MIRInvokePrimitiveDecl): [string, string, string] {
+        const le = this.typegen.assembly.entityDecls.get(idecl.resultType as string) as MIREntityTypeDecl;
+        const ltype = this.typegen.getMIRType(le.tkey);
+        const ctype = le.terms.get("T") as MIRType;
+        return [this.typegen.getCPPReprFor(ltype).base, this.typegen.getCPPReprFor(ctype).base, `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(le.tkey)}`];
     }
 
     getSetContentsInfoForListOp(idecl: MIRInvokePrimitiveDecl): MIRType {
         return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("T") as MIRType;
     }
 
-    createListOpsFor(ctype: MIRType): string {
+    createListOpsFor(ltype: MIRType, ctype: MIRType): string {
+        const lrepr = this.typegen.getCPPReprFor(ltype).base;
         const crepr = this.typegen.getCPPReprFor(ctype);
         const cops = this.typegen.getFunctorsForType(ctype);
-        return `BSQListOps<${crepr.std}, ${cops.inc}, ${cops.dec}, ${cops.display}>`;
+        return `BSQListOps<${lrepr}, ${crepr.std}, ${cops.inc}, ${cops.dec}, ${cops.display}>`;
     }
 
     createLambdaFor(pc: MIRPCode): string {
@@ -1780,21 +1792,156 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_all": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ctype)}::list_all(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_all(${params[0]}, ${lambda});`
                 break;
             }
             case "list_any": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ctype)}::list_any(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_any(${params[0]}, ${lambda});`
                 break;
             }
             case "list_none": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ctype)}::list_none(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_none(${params[0]}, ${lambda});`
+                break;
+            }
+            case "list_count": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_count(${params[0]}, ${lambda});`
+                break;
+            }
+            case "list_countnot": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_countnot(${params[0]}, ${lambda});`
+                break;
+            }
+            case "list_indexof": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexof(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
+                break;
+            }
+            case "list_indexoflast": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexoflast(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
+                break;
+            }
+            case "list_indexofnot": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexofnot(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
+                break;
+            }
+            case "list_indexofnotlast": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexofnotlast(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
+                break;
+            }
+            case "list_count_keytype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_indexof_keytype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_indexoflast_keytype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_min": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_max": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_sum": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_filter": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_filter(${params[0]}, ${lambda});`
+                break;
+            }
+            case "list_filternot": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_filternot(${params[0]}, ${lambda});`
+                break;
+            }
+            case "list_oftype": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_cast": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_slice": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_takewhile": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_discardwhile": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_takeuntil": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_discarduntil": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_unique": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_reverse": {
+                assert(false, "Need to implement");
+                break;
+            }
+            case "list_map": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("f") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_map<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
+                break;
+            }
+            case "list_mapindex": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("f") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
                 break;
             }
             case "set_has_key": {
@@ -1856,7 +2003,7 @@ class CPPBodyEmitter {
             }
             */
             default: {
-                bodystr = `[Builtin not defined -- ${idecl.iname}]`;
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
         }

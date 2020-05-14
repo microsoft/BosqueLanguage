@@ -1808,6 +1808,20 @@ class SMTBodyEmitter {
                 bodyres = new SMTValue(`(select ${this.typegen.generateSpecialTypeFieldAccess(enclkey, "entries", params[0])} ${params[1]})`);
                 break;
             }
+            case "list_unsafe_push": {
+                const cons = this.typegen.generateEntityConstructor(enclkey);
+                const entries = this.typegen.generateSpecialTypeFieldAccess(enclkey, "entries", params[0]);
+                const csize = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);
+                bodyres = new SMTValue(`(${cons} (+ ${csize} 1) (store ${entries} ${csize} ${params[1]}))`);
+                break;
+            }
+            case "list_unsafe_set": {
+                const cons = this.typegen.generateEntityConstructor(enclkey);
+                const entries = this.typegen.generateSpecialTypeFieldAccess(enclkey, "entries", params[0]);
+                const csize = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);
+                bodyres = new SMTValue(`(${cons} ${csize} (store ${entries} ${params[1]} ${params[2]}))`);
+                break;
+            }
             case "set_has_key": {
                 bodyres = new SMTValue(`(select ${this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0])} ${params[1]})`)
                 break;

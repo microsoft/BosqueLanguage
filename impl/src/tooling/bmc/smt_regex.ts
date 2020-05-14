@@ -17,10 +17,10 @@ function compileRegexSMTMatch(re: MIRRegex, str: string): SMTExp {
     //          also need to compile regex str into Z3 version!!!
     //
     let smtre = "[INVALID]";
-    if (re.re === "/^\\d$/") {
+    if (re.re === "/\\d/") {
         smtre = `(re.range "0" "9")`;
     }
-    else if (re.re === "/^\\w$/") {
+    else if (re.re === "/\\w/") {
         smtre = `(re.union (re.range "a" "z") (re.range "A" "Z"))`;
     }
     else {

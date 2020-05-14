@@ -9,12 +9,10 @@
 
 namespace BSQ
 {
-template <typename K, typename K_RCDecF, typename K_DisplayF, typename K_CMP, typename K_EQ, typename V, typename V_RCDecF, typename V_DisplayF>
+template <typename Ty, typename K, typename K_RCDecF, typename K_DisplayF, typename K_CMP, typename K_EQ, typename V, typename V_RCDecF, typename V_DisplayF>
 class BSQMapOps
 {
 public:
-    typedef BSQMap<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ, V, V_RCDecF, V_DisplayF> Ty;
-
     template <typename K_RCIncF, MIRNominalTypeEnum ntype>
     static BSQList<K, K_RCDecF, K_DisplayF>* map_key_list(Ty* m)
     {

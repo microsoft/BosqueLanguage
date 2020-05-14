@@ -168,7 +168,7 @@ entity String provides KeyType, PODType, APIType, Some {
 
     private static s_concat(s1: List<String>): String # string_concat
 
-    private static s_rangeInBounds(str: String, start?: Int, end?: Int): Bool {
+    private static s_rangeInBounds(str: String, start: Int?, end: Int?): Bool {
         let s, e = start ?| 0, end ?| String::s_length(str);
         return 0 <= s && s <= e && e <= String::s_length(str);
     }

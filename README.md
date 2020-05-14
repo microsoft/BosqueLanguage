@@ -41,7 +41,7 @@ add2(y=2, 5)   //7
 
 ```none
 function allPositive(...args: List<Int>): Bool {
-    return args->allof(fn(x) => x >= 0);
+    return args->allOf(fn(x) => x >= 0);
 }
 
 allPositive(1, 3, 4) //true
@@ -118,8 +118,8 @@ NamedGreeting@{name="bob"}->sayHello() //"hello bob"
 
 **Validated and Typed Strings:**
 ```
-typedef Letter = /^\w$/;
-typedef Digit = /^\d$/;
+typedef Letter = /\w/;
+typedef Digit = /\d/;
 
 function fss(s1: SafeString<Digit>): Bool {
     return s1->string() == "3";

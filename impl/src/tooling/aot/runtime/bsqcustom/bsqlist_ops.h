@@ -10,11 +10,9 @@
 namespace BSQ
 {
 
-template <typename T, typename RCIncF, typename RCDecF, typename DisplayF>
+template <typename Ty, typename T, typename RCIncF, typename RCDecF, typename DisplayF>
 class BSQListOps
 {
-typedef BSQList<T, RCDecF, DisplayF> Ty;
-
 public:
     template <typename SetT, typename LambdaSC>
     static SetT* list_toset(Ty* l)
@@ -42,87 +40,87 @@ public:
     }
 
     template <typename LambdaP>
-    static int64_t list_count(Ty* l)
+    static int64_t list_count(Ty* l, LambdaP p)
     {
-        return (int64_t)std::count_if(l->entries.begin(), l->entries.end(), LambdaP{});
+        return (int64_t)std::count_if(l->entries.begin(), l->entries.end(), p);
     }
 
     template <typename LambdaP>
-    static int64_t list_countnot(Ty* l)
+    static int64_t list_countnot(Ty* l, LambdaP p)
     {
-        return (int64_t)l->entries.size() - (int64_t)std::count_if(l->entries.begin(), l->entries.end(), LambdaP{});
+        return (int64_t)l->entries.size() - (int64_t)std::count_if(l->entries.begin(), l->entries.end(), p);
     }
 
     template <typename LambdaP>
-    static int64_t list_indexof(Ty* l, int64_t s, int64_t e)
+    static int64_t list_indexof(Ty* l, int64_t s, int64_t e, LambdaP p)
     {
         auto ib = l->entries.begin() + s;
         auto ie = l->entries.begin() + e;
 
-        auto uend = std::find_if(ib, ie, LambdaP{});
+        auto uend = std::find_if(ib, ie, p);
         return (int64_t)std::distance(ib, uend);
     }
 
     template <typename LambdaP>
-    static int64_t list_indexofnot(Ty* l, int64_t s, int64_t e)
+    static int64_t list_indexofnot(Ty* l, int64_t s, int64_t e, LambdaP p)
     {
         auto ib = l->entries.begin() + s;
         auto ie = l->entries.begin() + e;
 
-        auto uend = std::find_if_not(ib, ie, LambdaP{});
+        auto uend = std::find_if_not(ib, ie, p);
         return (int64_t)std::distance(ib, uend);
     }
 
     template <typename LambdaP>
-    static int64_t list_indexoflast(Ty* l, int64_t s, int64_t e)
+    static int64_t list_indexoflast(Ty* l, int64_t s, int64_t e, LambdaP p)
     {
-        auto ib = l->entries.begin() + s;
-        auto ie = l->entries.begin() + e;
-
-        auto rb = std::reverse_iterator(ib);
-        auto re = std::reverse_iterator(ie);
-
-        auto uend = std::find_if(ie, ib, LambdaP{});
-        return (int64_t)std::distance(ib, uend);
+        for(int64_t i = e; i > s; --i)
+        {
+            if(p(l->entries[i]))
+            {
+                return i;
+            }
+        }
+        return s;
     }
 
     template <typename LambdaP>
-    static int64_t list_indexoflastnot(Ty* l, int64_t s, int64_t e)
+    static int64_t list_indexoflastnot(Ty* l, int64_t s, int64_t e, LambdaP p)
     {
-        auto ib = l->entries.begin() + s;
-        auto ie = l->entries.begin() + e;
-
-        auto rb = std::reverse_iterator(ib);
-        auto re = std::reverse_iterator(ie);
-
-        auto uend = std::find_if_not(ie, ib, LambdaP{});
-        return (int64_t)std::distance(ib, uend);
+        for(int64_t i = e; i > s; --i)
+        {
+            if(!p(l->entries[i]))
+            {
+                return i;
+            }
+        }
+        return s;
     }
 
     template <typename LambdaC>
-    static T list_min(Ty* l)
+    static T list_min(Ty* l, LambdaC cmp)
     {
-        return std::min_element(l->entries.begin() + 1, l->entries.end(), *(l->entries.begin()), LambdaC{});
+        return std::min_element(l->entries.begin() + 1, l->entries.end(), *(l->entries.begin()), cmp);
     }
 
     template <typename LambdaC>
-    static T list_max(Ty* l)
+    static T list_max(Ty* l, LambdaC cmp)
     {
-        return std::max_element(l->entries.begin() + 1, l->entries.end(), *(l->entries.begin()), LambdaC{});
+        return std::max_element(l->entries.begin() + 1, l->entries.end(), *(l->entries.begin()), cmp);
     }
 
     template <typename LambdaR>
-    static T list_sum(Ty* l, T zero)
+    static T list_sum(Ty* l, T zero, LambdaR r)
     {
-        return std::reduce(l->entries.begin(), l->entries.end(), zero, LambdaR{});
+        return std::reduce(l->entries.begin(), l->entries.end(), zero, r);
     }
 
     template <typename LambdaP>
-    static Ty* list_filter(Ty* l)
+    static Ty* list_filter(Ty* l, LambdaP p)
     {
         std::vector<T> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
-            if(LambdaP{}(v))
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries, p](T& v) {
+            if(p(v))
             {
                 entries.push_back(RCIncF{}(v));
             }
@@ -132,11 +130,11 @@ public:
     }
 
     template <typename LambdaP>
-    static Ty* list_filternot(Ty* l)
+    static Ty* list_filternot(Ty* l, LambdaP p)
     {
         std::vector<T> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
-            if(!LambdaP{}(v))
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries, p](T& v) {
+            if(!p(v))
             {
                 entries.push_back(RCIncF{}(v));
             }
@@ -242,31 +240,31 @@ public:
         return BSQ_NEW_NO_RC(Ty, l->nominalType, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaF>
-    static BSQList<U, U_RCDecF, U_DisplayF>* list_map(Ty* l)
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename LambdaF>
+    static ListU* list_map(Ty* l, LambdaF f)
     {
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [](T& v) -> U {
-            return LambdaF{}(v);
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [f](T& v) -> U {
+            return f(v);
         });
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaF>
-    static BSQList<U, U_RCDecF, U_DisplayF>* list_mapindex(Ty* l)
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename LambdaF>
+    static ListU* list_mapindex(Ty* l, LambdaF f)
     {
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
         for(int64_t i = 0; i < (int64_t)l->entries.size(); ++i)
         {
-            entries.push_back(LambdaF{}(i, l->entries[i]));
+            entries.push_back(f(i, l->entries[i]));
         }
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
     template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaGet>

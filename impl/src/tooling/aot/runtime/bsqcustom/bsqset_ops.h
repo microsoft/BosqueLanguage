@@ -9,12 +9,10 @@
 
 namespace BSQ
 {
-template <typename T, typename RCDecF, typename DisplayF, typename T_CMP, typename T_EQ>
+template <typename Ty, typename T, typename RCDecF, typename DisplayF, typename T_CMP, typename T_EQ>
 class BSQSetOps
 {
 public:
-    typedef BSQSet<T, RCDecF, DisplayF, T_CMP, T_EQ> Ty;
-
     template <typename RCIncF, MIRNominalTypeEnum ntype>
     static BSQList<T, RCDecF, DisplayF>* set_entry_list(Ty* s)
     {
