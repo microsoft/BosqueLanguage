@@ -2,6 +2,8 @@
 
 The Bosque language derives from a combination of [TypeScript](https://www.typescriptlang.org/) inspired syntax and types plus [ML](https://www.smlnj.org/) and [Node/JavaScript](https://nodejs.org/en/) inspired semantics. This document provides an overview of the syntax, operations, and semantics in the Bosque language with an emphasis on the distinctive or unusual features in the language.
 
+_[Due to recent language updates some of this documentation is slightly out of date. We are working to get everything back in sync but please open issues as needed.]_
+
 # Table of Contents
 
 - [0 Highlight Features](#0-Highlight-Features)
