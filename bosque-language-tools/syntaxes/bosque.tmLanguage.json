@@ -134,7 +134,7 @@
 			"patterns": [
 				{
 					"name": "variable.name",
-					"match": "\\b([$]?([a-z]|[a-z][_a-zA-Z0-9]*[a-zA-Z0-9]))|[_]\\b"
+					"match": "\\b(([$]?([a-z]|([a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))|[_])\\"
 				}
 			]
 		}
