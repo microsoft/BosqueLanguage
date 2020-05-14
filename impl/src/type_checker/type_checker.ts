@@ -6,7 +6,7 @@
 import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomType, ResolvedRecordAtomTypeEntry, ResolvedAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedFunctionTypeParam, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl } from "../ast/assembly";
 import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue, StructuredAssignmentPathStep } from "./type_environment";
-import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter } from "../ast/type_signature";
+import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, FunctionTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, LiteralBigIntegerExpression, LiteralFloatExpression, ResultExpression, TailTypeExpression, MapEntryConstructorExpression } from "../ast/body";
 import { PCode, MIREmitter, MIRKeyGenerator, MIRBodyEmitter } from "../compiler/mir_emitter";
 import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRVirtualMethodKey, MIRRegisterArgument, MIRVariable, MIRNominalTypeKey, MIRConstantKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey } from "../compiler/mir_ops";
@@ -4933,13 +4933,19 @@ class TypeChecker {
             let cargs = new Map<string, VarInfo>();
             let argTypes = new Map<string, MIRType>();
             args.forEach((arg) => {
-                    const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
-                    const ptype = arg.isOptional ? this.m_assembly.typeUpperBound([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
-                    const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
+                    //
+                    //TODO: we are skipping the case of Lambda bindings in the precondition
+                    //      need to support this later
+                    //
+                    if (!(arg.type instanceof FunctionTypeSignature)) {
+                        const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
+                        const ptype = arg.isOptional ? this.m_assembly.typeUpperBound([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
+                        const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
 
-                    fps.push(new MIRFunctionParameter(arg.name, mirptype.trkey));
-                    cargs.set(arg.name, new VarInfo(ptype, true, false, true, ptype));
-                    argTypes.set(arg.name, mirptype);
+                        fps.push(new MIRFunctionParameter(arg.name, mirptype.trkey));
+                        cargs.set(arg.name, new VarInfo(ptype, true, false, true, ptype));
+                        argTypes.set(arg.name, mirptype);
+                    }
                 });
 
             const body = new BodyImplementation(`${srcFile}::${sinfo.pos}`, srcFile, bexp);
@@ -4987,13 +4993,19 @@ class TypeChecker {
             let cargs = new Map<string, VarInfo>();
             let argTypes = new Map<string, MIRType>();
             args.forEach((arg) => {
-                    const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
-                    const ptype = arg.isOptional ? this.m_assembly.typeUpperBound([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
-                    const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
+                    //
+                    //TODO: we are skipping the case of Lambda bindings in the precondition
+                    //      need to support this later
+                    //
+                    if (!(arg.type instanceof FunctionTypeSignature)) {
+                        const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
+                        const ptype = arg.isOptional ? this.m_assembly.typeUpperBound([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
+                        const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
 
-                    fps.push(new MIRFunctionParameter(arg.name, mirptype.trkey));
-                    cargs.set(arg.name, new VarInfo(ptype, true, false, true, ptype));
-                    argTypes.set(arg.name, mirptype);
+                        fps.push(new MIRFunctionParameter(arg.name, mirptype.trkey));
+                        cargs.set(arg.name, new VarInfo(ptype, true, false, true, ptype));
+                        argTypes.set(arg.name, mirptype);
+                    }
                 });
 
             let rprs: MIRFunctionParameter[] = [];
@@ -5224,7 +5236,14 @@ class TypeChecker {
 
         const env = TypeEnvironment.createInitialEnvForCall(ikey, binds, refNames, fargs, cargs, declaredResult);
 
-        const prepostargs = invoke.params.map((param) => new MIRVariable(param.name));
+        //
+        //TODO: we are skipping the case of Lambda bindings in the precondition
+        //      need to support this later
+        //
+        const prepostargs = invoke.params
+            .filter((param) => !(param.type instanceof FunctionTypeSignature))
+            .map((param) => new MIRVariable(param.name));
+        
         let preject: [MIRInvokeKey, MIRArgument[]] | undefined = undefined;
         let postject: [MIRInvokeKey, MIRArgument[]] | undefined = undefined;
         let realbody = invoke.body;
