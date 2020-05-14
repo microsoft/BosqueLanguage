@@ -4,10 +4,33 @@
 [![PR's Welcome](https://img.shields.io/badge/PRs%20-welcome-brightgreen.svg)](#contribute)
 [![Build Status](https://dev.azure.com/bosquepl/BosqueDevOps/_apis/build/status/Microsoft.BosqueLanguage?branchName=master)](https://dev.azure.com/bosquepl/BosqueDevOps/_build/latest?definitionId=1&branchName=master)
 
-The Bosque programming language is a breakthrough research project from [_Microsoft Research_](https://www.microsoft.com/en-us/research/project/bosque-programming-language/). Bosque simultaneously supports a high productivity development experience expected by modern cloud developers, coming from say a TypeScript/Node stack, while also providing a resource efficient and predictable runtime with a performance profile similar to a native C++ application. Beyond supporting these, previously conflicting objectives in one language, Bosque also brings an unprecedented tooling ecosystem including zero-effort verification, symbolic testing, dependency management validation, time-travel debugging, and more. 
 
-Small samples of code and unique Bosque tooling are below in the [Code Snippets](#Code-Snippets) and [Tooling](#Tooling) sections. A rundown of notable and/or unique features in the Bosque language is provided in the [language overview section 0](docs/language/overview.md#0-Highlight-Features).
-For a look at how the language works and flows _in the large_ please see the code for a [simple tic-tac-toe](impl/src/test/apps/tictactoe/main.bsq) program.
+## The Bosque Project
+The Bosque Programming Language project is a ground up language & tooling co-design effort focused on is investigating the theoretical and the practical implications of:
+
+1. Explicitly designing a code intermediate representation language (bytecode) that enables deep automated code reasoning and the deployment of next-generation development tools, compilers, and runtime systems.
+2. Leveraging the power of the intermediate representation to provide a programming language that is both easily accessible to modern developers and that provides a rich set of useful language features for developing high reliability & high performance applications.
+3. Taking a cloud-development first perspective on programming to address emerging challenges as we move into a distributed cloud development model based around microservices, serverless, and RESTful architectures.
+
+### The Role of Intermediate Representations
+
+Compiler intermediate representations (IRs) are traditionally thought of, and designed with, a specific source language (or languages) in mind. Their historical use has primarily been as an intermediate step in the process of lowering a source language program, with all of the associated syntactic sugar, into a final executable binary. However, over time they have become increasingly important in supporting program analysis and IDE tooling tasks. In these scenarios choices which were did not matter in the context of the compilation workflow can have major negative impacts.
+
+In the Bosque project we ask the question of what happens if the IR is designed explicitly to support the rich needs of automated code reasoning, IDE tooling, etc. With this novel IR first perspective we are exploring a new way to think about and build a language intermediate representation and tools that utilize it. Our initial experiments show that this empowers a range of next-generation experiences including symbolic-testing, enhanced fuzzing, soft-realtime compilation with stable GC support, API auto-marshaling, and more!
+
+### Regularized Programming
+
+Many features that make the Bosque IR amenable for automated reasoning involve simplifying and removing sources of irregularity in the semantics. These regularizations also simplify the task of understanding and writing code for the human developer. Inspired by this idea the Bosque project is building a new regularized programming language that takes advantage of the features of the IR.
+
+The Bosque Programming Language builds on the strengths of classical Functional Programming,  modern TypeScript/Node.js, and the power of the new IR. The result is a language that simultaneously supports the kind of high productivity development experience available to modern developers while also providing a resource efficient and predictable runtime, scaling from small IoT up to heavily loaded cloud services. In addition to bringing all the expressive power expected from a modern language, the Bosque language also introduces several novel features like Typed Strings and API Types, that directly address challenges faced by developers working in a distributed cloud based world.
+
+### Cloud First Development
+The move into cloud based development, with architectures based around microservices, serverless functions, and RESTful APIs, brings new challenges for development. In this environment an program may interoperate with many other (remote) services which are maintained by different teams (and maybe implemented in different languages). This forces APIs to use least-common denominator types for interop and creates the need for extensive serialize/deserialize/validate logic. Further, issues like cold-service startups, 95% response times, resiliency and diagnostics, all become critical but have not been design considerations in most traditional languages.
+
+The Bosque project takes a cloud and IoT first view of programming languages. Thus, it includes features like API Types to simplify the construction and deployment of REST style APIs. Application initialization design provides 0-cost loading for lighting fast (cold) startup. Choices like fully determinized language semantics, keys and ordering, and memory behavior result in a runtime with minimal performance variability and enable ultra-low overhead tracing.
+
+### Powering the Future of Programming
+An overarching theme of the Bosque project is increasing the ability of automated tools to reason about and transform code. This mechanization is a foundational part of unlocking the future of using AI and Synthesis in the development pipeline. The ability to mechanically reason about the semantics of a program via symbolic means is a key enabler to synthesizing novel and useful code components using examples or conditions. Bosque’s fully determinized and loop free design can also help facilitate the development and application of automated program differentiation. These are open problems but, just as we saw how Bosque unlocks value in classical tooling/compilation scenarios, we are excited to see what it can do to power the AI and Synthesis programming revolution.
 
 **Note:** This repository and code are currently still experimental. This means that the language is subject to revision, there are bugs and missing functionality, and the performance is limited. 
 
@@ -17,6 +40,10 @@ For a look at how the language works and flows _in the large_ please see the cod
 
 ## Documentation
 
+Small samples of code and unique Bosque tooling are below in the [Code Snippets](#Code-Snippets) and [Tooling](#Tooling) sections. A rundown of notable and/or unique features in the Bosque language is provided in the [language overview section 0](docs/language/overview.md#0-Highlight-Features).
+For a look at how the language works and flows _in the large_ please see the code for a [simple tic-tac-toe](impl/src/test/apps/tictactoe/main.bsq) program.
+
+Detailed Documentation, Tutorials, and Technical Information:
 * [Language Docs](docs/language/overview.md)
 * [Library Docs](docs/libraries/overview.md)
 * Tutorials - _Coming Eventually!_
@@ -221,8 +248,8 @@ function createAnimalPreSafe(catchPhrase: String): Animal
 typedef ErrData = {msg: String, data?: Any};
 
 entrypoint function getSays(animal: String, catchPhrase: String): Result<String, ErrData?>
-    validate animal != "" or return  Result<String, ErrData>::err({ msg="Invalid animal" });
-    validate catchPhrase != "" or return Result<String, ErrData>::err({ msg="Invalid catchPhrase" });
+    validate animal != "" or return err({ msg="Invalid animal" });
+    validate catchPhrase != "" or return err({ msg="Invalid catchPhrase" });
 {
     return String::concat("The ", animal, " says ", createAnimal::(catchPhrase).says);
 }
@@ -257,8 +284,14 @@ global ops: Set<String> = Set<String>@{
     "sub"
 };
 
+function checkIntBounds(arg: Int?): Bool {
+    //our calculator is for small numbers -- maybe use BigInt later
+    return arg == none || ((-100 <= arg) && (arg <= 100)); 
+}
+
 entrypoint function processOp(op: String, arg1: Int, arg2: Int?): Int 
     requires release NSMain::ops->has(op);
+    requires release checkIntBounds(arg1) && checkIntBounds(arg2);
     //requires release (op == "add" || op == "sub") ==> arg2 != none;
 {
     if(op == "negate") {

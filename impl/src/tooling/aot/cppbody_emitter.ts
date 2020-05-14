@@ -1945,7 +1945,7 @@ class CPPBodyEmitter {
                 break;
             }
             case "set_has_key": {
-                const tcmp = this.typegen.getFunctorsForType(this.getSetContentsInfoForListOp(idecl)).eq;
+                const tcmp = this.typegen.getFunctorsForType(this.getSetContentsInfoForListOp(idecl)).less;
                 bodystr = `auto $$return = std::binary_search(${params[0]}->entries.begin(), ${params[0]}->entries.end(), ${params[1]}, ${tcmp}{});`;
                 break;
             }
