@@ -312,7 +312,7 @@ class Lexer {
         return true;
     }
 
-    private static readonly _s_commentRe = /(\/\/.*)|(\/\*[\s\S]*?\/\*)/y;
+    private static readonly _s_commentRe = /(\/\/.*)|(\/\*[\s\S]*?\*\/)/y;
     private tryLexComment(): boolean {
         Lexer._s_commentRe.lastIndex = this.m_cpos;
         const m = Lexer._s_commentRe.exec(this.m_input);
