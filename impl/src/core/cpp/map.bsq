@@ -37,27 +37,27 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     hidden static s_merge(m: Map<K, V>, om: Map<K, V>): Map<K, V> # map_merge
     hidden static s_mergeall(dl: List<Map<K, V>>): Map<K, V> # map_mergeall
 
-    override method size(): Int {
+    method size(): Int {
         return Map<K, V>::s_size(this);
     }
 
-    override method empty(): Bool {
+    method empty(): Bool {
         return Map<K, V>::s_size(this) == 0;
     }
 
-    override method keys(): List<K> {
+    method keys(): List<K> {
         return Map<K, V>::s_key_list(this);
     }
 
-    override method keySet(): Set<K> {
+    method keySet(): Set<K> {
         return Map<K, V>::s_key_set(this);
     }
 
-    override method values(): List<K> {
+    method values(): List<K> {
         return Map<K, V>::s_values(this);
     }
 
-    override method entries(): List<MapEntry<K, V>> {
+    method entries(): List<MapEntry<K, V>> {
         return Map<K, V>::s_entries(this);
     }
 
@@ -65,15 +65,15 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         abort;
     }
 
-    override method has(key: K): Bool {
+    method has(key: K): Bool {
         return Map<K, V>::s_has_key(this, k);
     }
 
-    override method hasAll(...kl: List<K>): Bool {
+    method hasAll(...kl: List<K>): Bool {
         return Map<K, V>::s_has_all(this, kl);
     }
 
-    override method domainIncludes(s: Set<K>): Bool {
+    method domainIncludes(s: Set<K>): Bool {
         if(Set<K>::s_size(s) > Map<K, V>::s_size(this)) {
             return false;
         }
@@ -82,14 +82,18 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         }
     }
 
-    override method get(key: K): V 
+    method get(key: K): V 
         requires release Map<K, V>::s_has_key(this, k);
     {
         return Map<K, V>::s_at_val(this, k);
     }
 
-    override method tryGet(k: K): V? {
+    method tryGet(k: K): V? {
         return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : none;
+    }
+
+    method defaultGet(k: K, default: V): V {
+        return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : default;
     }
 
     recursive? method submap(p: recursive? fn(_: K, _: V) -> Bool): Map<K, V> {
@@ -158,27 +162,27 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
 }
 
 entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>> {
-    override method size(): Int {
+    method size(): Int {
         abort;
     }
 
-    override method empty(): Bool  {
+    method empty(): Bool  {
         abort;
     }
 
-    override method keys(): List<K>  {
+    method keys(): List<K>  {
         abort;
     }
 
-    override method keySet(): Set<K>  {
+    method keySet(): Set<K>  {
         abort;
     }
 
-    override method values(): List<K>  {
+    method values(): List<K>  {
         abort;
     }
 
-    override method entries(): List<MapEntry<K, V>>  {
+    method entries(): List<MapEntry<K, V>>  {
         abort;
     }
 
@@ -186,23 +190,23 @@ entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V
         abort;
     }
 
-    override method has(key: K): Bool {
+    method has(key: K): Bool {
         abort;
     }
 
-    override method hasAll(...ks: List<K>): Bool {
+    method hasAll(...ks: List<K>): Bool {
         abort;
     }
 
-    override method domainIncludes(s: Set<K>): Bool {
+    method domainIncludes(s: Set<K>): Bool {
         abort;
     }
 
-    override method get(key: K): V {
+    method get(key: K): V {
         abort;
     }
 
-    override method tryGet(k: K): V? {
+    method tryGet(k: K): V? {
         abort;
     }
 

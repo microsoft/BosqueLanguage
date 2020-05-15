@@ -205,10 +205,10 @@ entity String provides KeyType, PODType, APIType, Some {
             return "";
         }
         elif(List<String>::s_size(args) == 1) {
-            return args->front();
+            return args.front();
         }
         else {
-            return String::s_concat[recursive](args, 1, args->front());
+            return String::s_concat[recursive](args, 1, args.front());
         }
     }
 
@@ -263,13 +263,13 @@ entity StringOf<T where Parsable> provides APIValue, KeyType, Some, Convertable 
     method string(): String # stringof_string
 
     static from(str: String): StringOf<T> 
-        requires release T::tryParse(str)->isOk();
+        requires release T::tryParse(str).isOk();
     {
         return StringOf<T>::s_unsafe_from(str);
     }
 
     static tryFrom(str: String): StringOf<T>? {
-        return T::tryParse(str)->isOk() ? StringOf<T>::s_unsafe_from(str) : none;
+        return T::tryParse(str).isOk() ? StringOf<T>::s_unsafe_from(str) : none;
     }
 
     method convert<U where Parsable>(): StringOf<U> # stringof_convert
@@ -389,7 +389,7 @@ struct entity MapEntry<K where KeyType, V> provides Some, Convertable, PODType w
     }
 
     method convert<T where KeyType, U>(): MapEntry<T, U> {
-        return MapEntry<T, U>@{ key=this.key->as<T>(), value=this.value->as<U>() };
+        return MapEntry<T, U>@{ key=this.key.as<T>(), value=this.value.as<U>() };
     }
 }
 
@@ -404,23 +404,23 @@ struct concept Result<T, E=None> provides Some, Convertable, PODType when T PODT
     }
 
     method isOk(): Bool {
-        return this->is<Ok<T, E>>();
+        return this.is<Ok<T, E>>();
     }
 
     method isErr(): Bool {
-        return this->is<Err<T, E>>();
+        return this.is<Err<T, E>>();
     }
 
     method result(): T {
-        return this->as<Ok<T, E>>().result;
+        return this.as<Ok<T, E>>().result;
     }
 
     method failure(): E {
-        return this->as<Err<T, E>>().failure;
+        return this.as<Err<T, E>>().failure;
     }
 
     method convert<U, V>(): Result<U, V> {
-        return this->isOk() ? Result<U, V>::createOk(this->result()->as<U>()) : Result<U, V>::createErr(this->failure()->as<V>());
+        return this.isOk() ? Result<U, V>::createOk(this.result().as<U>()) : Result<U, V>::createErr(this.failure().as<V>());
     }
 }
 
@@ -439,6 +439,9 @@ struct entity Err<T, E=None> provides Result<T, E> {
         return Err<T, E>@{ failure = failure };
     }
 }
+
+function ok(of: Any): Any # special_method
+function err(of: Any): Any # special_method
 
 //<summary>All actual entities/concepts implicitly provide this concept.</summary>
 concept Object provides Some {

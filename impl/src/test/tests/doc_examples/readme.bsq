@@ -40,7 +40,7 @@ typedef Letter = /\w/;
 typedef Digit = /\d/;
 
 function fss(s1: SafeString<Digit>): Bool {
-    return s1->string() == "3";
+    return s1.string() == "3";
 }
 
 entity StatusCode provides Parsable {
@@ -118,7 +118,7 @@ entrypoint function add2Check(x: Int): Int {
 }
 
 function allPositive(...args: List<Int>): Bool {
-    return args->allOf(fn(x) => x >= 0);
+    return args.allOf(fn(x) => x >= 0);
 }
 
 entrypoint function allPositiveC(): Bool {
@@ -134,7 +134,7 @@ entrypoint function allPositiveCheck(x: Int): Bool {
 
 entrypoint function allPositiveCapture(): Bool {
     let zero = 0;
-    return List<Int>@{1, 2}->allOf(fn(x) => x >= zero);
+    return List<Int>@{1, 2}.allOf(fn(x) => x >= zero);
 }
 
 function sign(x?: Int): Int {
@@ -178,20 +178,20 @@ entrypoint function recordtupleC(): Int {
 }
 
 entrypoint function checkInvsAndObjs(): Bool {
-    check GenericGreeting@{}->sayHello() == "hello world";
-    check GenericGreeting::instance->sayHello() == "hello world";
+    check GenericGreeting@{}.sayHello() == "hello world";
+    check GenericGreeting::instance.sayHello() == "hello world";
 
-    check NamedGreeting@{name="bob"}->sayHello() == "hello bob";
+    check NamedGreeting@{name="bob"}.sayHello() == "hello bob";
 
     return true;
 }
 
 entrypoint function checkInvsAndObjsFail(): String {
-    return NamedGreeting@{name=""}->sayHello();
+    return NamedGreeting@{name=""}.sayHello();
 }
 
 entrypoint function checkInvsAndObjsPuzzle(n: String): String {
-    let say = NamedGreeting@{name=(n == "" ? "bob" : n)}->sayHello();
+    let say = NamedGreeting@{name=(n == "" ? "bob" : n)}.sayHello();
     check say != "hello chuck";
 
     return say;
@@ -240,8 +240,8 @@ entrypoint function stringofIsIOCons(): Int {
 
 entrypoint function stringofIsChk(s: String): Int {
     let sc = StatusCode::tryParse(s);
-    if(sc->isOk()) {
-        check sc->result().code != 2;
+    if(sc.isOk()) {
+        check sc.result().code != 2;
     }
 
     return 0;

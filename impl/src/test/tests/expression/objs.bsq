@@ -77,21 +77,21 @@ entrypoint function createObjFactory(): Bool {
 entrypoint function createObjFactoryTemplate(): Bool {
     let o = E1@creat<String>("ok");
 
-    check o.x->as<String>() == "ok" && o.y == 1 && o.z && o.f == 3;
+    check o.x.as<String>() == "ok" && o.y == 1 && o.z && o.f == 3;
     return true;
 }
 
 entrypoint function createObjTFactory(): Bool {
     let o = E2<Int>@create(3);
 
-    check o.f == 3 && o.g->as<Int>() == 1;
+    check o.f == 3 && o.g.as<Int>() == 1;
     return true;
 }
 
 entrypoint function createObjTFactoryTemplate(): Bool {
     let o = E2<Int>@creat<String>(3, "ok");
 
-    check o.f == 3 && o.g->as<String>() == "ok";
+    check o.f == 3 && o.g.as<String>() == "ok";
     return true;
 }
 

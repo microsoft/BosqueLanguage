@@ -54,30 +54,30 @@ entrypoint function projectIndeciesC(): Int {
 }
 
 entrypoint function modifyIndecies(): [Int, Int] {
-    return [ 1, 2 ]->update(1=5);
+    return [ 1, 2 ].update(1=5);
 }
 
 entrypoint function modifyIndeciesOpt(): [Int, Int, None, None, Int] {
-    return [ 1, 2 ]->update(1=5, 4=4);
+    return [ 1, 2 ].update(1=5, 4=4);
 }
 
 entrypoint function modifyIndeciesBailout(b: Bool): [Int]? {
-    return maybeTuple(b)?->update(0=5);
+    return maybeTuple(b)?.update(0=5);
 }
 
 entrypoint function modifyIndeciesC(): Int {
-    return [ 1, 2 ]->update(1=5).1;
+    return [ 1, 2 ].update(1=5).1;
 }
 
 entrypoint function extendTupleType(): [Bool, Bool, Int] {
-    return [ true, false ]->merge([ 3 ]);
+    return [ true, false ].merge([ 3 ]);
 }
 
 entrypoint function extendTupleTypeBailout(b: Bool): [Int, Int, Int]? {
-    return maybeTuple(b)?->merge([ 3, 4 ]);
+    return maybeTuple(b)?.merge([ 3, 4 ]);
 }
 
 entrypoint function extendTupleTypeC(): Int {
-    return [ true, false ]->merge([ 3 ]).2;
+    return [ true, false ].merge([ 3 ]).2;
 }
 

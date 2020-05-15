@@ -18,11 +18,11 @@ function makeConcept<U, T>(v: T): U {
 }
 
 function checkerAny<U>(v: Any): Bool {
-    return v->is<U>();
+    return v.is<U>();
 }
 
 function checker<T, U>(v: T): Bool {
-    return v->is<U>();
+    return v.is<U>();
 }
 
 concept TA {

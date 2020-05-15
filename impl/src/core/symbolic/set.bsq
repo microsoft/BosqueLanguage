@@ -70,8 +70,8 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
             return sp;
         }
         else {
-            if(kl.hkey->is<U>()) {
-                return Set<T>::s_oftype[recursive](Set<U>::s_add(sp, kl.hkey->as<U>()), kl.tail);
+            if(kl.hkey.is<U>()) {
+                return Set<T>::s_oftype[recursive](Set<U>::s_add(sp, kl.hkey.as<U>()), kl.tail);
             }
             else {
                 return Set<T>::s_oftype[recursive](sp, kl.tail, p);
@@ -84,7 +84,7 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
             return sp;
         }
         else {
-            return Set<T>::s_cast[recursive](Set<U>::s_add(sp, kl.hkey->as<U>()), kl.tail);
+            return Set<T>::s_cast[recursive](Set<U>::s_add(sp, kl.hkey.as<U>()), kl.tail);
         }
     }
 
@@ -131,7 +131,7 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
         }
         else {
             let s = List<T>::s_unsafe_get(sl, idx);
-            return Set<T>::s_unionall[recursive](sl, sp->union(s), idx + 1);
+            return Set<T>::s_unionall[recursive](sl, sp.union(s), idx + 1);
         }
     }
 
@@ -141,27 +141,27 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
         }
         else {
             let s = List<T>::s_unsafe_get(sl, idx);
-            return Set<T>::s_intersectall[recursive](sl, sp->intersect(s), idx + 1);
+            return Set<T>::s_intersectall[recursive](sl, sp.intersect(s), idx + 1);
         }
     }
 
-    override method size(): Int {
+    method size(): Int {
         return Set<T>::s_size(this);
     }
 
-    override method empty(): Bool {
+    method empty(): Bool {
         return Set<T>::s_size(this) == 0;
     }
 
-    override method entries(): List<T> {
+    method entries(): List<T> {
         return Set<T>::s_entry_list(KeyList<K>::sort(Set<T>::s_get_keylist(this)), List<T>@{});
     }
 
-    override method has(v: T): Bool {
+    method has(v: T): Bool {
         return Set<T>::s_has_key(this, v);
     }
 
-    override method hasAll(...v: List<T>): Bool {
+    method hasAll(...v: List<T>): Bool {
         return Set<T>::s_hasall[recursive](this, v, 0);
     }
 
@@ -216,9 +216,9 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
     }
 
     method symmetricDifference(s: Set<T>): Set<T> {
-        let d1 = this->diffWith(s);
-        let d2 = s->diffWith(this);
-        return d1->unionWith(d2);
+        let d1 = this.diffWith(s);
+        let d2 = s.diffWith(this);
+        return d1.unionWith(d2);
     }
 
     static unionOf(...sl: List<Set<T>>): Set<T> {
@@ -247,23 +247,23 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
 }
 
 entity DynamicSet<T where KeyType> provides Object, Expandoable<T> {
-    override method size(): Int {
+    method size(): Int {
         abort;
     }
 
-    override method empty(): Bool {
+    method empty(): Bool {
         abort;
     }
 
-    override method entries(): List<T> {
+    method entries(): List<T> {
         abort;
     }
 
-    override method has(v: T): Bool  {
+    method has(v: T): Bool  {
         abort;
     }
 
-    override method hasAll(...v: List<T>): Bool  {
+    method hasAll(...v: List<T>): Bool  {
         abort;
     }
 

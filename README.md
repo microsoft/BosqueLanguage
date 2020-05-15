@@ -68,7 +68,7 @@ add2(y=2, 5)   //7
 
 ```none
 function allPositive(...args: List<Int>): Bool {
-    return args->allOf(fn(x) => x >= 0);
+    return args.allOf(fn(x) => x >= 0);
 }
 
 allPositive(1, 3, 4) //true
@@ -135,12 +135,12 @@ entity NamedGreeting provides WithName, Greeting {
     }
 }
 
-GenericGreeting@{}->sayHello()         //"hello world"
-GenericGreeting::instance->sayHello()  //"hello world"
+GenericGreeting@{}.sayHello()         //"hello world"
+GenericGreeting::instance.sayHello()  //"hello world"
 
-NamedGreeting@{}->sayHello()           //type error no value provided for "name" field
-NamedGreeting@{name=""}->sayHello()    //invariant error
-NamedGreeting@{name="bob"}->sayHello() //"hello bob"
+NamedGreeting@{}.sayHello()           //type error no value provided for "name" field
+NamedGreeting@{name=""}.sayHello()    //invariant error
+NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 ```
 
 **Validated and Typed Strings:**
@@ -149,7 +149,7 @@ typedef Letter = /\w/;
 typedef Digit = /\d/;
 
 function fss(s1: SafeString<Digit>): Bool {
-    return s1->string() == "3";
+    return s1.string() == "3";
 }
 
 Digit::accepts("a"); //false
@@ -290,7 +290,7 @@ function checkIntBounds(arg: Int?): Bool {
 }
 
 entrypoint function processOp(op: String, arg1: Int, arg2: Int?): Int 
-    requires release NSMain::ops->has(op);
+    requires release NSMain::ops.has(op);
     requires release checkIntBounds(arg1) && checkIntBounds(arg2);
     //requires release (op == "add" || op == "sub") ==> arg2 != none;
 {

@@ -10,11 +10,11 @@ function makeValue<T>(v: T): T {
 }
 
 function checkerAny<U>(v: Any): Bool {
-    return v->is<U>();
+    return v.is<U>();
 }
 
 function checker<T, U>(v: T): Bool {
-    return v->is<U>();
+    return v.is<U>();
 }
 
 entrypoint function recordTests(): Int {
