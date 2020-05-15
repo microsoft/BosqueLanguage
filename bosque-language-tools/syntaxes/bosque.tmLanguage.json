@@ -98,7 +98,7 @@
 				},
 				{
 					"name": "keyword.bosque",
-					"match": "\\b(pragma|struct|hidden|private|factory|virtual|abstract|override|entrypoint|recursive?|recursive|_debug|concept|const|enum|entity|err|false|field|fn|function|global|identifier|method|namespace|none|ok|private|provides|ref|static|true|typeis|typeas|typetry|typedef|let|var)\\b"
+					"match": "\\b(pragma|struct|hidden|private|factory|virtual|abstract|override|entrypoint|recursive?|recursive|_debug|concept|const|enum|entity|false|field|fn|function|global|identifier|method|namespace|none|private|provides|ref|static|true|typeis|typeas|typetry|typedef|let|var)\\b"
 				}
 			]
 		},

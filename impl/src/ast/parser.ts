@@ -34,7 +34,6 @@ const KeywordStrings = [
     "enum",
     "entity",
     "ensures",
-    "err",
     "false",
     "field",
     "fn",
@@ -46,7 +45,6 @@ const KeywordStrings = [
     "method",
     "namespace",
     "none",
-    "ok",
     "or",
     "private",
     "provides",
@@ -112,7 +110,6 @@ const SymbolStrings = [
     ">=",
     "-",
     "->",
-    "?->",
     "*",
     "/"
 ].sort((a, b) => { return (a.length !== b.length) ? (b.length - a.length) : a.localeCompare(b); });
@@ -165,7 +162,10 @@ const RightScanParens = ["]", ")", "}", "|)", "|}"];
 
 const AttributeStrings = ["struct", "hidden", "private", "factory", "virtual", "abstract", "override", "entrypoint", "recursive", "recursive?"];
 
+const SpecialFunctionNames = ["ok", "err"];
 const SpecialInvokeNames = ["update", "merge", "project", "tryProject"];
+
+const UnsafeFieldNames = ["is", "as", "tryAs", "defaultAs", "isNone", "isSome", "update", "merge", "project", "tryProject", "tryParse"]
 
 const TokenStrings = {
     Clear: "[CLEAR]",
@@ -1043,7 +1043,15 @@ class Parser {
             entries = this.parseListOf<[string, TypeSignature, boolean]>("{", "}", ",", () => {
                 this.ensureToken(TokenStrings.Identifier);
 
+                //
+                //TODO: We also need to check this on objects that field and method names are distinct.
+                //      Type checker will also need to make sure that property/field accesses & updates are really to properties or fields.
+                //
                 const name = this.consumeTokenAndGetValue();
+                if(UnsafeFieldNames.includes(name)) {
+                    this.raiseError(this.getCurrentLine(), `Property name "${name}" is ambigious with the methods that Record may provide`);
+                }
+
                 const isopt = this.testAndConsumeTokenIf("?");
                 this.ensureAndConsumeToken(":");
                 const rtype = this.parseTypeSignature();
@@ -1346,15 +1354,6 @@ class Parser {
             this.m_penv.assembly.addLiteralRegex(restr);
             return new LiteralRegexExpression(sinfo, restr);
         }
-        else if(tk === "err" || tk === "ok") {
-            this.consumeToken();
-
-            this.ensureAndConsumeToken("(");
-            const arg = this.parseExpression();
-            this.ensureAndConsumeToken(")");
-            
-            return new ResultExpression(sinfo, this.m_penv.getCurrentFunctionScope().getReturnType(), tk, arg);
-        }
         else if (tk === TokenStrings.Identifier) {
             const istr = this.consumeTokenAndGetValue();
 
@@ -1379,11 +1378,20 @@ class Parser {
                 }
             }
             else {
-                const targs = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
-                const pragmas = this.testToken("[") ? this.parsePragmaArguments() : new PragmaArguments("no", []);
-                const args = this.parseArguments("(", ")");
+                if(SpecialFunctionNames.includes(istr)) {
+                    this.ensureAndConsumeToken("(");
+                    const arg = this.parseExpression();
+                    this.ensureAndConsumeToken(")");
+                    
+                    return new ResultExpression(sinfo, this.m_penv.getCurrentFunctionScope().getReturnType(), istr, arg);
+                }
+                else {
+                    const targs = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
+                    const pragmas = this.testToken("[") ? this.parsePragmaArguments() : new PragmaArguments("no", []);
+                    const args = this.parseArguments("(", ")");
 
-                return new CallNamespaceFunctionExpression(sinfo, ns, istr, targs, pragmas, args);
+                    return new CallNamespaceFunctionExpression(sinfo, ns, istr, targs, pragmas, args);
+                }
             }
         }
         else if (tk === "fn" || this.testFollows("recursive", "fn")) {
@@ -1569,11 +1577,6 @@ class Parser {
 
                     ops.push(new PostfixProjectFromIndecies(sinfo, isElvis, false, indecies));
                 }
-                else if (this.testToken(TokenStrings.Identifier)) {
-                    const name = this.consumeTokenAndGetValue();
-
-                    ops.push(new PostfixAccessFromName(sinfo, isElvis, name));
-                }
                 else if (this.testToken("{")) {
                     const names = this.parseListOf<string>("{", "}", ",", () => {
                         this.ensureToken(TokenStrings.Identifier);
@@ -1586,7 +1589,7 @@ class Parser {
 
                     ops.push(new PostfixProjectFromNames(sinfo, isElvis, false, names));
                 }
-                else {
+                else if(this.testToken("(|")) {
                     this.ensureToken("(|");
 
                     if (this.testFollows("(|", TokenStrings.Int)) {
@@ -1614,29 +1617,33 @@ class Parser {
                         ops.push(new PostfixProjectFromNames(sinfo, isElvis, true, names));
                     }
                 }
-            }
-            else if (tk === "->" || tk === "?->") {
-                const isElvis = this.testToken("?->");
-                this.consumeToken();
-
-                let specificResolve: TypeSignature | undefined = undefined;
-                if (this.testToken(TokenStrings.Namespace) || this.testToken(TokenStrings.Type) || this.testToken(TokenStrings.Template)) {
-                    specificResolve = this.parseTypeSignature();
-                    this.ensureAndConsumeToken("::");
-                }
-
-                this.ensureToken(TokenStrings.Identifier);
-                const name = this.consumeTokenAndGetValue();
-
-                if (SpecialInvokeNames.includes(name)) {
-                    ops.push(this.handleSpecialCaseMethods(sinfo, isElvis, specificResolve, name));
-                }
                 else {
-                    const terms = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
-                    const pragmas = this.testToken("[") ? this.parsePragmaArguments() : new PragmaArguments("no", []);
-                    const args = this.parseArguments("(", ")");
+                    let specificResolve: TypeSignature | undefined = undefined;
+                    if (this.testToken(TokenStrings.Namespace) || this.testToken(TokenStrings.Type) || this.testToken(TokenStrings.Template)) {
+                        specificResolve = this.parseTypeSignature();
+                        this.ensureAndConsumeToken("::");
+                    }
+    
+                    this.ensureToken(TokenStrings.Identifier);
+                    const name = this.consumeTokenAndGetValue();
+    
+                    if (SpecialInvokeNames.includes(name)) {
+                        ops.push(this.handleSpecialCaseMethods(sinfo, isElvis, specificResolve, name));
+                    }
+                    else if (!(this.testToken("<") || this.testToken("[") || this.testToken("("))) {
+                        if(specificResolve !== undefined) {
+                            this.raiseError(this.getCurrentLine(), "Encountered named access but given type resolver (only valid on method calls)");
+                        }
 
-                    ops.push(new PostfixInvoke(sinfo, isElvis, specificResolve, name, terms, pragmas, args));
+                        ops.push(new PostfixAccessFromName(sinfo, isElvis, name));
+                    }
+                    else {
+                        const terms = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
+                        const pragmas = this.testToken("[") ? this.parsePragmaArguments() : new PragmaArguments("no", []);
+                        const args = this.parseArguments("(", ")");
+    
+                        ops.push(new PostfixInvoke(sinfo, isElvis, specificResolve, name, terms, pragmas, args));
+                    }
                 }
             }
             else {

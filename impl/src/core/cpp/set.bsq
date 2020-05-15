@@ -30,23 +30,23 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
     hidden static s_unionall(sl: List<Set<T>>): Set<T> # set_unionall
     hidden static s_intersectall(sl: List<Set<T>>): Set<T> # set_intersectall
 
-    override method size(): Int {
+    method size(): Int {
         return Set<T>::s_size(this);
     }
 
-    override method empty(): Bool {
+    method empty(): Bool {
         return Set<T>::s_size(this) == 0;
     }
 
-    override method entries(): List<T> {
+    method entries(): List<T> {
         return Set<T>::s_entry_list(this);
     }
 
-    override method has(v: T): Bool {
+    method has(v: T): Bool {
         return Set<T>::s_has_key(this, v);
     }
 
-    override method hasAll(...v: List<T>): Bool {
+    method hasAll(...v: List<T>): Bool {
         return Set<T>::s_hasall(this, v);
     }
 
@@ -120,23 +120,23 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
 }
 
 entity DynamicSet<T where KeyType> provides Object, Expandoable<T> {
-    override method size(): Int {
+    method size(): Int {
         abort;
     }
 
-    override method empty(): Bool {
+    method empty(): Bool {
         abort;
     }
 
-    override method entries(): List<T> {
+    method entries(): List<T> {
         abort;
     }
 
-    override method has(v: T): Bool  {
+    method has(v: T): Bool  {
         abort;
     }
 
-    override method hasAll(...v: List<T>): Bool  {
+    method hasAll(...v: List<T>): Bool  {
         abort;
     }
 

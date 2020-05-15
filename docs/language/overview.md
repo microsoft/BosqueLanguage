@@ -105,7 +105,7 @@ Bosque provides _named arguments_ along with _rest_ and _spread_ operators. Thes
 
 ```none
 function nsum(d: Int, ...args: List<Int>): Int {
-    return args->sum(default=d);
+    return args.sum(default=d);
 }
 
 function np(p1: Int, p2: Int): {x: Int, y: Int} {
@@ -154,10 +154,10 @@ The `SafeString<T>` type is parameterized with a `Validator` regular expression 
 typedef SizeFormat = /(\d)+(em|px)/; //declare Validator type the size formats
 
 entrypoint function convertToPX(size: SafeString<SizeFormat>): Int {
-    let dvalstr = /?<digits>\d+/.match(size->string()).digits;
+    let dvalstr = /?<digits>\d+/.match(size.string()).digits;
     let dval = Int::parse(dvalstr);
     
-    if(size->string()->endsWith("px")) {
+    if(size.string().endsWith("px")) {
         return dval;
     }
     else {
@@ -196,7 +196,7 @@ entity EMailAddress provides Parsable {
             return Result<Any, String>::err("Invalid Email Address");
         }
         else {
-            let addr = EMailAddress@{local=localResult->value(), domain=domainResult->value()};
+            let addr = EMailAddress@{local=localResult.value(), domain=domainResult.value()};
             return Result<Any, String>::ok(addr);
         }
     }
@@ -218,9 +218,9 @@ entity UserName provides Parsable {
 function generateNotifications(users: List<StringOf<UserName>>, 
     contactInfo: Map<StringOf<UserName>, StringOf<EMailAddress>>, 
     msg: String): List<{addr: StringOf<EMailAdress>, msg: String}> {
-        return users->map<{addr: StringOf<EMailAdress>, msg: String}>(fn(uname) => {
-            let uaddr = contactInfo->get(uname);
-            let umsg = String::concat("Dear ", uname->string(), ", ", msg);
+        return users.map<{addr: StringOf<EMailAdress>, msg: String}>(fn(uname) => {
+            let uaddr = contactInfo.get(uname);
+            let umsg = String::concat("Dear ", uname.string(), ", ", msg);
 
             return {addr: uaddr, msg: umsg};
         });
@@ -237,7 +237,7 @@ Bulk algebraic operations in Bosque start with support for bulk reads and update
 
 ```none
 let x = {f=1, g=2, h=3};
-x->update(f=-1, g=-2); //{f=-1, @g=-2, h=3}
+x.update(f=-1, g=-2); //{f=-1, @g=-2, h=3}
 ```
 
 In addition to eliminating opportunities to forget or confuse a field these operators help focus the code on the overall intent, instead of being hidden in the individual steps, and allow a developer to perform algebraic reasoning on the data structure operations. Bosque provides several flavors of these algebraic operations for various data types, tuples, records, and nominal types, and for various operations including projection, multi-update, and merge.
@@ -247,12 +247,12 @@ let l = [7, 8, 9];
 let r = {f=7, g=8};
 
 l.[0, 2]               //[7, 9]
-l->merge([5, 6])       //[7, 8, 9, 5, 6]
-l->project<Int, Int>() //[7, 8]
+l.merge([5, 6])       //[7, 8, 9, 5, 6]
+l.project<Int, Int>() //[7, 8]
 
 r.{f, h}             //{f=7, h=none}
-r->update(f=5, h=1)  //{f=5, g=8, h=1}
-r->merge({f=5, h=1}) //{f=5, g=8, h=1}
+r.update(f=5, h=1)  //{f=5, g=8, h=1}
+r.merge({f=5, h=1}) //{f=5, g=8, h=1}
 ```
 
 ## <a name="0.7-None-Processing"></a>0.7 None Processing
@@ -273,7 +273,7 @@ A fundamental concept in a programming language is the iteration construct and a
 let v: List<Int?> = List<Int?>{1, 2, none, 4};
 
 //Chained - List<Int>{1, 4, 16}
-v->filter(fn(x) => x != none)->map<Int>(fn(x) => x*x)
+v.filter(fn(x) => x != none).map<Int>(fn(x) => x*x)
 ```
 
 Eliminating the boilerplate of writing the same loops repeatedly eliminates whole classes of errors including, e.g. bounds computations, and makes the intent clear with a descriptively named functor instead of relying on a shared set of mutually known loop patterns. Critically, for enabling automated program validation and optimization, eliminating loops also eliminates the need for computing loop-invariants. Instead, and with a careful design of the collection libraries, it is possible to write precise transformers for each functor. In this case the computation of _strongest-postconditions_ or _weakest-preconditions_ avoids the complexity of generating a loop invariant and instead becomes a simple and deterministic case of formula pushing!
@@ -309,7 +309,7 @@ entity Resource {
 }
 
 function checkAccessForUser(user: UserId, ...resources: List<Resource>): Bool {
-    return resources->all(fn(r) => 
+    return resources.all(fn(r) => 
         switch(r.id) {
             type DurableOrchestrationContext => true
             type OwnedResourceId => r.id.owner = user
@@ -467,10 +467,10 @@ The `SafeString<T>` type is parameterized with a `Validator` regular expression 
 typedef SizeFormat = /(\d)+(em|px)/; //declare Validator type the size formats
 
 entrypoint function convertToPX(size: SafeString<SizeFormat>): Int {
-    let dvalstr = /?<digits>\d+/.match(size->string()).digits;
+    let dvalstr = /?<digits>\d+/.match(size.string()).digits;
     let dval = Int::parse(dvalstr);
     
-    if(size->string()->endsWith("px")) {
+    if(size.string().endsWith("px")) {
         return dval;
     }
     else {
@@ -509,7 +509,7 @@ entity EMailAddress provides Parsable {
             return Result<Any, String>::err("Invalid Email Address");
         }
         else {
-            let addr = EMailAddress@{local=localResult->value(), domain=domainResult->value()};
+            let addr = EMailAddress@{local=localResult.value(), domain=domainResult.value()};
             return Result<Any, String>::ok(addr);
         }
     }
@@ -531,9 +531,9 @@ entity UserName provides Parsable {
 function generateNotifications(users: List<StringOf<UserName>>, 
     contactInfo: Map<StringOf<UserName>, StringOf<EMailAddress>>, 
     msg: String): List<{addr: StringOf<EMailAdress>, msg: String}> {
-        return users->map<{addr: StringOf<EMailAdress>, msg: String}>(fn(uname) => {
-            let uaddr = contactInfo->get(uname);
-            let umsg = String::concat("Dear ", uname->string(), ", ", msg);
+        return users.map<{addr: StringOf<EMailAdress>, msg: String}>(fn(uname) => {
+            let uaddr = contactInfo.get(uname);
+            let umsg = String::concat("Dear ", uname.string(), ", ", msg);
 
             return {addr: uaddr, msg: umsg};
         });
@@ -688,7 +688,7 @@ Bosque provides _named arguments_ along with _rest_ and _spread_ operators. Thes
 
 ```none
 function nsum(d: Int, ...args: List<Int>): Int {
-    return args->sum(default=d);
+    return args.sum(default=d);
 }
 
 function np(p1: Int, p2: Int): {x: Int, y: Int} {
@@ -963,7 +963,7 @@ As in most languages the `.` operator allows access to individual elements in a 
 
 ## <a name="5.12-Typed-Projection"></a>5.12 Typed Projection
 
-In addition to extracting new tuples/records using the `.[]` and `.{}` notation the Bosque language also supports projecting out structured data using types via the notation _Exp_`->project<`_Type_`>()` method. This chain operator can be used on tuples, records, and nominal types:
+In addition to extracting new tuples/records using the `.[]` and `.{}` notation the Bosque language also supports projecting out structured data using types via the notation _Exp_`.project<`_Type_`>()` method. This chain operator can be used on tuples, records, and nominal types:
 
 ```none
 concept Bar {
@@ -980,28 +980,28 @@ entity Baz provides Bar {
 }
 
 let t = [ 1, 2, 3 ];
-t->project<[Int]>()       //[1]
-t->project<[Bool]()       //error type mismatch
-t->project<[Int, ?:Int]() //[1, 2]
-t->project<[Int, Any]()   //[1, 2]
+t.project<[Int]>()       //[1]
+t.project<[Bool]()       //error type mismatch
+t.project<[Int, ?:Int]() //[1, 2]
+t.project<[Int, Any]()   //[1, 2]
 
 let r = { f=1, g=2, k=true };
-r->project<{f: Int}>()          //{f=1}
-r->project<{f: Bool}>()         //error type mismatch
-r->project<{f: Int, g?: Int}>() //{f=1, g=2}
-r->project<{f: Int, g: Any}>()  //{f=1, g=2}
+r.project<{f: Int}>()          //{f=1}
+r.project<{f: Bool}>()         //error type mismatch
+r.project<{f: Int, g?: Int}>() //{f=1, g=2}
+r.project<{f: Int, g: Any}>()  //{f=1, g=2}
 
 let e = Baz{ f=1, g=2, k=true };
-e->project<Bar>()       //{f=1}
-e->project<{f: Bool}>() //error type projection requires same kinds
-e->project<T3>()        //error type mismatch
+e.project<Bar>()       //{f=1}
+e.project<{f: Bool}>() //error type projection requires same kinds
+e.project<T3>()        //error type mismatch
 ```
 
 Note that the result type of projecting from a nominal type is a _record_.
 
 ## <a name="5.13-Update"></a>5.13 Update
 
-In most languages updating (or creating an updated copy) is done on a field-by-field basis. However, with the bulk updates in Bosque it is possible to perform the update as an atomic operation and without manually extracting and copying fields. Bosque provides a chainable update operations for tuples (_Exp_`->update(i=e1, ... j=ek)` notation), records, and nominal types (_Exp_`->update(f=e1, ... f=ek)`).
+In most languages updating (or creating an updated copy) is done on a field-by-field basis. However, with the bulk updates in Bosque it is possible to perform the update as an atomic operation and without manually extracting and copying fields. Bosque provides a chainable update operations for tuples (_Exp_`.update(i=e1, ... j=ek)` notation), records, and nominal types (_Exp_`.update(f=e1, ... f=ek)`).
 
 ```none
 entity Baz {
@@ -1011,26 +1011,26 @@ entity Baz {
 }
 
 let t = [ 1, 2, 3 ];
-t->update(1=5)      //[1, 5, 2]
-t->update(0=3, 1=5) //[3, 5, 3]
-t->update(1=5, 4=0) //[1, 5, 3, none, 0]
+t.update(1=5)      //[1, 5, 2]
+t.update(0=3, 1=5) //[3, 5, 3]
+t.update(1=5, 4=0) //[1, 5, 3, none, 0]
 
 let r = { f=1, g=2, k=true };
-r->update(g=5)          //{f=1, g=5, k=true}
-r->update(g=3, k=false) //{f=1, g=3, k=false}
-r->update(g=5, h=0)     //{f=1, g=5, k=true, h=0}
+r.update(g=5)          //{f=1, g=5, k=true}
+r.update(g=3, k=false) //{f=1, g=3, k=false}
+r.update(g=5, h=0)     //{f=1, g=5, k=true, h=0}
 
 let e = Baz{ f=1, g=2, k=true };
-e->update(g=5)          //Baz{f=1, g=5, k=true}
-e->update(g=3, k=false) //Baz{f=1, g=3, k=false}
-e->update(g=5, h=0)     //error invalid field name
+e.update(g=5)          //Baz{f=1, g=5, k=true}
+e.update(g=3, k=false) //Baz{f=1, g=3, k=false}
+e.update(g=5, h=0)     //error invalid field name
 ```
 
 Note that for tuples updating past the end of the tuple will `none` pad the needed locations while for records it will insert the specified property. Updating a non-existent field on a nominal type is an error.
 
 ## <a name="5.14-Merge"></a>5.14 Merge
 
-The update operations allow bulk algebraic copy-modification of values but require the literal properties/indecies/fields to be specified. To allow more programmatic operation the Bosque language also provides chainable merge operations which take pairs of tuple/tuple, record/record, or nominal/record and merge the data values using the syntax _Exp_`->merge(`_Exp_`)`. The tuple/tuple operation maps to append, record/record is dictionary merge, and nominal/record is bulk update fields.
+The update operations allow bulk algebraic copy-modification of values but require the literal properties/indecies/fields to be specified. To allow more programmatic operation the Bosque language also provides chainable merge operations which take pairs of tuple/tuple, record/record, or nominal/record and merge the data values using the syntax _Exp_`.merge(`_Exp_`)`. The tuple/tuple operation maps to append, record/record is dictionary merge, and nominal/record is bulk update fields.
 
 ```none
 entity Baz {
@@ -1040,18 +1040,18 @@ entity Baz {
 }
 
 let t = [ 1, 2, 3 ];
-t->merge([5])       //[1, 2, 3, 5]
-t->merge([3, 5])    //[1, 2, 3, 3, 5]
+t.merge([5])       //[1, 2, 3, 5]
+t.merge([3, 5])    //[1, 2, 3, 3, 5]
 
 let r = { f=1, g=2, k=true };
-r->merge({g=5})          //{f=1, g=5, k=true}
-r->merge({g=3, k=false}) //{f=1, g=3, k=false}
-r->merge({g=5, h=0})     //{f=1, g=5, k=true, h=0}
+r.merge({g=5})          //{f=1, g=5, k=true}
+r.merge({g=3, k=false}) //{f=1, g=3, k=false}
+r.merge({g=5, h=0})     //{f=1, g=5, k=true, h=0}
 
 let e = Baz{ f=1, g=2, k=true };
-e->merge({g=5})          //{f=1, g=5, k=true}
-e->merge({g=3, k=false}) //{f=1, g=3, k=false}
-e->merge({g=5, h=0})     //error field not defined
+e.merge({g=5})          //{f=1, g=5, k=true}
+e.merge({g=3, k=false}) //{f=1, g=3, k=false}
+e.merge({g=5, h=0})     //error field not defined
 ```
 
 The ability to programmatically merge into values allows us to write concise data processing code and eliminate redundant code copying around individual values. In addition to helping prevent subtle bugs during initial coding the operators can also simplify the process of updating data representations when refactoring code by reducing the number of places where _explicit_ value deconstruction, update, and copies need to be used.
@@ -1070,9 +1070,9 @@ In the case where the pcode return type is a value pack it must be denoted `(|T1
 
 ## <a name="5.16-Invoke"></a>5.16 Invoke
 
-The chainable invoke operator `->` is used to invoke both member methods from nominal types.
+The chainable invoke operator `.` is used to invoke both member methods from nominal types.
 
-For member method invocation the invoke operator will handle any virtual method resolution, either from the dynamic object type or from the specified base overload when using the `->::`_Type_ syntax.
+For member method invocation the invoke operator will handle any virtual method resolution, either from the dynamic object type or from the specified base overload when using the `.::`_Type_ syntax.
 
 ```none
 concept Fizz {
@@ -1102,22 +1102,22 @@ entity Biz provides Fizz {
 let bar = Bar{v=10};
 let biz = Biz{v=3};
 
-bar->m1(5) //15
-biz->m1(5) //8
+bar.m1(5) //15
+biz.m1(5) //8
 
-bar->m3(5)      //0
-bar->Fiz::m3(5) //18
-biz->m3(5)      //11
+bar.m3(5)      //0
+bar.Fiz::m3(5) //18
+biz.m3(5)      //11
 
-bar->mc<Int>(3) //error no such method
-biz->mc<Int>(3) //3
+bar.mc<Int>(3) //error no such method
+biz.mc<Int>(3) //3
 
-(none)->m1(5)    //error no such method
-(none)?->m1(5)   //none
+(none).m1(5)    //error no such method
+(none)?.m1(5)   //none
 
-none->isNone() //true - see core None and Any types
-{}->isSome()   //true - see core None and Any types
-5->isSome()    //true - see core None and Any types
+none.isNone() //true - see core None and Any types
+{}.isSome()   //true - see core None and Any types
+5.isSome()    //true - see core None and Any types
 ```
 
 The Bosque type system provides a unified model for all structural, primitive, and nominal types. So, methods can be invoked on any value. See the [core types](#2-Core-Types) section for more info on what invocations are supported.

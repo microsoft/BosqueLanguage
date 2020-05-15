@@ -35,5 +35,5 @@ entity Angle {
 entrypoint function main(): Angle {
     let angle = Angle{degrees=220, primes=60, seconds=60};
 
-    return angle->normalized();
+    return angle.normalized();
 }

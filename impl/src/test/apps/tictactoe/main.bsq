@@ -43,27 +43,27 @@ entity Board {
     }
 
     hidden method check3(c1: BoardCell, c2: BoardCell, c3: BoardCell, player: PlayerMark): Bool {
-        return this.cells->tryGet(c1) == player && this.cells->tryGet(c2) == player && this.cells->tryGet(c3) == player;
+        return this.cells.tryGet(c1) == player && this.cells.tryGet(c2) == player && this.cells.tryGet(c3) == player;
     }
 
     method checkWinner(player: PlayerMark): Bool {
         //check rows across
-        if(this->check3(BoardCell::r0c0, BoardCell::r0c1, BoardCell::r0c2, player) 
-            || this->check3(BoardCell::r1c0, BoardCell::r1c1, BoardCell::r1c2, player) 
-            || this->check3(BoardCell::r2c0, BoardCell::r2c1, BoardCell::r2c2, player)) {
+        if(this.check3(BoardCell::r0c0, BoardCell::r0c1, BoardCell::r0c2, player) 
+            || this.check3(BoardCell::r1c0, BoardCell::r1c1, BoardCell::r1c2, player) 
+            || this.check3(BoardCell::r2c0, BoardCell::r2c1, BoardCell::r2c2, player)) {
             return true;
         }
 
         //check columns down
-        if(this->check3(BoardCell::r0c0, BoardCell::r1c0, BoardCell::r2c0, player) 
-            || this->check3(BoardCell::r0c1, BoardCell::r1c1, BoardCell::r2c1, player) 
-            || this->check3(BoardCell::r0c2, BoardCell::r1c2, BoardCell::r2c2, player)) {
+        if(this.check3(BoardCell::r0c0, BoardCell::r1c0, BoardCell::r2c0, player) 
+            || this.check3(BoardCell::r0c1, BoardCell::r1c1, BoardCell::r2c1, player) 
+            || this.check3(BoardCell::r0c2, BoardCell::r1c2, BoardCell::r2c2, player)) {
             return true;
         }
 
         //check diagonals
-        if(this->check3(BoardCell::r0c0, BoardCell::r1c1, BoardCell::r2c2, player) 
-            || this->check3(BoardCell::r0c2, BoardCell::r1c1, BoardCell::r2c0, player)) {
+        if(this.check3(BoardCell::r0c0, BoardCell::r1c1, BoardCell::r2c2, player) 
+            || this.check3(BoardCell::r0c2, BoardCell::r1c1, BoardCell::r2c0, player)) {
             return true;
         }
 
@@ -71,34 +71,34 @@ entity Board {
     }
 
     method checkDraw(): Bool {
-        return this.cells->size() == 9;
+        return this.cells.size() == 9;
     }
 
     static convertRowColumnToCell(row: Int, col: Int): BoardCell
         requires 0 <= row && row < 3 && 0 <= col && col < 3;
     {
         let pos = Math::mult(row, 3) + col;
-        return NSMain::_posToCellList->get(pos);
+        return NSMain::_posToCellList.get(pos);
     }
 
     method isCellOccupied(x: Int, y: Int): Bool {
         let cellid = Board::convertRowColumnToCell(x, y);
-        return this.cells->has(cellid);
+        return this.cells.has(cellid);
     }
 
     method markCellWith(x: Int, y: Int, mark: PlayerMark): Board
         requires 0 <= x && x < 3 && 0 <= y && y < 3;
-        requires !this->isCellOccupied(x, y);
+        requires !this.isCellOccupied(x, y);
     {
         let cellid = Board::convertRowColumnToCell(x, y);
-        return this->update(cells=this.cells->add(cellid, mark));
+        return this.update(cells=this.cells.add(cellid, mark));
     }
 
     method checkAnyWinner(): PlayerMark? {
-        if(this->checkWinner(PlayerMark::x)) {
+        if(this.checkWinner(PlayerMark::x)) {
             return PlayerMark::x;
         }
-        elif(this->checkWinner(PlayerMark::o)) {
+        elif(this.checkWinner(PlayerMark::o)) {
             return PlayerMark::o;
         }
         else {
@@ -116,20 +116,20 @@ entity Game {
     }
 
     method getWinner(): PlayerMark
-        requires this->hasWinner();
+        requires this.hasWinner();
     {
-        return this.winner->as<PlayerMark>();
+        return this.winner.as<PlayerMark>();
     }
 
     method isMoveLegal(x: Int, y: Int): Bool {
-        return (0 <= x && x < 3 && 0 <= y && y < 3) ? !this.board->isCellOccupied(x, y) : false;
+        return (0 <= x && x < 3 && 0 <= y && y < 3) ? !this.board.isCellOccupied(x, y) : false;
     }
 
     method makeExplicitMove(x: Int, y: Int, mark: PlayerMark): Game
-        requires release this->isMoveLegal(x, y);
+        requires release this.isMoveLegal(x, y);
     {
-        let nboard = this.board->markCellWith(x, y, mark);
-        return Game@{ board=nboard, winner=nboard->checkAnyWinner() };
+        let nboard = this.board.markCellWith(x, y, mark);
+        return Game@{ board=nboard, winner=nboard.checkAnyWinner() };
     }
 }
 /*
@@ -142,52 +142,52 @@ function canIWinIn3(moves: [Move, Move, Move, Move]): Result<Bool, None> {
     var game = Game@{};
     
     let m1 = moves.0;
-    validate game->isMoveLegal(m1.row, m1.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m1.row, m1.col, PlayerMark::x);
+    validate game.isMoveLegal(m1.row, m1.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m1.row, m1.col, PlayerMark::x);
 
     let m2 = moves.0;
-    validate game->isMoveLegal(m2.row, m2.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m2.row, m2.col, PlayerMark::o);
+    validate game.isMoveLegal(m2.row, m2.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m2.row, m2.col, PlayerMark::o);
 
     let m3 = moves.0;
-    validate game->isMoveLegal(m3.row, m3.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m3.row, m3.col, PlayerMark::x);
+    validate game.isMoveLegal(m3.row, m3.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m3.row, m3.col, PlayerMark::x);
 
-    return Result<Bool, None>::ok(game->hasWinner());
+    return Result<Bool, None>::ok(game.hasWinner());
 }
 
 function canIWinIn5(moves: [Move, Move, Move, Move, Move]): Result<Bool, None> {
     var game = Game@{};
     
     let m1 = moves.0;
-    validate game->isMoveLegal(m1.row, m1.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m1.row, m1.col, PlayerMark::x);
+    validate game.isMoveLegal(m1.row, m1.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m1.row, m1.col, PlayerMark::x);
 
     let m2 = moves.0;
-    validate game->isMoveLegal(m2.row, m2.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m2.row, m2.col, PlayerMark::o);
+    validate game.isMoveLegal(m2.row, m2.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m2.row, m2.col, PlayerMark::o);
 
     let m3 = moves.0;
-    validate game->isMoveLegal(m3.row, m3.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m3.row, m3.col, PlayerMark::x);
+    validate game.isMoveLegal(m3.row, m3.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m3.row, m3.col, PlayerMark::x);
 
     let m4 = moves.0;
-    validate game->isMoveLegal(m4.row, m4.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m4.row, m4.col, PlayerMark::o);
+    validate game.isMoveLegal(m4.row, m4.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m4.row, m4.col, PlayerMark::o);
 
     let m3 = moves.0;
-    validate game->isMoveLegal(m5.row, m5.col) or return Result<Bool, None>::err(none);
-    game = game->makeExplicitMove(m5.row, m5.col, PlayerMark::x);
+    validate game.isMoveLegal(m5.row, m5.col) or return Result<Bool, None>::err(none);
+    game = game.makeExplicitMove(m5.row, m5.col, PlayerMark::x);
 
-    return Result::ok(game->hasWinner());
+    return Result::ok(game.hasWinner());
 }
 */
 entrypoint function main(): Bool {
     var game = Game@{};
 
-    game = game->makeExplicitMove(0, 0, PlayerMark::x);
-    game = game->makeExplicitMove(1, 1, PlayerMark::o);
-    game = game->makeExplicitMove(2, 2, PlayerMark::x);
+    game = game.makeExplicitMove(0, 0, PlayerMark::x);
+    game = game.makeExplicitMove(1, 1, PlayerMark::o);
+    game = game.makeExplicitMove(2, 2, PlayerMark::x);
 
-    return game->hasWinner();
+    return game.hasWinner();
 }
