@@ -5009,26 +5009,36 @@ class TypeChecker {
                 });
 
             let rprs: MIRFunctionParameter[] = [];
-            if (resultType.options.length !== 1 || !(resultType.options[0] instanceof ResolvedEphemeralListType)) {
-                rprs.push(new MIRFunctionParameter("$return", this.m_emitter.registerResolvedTypeReference(resultType).trkey));
+            if (resultType.options.length === 1 && !(resultType.options[0] instanceof ResolvedEphemeralListType)) {
+                const rtype = this.m_emitter.registerResolvedTypeReference(resultType);
+
+                rprs.push(new MIRFunctionParameter("$return", rtype.trkey));
+                cargs.set("$return", new VarInfo(resultType, true, false, true, resultType));
+                argTypes.set("$return", rtype);
             }
             else {
                 const epl = (resultType.options[0] as ResolvedEphemeralListType)
                 for(let i = 0; i < epl.types.length; ++i) {
-                    rprs.push(new MIRFunctionParameter(`$return_${i}`, this.m_emitter.registerResolvedTypeReference(epl.types[i]).trkey));
+                    const ritype = this.m_emitter.registerResolvedTypeReference(epl.types[i]);
+
+                    rprs.push(new MIRFunctionParameter(`$return_${i}`, ritype.trkey));
+                    cargs.set(`$return_${i}`, new VarInfo(epl.types[i], true, false, true, epl.types[i]));
+                    argTypes.set(`$return_${i}`, ritype);
                 }
             }
 
             let rreforig: MIRFunctionParameter[] = [];
             args.forEach((arg) => {
-                const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
-                const ptype = arg.isOptional ? this.m_assembly.typeUpperBound([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
-                const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
+                if (arg.isRef) {
+                    const pdecltype = this.m_assembly.normalizeTypeOnly(arg.type, declbinds);
+                    const ptype = arg.isOptional ? this.m_assembly.typeUpperBound([pdecltype, this.m_assembly.getSpecialNoneType()]) : pdecltype;
+                    const mirptype = this.m_emitter.registerResolvedTypeReference(ptype);
 
-                const oname = `$${arg.name}`;
-                rreforig.push(new MIRFunctionParameter(oname, mirptype.trkey));
-                cargs.set(oname, new VarInfo(ptype, true, false, true, ptype));
-                argTypes.set(oname, mirptype);
+                    const oname = `$${arg.name}`;
+                    rreforig.push(new MIRFunctionParameter(oname, mirptype.trkey));
+                    cargs.set(oname, new VarInfo(ptype, true, false, true, ptype));
+                    argTypes.set(oname, mirptype);
+                }
             });
             
             const body = new BodyImplementation(`${srcFile}::${sinfo.pos}`, srcFile, bexp);
