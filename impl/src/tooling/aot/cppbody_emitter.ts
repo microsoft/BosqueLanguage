@@ -1878,6 +1878,7 @@ class CPPBodyEmitter {
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.typegen.getFunctorsForType(ctype).less;
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_max(${params[0]}, ${lambda}{});`
+                break;
             }
             case "list_sum": {
                 assert(false, `Need to implement -- ${idecl.iname}`);
