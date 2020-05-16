@@ -1855,15 +1855,15 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_count_keytype": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_indexof_keytype": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_indexoflast_keytype": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_min": {
@@ -1880,7 +1880,7 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_max(${params[0]}, ${lambda}{});`
             }
             case "list_sum": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_filter": {
@@ -1898,39 +1898,39 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_oftype": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_cast": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_slice": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_takewhile": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_discardwhile": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_takeuntil": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_discarduntil": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_unique": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_reverse": {
-                assert(false, "Need to implement");
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             case "list_map": {
