@@ -1459,7 +1459,7 @@ class CPPBodyEmitter {
                 if (this.typegen.typecheckIsName(opt, /^NSCore::Int$/)) {
                     if(bop.op !== "/") {
                         const chkedop = new Map<string, string>().set("+", "__builtin_add_overflow").set("-", "__builtin_sub_overflow").set("*", "__builtin_mul_overflow").get(bop.op) as string;
-                        const opp = `if(${chkedop}(${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)}, &${this.varToCppName(bop.trgt)}) || INT_OOF_BOUNDS(${this.varToCppName(bop.trgt)})) { BSQ_ABORT("INT Overflow", "${filenameClean(this.currentFile)}", ${bop.sinfo.line}); }`;
+                        const opp = `if(${chkedop}(${this.argToCpp(bop.lhs, this.typegen.intType)}, ${this.argToCpp(bop.rhs, this.typegen.intType)}, &${this.varToCppName(bop.trgt)}) || INT_OOF_BOUNDS(${this.varToCppName(bop.trgt)})) { BSQ_ABORT("Int Overflow", "${filenameClean(this.currentFile)}", ${bop.sinfo.line}); }`;
                         return opp;
                     }
                     else {
@@ -1855,15 +1855,30 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_count_keytype": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const eqf = this.typegen.getFunctorsForType(ctype).eq;
+                const lambda = `[${params[1]}](${crepr.std} a) { return ${eqf}{}(a, ${params[1]}); }`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_count(${params[0]}, ${lambda});`
                 break;
             }
             case "list_indexof_keytype": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const eqf = this.typegen.getFunctorsForType(ctype).eq;
+                const lambda = `[${params[3]}](${crepr.std} a) { return ${eqf}{}(a, ${params[3]}); }`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexof(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
                 break;
             }
             case "list_indexoflast_keytype": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const eqf = this.typegen.getFunctorsForType(ctype).eq;
+                const lambda = `[${params[3]}](${crepr.std} a) { return ${eqf}{}(a, ${params[3]}); }`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexoflast(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
                 break;
             }
             case "list_min": {
@@ -1881,7 +1896,17 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_sum": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                if(ctype.trkey === "NSCore::Int") {
+                    bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sum_int(${params[0]});`
+                }
+                else if(ctype.trkey === "NSCore::Int") {
+                    bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sum_bigint(${params[0]});`
+                }
+                else {
+                    bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sum_mixed(${params[0]});`
+                }
                 break;
             }
             case "list_filter": {

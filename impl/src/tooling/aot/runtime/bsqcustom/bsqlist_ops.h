@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "bsqlist_decl.h"
+#include <execution>
 
 #pragma once
 
@@ -58,7 +59,7 @@ public:
         auto ie = l->entries.begin() + e;
 
         auto uend = std::find_if(ib, ie, p);
-        return (int64_t)std::distance(ib, uend);
+        return s + (int64_t)std::distance(ib, uend);
     }
 
     template <typename LambdaP>
@@ -68,7 +69,7 @@ public:
         auto ie = l->entries.begin() + e;
 
         auto uend = std::find_if_not(ib, ie, p);
-        return (int64_t)std::distance(ib, uend);
+        return s + (int64_t)std::distance(ib, uend);
     }
 
     template <typename LambdaP>
@@ -109,10 +110,40 @@ public:
         return *std::max_element(l->entries.begin(), l->entries.end(), cmp);
     }
 
-    template <typename LambdaR>
-    static T list_sum(Ty* l, T zero, LambdaR r)
+    static int64_t list_sum_int(Ty* l)
     {
-        return std::reduce(l->entries.begin(), l->entries.end(), zero, r);
+        int64_t res = std::reduce(/*std::execution::par_unseq,*/ l->entries.begin(), l->entries.end(), 0, [](int64_t a, int64_t b) {
+            if((a == std::numeric_limits<int64_t>::max()) | (b == std::numeric_limits<int64_t>::max())) 
+            {
+                return std::numeric_limits<int64_t>::max();
+            }
+            else 
+            {
+                int64_t res = 0;
+                if(__builtin_add_overflow(a, b, &res) || INT_OOF_BOUNDS(res)) 
+                {
+                    res = std::numeric_limits<int64_t>::max();
+                }
+                return res;
+            }
+        });
+
+        if(res == std::numeric_limits<int64_t>::max())
+        {
+            BSQ_ABORT("List<Int>.sum Overflow", "internal", -1);
+        }
+
+        return res;
+    }
+
+    static BSQBigInt* list_sum_bigint(Ty* l)
+    {
+        assert(false);
+    }
+
+    static BSQBigInt* list_sum_mixed(Ty* l)
+    {
+        assert(false);
     }
 
     template <typename LambdaP>
