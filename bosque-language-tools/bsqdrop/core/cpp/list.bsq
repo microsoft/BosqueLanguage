@@ -73,8 +73,8 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     hidden static s_rangeInBoundsRev(l: List<T>, start: Int?, end: Int?): Bool {
-        let s, e = start ?| -1, end ?| List<T>::s_size(l) - 1;
-        return -1 <= s && s <= e && e <= List<T>::s_size(l) - 1;
+        let s, e = start ?| 0, end ?| List<T>::s_size(l);
+        return 0 <= s && s <= e && e <= List<T>::s_size(l);
     }
 
     method size(): Int {
@@ -280,39 +280,39 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     recursive? method findLastIndexOf(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int
         requires release List<T>::s_rangeInBoundsRev(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
-        let idxlast = List<T>::s_indexoflast[recursive?](this, s, e, p);
-        check idxlast != s;
+        let idxlast = List<T>::s_indexoflast[recursive?](this, s - 1, e - 1, p);
+        check idxlast != s - 1;
         return idxlast;
     }
 
     recursive? method tryFindLastIndexOf(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int?
         requires release List<T>::s_rangeInBoundsRev(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
-        let idxlast = List<T>::s_indexoflast[recursive?](this, s, e, p);
-        return idxlast != s ? idxlast : none;
+        let idxlast = List<T>::s_indexoflast[recursive?](this, s - 1, e - 1, p);
+        return idxlast != s - 1 ? idxlast : none;
     }
 
     recursive? method findLastIndexOfNot(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int
         requires release List<T>::s_rangeInBoundsRev(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
-        let idxlast = List<T>::s_indexoflastnot[recursive?](this, s, e, p);
-        check idxlast != s;
+        let idxlast = List<T>::s_indexoflastnot[recursive?](this, s - 1, e - 1, p);
+        check idxlast != s - 1;
         return idxlast;
     }
 
     recursive? method tryFindLastIndexOfNot(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int?
         requires release List<T>::s_rangeInBoundsRev(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
-        let idxlast = List<T>::s_indexoflastnot[recursive?](this, s, e, p);
-        return idxlast != s ? idxlast : none;
+        let idxlast = List<T>::s_indexoflastnot[recursive?](this, s - 1, e - 1, p);
+        return idxlast != s - 1 ? idxlast : none;
     }
 
     method {when T KeyType} indexOf(v: T, start?: Int, end?: Int): Int
@@ -337,20 +337,20 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     method {when T KeyType} lastIndexOf(v: T, start?: Int, end?: Int): Int
         requires release List<T>::s_rangeInBoundsRev(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
-        let idx = List<T>::s_indexoflast_keytype(this, s, e, v);
-        check idx != s;
+        let idx = List<T>::s_indexoflast_keytype(this, s - 1, e - 1, v);
+        check idx != s - 1;
         return idx;
     }
 
     method {when T KeyType} tryLastIndexOf(v: T, start?: Int, end?: Int): Int?
         requires release List<T>::s_rangeInBoundsRev(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
-        let idx = List<T>::s_indexoflast_keytype(this, s, e, v);
-        return idx != s ? idx : none;
+        let idx = List<T>::s_indexoflast_keytype(this, s - 1, e - 1, v);
+        return idx != s - 1 ? idx : none;
     }
 
     recursive? method filter(p: recursive? fn(_: T) -> Bool): List<T> {
