@@ -687,30 +687,34 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     method {when T KeyType} min(): T 
         requires release List<T>::s_size(this) != 0;
     {
-        return List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(0));
+        return List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(this, 0));
     }
 
     method {when T KeyType} tryMin(): T? {
-        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(0)) : none;
+        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : none;
     }
 
-    method {when T KeyType} defaultMin(default: T): T? {
-        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(0)) : default;
+    method {when T KeyType} defaultMin(default: T): T {
+        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : default;
     }
 
     method {when T KeyType} max(): T 
         requires release List<T>::s_size(this) != 0;
     {
-        return List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(0));
+        return List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0));
     }
 
     method {when T KeyType} tryMax(): T? {
-        return s != e ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(0)) : none;
+        return s != e ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : none;
     }
 
      method {when T KeyType} defaultMax(default: T): T {
-        return s != e ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(0)) : default;
+        return s != e ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : default;
     }
+
+    //
+    //TODO: should do argMin/argMax variations on these as well
+    //
 
     method {when T Int | BigInt} sum(): T {
         return List<T>::s_sum[recursive](this, 0, 0, List<T>::s_size(this));

@@ -162,7 +162,17 @@ class CPPEmitter {
         .sort((a, b) => a[0]
         .localeCompare(b[0])).map((ce) => ce[1])
         .forEach((cdecl) => {
-            const enumv = `${typeemitter.mangleStringForCpp(cdecl.tkey)} = BUILD_MIR_NOMINAL_TYPE(MIRNominalTypeEnum_Category_Empty, ${concepttypeinfo.length + nominaltypeinfo.length + 1})`;
+            let enumv = "[INVALID]"; 
+            if(cdecl.tkey === "NSCore::Tuple") {
+                enumv = `${typeemitter.mangleStringForCpp(cdecl.tkey)} = BUILD_MIR_NOMINAL_TYPE(MIRNominalTypeEnum_Category_Tuple, ${concepttypeinfo.length + nominaltypeinfo.length + 1})`;
+            }
+            else if(cdecl.tkey === "NSCore::Record") {
+                enumv = `${typeemitter.mangleStringForCpp(cdecl.tkey)} = BUILD_MIR_NOMINAL_TYPE(MIRNominalTypeEnum_Category_Record, ${concepttypeinfo.length + nominaltypeinfo.length + 1})`;
+            }
+            else {
+                enumv = `${typeemitter.mangleStringForCpp(cdecl.tkey)} = BUILD_MIR_NOMINAL_TYPE(MIRNominalTypeEnum_Category_Empty, ${concepttypeinfo.length + nominaltypeinfo.length + 1})`;
+            }
+
             const displayv = `"${cdecl.tkey}"`;
             concepttypeinfo.push({ enum: enumv, display: displayv, datakind: "-1" });
         });

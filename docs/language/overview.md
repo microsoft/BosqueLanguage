@@ -95,7 +95,7 @@ function abs(x: Int): Int {
         sign = -1; //update the variable
     }
 
-    return Math::mult(x, sign);
+    return x * sign;
 }
 ```
 
@@ -104,8 +104,8 @@ function abs(x: Int): Int {
 Bosque provides _named arguments_ along with _rest_ and _spread_ operators. These can be used to perform simple and powerful data manipulation as part of invocations and constructor operations ([5.1 Arguments](#5.1-Arguments)).
 
 ```none
-function nsum(d: Int, ...args: List<Int>): Int {
-    return args.sum(default=d);
+function nmin(d: Int, ...args: List<Int>): Int {
+    return args.min(default=d);
 }
 
 function np(p1: Int, p2: Int): {x: Int, y: Int} {
@@ -113,14 +113,14 @@ function np(p1: Int, p2: Int): {x: Int, y: Int} {
 }
 
 //calls with explicit arguments
-let x = nsum(0, 1, 2, 3); //returns 6
+nmin(-1, 1, 2, 3) //returns 1
 
-let a = np(1, 2);         //returns {x=1, y=2}
-let b = np(p2=2, 1);      //also returns {x=1, y=2}
+np(1, 2)         //returns {x=1, y=2}
+np(p2=2, 1)      //also returns {x=1, y=2}
 
 //calls with spread arguments
-let t = [1, 2, 3];
-let p = nsum(0, ...t);    //returns 6 -- same as explicit call
+let t = List<Int>@{1, 2, 3};
+let p = nmin(-1, ...t);    //returns 1 -- same as explicit call
 
 let r = {p1=1, p2=2};
 let q = np(...r);         //returns {x=1, y=2} -- same as explicit call

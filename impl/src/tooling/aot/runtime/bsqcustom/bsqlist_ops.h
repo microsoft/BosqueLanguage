@@ -100,13 +100,13 @@ public:
     template <typename LambdaC>
     static T list_min(Ty* l, LambdaC cmp)
     {
-        return std::min_element(l->entries.begin() + 1, l->entries.end(), *(l->entries.begin()), cmp);
+        return *std::min_element(l->entries.begin(), l->entries.end(), cmp);
     }
 
     template <typename LambdaC>
     static T list_max(Ty* l, LambdaC cmp)
     {
-        return std::max_element(l->entries.begin() + 1, l->entries.end(), *(l->entries.begin()), cmp);
+        return *std::max_element(l->entries.begin(), l->entries.end(), cmp);
     }
 
     template <typename LambdaR>

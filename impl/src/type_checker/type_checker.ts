@@ -902,7 +902,13 @@ class TypeChecker {
                     this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map((arg) => arg[2]), trgt);
                 }
                 else if (args.every((v) => v[1])) {
-                    this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => arg[2]), trgt);
+                    if(args.length === 1 && args[0][0].idStr === oftype.idStr) {
+                        //special case where we expand a (say) List<Int> into a List<Int>
+                        this.m_emitter.bodyEmitter.emitRegAssign(sinfo, args[0][2], trgt);
+                    }
+                    else {
+                        this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => arg[2]), trgt);
+                    }
                 }
                 else {
                     this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, args.map<[boolean, MIRArgument]>((arg) => [arg[1], arg[2]]), trgt);
@@ -946,7 +952,13 @@ class TypeChecker {
                     this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map((arg) => arg[2]), trgt);
                 }
                 else if (args.every((v) => v[1])) {
-                    this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => arg[2]), trgt);
+                    if(args.length === 1 && args[0][0].idStr === oftype.idStr) {
+                        //special case where we expand a (say) Set<Int> into a Set<Int>
+                        this.m_emitter.bodyEmitter.emitRegAssign(sinfo, args[0][2], trgt);
+                    }
+                    else {
+                        this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => arg[2]), trgt);
+                    }
                 }
                 else {
                     this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, args.map<[boolean, MIRArgument]>((arg) => [arg[1], arg[2]]), trgt);
@@ -993,7 +1005,13 @@ class TypeChecker {
                     this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map((arg) => arg[2]), trgt);
                 }
                 else if (args.every((v) => v[1])) {
-                    this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => arg[2]), trgt);
+                    if(args.length === 1 && args[0][0].idStr === oftype.idStr) {
+                        //special case where we expand a (say) Map<Int, Int> into a Map<Int, Int>
+                        this.m_emitter.bodyEmitter.emitRegAssign(sinfo, args[0][2], trgt);
+                    }
+                    else {
+                        this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => arg[2]), trgt);
+                    }
                 }
                 else {
                     this.m_emitter.bodyEmitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, args.map<[boolean, MIRArgument]>((arg) => [arg[1], arg[2]]), trgt);

@@ -282,5 +282,70 @@
                 "expected": null
             }
         ]
+    },
+    {
+        "src": "langhighlight.bsq",
+        "tests": [
+            {
+                "kind": "compile"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "abs",
+                "args": [3],
+                "expected": "3"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "abs",
+                "args": [-2],
+                "expected": "2"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "minDirect",
+                "expected": "1"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "minExpand",
+                "expected": "1"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "nameDirect",
+                "expected": "3"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "nameExpand",
+                "expected": "3"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "absC",
+                "expected": "2"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "minDirect",
+                "expected": "1"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "minExpand",
+                "expected": "1"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "nameDirect",
+                "expected": "3"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "nameExpand",
+                "expected": "3"
+            }
+        ]
     }
 ]
