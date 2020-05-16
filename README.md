@@ -371,7 +371,7 @@ In order to build the language the following are needed:
 - 64 bit Operating System
 - The LTS version of [node.js](https://nodejs.org/en/download/) ( According to your OS )
 - Typescript (install with: `npm i typescript -g`)
-- A C++ compiler -- by default `clang` on Windows and `g++` on Linux/Mac
+- A C++ compiler -- by default `clang` on Windows/Linux/Mac
 
 ### Build & Test
 
