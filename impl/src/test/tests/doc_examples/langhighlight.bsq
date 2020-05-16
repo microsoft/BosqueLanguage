@@ -1,0 +1,58 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace NSTest;
+
+////
+//Misc Defs
+
+function nmin(d: Int, ...args: List<Int>): Int {
+    return args.defaultMin(default=d);
+}
+
+function np(p1: Int, p2: Int): {x: Int, y: Int} {
+    return {x=p1, y=p2};
+}
+
+function absImpl(x: Int): Int {
+    var sign = 1; //declare updatable variable with initial value
+    if(x < 0) {
+        sign = -1; //update the variable
+    }
+
+    return x * sign;
+}
+
+////
+//Tests
+
+entrypoint function abs(x: Int): Int {
+    return absImpl(x);
+}
+
+entrypoint function absC(): Int {
+    return absImpl(1) + absImpl(-1);
+}
+
+entrypoint function minDirect(): Int {
+    return nmin(-1, 1, 2, 3);
+}
+
+entrypoint function minExpand(): Int {
+    let t = List<Int>@{1, 2, 3};
+    return nmin(-1, ...t);
+}
+
+entrypoint function nameDirect(): Int {
+    let pa = np(1, 2);
+    let na = np(p2=2, 1);
+    return pa.x + na.y;
+}
+
+entrypoint function nameExpand(): Int {
+    let r = {p1=1, p2=2};
+    let rr = np(...r);
+    return rr.x + rr.y;
+}

@@ -1867,12 +1867,17 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_min": {
-                assert(false, "Need to implement");
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.typegen.getFunctorsForType(ctype).less;
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_min(${params[0]}, ${lambda}{});`
                 break;
             }
             case "list_max": {
-                assert(false, "Need to implement");
-                break;
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.typegen.getFunctorsForType(ctype).less;
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_max(${params[0]}, ${lambda}{});`
             }
             case "list_sum": {
                 assert(false, "Need to implement");

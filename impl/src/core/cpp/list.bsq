@@ -218,6 +218,10 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return s != e ? List<T>::s_max(this) : default;
     }
 
+    //
+    //TODO: should do argMin/argMax variations on these as well
+    //
+
     method {when T Int | BigInt} sum(): T {
         return List<T>::s_sum(this);
     }
