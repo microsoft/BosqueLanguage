@@ -1901,7 +1901,7 @@ class CPPBodyEmitter {
                 if(ctype.trkey === "NSCore::Int") {
                     bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sum_int(${params[0]});`
                 }
-                else if(ctype.trkey === "NSCore::Int") {
+                else if(ctype.trkey === "NSCore::BigInt") {
                     bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sum_bigint(${params[0]});`
                 }
                 else {
