@@ -83,9 +83,9 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method get(key: K): V 
-        requires release Map<K, V>::s_has_key(this, k);
+        requires release Map<K, V>::s_has_key(this, key);
     {
-        return Map<K, V>::s_at_val(this, k);
+        return Map<K, V>::s_at_val(this, key);
     }
 
     method tryGet(k: K): V? {
