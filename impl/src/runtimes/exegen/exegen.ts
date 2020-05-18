@@ -7,7 +7,11 @@ import * as FS from "fs";
 import * as Path from "path";
 import { execSync } from "child_process";
 
-import * as Commander from "commander";
+const VERSION = require('../../../package.json').version;
+
+import { Command } from "commander";
+const program = new Command();
+program.version(VERSION);
 
 import { MIRAssembly, PackageConfig, MIRInvokeBodyDecl, MIRType } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";
@@ -51,33 +55,34 @@ function generateMASM(files: string[], blevel: "debug" | "test" | "release", cor
     return masm as MIRAssembly;
 }
 
-Commander
+program
     .option("-e --entrypoint [entrypoint]", "Entrypoint of the exe", "NSMain::main")
     .option("-o --outfile [outfile]", "Optional name of the output exe", (process.platform === "win32") ? "a.exe" : "a.out")
     .option("-c --compiler [compiler]", "Compiler to use", (process.platform === "win32") ? "\"C:\\Program Files\\LLVM\\bin\\clang.exe\"" : "clang++")
-    .option("-l --level [level]", "Build level version", "debug");
+    .option("-l --level [level]", "Build level version", "debug")
+    .option("-f --flags <flags>", "Custom compiler flags", "")
 
-Commander.parse(process.argv);
+    program.parse(process.argv);
 
-if (Commander.args.length === 0) {
+if (program.args.length === 0) {
     process.stdout.write(chalk.red("Error -- Please specify at least one source file as an argument\n"));
     process.exit(1);
 }
 
-if(!["debug", "test", "release"].includes(Commander.level)) {
+if(!["debug", "test", "release"].includes(program.level)) {
     process.stdout.write(chalk.red("Error -- Valid build levels are 'debug', 'test', and 'release'\n"));
     process.exit(1);
 }
 
-process.stdout.write(`Compiling Bosque sources in files:\n${Commander.args.join("\n")}\n...\n`);
-const massembly = generateMASM(Commander.args, Commander.level, "cpp");
+process.stdout.write(`Compiling Bosque sources in files:\n${program.args.join("\n")}\n...\n`);
+const massembly = generateMASM(program.args, program.level, "cpp");
 
 setImmediate(() => {
-    process.stdout.write(`Transpiling Bosque assembly to C++ with entrypoint of ${Commander.entrypoint}...\n`);
+    process.stdout.write(`Transpiling Bosque assembly to C++ with entrypoint of ${program.entrypoint}...\n`);
     const cpp_runtime = Path.join(binroot, "tooling/aot/runtime/");
 
     try {
-        const cparams = CPPEmitter.emit(massembly, Commander.entrypoint);
+        const cparams = CPPEmitter.emit(massembly, program.entrypoint);
         const lsrc = FS.readdirSync(cpp_runtime).filter((name) => name.endsWith(".h") || name.endsWith(".cpp"));
         const linked = lsrc.map((fname) => {
             const contents = FS.readFileSync(Path.join(cpp_runtime, fname)).toString();
@@ -103,12 +108,12 @@ setImmediate(() => {
             return { file: fname, contents: bcontents };
         });
 
-        if (massembly.invokeDecls.get(Commander.entrypoint) === undefined) {
+        if (massembly.invokeDecls.get(program.entrypoint) === undefined) {
             process.stderr.write("Could not find specified entrypoint!!!\n");
             process.exit(1);
         }
 
-        const entrypoint = massembly.invokeDecls.get(Commander.entrypoint) as MIRInvokeBodyDecl;
+        const entrypoint = massembly.invokeDecls.get(program.entrypoint) as MIRInvokeBodyDecl;
         if (entrypoint.params.some((p) => !massembly.subtypeOf(massembly.typeMap.get(p.type) as MIRType, massembly.typeMap.get("NSCore::APIValue") as MIRType))) {
             process.stderr.write("Only APIValue types are supported as inputs of Bosque programs.\n");
             process.exit(1);
@@ -159,22 +164,26 @@ setImmediate(() => {
             FS.writeFileSync(outfile, contents);
         });
 
-        process.stdout.write(`Compiling C++ code with ${Commander.compiler} into exe file "${chalk.bold(Commander.outfile)}"...\n`);
+        process.stdout.write(`Compiling C++ code with ${program.compiler} into exe file "${chalk.bold(program.outfile)}"...\n`);
         let buildOpts = "";
-        if(Commander.level === "debug") {
+        if(program.level === "debug") {
             buildOpts = " -g -DBDEBUG";
         }
-        else if (Commander.level === "test") {
+        else if (program.level === "test") {
             buildOpts = " -g -DBDEBUG -Os"
         }
         else {
             buildOpts = " -Os -march=native"
         }
 
-        execSync(`${Commander.compiler}${buildOpts} -std=c++17 -o ${Commander.outfile} ${cpppath}/*.cpp`);
+        if(program.flags) {
+            buildOpts += ` ${program.flags}`;
+        }
+
+        execSync(`${program.compiler}${buildOpts} -std=c++17 -o ${program.outfile} ${cpppath}/*.cpp`);
     }
     catch (ex) {
         process.stderr.write(chalk.red(`Error -- ${ex}\n`));
     }
-    process.stdout.write(chalk.green(`Done with executable -- ${Commander.outfile}\n`));
+    process.stdout.write(chalk.green(`Done with executable -- ${program.outfile}\n`));
 });
