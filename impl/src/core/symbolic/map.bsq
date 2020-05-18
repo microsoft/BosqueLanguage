@@ -245,7 +245,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method has(key: K): Bool {
-        return Map<K, V>::s_has_key(this, k);
+        return Map<K, V>::s_has_key(this, key);
     }
 
     method hasAll(...kl: List<K>): Bool {
