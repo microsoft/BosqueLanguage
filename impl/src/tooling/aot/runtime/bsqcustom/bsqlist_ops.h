@@ -174,33 +174,33 @@ public:
         return BSQ_NEW_NO_RC(Ty, l->nominalType, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaTC, typename LambdaCC>
-    static BSQList<U, U_RCDecF, U_DisplayF>* list_oftype(Ty* l)
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename LambdaTC, typename LambdaCC>
+    static ListU* list_oftype(Ty* l, LambdaTC tc, LambdaCC cc)
     {
         std::vector<U> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
-            if(LambdaTC{}(v))
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries, tc, cc](T& v) {
+            if(tc(v))
             {
-                entries.push_back(LambdaCC{}(v));
+                entries.push_back(cc(v));
             }
         });
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaTC, typename LambdaCC>
-    static BSQList<U, U_RCDecF, U_DisplayF>* list_cast(Ty* l)
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename LambdaTC, typename LambdaCC>
+    static ListU* list_cast(Ty* l, LambdaTC tc, LambdaCC cc)
     {
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [](T& v) -> U {
-            BSQ_ASSERT(LambdaTC{}(v), "Invalid element to cast");
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [tc, cc](T& v) -> U {
+            BSQ_ASSERT(tc(v), "Invalid element to cast");
 
-            return LambdaCC{}(v);
+            return cc(v);
         });
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
     static Ty* list_slice(Ty* l, int64_t s, int64_t e)

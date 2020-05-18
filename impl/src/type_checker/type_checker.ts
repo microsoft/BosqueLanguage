@@ -2565,8 +2565,11 @@ class TypeChecker {
                     if (ttype.isNoneType()) {
                         opname = "isNone";
                     }
-                    if (ttype.isSomeType()) {
+                    else if (ttype.isSomeType()) {
                         opname = "isSome";
+                    }
+                    else {
+                        //don't specialize
                     }
                 }
 
@@ -2800,7 +2803,7 @@ class TypeChecker {
                 this.m_emitter.bodyEmitter.emitRegAssign(exp.sinfo, etreg, trgt);
             }
             else {
-                this.raiseErrorIf(exp.sinfo, op !== "typeas");
+                this.raiseErrorIf(exp.sinfo, op !== "typetry");
 
                 this.m_emitter.bodyEmitter.emitRegAssign(exp.sinfo, etreg, trgt);
 
@@ -2818,78 +2821,90 @@ class TypeChecker {
             }
         }
 
-        let opname = op;
-        if (op === "typeis") {
+        //
+        //TODO: we may want to do some as/tryAs action here as well
+        //
+        if (op === "typeas") {
+            return [cenv.setExpressionResult(ttype)];
+        }
+        else if(op === "tryas") {
+            return [cenv.setExpressionResult(this.m_assembly.typeUpperBound([ttype, this.m_assembly.getSpecialNoneType()]))];
+        }
+        else {
+            let opname = op;
+
             if (ttype.isNoneType()) {
                 opname = "isNone";
             }
-            if (ttype.isSomeType()) {
+            else if (ttype.isSomeType()) {
                 opname = "isSome";
             }
-        }
+            else {
+                //don't specialize
+            }
 
-        if (opname === "isNone" || opname === "isSome") {
-            const [enone, esome] = TypeEnvironment.convertToNoneSomeFlowsOnExpressionResult(this.m_assembly, [cenv]);
+            if (opname === "isNone" || opname === "isSome") {
+                const [enone, esome] = TypeEnvironment.convertToNoneSomeFlowsOnExpressionResult(this.m_assembly, [cenv]);
 
-            //
-            //TODO: we are not going to warn here since template instantiation can be annoying 
-            //      should have one mode for TypeCheck -- only on un-templated code and one for compile
-            //
-            //this.raiseErrorIf(op.sinfo, enone.length === 0, "Value is never equal to none");
-            //this.raiseErrorIf(op.sinfo, esome.length === 0, "Value is always equal to none");
+                //
+                //TODO: we are not going to warn here since template instantiation can be annoying 
+                //      should have one mode for TypeCheck -- only on un-templated code and one for compile
+                //
+                //this.raiseErrorIf(op.sinfo, enone.length === 0, "Value is never equal to none");
+                //this.raiseErrorIf(op.sinfo, esome.length === 0, "Value is always equal to none");
 
-            if (optvname === undefined) {
-                const eqnone = enone.map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.True : FlowTypeTruthValue.False));
-                const neqnone = esome.map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.False : FlowTypeTruthValue.True));
+                if (optvname === undefined) {
+                    const eqnone = enone.map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.True : FlowTypeTruthValue.False));
+                    const neqnone = esome.map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.False : FlowTypeTruthValue.True));
 
-                return [...eqnone, ...neqnone];
+                    return [...eqnone, ...neqnone];
+                }
+                else {
+                    const eqnone = enone.map((opt) => opt
+                        .assumeVar(optvname, (opt.expressionResult as ExpressionReturnResult).etype)
+                        .setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.True : FlowTypeTruthValue.False));
+
+                    const neqnone = esome.map((opt) => opt
+                        .assumeVar(optvname, (opt.expressionResult as ExpressionReturnResult).etype)
+                        .setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.False : FlowTypeTruthValue.True));
+
+                    return [...eqnone, ...neqnone];
+                }
             }
             else {
-                const eqnone = enone.map((opt) => opt
-                    .assumeVar(optvname, (opt.expressionResult as ExpressionReturnResult).etype)
-                    .setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.True : FlowTypeTruthValue.False));
+                //
+                //TODO: we are not going to warn here since template instantiation can be annoying 
+                //      should have one mode for TypeCheck -- only on un-templated code and one for compile
+                //
+                //this.raiseErrorIf(op.sinfo, tvals.length === 0, "Value is never of type");
+                //this.raiseErrorIf(op.sinfo, ntvals.length === 0, "Value is always of type");
 
-                const neqnone = esome.map((opt) => opt
-                    .assumeVar(optvname, (opt.expressionResult as ExpressionReturnResult).etype)
-                    .setExpressionResult(this.m_assembly.getSpecialBoolType(), opname === "isNone" ? FlowTypeTruthValue.False : FlowTypeTruthValue.True));
+                if (optvname === undefined) {
+                    const tvals = [cenv]
+                        .filter((opt) => !this.m_assembly.restrictT(opt.getExpressionResult().etype, ttype).isEmptyType())
+                        .map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True));
 
-                return [...eqnone, ...neqnone];
-            }
-        }
-        else {
-            //
-            //TODO: we are not going to warn here since template instantiation can be annoying 
-            //      should have one mode for TypeCheck -- only on un-templated code and one for compile
-            //
-            //this.raiseErrorIf(op.sinfo, tvals.length === 0, "Value is never of type");
-            //this.raiseErrorIf(op.sinfo, ntvals.length === 0, "Value is always of type");
+                    const ntvals = [cenv]
+                        .filter((opt) => !this.m_assembly.restrictNotT(opt.getExpressionResult().etype, ttype).isEmptyType())
+                        .map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False));
 
-            if (optvname === undefined) {
-                const tvals = [cenv]
-                    .filter((opt) => !this.m_assembly.restrictT(opt.getExpressionResult().etype, ttype).isEmptyType())
-                    .map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True));
+                    return [...tvals, ...ntvals];
+                }
+                else {
+                    const tvals = [cenv]
+                        .filter((opt) => !this.m_assembly.restrictT(opt.getExpressionResult().etype, ttype).isEmptyType())
+                        .map((opt) =>
+                            opt.assumeVar(optvname, this.m_assembly.restrictT(opt.getExpressionResult().etype, ttype))
+                                .setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True));
 
-                const ntvals = [cenv]
-                    .filter((opt) => !this.m_assembly.restrictNotT(opt.getExpressionResult().etype, ttype).isEmptyType())
-                    .map((opt) => opt.setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False));
+                    const ntvals = [cenv]
+                        .filter((opt) => !this.m_assembly.restrictNotT(opt.getExpressionResult().etype, ttype).isEmptyType())
+                        .map((opt) =>
+                            opt.assumeVar(optvname, this.m_assembly.restrictNotT(opt.getExpressionResult().etype, ttype))
+                                .setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False));
 
-                return [...tvals, ...ntvals];
-            }
-            else {
-                const tvals = [cenv]
-                    .filter((opt) => !this.m_assembly.restrictT(opt.getExpressionResult().etype, ttype).isEmptyType())
-                    .map((opt) => opt
-                        .assumeVar(optvname, this.m_assembly.restrictT(opt.getExpressionResult().etype, ttype))
-                        .setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True));
-
-                const ntvals = [cenv]
-                    .filter((opt) => !this.m_assembly.restrictNotT(opt.getExpressionResult().etype, ttype).isEmptyType())
-                    .map((opt) => opt
-                        .assumeVar(optvname, this.m_assembly.restrictNotT(opt.getExpressionResult().etype, ttype))
-                        .setExpressionResult(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False));
-
-
-                return [...tvals, ...ntvals];
+                    return [...tvals, ...ntvals];
+                }
             }
         }
     }

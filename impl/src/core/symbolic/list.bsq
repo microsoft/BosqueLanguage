@@ -200,17 +200,17 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_min[recursive](l, idx + 1, acc < val ? acc : val);
+            return List<T>::s_min[recursive](l, idx + 1, KeyType::less(acc, val) ? acc : val);
         }
     }
 
     hidden recursive static {when T KeyType} s_max(l: List<T>, idx: Int, acc: T): T {
         if(idx == List<T>::s_size(l)) {
-            return List<T>::s_size(l);
+            return acc;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_max[recursive](l, idx + 1, acc > val ? acc : val);
+            return List<T>::s_max[recursive](l, idx + 1, KeyType::less(val, acc) ? acc : val);
         }
     }
 
@@ -255,17 +255,17 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static s_ofttype<U>(l: List<T>, lp: List<U>, idx: Int): List<U> {
+    hidden recursive static s_oftype<U>(l: List<T>, lp: List<U>, idx: Int): List<U> {
         if(idx == List<T>::s_size(l)) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             if(val.is<U>()) {
-                return List<T>::s_ofttype<U>[recursive](l, List<U>::s_unsafe_push(lp, val.as<U>()), idx + 1);
+                return List<T>::s_oftype<U>[recursive](l, List<U>::s_unsafe_push(lp, val.as<U>()), idx + 1);
             }
             else {
-                return List<T>::s_ofttype<U>[recursive](l, lp, idx + 1);
+                return List<T>::s_oftype<U>[recursive](l, lp, idx + 1);
             }
         }
     }
@@ -705,11 +705,11 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method {when T KeyType} tryMax(): T? {
-        return s != e ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : none;
+        return List<T>::s_size(this) != 0 ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : none;
     }
 
      method {when T KeyType} defaultMax(default: T): T {
-        return s != e ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : default;
+        return List<T>::s_size(this) != 0 ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : default;
     }
 
     //
@@ -907,7 +907,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method ofType<U>(): List<U> {
-        return List<T>::s_oftype<U>[recursive](this, List<T>@{}, 0);
+        return List<T>::s_oftype<U>[recursive](this, List<U>@{}, 0);
     }
 
     method cast<U>(): List<U> {

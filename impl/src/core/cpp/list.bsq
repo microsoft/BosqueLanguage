@@ -211,11 +211,11 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method {when T KeyType} tryMax(): T? {
-        return s != e ? List<T>::s_max(this) : none;
+        return List<T>::s_size(this) != 0 ? List<T>::s_max(this) : none;
     }
 
     method {when T KeyType} defaultMax(default: T): T {
-        return s != e ? List<T>::s_max(this) : default;
+        return List<T>::s_size(this) != 0 ? List<T>::s_max(this) : default;
     }
 
     //

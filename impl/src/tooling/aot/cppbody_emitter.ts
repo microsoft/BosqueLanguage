@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRType, MIRInvokeDecl, MIRInvokeBodyDecl, MIRInvokePrimitiveDecl, MIRConstantDecl, MIRFieldDecl, MIREntityTypeDecl, MIRFunctionParameter, MIREntityType, MIRTupleType, MIRRecordType, MIRConceptType, MIREphemeralListType, MIRPCode, MIRRegex } from "../../compiler/mir_assembly";
 import { CPPTypeEmitter } from "./cpptype_emitter";
-import { MIRArgument, MIRRegisterArgument, MIRConstantNone, MIRConstantFalse, MIRConstantTrue, MIRConstantInt, MIRConstantArgument, MIRConstantString, MIROp, MIROpTag, MIRLoadConst, MIRAccessArgVariable, MIRAccessLocalVariable, MIRInvokeFixedFunction, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRJump, MIRJumpCond, MIRJumpNone, MIRAbort, MIRBasicBlock, MIRPhi, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRAccessFromProperty, MIRInvokeKey, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRBody, MIRConstructorPrimary, MIRAccessFromField, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRIsTypeOf, MIRProjectFromIndecies, MIRModifyWithIndecies, MIRStructuredExtendTuple, MIRProjectFromProperties, MIRModifyWithProperties, MIRStructuredExtendRecord, MIRLoadConstTypedString, MIRConstructorEphemeralValueList, MIRProjectFromFields, MIRModifyWithFields, MIRStructuredExtendObject, MIRLoadConstSafeString, MIRInvokeInvariantCheckDirect, MIRLoadFromEpehmeralList, MIRLoadConstRegex, MIRConstantBigInt, MIRConstantFloat64, MIRFieldKey, MIRResolvedTypeKey, MIRPackSlice, MIRPackExtend, MIRNominalTypeKey } from "../../compiler/mir_ops";
+import { MIRArgument, MIRRegisterArgument, MIRConstantNone, MIRConstantFalse, MIRConstantTrue, MIRConstantInt, MIRConstantArgument, MIRConstantString, MIROp, MIROpTag, MIRLoadConst, MIRAccessArgVariable, MIRAccessLocalVariable, MIRInvokeFixedFunction, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRJump, MIRJumpCond, MIRJumpNone, MIRAbort, MIRBasicBlock, MIRPhi, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRAccessFromProperty, MIRInvokeKey, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRBody, MIRConstructorPrimary, MIRAccessFromField, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRIsTypeOf, MIRProjectFromIndecies, MIRModifyWithIndecies, MIRStructuredExtendTuple, MIRProjectFromProperties, MIRModifyWithProperties, MIRStructuredExtendRecord, MIRLoadConstTypedString, MIRConstructorEphemeralValueList, MIRProjectFromFields, MIRModifyWithFields, MIRStructuredExtendObject, MIRLoadConstSafeString, MIRInvokeInvariantCheckDirect, MIRLoadFromEpehmeralList, MIRLoadConstRegex, MIRConstantBigInt, MIRConstantFloat64, MIRFieldKey, MIRResolvedTypeKey, MIRPackSlice, MIRPackExtend, MIRNominalTypeKey, MIRBinLess } from "../../compiler/mir_ops";
 import { topologicalOrder } from "../../compiler/mir_info";
 
 import * as assert from "assert";
@@ -1491,6 +1491,13 @@ class CPPBodyEmitter {
                 const rhvtypeinfer = this.typegen.getMIRType(beq.rhsInferType);
                 return `${this.varToCppName(beq.trgt)} = ${this.generateEquals(beq.op, lhvtypeinfer, beq.lhs, rhvtypeinfer, beq.rhs, !beq.relaxed)};`;
             }
+            case MIROpTag.MIRBinLess: {
+                const blt = op as MIRBinLess;
+
+                const lhvtypeinfer = this.typegen.getMIRType(blt.lhsInferType);
+                const rhvtypeinfer = this.typegen.getMIRType(blt.rhsInferType);
+                return `${this.varToCppName(blt.trgt)} = ${this.generateLess(lhvtypeinfer, blt.lhs, rhvtypeinfer, blt.rhs, !blt.relaxed)};`;
+            }
             case MIROpTag.MIRBinCmp: {
                 const bcmp = op as MIRBinCmp;
 
@@ -1924,11 +1931,37 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_oftype": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const rltype = this.typegen.getMIRType(idecl.resultType);
+                const rlctype = (this.typegen.assembly.entityDecls.get(rltype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+
+                //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
+                const codetc = this.generateTypeCheck("v", ctype, ctype, rlctype);
+                const lambdatc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> bool { return ${codetc}; }`;
+                const codecc = this.typegen.coerce("v", ctype, rlctype);
+                const rlcinc = this.typegen.getFunctorsForType(rlctype).inc;
+                const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> ${this.typegen.getCPPReprFor(rlctype).std} { return ${rlcinc}{}(${codecc}); }`;
+                
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_oftype<${this.typegen.getCPPReprFor(rltype).base}, ${this.typegen.getCPPReprFor(rlctype).base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)}>(${params[0]}, ${lambdatc}, ${lambdacc});`
                 break;
             }
             case "list_cast": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const rltype = this.typegen.getMIRType(idecl.resultType);
+                const rlctype = (this.typegen.assembly.entityDecls.get(rltype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+
+                //TODO: we should be a bit clever here on the type conversions and only do the coerce/copy when we actually need to
+
+                //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
+                const codetc = this.generateTypeCheck("v", ctype, ctype, rlctype);
+                const lambdatc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> bool { return ${codetc}; }`;
+                const codecc = this.typegen.coerce("v", ctype, rlctype);
+                const rlcinc = this.typegen.getFunctorsForType(rlctype).inc;
+                const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> ${this.typegen.getCPPReprFor(rlctype).std} { return ${rlcinc}{}(${codecc}); }`;
+                
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_cast<${this.typegen.getCPPReprFor(rltype).base}, ${this.typegen.getCPPReprFor(rlctype).base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)}>(${params[0]}, ${lambdatc}, ${lambdacc});`
                 break;
             }
             case "list_slice": {
