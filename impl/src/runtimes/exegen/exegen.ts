@@ -89,6 +89,8 @@ setImmediate(() => {
             let bcontents = contents
             .replace("//%%STATIC_STRING_DECLARE%%", cparams.STATIC_STRING_DECLARE)
             .replace("//%%STATIC_STRING_CREATE%%", cparams.STATIC_STRING_CREATE)
+            .replace("//%%STATIC_REGEX_DECLARE%%", cparams.STATIC_REGEX_DECLARE)
+            .replace("//%%STATIC_REGEX_CREATE%%", cparams.STATIC_REGEX_CREATE)
             .replace("//%%STATIC_INT_DECLARE%%", cparams.STATIC_INT_DECLARE)
             .replace("//%%STATIC_INT_CREATE%%", cparams.STATIC_INT_CREATE)
             .replace("//%%PROPERTY_ENUM_DECLARE%%", cparams.PROPERTY_ENUM_DECLARE) 

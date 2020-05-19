@@ -7,10 +7,19 @@
 namespace NSCore;
 
 entity Queue<T> provides Object, Expandoable<T> {
+    pragma KnownSafe
     hidden static s_size(q: Queue<T>): Int # queue_size
+
+    pragma KnownSafe
     hidden static s_unsafe_front(q: Queue<T>): T # queue_unsafe_front
+
+    pragma KnownSafe
     hidden static s_unsafe_at(q: Queue<T>, idx: Int): T # queue_unsafe_at
+
+    pragma KnownSafe
     hidden static s_unsafe_push(q: Queue<T>, v: T): Queue<T> # queue_unsafe_push
+
+    pragma KnownSafe
     hidden static s_unsafe_pop(q: Queue<T>): Queue<T> # queue_unsafe_pop
 
     hidden static s_toList(q: Queue<T>, lp: List<T>, idx: Int): List<T> {

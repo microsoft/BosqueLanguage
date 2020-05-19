@@ -59,15 +59,21 @@ bool bsqKeyValueEqual(KeyValue v1, KeyValue v2)
         return true;
     }
 
-    if(BSQ_IS_VALUE_NONE(v1) || BSQ_IS_VALUE_NONE(v2))
-    {
-        return BSQ_IS_VALUE_NONE(v1) && BSQ_IS_VALUE_NONE(v2);
+    MIRNominalTypeEnum kt1 = getNominalTypeOf_KeyValue(v1);
+    MIRNominalTypeEnum kt2 = getNominalTypeOf_KeyValue(v2);
+    if(kt1 != kt2) {
+        return false;
     }
-    else if(BSQ_IS_VALUE_BOOL(v1) && BSQ_IS_VALUE_BOOL(v2))
+
+    if((kt1 == MIRNominalTypeEnum_None) & (kt2 == MIRNominalTypeEnum_None))
+    {
+        return true;
+    }
+    else if((kt1 == MIRNominalTypeEnum_Bool) & (kt2 == MIRNominalTypeEnum_Bool))
     {
         return EqualFunctor_bool{}(BSQ_GET_VALUE_BOOL(v1), BSQ_GET_VALUE_BOOL(v2));
     }
-    else if(BSQ_IS_VALUE_TAGGED_INT(v1) || BSQ_IS_VALUE_TAGGED_INT(v2))
+    else if((kt1 == MIRNominalTypeEnum_Int) & (kt2 == MIRNominalTypeEnum_Int))
     {
         return EqualFunctor_int64_t{}(BSQ_GET_VALUE_TAGGED_INT(v1), BSQ_GET_VALUE_TAGGED_INT(v2));
     }
@@ -76,11 +82,6 @@ bool bsqKeyValueEqual(KeyValue v1, KeyValue v2)
         auto ptr1 = BSQ_GET_VALUE_PTR(v1, BSQRef); 
         auto ptr2 = BSQ_GET_VALUE_PTR(v2, BSQRef);
 
-        if(ptr1->nominalType != ptr2->nominalType)
-        {
-            return false;
-        }
-        
         auto rcategory = GET_MIR_TYPE_CATEGORY(ptr1->nominalType);
         switch(rcategory)
         {
@@ -110,15 +111,21 @@ bool bsqKeyValueEqual(KeyValue v1, KeyValue v2)
 
 bool bsqKeyValueLess(KeyValue v1, KeyValue v2)
 {
-    if(BSQ_IS_VALUE_NONE(v1) || BSQ_IS_VALUE_NONE(v2))
-    {
-        return BSQ_IS_VALUE_NONE(v1) && BSQ_IS_VALUE_NONNONE(v2);
+    MIRNominalTypeEnum kt1 = getNominalTypeOf_KeyValue(v1);
+    MIRNominalTypeEnum kt2 = getNominalTypeOf_KeyValue(v2);
+    if(kt1 != kt2) {
+        return kt1 < kt2;
     }
-    else if(BSQ_IS_VALUE_BOOL(v1) && BSQ_IS_VALUE_BOOL(v2))
+
+    if((kt1 == MIRNominalTypeEnum_None) & (kt2 == MIRNominalTypeEnum_None))
+    {
+        return false;
+    }
+    else if((kt1 == MIRNominalTypeEnum_Bool) & (kt2 == MIRNominalTypeEnum_Bool))
     {
         return LessFunctor_bool{}(BSQ_GET_VALUE_BOOL(v1), BSQ_GET_VALUE_BOOL(v2));
     }
-    else if(BSQ_IS_VALUE_TAGGED_INT(v1) || BSQ_IS_VALUE_TAGGED_INT(v2))
+    else if((kt1 == MIRNominalTypeEnum_Int) & (kt2 == MIRNominalTypeEnum_Int))
     {
         return LessFunctor_int64_t{}(BSQ_GET_VALUE_TAGGED_INT(v1), BSQ_GET_VALUE_TAGGED_INT(v2));
     }
@@ -126,11 +133,6 @@ bool bsqKeyValueLess(KeyValue v1, KeyValue v2)
     {
         auto ptr1 = BSQ_GET_VALUE_PTR(v1, BSQRef); 
         auto ptr2 = BSQ_GET_VALUE_PTR(v2, BSQRef);
-
-        if(ptr1->nominalType != ptr2->nominalType)
-        {
-            return ptr1->nominalType < ptr2->nominalType;
-        }
         
         auto rcategory = GET_MIR_TYPE_CATEGORY(ptr1->nominalType);
         switch(rcategory)
@@ -233,7 +235,7 @@ std::string diagnostic_format(Value v)
             case MIRNominalTypeEnum_Category_ISOTime:
                 return DisplayFunctor_BSQISOTime{}(dynamic_cast<Boxed_BSQISOTime*>(vv)->bval);
             case MIRNominalTypeEnum_Category_Regex:
-                return DisplayFunctor_BSQRegex{}(dynamic_cast<BSQRegex*>(vv));
+                return DisplayFunctor_BSQRegex{}(dynamic_cast<Boxed_BSQRegex*>(vv)->bval);
             case MIRNominalTypeEnum_Category_Tuple:
                 return DisplayFunctor_BSQTuple{}(*dynamic_cast<BSQTuple*>(vv));
             case MIRNominalTypeEnum_Category_Record:

@@ -20,6 +20,7 @@ class CPPTypeEmitter {
     readonly bigIntType: MIRType;
     readonly float64Type: MIRType;
     readonly stringType: MIRType;
+    readonly regexType: MIRType;
 
     readonly keyType: MIRType;
     readonly validatorType: MIRType;
@@ -48,6 +49,7 @@ class CPPTypeEmitter {
         this.bigIntType = assembly.typeMap.get("NSCore::BigInt") as MIRType;
         this.float64Type = assembly.typeMap.get("NSCore::Float64") as MIRType;
         this.stringType = assembly.typeMap.get("NSCore::String") as MIRType;
+        this.regexType = assembly.typeMap.get("NSCore::Regex") as MIRType;
 
         this.keyType = assembly.typeMap.get("NSCore::KeyType") as MIRType;
         this.validatorType = assembly.typeMap.get("NSCore::Validator") as MIRType;
@@ -308,7 +310,7 @@ class CPPTypeEmitter {
                 return new StructRepr(false, "BSQISOTime", "Boxed_BSQISOTime", "MIRNominalTypeEnum_ISOTime", "MIRNominalTypeEnum_Category_ISOTime");
             }
             else if (this.typecheckIsName_Option(tt, /^NSCore::Regex$/)) {
-                return new RefRepr(false, "BSQRegex", "BSQRegex*", "MIRNominalTypeEnum_Category_Regex");
+                return new StructRepr(false, "BSQRegex", "Boxed_BSQRegex", "MIRNominalTypeEnum_Regex", "MIRNominalTypeEnum_Category_Regex", );
             }
             else if (tt instanceof MIRTupleType) {
                 return new StructRepr(false, "BSQTuple", "BSQTuple", "MIRNominalTypeEnum_Tuple", "MIRNominalTypeEnum_Category_Tuple");

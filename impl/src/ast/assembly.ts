@@ -1032,25 +1032,6 @@ class Assembly {
         return ResolvedFunctionType.create(t.recursive, params, t.optRestParamName, optRestParamType, rtype);
     }
 
-    isGroundedType(tt: ResolvedType): boolean {
-        return tt.options.every((opt) => this.isGrounded_Atom(opt));
-    }
-
-    private isGrounded_Atom(atom: ResolvedAtomType): boolean {
-        if(atom instanceof ResolvedEntityAtomType) {
-            return [...atom.binds].every((bind) => this.isGroundedType(bind[1]));
-        }
-        else if(atom instanceof ResolvedTupleAtomType) {
-            return atom.types.every((entry) => this.isGroundedType(entry.type));
-        }
-        else if(atom instanceof ResolvedRecordAtomType) {
-            return atom.entries.every((entry) => this.isGroundedType(entry.type));
-        }
-        else {
-            return false;
-        }
-    }
-
     private atomSubtypeOf_EntityEntity(t1: ResolvedEntityAtomType, t2: ResolvedEntityAtomType): boolean {
         if (t1.object.ns !== t2.object.ns || t1.object.name !== t2.object.name) {
             return false;

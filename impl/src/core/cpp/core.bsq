@@ -331,30 +331,40 @@ concept IdKey provides KeyType, Some {
 
 //<summary>Primitive regex value.</summary>
 entity Regex provides Some {
-    method accepts(str: String, start?: Int, end?: Int): Bool # regex_accepts
-    method match(str: String, start?: Int, end?: Int): RegexMatch # regex_match
-    
-    method matchAll(str: String, start?: Int, end?: Int): List<RegexMatch> # regex_matchall
-}
+    hidden static s_accepts(str: String, start: Int, end: Int): Bool # regex_accepts
+    hidden static s_match(str: String, start: Int, end: Int): Int, Int # regex_match
 
-entity RegexCapture provides Object {
-    field index: Int;
-    field length: Int;
-    field value: String;
-}
+    hidden static s_rangeInBounds(str: String, start: Int?, end: Int?): Bool {
+        let s, e = start ?| 0, end ?| String::s_length(str);
+        return 0 <= s && s <= e && e <= String::s_length(str); 
+    }
 
-entity RegexGroup provides Object {
-    field success: Bool;
-    field name: String;
-    field captures: List<RegexCapture>;
+    method accepts(str: String, start?: Int, end?: Int): Bool
+        requires release Regex::s_rangeInBounds(s, start, end);
+    {
+        let s, e = start ?| 0, end ?| String::s_length(str);
+        return Regex::s_accepts(str, s, e);
+    }
+
+    method match(str: String, start?: Int, end?: Int): RegexMatch
+        requires release Regex::s_rangeInBounds(s, start, end);
+    {
+        let s, e = start ?| 0, end ?| String::s_length(str);
+
+        let i, l = Regex::s_match(str, s, e);
+        if(l == -1) {
+            return RegexMatch@{ success=false, index=-1, length=-1 };
+        }
+        else {
+            return RegexMatch@{ success=true, index=i, length=l };
+        }
+    }
 }
 
 entity RegexMatch provides Object {
     field success: Bool;
     field index: Int;
     field length: Int;
-    field value: String;
-    field groups: List<RegexGroup>; 
 }
 
 //<summary>All actual tuples implicitly provide this concept.</summary>

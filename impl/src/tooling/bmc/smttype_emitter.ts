@@ -21,6 +21,7 @@ class SMTTypeEmitter {
     readonly bigIntType: MIRType;
     readonly float64Type: MIRType;
     readonly stringType: MIRType;
+    readonly regexType: MIRType;
 
     readonly keyType: MIRType;
     readonly validatorType: MIRType;
@@ -49,6 +50,7 @@ class SMTTypeEmitter {
         this.bigIntType = assembly.typeMap.get("NSCore::BigInt") as MIRType;
         this.float64Type = assembly.typeMap.get("NSCore::Float64") as MIRType;
         this.stringType = assembly.typeMap.get("NSCore::String") as MIRType;
+        this.regexType = assembly.typeMap.get("NSCore::Regex") as MIRType;
 
         this.keyType = assembly.typeMap.get("NSCore::KeyType") as MIRType;
         this.validatorType = assembly.typeMap.get("NSCore::Validator") as MIRType;
@@ -400,7 +402,7 @@ class SMTTypeEmitter {
             return new SMTValue(`(bsqterm_record ${exp.emit()})`);
         }
         else {
-            return new SMTValue(`(bsqterm_object "${this.mangleStringForSMT(from.trkey)}" (cons@bsq_object_from_${this.mangleStringForSMT(from.trkey)} ${exp.emit()}))`);
+            return new SMTValue(`(bsqterm_object MIRNominalTypeEnum_${this.mangleStringForSMT(from.trkey)} (cons@bsq_object_from_${this.mangleStringForSMT(from.trkey)} ${exp.emit()}))`);
         }
     }
 

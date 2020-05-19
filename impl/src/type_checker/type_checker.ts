@@ -144,8 +144,9 @@ class TypeChecker {
             const terminfo = terms[i];
             const termtype = binds.get(terminfo.name) as ResolvedType;
 
-            const boundsok = this.m_assembly.subtypeOf(termtype, this.resolveAndEnsureTypeOnly(sinfo, terminfo.constraint, new Map<string, ResolvedType>()));
-            this.raiseErrorIf(sinfo, !boundsok, "Template instantiation does not satisfy specified bounds");
+            const termconstraint = this.resolveAndEnsureTypeOnly(sinfo, terminfo.constraint, new Map<string, ResolvedType>());
+            const boundsok = this.m_assembly.subtypeOf(termtype, termconstraint);
+            this.raiseErrorIf(sinfo, !boundsok, `Template instantiation does not satisfy specified bounds -- not subtype of ${termconstraint.idStr}`);
         }
 
         if (optTypeRestrict !== undefined) {
@@ -153,8 +154,9 @@ class TypeChecker {
                 const consinfo = optTypeRestrict.constraints[i];
                 const constype = this.resolveAndEnsureTypeOnly(sinfo, consinfo.t, binds)
 
-                const boundsok = this.m_assembly.subtypeOf(constype, this.resolveAndEnsureTypeOnly(sinfo, consinfo.constraint, binds));
-                this.raiseErrorIf(sinfo, !boundsok, "Template instantiation does not satisfy specified bounds");
+                const constrainttype = this.resolveAndEnsureTypeOnly(sinfo, consinfo.constraint, binds);
+                const boundsok = this.m_assembly.subtypeOf(constype, constrainttype);
+                this.raiseErrorIf(sinfo, !boundsok, `Template instantiation does not satisfy specified restriction -- not subtype of ${constrainttype.idStr}`);
             }
         }
     }
@@ -247,20 +249,40 @@ class TypeChecker {
         return tj;
     }
 
-    private checkValueEq(lhs: ResolvedType, rhs: ResolvedType): boolean {
+    private checkValueEq(lhs: ResolvedType, rhs: ResolvedType): [boolean, boolean] {
         if(lhs.isNoneType() || rhs.isNoneType()) {
-            return true;
+            return [true, false];
         }
 
-        if (!this.m_assembly.subtypeOf(lhs, this.m_assembly.getSpecialKeyTypeConceptType()) || !this.m_assembly.isGroundedType(lhs)) {
-            return false;
+        if (!this.m_assembly.subtypeOf(lhs, this.m_assembly.getSpecialKeyTypeConceptType())) {
+            return [false, false];
         }
 
-        if (!this.m_assembly.subtypeOf(rhs, this.m_assembly.getSpecialKeyTypeConceptType()) || !this.m_assembly.isGroundedType(rhs)) {
-            return false;
+        if (!this.m_assembly.subtypeOf(rhs, this.m_assembly.getSpecialKeyTypeConceptType())) {
+            return [false, false];
         }
 
-        return lhs.options.length === 1 && rhs.options.length === 1 && lhs.idStr === rhs.idStr;
+        if(lhs.options.length === 1 && rhs.options.length === 1 && lhs.idStr === rhs.idStr) {
+            return [true, true];
+        }
+        else {
+            if(lhs.options.length === 1 && rhs.options.length === 1) {
+                return [false, false]; //types not same and neither are none
+            }
+            else if(lhs.options.length !== 1 && rhs.options.length !== 1) {
+                return [false, false]; //both types are ambig so not ok
+            }
+            else {
+                if(lhs.options.length !== 1) {
+                    const ok = lhs.options.every((opt) => opt.idStr === "NSCore::None" || opt.idStr === rhs.idStr);
+                    return [ok, false];
+                }
+                else {
+                    const ok = rhs.options.every((opt) => opt.idStr === "NSCore::None" || opt.idStr === lhs.idStr);
+                    return [ok, false];
+                }
+            }
+        }
     }
     
     private checkValueLess(lhs: ResolvedType, rhs: ResolvedType): boolean {
@@ -2936,7 +2958,7 @@ class TypeChecker {
         const rhsreg = this.m_emitter.bodyEmitter.generateTmpRegister();
         const rhs = this.checkExpression(env, exp.rhs, rhsreg);
 
-        const pairwiseok = this.checkValueEq(lhs.getExpressionResult().etype, rhs.getExpressionResult().etype);
+        const [pairwiseok, isstrict] = this.checkValueEq(lhs.getExpressionResult().etype, rhs.getExpressionResult().etype);
         this.raiseErrorIf(exp.sinfo, !pairwiseok, "Types are incompatible for equality compare");
 
         if (this.m_emitEnabled) {
@@ -2952,7 +2974,7 @@ class TypeChecker {
                 this.m_emitter.bodyEmitter.emitTypeOf(exp.sinfo, trgt, chktype.trkey, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().etype).trkey, lhsreg);
             }
             else {
-                this.m_emitter.bodyEmitter.emitBinEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().etype).trkey, lhsreg, exp.op, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().etype).trkey, rhsreg, trgt, false);
+                this.m_emitter.bodyEmitter.emitBinEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().etype).trkey, lhsreg, exp.op, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().etype).trkey, rhsreg, trgt, !isstrict);
             }
         }
 

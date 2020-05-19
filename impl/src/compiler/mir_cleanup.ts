@@ -56,7 +56,6 @@ function propagateTmpAssignForOp(op: MIROp, propMap: Map<number, MIRArgument>) {
             propagateTmpAssign_Bind(lc.trgt, lc.src, propMap);
             break;
         }
-        case MIROpTag.MIRLoadConstRegex:
         case MIROpTag.MIRLoadConstSafeString:
         case MIROpTag.MIRLoadConstTypedString:
         case MIROpTag.MIRAccessConstantValue:

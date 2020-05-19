@@ -168,9 +168,13 @@ struct entity Float64 provides Parsable, PODType, APIType, Some {
 
 //<summary>Primitive string value.</summary>
 entity String provides KeyType, PODType, APIType, Some {
+    pragma KnownSafe
     private static s_length(s: String): Int # string_count
+
+    pragma AssumeSafe
     private static s_charat(s: String): Int # string_charat
 
+    pragma KnownSafe
     private static s_concat2(s1: String, s2: String): String # string_concat
 
     private recursive static s_concat(sl: List<String>, idx: Int, rs: String): String {
@@ -183,13 +187,16 @@ entity String provides KeyType, PODType, APIType, Some {
         }
     }
 
+    pragma KnownSafe
     private static s_rangeInBounds(str: String, start: Int?, end: Int?): Bool {
         let s, e = start ?| 0, end ?| String::s_length(str);
         return 0 <= s && s <= e && e <= String::s_length(str);
     }
 
+    pragma AssumeSafe
     private static s_substring(s: String, start: Int, end: Int): String # string_substring
 
+    pragma KnownSafe
     method length(): Int {
         return String::s_length(this);
     }
@@ -346,30 +353,44 @@ concept IdKey provides KeyType, Some {
 
 //<summary>Primitive regex value.</summary>
 entity Regex provides Some {
-    method accepts(str: String, start?: Int, end?: Int): Bool # regex_accepts
-    method match(str: String, start?: Int, end?: Int): RegexMatch # regex_match
-    
-    method matchAll(str: String, start?: Int, end?: Int): List<RegexMatch> # regex_matchall
-}
+    pragma AssumeSafe
+    hidden static s_accepts(str: String, start: Int, end: Int): Bool # regex_accepts
 
-entity RegexCapture provides Object {
-    field index: Int;
-    field length: Int;
-    field value: String;
-}
+    pragma AssumeSafe
+    hidden static s_match(str: String, start: Int, end: Int): Int, Int # regex_match
 
-entity RegexGroup provides Object {
-    field success: Bool;
-    field name: String;
-    field captures: List<RegexCapture>;
+    pragma KnownSafe
+    hidden static s_rangeInBounds(str: String, start: Int?, end: Int?): Bool {
+        let s, e = start ?| 0, end ?| String::s_length(str);
+        return 0 <= s && s <= e && e <= String::s_length(str); 
+    }
+
+    method accepts(str: String, start?: Int, end?: Int): Bool
+        requires release Regex::s_rangeInBounds(s, start, end);
+    {
+        let s, e = start ?| 0, end ?| String::s_length(str);
+        return Regex::s_accepts(str, s, e);
+    }
+
+    method match(str: String, start?: Int, end?: Int): RegexMatch
+        requires release Regex::s_rangeInBounds(s, start, end);
+    {
+        let s, e = start ?| 0, end ?| String::s_length(str);
+
+        let i, l = Regex::s_match(str, s, e);
+        if(l == -1) {
+            return RegexMatch@{ success=false, index=-1, length=-1 };
+        }
+        else {
+            return RegexMatch@{ success=true, index=i, length=l };
+        }
+    }
 }
 
 entity RegexMatch provides Object {
     field success: Bool;
     field index: Int;
     field length: Int;
-    field value: String;
-    field groups: List<RegexGroup>; 
 }
 
 //<summary>All actual tuples implicitly provide this concept.</summary>
@@ -450,4 +471,18 @@ concept Object provides Some {
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>
 concept Expandoable<T> provides Object {
     method expand<U>(): List<U> # special_method
+}
+
+//<summary>Special KnownSafe Pragma type for symbolic checker -- you MUST make sure this is actually safe at the callsite!</summary>
+entity AssumeSafe provides Some {
+    override static tryParse(str: String): Result<KnownSafe, String> {
+        return str == "" ? KnownSafe@{} : "AssumeSafe does not take any other context";
+    }
+}
+
+//<summary>Special KnownSafe Pragma type for symbolic checker -- this is always safe by construction.</summary>
+entity KnownSafe provides Some {
+    override static tryParse(str: String): Result<KnownSafe, String> {
+        return str == "" ? KnownSafe@{} : "KnownSafe does not take any other context";
+    }
 }

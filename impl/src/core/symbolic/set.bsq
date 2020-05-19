@@ -7,11 +7,19 @@
 namespace NSCore;
 
 entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODType, APIType when T APIType {
+    pragma KnownSafe
     hidden static s_size(s: Set<T>): Int # set_size
+
+    pragma KnownSafe
     hidden static s_has_key(s: Set<T>, key: T): Bool # set_has_key
+
+    pragma KnownSafe
     hidden static s_get_keylist(s: Set<T>): KeyList<T>? # set_get_keylist
+
+    pragma AssumeSafe
     hidden static s_unsafe_add(s: Set<T>, v: T, newkl: KeyList<T>): Set<T> # set_unsafe_add
 
+    pragma KnownSafe
     hidden static s_add(s: Set<T>, v: T): Set<T> {
         if(Set<T>::s_has_key(s, v)) {
             return s;
@@ -36,8 +44,8 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
         }
     }
 
-    hidden recursive static s_hasall(s: Set<T>, l: List<T>, idx: Int): Bool {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_hasall(s: Set<T>, l: List<T>, lsize: Int, idx: Int): Bool {
+        if(idx == lsize) {
             return true;
         }
         else {
@@ -46,7 +54,7 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
                 return false;
             }
             else {
-                return Set<T>::s_hasall[recursive](s, l, idx + 1);
+                return Set<T>::s_hasall[recursive](s, l, lsize, idx + 1);
             }
         }
     }
@@ -125,23 +133,23 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
         }
     }
 
-    hidden recursive static s_unionall(sl: List<Set<T>>, sp: Set<T>, idx: Int): Set<T> {
-        if(idx == List<T>::s_size(sl)) {
+    hidden recursive static s_unionall(sl: List<Set<T>>, slsize: Int, sp: Set<T>, idx: Int): Set<T> {
+        if(idx == slsize) {
             return sp;
         }
         else {
             let s = List<T>::s_unsafe_get(sl, idx);
-            return Set<T>::s_unionall[recursive](sl, sp.union(s), idx + 1);
+            return Set<T>::s_unionall[recursive](sl, slsize, sp.union(s), idx + 1);
         }
     }
 
-    hidden recursive static s_intersectall(sl: List<Set<T>>, sp: Set<T>, idx: Int): Set<T> {
+    hidden recursive static s_intersectall(sl: List<Set<T>>, slsize: Int, sp: Set<T>, idx: Int): Set<T> {
         if(idx == List<T>::s_size(sl)) {
             return sp;
         }
         else {
             let s = List<T>::s_unsafe_get(sl, idx);
-            return Set<T>::s_intersectall[recursive](sl, sp.intersect(s), idx + 1);
+            return Set<T>::s_intersectall[recursive](sl, slsize, sp.intersect(s), idx + 1);
         }
     }
 
@@ -162,7 +170,7 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
     }
 
     method hasAll(...v: List<T>): Bool {
-        return Set<T>::s_hasall[recursive](this, v, 0);
+        return Set<T>::s_hasall[recursive](this, List<T>::s_size(v), v, 0);
     }
 
     method toDynamicSet<T>(): DynamicSet<T> {
@@ -229,7 +237,7 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
             return List<T>::s_unsafe_get(sl, 0);
         }
         else {
-            return Set<T>::s_unionall(sl, Set<T>@{}, 0);
+            return Set<T>::s_unionall(sl, List<Set<T>>::s_size(sl), Set<T>@{}, 0);
         }
     }
 
@@ -241,7 +249,7 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
             return List<T>::s_unsafe_get(sl, 0);
         }
         else {
-            return Set<T>::s_intersectall(sl, Set<T>@{}, 0);
+            return Set<T>::s_intersectall(sl, List<Set<T>>::s_size(sl), Set<T>@{}, 0);
         }
     }
 }
