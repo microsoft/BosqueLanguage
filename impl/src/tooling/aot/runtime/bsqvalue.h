@@ -598,21 +598,40 @@ struct DisplayFunctor_BSQISOTime
 };
 typedef BSQBoxed<BSQISOTime, RCDecFunctor_BSQISOTime> Boxed_BSQISOTime;
 
-class BSQRegex : public BSQRef
+class BSQRegex
 {
 public:
-    const std::string re;
+    const std::regex* re;
 
-    BSQRegex(const std::string& re) : BSQRef(MIRNominalTypeEnum_Regex), re(re) { ; }
-    virtual ~BSQRegex() = default;
+    BSQRegex() { ; }
+    BSQRegex(std::regex* re) : re(re) { ; }
+
+    BSQRegex(const BSQRegex& src) = default;
+    BSQRegex(BSQRegex&& src) = default;
+
+    BSQRegex& operator=(const BSQRegex& src) = default;
+    BSQRegex& operator=(BSQRegex&& src) = default;
+};
+struct RCIncFunctor_BSQRegex
+{
+    inline BSQRegex operator()(BSQRegex re) const { return re; }
+};
+struct RCDecFunctor_BSQRegex
+{
+    inline void operator()(BSQRegex re) const { ; }
+};
+struct RCReturnFunctor_BSQRegex
+{
+    inline void operator()(BSQRegex& re, BSQRefScope& scope) const { ; }
 };
 struct DisplayFunctor_BSQRegex
 {
-    std::string operator()(const BSQRegex* r) const 
+    std::string operator()(const BSQRegex& r) const 
     { 
-        return std::string{"/"} + r->re + std::string{"/"};
+        return std::string{"[REGEX]"};
     }
 };
+typedef BSQBoxed<BSQRegex, RCDecFunctor_BSQRegex> Boxed_BSQRegex;
 
 class BSQTuple : public BSQRef
 {

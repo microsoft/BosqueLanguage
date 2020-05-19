@@ -62,7 +62,6 @@ function processValueOpTempSSA(op: MIRValueOp, remap: Map<string, MIRRegisterArg
 function assignSSA(op: MIROp, remap: Map<string, MIRRegisterArgument>, ctrs: Map<string, number>) {
     switch (op.tag) {
         case MIROpTag.MIRLoadConst:
-        case MIROpTag.MIRLoadConstRegex:
         case MIROpTag.MIRLoadConstSafeString:
         case MIROpTag.MIRLoadConstTypedString:
         case MIROpTag.MIRAccessConstantValue:

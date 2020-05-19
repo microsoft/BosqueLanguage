@@ -8,6 +8,8 @@ namespace BSQ
 {
 //%%STATIC_STRING_CREATE%%
 
+//%%STATIC_REGEX_CREATE%%
+
 //%%STATIC_INT_CREATE%%
 /*
 std::regex LexerRegexs::whitespaceRe("\\s+"); 

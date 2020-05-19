@@ -4,7 +4,6 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "bsqlist_decl.h"
-#include <execution>
 
 #pragma once
 
@@ -112,7 +111,7 @@ public:
 
     static int64_t list_sum_int(Ty* l)
     {
-        int64_t res = std::reduce(/*std::execution::par_unseq,*/ l->entries.begin(), l->entries.end(), 0, [](int64_t a, int64_t b) {
+        int64_t res = std::reduce(l->entries.begin(), l->entries.end(), 0, [](int64_t a, int64_t b) {
             if((a == std::numeric_limits<int64_t>::max()) | (b == std::numeric_limits<int64_t>::max())) 
             {
                 return std::numeric_limits<int64_t>::max();

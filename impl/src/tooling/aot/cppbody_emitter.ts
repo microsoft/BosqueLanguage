@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRType, MIRInvokeDecl, MIRInvokeBodyDecl, MIRInvokePrimitiveDecl, MIRConstantDecl, MIRFieldDecl, MIREntityTypeDecl, MIRFunctionParameter, MIREntityType, MIRTupleType, MIRRecordType, MIRConceptType, MIREphemeralListType, MIRPCode, MIRRegex } from "../../compiler/mir_assembly";
 import { CPPTypeEmitter } from "./cpptype_emitter";
-import { MIRArgument, MIRRegisterArgument, MIRConstantNone, MIRConstantFalse, MIRConstantTrue, MIRConstantInt, MIRConstantArgument, MIRConstantString, MIROp, MIROpTag, MIRLoadConst, MIRAccessArgVariable, MIRAccessLocalVariable, MIRInvokeFixedFunction, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRJump, MIRJumpCond, MIRJumpNone, MIRAbort, MIRBasicBlock, MIRPhi, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRAccessFromProperty, MIRInvokeKey, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRBody, MIRConstructorPrimary, MIRAccessFromField, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRIsTypeOf, MIRProjectFromIndecies, MIRModifyWithIndecies, MIRStructuredExtendTuple, MIRProjectFromProperties, MIRModifyWithProperties, MIRStructuredExtendRecord, MIRLoadConstTypedString, MIRConstructorEphemeralValueList, MIRProjectFromFields, MIRModifyWithFields, MIRStructuredExtendObject, MIRLoadConstSafeString, MIRInvokeInvariantCheckDirect, MIRLoadFromEpehmeralList, MIRLoadConstRegex, MIRConstantBigInt, MIRConstantFloat64, MIRFieldKey, MIRResolvedTypeKey, MIRPackSlice, MIRPackExtend, MIRNominalTypeKey, MIRBinLess } from "../../compiler/mir_ops";
+import { MIRArgument, MIRRegisterArgument, MIRConstantNone, MIRConstantFalse, MIRConstantTrue, MIRConstantInt, MIRConstantArgument, MIRConstantString, MIROp, MIROpTag, MIRLoadConst, MIRAccessArgVariable, MIRAccessLocalVariable, MIRInvokeFixedFunction, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRDebug, MIRJump, MIRJumpCond, MIRJumpNone, MIRAbort, MIRBasicBlock, MIRPhi, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRAccessFromProperty, MIRInvokeKey, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRBody, MIRConstructorPrimary, MIRAccessFromField, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRIsTypeOf, MIRProjectFromIndecies, MIRModifyWithIndecies, MIRStructuredExtendTuple, MIRProjectFromProperties, MIRModifyWithProperties, MIRStructuredExtendRecord, MIRLoadConstTypedString, MIRConstructorEphemeralValueList, MIRProjectFromFields, MIRModifyWithFields, MIRStructuredExtendObject, MIRLoadConstSafeString, MIRInvokeInvariantCheckDirect, MIRLoadFromEpehmeralList, MIRConstantBigInt, MIRConstantFloat64, MIRFieldKey, MIRResolvedTypeKey, MIRPackSlice, MIRPackExtend, MIRNominalTypeKey, MIRBinLess, MIRConstantRegex } from "../../compiler/mir_ops";
 import { topologicalOrder } from "../../compiler/mir_info";
 
 import * as assert from "assert";
@@ -26,6 +26,7 @@ class CPPBodyEmitter {
     
     readonly allPropertyNames: Set<string> = new Set<string>();
     readonly allConstStrings: Map<string, string> = new Map<string, string>();
+    readonly allConstRegexes: Map<string, string> = new Map<string, string>();
     readonly allConstBigInts: Map<string, string> = new Map<string, string>();
 
     private currentFile: string = "[No File]";
@@ -92,8 +93,11 @@ class CPPBodyEmitter {
             else if (arg instanceof MIRConstantInt) {
                 return this.typegen.intType;
             }
-            else {
+            else if (arg instanceof MIRConstantString) {
                 return this.typegen.stringType;
+            }
+            else {
+                return this.typegen.regexType;
             }
         }
     }
@@ -123,7 +127,7 @@ class CPPBodyEmitter {
         else if (cval instanceof MIRConstantFloat64) {
             return this.typegen.coerce(cval.digits(), this.typegen.float64Type, into);
         }
-        else {
+        else if (cval instanceof MIRConstantString) {
             assert(cval instanceof MIRConstantString);
 
             const sval = CPPBodyEmitter.cleanStrRepr((cval as MIRConstantString).value);
@@ -134,6 +138,18 @@ class CPPBodyEmitter {
 
             const strval = `(&Runtime::${this.allConstStrings.get(sval) as string})`;
             return this.typegen.coerce(strval, this.typegen.stringType, into);
+        }
+        else {
+            assert(cval instanceof MIRConstantRegex);
+
+            const rval = (cval as MIRConstantRegex).value;
+            const rname = "REGEX__" + this.allConstRegexes.size;
+            if (!this.allConstRegexes.has(rval)) {
+                this.allConstRegexes.set(rval, rname);
+            }
+
+            const strval = `(&Runtime::${this.allConstRegexes.get(rval) as string})`;
+            return this.typegen.coerce(strval, this.typegen.regexType, into);
         }
     }
 
@@ -1286,11 +1302,6 @@ class CPPBodyEmitter {
             case MIROpTag.MIRLoadConst: {
                 const lcv = op as MIRLoadConst;
                 return `${this.varToCppName(lcv.trgt)} = ${this.generateConstantExp(lcv.src, this.getArgType(lcv.trgt))};`;
-            }
-            case MIROpTag.MIRLoadConstRegex: {
-                const lcr = op as MIRLoadConstRegex;
-                const scopevar = this.varNameToCppName("$scope$");
-                return `${this.varToCppName(lcr.trgt)} = BSQ_NEW_ADD_SCOPE(${scopevar}, BSQRegex, ${lcr.restr});`;
             }
             case MIROpTag.MIRLoadConstSafeString: {
                 return this.generateLoadConstSafeString(op as MIRLoadConstSafeString);

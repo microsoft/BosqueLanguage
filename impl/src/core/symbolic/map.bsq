@@ -7,25 +7,32 @@
 namespace NSCore;
 
 entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, PODType when K PODType && V PODType, APIType when K APIType && V APIType {
+    pragma KnownSafe
     hidden static s_size(m: Map<K, V>): Int # map_size
+
+    pragma KnownSafe
     hidden static s_has_key(m: Map<K, V>, key: K): Bool # map_has_key
+
+    pragma AssumeSafe
     hidden static s_at_val(m: Map<K, V>, key: K): V # map_at_val
 
+    pragma KnownSafe
     hidden static s_get_keylist(m: Map<K, V>): KeyList<K>? # map_get_keylist
     
+    pragma AssumeSafe
     hidden static s_unsafe_add(m: Map<K, V>, key: K, val: V, newkl: KeyList<K>): Map<K, V> # map_unsafe_add
+
+    pragma AssumeSafe
     hidden static s_unsafe_update(m: Map<K, V>, key: K, val: V): Map<K, V> # map_unsafe_update
 
-     hidden static s_add(m: Map<K, V>, k: K, v: V): Map<K, V>
-        requires release !Map<K, V>::s_has_key(m, k);
-    {
+    pragma AssumeSafe
+    hidden static s_add(m: Map<K, V>, k: K, v: V): Map<K, V> {
         let kl = Map<K, V>::s_get_keylist(m);
         return Map<K, V>::s_unsafe_add(m, k, v, KeyList<K>@{hkey=kk, tail=kl});
     }
 
-    hidden static s_update(m: Map<K, V>, k: K, v: V): Map<K, V>
-        requires release Map<K, V>::s_has_key(m, k);
-    {
+    pragma AssumeSafe
+    hidden static s_update(m: Map<K, V>, k: K, v: V): Map<K, V> {
         return Map<K, V>::s_unsafe_update(m, k, v);
     }
 
@@ -64,8 +71,8 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         }
     }
 
-    hidden recursive static s_hasall(m: Map<K, V>, l: List<K>, idx: Int): Bool {
-        if(idx == List<K>::s_size(l)) {
+    hidden recursive static s_hasall(m: Map<K, V>, l: List<K>, lsize: Int, idx: Int): Bool {
+        if(idx == lsize) {
             return true;
         }
         else {
@@ -74,7 +81,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
                 return false;
             }
             else {
-                return Map<K, V>::s_hasall[recursive](m, l, idx + 1);
+                return Map<K, V>::s_hasall[recursive](m, l, lsize, idx + 1);
             }
         }
     }
@@ -175,6 +182,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             let k = kl.hkey;
             let v = Map<K, V>::s_at_val(m, k);
 
+            check !Map<K, V>::s_has_key(mp, k);
             return Map<K, V>::s_union[recursive](m, Map<K, V>::s_add(mp, k, v), kl.tail);
         }
     }
@@ -196,23 +204,23 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         }
     }
 
-    hidden recursive static s_unionall(ml: List<Map<K, V>>, mp: Map<K, V>, idx: Int): Map<K, V> {
-        if(idx == List<T>::s_size(ml)) {
+    hidden recursive static s_unionall(ml: List<Map<K, V>>, mlsize: Int, mp: Map<K, V>, idx: Int): Map<K, V> {
+        if(idx == mlsize) {
             return mp;
         }
         else {
             let m = List<T>::s_unsafe_get(ml, idx);
-            return Map<K, V>::s_unionall[recursive](ml, mp.union(m), idx + 1);
+            return Map<K, V>::s_unionall[recursive](ml, mlsize, mp.union(m), idx + 1);
         }
     }
 
-    hidden recursive static s_mergeall(ml: List<Map<K, V>>, mp: Map<K, V>, idx: Int): Map<K, V> {
-        if(idx == List<T>::s_size(ml)) {
+    hidden recursive static s_mergeall(ml: List<Map<K, V>>, mlsize: Int, mp: Map<K, V>, idx: Int): Map<K, V> {
+        if(idx == mlsize) {
             return mp;
         }
         else {
             let m = List<T>::s_unsafe_get(ml, idx);
-            return Map<K, V>::s_mergeall[recursive](ml, mp.merge(m), idx + 1);
+            return Map<K, V>::s_mergeall[recursive](ml, mlsize, mp.merge(m), idx + 1);
         }
     }
 
@@ -249,7 +257,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method hasAll(...kl: List<K>): Bool {
-        return Map<K, V>::s_hasall[recursive](this, kl, 0);
+        return Map<K, V>::s_hasall[recursive](this, kl, List<K>::s_size(kl), 0);
     }
 
     method domainIncludes(s: Set<K>): Bool {
@@ -319,7 +327,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return List<T>::s_unsafe_get(ml, 0);
         }
         else {
-            return Set<T>::s_unionall(ml, Map<K, V>@{}, 0);
+            return Set<T>::s_unionall(ml, List<Map<K, V>>::s_size(ml), Map<K, V>@{}, 0);
         }
     }
 
@@ -335,7 +343,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return List<T>::s_unsafe_get(ml, 0);
         }
         else {
-            return Set<T>::s_mergeall(ml, Map<K, V>@{}, 0);
+            return Set<T>::s_mergeall(ml, List<Map<K, V>>::s_size(ml), Map<K, V>@{}, 0);
         }
     }
 }

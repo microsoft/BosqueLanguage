@@ -1251,8 +1251,7 @@ class Parser {
                 }
                 else {
                     const ptype = this.parseTypeSignature();
-                    this.ensureToken(TokenStrings.TypedString);
-                    const pstr = this.consumeTokenAndGetValue();
+                    const pstr = this.testToken(TokenStrings.TypedString) ? this.consumeTokenAndGetValue() : "";
 
                     pargs.push([ptype, pstr]);
                 }
@@ -2210,11 +2209,7 @@ class Parser {
                     return new VariableDeclarationStatement(sinfo, vars[0].name, isConst, vars[0].vtype, sexp); 
                 }
                 else {
-                    if (exp !== undefined && exp.length !== vars.length) {
-                        this.raiseError(line, "Mismatch between variables declared and values provided");
-                    }
-
-                    return new VariablePackDeclarationStatement(sinfo, isConst, vars, exp);
+                    return new VariablePackDeclarationStatement(sinfo, isConst, vars, undefined);
                 }
             }
         }
@@ -2278,10 +2273,6 @@ class Parser {
                 return new VariableAssignmentStatement(sinfo, vars[0], exps[0]); 
             }
             else {
-                if (exps.length !== 1 || exps.length !== vars.length) {
-                    this.raiseError(line, "Mismatch between variables declared and values provided");
-                }
-
                 return new VariablePackAssignmentStatement(sinfo, vars, exps);
             }
         }
@@ -2589,11 +2580,9 @@ class Parser {
 
     private parseDeclPragmas(): [TypeSignature, string][] {
         let pragmas: [TypeSignature, string][] = [];
-        while (this.testToken("pragma")) {
+        while (this.testAndConsumeTokenIf("pragma")) {
             const ts = this.parseTypeSignature();
-
-            this.ensureToken(TokenStrings.TypedString);
-            const sl = this.consumeTokenAndGetValue();
+            const sl = this.testToken(TokenStrings.TypedString) ? this.consumeTokenAndGetValue() : "";
 
             pragmas.push([ts, sl]);
         }

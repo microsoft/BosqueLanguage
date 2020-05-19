@@ -7,24 +7,30 @@
 namespace NSCore;
 
 entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType when T APIType {
+    pragma KnownSafe
     hidden static s_size(l: List<T>): Int # list_size
+
+    pragma AssumeSafe
     hidden static s_unsafe_get(l: List<T>, i: Int): T # list_unsafe_get
 
+    pragma KnownSafe
     hidden static s_unsafe_push(l: List<T>, v: T): List<T> # list_unsafe_push
+
+    pragma AssumeSafe
     hidden static s_unsafe_set(l: List<T>, idx: Int, v: T): List<T> # list_unsafe_set
     
-    hidden recursive static {when T KeyType} s_toset(l: List<T>, idx: Int, r: Set<T>): Set<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T KeyType} s_toset(l: List<T>, lsize: Int, idx: Int, r: Set<T>): Set<T> {
+        if(idx == lsize) {
             return rs;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_toset(l, idx + 1, Set<T>::s_add(r, val));
+            return List<T>::s_toset(l, lsize, idx + 1, Set<T>::s_add(r, val));
         }
     }
 
-    hidden recursive static s_all(l: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): Bool {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_all(l: List<T>, lsize: Int, idx: Int, p: recursive? fn(_: T) -> Bool): Bool {
+        if(idx == lsize) {
             return true;
         }
         else {
@@ -33,13 +39,13 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
                 return false;
             }
             else {
-                return List<T>::s_all[recursive](l, idx + 1, p);
+                return List<T>::s_all[recursive](l, lsize, idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_none(l: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): Bool {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_none(l: List<T>, lsize: Int, idx: Int, p: recursive? fn(_: T) -> Bool): Bool {
+        if(idx == lsize) {
             return true;
         }
         else {
@@ -48,13 +54,13 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
                 return false;
             }
             else {
-                return List<T>::s_none[recursive](l, idx + 1, p);
+                return List<T>::s_none[recursive](l, lsize, idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_any(l: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): Bool {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_any(l: List<T>, lsize: Int, idx: Int, p: recursive? fn(_: T) -> Bool): Bool {
+        if(idx == lsize) {
             return false;
         }
         else {
@@ -63,7 +69,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
                 return true;
             }
             else {
-                return List<T>::s_any[recursive](l, idx + 1, p);
+                return List<T>::s_any[recursive](l, lsize, idx + 1, p);
             }
         }
     }
@@ -128,27 +134,27 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static s_count(l: List<T>, idx: Int, acc: Int, p: recursive? fn(_: T) -> Bool): Int {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_count(l: List<T>, lsize: Int, idx: Int, acc: Int, p: recursive? fn(_: T) -> Bool): Int {
+        if(idx == lsize) {
             return acc;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let nacc = p[recursive?](val) ? acc + 1 : acc;
             
-            return List<T>::s_count[recursive](l, idx + 1, nacc, p);
+            return List<T>::s_count[recursive](l, lsize, idx + 1, nacc, p);
         }
     }
 
-    hidden recursive static s_countnot(l: List<T>, idx: Int, acc: Int, p: recursive? fn(_: T) -> Bool): Int {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_countnot(l: List<T>, lsize: Int, idx: Int, acc: Int, p: recursive? fn(_: T) -> Bool): Int {
+        if(idx == lsize) {
             return acc;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let nacc = !p[recursive?](val) ? acc + 1 : acc;
             
-            return List<T>::s_count[recursive](l, idx + 1, nacc, p);
+            return List<T>::s_count[recursive](l, lsize, idx + 1, nacc, p);
         }
     }
 
@@ -182,101 +188,101 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static {when T KeyType} s_count_keytype(l: List<T>, idx: Int, acc: Int, cv: T): Int {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T KeyType} s_count_keytype(l: List<T>, lsize: Int, idx: Int, acc: Int, cv: T): Int {
+        if(idx == lsize) {
             return acc;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let nacc = (KeyType::equal(cv, val)) ? acc + 1 : acc;
             
-            return List<T>::s_count_keytype[recursive](l, idx + 1, nacc, cv);
+            return List<T>::s_count_keytype[recursive](l, lsize, idx + 1, nacc, cv);
         }
     }
 
-    hidden recursive static {when T KeyType} s_min(l: List<T>, idx: Int, acc: T): T {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T KeyType} s_min(l: List<T>, lsize: Int, idx: Int, acc: T): T {
+        if(idx == lsize) {
             return acc;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_min[recursive](l, idx + 1, KeyType::less(acc, val) ? acc : val);
+            return List<T>::s_min[recursive](l, lsize, idx + 1, KeyType::less(acc, val) ? acc : val);
         }
     }
 
-    hidden recursive static {when T KeyType} s_max(l: List<T>, idx: Int, acc: T): T {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T KeyType} s_max(l: List<T>, lsize: Int, idx: Int, acc: T): T {
+        if(idx == lsize) {
             return acc;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_max[recursive](l, idx + 1, KeyType::less(val, acc) ? acc : val);
+            return List<T>::s_max[recursive](l, lsize, idx + 1, KeyType::less(val, acc) ? acc : val);
         }
     }
 
-    hidden recursive static {when T Int | BigInt} s_sum(l: List<T>, idx: Int, acc: T): T {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T Int | BigInt} s_sum(l: List<T>, lsize: Int, idx: Int, acc: T): T {
+        if(idx == lsize) {
             return acc;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_sum[recursive](l, idx + 1, acc + val);
+            return List<T>::s_sum[recursive](l, lsize, idx + 1, acc + val);
         }
     }
 
 
-    hidden recursive static s_filter(l: List<T>, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_filter(l: List<T>, lsize: Int, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             if(p[recursive?](val)) {
-                return List<T>::s_filter[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1, p);
+                return List<T>::s_filter[recursive](l, lsize, List<T>::s_unsafe_push(lp, val), idx + 1, p);
             }
             else {
-                return List<T>::s_filter[recursive](l, lp, idx + 1, p);
+                return List<T>::s_filter[recursive](l, lsize, lp, idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_filternot(l: List<T>, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_filternot(l: List<T>, lsize: Int, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             if(!p[recursive?](val)) {
-                return List<T>::s_filternot[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1, p);
+                return List<T>::s_filternot[recursive](l, lsize, List<T>::s_unsafe_push(lp, val), idx + 1, p);
             }
             else {
-                return List<T>::s_filternot[recursive](l, lp, idx + 1, p);
+                return List<T>::s_filternot[recursive](l, lsize, lp, idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_oftype<U>(l: List<T>, lp: List<U>, idx: Int): List<U> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_oftype<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int): List<U> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             if(val.is<U>()) {
-                return List<T>::s_oftype<U>[recursive](l, List<U>::s_unsafe_push(lp, val.as<U>()), idx + 1);
+                return List<T>::s_oftype<U>[recursive](l, lsize, List<U>::s_unsafe_push(lp, val.as<U>()), idx + 1);
             }
             else {
-                return List<T>::s_oftype<U>[recursive](l, lp, idx + 1);
+                return List<T>::s_oftype<U>[recursive](l, lsize, lp, idx + 1);
             }
         }
     }
 
-    hidden recursive static s_cast<U>(l: List<T>, lp: List<U>, idx: Int): List<U> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_cast<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int): List<U> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_cast<U>[recursive](l, List<U>::s_unsafe_push(lp, val.as<U>()), idx + 1);
+            return List<T>::s_cast<U>[recursive](l, lsize, List<U>::s_unsafe_push(lp, val.as<U>()), idx + 1);
         }
     }
 
@@ -294,8 +300,8 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_takek[recursive](l, List<T>@{}, start, end - start);
     }
 
-    hidden recursive static s_takewhile(l: List<T>, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_takewhile(l: List<T>, lsize: Int, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
@@ -304,19 +310,19 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
                 return lp;
             }
             else {
-                return List<T>::s_takewhile[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1, p);
+                return List<T>::s_takewhile[recursive](l, lsize, List<T>::s_unsafe_push(lp, val), idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_discardwhile(l: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_discardwhile(l: List<T>, lsize: Int, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
+        if(idx == lsize) {
             return List<T>@{};
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             if(p[recursive?](val)) {
-                return List<T>::s_discardwhile[recursive](l, idx + 1, p);
+                return List<T>::s_discardwhile[recursive](l, lsize, idx + 1, p);
             }
             else {
                 return List<T>::s_takek[recursive](l, List<T>@{}, idx, List<T>::s_size(l) - idx);
@@ -324,8 +330,8 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static s_takeuntil(l: List<T>, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_takeuntil(l: List<T>, lsize: Int, lp: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
@@ -334,19 +340,19 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
                 return lp;
             }
             else {
-                return List<T>::s_takeuntil[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1, p);
+                return List<T>::s_takeuntil[recursive](l, lsize, List<T>::s_unsafe_push(lp, val), idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_discarduntil(l: List<T>, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_discarduntil(l: List<T>, lsize: Int, idx: Int, p: recursive? fn(_: T) -> Bool): List<T> {
+        if(idx == lsize) {
             return List<T>@{};
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             if(!p[recursive?](val)) {
-                return List<T>::s_discarduntil[recursive](l, idx + 1, p);
+                return List<T>::s_discarduntil[recursive](l, lsize, idx + 1, p);
             }
             else {
                 return List<T>::s_takek[recursive](l, List<T>@{}, idx, List<T>::s_size(l) - idx);
@@ -354,147 +360,147 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static {when T KeyType} s_unique(l: List<T>, lp: List<T>, idx: Int): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T KeyType} s_unique(l: List<T>, lsize: Int, lp: List<T>, idx: Int): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let has = List<T>::s_indexof_keytype[recursive](lp, 0, List<T>::s_size(lp), val) != List<T>::s_size(lp);
             if(has) {
-                return List<T>::s_unique[recursive](l, lp, idx + 1);
+                return List<T>::s_unique[recursive](l, lsize, lp, idx + 1);
             }
             else {
-                return List<T>::s_unique[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1);
+                return List<T>::s_unique[recursive](l, lsize, List<T>::s_unsafe_push(lp, val), idx + 1);
             }
         }
     }
 
-    hidden recursive static s_reverse(l: List<T>, lp: List<T>, idx: Int): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_reverse(l: List<T>, lsize: Int, lp: List<T>, idx: Int): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_reverse[recursive](l, List<T>::s_unsafe_set(lp, (List<T>::s_size(l) - 1) - idx, val), idx + 1);
+            return List<T>::s_reverse[recursive](l, lsize, List<T>::s_unsafe_set(lp, (List<T>::s_size(l) - 1) - idx, val), idx + 1);
         }
     }
 
-    hidden recursive static s_map<U>(l: List<T>, lp: List<U>, idx: Int, f: recursive? fn(_: T) -> U): List<U> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_map<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int, f: recursive? fn(_: T) -> U): List<U> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_map<U>[recursive](l, List<T>::s_unsafe_push(lp, f[recursive?](val)), idx + 1, f);
+            return List<T>::s_map<U>[recursive](l, lsize, List<T>::s_unsafe_push(lp, f[recursive?](val)), idx + 1, f);
         }
     }
 
-    hidden recursive static s_mapIndex<U>(l: List<T>, lp: List<U>, idx: Int, f: recursive? fn(_: Int, _: T) -> U): List<U> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_mapIndex<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int, f: recursive? fn(_: Int, _: T) -> U): List<U> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_mapIndex<U>[recursive](l, List<T>::s_unsafe_push(lp, f[recursive?](idx, val)), idx + 1, f);
+            return List<T>::s_mapIndex<U>[recursive](l, lsize, List<T>::s_unsafe_push(lp, f[recursive?](idx, val)), idx + 1, f);
         }
     }
 
-    hidden recursive static {when T KeyType} s_projectWMap<U>(l: List<T>, lp: List<U>, idx: Int, m: Map<T, U>): List<U> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T KeyType} s_projectWMap<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int, m: Map<T, U>): List<U> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_projectWMap<U>[recursive](l, List<T>::s_unsafe_push(lp, m.get(val)), idx + 1);
+            return List<T>::s_projectWMap<U>[recursive](l, lsize, List<T>::s_unsafe_push(lp, m.get(val)), idx + 1);
         }
     }
 
-    hidden recursive static {when T KeyType} s_tryProjectWMap<U>(l: List<T>, lp: List<U>, idx: Int, m: Map<T, U>): List<U> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static {when T KeyType} s_tryProjectWMap<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int, m: Map<T, U>): List<U> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_tryProjectWMap<U>[recursive](l, List<T>::s_unsafe_push(lp, m.tryGet(val)), idx + 1);
+            return List<T>::s_tryProjectWMap<U>[recursive](l, lsize, List<T>::s_unsafe_push(lp, m.tryGet(val)), idx + 1);
         }
     }
 
-    hidden recursive static s_zipIndex(l: List<T>, lp: List<[Int, T]>, idx: Int): List<[Int, T]> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_zipIndex(l: List<T>, lsize: Int, lp: List<[Int, T]>, idx: Int): List<[Int, T]> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_zipIndex[recursive](l, List<T>::s_unsafe_push(lp, [idx, val]), idx + 1);
+            return List<T>::s_zipIndex[recursive](l, lsize, List<T>::s_unsafe_push(lp, [idx, val]), idx + 1);
         }
     }
 
-    hidden recursive static s_joinSingle<U>(v: T, ol: List<U>, lp: List<[T, U]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
-        if(idx == List<T>::s_size(ol)) {
+    hidden recursive static s_joinSingle<U>(v: T, ol: List<U>, olsize: Int, lp: List<[T, U]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
+        if(idx == olsize) {
             return lp;
         }
         else {
             let val = List<U>::s_unsafe_get(ol, idx);
             if(p[recursive?](v, val)) {
-                return List<T>::s_joinSingle<U>[recursive](v, List<[T, U]>::s_unsafe_push(lp, [v, val]), idx + 1, p);
+                return List<T>::s_joinSingle<U>[recursive](v, ol, olsize, List<[T, U]>::s_unsafe_push(lp, [v, val]), idx + 1, p);
             }
             else {
-                return List<T>::s_joinSingle<U>[recursive](v, lp, idx + 1, p);
+                return List<T>::s_joinSingle<U>[recursive](v, ol, olsize, lp, idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_join<U>(l: List<T>, ol: List<U>, lp: List<[T, U]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_join<U>(l: List<T>, lsize: Int, ol: List<U>, olsize: Int, lp: List<[T, U]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            let jl = List<T>::s_joinSingle<U>[recursive](val, ol, lp, 0, p);
+            let jl = List<T>::s_joinSingle<U>[recursive](val, ol, olsize, lp, 0, p);
 
-            return List<T>::s_join<U>[recursive](l, ol, lp, idx + 1, p);
+            return List<T>::s_join<U>[recursive](l, lsize, ol, olsize, lp, idx + 1, p);
         }
     }
 
-    hidden recursive static s_joinGroupSingle<U>(v: T, ol: List<U>, lp: List<[T, List<U>]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
-        if(idx == List<T>::s_size(ol)) {
+    hidden recursive static s_joinGroupSingle<U>(v: T, ol: List<U>, olsize: Int, lp: List<[T, List<U>]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
+        if(idx == olsize) {
             return lp;
         }
         else {
             let val = List<U>::s_unsafe_get(ol, idx);
             if(p[recursive?](v, val)) {
-                return List<T>::s_joinGroupSingle<U>[recursive](v, List<T>::s_unsafe_push(lp, [v, val]), idx + 1, p);
+                return List<T>::s_joinGroupSingle<U>[recursive](v, ol, olsize, List<T>::s_unsafe_push(lp, [v, val]), idx + 1, p);
             }
             else {
-                return List<T>::s_joinGroupSingle<U>[recursive](v, lp, idx + 1, p);
+                return List<T>::s_joinGroupSingle<U>[recursive](v, ol, olsize, lp, idx + 1, p);
             }
         }
     }
 
-    hidden recursive static s_joinGroup<U>(l: List<T>, ol: List<U>, lp: List<[T, List<U>]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, List<U>]> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_joinGroup<U>(l: List<T>, lsize: Int, ol: List<U>, olsize: Int, lp: List<[T, List<U>]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, List<U>]> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            let jl = List<T>::s_joinGroupSingle<U>[recursive](val, ol, List<[T, List<U>]>@{}, 0, p);
+            let jl = List<T>::s_joinGroupSingle<U>[recursive](val, ol, olsize, List<[T, List<U>]>@{}, 0, p);
 
-            return List<T>::s_joinGroup<U>[recursive](l, ol, List<T>::s_unsafe_push(lp, jl), idx + 1, p);
+            return List<T>::s_joinGroup<U>[recursive](l, lsize, ol, olsize, List<T>::s_unsafe_push(lp, jl), idx + 1, p);
         }
     }
 
-    hidden recursive static s_append(l: List<T>, lp: List<T>, idx: Int): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_append(l: List<T>, lsize: Int, lp: List<T>, idx: Int): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_append[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1);
+            return List<T>::s_append[recursive](l, lsize, List<T>::s_unsafe_push(lp, val), idx + 1);
         }
     }
 
-    hidden recursive static s_partitionSingle<K where KeyType>(kk: K, ol: List<T>, lp: List<T>, idx: Int, pf: recursive? fn(_: T) -> K): List<T> {
+    hidden recursive static s_partitionSingle<K where KeyType>(kk: K, ol: List<T>, olsize: Int, lp: List<T>, idx: Int, pf: recursive? fn(_: T) -> K): List<T> {
         if(idx == List<T>::s_size(ol)) {
             return lp;
         }
@@ -502,37 +508,37 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             let val = List<T>::s_unsafe_get(ol, idx);
             let key = pf[recursive?](val);
             if(KeyType::equal(kk, key)) {
-                return List<T>::s_partitionSingle[recursive](kk, ol, List<T>::s_unsafe_push(lp, val), idx + 1, pf);
+                return List<T>::s_partitionSingle[recursive](kk, ol, olsize, List<T>::s_unsafe_push(lp, val), idx + 1, pf);
             }
             else {
-                return List<T>::s_partitionSingle[recursive](kk, ol, lp, idx + 1, pf);
+                return List<T>::s_partitionSingle[recursive](kk, o, olsize, lp, idx + 1, pf);
             }
         }
     }
 
-    hidden recursive static s_partition<K where KeyType>(l: List<T>, mp: Map<K, List<T>>, idx: Int, pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_partition<K where KeyType>(l: List<T>, lsize: Int, mp: Map<K, List<T>>, idx: Int, pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let key = pf[recursive?](val);
             if(Map<K, List<T>>::s_has(key)) {
-                return List<T>::s_partition(l, mp, idx + 1, pf);
+                return List<T>::s_partition(l, lsize, mp, idx + 1, pf);
             }
             else {
-                let pfg = List<T>::s_partitionSingle<K>(key, l, List<T>@{}, idx, pf);
-                return List<T>::s_partition(l, mp.add(val, pfg), idx + 1, pf);
+                let pfg = List<T>::s_partitionSingle<K>(key, l, lsize, List<T>@{}, idx, pf);
+                return List<T>::s_partition(l, lsize, mp.add(val, pfg), idx + 1, pf);
             }
         }
     }
 
-    hidden recursive static s_sort(l: List<T>, ol: List<T>, idx: Int, sf: recursive? fn(_: T, _: T) -> Bool): List<T> {
+    hidden recursive static s_sort(l: List<T>, lsize: Int, ol: List<T>, idx: Int, sf: recursive? fn(_: T, _: T) -> Bool): List<T> {
         abort;
     }
 
-    hidden recursive static s_toMap<K, V>(l: List<T>, mp: Map<K, V>, idx: Int, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge: Bool): Map<K, V> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_toMap<K, V>(l: List<T>, lsize: Int, mp: Map<K, V>, idx: Int, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge: Bool): Map<K, V> {
+        if(idx == lsize) {
             return lp;
         }
         else {
@@ -541,31 +547,33 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             let v = vf[recursive?](val);
 
             if(merge) {
-                return List<T>::s_toMap(l, map.insert(k, v), idx + 1, kf, vf);
+                return List<T>::s_toMap(l, lsize, map.insert(k, v), idx + 1, kf, vf);
             }
             else {
-                return List<T>::s_toMap(l, map.add(k, v), idx + 1, kf, vf);
+                return List<T>::s_toMap(l, lsize, map.add(k, v), idx + 1, kf, vf);
             }
         }
     }
 
-    hidden recursive static s_toIndexMap<V>(l: List<T>, mp: Map<Int, V>, idx: Int, vf: recursive? fn(_: T) -> V): Map<Int, V> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_toIndexMap<V>(l: List<T>, lsize: Int, mp: Map<Int, V>, idx: Int, vf: recursive? fn(_: T) -> V): Map<Int, V> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let v = vf[recursive?](val);
 
-            return List<T>::s_toIndexMap(l, mp.add(idx, v), idx + 1, kf, vf);
+            return List<T>::s_toIndexMap(l, lsize, mp.add(idx, v), idx + 1, kf, vf);
         }
     }
 
+    pragma KnownSafe
     hidden static s_rangeInBoundsFwd(l: List<T>, start: Int?, end: Int?): Bool {
         let s, e = start ?| 0, end ?| List<T>::s_size(l);
         return 0 <= s && s <= e && e <= List<T>::s_size(l); 
     }
 
+    pragma KnownSafe
     hidden static s_rangeInBoundsRev(l: List<T>, start: Int?, end: Int?): Bool {
         let s, e = start ?| -1, end ?| List<T>::s_size(l) - 1;
         return -1 <= s && s <= e && e <= List<T>::s_size(l) - 1;
@@ -622,7 +630,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method {when T KeyType} toSet(): Set<T> {
-        return List<T>::s_toset(this, 0, Set<T>@{});
+        return List<T>::s_toset(this, List<T>::s_size(this), 0, Set<T>@{});
     }
 
     recursive? method single(p: recursive? fn(_: T) -> Bool): Bool 
@@ -657,23 +665,23 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method allOf(p: recursive? fn(_: T) -> Bool): Bool {
-        return List<T>::s_size(this) == 0 || List<T>::s_all[recursive](this, 0, p);
+        return List<T>::s_size(this) == 0 || List<T>::s_all[recursive](this, List<T>::s_size(this), 0, p);
     }
 
     recursive? method noneOf(p: recursive? fn(_: T) -> Bool): Bool {
-        return List<T>::s_size(this) == 0 || List<T>::s_none[recursive](this, 0, p);
+        return List<T>::s_size(this) == 0 || List<T>::s_none[recursive](this, List<T>::s_size(this), 0, p);
     }
 
     recursive? method anyOf(p: recursive? fn(_: T) -> Bool): Bool {
-        return List<T>::s_size(this) != 0 && List<T>::s_any[recursive](this, 0, p);
+        return List<T>::s_size(this) != 0 && List<T>::s_any[recursive](this, List<T>::s_size(this), 0, p);
     }
 
     recursive? method countIf(p: recursive? fn(_: T) -> Bool): Int {
-        return List<T>::s_count[recursive](this, 0, 0, p);
+        return List<T>::s_count[recursive](this, List<T>::s_size(this), 0, 0, p);
     }
 
     recursive? method countIfNot(p: recursive? fn(_: T) -> Bool): Int {
-        return List<T>::s_countnot[recursive](this, 0, 0, p);
+        return List<T>::s_countnot[recursive](this, List<T>::s_size(this), 0, 0, p);
     }
 
     method {when T KeyType} contains(v: T): Bool {
@@ -681,35 +689,35 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method {when T KeyType} count(v: T): Int {
-        return List<T>::s_count_keytype[recursive](this, 0, 0, v);
+        return List<T>::s_count_keytype[recursive](this, List<T>::s_size(this), 0, 0, v);
     }
 
     method {when T KeyType} min(): T 
         requires release List<T>::s_size(this) != 0;
     {
-        return List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(this, 0));
+        return List<T>::s_min[recursive](this, List<T>::s_size(this), 1, List<T>::s_unsafe_get(this, 0));
     }
 
     method {when T KeyType} tryMin(): T? {
-        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : none;
+        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, List<T>::s_size(this), 1, List<T>::s_unsafe_get(this, 0)) : none;
     }
 
     method {when T KeyType} defaultMin(default: T): T {
-        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : default;
+        return List<T>::s_size(this) != 0 ? List<T>::s_min[recursive](this, List<T>::s_size(this), 1, List<T>::s_unsafe_get(this, 0)) : default;
     }
 
     method {when T KeyType} max(): T 
         requires release List<T>::s_size(this) != 0;
     {
-        return List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0));
+        return List<T>::s_max[recursive](this, List<T>::s_size(this), 1, List<T>::s_unsafe_get(this, 0));
     }
 
     method {when T KeyType} tryMax(): T? {
-        return List<T>::s_size(this) != 0 ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : none;
+        return List<T>::s_size(this) != 0 ? List<T>::s_max[recursive](this, List<T>::s_size(this), 1, List<T>::s_unsafe_get(this, 0)) : none;
     }
 
      method {when T KeyType} defaultMax(default: T): T {
-        return List<T>::s_size(this) != 0 ? List<T>::s_max[recursive](this, 1, List<T>::s_unsafe_get(this, 0)) : default;
+        return List<T>::s_size(this) != 0 ? List<T>::s_max[recursive](this, List<T>::s_size(this), 1, List<T>::s_unsafe_get(this, 0)) : default;
     }
 
     //
@@ -717,7 +725,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     //
 
     method {when T Int | BigInt} sum(): T {
-        return List<T>::s_sum[recursive](this, 0, 0, List<T>::s_size(this));
+        return List<T>::s_sum[recursive](this, List<T>::s_size(this), 0, List<T>::s_size(this));
     }
 
     recursive? method find(p: recursive? fn(_: T) -> Bool): T {
@@ -899,19 +907,19 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method filter(p: recursive? fn(_: T) -> Bool): List<T> {
-        return List<T>::s_filter[recursive](this, List<T>@{}, 0, p);
+        return List<T>::s_filter[recursive](this, List<T>::s_size(this), List<T>@{}, 0, p);
     }
 
     recursive? method filterNot(p: recursive? fn(_: T) -> Bool): List<T> {
-        return List<T>::s_filternot[recursive](this, List<T>@{}, 0, p);
+        return List<T>::s_filternot[recursive](this, List<T>::s_size(this), List<T>@{}, 0, p);
     }
 
     method ofType<U>(): List<U> {
-        return List<T>::s_oftype<U>[recursive](this, List<U>@{}, 0);
+        return List<T>::s_oftype<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0);
     }
 
     method cast<U>(): List<U> {
-        return List<T>::s_cast<U>[recursive](this, List<U>@{}, 0);
+        return List<T>::s_cast<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0);
     }
 
     method slice(start?: Int, end?: Int): List<T> 
@@ -946,11 +954,11 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method takeWhile(p: recursive? fn(_: T) -> Bool): List<T> {
-        return List<T>::s_takewhile[recursive](this, List<T>@{}, 0, p);
+        return List<T>::s_takewhile[recursive](this, List<T>::s_size(this), List<T>@{}, 0, p);
     }
 
     recursive? method discardWhile(p: recursive? fn(_: T) -> Bool): List<T> {
-        return List<T>::s_discardwhile[recursive](this, 0, p);
+        return List<T>::s_discardwhile[recursive](this, List<T>::s_size(this), 0, p);
     }
 
     recursive? method takeUntil(p: recursive? fn(_: T) -> Bool): List<T> {
@@ -958,102 +966,100 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method discardUntil(p: recursive? fn(_: T) -> Bool): List<T> {
-        return List<T>::s_discarduntil[recursive](this, 0, p);
+        return List<T>::s_discarduntil[recursive](this, List<T>::s_size(this), 0, p);
     }
 
     method {when T KeyType} unique(): List<T> {
-        return List<T>::s_unique[recursive](this, List<T>@{}, 0);
+        return List<T>::s_unique[recursive](this, List<T>::s_size(this), List<T>@{}, 0);
     }
 
     method reverse(): List<T> {
-        return List<T>::s_reverse[recursive](this, List<T>@{}, 0);
+        return List<T>::s_reverse[recursive](this, List<T>::s_size(this), List<T>@{}, 0);
     }
 
     recursive? method map<U>(f: recursive? fn(_: T) -> U): List<U> {
-        return List<T>::s_map<U>[recursive](this, List<U>@{}, 0, f);
+        return List<T>::s_map<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0, f);
     }
 
     recursive? method mapIndex<U>(f: recursive? fn(_: Int, _: T) -> U): List<U> {
-        return List<T>::s_mapIndex<U>[recursive](this, List<U>@{}, 0, f);
+        return List<T>::s_mapIndex<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0, f);
     }
 
     method {when T KeyType} project<U>(m: Map<T, U>): List<U> {
-        return List<T>::s_projectWMap<U>[recursive](this, List<U>@{}, 0, m); 
+        return List<T>::s_projectWMap<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0, m); 
     }
 
     method {when T KeyType} tryProject<U>(m: Map<T, U>): List<U?> {
-        return List<T>::s_tryProjectWMap<U>[recursive](this, List<U>@{}, 0, m);
+        return List<T>::s_tryProjectWMap<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0, m);
     }
 
     method zipIndex(): List<[Int, T]> {
-        return List<T>::s_zipIndex[recursive](this, List<[Int, T]>@{}, 0);
+        return List<T>::s_zipIndex[recursive](this, List<T>::s_size(this), List<[Int, T]>@{}, 0);
     }
 
     recursive? method join<U>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
-        return List<T>::s_join<U>[recursive](this, ol, List<[T, U]>@{}, 0, p);
+        return List<T>::s_join<U>[recursive](this, List<T>::s_size(this), ol, List<T>::s_size(ol), List<[T, U]>@{}, 0, p);
     }
 
     recursive? method joinGroup<U>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, List<U>]> {
-        return List<T>::s_joinGroup<U>[recursive](this, ol, List<[T, List<U>]>@{}, 0, p);
+        return List<T>::s_joinGroup<U>[recursive](this, List<T>::s_size(this), ol, List<T>::s_size(ol), List<[T, List<U>]>@{}, 0, p);
     }
 
     method append(l: List<T>): List<T> {
-        let cl = List<T>::s_append[recursive](this, List<T>@{}, 0);
-        return List<T>::s_append[recursive](l, cl, 0);
+        return List<T>::s_append[recursive](l, List<T>::s_size(l), this, 0);
     }
 
     method prepend(l: List<T>): List<T> {
-        let cl = List<T>::s_append[recursive](l, List<T>@{}, 0);
-        return List<T>::s_append[recursive](this, cl, 0);
+        return List<T>::s_append[recursive](this, List<T>::s_size(this), l, 0);
     }
 
     recursive? method partition<K where KeyType>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
-        return List<T>::s_partition<K>[recursive](this, Map<K, List<T>>@{}, 0, pf);
+        return List<T>::s_partition<K>[recursive](this, List<T>::s_size(this), Map<K, List<T>>@{}, 0, pf);
     }
 
     recursive? method sort(cmp: recursive? fn(_: T, _: T) -> Bool): List<T> {
-        return List<T>::s_sort[recursive](this, List<T>@{}, 0, cmp);
+        return List<T>::s_sort[recursive](this, List<T>::s_size(this), List<T>@{}, 0, cmp);
     }
 
     recursive? method toMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge?: Bool): Map<K, V> {
-        return List<T>::s_toMap<K, V>[recursive](this, Map<K, V>@{}, 0, kf, vf, Truthy::truth(merge));
+        return List<T>::s_toMap<K, V>[recursive](this, List<T>::s_size(this), Map<K, V>@{}, 0, kf, vf, Truthy::truth(merge));
     }
 
     recursive? method toIndexMap<V>(vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> {
-        return List<T>::s_toIndexMap<K, V>[recursive](this, Map<K, V>@{}, 0, vf);
+        return List<T>::s_toIndexMap<K, V>[recursive](this, List<T>::s_size(this), Map<K, V>@{}, 0, vf);
     }
 }
 
 concept ListUtil {
-    hidden recursive static s_zip<T>(l1: List<T>, l2: List<U>, lp: List<[T, U]>, idx: Int): List<[T, U]> {
-        if(idx == List<T>::s_size(l1)) {
+    hidden recursive static s_zip<T>(size: Int, l1: List<T>, l2: List<U>, lp: List<[T, U]>, idx: Int): List<[T, U]> {
+        if(idx == size) {
             return lp;
         }
         else {
             let vt = List<T>::s_unsafe_get(l1, idx);
             let vu = List<U>::s_unsafe_get(l2, idx);
-            return ListUtil::s_zip(l1, l2, List<[T, U]>::s_unsafe_push(lp, [vt, vu]), idx + 1);
+            return ListUtil::s_zip(size, l1, l2, List<[T, U]>::s_unsafe_push(lp, [vt, vu]), idx + 1);
         }
     }
 
-    hidden recursive static s_unzip<T>(l: List<[T, U]>, lt: List<T>, lu: List<U>, idx: Int): List<T>, List<U> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_unzip<T>(l: List<[T, U]>, lsize: Int, lt: List<T>, lu: List<U>, idx: Int): List<T>, List<U> {
+        if(idx == lsize) {
             return lt, lu;
         }
         else {
             let vp = List<[T, U]>::s_unsafe_get(l, idx);
-            return ListUtil::s_unzip(l, List<T>::s_unsafe_push(lt, vp.0), List<U>::s_unsafe_push(lu, vp.1), idx + 1);
+            return ListUtil::s_unzip(l, lsize, List<T>::s_unsafe_push(lt, vp.0), List<U>::s_unsafe_push(lu, vp.1), idx + 1);
         }
     }
 
-    hidden recursive static s_concat<T>(l: List<List<T>>, lp: List<T>, idx: Int): List<T> {
-        if(idx == List<T>::s_size(l)) {
+    hidden recursive static s_concat<T>(l: List<List<T>>, lsize: Int, lp: List<T>, idx: Int): List<T> {
+        if(idx == lsize) {
             return lp;
         }
         else {
             let ll = List<List<T>>::s_unsafe_get(l, idx);
             let cc = List<T>::s_append(ll, lp, 0);
-            return List<T>::s_concat(l, lp, idx + 1);
+            return List<T>::s_concat(l, lsize, lp, idx + 1);
         }
     }
 
@@ -1078,15 +1084,15 @@ concept ListUtil {
     static zip<T>(l1: List<T>, l2: List<U>): List<[T, U]>
         requires release List<T>::s_size(l1) == List<U>::s_size(l2);
     {
-        return ListUtil::s_zip<T>[recursive](l1, l2, List<[T, U]>@{}, 0);
+        return ListUtil::s_zip<T>[recursive](List<T>::s_size(l1), l1, l2, List<[T, U]>@{}, 0);
     }
 
     static unzip<T, U>(l: List<[T, U]>): List<T>, List<U> {
-        return ListUtil::s_unzip<T>[recursive](l, List<T>@{}, List<U>@{}, 0);
+        return ListUtil::s_unzip<T>[recursive](l, List<T>::s_size(l), List<T>@{}, List<U>@{}, 0);
     }
 
     static concat<T>(...ll: List<List<T>>): List<T> {
-        return ListUtil::s_concat[recursive](ll, List<T>@{}, 0);
+        return ListUtil::s_concat[recursive](ll, List<T>::s_size(ll), List<T>@{}, 0);
     }
 
     static fill<T>(k: Int, val: T): List<T>

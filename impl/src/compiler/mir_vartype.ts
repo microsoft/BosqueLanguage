@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIROp, MIROpTag, MIRLoadConst, MIRArgument, MIRRegisterArgument, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRLoadConstTypedString, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeNominal, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRPhi, MIRBody, MIRResolvedTypeKey, MIRLoadConstRegex, MIRLoadConstSafeString, MIRInvokeInvariantCheckDirect, MIRInvokeInvariantCheckVirtualTarget, MIRLoadFromEpehmeralList, MIRConstructorEphemeralValueList, MIRConstantBigInt, MIRConstantFloat64, MIRPackSlice, MIRPackExtend } from "./mir_ops";
+import { MIROp, MIROpTag, MIRLoadConst, MIRArgument, MIRRegisterArgument, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRLoadConstTypedString, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRAccessArgVariable, MIRAccessLocalVariable, MIRConstructorPrimary, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRProjectFromIndecies, MIRAccessFromProperty, MIRProjectFromProperties, MIRAccessFromField, MIRProjectFromFields, MIRProjectFromTypeTuple, MIRProjectFromTypeRecord, MIRProjectFromTypeNominal, MIRModifyWithIndecies, MIRModifyWithProperties, MIRModifyWithFields, MIRStructuredExtendTuple, MIRStructuredExtendRecord, MIRStructuredExtendObject, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRIsTypeOf, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRPhi, MIRBody, MIRResolvedTypeKey, MIRLoadConstSafeString, MIRInvokeInvariantCheckDirect, MIRInvokeInvariantCheckVirtualTarget, MIRLoadFromEpehmeralList, MIRConstructorEphemeralValueList, MIRConstantBigInt, MIRConstantFloat64, MIRPackSlice, MIRPackExtend, MIRConstantString } from "./mir_ops";
 import { MIRType, MIRAssembly, MIRConstantDecl, MIRFieldDecl, MIREphemeralListType } from "./mir_assembly";
 import assert = require("assert");
 import { topologicalOrder } from "./mir_info";
@@ -28,8 +28,11 @@ function getArgType(arg: MIRArgument, vtypes: Map<string, MIRType>, assembly: MI
         else if (arg instanceof MIRConstantFloat64) {
             return assembly.typeMap.get("NSCore::Float64") as MIRType;
         }
-        else {
+        else if (arg instanceof MIRConstantString) {
             return assembly.typeMap.get("NSCore::String") as MIRType;
+        }
+        else {
+            return assembly.typeMap.get("NSCore::Regex") as MIRType;
         }
     }
 }
@@ -39,11 +42,6 @@ function extendVariableTypeMapForOp(op: MIROp, vtypes: Map<string, MIRType>, ass
         case MIROpTag.MIRLoadConst: {
             const lcv = op as MIRLoadConst;
             vtypes.set(lcv.trgt.nameID, getArgType(lcv.src, vtypes, assembly));
-            break;
-        }
-        case MIROpTag.MIRLoadConstRegex: {
-            const lcr = op as MIRLoadConstRegex;
-            vtypes.set(lcr.trgt.nameID, assembly.typeMap.get("NSCore::Regex") as MIRType);
             break;
         }
         case MIROpTag.MIRLoadConstSafeString: {

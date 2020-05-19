@@ -7,10 +7,19 @@
 namespace NSCore;
 
 entity Stack<T> provides Object, Expandoable<T> {
+    pragma KnownSafe
     hidden static s_size(s: Stack<T>): Int # stack_size
+
+    pragma KnownSafe
     hidden static s_unsafe_top(s: Stack<T>): T # stack_unsafe_top
+
+    pragma KnownSafe
     hidden static s_unsafe_at(s: Stack<T>, idx: Int): T # stack_unsafe_at
+
+    pragma KnownSafe
     hidden static s_unsafe_push(s: Stack<T>, v: T): Stack<T> # stack_unsafe_push
+
+    pragma KnownSafe
     hidden static s_unsafe_pop(s: Stack<T>): Stack<T> # stack_unsafe_pop
 
     hidden static s_toList(q: Stack<T>, lp: List<T>, idx: Int): List<T> {
