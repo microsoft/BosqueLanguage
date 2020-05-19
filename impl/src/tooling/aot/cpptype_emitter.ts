@@ -282,12 +282,12 @@ class CPPTypeEmitter {
             return new RefRepr(true, "BSQCryptoHash", "BSQCryptoHash*", "MIRNominalTypeEnum_Category_CryptoHash");
         }
         else if (this.typecheckEntityAndProvidesName_Option(tt, this.enumtype)) {
-            return new StructRepr(true, "BSQEnum", "Boxed_BSQEnum", `MIRNominalTypeEnum_${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_Enum");
+            return new StructRepr(true, "BSQEnum", "Boxed_BSQEnum", `MIRNominalTypeEnum::${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_Enum");
         }
         else if (this.typecheckEntityAndProvidesName_Option(tt, this.idkeytype)) {
             const iddecl = this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
-            if(iddecl.fields.length === 1) {
-                return new StructRepr(true, "BSQIdKeySimple", "Boxed_BSQIdKeySimple", `MIRNominalTypeEnum_${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_IdKeySimple");
+            if(iddecl.attributes.includes("identifier_simple")) {
+                return new StructRepr(true, "BSQIdKeySimple", "Boxed_BSQIdKeySimple", `MIRNominalTypeEnum::${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_IdKeySimple");
             }
             else {
                 return new RefRepr(true, "BSQIdKeyCompound", "BSQIdKeyCompound*", "MIRNominalTypeEnum_Category_IdKeyCompound");
@@ -431,12 +431,17 @@ class CPPTypeEmitter {
             else if (trfrom.base === "int64_t") {
                 cc = `BSQ_ENCODE_VALUE_TAGGED_INT(${exp})`;
             }
+            else if (trfrom.base === "BSQEnum" || trfrom.base === "BSQIdKeySimple" || trfrom.base === "BSQIdKeyCompound") {
+                const scope = this.mangleStringForCpp("$scope$");
+                const ops = this.getFunctorsForType(from);
+                cc = `BSQ_NEW_ADD_SCOPE(${scope}, ${trfrom.boxed}, ${trfrom.nominaltype}, ${ops.inc}{}(${exp}))`;
+            }
             else {
                 const scope = this.mangleStringForCpp("$scope$");
                 const ops = this.getFunctorsForType(from);
                 cc = `BSQ_NEW_ADD_SCOPE(${scope}, ${trfrom.boxed}, ${ops.inc}{}(${exp}))`;
             }
-
+                
             if (trinto instanceof KeyValueRepr) {
                 return `((KeyValue)${cc})`;
             }

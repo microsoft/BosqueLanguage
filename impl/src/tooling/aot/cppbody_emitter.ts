@@ -1767,6 +1767,16 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = BSQEnum{ (uint32_t)BSQ_GET_VALUE_TAGGED_INT(${params[0]}), MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
                 break;
             }
+            case "idkey_from_simple": {
+                const kv = this.typegen.coerce(params[0], this.typegen.getMIRType(idecl.params[0].type), this.typegen.keyType);
+                bodystr = `auto $$return = BSQIdKeySimple{ ${kv}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
+                break;
+            }
+            case "idkey_from_composite": {
+                const kvs = params.map((p, i) => this.typegen.coerce(p, this.typegen.getMIRType(idecl.params[i].type), this.typegen.keyType));
+                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQIdKeyCompound, { ${kvs.join(", ")}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)});`;
+                break;
+            }
             case "string_count": {
                 bodystr = `auto $$return = ${params[0]}->sdata.size();`;
                 break;
@@ -2017,6 +2027,10 @@ class CPPBodyEmitter {
                 const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("f") as MIRPCode);
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
+                break;
+            }
+            case "set_size": {
+                bodystr = `auto $$return = ${params[0]}->entries.size();`;
                 break;
             }
             case "set_has_key": {

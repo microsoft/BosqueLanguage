@@ -937,8 +937,14 @@ class SMTBodyEmitter {
                 return `(< (bsq_enum_value ${argl}) (bsq_enum_value ${argr}))`;
             }
             else {
-                //TODO: this should turn into a gas driven generation
-                return `(bsqkeyless_identity$${this.typegen.mangleStringForSMT(tt.trkey)} (bsq_idkey_value ${argl}) (bsq_idkey_value ${argr}))`;
+                //TODO: this should turn into a gas driven generation -- and do this for composite and simple
+                const iddecl = this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
+                if (iddecl.attributes.includes("identifier_simple")) {
+                    return `(bsqkeyless_identitysimple MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(tt.trkey)} ${argl} ${argr})`;
+                }
+                else {
+                    return `(bsqkeyless_identitycompound MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(tt.trkey)} ${argl} ${argr})`;
+                }
             }
         }
         else {
@@ -1805,6 +1811,16 @@ class SMTBodyEmitter {
                 bodyres = new SMTValue(`(bsq_enum@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(enclkey)} ${params[0]})`);
                 break;
             }
+            case "idkey_from_simple": {
+                const kv = this.typegen.coerce(new SMTValue(params[0]), this.typegen.getMIRType(idecl.params[0].type), this.typegen.keyType).emit();
+                bodyres = new SMTValue(`(bsq_idkeysimple@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(enclkey)} ${kv})`);
+                break;
+            }
+            case "idkey_from_composite": {
+                const kvs = params.map((p, i) => this.typegen.coerce(new SMTValue(p), this.typegen.getMIRType(idecl.params[i].type), this.typegen.keyType).emit());
+                bodyres = new SMTValue(`(bsq_idkeycompound@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(enclkey)} ${kvs.join(" ")})`);
+                break;
+            }
             case "string_count": {
                 bodyres = new SMTValue(`(str.len ${params[0]})`);
                 break;
@@ -1857,6 +1873,10 @@ class SMTBodyEmitter {
                 const entries = this.typegen.generateSpecialTypeFieldAccess(enclkey, "entries", params[0]);
                 const csize = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);
                 bodyres = new SMTValue(`(${cons} ${csize} (store ${entries} ${params[1]} ${params[2]}))`);
+                break;
+            }
+            case "set_size": {
+                bodyres = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "size", params[0]);
                 break;
             }
             case "set_has_key": {

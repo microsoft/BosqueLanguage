@@ -257,7 +257,13 @@ class SMTTypeEmitter {
             return "bsq_enum";
         }
         else if (this.typecheckEntityAndProvidesName(tt, this.idkeytype)) {
-            return "bsq_idkey";
+            const iddecl = this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
+            if (iddecl.attributes.includes("identifier_simple")) {
+                return "bsq_idkeysimple";
+            }
+            else {
+                return "bsq_idkeycompound";
+            }
         }
         else {
             if(this.typecheckAllKeys(tt)) {
@@ -333,7 +339,13 @@ class SMTTypeEmitter {
                 ctoval = `(bsqkey_enum ${exp.emit()})`;
             }
             else {
-                ctoval = `(bsqkey_idkey ${exp.emit()})`;
+                const iddecl = this.assembly.entityDecls.get(from.trkey) as MIREntityTypeDecl;
+                if (iddecl.attributes.includes("identifier_simple")) {
+                    ctoval = `(bsqkey_idkeysimple ${exp.emit()})`;
+                }
+                else {
+                    ctoval = `(bsqkey_idkeycompound ${exp.emit()})`;
+                }
             }
 
             return (intotype === "BKeyValue") ? new SMTValue(ctoval) : new SMTValue(`(bsqterm_key ${ctoval})`);
@@ -372,7 +384,13 @@ class SMTTypeEmitter {
             return new SMTValue(`(bsqkey_enum_value ${exp.emit()})`);
         }
         else {
-            return new SMTValue(`(bsqkey_idkey_value ${exp.emit()})`);
+            const iddecl = this.assembly.entityDecls.get(into.trkey) as MIREntityTypeDecl;
+            if (iddecl.attributes.includes("identifier_simple")) {
+                return new SMTValue(`(bsqkey_idkeysimple_value ${exp.emit()})`);
+            }
+            else {
+                return new SMTValue(`(bsqkey_idkeycompound_value ${exp.emit()})`);
+            }
         }
     }
 
@@ -444,7 +462,13 @@ class SMTTypeEmitter {
                 return new SMTValue(`(bsq_enum_value ${cfrom})`);
             }
             else {
-                return new SMTValue(`(bsq_idkey_value ${cfrom})`);
+                const iddecl = this.assembly.entityDecls.get(into.trkey) as MIREntityTypeDecl;
+                if (iddecl.attributes.includes("identifier_simple")) {
+                    return new SMTValue(`(bsq_idkeysimple_value ${cfrom})`);
+                }
+                else {
+                    return new SMTValue(`(bsq_idkeycompound_value ${cfrom})`);
+                }
             }
         }
     }
