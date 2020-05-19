@@ -21,7 +21,8 @@
       (bsq_logicaltime 0)
       (bsq_cryptohash 0)
       (bsq_enum 0)
-      (bsq_idkey 0)
+      (bsq_idkeysimple 0)
+      (bsq_idkeycompound 0)
       (BKeyValue 0)
     ) (
     ( (bsq_safestring@cons (bsq_safestring_type Int) (bsq_safestring_value String)) )
@@ -30,7 +31,8 @@
     ( (bsq_logicaltime@cons (bsq_logicaltime_value Int)) )
     ( (bsq_cryptohash@cons (bsq_cryptohash_value String)) )
     ( (bsq_enum@cons (bsq_enum_type Int) (bsq_enum_value Int)) )
-    ( (bsq_idkey@cons (bsq_idkey_type Int) (bsq_idkey_value (Array Int BKeyValue))) )
+    ( (bsq_idkeysimple@cons (bsq_idkeysimple_type Int) (bsq_idkeysimple_value BKeyValue)) )
+    ( (bsq_idkeycompound@cons (bsq_idkeycompound_type Int) (bsq_idkeycompound_value (Array Int BKeyValue))) )
     (
       (bsqkey_none) 
       (bsqkey_bool (bsqkey_bool_value Bool))
@@ -43,7 +45,8 @@
       (bsqkey_logicaltime (bsqkey_logicaltime_value bsq_logicaltime))
       (bsqkey_cryptohash (bsqkey_cryptohash_value bsq_cryptohash))
       (bsqkey_enum (bsqkey_enum_value bsq_enum))
-      (bsqkey_idkey (bsqkey_idkey_value bsq_idkey))
+      (bsqkey_idkeysimple (bsqkey_idkeysimple_value bsq_idkeysimple))
+      (bsqkey_idkeycompound (bsqkey_idkeycompound_value bsq_idkeycompound))
     )
 ))
 
@@ -120,7 +123,9 @@
                   (ite (is-bsqkey_logicaltime keyv) MIRNominalTypeEnum_LogicalTime
                     (ite (is-bsqkey_cryptohash keyv) MIRNominalTypeEnum_CryptoHash
                       (ite (is-bsqkey_enum keyv) (bsq_enum_type (bsqkey_enum_value keyv))
-                        (bsq_idkey_type (bsqkey_idkey_value keyv))
+                        (ite (is-bsqkey_idkeysimple keyv) (bsq_idkeysimple_type (bsqkey_idkeysimple_value keyv))
+                          (bsq_idkeycompound_type (bsqkey_idkeycompound_value keyv))
+                        )
                       )
                     )
                   )
@@ -185,7 +190,14 @@
   )
 )
 
-(define-fun bsqkeyless_identity ((idtype Int) (k1 bsq_idkey) (k2 bsq_idkey)) Bool
+(define-fun bsqkeyless_identitysimple ((idtype Int) (k1 bsq_idkeysimple) (k2 bsq_idkeysimple)) Bool
+;;
+;;TODO -- need to gas bound and generate this (and bsqkeyless programatically)
+;;
+false
+)
+
+(define-fun bsqkeyless_identitycompound ((idtype Int) (k1 bsq_idkeycompound) (k2 bsq_idkeycompound)) Bool
 ;;
 ;;TODO -- need to gas bound and generate this (and bsqkeyless programatically)
 ;;
@@ -196,9 +208,12 @@ false
   (let ((k1t (bsqkey_get_nominal_type k1)) (k2t (bsqkey_get_nominal_type k2)))
     (ite (not (= k1t k2t))
       (< k1t k2t)
-      (ite (and (is-bsqkey_idkey k1) (is-bsqkey_idkey k2))
-        (bsqkeyless_identity k1t (bsqkey_idkey_value k1) (bsqkey_idkey_value k2))
-        (bsqkeyless_basetypes k1 k2)
+      (ite (and (is-bsqkey_idkeycompound k1) (is-bsqkey_idkeycompound k2))
+        (bsqkeyless_identitycompound k1t (bsqkey_idkeycompound_value k1) (bsqkey_idkeycompound_value k2))
+        (ite (and (is-bsqkey_idkeysimple k1) (is-bsqkey_idkeysimple k2))
+          (bsqkeyless_identitysimple k1t (bsqkey_idkeysimple_value k1) (bsqkey_idkeysimple_value k2))
+          (bsqkeyless_basetypes k1 k2)
+        )
       )
     )
   )
