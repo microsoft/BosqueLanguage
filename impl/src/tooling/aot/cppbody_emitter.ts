@@ -1774,7 +1774,7 @@ class CPPBodyEmitter {
             }
             case "idkey_from_composite": {
                 const kvs = params.map((p, i) => this.typegen.coerce(p, this.typegen.getMIRType(idecl.params[i].type), this.typegen.keyType));
-                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQIdKeyCompound, { ${kvs.join(", ")}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)});`;
+                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQIdKeyCompound, {${kvs.join(", ")}}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)});`;
                 break;
             }
             case "string_count": {

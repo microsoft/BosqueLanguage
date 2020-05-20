@@ -625,4 +625,14 @@ struct DisplayFunctor_BSQIdKeyCompound
         return rvals;
     }
 };
+struct RCReturnFunctor_BSQIdKeyCompound
+{
+    inline void operator()(BSQIdKeyCompound* idk, BSQRefScope& scope) const
+    {
+        for(size_t i = 0; i < idk->keys.size(); ++i)
+        {
+            scope.processReturnChecked(idk->keys[i]);
+        }
+    }
+};
 }
