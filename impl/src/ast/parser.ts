@@ -2201,7 +2201,7 @@ class Parser {
                     return new VariableDeclarationStatement(sinfo, vars[0].name, isConst, vars[0].vtype, sexp); 
                 }
                 else {
-                    return new VariablePackDeclarationStatement(sinfo, isConst, vars, undefined);
+                    return new VariablePackDeclarationStatement(sinfo, isConst, vars, exp);
                 }
             }
         }

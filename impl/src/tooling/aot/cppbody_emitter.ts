@@ -1901,11 +1901,11 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexofnot(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
                 break;
             }
-            case "list_indexofnotlast": {
+            case "list_indexoflastnot": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexofnotlast(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_indexoflastnot(${params[0]}, ${params[1]}, ${params[2]}, ${lambda});`
                 break;
             }
             case "list_count_keytype": {

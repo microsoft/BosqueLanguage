@@ -83,3 +83,226 @@ entrypoint function singleError(): Int {
 
     return l.single(fn(x) => x + 1 == 3);
 }
+
+entrypoint function xof(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check l.allOf(fn(x) => x > 0);
+    check !l.allOf(fn(x) => x != 3);
+    check e.allOf(fn(x) => false);
+
+    check l.noneOf(fn(x) => x == 0);
+    check !l.noneOf(fn(x) => x == 3);
+    check e.noneOf(fn(x) => true);
+
+    check !l.anyOf(fn(x) => x == 0);
+    check l.anyOf(fn(x) => x == 3);
+    check !e.anyOf(fn(x) => true);
+
+    return 0;
+}
+
+entrypoint function countp(): Int {
+    let l = List<Int>@{1, 2, 3};
+
+    check l.countIf(fn(x) => x == 2) == 1;
+    check l.countIf(fn(x) => x == 5) == 0;
+    check l.countIf(fn(x) => x > 0) == 3;
+
+    check l.countIfNot(fn(x) => x == 2) == 2;
+    check l.countIfNot(fn(x) => x == 5) == 3;
+    check l.countIfNot(fn(x) => x > 0) == 0;
+
+    return 0;
+}
+
+entrypoint function contcount(): Int {
+    let l = List<Int>@{1, 2, 2, 3};
+    let ll = List<Int?>@{1, none, 3};
+
+    check l.contains(1);
+    check !l.contains(12);
+    check ll.contains(1);
+    check !ll.contains(2);
+    check ll.contains(none);
+
+    check l.count(1) == 1;
+    check l.count(12) == 0;
+    check l.count(2) == 2;
+    check ll.count(1) == 1;
+    check ll.count(2) == 0;
+    check ll.count(none) == 1;
+
+    return 0;
+}
+
+entrypoint function minmax(): Int {
+    let l = List<Int>@{1, -2, 3};
+    let e = List<Int>@{};
+    let ll = List<Int?>@{1, 2, none};
+
+    check l.min() == -2;
+    check l.max() == 3;
+    check ll.min() == 1;
+    check ll.max() == none;
+
+    check l.tryMin() == -2;
+    check l.tryMax() == 3;
+    check e.tryMin() == none;
+    check e.tryMax() == none;
+
+    check l.defaultMin(0) == -2;
+    check l.defaultMax(0) == 3;
+    check e.defaultMin(0) == 0;
+    check e.defaultMax(0) == 0;
+
+    return 0;
+}
+
+entrypoint function minerror(): Int {
+    let e = List<Int>@{};
+
+    return e.min();
+}
+
+entrypoint function maxerror(): Int {
+    let e = List<Int>@{};
+
+    return e.max();
+}
+
+entrypoint function sumop(): Int {
+    let l = List<Int>@{1, 2, 3};
+    let e = List<Int>@{};
+
+    check l.sum() == 6;
+    check e.sum() == 0;
+
+    return 0;
+}
+
+entrypoint function findop(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check l.find(fn(x) => x + 1 == 3) == 2;
+    check l.tryFind(fn(x) => x + 1 == 3) == 2;
+    check l.defaultFind(0, fn(x) => x + 1 == 3) == 2;
+
+    check e.tryFind(fn(x) => x + 1 == 3) == none;
+    check e.defaultFind(0, fn(x) => x + 1 == 3) == 0;
+
+    check l.tryFind(fn(x) => x == 5) == none;
+    check l.defaultFind(0, fn(x) => x == 5) == 0;
+
+    check l.findLast(fn(x) => x + 1 == 3) == 2;
+    check l.tryFindLast(fn(x) => x + 1 == 3) == 2;
+    check l.defaultFindLast(0, fn(x) => x + 1 == 3) == 2;
+
+    check e.tryFindLast(fn(x) => x + 1 == 3) == none;
+    check e.defaultFindLast(0, fn(x) => x + 1 == 3) == 0;
+
+    check l.tryFindLast(fn(x) => x == 5) == none;
+    check l.defaultFindLast(0, fn(x) => x == 5) == 0;
+
+    return 0;
+}
+
+entrypoint function findnotop(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check l.findNot(fn(x) => x + 1 == 3) == 1;
+    check l.tryFindNot(fn(x) => x + 1 == 3) == 1;
+    check l.defaultFindNot(0, fn(x) => x + 1 == 3) == 1;
+
+    check e.tryFindNot(fn(x) => x + 1 == 3) == none;
+    check e.defaultFindNot(0, fn(x) => x + 1 == 3) == 0;
+
+    check l.tryFindNot(fn(x) => x > 0) == none;
+    check l.defaultFindNot(0, fn(x) => x > 0) == 0;
+
+    check l.findLastNot(fn(x) => x + 1 == 3) == 3;
+    check l.tryFindLastNot(fn(x) => x + 1 == 3) == 3;
+    check l.defaultFindLastNot(0, fn(x) => x + 1 == 3) == 3;
+
+    check e.tryFindLastNot(fn(x) => x + 1 == 3) == none;
+    check e.defaultFindLastNot(0, fn(x) => x + 1 == 3) == 0;
+
+    check l.tryFindLastNot(fn(x) => x > 0) == none;
+    check l.defaultFindLastNot(0, fn(x) => x > 0) == 0;
+
+    return 0;
+}
+
+entrypoint function findoperror(): Int {
+    let e = List<Int>@{};
+
+    return e.find(fn(x) => x == 2);
+}
+
+entrypoint function findlastoperror(): Int {
+    let l = List<Int>@{1, 1};
+
+    return l.findLast(fn(x) => x == 2);
+}
+
+entrypoint function findindexop(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+
+    check l.findIndexOf(fn(x) => x == 2) == 1;
+    check l.findIndexOf(fn(x) => x == 2, 0, l.size()) == 1;
+    check l.findIndexOf(fn(x) => x == 2, 1) == 1;
+    check l.findIndexOf(fn(x) => x == 2, 2) == 3;
+
+    check l.findIndexOf(fn(x) => x == 2, end=l.size(), start=0) == 1;
+
+    check l.tryFindIndexOf(fn(x) => x == 3, 0, 1) == none;
+    check l.tryFindIndexOf(fn(x) => x == 3, 2, 2) == none;
+
+    check l.findLastIndexOf(fn(x) => x == 2) == 3;
+    check l.findLastIndexOf(fn(x) => x == 2, 0, l.size()) == 3;
+    check l.findLastIndexOf(fn(x) => x == 2, 1, 2) == 1;
+    check l.findLastIndexOf(fn(x) => x == 2, 2, l.size()) == 3;
+
+    check l.findLastIndexOf(fn(x) => x == 3, end=l.size(), start=0) == 2;
+
+    check l.tryFindLastIndexOf(fn(x) => x == 3, 0, 1) == none;
+    check l.tryFindLastIndexOf(fn(x) => x == 3, 2, 2) == none;
+
+    return 0;
+}
+
+entrypoint function findindexopalts(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check e.tryFindIndexOf(fn(x) => x + 1 == 3) == none;
+    check l.tryFindIndexOf(fn(x) => x == 5) == none;
+
+    check e.tryFindLastIndexOf(fn(x) => x + 1 == 3) == none;
+    check l.tryFindLastIndexOf(fn(x) => x == 5) == none;
+
+    return 0;
+}
+
+entrypoint function findindexerr1(): Int {
+    let e = List<Int>@{};
+    return e.findIndexOf(fn(x) => x == 2);
+}
+
+entrypoint function findindexerr2(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.findIndexOf(fn(x) => x == 2, -1, 1);
+}
+
+entrypoint function findindexerr3(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.findIndexOf(fn(x) => x == 2, 0, 5);
+}
+
+entrypoint function findindexerr4(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.findIndexOf(fn(x) => x == 2, 2, 1);
+}

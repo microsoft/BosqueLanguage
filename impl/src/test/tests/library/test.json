@@ -46,6 +46,91 @@
                 "expected": null
             },
             {
+                "kind": "aot",
+                "entrypoint": "xof",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "countp",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "contcount",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "minmax",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "minerror",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "maxerror",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "sumop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findnotop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findoperror",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findlastoperror",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexopalts",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexerr1",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexerr2",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexerr3",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexerr4",
+                "expected": null
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
@@ -83,6 +168,91 @@
             {
                 "kind": "symexec",
                 "entrypoint": "singleError",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "xof",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "countp",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "contcount",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "minmax",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "minerror",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "maxerror",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "sumop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findnotop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findoperror",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findlastoperror",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexopalts",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexerr1",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexerr2",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexerr3",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexerr4",
                 "expected": null
             }
         ]
