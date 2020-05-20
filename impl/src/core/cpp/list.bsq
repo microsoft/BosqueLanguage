@@ -67,14 +67,9 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     hidden recursive? static s_toMap<K where KeyType, V>(l: List<T>, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge: Bool): Map<K, V> # list_tomap
     hidden recursive? static s_toIndexMap<V>(l: List<T>, vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> # list_toindexmap
 
-    hidden static s_rangeInBoundsFwd(l: List<T>, start: Int?, end: Int?): Bool {
+    hidden static s_rangeInBounds(l: List<T>, start: Int?, end: Int?): Bool {
         let s, e = start ?| 0, end ?| List<T>::s_size(l);
         return 0 <= s && s <= e && e <= List<T>::s_size(l);
-    }
-
-    hidden static s_rangeInBoundsRev(l: List<T>, start: Int?, end: Int?): Bool {
-        let s, e = start ?| -1, end ?| List<T>::s_size(l) - 1;
-        return -1 <= s && s <= e && e <= List<T>::s_size(l) - 1;
     }
 
     method size(): Int {
@@ -161,7 +156,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
 
     method uniform(i: Int, start?: Int, end?: Int): T
         requires release List<T>::s_size(this) != 0;
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         abort;
     }
@@ -171,11 +166,11 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method noneOf(p: recursive? fn(_: T) -> Bool): Bool {
-        return List<T>::s_size(this) == 0 || List<T>::s_none[recursive?](this, 0, List<T>::s_size(this), p);
+        return List<T>::s_size(this) == 0 || List<T>::s_none[recursive?](this, p);
     }
 
     recursive? method anyOf(p: recursive? fn(_: T) -> Bool): Bool {
-        return List<T>::s_size(this) != 0 && List<T>::s_any[recursive?](this, 0, List<T>::s_size(this), p);
+        return List<T>::s_size(this) != 0 && List<T>::s_any[recursive?](this, p);
     }
 
     recursive? method countIf(p: recursive? fn(_: T) -> Bool): Int {
@@ -241,7 +236,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return idx != List<T>::s_size(this) ? List<T>::s_unsafe_get(this, idx) : none;
     }
 
-    recursive? method defaultFind(p: recursive? fn(_: T) -> Bool, default: T): T {
+    recursive? method defaultFind(default: T, p: recursive? fn(_: T) -> Bool): T {
         let idx = List<T>::s_indexof[recursive?](this, 0, List<T>::s_size(this), p);
         return idx != List<T>::s_size(this) ? List<T>::s_unsafe_get(this, idx) : default;
     }
@@ -257,7 +252,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return idx != List<T>::s_size(this) ? List<T>::s_unsafe_get(this, idx) : none;
     }
 
-    recursive? method defaultFindNot(p: recursive? fn(_: T) -> Bool, default: T): T {
+    recursive? method defaultFindNot(default: T, p: recursive? fn(_: T) -> Bool): T {
         let idx = List<T>::s_indexofnot[recursive?](this, 0, List<T>::s_size(this), p);
         return idx != List<T>::s_size(this) ? List<T>::s_unsafe_get(this, idx) : default;
     }
@@ -273,7 +268,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return idxlast != -1 ? List<T>::s_unsafe_get(this, idxlast) : none;
     }
 
-    recursive? method defaultFindLast(p: recursive? fn(_: T) -> Bool, default: T): T {
+    recursive? method defaultFindLast(default: T, p: recursive? fn(_: T) -> Bool): T {
         let idxlast = List<T>::s_indexoflast[recursive?](this, -1, List<T>::s_size(this) - 1, p);
         return idxlast != -1 ? List<T>::s_unsafe_get(this, idxlast) : default;
     }
@@ -289,13 +284,13 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return idxlast != -1 ? List<T>::s_unsafe_get(this, idxlast) : none;
     }
 
-    recursive? method defaultFindLastNot(p: recursive? fn(_: T) -> Bool, default: T): T {
+    recursive? method defaultFindLastNot(default: T, p: recursive? fn(_: T) -> Bool): T {
         let idxlast = List<T>::s_indexoflastnot[recursive?](this, -1, List<T>::s_size(this) - 1, p);
-        return idxlast != -1 ? List<T>::s_unsafe_get(this, idxlast) : none;
+        return idxlast != -1 ? List<T>::s_unsafe_get(this, idxlast) : default;
     }
 
     recursive? method findIndexOf(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
@@ -305,7 +300,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method tryFindIndexOf(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int?
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
@@ -314,7 +309,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method findIndexOfNot(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
@@ -324,7 +319,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method tryFindIndexOfNot(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int?
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
@@ -333,9 +328,9 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method findLastIndexOf(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int
-        requires release List<T>::s_rangeInBoundsRev(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = (start ?| 0) - 1, (end ?| List<T>::s_size(this)) - 1;
 
         let idxlast = List<T>::s_indexoflast[recursive?](this, s, e, p);
         check idxlast != s;
@@ -343,18 +338,18 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method tryFindLastIndexOf(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int?
-        requires release List<T>::s_rangeInBoundsRev(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = (start ?| 0) - 1, (end ?| List<T>::s_size(this)) - 1;
 
         let idxlast = List<T>::s_indexoflast[recursive?](this, s, e, p);
         return idxlast != s ? idxlast : none;
     }
 
     recursive? method findLastIndexOfNot(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int
-        requires release List<T>::s_rangeInBoundsRev(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = (start ?| 0) - 1, (end ?| List<T>::s_size(this)) - 1;
 
         let idxlast = List<T>::s_indexoflastnot[recursive?](this, s, e, p);
         check idxlast != s;
@@ -362,16 +357,16 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method tryFindLastIndexOfNot(p: recursive? fn(_: T) -> Bool, start?: Int, end?: Int): Int?
-        requires release List<T>::s_rangeInBoundsRev(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = (start ?| 0) - 1, (end ?| List<T>::s_size(this)) - 1;
 
         let idxlast = List<T>::s_indexoflastnot[recursive?](this, s, e, p);
         return idxlast != s ? idxlast : none;
     }
 
     method {when T KeyType} indexOf(v: T, start?: Int, end?: Int): Int
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
@@ -381,7 +376,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method {when T KeyType} tryIndexOf(v: T, start?: Int, end?: Int): Int?
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         let s, e = start ?| 0, end ?| List<T>::s_size(this);
 
@@ -390,9 +385,9 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method {when T KeyType} lastIndexOf(v: T, start?: Int, end?: Int): Int
-        requires release List<T>::s_rangeInBoundsRev(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = (start ?| 0) - 1, (end ?| List<T>::s_size(this)) - 1;
 
         let idx = List<T>::s_indexoflast_keytype(this, s, e, v);
         check idx != s;
@@ -400,9 +395,9 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method {when T KeyType} tryLastIndexOf(v: T, start?: Int, end?: Int): Int?
-        requires release List<T>::s_rangeInBoundsRev(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
-        let s, e = start ?| -1, end ?| List<T>::s_size(this) - 1;
+        let s, e = (start ?| 0) - 1, (end ?| List<T>::s_size(this)) - 1;
 
         let idx = List<T>::s_indexoflast_keytype(this, s, e, v);
         return idx != s ? idx : none;
@@ -425,7 +420,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method slice(start?: Int, end?: Int): List<T> 
-        requires release List<T>::s_rangeInBoundsFwd(this, start, end);
+        requires release List<T>::s_rangeInBounds(this, start, end);
     {
         let s, e = start ?| 0, end ?| List<T>::s_size(this);
 

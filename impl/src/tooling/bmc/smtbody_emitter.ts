@@ -23,10 +23,9 @@ class SMTBodyEmitter {
     private standard_gas = 4;
     private collection_gas = 5;
     private string_gas = 10;
-    private regex_gas = 3;
 
     private errorCodes = new Map<string, number>();
-    private gasLimits = new Map<string, number>().set("default", this.standard_gas).set("collection", this.collection_gas).set("string",this.string_gas).set("regex", this.regex_gas);
+    private gasLimits = new Map<string, number>().set("default", this.standard_gas).set("collection", this.collection_gas).set("string",this.string_gas);
 
     readonly allConstRegexes: Map<string, string> = new Map<string, string>();
 
@@ -77,14 +76,13 @@ class SMTBodyEmitter {
     }
 
     getGasKeyForOperation(ikey: MIRInvokeKey): "collection" | "string" | "regex" | "default" {
-        if(ikey.startsWith("NSCore::List<") || ikey.startsWith("NSCore::Set<") || ikey.startsWith("NSCore::Map<")) {
+        if(ikey.startsWith("NSCore::List::") ||ikey.startsWith("NSCore::Stack::") || ikey.startsWith("NSCore::Queue::") 
+            || ikey.startsWith("NSCore::Set::") || ikey.startsWith("NSCore::DynamicSet::")
+            || ikey.startsWith("NSCore::Map::") || ikey.startsWith("NSCore::DynamicMap::")) {
             return "collection";
         }
-        else if(ikey.startsWith("NSCore::String")) {
+        else if(ikey.startsWith("NSCore::String::")) {
             return "string";
-        }
-        else if(ikey.startsWith("NSCore::Regex")) {
-            return "regex";
         }
         else {
             return "default";
