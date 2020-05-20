@@ -1773,8 +1773,22 @@ class CPPBodyEmitter {
                 break;
             }
             case "idkey_from_composite": {
-                const kvs = params.map((p, i) => this.typegen.coerce(p, this.typegen.getMIRType(idecl.params[i].type), this.typegen.keyType));
-                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQIdKeyCompound, { ${kvs.join(", ")}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)});`;
+                const ptype = this.typegen.getMIRType(idecl.params[0].type);
+                let kvs: string[] = [];
+                //
+                //TODO: we chat and use the fact that tuples/records are also uniform representation to skip any coerce ops
+                //
+                if(ptype.options[0] instanceof MIRTupleType) {
+                    kvs = (ptype.options[0] as MIRTupleType).entries.map((e, i) => {
+                        return `${params[0]}.atFixed<${i}>()`;
+                    });
+                }
+                else {
+                    kvs = (ptype.options[0] as MIRRecordType).entries.map((e) => {
+                        return `${params[0]}.atFixed<MIRPropertyEnum::${e.name}>()`;
+                    });
+                }
+                bodystr = `auto $$return = BSQIdKeyCompound{ { ${kvs.join(", ")} }, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
                 break;
             }
             case "string_count": {
