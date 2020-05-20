@@ -290,7 +290,7 @@ class CPPTypeEmitter {
                 return new StructRepr(true, "BSQIdKeySimple", "Boxed_BSQIdKeySimple", `MIRNominalTypeEnum::${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_IdKeySimple");
             }
             else {
-                return new RefRepr(true, "BSQIdKeyCompound", "BSQIdKeyCompound*", "MIRNominalTypeEnum_Category_IdKeyCompound");
+                return new StructRepr(true, "BSQIdKeyCompound", "Boxed_BSQIdKeyCompound", `MIRNominalTypeEnum::${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_IdKeyCompound");
             }
         }
         else {

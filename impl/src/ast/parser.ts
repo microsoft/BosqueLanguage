@@ -320,18 +320,10 @@ class Lexer {
             return false;
         }
 
-        if (m.groups) {
-            const groups = m.groups;
-            if (groups.multiline !== undefined) {
-                for (const char of groups.multiline) {
-                    if (char === "\n") {
-                        this.m_cline++;
-                    }
-                }
-            }
-            if (groups.multilineEndChar !== undefined && groups.multilineEndChar !== "/")
-            {
-                this.recordLexToken(this.m_cpos, TokenStrings.Error);
+        for (let i = 0; i < m[0].length; ++i) {
+            if (m[0][i] === "\n") {
+                this.m_cline++;
+                this.m_linestart = this.m_cpos + i + 1;
             }
         }
 
@@ -3132,9 +3124,9 @@ class Parser {
                 components = idval.entries.map((re, i) => { return {cname: re[0], ctype: re[1]} });
             }
 
-            const consparams = components.map((cmp) => new FunctionParameter(cmp.cname, cmp.ctype, false, false));
+            const param =  new FunctionParameter("value", idval, false, false);
             const body = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "idkey_from_composite");
-            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], [], undefined, consparams, undefined, undefined, simpleITypeResult, [], [], false, new Set<string>(), body);
+            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], [], undefined, [param], undefined, undefined, simpleITypeResult, [], [], false, new Set<string>(), body);
             const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), [], "create", createdecl);
 
             const gkbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "idkey_getkey_composite");
