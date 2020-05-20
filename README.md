@@ -36,7 +36,7 @@ An overarching theme of the Bosque project is increasing the ability of automate
 
 ## News
 
-**May 2020:** We will be running a Bosque Webinar with Live Q&A on May 14th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
+**May 2020:** We will be running a Bosque Webinar with Live Q&A on May 27th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
 
 ## Documentation
 
