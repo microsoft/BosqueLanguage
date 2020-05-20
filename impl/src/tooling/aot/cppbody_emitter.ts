@@ -1819,6 +1819,18 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${params[0]}->entries[${params[1]}];`;
                 break;
             }
+            case "list_toset": {
+                const settype = this.typegen.getMIRType(idecl.resultType);
+                const setrepr = this.typegen.getCPPReprFor(settype);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const cfuncs = this.typegen.getFunctorsForType(ctype);
+
+                const ntype = `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(settype.trkey)}`;
+                const stemplate = `BSQSet<${crepr.std}, ${cfuncs.dec}, ${cfuncs.display}, ${cfuncs.less}, ${cfuncs.eq}>`;
+                bodystr = `auto $$return =  BSQ_NEW_NO_RC(${setrepr.base}, ${ntype}, ${stemplate}::processSingletonSetInit<${cfuncs.inc}>(${params[0]}->entries));`;
+                break;
+            }
             case "list_all": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);

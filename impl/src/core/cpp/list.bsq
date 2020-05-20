@@ -81,7 +81,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_size(this);
     }
 
-    method empty(): Int {
+    method empty(): Bool {
         return List<T>::s_size(this) == 0;
     }
 
@@ -99,18 +99,18 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_size(this) != 0 ? List<T>::s_unsafe_get(this, 0) : default;
     }
 
-    method last(): T 
+    method back(): T 
         requires release List<T>::s_size(this) != 0;
     {
-        List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1);
+        return List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1);
     }
 
-    method tryLast(): T? {
+    method tryBack(): T? {
         return List<T>::s_size(this) != 0 ? List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1) : none;
     }
 
-    method defaultLast(default: T): T {
-        return List<T>::s_size(this) != 0 ? List<T>::s_unsafe_get(this, 0) : default;
+    method defaultBack(default: T): T {
+        return List<T>::s_size(this) != 0 ? List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1) : default;
     }
 
     method get(i: Int): T 
@@ -119,19 +119,23 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_unsafe_get(this, i);
     }
 
-    method tryGet(i: Int): T? {
-        return 0 <= i && i < List<T>::s_size(this) ? List<T>::s_unsafe_get(this, i) : none;
+    method tryGet(i: Int): T? 
+        requires release 0 <= i;
+    {
+        return i < List<T>::s_size(this) ? List<T>::s_unsafe_get(this, i) : none;
     }
 
-     method defaultGet(i: Int, default: T): T {
-        return 0 <= i && i < List<T>::s_size(this) ? List<T>::s_unsafe_get(this, i) : default;
+    method defaultGet(i: Int, default: T): T
+        requires release 0 <= i;
+    {
+        return i < List<T>::s_size(this) ? List<T>::s_unsafe_get(this, i) : default;
     }
 
     method {when T KeyType} toSet(): Set<T> {
         return List<T>::s_toset(this);
     }
 
-    recursive? method single(p: recursive? fn(_: T) -> Bool): Bool 
+    recursive? method single(p: recursive? fn(_: T) -> Bool): T 
         requires release List<T>::s_size(this) != 0;
     {
         let idx = List<T>::s_indexof[recursive?](this, 0, List<T>::s_size(this), p);
@@ -148,7 +152,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return idx == lastidx ? List<T>::s_unsafe_get(this, idx) : none;
     }
 
-    recursive? method defaultSingle(p: recursive? fn(_: T) -> Bool, default: T): T {
+    recursive? method defaultSingle(default: T, p: recursive? fn(_: T) -> Bool): T {
         let idx = List<T>::s_indexof[recursive?](this, 0, List<T>::s_size(this), p);
         let lastidx = List<T>::s_indexoflast[recursive?](this, -1, List<T>::s_size(this) - 1, p);
 
