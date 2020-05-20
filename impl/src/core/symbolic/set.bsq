@@ -26,7 +26,7 @@ entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODT
         }
         else {
             let kl = Set<T>::s_get_keylist(s);
-            return Set<T>::s_unsafe_add(s, v, KeyList<T>@{hkey=k, tail=kl});
+            return Set<T>::s_unsafe_add(s, v, KeyList<T>@{hkey=v, tail=kl});
         }
     }
 

@@ -1883,6 +1883,19 @@ class SMTBodyEmitter {
                 bodyres = new SMTValue(`(select ${this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0])} ${params[1]})`)
                 break;
             }
+            case "set_get_keylist": {
+                bodyres = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "keylist", params[0]);
+                break;
+            }
+            case "set_unsafe_add":  {
+                const cons = this.typegen.generateEntityConstructor(enclkey);
+                const size = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);
+                const has = this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0]);
+                const klctype = this.typegen.getKeyListTypeForSet(this.typegen.assembly.entityDecls.get(enclkey) as MIREntityTypeDecl);
+                const kll = this.typegen.coerce(new SMTValue(params[2]), this.typegen.getMIRType(idecl.params[2].type), klctype);
+                bodyres = new SMTValue(`(${cons} (+ ${size} 1) (store ${has} ${params[1]} true) ${kll.emit()})`);
+                break;
+            }
             /*
             case "list_size":
             case "set_size":

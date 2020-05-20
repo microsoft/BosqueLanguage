@@ -1,0 +1,85 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace NSTest;
+
+entrypoint function sizeAndEmpty(): Int {
+    check List<Int>@{}.size() == 0;
+    check List<Int>@{1, 2}.size() == 2;
+
+    check List<Int>@{}.empty();
+
+    return 0;
+}
+
+entrypoint function frontBackGet(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check l.front() == 1;
+    check l.back() == 3;
+    check l.get(1) == 2;
+
+    check l.tryFront() == 1;
+    check l.tryBack() == 3;
+    check l.tryGet(1) == 2;
+
+    check l.defaultFront(-1) == 1;
+    check l.defaultBack(-1) == 3;
+    check l.defaultGet(1, -1) == 2;
+
+    check e.tryFront() == none;
+    check e.tryBack() == none;
+    check e.tryGet(1) == none;
+
+    check e.defaultFront(-1) == -1;
+    check e.defaultBack(-1) == -1;
+    check e.defaultGet(1, -1) == -1;
+
+    return 0;
+}
+
+entrypoint function frontError(): Int {
+    return List<Int>@{}.front();
+}
+
+entrypoint function backError(): Int {
+    return List<Int>@{}.back();
+}
+
+entrypoint function getError(): Int {
+    return List<Int>@{1, 2}.get(5);
+}
+
+entrypoint function toSet(): Int {
+    check List<Int>@{1, 2}.toSet().size() == 2;
+    check List<Int>@{2, 1, 2}.toSet().size() == 2;
+
+    return 0;
+}
+
+entrypoint function single(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check l.single(fn(x) => x + 1 == 3) == 2;
+    check l.trySingle(fn(x) => x + 1 == 3) == 2;
+    check l.defaultSingle(0, fn(x) => x + 1 == 3) == 2;
+
+    check e.trySingle(fn(x) => x + 1 == 3) == none;
+    check e.defaultSingle(0, fn(x) => x + 1 == 3) == 0;
+
+    check l.trySingle(fn(x) => x == 2 || x == 1) == none;
+    check l.defaultSingle(0, fn(x) => x == 2 || x == 1) == 0;
+
+    return 0;
+}
+
+entrypoint function singleError(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 2};
+
+    return l.single(fn(x) => x + 1 == 3);
+}
