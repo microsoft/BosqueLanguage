@@ -1815,22 +1815,12 @@ class SMTBodyEmitter {
                 break;
             }
             case "idkey_from_composite": {
-                const ptype = this.typegen.getMIRType(idecl.params[0].type);
                 let kvs: string = "bsqidkey_array_empty";
-                if(ptype.options[0] instanceof MIRTupleType) {
-                    const tentries = (ptype.options[0] as MIRTupleType).entries;
-                    for (let i = 0; i < tentries.length; ++i) {
-                        const select = this.typegen.coerce(new SMTValue(`(select (bsq_tuple_entries ${params[0]}) ${i})`), this.typegen.anyType, this.typegen.keyType);
-                        kvs = `(store ${kvs} ${i} ${select.emit()})`;
-                    }
+                for (let i = 0; i < params.length; ++i) {
+                    const select = this.typegen.coerce(new SMTValue(params[i]), this.typegen.getMIRType(idecl.params[i].type), this.typegen.keyType);
+                    kvs = `(store ${kvs} ${i} ${select.emit()})`;
                 }
-                else {
-                    const rentries = (ptype.options[0] as MIRRecordType).entries;
-                    for (let i = 0; i < rentries.length; ++i) {
-                        const select = this.typegen.coerce(new SMTValue(`(select (bsq_record_entries ${params[0]}) "${rentries[i].name}")`), this.typegen.anyType, this.typegen.keyType);
-                        kvs = `(store ${kvs} ${i} ${select.emit()})`;
-                    }
-                }
+                
                 bodyres = new SMTValue(`(bsq_idkeycompound@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(enclkey)} ${kvs})`);
                 break;
             }

@@ -3104,6 +3104,12 @@ class Parser {
         const simpleITypeResult = itype;
 
         this.ensureAndConsumeToken("=");
+
+        //
+        //TODO: Parse this explicitly to preserve the order of "properties" and enforce no optional
+        //      This is needed to keep the order of params in the constructor stable (and developer friendly)
+        //      Will be a breaking change though!
+        //
         const idval = this.parseTypeSignature();
         this.ensureAndConsumeToken(";");
 
@@ -3124,9 +3130,9 @@ class Parser {
                 components = idval.entries.map((re, i) => { return {cname: re[0], ctype: re[1]} });
             }
 
-            const param =  new FunctionParameter("value", idval, false, false);
+            const consparams = components.map((cmp) => new FunctionParameter(cmp.cname, cmp.ctype, false, false));
             const body = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "idkey_from_composite");
-            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], [], undefined, [param], undefined, undefined, simpleITypeResult, [], [], false, new Set<string>(), body);
+            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], [], undefined, consparams, undefined, undefined, simpleITypeResult, [], [], false, new Set<string>(), body);
             const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), [], "create", createdecl);
 
             const gkbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "idkey_getkey_composite");
