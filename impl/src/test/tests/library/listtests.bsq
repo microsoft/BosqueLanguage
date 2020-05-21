@@ -306,3 +306,192 @@ entrypoint function findindexerr4(): Int {
     let l = List<Int>@{1, 2, 3, 2};
     return l.findIndexOf(fn(x) => x == 2, 2, 1);
 }
+
+entrypoint function findindexnotop(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+
+    check l.findIndexOfNot(fn(x) => x < 2) == 1;
+    check l.findIndexOfNot(fn(x) => x < 2, 0, l.size()) == 1;
+    check l.findIndexOfNot(fn(x) => x < 2, 1) == 1;
+    check l.findIndexOfNot(fn(x) => x < 2 || x == 3, 2) == 3;
+
+    check l.findIndexOfNot(fn(x) => x < 2, end=l.size(), start=0) == 1;
+
+    check l.tryFindIndexOfNot(fn(x) => x < 3, 0, 1) == none;
+    check l.tryFindIndexOfNot(fn(x) => x < 3, 2, 2) == none;
+
+    check l.findLastIndexOfNot(fn(x) => x < 2) == 3;
+    check l.findLastIndexOfNot(fn(x) => x < 2, 0, l.size()) == 3;
+    check l.findLastIndexOfNot(fn(x) => x < 2, 1, 2) == 1;
+    check l.findLastIndexOfNot(fn(x) => x < 2, 2, l.size()) == 3;
+
+    check l.findLastIndexOfNot(fn(x) => x < 3, end=l.size(), start=0) == 2;
+
+    check l.tryFindLastIndexOfNot(fn(x) => x < 3, 0, 1) == none;
+    check l.tryFindLastIndexOfNot(fn(x) => x < 3, 2, 2) == none;
+
+    return 0;
+}
+
+entrypoint function findindexnotopalts(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check e.tryFindIndexOfNot(fn(x) => x + 1 == 3) == none;
+    check l.tryFindIndexOfNot(fn(x) => x < 5) == none;
+
+    check e.tryFindLastIndexOfNot(fn(x) => x + 1 == 3) == none;
+    check l.tryFindLastIndexOfNot(fn(x) => x < 5) == none;
+
+    return 0;
+}
+
+entrypoint function findindexnoterr1(): Int {
+    let e = List<Int>@{};
+    return e.findIndexOfNot(fn(x) => x == 2);
+}
+
+entrypoint function findindexnoterr2(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.findIndexOfNot(fn(x) => x == 2, -1, 1);
+}
+
+entrypoint function findindexnoterr3(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.findIndexOfNot(fn(x) => x == 2, 0, 5);
+}
+
+entrypoint function findindexnoterr4(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.findIndexOfNot(fn(x) => x == 2, 2, 1);
+}
+
+
+entrypoint function indexop(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+
+    check l.indexOf(2) == 1;
+    check l.indexOf(2, 0, l.size()) == 1;
+    check l.indexOf(2, 1) == 1;
+    check l.indexOf(2, 2) == 3;
+
+    check l.indexOf(2, end=l.size(), start=0) == 1;
+
+    check l.tryIndexOf(3, 0, 1) == none;
+    check l.tryIndexOf(3, 2, 2) == none;
+
+    check l.lastIndexOf(2) == 3;
+    check l.lastIndexOf(2, 0, l.size()) == 3;
+    check l.lastIndexOf(2, 1, 2) == 1;
+    check l.lastIndexOf(2, 2, l.size()) == 3;
+
+    check l.lastIndexOf(3, end=l.size(), start=0) == 2;
+
+    check l.tryLastIndexOf(3, 0, 1) == none;
+    check l.tryLastIndexOf(3, 2, 2) == none;
+
+    return 0;
+}
+
+entrypoint function indexopalts(): Int {
+    let e = List<Int>@{};
+    let l = List<Int>@{1, 2, 3};
+
+    check e.tryIndexOf(3) == none;
+    check l.tryIndexOf(5) == none;
+
+    check e.tryLastIndexOf(3) == none;
+    check l.tryLastIndexOf(5) == none;
+
+    return 0;
+}
+
+entrypoint function indexerr1(): Int {
+    let e = List<Int>@{};
+    return e.indexOf(2);
+}
+
+entrypoint function indexerr2(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.indexOf(2, -1, 1);
+}
+
+entrypoint function indexerr3(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.indexOf(2, 0, 5);
+}
+
+entrypoint function indexerr4(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+    return l.indexOf(2, 2, 1);
+}
+
+entrypoint function filterop(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+
+    let lp = l.filter(fn(x) => x == 2);
+    check lp.size() == 2;
+    check lp.front() == 2;
+    check lp.back() == 2;
+
+    let le = l.filter(fn(x) => false);
+    check le.empty();
+
+    return 0;
+}
+
+entrypoint function filternotop(): Int {
+    let l = List<Int>@{1, 2, 3, 2};
+
+    let lp = l.filterNot(fn(x) => x == 2);
+    check lp.size() == 2;
+    check lp.front() == 1;
+    check lp.back() == 3;
+
+    let le = l.filterNot(fn(x) => true);
+    check le.empty();
+
+    return 0;
+}
+
+entrypoint function oftypeop(): Int {
+    let l = List<Int|Bool|String>@{1, false, true, 2};
+
+    let lp = l.ofType<Int>();
+    check lp.size() == 2;
+    check lp.front() == 1;
+    check lp.back() == 2;
+    check lp.sum() == 3;
+
+/*
+    let lb = l.ofType<Bool>();
+    check lb.size() == 1;
+    check lb.front();
+*/
+    let le = l.ofType<String>();
+    check le.empty();
+
+    return 0;
+}
+
+entrypoint function castop(): Int {
+    let l = List<Int|Bool|None>@{1, 2, 3, 2};
+    let le = List<Int|Bool|None>@{};
+
+    let lp = l.cast<Int>();
+    check lp.size() == 4;
+    check lp.front() == 1;
+    check lp.back() == 2;
+    check lp.sum() == 8;
+
+    let lei = le.cast<Int>();
+    check lei.empty();
+
+    return 0; 
+}
+
+entrypoint function casterr(): Int {
+    let l = List<Int|Bool|None>@{1, 2, true, 2};
+    
+    return l.cast<Int>().front();
+}

@@ -53,7 +53,7 @@ public:
     
         std::stable_sort(src.begin(), src.end(), MEntryCMP<K, V, K_CMP>{});
         auto dup = std::adjacent_find(src.begin(), src.end(), MEntryEQ<K, V, K_EQ>{});
-        BSQ_ASSERT(dup == src.end(), "Duplicate key found in Map initialization");
+        BSQ_ASSERT(dup == src.end(), "abort -- duplicate key found in Map initialization");
 
         return src;
     }

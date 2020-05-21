@@ -131,6 +131,61 @@
                 "expected": null
             },
             {
+                "kind": "aot",
+                "entrypoint": "findindexnotop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexnotopalts",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexnoterr1",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexnoterr2",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexnoterr3",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "findindexnoterr4",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "filterop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "filternotop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "oftypeop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "castop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "casterr",
+                "expected": null
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
@@ -253,6 +308,61 @@
             {
                 "kind": "symexec",
                 "entrypoint": "findindexerr4",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexnotop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexnotopalts",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexnoterr1",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexnoterr2",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexnoterr3",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "findindexnoterr4",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "filterop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "filternotop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "oftypeop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "castop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "casterr",
                 "expected": null
             }
         ]
