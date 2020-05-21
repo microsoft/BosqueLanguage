@@ -26,9 +26,9 @@
 #include <numeric>
 
 #ifdef BDEBUG
-#define BSQ_ASSERT(C, MSG) (bsqassert(C, MSG, __FILE__, __LINE__))
+#define BSQ_ASSERT(C, MSG) if(!C) { throw BSQAbort(MSG, __FILE__, __LINE__, __FILE__, __LINE__); }
 #else
-#define BSQ_ASSERT(C, MSG)
+#define BSQ_ASSERT(C, MSG) if(!C) { throw BSQAbort(); }
 #endif
 
 #ifdef BDEBUG
@@ -48,8 +48,6 @@
 
 namespace BSQ
 {
-void bsqassert(bool cond, const char* msg, const char* file, int32_t line);
-
 class BSQAbort
 {
 #ifdef BDEBUG

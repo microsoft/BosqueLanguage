@@ -114,7 +114,7 @@ public:
     {
         std::vector<MEntry<T, U>> entries;
         std::for_each(m->entries.begin(), m->entries.end(), [&entries](MEntry<K, V>& v) {
-            BSQ_ASSERT(LambdaTC{}(v.key, v.value), "Invalid element in cast");
+            BSQ_ASSERT(LambdaTC{}(v.key, v.value), "abort -- invalid element in cast in Map<K, V>::cast");
 
             entries.push_back(LambdaCC{}(v.key, v.value));
         });
@@ -144,7 +144,7 @@ public:
             std::for_each(ds->entries.begin(), ds->entries.end(), [&entries, m](K& k) {
                 MEntry<K, V> ekey{k};
                 auto entry = m->entries.find(ekey);
-                BSQ_ASSERT(entry != m->entries.end(), "Missing key in domain");
+                BSQ_ASSERT(entry != m->entries.end(), "abort -- missing key in domain in Map<K, V>::project");
                 
                 entries.push_back(MEntry<K, V>{K_RCIncF{}(entry->key), V_RCIncF{}(entry->value)});
             });
@@ -190,7 +190,7 @@ public:
         std::for_each(dl->entries.begin(), dl->entries.end(), [&entries, m](K& k) {
             MEntry<K, V> ekey{k};
             auto entry = m->entries.find(ekey);
-            BSQ_ASSERT(entry != m->entries.end(), "Missing key in domain");
+            BSQ_ASSERT(entry != m->entries.end(), "abort -- missing key in domain in Map<K, V>::projectAll");
                 
             entries.push_back(MEntry<K, V>{K_RCIncF{}(entry->key), V_RCIncF{}(entry->value)});
         });
@@ -227,6 +227,8 @@ public:
         });
 
         std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) -> std::pair<K, V> {
+            BSQ_ASSERT(rm.find(e.key) == rm.end(), "abort -- cannot have duplicate keys in Map<K, V>::union");
+
             rm.insert(e.key, e.value);
         });
 
@@ -250,6 +252,8 @@ public:
 
         std::for_each(maps.begin() + 1, maps.end(), [&rm](Ty* om) {
             std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) {
+                BSQ_ASSERT(rm.find(e.key) == rm.end(), "abort -- cannot have duplicate keys in Map<K, V>::unionAll");
+
                 rm.insert(e.key, e.value);
             });
         });
@@ -272,8 +276,6 @@ public:
         });
 
         std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) -> std::pair<K, V> {
-            BSQ_ASSERT(rm.find(e.key) == rm.end(), "Cannot have duplicate keys");
-
             rm.insert(e.key, e.value);
         });
 
@@ -297,8 +299,6 @@ public:
 
         std::for_each(maps.begin() + 1, maps.end(), [&rm](Ty* om) {
             std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) {
-                BSQ_ASSERT(rm.find(e.key) == rm.end(), "Cannot have duplicate keys");
-
                 rm.insert(e.key, e.value);
             });
         });

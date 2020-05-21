@@ -719,7 +719,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     //
 
     method {when T Int | BigInt} sum(): T {
-        return List<T>::s_sum[recursive](this, List<T>::s_size(this), 0, List<T>::s_size(this));
+        return List<T>::s_sum[recursive](this, List<T>::s_size(this), 0, 0);
     }
 
     recursive? method find(p: recursive? fn(_: T) -> Bool): T {

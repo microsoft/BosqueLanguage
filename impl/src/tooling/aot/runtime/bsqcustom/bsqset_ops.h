@@ -100,7 +100,7 @@ public:
     {
         std::vector<U> entries;
         std::for_each(s->entries.begin(), s->entries.end(), [&entries](T& v) {
-            BSQ_ASSERT(LambdaTC{}(v), "Invalid element to cast");
+            BSQ_ASSERT(LambdaTC{}(v), "abort -- invalid element to cast in Set<T>::cast");
 
             entries.push_back(LambdaCC{}(v));
         });

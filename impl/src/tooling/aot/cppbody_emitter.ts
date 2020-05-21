@@ -1972,11 +1972,16 @@ class CPPBodyEmitter {
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const codetc = this.generateTypeCheck("v", ctype, ctype, rlctype);
                 const lambdatc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> bool { return ${codetc}; }`;
-                const codecc = this.typegen.coerce("v", ctype, rlctype);
-                const rlcinc = this.typegen.getFunctorsForType(rlctype).inc;
-                const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> ${this.typegen.getCPPReprFor(rlctype).std} { return ${rlcinc}{}(${codecc}); }`;
-                
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_oftype<${this.typegen.getCPPReprFor(rltype).base}, ${this.typegen.getCPPReprFor(rlctype).base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)}>(${params[0]}, ${lambdatc}, ${lambdacc});`
+                if(codetc === "FALSE") {
+                    bodystr = `auto $$return = BSQ_NEW_ADD_SCOPE(${scopevar}, ${rltype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)})`;
+                }
+                else {
+                    const codecc = this.typegen.coerce("v", ctype, rlctype);
+                    const rlcinc = this.typegen.getFunctorsForType(rlctype).inc;
+                    const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> ${this.typegen.getCPPReprFor(rlctype).std} { return ${rlcinc}{}(${codecc}); }`;
+
+                    bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_oftype<${this.typegen.getCPPReprFor(rltype).base}, ${this.typegen.getCPPReprFor(rlctype).std}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)}>(${params[0]}, ${lambdatc}, ${lambdacc});`;
+                }
                 break;
             }
             case "list_cast": {
@@ -1990,11 +1995,18 @@ class CPPBodyEmitter {
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const codetc = this.generateTypeCheck("v", ctype, ctype, rlctype);
                 const lambdatc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> bool { return ${codetc}; }`;
-                const codecc = this.typegen.coerce("v", ctype, rlctype);
-                const rlcinc = this.typegen.getFunctorsForType(rlctype).inc;
-                const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> ${this.typegen.getCPPReprFor(rlctype).std} { return ${rlcinc}{}(${codecc}); }`;
-                
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_cast<${this.typegen.getCPPReprFor(rltype).base}, ${this.typegen.getCPPReprFor(rlctype).base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)}>(${params[0]}, ${lambdatc}, ${lambdacc});`
+                if(codetc === "FALSE") {
+                    const abrt = `BSQ_ABORT("Invalic element to cast", "${filenameClean(this.currentFile)}", ${idecl.sourceLocation.line});`;
+                    const iec = `if(${params[0]}->entries.size() != 0) { ${abrt} }`;
+                    bodystr = `${iec} auto $$return = BSQ_NEW_ADD_SCOPE(${scopevar}, ${rltype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)});`;
+                }
+                else {
+                    const codecc = this.typegen.coerce("v", ctype, rlctype);
+                    const rlcinc = this.typegen.getFunctorsForType(rlctype).inc;
+                    const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> ${this.typegen.getCPPReprFor(rlctype).std} { return ${rlcinc}{}(${codecc}); }`;
+
+                    bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_cast<${this.typegen.getCPPReprFor(rltype).base}, ${this.typegen.getCPPReprFor(rlctype).std}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)}>(${params[0]}, ${lambdatc}, ${lambdacc});`;
+                }
                 break;
             }
             case "list_slice": {

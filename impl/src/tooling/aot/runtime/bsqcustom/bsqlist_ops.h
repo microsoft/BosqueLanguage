@@ -194,7 +194,7 @@ public:
         entries.reserve(l->entries.size());
 
         std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [tc, cc](T& v) -> U {
-            BSQ_ASSERT(tc(v), "Invalid element to cast");
+            BSQ_ASSERT(tc(v), "abort -- invalid element to cast List<T>::cast");
 
             return cc(v);
         });
@@ -446,7 +446,7 @@ public:
             auto epos = mentries.find(k);
             if(epos != mentries.end())
             {
-                BSQ_ASSERT(merge, "Duplicate keys are not allowed");
+                BSQ_ASSERT(merge, "abort -- duplicate keys are not allowed in List<T>::toMap");
                 
                 K_RCDecF{}(epos->first);
                 V_RCDecF{}(epos->second); 
