@@ -255,7 +255,7 @@ class CPPTypeEmitter {
             return new NoneRepr();
         }
         else if (this.typecheckIsName_Option(tt, /^NSCore::Bool$/)) {
-            return new StructRepr(true, "bool", "*", "MIRNominalTypeEnum_Bool", "MIRNominalTypeEnum_Category_Empty");
+            return new StructRepr(true, "BSQBool", "*", "MIRNominalTypeEnum_Bool", "MIRNominalTypeEnum_Category_Empty");
         }
         else if (this.typecheckIsName_Option(tt, /^NSCore::Int$/)) {
             return new StructRepr(true, "int64_t", "*", "MIRNominalTypeEnum_Int", "MIRNominalTypeEnum_Category_Empty");
@@ -425,7 +425,7 @@ class CPPTypeEmitter {
             assert(!(trinto instanceof NoneRepr) && !(trinto instanceof StructRepr) && !(trinto instanceof RefRepr), "Should not be possible");
 
             let cc = "[INVALID]";
-            if (trfrom.base === "bool") {
+            if (trfrom.base === "BSQBool") {
                 cc = `BSQ_ENCODE_VALUE_BOOL(${exp})`;
             }
             else if (trfrom.base === "int64_t") {
@@ -464,7 +464,7 @@ class CPPTypeEmitter {
                 return `BSQ_VALUE_NONE`;
             }
             else if (trinto instanceof StructRepr) {
-                if (trinto.base === "bool") {
+                if (trinto.base === "BSQBool") {
                     return `BSQ_GET_VALUE_BOOL(${exp})`;
                 }
                 else if (trinto.base === "int64_t") {
@@ -491,7 +491,7 @@ class CPPTypeEmitter {
                 return `BSQ_VALUE_NONE`;
             }
             else if (trinto instanceof StructRepr) {
-                if (trinto.base === "bool") {
+                if (trinto.base === "BSQBool") {
                     return `BSQ_GET_VALUE_BOOL(${exp})`;
                 }
                 else if (trinto.base === "int64_t") {

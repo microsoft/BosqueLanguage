@@ -107,10 +107,10 @@ class CPPBodyEmitter {
             return this.typegen.coerce("BSQ_VALUE_NONE", this.typegen.noneType, into);
         }
         else if (cval instanceof MIRConstantTrue) {
-            return this.typegen.coerce("true", this.typegen.boolType, into);
+            return this.typegen.coerce("BSQTRUE", this.typegen.boolType, into);
         }
         else if (cval instanceof MIRConstantFalse) {
-            return this.typegen.coerce("false", this.typegen.boolType, into);
+            return this.typegen.coerce("BSQFALSE", this.typegen.boolType, into);
         }
         else if (cval instanceof MIRConstantInt) {
             return this.typegen.coerce(cval.value, this.typegen.intType, into);
@@ -1651,11 +1651,14 @@ class CPPBodyEmitter {
             }
         });
         let vdeclscpp: string[] = [];
-        if (vdecls.has("bool")) {
-            vdeclscpp.push(`bool ${(vdecls.get("bool") as string[]).join(", ")};`);
+        if (vdecls.has("BSQBool")) {
+            vdeclscpp.push(`BSQBool ${(vdecls.get("BSQBool") as string[]).join(", ")};`);
+        }
+        if (vdecls.has("int64_t")) {
+            vdeclscpp.push(`int64_t ${(vdecls.get("int64_t") as string[]).join(", ")};`);
         }
         [...vdecls].sort((a, b) => a[0].localeCompare(b[0])).forEach((kv) => {
-            if (kv[0] !== "bool") {
+            if (kv[0] !== "BSQBool" && kv[0] !== "int64_t") {
                 vdeclscpp.push(kv[1].map((vname) => `${kv[0]} ${vname}`).join("; ") + ";");
             }
         });
@@ -1972,7 +1975,7 @@ class CPPBodyEmitter {
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const codetc = this.generateTypeCheck("v", ctype, ctype, rlctype);
                 const lambdatc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> bool { return ${codetc}; }`;
-                if(codetc === "FALSE") {
+                if(codetc === "false") {
                     bodystr = `auto $$return = BSQ_NEW_ADD_SCOPE(${scopevar}, ${rltype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)})`;
                 }
                 else {
@@ -1995,7 +1998,7 @@ class CPPBodyEmitter {
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const codetc = this.generateTypeCheck("v", ctype, ctype, rlctype);
                 const lambdatc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} v) -> bool { return ${codetc}; }`;
-                if(codetc === "FALSE") {
+                if(codetc === "false") {
                     const abrt = `BSQ_ABORT("Invalic element to cast", "${filenameClean(this.currentFile)}", ${idecl.sourceLocation.line});`;
                     const iec = `if(${params[0]}->entries.size() != 0) { ${abrt} }`;
                     bodystr = `${iec} auto $$return = BSQ_NEW_ADD_SCOPE(${scopevar}, ${rltype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rltype.trkey)});`;

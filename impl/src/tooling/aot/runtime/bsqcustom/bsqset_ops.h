@@ -26,14 +26,14 @@ public:
         return BSQ_NEW_NO_RC((BSQList<T, RCDecF, DisplayF>), ntype, move(entries));
     }
 
-    static bool set_hasall(Ty* s, BSQList<T, RCDecF, DisplayF>* l)
+    static BSQBool set_hasall(Ty* s, BSQList<T, RCDecF, DisplayF>* l)
     {
         return std::all_of(l->entries.begin(), l->entries.end(), [s](const T& v) -> bool {
             return std::binary_search(s->entries.begin(), s->entries.end(), v, T_CMP{});
         });
     }
     
-    static bool set_subsetof(Ty* s, Ty* os)
+    static BSQBool set_subsetof(Ty* s, Ty* os)
     {
         if(s->entries.size() > os->entries.size())
         {
@@ -45,7 +45,7 @@ public:
         });
     }
 
-    static bool set_equal(Ty* s, Ty* os)
+    static BSQBool set_equal(Ty* s, Ty* os)
     {
         if(s->entries.size() != os->entries.size())
         {
@@ -55,7 +55,7 @@ public:
         return std::equal(s->entries.begin(), s->entries.end(), os->entries.begin(), os->entries.end(), T_EQ{});
     }
 
-    static bool set_disjoint(Ty* s, Ty* os)
+    static BSQBool set_disjoint(Ty* s, Ty* os)
     {
         if(s->entries.size() == 0 || os->entries.size() == 0)
         {

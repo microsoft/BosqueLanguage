@@ -22,19 +22,19 @@ public:
     }
 
     template <typename LambdaP>
-    static bool list_all(Ty* l, LambdaP p)
+    static BSQBool list_all(Ty* l, LambdaP p)
     {
         return std::all_of(l->entries.begin(), l->entries.end(), p);
     }
 
     template <typename LambdaP>
-    static bool list_none(Ty* l, LambdaP p)
+    static BSQBool list_none(Ty* l, LambdaP p)
     {
         return std::none_of(l->entries.begin(), l->entries.end(), p);
     }
 
     template <typename LambdaP>
-    static bool list_any(Ty* l, LambdaP p)
+    static BSQBool list_any(Ty* l, LambdaP p)
     {
         return std::any_of(l->entries.begin(), l->entries.end(), p);
     }

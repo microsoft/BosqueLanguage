@@ -71,7 +71,7 @@ bool bsqKeyValueEqual(KeyValue v1, KeyValue v2)
     }
     else if((kt1 == MIRNominalTypeEnum_Bool) & (kt2 == MIRNominalTypeEnum_Bool))
     {
-        return EqualFunctor_bool{}(BSQ_GET_VALUE_BOOL(v1), BSQ_GET_VALUE_BOOL(v2));
+        return EqualFunctor_BSQBool{}(BSQ_GET_VALUE_BOOL(v1), BSQ_GET_VALUE_BOOL(v2));
     }
     else if((kt1 == MIRNominalTypeEnum_Int) & (kt2 == MIRNominalTypeEnum_Int))
     {
@@ -123,7 +123,7 @@ bool bsqKeyValueLess(KeyValue v1, KeyValue v2)
     }
     else if((kt1 == MIRNominalTypeEnum_Bool) & (kt2 == MIRNominalTypeEnum_Bool))
     {
-        return LessFunctor_bool{}(BSQ_GET_VALUE_BOOL(v1), BSQ_GET_VALUE_BOOL(v2));
+        return LessFunctor_BSQBool{}(BSQ_GET_VALUE_BOOL(v1), BSQ_GET_VALUE_BOOL(v2));
     }
     else if((kt1 == MIRNominalTypeEnum_Int) & (kt2 == MIRNominalTypeEnum_Int))
     {

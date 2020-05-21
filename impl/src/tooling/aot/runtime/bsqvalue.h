@@ -10,6 +10,10 @@
 ////
 //Value ops
 
+typedef uint8_t BSQBool;
+#define BSQTRUE 1
+#define BSQFALSE 0
+
 #define MIN_BSQ_INT -9007199254740991
 #define MAX_BSQ_INT 9007199254740991
 
@@ -22,18 +26,18 @@
 #define BSQ_IS_VALUE_TAGGED_INT(V) ((((uintptr_t)(V)) & 0x4) == 0x4)
 #define BSQ_IS_VALUE_PTR(V) ((((uintptr_t)(V)) & 0x7) == 0)
 
-#define BSQ_GET_VALUE_BOOL(V) (((uintptr_t)(V)) & 0x1)
+#define BSQ_GET_VALUE_BOOL(V) ((BSQBool)(((uintptr_t)(V)) & 0x1))
 #define BSQ_GET_VALUE_TAGGED_INT(V) (int64_t)(((int64_t)(V)) >> 0x3)
 #define BSQ_GET_VALUE_PTR(V, T) (reinterpret_cast<T*>(V))
 
 #define BSQ_ENCODE_VALUE_BOOL(B) ((void*)(((uintptr_t)(B)) | 0x2))
 #define BSQ_ENCODE_VALUE_TAGGED_INT(I) ((void*)((((uint64_t) I) << 0x3) | 0x4))
 
-#define BSQ_GET_VALUE_TRUTHY(V) (((uintptr_t)(V)) & 0x1)
+#define BSQ_GET_VALUE_TRUTHY(V) ((BSQBool)(((uintptr_t)(V)) & 0x1))
 
 #define BSQ_VALUE_NONE nullptr
-#define BSQ_VALUE_TRUE BSQ_ENCODE_VALUE_BOOL(true)
-#define BSQ_VALUE_FALSE BSQ_ENCODE_VALUE_BOOL(false)
+#define BSQ_VALUE_TRUE BSQ_ENCODE_VALUE_BOOL(BSQTRUE)
+#define BSQ_VALUE_FALSE BSQ_ENCODE_VALUE_BOOL(BSQFALSE)
 
 ////
 //Reference counting ops
@@ -305,29 +309,29 @@ struct DisplayFunctor_NoneValue
     std::string operator()(NoneValue n) const { return "none"; }
 };
 
-struct RCIncFunctor_bool
+struct RCIncFunctor_BSQBool
 {
-    inline bool operator()(bool b) const { return b; }
+    inline BSQBool operator()(bool b) const { return b; }
 };
-struct RCDecFunctor_bool
+struct RCDecFunctor_BSQBool
 {
-    inline void operator()(bool b) const { ; }
+    inline void operator()(BSQBool b) const { ; }
 };
-struct RCReturnFunctor_bool
+struct RCReturnFunctor_BSQBool
 {
-    inline void operator()(bool b, BSQRefScope& scope) const { ; }
+    inline void operator()(BSQBool b, BSQRefScope& scope) const { ; }
 };
-struct EqualFunctor_bool
+struct EqualFunctor_BSQBool
 {
-    inline bool operator()(bool l, bool r) const { return l == r; }
+    inline bool operator()(BSQBool l, BSQBool r) const { return l == r; }
 };
-struct LessFunctor_bool
+struct LessFunctor_BSQBool
 {
-    inline bool operator()(bool l, bool r) const { return (!l) & r; }
+    inline bool operator()(BSQBool l, BSQBool r) const { return (!l) & r; }
 };
-struct DisplayFunctor_bool
+struct DisplayFunctor_BSQBool
 {
-    std::string operator()(bool b) const { return b ? "true" : "false"; }
+    std::string operator()(BSQBool b) const { return b ? "true" : "false"; }
 };
 
 struct RCIncFunctor_int64_t
