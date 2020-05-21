@@ -463,11 +463,10 @@ entrypoint function oftypeop(): Int {
     check lp.back() == 2;
     check lp.sum() == 3;
 
-/*
     let lb = l.ofType<Bool>();
-    check lb.size() == 1;
-    check lb.front();
-*/
+    check lb.size() == 2;
+    check lb.back();
+
     let le = l.ofType<String>();
     check le.empty();
 

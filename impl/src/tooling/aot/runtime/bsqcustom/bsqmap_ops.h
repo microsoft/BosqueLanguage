@@ -65,7 +65,7 @@ public:
         return BSQ_NEW_NO_RC((BSQList<K, K_RCDecF, K_DisplayF>), ntype, move(entries));
     }
 
-    static bool map_has_all(Ty* m, BSQList<K, K_RCDecF, K_DisplayF>* kl)
+    static BSQBool map_has_all(Ty* m, BSQList<K, K_RCDecF, K_DisplayF>* kl)
     {
         return std::all_of(kl->entries.begin(), kl->entries.end(), [m](K& k) -> bool {
             MEntry<K, V> ekey{k};
@@ -73,7 +73,7 @@ public:
         });
     }
 
-    static bool map_domainincludes(Ty* m, BSQSet<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ>* s)
+    static BSQBool map_domainincludes(Ty* m, BSQSet<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ>* s)
     {
         return std::all_of(s->entries.begin(), s->entries.end(), [m](K& k) -> bool {
             MEntry<K, V> ekey{k};
