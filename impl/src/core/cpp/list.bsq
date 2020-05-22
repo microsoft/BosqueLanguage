@@ -432,22 +432,16 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    method removeFirst(k: Int): List<T> {
-        if(k >= List<T>::s_size(this)) {
-            return List<T>@{};
-        }
-        else {
-            return List<T>::s_slice(this, k, List<T>::s_size(this));
-        }
+    method removeFirst(k: Int): List<T> 
+        requires release List<T>::s_rangeInBounds(this, k, List<T>::s_size(this));
+    {
+        return List<T>::s_slice(this, k, List<T>::s_size(this));
     }
 
-    method removeLast(k: Int): List<T> {
-        if(k >= List<T>::s_size(this)) {
-            return List<T>@{};
-        }
-        else {
-            return List<T>::s_slice(this, 0, List<T>::s_size(this) - k);
-        }
+    method removeLast(k: Int): List<T> 
+        requires release List<T>::s_rangeInBounds(this, k, List<T>::s_size(this));
+    {
+        return List<T>::s_slice(this, 0, List<T>::s_size(this) - k);
     }
 
     recursive? method takeWhile(p: recursive? fn(_: T) -> Bool): List<T> {

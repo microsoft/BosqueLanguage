@@ -186,6 +186,66 @@
                 "expected": null
             },
             {
+                "kind": "aot",
+                "entrypoint": "sliceop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "sliceerr1",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "sliceerr2",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "sliceerr3",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "removefirstop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "removefirsterr",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "removelastop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "removelasterr",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "takewhileop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "discardwhileop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "takeuntilop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "discarduntilop",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
@@ -364,6 +424,66 @@
                 "kind": "symexec",
                 "entrypoint": "casterr",
                 "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "sliceop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "sliceerr1",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "sliceerr2",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "sliceerr3",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "removefirstop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "removefirsterr",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "removelastop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "removelasterr",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "takewhileop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "discardwhileop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "takeuntilop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "discarduntilop",
+                "expected": "0"
             }
         ]
     }

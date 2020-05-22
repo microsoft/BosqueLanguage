@@ -494,3 +494,144 @@ entrypoint function casterr(): Int {
     
     return l.cast<Int>().front();
 }
+
+entrypoint function sliceop(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let ls = l.slice();
+    check ls.size() == 4;
+    check ls.front() == 1;
+    check ls.back() == 4;
+
+    let lfe = l.slice(0, 2);
+    check lfe.size() == 2;
+    check lfe.front() == 1;
+    check lfe.back() == 2;
+
+    let lf = l.slice(end=2);
+    check lf.size() == 2;
+    check lf.front() == 1;
+    check lf.back() == 2;
+
+    let lre = l.slice(2);
+    check lre.size() == 2;
+    check lre.front() == 3;
+    check lre.back() == 4;
+
+    let lr = l.slice(start=2);
+    check lr.size() == 2;
+    check lr.front() == 3;
+    check lr.back() == 4;
+
+    let lm = l.slice(1, 3);
+    check lm.size() == 2;
+    check lm.front() == 2;
+    check lm.back() == 3;
+
+    return 0;
+}
+
+entrypoint function sliceerr1(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let ls = l.slice(-1, 2);
+    return ls.size();
+}
+
+entrypoint function sliceerr2(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let ls = l.slice(0, 5);
+    return ls.size();
+}
+
+entrypoint function sliceerr3(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let ls = l.slice(2, 1);
+    return ls.size();
+}
+
+entrypoint function removefirstop(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let lm = l.removeFirst(2);
+    check lm.size() == 2;
+    check lm.front() == 3;
+
+    let la = l.removeFirst(4);
+    check la.empty();
+
+    return 0;
+}
+
+entrypoint function removefirsterr(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let le = l.removeFirst(5);
+    return le.size();
+}
+
+entrypoint function removelastop(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let lm = l.removeLast(2);
+    check lm.size() == 2;
+    check lm.back() == 2;
+
+    let la = l.removeFirst(4);
+    check la.empty();
+
+    return 0;
+}
+
+entrypoint function removelasterr(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let le = l.removeLast(5);
+    return le.size();
+}
+
+entrypoint function takewhileop(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let ll = l.takeWhile(fn(x) => x < 3);
+    check ll.size() == 2;
+    check ll.front() == 1;
+    check ll.back() == 2;
+
+    return 0;
+}
+
+entrypoint function discardwhileop(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let ll = l.discardWhile(fn(x) => x < 3);
+    check ll.size() == 2;
+    check ll.front() == 3;
+    check ll.back() == 4;
+
+    return 0;
+}
+
+entrypoint function takeuntilop(): Int {
+    let l = List<Int>@{1, 2, 3, 4};
+
+    let ll = l.takeUntil(fn(x) => x == 3);
+    check ll.size() == 2;
+    check ll.front() == 1;
+    check ll.back() == 2;
+
+    return 0;
+}
+
+entrypoint function discarduntilop(): Int {
+let l = List<Int>@{1, 2, 3, 4};
+
+    let ll = l.discardUntil(fn(x) => x == 3);
+    check ll.size() == 2;
+    check ll.front() == 3;
+    check ll.back() == 4;
+
+    return 0;
+}

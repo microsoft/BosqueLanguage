@@ -215,44 +215,45 @@ public:
     }
 
     template <typename LambdaP>
-    static Ty* list_takewhile(Ty* l)
+    static Ty* list_takewhile(Ty* l, LambdaP p)
     {
-        auto uend = std::find_if_not(l->entries.begin(), l->entries.end(), LambdaP{});
+        auto uend = std::find_if_not(l->entries.begin(), l->entries.end(), p);
         return BSQListOps::list_slice(l, 0, (int64_t)std::distance(l->entries.begin(), uend));
     }
 
     template <typename LambdaP>
-    static Ty* list_discardwhile(Ty* l)
+    static Ty* list_discardwhile(Ty* l, LambdaP p)
     {
-        auto uend = std::find_if_not(l->entries.begin(), l->entries.end(), LambdaP{});
+        auto uend = std::find_if_not(l->entries.begin(), l->entries.end(), p);
         return BSQListOps::list_slice(l, (int64_t)std::distance(l->entries.begin(), uend), (int64_t)l->entries.size());
     }
 
     template <typename LambdaP>
-    static Ty* list_takeuntil(Ty* l)
+    static Ty* list_takeuntil(Ty* l, LambdaP p)
     {
-        auto uend = std::find_if(l->entries.begin(), l->entries.end(), LambdaP{});
+        auto uend = std::find_if(l->entries.begin(), l->entries.end(), p);
         return BSQListOps::list_slice(l, 0, (int64_t)std::distance(l->entries.begin(), uend));
     }
 
     template <typename LambdaP>
-    static Ty* list_discarduntil(Ty* l)
+    static Ty* list_discarduntil(Ty* l, LambdaP p)
     {
-        auto uend = std::find_if(l->entries.begin(), l->entries.end(), LambdaP{});
+        auto uend = std::find_if(l->entries.begin(), l->entries.end(), p);
         return BSQListOps::list_slice(l, (int64_t)std::distance(l->entries.begin(), uend), (int64_t)l->entries.size());
     }
 
-    template <typename LambdaCMP, typename LambdaEQ>
+    template <typename LambdaCMP>
     static Ty* list_unique(Ty* l)
     {
-        std::vector<T> vv(l->entries.begin(), l->entries.end());
-        std::stable_sort(vv.begin(), vv.end(), LambdaCMP{});
+        std::vector<T> vv;
+        std::set<T, LambdaCMP> seen;
 
-        auto uend = std::unique(vv.begin(), vv.end(), LambdaEQ{});
-        vv.erase(uend, vv.end());
-
-        std::for_each(vv.begin(), vv.end(), [](T& v) -> T {
-            RCIncF{}(v);
+        std::for_each(l->entries.begin(), l->entries.end(), [](T& v) -> T {
+            if(!seen.find(v) != seen.cend()) 
+            {
+                seen.insert(v);
+                RCIncF{}(v);
+            }
         });
 
         return BSQ_NEW_NO_RC(Ty, l->nominalType, move(vv));
