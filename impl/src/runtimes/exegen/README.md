@@ -9,3 +9,7 @@ ExeGen is a simple command line tool for producing self contained executable bin
     - debug -- all asserts/pre/post/invariant checks are enabled, debug symbols are produced, and no optimization is done
     - test -- only test/release checks are enabled, debug symbols are produced, and light optimization is performed
     - release -- only release checks are enabled, no symbols are produced, and aggressive + platform specific optimization is done
+* `-f --flags` which can be used to send additional flags to the C++ compiler, for example:
+    * include and library search paths
+    * libraries for linking with the executable
+    * optimization and debugging flags
