@@ -382,7 +382,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_reverse[recursive](l, lsize, List<T>::s_unsafe_set(lp, (List<T>::s_size(l) - 1) - idx, val), idx + 1);
+            return List<T>::s_reverse[recursive](l, lsize, List<T>::s_unsafe_set(lp, (lsize - 1) - idx, val), idx + 1);
         }
     }
 
@@ -396,13 +396,13 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static s_mapIndex<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int, f: recursive? fn(_: Int, _: T) -> U): List<U> {
+    hidden recursive static s_mapIndex<U>(l: List<T>, lsize: Int, lp: List<U>, idx: Int, f: recursive? fn(_: T, _: Int) -> U): List<U> {
         if(idx == lsize) {
             return lp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_mapIndex<U>[recursive](l, lsize, List<T>::s_unsafe_push(lp, f[recursive?](idx, val)), idx + 1, f);
+            return List<T>::s_mapIndex<U>[recursive](l, lsize, List<U>::s_unsafe_push(lp, f[recursive?](val, idx)), idx + 1, f);
         }
     }
 
@@ -962,14 +962,14 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method reverse(): List<T> {
-        return List<T>::s_reverse[recursive](this, List<T>::s_size(this), List<T>@{}, 0);
+        return List<T>::s_reverse[recursive](this, List<T>::s_size(this), this, 0);
     }
 
     recursive? method map<U>(f: recursive? fn(_: T) -> U): List<U> {
         return List<T>::s_map<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0, f);
     }
 
-    recursive? method mapIndex<U>(f: recursive? fn(_: Int, _: T) -> U): List<U> {
+    recursive? method mapIndex<U>(f: recursive? fn(_: T, _: Int) -> U): List<U> {
         return List<T>::s_mapIndex<U>[recursive](this, List<T>::s_size(this), List<U>@{}, 0, f);
     }
 

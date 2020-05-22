@@ -1899,6 +1899,18 @@ class SMTBodyEmitter {
                 bodyres = new SMTValue(`(${cons} (+ ${size} 1) (store ${has} ${params[1]} true) ${kll.emit()})`);
                 break;
             }
+            case "map_size": {
+                bodyres = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "size", params[0]);
+                break;
+            }
+            case "map_has_key": {
+                bodyres = new SMTValue(`(select ${this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0])} ${params[1]})`)
+                break;
+            }
+            case "map_at_val": {
+                bodyres = new SMTValue(`(select ${this.typegen.generateSpecialTypeFieldAccess(enclkey, "values", params[0])} ${params[1]})`);
+                break;
+            }
             /*
             case "list_size":
             case "set_size":

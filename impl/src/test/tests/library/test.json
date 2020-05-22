@@ -232,6 +232,26 @@
             },
             {
                 "kind": "aot",
+                "entrypoint": "uniqueop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "reverseop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "mapop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "mapindexop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
                 "entrypoint": "discardwhileop",
                 "expected": "0"
             },
@@ -483,6 +503,26 @@
             {
                 "kind": "symexec",
                 "entrypoint": "discarduntilop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "uniqueop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "reverseop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "mapop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "mapindexop",
                 "expected": "0"
             }
         ]
