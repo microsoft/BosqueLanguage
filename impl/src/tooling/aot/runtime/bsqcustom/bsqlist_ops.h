@@ -248,8 +248,8 @@ public:
         std::vector<T> vv;
         std::set<T, LambdaCMP> seen;
 
-        std::for_each(l->entries.begin(), l->entries.end(), [](T& v) -> T {
-            if(!seen.find(v) != seen.cend()) 
+        std::for_each(l->entries.begin(), l->entries.end(), [&seen](T& v) -> T {
+            if(!seen.find(v) != seen.cend())
             {
                 seen.insert(v);
                 RCIncF{}(v);
