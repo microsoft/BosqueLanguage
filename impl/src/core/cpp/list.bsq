@@ -49,7 +49,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     hidden static s_reverse(l: List<T>): List<T> # list_reverse
     
     hidden recursive? static s_map<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> # list_map
-    hidden recursive? static s_mapindex<U>(l: List<T>, f: recursive? fn(_: Int, _: T) -> U): List<U> # list_mapindex
+    hidden recursive? static s_mapindex<U>(l: List<T>, f: recursive? fn(_: T, _: Int) -> U): List<U> # list_mapindex
 
     hidden static {when T KeyType} s_project<U>(l: List<T>, m: Map<T, U>): List<U> # list_project
     hidden static {when T KeyType} s_tryproject<U>(l: List<T>, m: Map<T, U>): List<U?> # list_tryproject
@@ -472,7 +472,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_map<U>[recursive?](this, f);
     }
 
-    recursive? method mapIndex<U>(f: recursive? fn(_: Int, _: T) -> U): List<U> {
+    recursive? method mapIndex<U>(f: recursive? fn(_: T, _: Int) -> U): List<U> {
         return List<T>::s_mapindex<U>[recursive?](this, f);
     }
 

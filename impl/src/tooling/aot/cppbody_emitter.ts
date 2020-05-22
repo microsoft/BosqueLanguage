@@ -1730,8 +1730,31 @@ class CPPBodyEmitter {
         return [this.typegen.getCPPReprFor(ltype).base, this.typegen.getCPPReprFor(ctype).base, `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(le.tkey)}`];
     }
 
-    getSetContentsInfoForListOp(idecl: MIRInvokePrimitiveDecl): MIRType {
+    getSetContentsInfoForSetOp(idecl: MIRInvokePrimitiveDecl): MIRType {
         return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("T") as MIRType;
+    }
+
+    getMapKeyContentsInfoForMapOp(idecl: MIRInvokePrimitiveDecl): MIRType {
+        return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("K") as MIRType;
+    }
+
+    getMapValueContentsInfoForMapOp(idecl: MIRInvokePrimitiveDecl): MIRType {
+        return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("V") as MIRType;
+    }
+
+    getMEntryTypeForMapOp(idecl: MIRInvokePrimitiveDecl): string {
+        const ktd = this.typegen.getCPPReprFor(this.getMapKeyContentsInfoForMapOp(idecl)).std;
+        const vtd = this.typegen.getCPPReprFor(this.getMapValueContentsInfoForMapOp(idecl)).std;
+
+        return `MEntry<${ktd}, ${vtd}>`;
+    }
+
+    getMEntryCmpTypeForMapOp(idecl: MIRInvokePrimitiveDecl): string {
+        const ktd = this.typegen.getCPPReprFor(this.getMapKeyContentsInfoForMapOp(idecl)).std;
+        const kcmp = this.typegen.getFunctorsForType(this.getMapKeyContentsInfoForMapOp(idecl)).less;
+        const vtd = this.typegen.getCPPReprFor(this.getMapValueContentsInfoForMapOp(idecl)).std;
+
+        return `MEntryCMP<${ktd}, ${vtd}, ${kcmp}>`;
     }
 
     createListOpsFor(ltype: MIRType, ctype: MIRType): string {
@@ -2048,11 +2071,16 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_unique": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const cmp = this.typegen.getFunctorsForType(ctype).less;
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_unique<${cmp}>(${params[0]});`
                 break;
             }
             case "list_reverse": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_reverse(${params[0]});`
                 break;
             }
             case "list_map": {
@@ -2076,8 +2104,22 @@ class CPPBodyEmitter {
                 break;
             }
             case "set_has_key": {
-                const tcmp = this.typegen.getFunctorsForType(this.getSetContentsInfoForListOp(idecl)).less;
+                const tcmp = this.typegen.getFunctorsForType(this.getSetContentsInfoForSetOp(idecl)).less;
                 bodystr = `auto $$return = std::binary_search(${params[0]}->entries.begin(), ${params[0]}->entries.end(), ${params[1]}, ${tcmp}{});`;
+                break;
+            }
+            case "map_size": {
+                bodystr = `auto $$return = ${params[0]}->entries.size();`;
+                break;
+            }
+            case "map_has_key": {
+                const kcmp = this.getMEntryCmpTypeForMapOp(idecl);
+                bodystr = `auto $$return = std::binary_search(${params[0]}->entries.begin(), ${params[0]}->entries.end(), ${params[1]}, ${kcmp}{});`;
+                break;
+            }
+            case "map_at_val": {
+                const kcmp = this.getMEntryCmpTypeForMapOp(idecl);
+                bodystr = `auto $$return = std::lower_bound(${params[0]}->entries.begin(), ${params[0]}->entries.end(), ${params[1]}, ${kcmp}{}).value;`;
                 break;
             }
             /*

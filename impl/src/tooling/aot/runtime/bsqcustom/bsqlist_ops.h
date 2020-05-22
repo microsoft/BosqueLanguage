@@ -248,11 +248,11 @@ public:
         std::vector<T> vv;
         std::set<T, LambdaCMP> seen;
 
-        std::for_each(l->entries.begin(), l->entries.end(), [](T& v) -> T {
-            if(!seen.find(v) != seen.cend()) 
+        std::for_each(l->entries.begin(), l->entries.end(), [&seen, &vv](T& v) {
+            if(seen.find(v) == seen.cend()) 
             {
                 seen.insert(v);
-                RCIncF{}(v);
+                vv.push_back(RCIncF{}(v));
             }
         });
 
@@ -264,7 +264,7 @@ public:
         std::vector<T> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.crbegin(), l->entries.crend(), std::back_inserter(entries), [](T& v) -> T {
+        std::transform(l->entries.rbegin(), l->entries.rend(), std::back_inserter(entries), [](T& v) -> T {
             return RCIncF{}(v);
         });
 
@@ -292,7 +292,7 @@ public:
 
         for(int64_t i = 0; i < (int64_t)l->entries.size(); ++i)
         {
-            entries.push_back(f(i, l->entries[i]));
+            entries.push_back(f(l->entries[i], i));
         }
 
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));

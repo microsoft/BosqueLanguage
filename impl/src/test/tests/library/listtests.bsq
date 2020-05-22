@@ -626,7 +626,7 @@ entrypoint function takeuntilop(): Int {
 }
 
 entrypoint function discarduntilop(): Int {
-let l = List<Int>@{1, 2, 3, 4};
+    let l = List<Int>@{1, 2, 3, 4};
 
     let ll = l.discardUntil(fn(x) => x == 3);
     check ll.size() == 2;
@@ -635,3 +635,51 @@ let l = List<Int>@{1, 2, 3, 4};
 
     return 0;
 }
+
+entrypoint function uniqueop(): Int {
+    let l = List<Int>@{1, 2, 1, 2};
+
+    let ll = l.unique();
+    check ll.size() == 2;
+    check ll.front() == 1;
+    check ll.back() == 2;
+
+    return 0;
+}
+
+entrypoint function reverseop(): Int {
+    let l = List<Int>@{1, 2, 3};
+
+    let ll = l.reverse();
+    check ll.size() == 3;
+    check ll.front() == 3;
+    check ll.back() == 1;
+
+    return 0;
+}
+
+entrypoint function mapop(): Int {
+    let l = List<Int>@{1, 2, 3};
+
+    let ll = l.map<Int>(fn(x) => x + 1);
+    check ll.size() == 3;
+    check ll.front() == 2;
+    check ll.back() == 4;
+
+    return 0;
+}
+
+entrypoint function mapindexop(): Int {
+     let l = List<Bool>@{true, true, false};
+
+    let ll = l.mapIndex<Int>(fn(x, i) => x ? i : -i);
+    check ll.size() == 3;
+    check ll.front() == 0;
+    check ll.back() == -2;
+
+    return 0;
+}
+
+
+
+
