@@ -2013,23 +2013,38 @@ class CPPBodyEmitter {
                 break;
             }
             case "list_slice": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_slice(${params[0]}, ${params[1]}, ${params[2]});`;
                 break;
             }
             case "list_takewhile": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_takewhile(${params[0]}, ${lambda});`
                 break;
             }
             case "list_discardwhile": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_discardwhile(${params[0]}, ${lambda});`
                 break;
             }
             case "list_takeuntil": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_takeuntil(${params[0]}, ${lambda});`
                 break;
             }
             case "list_discarduntil": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_discarduntil(${params[0]}, ${lambda});`
                 break;
             }
             case "list_unique": {

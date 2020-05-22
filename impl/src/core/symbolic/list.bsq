@@ -292,7 +292,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_takek<U>[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1, k - 1);
+            return List<T>::s_takek[recursive](l, List<T>::s_unsafe_push(lp, val), idx + 1, k - 1);
         }
     }
 
@@ -925,26 +925,20 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             return List<T>@{};
         }
         else {
-            return List<T>::s_slice[recursive](this, List<T>@{}, s, e);
+            return List<T>::s_slice[recursive](this, s, e);
         }
     }
 
-    method removeFirst(k: Int): List<T> {
-        if(k >= List<T>::s_size(this)) {
-            return List<T>@{};
-        }
-        else {
-            return List<T>::s_slice[recursive](this, List<T>@{}, k, List<T>::s_size(this));
-        }
+    method removeFirst(k: Int): List<T> 
+        requires release List<T>::s_rangeInBounds(this, k, List<T>::s_size(this));
+    {
+        return List<T>::s_slice[recursive](this, k, List<T>::s_size(this));
     }
 
-    method removeLast(k: Int): List<T> {
-        if(k >= List<T>::s_size(this)) {
-            return List<T>@{};
-        }
-        else {
-            return List<T>::s_slice[recursive](this, List<T>@{}, 0, List<T>::s_size(this) - k);
-        }
+    method removeLast(k: Int): List<T> 
+        requires release List<T>::s_rangeInBounds(this, k, List<T>::s_size(this));
+    {
+        return List<T>::s_slice[recursive](this, 0, List<T>::s_size(this) - k);
     }
 
     recursive? method takeWhile(p: recursive? fn(_: T) -> Bool): List<T> {
@@ -956,7 +950,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method takeUntil(p: recursive? fn(_: T) -> Bool): List<T> {
-        return List<T>::s_takeuntil[recursive](this, List<T>@{}, 0, p);
+        return List<T>::s_takeuntil[recursive](this, List<T>::s_size(this), List<T>@{}, 0, p);
     }
 
     recursive? method discardUntil(p: recursive? fn(_: T) -> Bool): List<T> {
