@@ -1790,7 +1790,7 @@ class CPPBodyEmitter {
                 break;
             }
             case "enum_create": {
-                bodystr = `auto $$return = BSQEnum{ (uint32_t)BSQ_GET_VALUE_TAGGED_INT(${params[0]}), MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
+                bodystr = `auto $$return = BSQEnum{ (uint32_t)${params[0]}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
                 break;
             }
             case "idkey_from_simple": {
@@ -1973,6 +1973,13 @@ class CPPBodyEmitter {
                 else {
                     bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sum_mixed(${params[0]});`
                 }
+                break;
+            }
+            case "list_sort": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.typegen.getFunctorsForType(ctype).less;
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sort(${params[0]}, ${lambda}{});`
                 break;
             }
             case "list_filter": {
