@@ -638,16 +638,10 @@ class MIREmitter {
         return key;
     }
 
-    private closeConceptDecl(cpt: MIRConceptTypeDecl) {
+    private closeConceptDecl( cpt: MIRConceptTypeDecl) {
         cpt.provides.forEach((tkey) => {
             const ccdecl = this.masm.conceptDecls.get(tkey) as MIRConceptTypeDecl;
             this.closeConceptDecl(ccdecl);
-
-            ccdecl.fields.forEach((fd) => {
-                if (cpt.fields.findIndex((ff) => ff.name === fd.name) === -1) {
-                    cpt.fields.push(fd);
-                }
-            });
 
             ccdecl.vcallMap.forEach((vcall, vcname) => {
                 if (!cpt.vcallMap.has(vcname)) {
@@ -662,20 +656,12 @@ class MIREmitter {
             const ccdecl = this.masm.conceptDecls.get(tkey) as MIRConceptTypeDecl;
             this.closeConceptDecl(ccdecl);
 
-            ccdecl.fields.forEach((fd) => {
-                if (entity.fields.findIndex((ff) => ff.name === fd.name) === -1) {
-                    entity.fields.push(fd);
-                }
-            });
-
             ccdecl.vcallMap.forEach((vcall, vcname) => {
                 if (!entity.vcallMap.has(vcname)) {
                     entity.vcallMap.set(vcname, vcall);
                 }
             });
         });
-
-        entity.fields.sort((f1, f2) => f1.name.localeCompare(f2.name));
     }
 
     static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, validateLiteralStrings: boolean, functionalize: boolean, srcFiles: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
