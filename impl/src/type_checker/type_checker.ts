@@ -4907,8 +4907,7 @@ class TypeChecker {
             let fps: MIRFunctionParameter[] = [];
             let cargs = new Map<string, VarInfo>();
             let argTypes = new Map<string, MIRType>();
-            [...fields].sort((a, b) => a[0].localeCompare(b[0]))
-                .forEach((finfo) => {
+            [...fields].forEach((finfo) => {
                     const fname = `$${finfo[1][1].name}`;
                     const ftype = this.m_assembly.normalizeTypeOnly(finfo[1][1].declaredType, finfo[1][2]);
                     const mirftype = this.m_emitter.registerResolvedTypeReference(ftype);
@@ -5137,12 +5136,12 @@ class TypeChecker {
                 const mirthistype = this.m_emitter.registerResolvedTypeReference(ResolvedType.createSingle(ResolvedEntityAtomType.create(tdecl, binds)));
                 
                 const fields = this.m_assembly.getAllOOFields(tdecl, binds);
-                const allfields = [...fields].sort((a, b) => a[0].localeCompare(b[0])).map((field) => field[1]);
+                const allfields = [...fields].map((field) => field[1]);
 
                 const invcallinfo = allinvariants.map((invinfo) => {
                     const icall =  MIRKeyGenerator.generateStaticKey(invinfo[1], "@invariant_direct", invinfo[2], []);
 
-                    const fields = [...this.m_assembly.getAllOOFields(tdecl, binds)].sort((a, b) => a[0].localeCompare(b[0]));
+                    const fields = [...this.m_assembly.getAllOOFields(tdecl, binds)];
                     const cargs = fields.map((finfo) => ({name: `$${finfo[1][1].name}`, t: this.m_assembly.normalizeTypeOnly(finfo[1][1].declaredType, finfo[1][2])}));
 
                     return {ivk: icall, args: cargs};
@@ -5157,24 +5156,31 @@ class TypeChecker {
             //
 
             const fields: MIRFieldDecl[] = [];
-            tdecl.memberFields.forEach((f) => {
+            const finfos = [...this.m_assembly.getAllOOFields(tdecl, binds)];
+            finfos.forEach((ff) => {
+                const fi = ff[1];
+                const f = fi[1];
                 let dkey: string | undefined = undefined;
 
-                if (f.value !== undefined) {
-                    dkey = MIRKeyGenerator.generateStaticKey(tdecl, `${f.name}@@cons`, binds, []);
-                    const iname = `${MIRKeyGenerator.generateTypeKey(tdecl, binds)}::${f.name}@@cons`;
+                //only generate this if this is the declaring (enclosing) type
+                if (f.value !== undefined && fi[0].ns === tdecl.ns && fi[0].name === tdecl.name) {
+                    dkey = MIRKeyGenerator.generateStaticKey(fi[0], `${f.name}@@cons`, fi[2], []);
+                    const iname = `${MIRKeyGenerator.generateTypeKey(fi[0], fi[2])}::${f.name}@@cons`;
                     this.processGenerateSpecialExpFunction(dkey, iname, new Map<string, ResolvedType>(), f.value as Expression, f.declaredType, f.srcFile, f.sourceLocation);
                 }
 
-                const fkey = MIRKeyGenerator.generateFieldKey(tdecl, binds, f.name);
+                const fkey = MIRKeyGenerator.generateFieldKey(fi[0], fi[2], f.name);
                 const fpragmas = this.processPragmas(f.sourceLocation, f.pragmas);
                 const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
                 const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
 
-                const fname = `${tdecl.ns}::${tdecl.name}.${f.name}`;
+                const fname = `${fi[0].ns}::${fi[0].name}.${f.name}`;
                 const mfield = new MIRFieldDecl(tkey, f.attributes, fname, f.sourceLocation, f.srcFile, fkey, fpragmas, f.name, dtype.trkey, dkey);
                 fields.push(mfield);
-                this.m_emitter.masm.fieldDecls.set(fkey, mfield);
+
+                if(!this.m_emitter.masm.fieldDecls.has(fkey)) {
+                    this.m_emitter.masm.fieldDecls.set(fkey, mfield);
+                }
             });
 
             const ooname = `${tdecl.ns}::${tdecl.name}`;

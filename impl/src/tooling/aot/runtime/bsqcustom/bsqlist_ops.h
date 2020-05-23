@@ -305,7 +305,10 @@ public:
         entries.reserve(l->entries.size());
 
         std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m](T& v) -> U {
-            U vv = m->getValue(v);
+            U vv;
+            bool found = m->tryGetValue(v, &vv);
+            BSQ_ASSERT(found, "abort -- missing key for List<T>::projectWith");
+
             return RCIncU{}(vv);
         });
 

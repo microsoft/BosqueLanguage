@@ -730,7 +730,7 @@ entrypoint function sort(): Int {
     let l = List<Int>@{2, 7, 23, 0};
     
     let ll = l.sort(fn(a, b) => a < b);
-    check ll.size() == 7;
+    check ll.size() == 4;
     check ll.front() == 0;
     check ll.back() == 23;
 

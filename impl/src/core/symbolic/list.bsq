@@ -553,8 +553,13 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static s_sort(l: List<T>, lsize: Int, ol: List<T>, idx: Int, sf: recursive? fn(_: T, _: T) -> Bool): List<T> {
-        abort;
+    hidden recursive static s_sort(l: List<T>, sf: recursive? fn(_: T, _: T) -> Bool): List<T> {
+        if(List<T>::s_size(l) <= 1) {
+            return l;
+        }
+        else {
+            abort;
+        }
     }
 
     hidden recursive static s_toIndexMap<V>(l: List<T>, lsize: Int, mp: Map<Int, T>, idx: Int): Map<Int, T> {
@@ -1040,7 +1045,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method sort(cmp: recursive? fn(_: T, _: T) -> Bool): List<T> {
-        return List<T>::s_sort[recursive](this, List<T>::s_size(this), List<T>@{}, 0, cmp);
+        return List<T>::s_sort[recursive](this, cmp);
     }
 
     method toIndexMap(): Map<Int, T> {
