@@ -51,8 +51,9 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     hidden recursive? static s_map<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> # list_map
     hidden recursive? static s_mapindex<U>(l: List<T>, f: recursive? fn(_: T, _: Int) -> U): List<U> # list_mapindex
 
-    hidden static {when T KeyType} s_project<U>(l: List<T>, m: Map<T, U>): List<U> # list_project
-    hidden static {when T KeyType} s_tryproject<U>(l: List<T>, m: Map<T, U>): List<U?> # list_tryproject
+    hidden static {when T KeyType} s_projectWMap<U>(l: List<T>, m: Map<T, U>): List<U> # list_project
+    hidden static {when T KeyType} s_tryProjectWMap<U>(l: List<T>, m: Map<T, U>): List<U?> # list_tryproject
+    hidden static {when T KeyType} s_defaultProjectWMap<U>(l: List<T>, m: Map<T, U>, d: U): List<U> # list_defaultproject
 
     hidden static  s_zipindex(l: List<T>): List<[Int, T]> # list_zipindex
 
@@ -64,8 +65,9 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     hidden recursive? static s_partition<K where KeyType>(l: List<T>, pf: recursive? fn(_: T) -> K): Map<K, List<T>> # list_partition
     hidden recursive? static s_sort(l: List<T>, cmp: recursive? fn(_: T, _: T) -> Bool): List<T> # list_sort
 
-    hidden recursive? static s_toMap<K where KeyType, V>(l: List<T>, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge: Bool): Map<K, V> # list_tomap
-    hidden recursive? static s_toIndexMap<V>(l: List<T>, vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> # list_toindexmap
+    hidden static s_toIndexMap<V>(l: List<T>): Map<Int, T> # list_toindexmap
+    hidden recursive? static s_transformIndexMap<V>(l: List<T>, vf: recursive? fn(_: T) -> V): Map<Int, V> # list_transformIndexMap
+    hidden recursive? static s_transformMap<K, V>(l: List<T>, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge: Bool): Map<K, V> # listtransformMap
 
     hidden static s_rangeInBounds(l: List<T>, start: Int?, end: Int?): Bool {
         let s, e = start ?| 0, end ?| List<T>::s_size(l);
@@ -476,12 +478,16 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_mapindex<U>[recursive?](this, f);
     }
 
-    method {when T KeyType} project<U>(m: Map<T, U>): List<U> {
+    method {when T KeyType} projectWithMap<U>(m: Map<T, U>): List<U> {
         return List<T>::s_projectWMap<U>(this, m); 
     }
 
-    method {when T KeyType} tryProject<U>(m: Map<T, U>): List<U?> {
+    method {when T KeyType} tryProjectWithMap<U>(m: Map<T, U>): List<U?> {
         return List<T>::s_tryProjectWMap<U>(this, m);
+    }
+
+    method {when T KeyType} defaultProjectWithMap<U>(default: U, m: Map<T, U>): List<U> {
+        return List<T>::s_defaultProjectWMap<U>(this, m, default);
     }
 
     method zipIndex(): List<[Int, T]> {
@@ -512,12 +518,16 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_sort[recursive?](this, cmp);
     }
 
-    recursive? method toMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge?: Bool): Map<K, V> {
-        return List<T>::s_toMap<K, V>[recursive?](this, kf, vf, Truthy::truth(merge));
+    method toIndexMap(): Map<Int, T> {
+        return List<T>::s_toIndexMap(this);
     }
 
-    recursive? method toIndexMap<V>(vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> {
-        return List<T>::s_toIndexMap<K, V>[recursive?](this, vf);
+    recursive? method transformToIndexMap<V>(vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> {
+        return List<T>::s_transformIndexMap<V>[recursive](this, vf);
+    }
+
+    recursive? method transformToMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge?: Bool): Map<K, V> {
+        return List<T>::s_transformMap<K, V>[recursive](this, kf, vf, Truthy::truth(merge));
     }
 }
 

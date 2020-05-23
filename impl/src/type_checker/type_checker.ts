@@ -1013,7 +1013,7 @@ class TypeChecker {
 
             if (this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::KeyList") !== undefined) {
                 const klobj = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::KeyList") as EntityTypeDecl;
-                const klbinds = new Map<string, ResolvedType>().set("K", this.m_assembly.getTypeProjection(oftype.binds.get("K") as ResolvedType, this.m_assembly.getSpecialKeyTypeConceptType()));
+                const klbinds = new Map<string, ResolvedType>().set("K", oftype.binds.get("K") as ResolvedType);
                 const kltype = ResolvedType.createSingle(ResolvedEntityAtomType.create(klobj, klbinds));
                 this.m_emitter.registerResolvedTypeReference(kltype);
                 this.m_emitter.registerTypeInstantiation(klobj, klbinds);
@@ -3148,6 +3148,9 @@ class TypeChecker {
         if (this.m_emitEnabled) {
             this.m_emitter.registerResolvedTypeReference(mtype);
             this.m_emitter.registerTypeInstantiation(mentity, mbinds);
+            const tkey = MIRKeyGenerator.generateTypeKey(mentity, mbinds);
+
+            this.m_emitter.bodyEmitter.emitConstructorPrimary(exp.sinfo, tkey, [kreg, vreg], trgt);
         }
 
         return [env.setExpressionResult(mtype)];

@@ -615,7 +615,7 @@ class CPPTypeEmitter {
     buildIncOpForType(tt: MIRType, arg: string): string {
         const rcinfo = this.getRefCountableStatus(tt);
         if (rcinfo === "no") {
-            return arg;
+            return "";
         }
         else {
             const tr = this.getCPPReprFor(tt);
@@ -628,7 +628,7 @@ class CPPTypeEmitter {
                 return `INC_REF_CHECK(${tr.base}, ${arg})`;
             }
             else {
-                return `RCIncFunctor_${tr.base}{}(${arg})`
+                return `RCIncFunctor_${tr.base}{}(${arg})`;
             }
         }
     }
@@ -636,21 +636,21 @@ class CPPTypeEmitter {
     buildReturnOpForType(tt: MIRType, arg: string, scope: string): string {
         const rcinfo = this.getRefCountableStatus(tt);
         if (rcinfo === "no") {
-            return ";";
+            return "";
         }
         else {
             const tr = this.getCPPReprFor(tt);
             if (rcinfo === "ephemeral") {
-                return `(${arg}).processForCallReturn(${scope});`;
+                return `(${arg}).processForCallReturn(${scope})`;
             }
             else if (rcinfo === "direct") {
-                return `${scope}.callReturnDirect(${arg});`;
+                return `${scope}.callReturnDirect(${arg})`;
             }
             else if (rcinfo === "checked") {
-                return `${scope}.processReturnChecked(${arg});`;
+                return `${scope}.processReturnChecked(${arg})`;
             }
             else {
-                return `RCReturnFunctor_${tr.base}{}(${arg}, ${scope});`
+                return `RCReturnFunctor_${tr.base}{}(${arg}, ${scope})`;
             }
         }
     }
@@ -845,7 +845,7 @@ class CPPTypeEmitter {
         const kops = this.getFunctorsForType(typek);
         const vops = this.getFunctorsForType(typev);
 
-        const bc = `BSQMap<${krepr.std}, ${kops.dec}, ${kops.display}, ${kops.eq}, ${kops.less}, ${vrepr.std}, ${vops.dec}, ${vops.display}>`;
+        const bc = `BSQMap<${krepr.std}, ${kops.dec}, ${kops.display}, ${kops.less}, ${kops.eq}, ${vrepr.std}, ${vops.dec}, ${vops.display}>`;
         const decl = `class ${declrepr.base} : public ${bc}\n`
         + "{\n"
         + "public:\n"
