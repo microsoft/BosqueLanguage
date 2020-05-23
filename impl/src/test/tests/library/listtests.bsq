@@ -680,6 +680,16 @@ entrypoint function mapindexop(): Int {
     return 0;
 }
 
+entrypoint function sort(): Int {
+    let l = List<Int>@{2, 7, 8, 23, 0, 5, 9};
+    
+    let ll = l.sort(fn(a, b) => a < b);
+    check ll.size() == 7;
+    check ll.front() == 0;
+    check ll.back() == 23;
+
+    return 0;
+}
 
 
 
