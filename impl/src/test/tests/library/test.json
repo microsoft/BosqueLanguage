@@ -286,6 +286,11 @@
                 "expected": "0"
             },
             {
+                "kind": "aot",
+                "entrypoint": "sort",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"

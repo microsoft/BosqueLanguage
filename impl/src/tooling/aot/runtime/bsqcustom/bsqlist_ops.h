@@ -452,15 +452,15 @@ public:
     }
 
     template <typename LambdaCMP>
-    static Ty* list_sort(Ty* l)
+    static Ty* list_sort(Ty* l, LambdaCMP cmp)
     {
         std::vector<T> entries;
         entries.reserve(l->entries.size());
 
-        std::for_each(l->begin(), l->end(), [&entries](T& v) {
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
             entries.push_back(RCIncF{}(v));
         });
-        std::stable_sort(entries.begin(), entries.end(), LambdaCMP{});
+        std::stable_sort(entries.begin(), entries.end(), cmp);
 
         return BSQ_NEW_NO_RC(Ty, l->nominalType, move(entries));
     }
