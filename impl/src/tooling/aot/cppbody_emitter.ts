@@ -1975,6 +1975,13 @@ class CPPBodyEmitter {
                 }
                 break;
             }
+            case "list_sort": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const lambda = this.typegen.getFunctorsForType(ctype).less;
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_sort(${params[0]}, ${lambda}{});`
+                break;
+            }
             case "list_filter": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
