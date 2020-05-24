@@ -569,6 +569,11 @@
                 "kind": "symexec",
                 "entrypoint": "defaultprojectop",
                 "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "sort",
+                "expected": "0"
             }
         ]
     }
