@@ -327,7 +327,7 @@ class CPPBodyEmitter {
             const entrykaccess = this.typegen.mangleStringForCpp((entryentity.fields.find((fd) => fd.name === "key") as MIRFieldDecl).fkey);
             const entryvaccess = this.typegen.mangleStringForCpp((entryentity.fields.find((fd) => fd.name === "value") as MIRFieldDecl).fkey);
 
-            const cvals = cpcs.args.map((arg) => `std::make_pair(${this.argToCpp(arg, oftype)}.${entrykaccess}, ${this.argToCpp(arg, oftype)}.${entryvaccess})`);
+            const cvals = cpcs.args.map((arg) => `MEntry<${this.typegen.getCPPReprFor(ktype).std}, ${this.typegen.getCPPReprFor(vtype).std}>{${this.argToCpp(arg, oftype)}.${entrykaccess}, ${this.argToCpp(arg, oftype)}.${entryvaccess}}`);
             
             const krepr = this.typegen.getCPPReprFor(ktype);
             const kops = this.typegen.getFunctorsForType(ktype);
@@ -1626,7 +1626,7 @@ class CPPBodyEmitter {
         if (block.label === "exit") {
             const rctype = this.typegen.getRefCountableStatus(this.currentRType);
             if(rctype !== "no") {
-                gblock.push(this.typegen.buildReturnOpForType(this.currentRType, "$$return", "$callerscope$"));
+                gblock.push(this.typegen.buildReturnOpForType(this.currentRType, "$$return", "$callerscope$") + ";");
             }
             
             gblock.push("return $$return;");
@@ -1723,38 +1723,59 @@ class CPPBodyEmitter {
         return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("T") as MIRType;
     }
 
-    getListResultTypeFor(idecl: MIRInvokePrimitiveDecl): [string, string, string] {
+    getListResultTypeFor(idecl: MIRInvokePrimitiveDecl): [string, string, string, string] {
         const le = this.typegen.assembly.entityDecls.get(idecl.resultType as string) as MIREntityTypeDecl;
         const ltype = this.typegen.getMIRType(le.tkey);
         const ctype = le.terms.get("T") as MIRType;
-        return [this.typegen.getCPPReprFor(ltype).base, this.typegen.getCPPReprFor(ctype).base, `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(le.tkey)}`];
+        const uinc = this.typegen.getFunctorsForType(ctype).inc;
+        return [this.typegen.getCPPReprFor(ltype).base, this.typegen.getCPPReprFor(ctype).base, `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(le.tkey)}`, uinc];
     }
 
     getSetContentsInfoForSetOp(idecl: MIRInvokePrimitiveDecl): MIRType {
         return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("T") as MIRType;
     }
 
-    getMapKeyContentsInfoForMapOp(idecl: MIRInvokePrimitiveDecl): MIRType {
-        return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("K") as MIRType;
+    getMapKeyContentsInfoForMapType(decl: MIRResolvedTypeKey): MIRType {
+        return (this.typegen.assembly.entityDecls.get(decl) as MIREntityTypeDecl).terms.get("K") as MIRType;
     }
 
-    getMapValueContentsInfoForMapOp(idecl: MIRInvokePrimitiveDecl): MIRType {
-        return (this.typegen.assembly.entityDecls.get(idecl.enclosingDecl as string) as MIREntityTypeDecl).terms.get("V") as MIRType;
+    getMapValueContentsInfoForMapType(decl: MIRResolvedTypeKey): MIRType {
+        return (this.typegen.assembly.entityDecls.get(decl) as MIREntityTypeDecl).terms.get("V") as MIRType;
     }
 
-    getMEntryTypeForMapOp(idecl: MIRInvokePrimitiveDecl): string {
-        const ktd = this.typegen.getCPPReprFor(this.getMapKeyContentsInfoForMapOp(idecl)).std;
-        const vtd = this.typegen.getCPPReprFor(this.getMapValueContentsInfoForMapOp(idecl)).std;
+    getMEntryTypeForMapType(decl: MIRResolvedTypeKey): string {
+        const ktd = this.typegen.getCPPReprFor(this.getMapKeyContentsInfoForMapType(decl)).std;
+        const vtd = this.typegen.getCPPReprFor(this.getMapValueContentsInfoForMapType(decl)).std;
 
         return `MEntry<${ktd}, ${vtd}>`;
     }
 
-    getMEntryCmpTypeForMapOp(idecl: MIRInvokePrimitiveDecl): string {
-        const ktd = this.typegen.getCPPReprFor(this.getMapKeyContentsInfoForMapOp(idecl)).std;
-        const kcmp = this.typegen.getFunctorsForType(this.getMapKeyContentsInfoForMapOp(idecl)).less;
-        const vtd = this.typegen.getCPPReprFor(this.getMapValueContentsInfoForMapOp(idecl)).std;
+    getMEntryCmpTypeForMapType(decl: MIRResolvedTypeKey): string {
+        const ktd = this.typegen.getCPPReprFor(this.getMapKeyContentsInfoForMapType(decl)).std;
+        const kcmp = this.typegen.getFunctorsForType(this.getMapKeyContentsInfoForMapType(decl)).less;
+        const vtd = this.typegen.getCPPReprFor(this.getMapValueContentsInfoForMapType(decl)).std;
 
         return `MEntryCMP<${ktd}, ${vtd}, ${kcmp}>`;
+    }
+
+    getEnclosingMapTypeForMapOp(idecl: MIRInvokePrimitiveDecl): MIRType {
+        return this.typegen.getMIRType(idecl.enclosingDecl as string);
+    }
+
+    getMapKeyContentsInfoForMapOp(idecl: MIRInvokePrimitiveDecl): MIRType {
+        return this.getMapKeyContentsInfoForMapType(idecl.enclosingDecl as string);
+    }
+
+    getMapValueContentsInfoForMapOp(idecl: MIRInvokePrimitiveDecl): MIRType {
+        return this.getMapValueContentsInfoForMapType(idecl.enclosingDecl as string);
+    }
+
+    getMEntryTypeForMapOp(idecl: MIRInvokePrimitiveDecl): string {
+        return this.getMEntryTypeForMapType(idecl.enclosingDecl as string);
+    }
+
+    getMEntryCmpTypeForMapOp(idecl: MIRInvokePrimitiveDecl): string {
+        return this.getMEntryCmpTypeForMapType(idecl.enclosingDecl as string);
     }
 
     createListOpsFor(ltype: MIRType, ctype: MIRType): string {
@@ -2106,6 +2127,46 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
                 break;
             }
+            case "list_project": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag, incu] = this.getListResultTypeFor(idecl);
+                const mapt = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+                const cmp = this.getMEntryCmpTypeForMapType(idecl.params[1].type);
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_project<${utype}, ${ucontents}, ${utag}, ${mapt}, ${incu}, ${cmp}>(${params[0]}, ${params[1]});`
+                break;
+            }
+            case "list_tryproject": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag, incu] = this.getListResultTypeFor(idecl);
+                const mapt = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+                const cmp = this.getMEntryCmpTypeForMapType(idecl.params[1].type);
+
+                const mirutype = (this.typegen.assembly.entityDecls.get(this.typegen.getMIRType(idecl.resultType).trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const utyperepr = this.typegen.getCPPReprFor(mirutype);
+
+                const mirvvtype = (this.typegen.assembly.entityDecls.get(this.typegen.getMIRType(idecl.params[1].type).trkey) as MIREntityTypeDecl).terms.get("V") as MIRType;
+                const vvtyperepr = this.typegen.getCPPReprFor(mirvvtype);
+
+                const codecc = this.typegen.coerce("ccv", mirvvtype, mirutype);
+                const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} ccv) -> ${utyperepr.std} { return ${codecc}; }`;
+                const unone = this.typegen.coerce("BSQ_VALUE_NONE", this.typegen.noneType, mirutype);
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_tryproject<${utype}, ${ucontents}, ${vvtyperepr.std}, ${utag}, ${mapt}, ${incu}, ${cmp}>(${params[0]}, ${params[1]}, ${unone}, ${lambdacc});`
+                break;
+            }
+            case "list_defaultproject": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag, incu] = this.getListResultTypeFor(idecl);
+                const mapt = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+                const cmp = this.getMEntryCmpTypeForMapType(idecl.params[1].type);
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_defaultproject<${utype}, ${ucontents}, ${utag}, ${mapt}, ${incu}, ${cmp}>(${params[0]}, ${params[1]}, ${params[2]});`
+                break;
+            }
             case "set_size": {
                 bodystr = `auto $$return = ${params[0]}->entries.size();`;
                 break;
@@ -2120,13 +2181,11 @@ class CPPBodyEmitter {
                 break;
             }
             case "map_has_key": {
-                const kcmp = this.getMEntryCmpTypeForMapOp(idecl);
-                bodystr = `auto $$return = std::binary_search(${params[0]}->entries.begin(), ${params[0]}->entries.end(), ${params[1]}, ${kcmp}{});`;
+                bodystr = `auto $$return = ${params[0]}->hasKey(${params[1]});`;
                 break;
             }
             case "map_at_val": {
-                const kcmp = this.getMEntryCmpTypeForMapOp(idecl);
-                bodystr = `auto $$return = std::lower_bound(${params[0]}->entries.begin(), ${params[0]}->entries.end(), ${params[1]}, ${kcmp}{}).value;`;
+                bodystr = `auto $$return = ${params[0]}->getValue(${params[1]});`;
                 break;
             }
             /*
@@ -2191,7 +2250,7 @@ class CPPBodyEmitter {
         const refscope = `BSQRefScope ${scopevar};`;
         let returnmgr = "";
         if (this.typegen.getRefCountableStatus(this.currentRType) !== "no") {
-            returnmgr = this.typegen.buildReturnOpForType(this.currentRType, "$$return", "$callerscope$");
+            returnmgr = this.typegen.buildReturnOpForType(this.currentRType, "$$return", "$callerscope$") + ";";
         }
 
         return "\n    " + refscope + "\n    " + bodystr + "\n    " + returnmgr + "\n    " + "return $$return;\n";

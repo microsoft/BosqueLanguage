@@ -266,6 +266,31 @@
                 "expected": "0"
             },
             {
+                "kind": "aot",
+                "entrypoint": "projectop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "projecterr",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "tryprojectop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "defaultprojectop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "sort",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
@@ -523,6 +548,26 @@
             {
                 "kind": "symexec",
                 "entrypoint": "mapindexop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "projectop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "projecterr",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "tryprojectop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "defaultprojectop",
                 "expected": "0"
             }
         ]

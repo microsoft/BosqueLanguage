@@ -42,20 +42,44 @@ class BSQMap : public BSQObject
 public:
     std::vector<MEntry<K, V>> entries;
     
+    inline bool hasKey(K k)
+    {
+        auto ipos = std::lower_bound(this->entries.begin(), this->entries.end(), k, [](const MEntry<K, V>& entry, K kval){ return K_CMP{}(entry.key, kval); });
+        return ipos != this->entries.end() && K_EQ{}(k, ipos->key);
+    }
+
+    inline V getValue(K k)
+    {
+        return std::lower_bound(this->entries.begin(), this->entries.end(), k, [](const MEntry<K, V>& entry, K kval){ return K_CMP{}(entry.key, kval); })->value;
+    }
+
+    inline bool tryGetValue(K k, V* res)
+    {
+        auto ipos = std::lower_bound(this->entries.begin(), this->entries.end(), k, [](const MEntry<K, V>& entry, K kval){ return K_CMP{}(entry.key, kval); });
+        bool found = ipos != this->entries.end() && K_EQ{}(k, ipos->key);
+
+        if(found)
+        {
+            *res = ipos->value;
+        }
+
+        return found;
+    }
+
     template <typename K_INC, typename V_INC>
-    inline static std::vector<MEntry<K, V>> processSingletonMapInit(std::vector<std::pair<K, V>> src) {
+    inline static std::vector<MEntry<K, V>> processSingletonMapInit(std::vector<MEntry<K, V>> src) {
         std::vector<MEntry<K, V>> res;
         res.reserve(src.size());
 
-        std::transform(src.begin(), src.end(), back_inserter(res), [](const std::pair<K, V>& entry) {
-            return MEntry<K, V>(K_INC{}(entry.first), V_INC{}(entry.second));
+        std::transform(src.begin(), src.end(), back_inserter(res), [](const MEntry<K, V>& entry) {
+            return MEntry<K, V>{K_INC{}(entry.key), V_INC{}(entry.value)};
         });
     
-        std::stable_sort(src.begin(), src.end(), MEntryCMP<K, V, K_CMP>{});
-        auto dup = std::adjacent_find(src.begin(), src.end(), MEntryEQ<K, V, K_EQ>{});
-        BSQ_ASSERT(dup == src.end(), "abort -- duplicate key found in Map initialization");
+        std::stable_sort(res.begin(), res.end(), MEntryCMP<K, V, K_CMP>{});
+        auto dup = std::adjacent_find(res.begin(), res.end(), MEntryEQ<K, V, K_EQ>{});
+        BSQ_ASSERT(dup == res.end(), "abort -- duplicate key found in Map initialization");
 
-        return src;
+        return res;
     }
 
     BSQMap(MIRNominalTypeEnum ntype) : BSQObject(ntype), entries() { ; }
@@ -86,7 +110,7 @@ public:
             }
             first = false;
 
-            ms += K_Display(iter->key) + " => " + V_Display(iter->value);
+            ms += K_DisplayF{}(iter->key) + " => " + V_DisplayF{}(iter->value);
         }
         ms += "}";
 

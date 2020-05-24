@@ -680,16 +680,61 @@ entrypoint function mapindexop(): Int {
     return 0;
 }
 
+entrypoint function projectop(): Int {
+    let l = List<Int>@{1, 2, 3};
+    let m = Map<Int, Bool>@{1 => true, 2 => true, 3 => false};
+
+    let ll = l.projectWithMap<Bool>(m);
+    check ll.size() == 3;
+    check ll.front() == true;
+    check ll.back() == false;
+
+    return 0;
+}
+
+entrypoint function projecterr(): Int {
+    let l = List<Int>@{1, 0, 3};
+    let m = Map<Int, Bool>@{1 => true, 2 => true, 3 => false};
+
+    let ll = l.projectWithMap<Bool>(m);
+    return ll.size();
+}
+
+entrypoint function tryprojectop(): Int {
+    let l = List<Int>@{1, 0, 3};
+    let m = Map<Int, Bool>@{1 => true, 2 => true, 3 => false};
+
+    let ll = l.tryProjectWithMap<Bool>(m);
+    check ll.size() == 3;
+    check ll.front() == true;
+    check ll.get(1) == none;
+    check ll.back() == false;
+
+    return 0;
+}
+
+entrypoint function defaultprojectop(): Int {
+    let l = List<Int>@{1, 0, 3};
+    let m = Map<Int, Bool>@{1 => true, 2 => true, 3 => false};
+
+    let ll = l.defaultProjectWithMap<Bool>(false, m);
+    check ll.size() == 3;
+    check ll.front() == true;
+    check ll.get(1) == false;
+    check ll.back() == false;
+
+    return 0;
+}
+
 entrypoint function sort(): Int {
-    let l = List<Int>@{2, 7, 8, 23, 0, 5, 9};
+    let l = List<Int>@{2, 7, 23, 0};
     
     let ll = l.sort(fn(a, b) => a < b);
-    check ll.size() == 7;
+    check ll.size() == 4;
     check ll.front() == 0;
     check ll.back() == 23;
 
     return 0;
 }
-
 
 

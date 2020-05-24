@@ -298,30 +298,63 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaGet>
-    static BSQList<U, U_RCDecF, U_DisplayF>* list_project(Ty* l)
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP>
+    static ListU* list_project(Ty* l, MapT* m)
     {
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [](T& v) -> U {
-            return LambdaGet{}(v);
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m](T& v) -> U {
+            U vv;
+            bool found = m->tryGetValue(v, &vv);
+            BSQ_ASSERT(found, "abort -- missing key for List<T>::projectWith");
+
+            return RCIncU{}(vv);
         });
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaGet>
-    static BSQList<U, U_RCDecF, U_DisplayF>* list_tryproject(Ty* l)
+    template <typename ListU, typename LU, typename UU, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP, typename LambdaCC>
+    static ListU* list_tryproject(Ty* l, MapT* m, LU unone, LambdaCC cc)
+    {
+        std::vector<LU> entries;
+        entries.reserve(l->entries.size());
+
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m, unone, cc](T& v) -> LU {
+            UU vv;
+            if(m->tryGetValue(v, &vv))
+            {
+                return RCIncU{}(cc(vv));
+            }
+            else
+            {
+                return unone;
+            }
+        });
+
+        return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
+    }
+
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP>
+    static ListU* list_defaultproject(Ty* l, MapT* m, U dval)
     {
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [](T& v) -> U {
-            return LambdaGet{}(v);
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m, dval](T& v) -> U {
+            U vv;
+            if(m->tryGetValue(v, &vv))
+            {
+                return RCIncU{}(vv);
+            }
+            else
+            {
+                return RCIncU{}(dval);
+            }
         });
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
     template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaZip>
