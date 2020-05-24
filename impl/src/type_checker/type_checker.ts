@@ -5160,27 +5160,29 @@ class TypeChecker {
             finfos.forEach((ff) => {
                 const fi = ff[1];
                 const f = fi[1];
-                let dkey: string | undefined = undefined;
-
-                //only generate this if this is the declaring (enclosing) type
-                if (f.value !== undefined && fi[0].ns === tdecl.ns && fi[0].name === tdecl.name) {
-                    dkey = MIRKeyGenerator.generateStaticKey(fi[0], `${f.name}@@cons`, fi[2], []);
-                    const iname = `${MIRKeyGenerator.generateTypeKey(fi[0], fi[2])}::${f.name}@@cons`;
-                    this.processGenerateSpecialExpFunction(dkey, iname, new Map<string, ResolvedType>(), f.value as Expression, f.declaredType, f.srcFile, f.sourceLocation);
-                }
 
                 const fkey = MIRKeyGenerator.generateFieldKey(fi[0], fi[2], f.name);
-                const fpragmas = this.processPragmas(f.sourceLocation, f.pragmas);
-                const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
-                const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
+                if (!this.m_emitter.masm.fieldDecls.has(fkey)) {
+                    let dkey: string | undefined = undefined;
 
-                const fname = `${fi[0].ns}::${fi[0].name}.${f.name}`;
-                const mfield = new MIRFieldDecl(tkey, f.attributes, fname, f.sourceLocation, f.srcFile, fkey, fpragmas, f.name, dtype.trkey, dkey);
-                fields.push(mfield);
+                    //only generate this if this is the declaring (enclosing) type
+                    if (f.value !== undefined && fi[0].ns === tdecl.ns && fi[0].name === tdecl.name) {
+                        dkey = MIRKeyGenerator.generateStaticKey(fi[0], `${f.name}@@cons`, fi[2], []);
+                        const iname = `${MIRKeyGenerator.generateTypeKey(fi[0], fi[2])}::${f.name}@@cons`;
+                        this.processGenerateSpecialExpFunction(dkey, iname, new Map<string, ResolvedType>(), f.value as Expression, f.declaredType, f.srcFile, f.sourceLocation);
+                    }
 
-                if(!this.m_emitter.masm.fieldDecls.has(fkey)) {
+
+                    const fpragmas = this.processPragmas(f.sourceLocation, f.pragmas);
+                    const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
+                    const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
+
+                    const fname = `${fi[0].ns}::${fi[0].name}.${f.name}`;
+                    const mfield = new MIRFieldDecl(tkey, f.attributes, fname, f.sourceLocation, f.srcFile, fkey, fpragmas, f.name, dtype.trkey, dkey);
                     this.m_emitter.masm.fieldDecls.set(fkey, mfield);
                 }
+
+                fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
             });
 
             const ooname = `${tdecl.ns}::${tdecl.name}`;

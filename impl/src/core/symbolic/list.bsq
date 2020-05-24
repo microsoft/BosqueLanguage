@@ -553,12 +553,41 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static s_sort(l: List<T>, sf: recursive? fn(_: T, _: T) -> Bool): List<T> {
-        if(List<T>::s_size(l) <= 1) {
+    hidden recursive static s_sortsplit(l: List<T>, lsize: Int, e: T, ll: List<T>, le: List<T>, lu: List<T>, idx: Int, sf: recursive? fn(_: T, _: T) -> Bool): List<T>, List<T>, List<T> {
+        if(idx == lsize) {
+            return ll, le, lu;
+        }
+        else {
+            let val = List<T>::s_unsafe_get(l, idx);
+            
+            let lt = sf[recursive?](val, e);
+            let gt = sf[recursive?](e, val);
+            if(!lt && !gt) {
+                return List<T>::s_sortsplit[recursive](l, lsize, e, ll, List<T>::s_unsafe_push(le, val), lu, idx + 1, sf);
+            }
+            else {
+                if(lt) {
+                    return List<T>::s_sortsplit[recursive](l, lsize, e, List<T>::s_unsafe_push(ll, val), le, lu, idx + 1, sf);
+                }
+                else {
+                    return List<T>::s_sortsplit[recursive](l, lsize, e, ll, le, List<T>::s_unsafe_push(lu, val), idx + 1, sf);
+                }
+            }
+        }
+    }
+
+    hidden recursive static s_sort(l: List<T>, lsize: Int, sf: recursive? fn(_: T, _: T) -> Bool): List<T> {
+        if(lsize <= 1) {
             return l;
         }
         else {
-            abort;
+            let e = List<T>::s_unsafe_get(l, 0);
+
+            let ll, le, lu = List<T>::s_sortsplit[recursive](l, lsize, e, List<T>@{}, List<T>@{}, List<T>@{}, 0, sf);
+            let lls = List<T>::s_sort[recursive](ll, List<T>::s_size(ll), sf);
+            let llu = List<T>::s_sort[recursive](lu, List<T>::s_size(lu), sf);
+
+            return lls.append(le).append(llu);
         }
     }
 
@@ -1045,7 +1074,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method sort(cmp: recursive? fn(_: T, _: T) -> Bool): List<T> {
-        return List<T>::s_sort[recursive](this, cmp);
+        return List<T>::s_sort[recursive](this, List<T>::s_size(this), cmp);
     }
 
     method toIndexMap(): Map<Int, T> {
