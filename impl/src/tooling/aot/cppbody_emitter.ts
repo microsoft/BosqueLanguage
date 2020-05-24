@@ -1797,7 +1797,7 @@ class CPPBodyEmitter {
         const cargs = pc.cargs.map((ca) => this.typegen.mangleStringForCpp(ca));
         const rrepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(pci.resultType));
 
-        return `[&](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`
+        return `[](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`
     }
 
     generateBuiltinBody(idecl: MIRInvokePrimitiveDecl, params: string[]): string {
@@ -2167,6 +2167,18 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_defaultproject<${utype}, ${ucontents}, ${utag}, ${mapt}, ${incu}, ${cmp}>(${params[0]}, ${params[1]}, ${params[2]});`
                 break;
             }
+            case "list_zipindex": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
+            
+                const codecc = this.typegen.coerce("u", ctype, this.typegen.anyType);
+                const lambda = `[&${scopevar}](int64_t i, ${ucontents} u) -> ${utype} { return BSQTuple{ BSQ_ENCODE_VALUE_TAGGED_INT(i), INC_REF_CHECK(Value, ${codecc}) }; }`
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_zipindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
+                break;
+            }
+
             case "set_size": {
                 bodystr = `auto $$return = ${params[0]}->entries.size();`;
                 break;
