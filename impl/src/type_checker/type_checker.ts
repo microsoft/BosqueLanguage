@@ -4240,7 +4240,9 @@ class TypeChecker {
                 opts = [tval, ntval];
             }
 
-            nexttype = this.m_assembly.restrictNotT(sexp, tmatch);
+            if(guard.optionalWhen === undefined) {
+                nexttype = this.m_assembly.restrictNotT(sexp, tmatch);
+            }
         }
         else {
             const sguard = guard as StructureMatchGuard;
