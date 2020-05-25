@@ -1404,8 +1404,8 @@ In addition to single variable declarations and assignments the Bosque language 
 ```none
 [let x: Int, let y: Int] = [1, 2];               //declare and assign x=1, y=2 (explicit types)
 {f=let x, g=let y} = {f=1, g=2};                 //declare and assign x=1, y=2 (infer types)
-{f=let x, g=@[let y, let z]} = {f=1, g=@[2, 3]}; //declare x=1, y=2, and z=3
-Pair@{f=let x, s=let y} = Pair@{f=1, s=2};       //declare x, y and assign from entity or concept
+{f=let x, g=[let y, let z]} = {f=1, g=[2, 3]}; //declare x=1, y=2, and z=3
+Pair@{f=let x, s=let y} = Pair{f=1, s=2};       //declare x, y and assign from entity or concept
 (|let x, let y|) = foo(5)                        //declare x, y and assign from value pack typed expression
 ```
 
@@ -1477,13 +1477,13 @@ function absy(x?: Int): Int {
         return 0;
     }
 
-    return {
+    return {|
         var y = x;
         if(y < 0) {
             y = -y;
         }
         yield y;
-    }
+    |};
 }
 ```
 

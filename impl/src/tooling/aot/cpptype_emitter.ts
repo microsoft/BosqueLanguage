@@ -472,7 +472,7 @@ class CPPTypeEmitter {
                 }
                 else {
                     if(trinto.base === "BSQTuple" || trinto.base === "BSQRecord") {
-                        return `*${exp}`
+                        return `*(BSQ_GET_VALUE_PTR(${exp}, ${trinto.base}))`;
                     }
                     else {
                         return `BSQ_GET_VALUE_PTR(${exp}, ${trinto.boxed})->bval`;
@@ -499,7 +499,7 @@ class CPPTypeEmitter {
                 }
                 else {
                     if(trinto.base === "BSQTuple" || trinto.base === "BSQRecord") {
-                        return `*${exp}`
+                        return `*(BSQ_GET_VALUE_PTR(${exp}, ${trinto.base}))`;
                     }
                     else {
                         return `BSQ_GET_VALUE_PTR(${exp}, ${trinto.boxed})->bval`;

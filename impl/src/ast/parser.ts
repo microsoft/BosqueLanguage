@@ -1792,11 +1792,11 @@ class Parser {
         }
     }
 
-    private parseMapEntryConstructorExpression(): Expression {
+    private parseMapEntryConstructorExpression(disallowMapEntry?: boolean): Expression {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseOrExpression();
 
-        if (this.testAndConsumeTokenIf("=>")) {
+        if (!(disallowMapEntry) && this.testAndConsumeTokenIf("=>")) {
             return new MapEntryConstructorExpression(sinfo, exp, this.parseMapEntryConstructorExpression());
         }
         else {
@@ -1804,14 +1804,14 @@ class Parser {
         }
     }
 
-    private parseSelectExpression(): Expression {
+    private parseSelectExpression(disallowMapEntry?: boolean): Expression {
         const sinfo = this.getCurrentSrcInfo();
-        const texp = this.parseMapEntryConstructorExpression();
+        const texp = this.parseMapEntryConstructorExpression(disallowMapEntry);
 
         if (this.testAndConsumeTokenIf("?")) {
-            const exp1 = this.parseMapEntryConstructorExpression();
+            const exp1 = this.parseMapEntryConstructorExpression(disallowMapEntry);
             this.ensureAndConsumeToken(":");
-            const exp2 = this.parseSelectExpression();
+            const exp2 = this.parseSelectExpression(disallowMapEntry);
 
             return new SelectExpression(sinfo, texp, exp1, exp2);
         }
@@ -2482,7 +2482,7 @@ class Parser {
 
         let whencheck = undefined;
         if (this.testAndConsumeTokenIf("when")) {
-            whencheck = this.parseExpression();
+            whencheck = this.parseSelectExpression(true);
         }
 
         if (istypematch) {
