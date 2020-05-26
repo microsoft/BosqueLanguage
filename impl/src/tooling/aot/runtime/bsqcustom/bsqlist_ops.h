@@ -298,7 +298,7 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP>
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU>
     static ListU* list_project(Ty* l, MapT* m)
     {
         std::vector<U> entries;
@@ -315,7 +315,7 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename ListU, typename LU, typename UU, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP, typename LambdaCC>
+    template <typename ListU, typename LU, typename UU, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCC>
     static ListU* list_tryproject(Ty* l, MapT* m, LU unone, LambdaCC cc)
     {
         std::vector<LU> entries;
@@ -336,7 +336,7 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP>
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU>
     static ListU* list_defaultproject(Ty* l, MapT* m, U dval)
     {
         std::vector<U> entries;
@@ -371,7 +371,7 @@ public:
     }
 
     template <typename ListTU, typename TU, typename ListU, typename U, MIRNominalTypeEnum ntype, typename TUConsWInc, typename LambdaP>
-    static ListTU* list_join(Ty* l, ListU* ol, UTConsWInc utc, LambdaP p)
+    static ListTU* list_join(Ty* l, ListU* ol, TUConsWInc utc, LambdaP p)
     {
         std::vector<TU> entries;
 
@@ -388,21 +388,21 @@ public:
     }
 
     template <typename ListTLU, typename TLU, typename ListU, typename U, MIRNominalTypeEnum lutype, MIRNominalTypeEnum ntype, typename U_RCIncF, typename TLUConsWInc, typename LambdaP>
-    static ListTU* list_join(Ty* l, ListU* ol, TLUConsWInc lutc, LambdaP p)
+    static ListTLU* list_joingroup(Ty* l, ListU* ol, TLUConsWInc lutc, LambdaP p)
     {
         std::vector<TLU> entries;
+        
+        std::for_each(l->entries.begin(), l->entries.end(), [lutc, p, ol, &entries](T& v) {
 
-        std::for_each(l->entries.begin(), l->entries.end(), [luct, p, ol, &entries](T& v) {
             std::vector<U> ue;
-
-            std::for_each(ol->entries.begin(), ol->entries.end(), [luct, p, v, ue](U& u) {
+            std::for_each(ol->entries.begin(), ol->entries.end(), [p, v, &ue](U& u) {
                 if(p(v, u))
                 {
                     ue.push_back(U_RCIncF{}(u));
                 }
             });
 
-            ListU* lu = INC_REF_DIRECT(LISTU, BSQ_NEW_NO_RC(LISTU, lutype, std::move(ue))); 
+            ListU* lu = INC_REF_DIRECT(ListU, BSQ_NEW_NO_RC(ListU, lutype, std::move(ue))); 
             entries.push_back(lutc(v, lu));
         });
 

@@ -1728,7 +1728,7 @@ class CPPBodyEmitter {
         const ltype = this.typegen.getMIRType(le.tkey);
         const ctype = le.terms.get("T") as MIRType;
         const uinc = this.typegen.getFunctorsForType(ctype).inc;
-        return [this.typegen.getCPPReprFor(ltype).base, this.typegen.getCPPReprFor(ctype).base, `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(le.tkey)}`, uinc];
+        return [this.typegen.getCPPReprFor(ltype).base, this.typegen.getCPPReprFor(ctype).std, `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(le.tkey)}`, uinc];
     }
 
     getSetContentsInfoForSetOp(idecl: MIRInvokePrimitiveDecl): MIRType {
@@ -1797,7 +1797,7 @@ class CPPBodyEmitter {
         const cargs = pc.cargs.map((ca) => this.typegen.mangleStringForCpp(ca));
         const rrepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(pci.resultType));
 
-        return `[](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`
+        return `[=](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`
     }
 
     generateBuiltinBody(idecl: MIRInvokePrimitiveDecl, params: string[]): string {
@@ -2074,41 +2074,41 @@ class CPPBodyEmitter {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_takewhile(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_takewhile(${params[0]}, ${lambda});`;
                 break;
             }
             case "list_discardwhile": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_discardwhile(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_discardwhile(${params[0]}, ${lambda});`;
                 break;
             }
             case "list_takeuntil": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_takeuntil(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_takeuntil(${params[0]}, ${lambda});`;
                 break;
             }
             case "list_discarduntil": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_discarduntil(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_discarduntil(${params[0]}, ${lambda});`;
                 break;
             }
             case "list_unique": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const cmp = this.typegen.getFunctorsForType(ctype).less;
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_unique<${cmp}>(${params[0]});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_unique<${cmp}>(${params[0]});`;
                 break;
             }
             case "list_reverse": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_reverse(${params[0]});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_reverse(${params[0]});`;
                 break;
             }
             case "list_map": {
@@ -2116,7 +2116,7 @@ class CPPBodyEmitter {
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("f") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_map<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_map<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`;
                 break;
             }
             case "list_mapindex": {
@@ -2124,7 +2124,7 @@ class CPPBodyEmitter {
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
                 const lambda = this.createLambdaFor(idecl.pcodes.get("f") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`;
                 break;
             }
             case "list_project": {
@@ -2132,9 +2132,8 @@ class CPPBodyEmitter {
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const [utype, ucontents, utag, incu] = this.getListResultTypeFor(idecl);
                 const mapt = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
-                const cmp = this.getMEntryCmpTypeForMapType(idecl.params[1].type);
 
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_project<${utype}, ${ucontents}, ${utag}, ${mapt}, ${incu}, ${cmp}>(${params[0]}, ${params[1]});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_project<${utype}, ${ucontents}, ${utag}, ${mapt}, ${incu}>(${params[0]}, ${params[1]});`;
                 break;
             }
             case "list_tryproject": {
@@ -2142,7 +2141,6 @@ class CPPBodyEmitter {
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const [utype, ucontents, utag, incu] = this.getListResultTypeFor(idecl);
                 const mapt = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
-                const cmp = this.getMEntryCmpTypeForMapType(idecl.params[1].type);
 
                 const mirutype = (this.typegen.assembly.entityDecls.get(this.typegen.getMIRType(idecl.resultType).trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
                 const utyperepr = this.typegen.getCPPReprFor(mirutype);
@@ -2154,7 +2152,7 @@ class CPPBodyEmitter {
                 const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ctype).std} ccv) -> ${utyperepr.std} { return ${codecc}; }`;
                 const unone = this.typegen.coerce("BSQ_VALUE_NONE", this.typegen.noneType, mirutype);
 
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_tryproject<${utype}, ${ucontents}, ${vvtyperepr.std}, ${utag}, ${mapt}, ${incu}, ${cmp}>(${params[0]}, ${params[1]}, ${unone}, ${lambdacc});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_tryproject<${utype}, ${ucontents}, ${vvtyperepr.std}, ${utag}, ${mapt}, ${incu}>(${params[0]}, ${params[1]}, ${unone}, ${lambdacc});`;
                 break;
             }
             case "list_defaultproject": {
@@ -2162,9 +2160,8 @@ class CPPBodyEmitter {
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const [utype, ucontents, utag, incu] = this.getListResultTypeFor(idecl);
                 const mapt = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
-                const cmp = this.getMEntryCmpTypeForMapType(idecl.params[1].type);
 
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_defaultproject<${utype}, ${ucontents}, ${utag}, ${mapt}, ${incu}, ${cmp}>(${params[0]}, ${params[1]}, ${params[2]});`
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_defaultproject<${utype}, ${ucontents}, ${utag}, ${mapt}, ${incu}>(${params[0]}, ${params[1]}, ${params[2]});`;
                 break;
             }
             case "list_zipindex": {
@@ -2173,7 +2170,68 @@ class CPPBodyEmitter {
                 const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
             
                 const codecc = this.typegen.coerce("u", ctype, this.typegen.anyType);
-                const lambda = `[&${scopevar}](int64_t i, ${ucontents} u) -> ${utype} { return BSQTuple{ BSQ_ENCODE_VALUE_TAGGED_INT(i), INC_REF_CHECK(Value, ${codecc}) }; }`
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const iflag = this.typegen.generateInitialDataKindFlag(ctype); //int component goes along with everything so just ignore it
+                const lambda = `[&${scopevar}](int64_t i, ${crepr.std} u) -> ${ucontents} { return BSQTuple::createFromSingle<${iflag}>({ BSQ_ENCODE_VALUE_TAGGED_INT(i), INC_REF_CHECK(Value, ${codecc}) }); }`;
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_zipindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`;
+                break;
+            }
+            case "list_join": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const utype = this.typegen.getMIRType(idecl.params[1].type);
+                const ucontents = (this.typegen.assembly.entityDecls.get(utype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const [tutype, tucontents, tutag] = this.getListResultTypeFor(idecl);
+            
+                const codecc = this.typegen.coerce("v", ctype, this.typegen.anyType);
+                const codecu = this.typegen.coerce("u", ucontents, this.typegen.anyType);
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const urepr = this.typegen.getCPPReprFor(ucontents);
+                const iflag = `${this.typegen.generateInitialDataKindFlag(ctype)} & ${this.typegen.generateInitialDataKindFlag(ucontents)}`;
+                const lambda = `[&${scopevar}](${crepr.std} v, ${urepr.std} u) -> ${tucontents} { return BSQTuple::createFromSingle<${iflag}>({ INC_REF_CHECK(Value, ${codecc}), INC_REF_CHECK(Value, ${codecu}) }); }`;
+
+                const lambdap = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_join<${tutype}, ${tucontents}, ${this.typegen.getCPPReprFor(utype).base}, ${urepr.std}, ${tutag}>(${params[0]}, ${params[1]}, ${lambda}, ${lambdap});`;
+                break;
+            }
+            case "list_joingroup": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const utype = this.typegen.getMIRType(idecl.params[1].type);
+                const ucontents = (this.typegen.assembly.entityDecls.get(utype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const [tutype, tucontents, tutag] = this.getListResultTypeFor(idecl);
+            
+                const codecc = this.typegen.coerce("v", ctype, this.typegen.anyType);
+                const codecu = this.typegen.coerce("u", utype, this.typegen.anyType);
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const urepr = this.typegen.getCPPReprFor(utype);
+                const iflag = `${this.typegen.generateInitialDataKindFlag(ctype)} & ${this.typegen.generateInitialDataKindFlag(ucontents)}`;
+                const lambda = `[&${scopevar}](${crepr.std} v, ${urepr.std} u) -> ${tucontents} { return BSQTuple::createFromSingle<${iflag}>({ INC_REF_CHECK(Value, ${codecc}), INC_REF_CHECK(Value, ${codecu}) }); }`;
+
+                const lambdap = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_joingroup<${tutype}, ${tucontents}, ${this.typegen.getCPPReprFor(utype).base}, ${this.typegen.getCPPReprFor(ucontents).std}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(utype.trkey)}, ${tutag}, ${this.typegen.getFunctorsForType(ucontents).inc}>(${params[0]}, ${params[1]}, ${lambda}, ${lambdap});`;
+                break;
+            }
+
+            case "list_append": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_append(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "list_partition": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
+            
+                const codecc = this.typegen.coerce("u", ctype, this.typegen.anyType);
+                const crepr = this.typegen.getCPPReprFor(ctype);
+                const iflag = this.typegen.generateInitialDataKindFlag(ctype); //int component goes along with everything so just ignore it
+                const lambda = `[&${scopevar}](int64_t i, ${crepr.std} u) -> ${ucontents} { return BSQTuple::createFromSingle<${iflag}>({ BSQ_ENCODE_VALUE_TAGGED_INT(i), INC_REF_CHECK(Value, ${codecc}) }); }`;
 
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_zipindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
                 break;
