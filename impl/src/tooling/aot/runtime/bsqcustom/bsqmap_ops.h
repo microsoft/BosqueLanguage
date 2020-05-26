@@ -65,28 +65,28 @@ public:
         return BSQ_NEW_NO_RC((BSQList<K, K_RCDecF, K_DisplayF>), ntype, move(entries));
     }
 
-    static BSQBool map_has_all(Ty* m, BSQList<K, K_RCDecF, K_DisplayF>* kl)
+    template <typename ListT>
+    static BSQBool map_has_all(Ty* m, ListT* kl)
     {
-        return std::all_of(kl->entries.begin(), kl->entries.end(), [m](K& k) -> bool {
-            MEntry<K, V> ekey{k};
-            return std::binary_search(m->entries.begin(), m->entries.end(), ekey, MEntryCMP<K, V, K_CMP>{});
+        return std::all_of(kl->entries.begin(), kl->entries.end(), [m](K k) -> bool {
+            return m->hasKey(k);
         });
     }
 
-    static BSQBool map_domainincludes(Ty* m, BSQSet<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ>* s)
+    template <typename SetT>
+    static BSQBool map_domainincludes(Ty* m, SetT* s)
     {
-        return std::all_of(s->entries.begin(), s->entries.end(), [m](K& k) -> bool {
-            MEntry<K, V> ekey{k};
-            return std::binary_search(m->entries.begin(), m->entries.end(), ekey, MEntryCMP<K, V, K_CMP>{});
+        return std::all_of(s->entries.begin(), s->entries.end(), [m](K k) -> bool {
+            return m->hasKey(k);
         });
     }
 
     template <typename K_RCIncF, typename V_RCIncF, typename LambdaP>
-    static Ty* map_submap(Ty* m)
+    static Ty* map_submap(Ty* m, LambdaP p)
     {
         std::vector<MEntry<K, V>> entries;
-        std::for_each(m->entries.begin(), m->entries.end(), [&entries](MEntry<K, V>& v) {
-            if(LambdaP{}(v.key, v.value))
+        std::for_each(m->entries.begin(), m->entries.end(), [p, &entries](MEntry<K, V>& v) {
+            if(p(v.key, v.value))
             {
                 entries.push_back(MEntry<K, V>{K_RCIncF{}(v.key), V_RCIncF{}(v.value)});
             }
@@ -95,31 +95,31 @@ public:
         return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
     }
 
-    template <typename T, typename T_RCDecF, typename T_DisplayF, typename T_CMP, typename T_EQ, typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaTC, typename LambdaCC>
-    static BSQMap<T, T_RCDecF, T_DisplayF, T_CMP, T_EQ, U, U_RCDecF, U_DisplayF>* map_oftype(Ty* m)
+    template <typename RMType, typename RMEntryType, MIRNominalTypeEnum ntype, typename LambdaTCK, typename LambdaTCV, typename LambdaCC>
+    static RMType* map_oftype(Ty* m, LambdaTCK tck, LambdaTCV tcv, LambdaCC cc)
     {
-        std::vector<MEntry<T, U>> entries;
-        std::for_each(m->entries.begin(), m->entries.end(), [&entries](MEntry<K, V>& v) {
-            if(LambdaTC{}(v.key, v.value))
+        std::vector<RMEntryType> entries;
+        std::for_each(m->entries.begin(), m->entries.end(), [tck, tcv, cc, &entries](MEntry<K, V>& v) {
+            if(tck(v.key) && tcv(v.value))
             {
-                entries.push_back(LambdaCC{}(v.key, v.value));
+                entries.push_back(cc(v.key, v.value));
             }
         });
 
-        return BSQ_NEW_NO_RC((BSQMap<T, T_RCDecF, T_DisplayF, T_CMP, T_EQ, U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(RMType, ntype, move(entries));
     }
 
-    template <typename T, typename T_RCDecF, typename T_DisplayF, typename T_CMP, typename T_EQ, typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaTC, typename LambdaCC>
-    static BSQMap<T, T_RCDecF, T_DisplayF, T_CMP, T_EQ, U, U_RCDecF, U_DisplayF>* map_cast(Ty* m)
+    template <typename RMType, typename RMEntryType, MIRNominalTypeEnum ntype, typename LambdaTCK, typename LambdaTCV, typename LambdaCC>
+    static RMType* map_cast(Ty* m, LambdaTCK tck, LambdaTCV tcv, LambdaCC cc)
     {
-        std::vector<MEntry<T, U>> entries;
-        std::for_each(m->entries.begin(), m->entries.end(), [&entries](MEntry<K, V>& v) {
-            BSQ_ASSERT(LambdaTC{}(v.key, v.value), "abort -- invalid element in cast in Map<K, V>::cast");
+        std::vector<RMEntryType> entries;
+        std::for_each(m->entries.begin(), m->entries.end(), [tck, tcv, cc, &entries](MEntry<K, V>& v) {
+            BSQ_ASSERT(tck(v.key) && tcv(v.value), "abort -- invalid element in cast in Map<K, V>::cast");
 
-            entries.push_back(LambdaCC{}(v.key, v.value));
+            entries.push_back(cc(v.key, v.value));
         });
 
-        return BSQ_NEW_NO_RC((BSQMap<T, T_RCDecF, T_DisplayF, T_CMP, T_EQ, U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(RMType, ntype, move(entries));
     }
 
     template <typename K_RCIncF, typename V_RCIncF, bool missingok>

@@ -28,7 +28,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     pragma AssumeSafe
     hidden static s_add(m: Map<K, V>, k: K, v: V): Map<K, V> {
         let kl = Map<K, V>::s_get_keylist(m);
-        return Map<K, V>::s_unsafe_add(m, k, v, KeyList<K>@{hkey=kk, tail=kl});
+        return Map<K, V>::s_unsafe_add(m, k, v, KeyList<K>@{hkey=k, tail=kl});
     }
 
     pragma AssumeSafe
@@ -95,15 +95,15 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             let v = Map<K, V>::s_at_val(m, k);
 
             if(!p[recursive?](k, v)) {
-                return Map<K, V>::s_submap(kl.tail, mp, p);
+                return Map<K, V>::s_submap[recursive](m, kl.tail, mp, p);
             }
             else {
-                return Map<K, V>::s_submap(kl.tail, Map<K, V>::s_add(mp, k, v), p);
+                return Map<K, V>::s_submap[recursive](m, kl.tail, Map<K, V>::s_add(mp, k, v), p);
             }
         }
     }
 
-    hidden recursive static s_ofType<T where KeyType, U>(kl: KeyList<K>?, mp: Map<T, U>): Map<T, U> {
+    hidden recursive static s_oftype<T where KeyType, U>(m: Map<K, V>, kl: KeyList<K>?, mp: Map<T, U>): Map<T, U> {
         if(kl == none) {
             return mp;
         }
@@ -112,15 +112,15 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             let v = Map<K, V>::s_at_val(m, k);
 
             if(k.is<T>() && v.is<U>()) {
-                return Map<K, V>::s_ofType(kl.tail, Map<T, U>::s_add(mp, k.as<T>(), v.as<U>()));
+                return Map<K, V>::s_oftype<T, U>[recursive](m, kl.tail, Map<T, U>::s_add(mp, k.as<T>(), v.as<U>()));
             }
             else {
-                return Map<K, V>::s_ofType(kl.tail, mp, p);
+                return Map<K, V>::s_oftype<T, U>[recursive](m, kl.tail, mp);
             }
         }
     }
 
-    hidden recursive static s_cast<T where KeyType, U>(kl: KeyList<K>?, mp: Map<T, U>): Map<T, U> {
+    hidden recursive static s_cast<T where KeyType, U>(m: Map<K, V>, kl: KeyList<K>?, mp: Map<T, U>): Map<T, U> {
        if(kl == none) {
             return mp;
         }
@@ -129,7 +129,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             let v = Map<K, V>::s_at_val(m, k);
             check (k.is<T>() && v.is<U>());
 
-            return Map<K, V>::s_ofType(kl.tail, Map<T, U>::s_add(mp, k.as<T>(), v.as<U>()));
+            return Map<K, V>::s_cast<T, U>[recursive](m, kl.tail, Map<T, U>::s_add(mp, k.as<T>(), v.as<U>()));
         }
     }
 
@@ -260,7 +260,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         return Map<K, V>::s_hasall[recursive](this, kl, List<K>::s_size(kl), 0);
     }
 
-    method domainIncludes(s: Set<K>): Bool {
+    method domainSubsetOf(s: Set<K>): Bool {
         if(Set<K>::s_size(s) > Map<K, V>::s_size(this)) {
             return false;
         }
@@ -288,23 +288,43 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method ofType<T where KeyType, U>(): Map<T, U> {
-        return Map<K, V>::s_oftype<T, U>[recursive](Map<K, V>::s_get_keylist(this), Map<T, U>@{});
+        return Map<K, V>::s_oftype<T, U>[recursive](this, Map<K, V>::s_get_keylist(this), Map<T, U>@{});
     }
 
     method cast<T where KeyType, U>(): Map<T, U> {
-        return Map<K, V>::s_cast<T, U>[recursive](Map<K, V>::s_get_keylist(this), Map<T, U>@{});
+        return Map<K, V>::s_cast<T, U>[recursive](this, Map<K, V>::s_get_keylist(this), Map<T, U>@{});
     }
 
-    method project(ds: Set<K>, missingok?: Bool): Map<K, V> {
+    method projectSet(ds: Set<K>, missingok?: Bool): Map<K, V> {
         return Map<K, V>::s_project(this, ds, Truthy::truth(missingok));
     }
 
-    method exclude(ds: Set<K>): Map<K, V> {
+    method excludeSet(ds: Set<K>): Map<K, V> {
         return Map<K, V>::s_exclude[recursive](this, ds, Map<K, V>::s_get_keylist(this), Map<K, V>@{});
     }
 
     recursive? method remap<U>(f: recursive? fn(_: K, _: V) -> U): Map<K, U> {
-        return Map<K, V>::s_remap<U>[recursive](this, Map<K, V>::s_get_keylist(this).reverse(), Map<K, U>@{}, f);
+        return Map<K, V>::s_remap<U>[recursive](this, Map<K, V>::s_get_keylist(this), Map<K, U>@{}, f);
+    }
+
+    method {when V KeyType} composeWith(m: Map<V, U>): Map<K, U> {
+        return Map<K, V>::s_composewith[recursive](this, m);
+    }
+
+    method {when V KeyType} tryComposeWith(m: Map<V, U>): Map<K, U?> {
+        return Map<K, V>::s_trycomposewith[recursive](this, m);
+    }
+
+    method {when V KeyType} defaultComposeWith(m: Map<V, U>, default: U): Map<K, U> {
+        return Map<K, V>::s_defaultcomposewith[recursive](this, m, default);
+    }
+
+    method {when V KeyType} invertInjection(): Map<V, K> {
+        return Map<K, V>::s_invertinj[recursive](this, m);
+    }
+
+    method {when V KeyType} invertRelation(): Map<V, List<K>> {
+        return Map<K, V>::s_invertrel[recursive](this, m);
     }
 
     method projectAll(...kl: List<K>): Map<K, V> {
@@ -385,7 +405,7 @@ entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V
         abort;
     }
 
-    method domainIncludes(s: Set<K>): Bool {
+    method domainSubsetOf(s: Set<K>): Bool {
         abort;
     }
 
