@@ -240,7 +240,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         return Map<K, V>::s_key_set(this);
     }
 
-    method values(): List<K> {
+    method values(): List<V> {
         return Map<K, V>::s_value_list(this, KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), List<V>@{});
     }
 
@@ -365,7 +365,7 @@ entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V
         abort;
     }
 
-    method values(): List<K>  {
+    method values(): List<V>  {
         abort;
     }
 
