@@ -1911,6 +1911,35 @@ class SMTBodyEmitter {
                 bodyres = new SMTValue(`(select ${this.typegen.generateSpecialTypeFieldAccess(enclkey, "values", params[0])} ${params[1]})`);
                 break;
             }
+            case "map_get_keylist": {
+                bodyres = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "keylist", params[0]);
+                break;
+            }
+            case "map_unsafe_add": {
+                const cons = this.typegen.generateEntityConstructor(enclkey);
+                const size = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);
+                const has = this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0]);
+                const entries = this.typegen.generateSpecialTypeFieldAccess(enclkey, "values", params[0]);
+                const klctype = this.typegen.getKeyListTypeForMap(this.typegen.assembly.entityDecls.get(enclkey) as MIREntityTypeDecl);
+                const kll = this.typegen.coerce(new SMTValue(params[3]), this.typegen.getMIRType(idecl.params[3].type), klctype);
+                bodyres = new SMTValue(`(${cons} (+ ${size} 1) (store ${has} ${params[1]} true) (store ${entries} ${params[1]} ${params[2]}) ${kll.emit()})`);
+                break;
+            }
+            case "map_unsafe_update": {
+                const cons = this.typegen.generateEntityConstructor(enclkey);
+                const size = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);
+                const has = this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0]);
+                const entries = this.typegen.generateSpecialTypeFieldAccess(enclkey, "values", params[0]);
+                const kl = this.typegen.generateSpecialTypeFieldAccess(enclkey, "keylist", params[0]);
+                bodyres = new SMTValue(`(${cons} ${size} ${has} (store ${entries} ${params[1]} ${params[3]}) ${kl})`);
+                break;
+            }
+            case "map_domainincludes": {
+                const hasm = this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0]);
+                const hass = this.typegen.generateSpecialTypeFieldAccess(idecl.params[1].type, "has", params[1]);
+                bodyres = new SMTValue(`(= ((_ map and) ${hasm} ${hass}) ${hass})`);
+                break;
+            }
             /*
             case "list_size":
             case "set_size":

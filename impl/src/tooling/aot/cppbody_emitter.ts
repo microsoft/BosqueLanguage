@@ -1785,6 +1785,16 @@ class CPPBodyEmitter {
         return `BSQListOps<${lrepr}, ${crepr.std}, ${cops.inc}, ${cops.dec}, ${cops.display}>`;
     }
 
+    createMapOpsFor(mtype: MIRType, ktype: MIRType, vtype: MIRType): string {
+        const mrepr = this.typegen.getCPPReprFor(mtype).base;
+        const krepr = this.typegen.getCPPReprFor(ktype);
+        const kops = this.typegen.getFunctorsForType(ktype);
+        const vrepr = this.typegen.getCPPReprFor(vtype);
+        const vops = this.typegen.getFunctorsForType(vtype);
+
+        return `BSQMapOps<${mrepr}, ${krepr.std}, ${kops.dec}, ${kops.display}, ${kops.less}, ${kops.eq}, ${vrepr.std}, ${vops.dec}, ${vops.display}>`;
+    }
+
     createLambdaFor(pc: MIRPCode): string {
         const pci = this.assembly.invokeDecls.get(pc.code) || this.assembly.primitiveInvokeDecls.get(pc.code) as MIRInvokeDecl;
         let params: string[] = [];
@@ -2256,6 +2266,97 @@ class CPPBodyEmitter {
             }
             case "map_at_val": {
                 bodystr = `auto $$return = ${params[0]}->getValue(${params[1]});`;
+                break;
+            }
+            case "map_has_all": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const ltype = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_has_all<${ltype}>(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "map_domainincludes": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const stype = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_domainincludes<${stype}>(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "map_submap": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const kops = this.typegen.getFunctorsForType(ktype);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const vops = this.typegen.getFunctorsForType(vtype);
+
+                const lambdap = this.createLambdaFor(idecl.pcodes.get("p") as MIRPCode);
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_submap<${kops.inc}, ${vops.inc}>(${params[0]}, ${lambdap});`;
+                break;
+            }
+
+            case "map_oftype": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+
+                const rmtype = this.typegen.getMIRType(idecl.resultType);
+                const rmrepr = this.typegen.getCPPReprFor(rmtype);
+                const rmentry = this.getMEntryTypeForMapType(idecl.resultType);
+
+                //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
+                const ttype = this.typegen.getMIRType(idecl.binds.get("T") as MIRResolvedTypeKey);
+                const codetck = this.generateTypeCheck("kk", ktype, ktype, ttype);
+                const lambdatck = `[&${scopevar}](${this.typegen.getCPPReprFor(ktype).std} kk) -> bool { return ${codetck}; }`;
+
+                const utype = this.typegen.getMIRType(idecl.binds.get("U") as MIRResolvedTypeKey);
+                const codetcv = this.generateTypeCheck("vv", vtype, vtype, utype);
+                const lambdatcv = `[&${scopevar}](${this.typegen.getCPPReprFor(vtype).std} vv) -> bool { return ${codetcv}; }`;
+
+                if(codetck === "false" || codetcv == "false") {
+                    bodystr = `auto $$return = BSQ_NEW_ADD_SCOPE(${scopevar}, ${rmtype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rmtype.trkey)})`;
+                }
+                else {
+                    const codecck = `${this.typegen.getFunctorsForType(ttype).inc}{}(${this.typegen.coerce("kk", ktype, ttype)})`;
+                    const codeccv = `${this.typegen.getFunctorsForType(utype).inc}{}(${this.typegen.coerce("vv", vtype, utype)})`;
+                    const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ktype).std} kk, ${this.typegen.getCPPReprFor(vtype).std} vv) -> ${rmentry} { return ${rmentry}{${codecck}, ${codeccv}}; }`;
+
+                    bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_oftype<${rmrepr.base}, ${rmentry}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rmtype.trkey)}>(${params[0]}, ${lambdatck}, ${lambdatcv}, ${lambdacc});`;
+                }
+                break;
+            }
+            case "map_cast": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+
+                const rmtype = this.typegen.getMIRType(idecl.resultType);
+                const rmrepr = this.typegen.getCPPReprFor(rmtype);
+                const rmentry = this.getMEntryTypeForMapType(idecl.resultType);
+
+                //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
+                const ttype = this.typegen.getMIRType(idecl.binds.get("T") as MIRResolvedTypeKey);
+                const codetck = this.generateTypeCheck("kk", ktype, ktype, ttype);
+                const lambdatck = `[&${scopevar}](${this.typegen.getCPPReprFor(ktype).std} kk) -> bool { return ${codetck}; }`;
+
+                const utype = this.typegen.getMIRType(idecl.binds.get("U") as MIRResolvedTypeKey);
+                const codetcv = this.generateTypeCheck("vv", vtype, vtype, utype);
+                const lambdatcv = `[&${scopevar}](${this.typegen.getCPPReprFor(vtype).std} vv) -> bool { return ${codetcv}; }`;
+
+                if(codetck === "false" || codetcv == "false") {
+                    bodystr = `auto $$return = BSQ_NEW_ADD_SCOPE(${scopevar}, ${rmtype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rmtype.trkey)})`;
+                }
+                else {
+                    const codecck = `${this.typegen.getFunctorsForType(ttype).inc}{}(${this.typegen.coerce("kk", ktype, ttype)})`;
+                    const codeccv = `${this.typegen.getFunctorsForType(utype).inc}{}(${this.typegen.coerce("vv", vtype, utype)})`;
+                    const lambdacc = `[&${scopevar}](${this.typegen.getCPPReprFor(ktype).std} kk, ${this.typegen.getCPPReprFor(vtype).std} vv) -> ${rmentry} { return ${rmentry}{${codecck}, ${codeccv}}; }`;
+
+                    bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_cast<${rmrepr.base}, ${rmentry}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rmtype.trkey)}>(${params[0]}, ${lambdatck}, ${lambdatcv}, ${lambdacc});`;
+                }
                 break;
             }
             /*

@@ -73,7 +73,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         return Map<K, V>::s_has_all(this, kl);
     }
 
-    method domainIncludes(s: Set<K>): Bool {
+    method domainSubsetOf(s: Set<K>): Bool {
         if(Set<K>::s_size(s) > Map<K, V>::s_size(this)) {
             return false;
         }
@@ -101,23 +101,43 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method ofType<T where KeyType, U>(): Map<T, U> {
-        return Map<K, V>::s_oftype<U>(this);
+        return Map<K, V>::s_oftype<T, U>(this);
     }
 
     method cast<T where KeyType, U>(): Map<T, U> {
-        return Map<K, V>::s_cast<U>(this);
+        return Map<K, V>::s_cast<T, U>(this);
     }
 
-    method project(ds: Set<K>, missingok?: Bool): Map<K, V> {
+    method projectSet(ds: Set<K>, missingok?: Bool): Map<K, V> {
         return Map<K, V>::s_project(this, ds, Truthy::truth(missingok));
     }
 
-    method exclude(ds: Set<K>): Map<K, V> {
-        return Map<K, V>::s_exclude(this, ds);
+    method excludeSet(ds: Set<K>, missingok?: Bool): Map<K, V> {
+        return Map<K, V>::s_exclude(this, ds, Truthy::truth(missingok));
     }
 
     recursive? method remap<U>(f: recursive? fn(_: K, _: V) -> U): Map<K, U> {
         return Map<K, V>::s_remap<U>[recursive?](this, f);
+    }
+
+    method {when V KeyType} composeWith(m: Map<V, U>): Map<K, U> {
+        return Map<K, V>::s_composewith(this, m);
+    }
+
+    method {when V KeyType} tryComposeWith(m: Map<V, U>): Map<K, U?> {
+        return Map<K, V>::s_trycomposewith(this, m);
+    }
+
+    method {when V KeyType} defaultComposeWith(m: Map<V, U>, default: U): Map<K, U> {
+        return Map<K, V>::s_defaultcomposewith(this, m, default);
+    }
+
+    method {when V KeyType} invertInjection(): Map<V, K> {
+        return Map<K, V>::s_invertinj(this, m);
+    }
+
+    method {when V KeyType} invertRelation(): Map<V, List<K>> {
+        return Map<K, V>::s_invertrel(this, m);
     }
 
     method projectAll(...kl: List<K>): Map<K, V> {
@@ -198,7 +218,7 @@ entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V
         abort;
     }
 
-    method domainIncludes(s: Set<K>): Bool {
+    method domainSubsetOf(s: Set<K>): Bool {
         abort;
     }
 

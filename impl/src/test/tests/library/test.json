@@ -1,5 +1,123 @@
 [
     {
+        "src": "maptests.bsq",
+        "tests": [
+            {
+                "kind": "compile"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "sizeAndEmpty",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "hasop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "hasallop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "domainsubsetofop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "gettests",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "geterr1",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "geterr2",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "submapop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "oftypeop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "castop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "casterr",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "sizeAndEmpty",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "hasop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "hasallop",
+                "expected": "0"
+            },
+            {
+                "kind": "symtest",
+                "entrypoint": "domainsubsetofop",
+                "error": false
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "gettests",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "geterr1",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "geterr2",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "submapop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "oftypeop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "castop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "casterr",
+                "expected": null
+            }
+        ]
+    },
+    {
         "src": "listtests.bsq",
         "tests": [
             {

@@ -625,11 +625,14 @@ class TypeChecker {
         return [reqNames, allNames];
     }
 
-    private checkPCodeExpression(env: TypeEnvironment, exp: ConstructorPCodeExpression, expectedFunction?: ResolvedFunctionType): PCode {
+    private checkPCodeExpression(env: TypeEnvironment, exp: ConstructorPCodeExpression, expectedFunction: ResolvedFunctionType): PCode {
         this.raiseErrorIf(exp.sinfo, exp.isAuto && expectedFunction === undefined, "Could not infer auto function type");
 
         const ltypetry = exp.isAuto ? expectedFunction : this.m_assembly.normalizeTypeFunction(exp.invoke.generateSig(), env.terms);
         this.raiseErrorIf(exp.sinfo, ltypetry === undefined, "Invalid lambda type");
+
+        this.raiseErrorIf(exp.sinfo, exp.invoke.params.length !== expectedFunction.params.length, "Mismatch in expected parameter count and provided function parameter count");
+        this.raiseErrorIf(exp.sinfo, !this.m_assembly.functionSubtypeOf(ltypetry as ResolvedFunctionType, expectedFunction), "Mismatch in expected and provided function signature");
 
         let captured = new Map<string, MIRRegisterArgument>();
         let capturedMap: Map<string, ResolvedType> = new Map<string, ResolvedType>();
@@ -671,8 +674,8 @@ class TypeChecker {
             this.raiseErrorIf(arg.value.sinfo, arg.isRef && arg instanceof PositionalArgument && arg.isSpread, "Cannot use ref on spread argument");
 
             if (arg.value instanceof ConstructorPCodeExpression) {
-                const oftype = (noExpando && (firstNameIdx === -1 || i < firstNameIdx) && i < sig.params.length && !sig.params[i].isOptional) ? sig.params[i + skipthisidx].type : this.m_assembly.getSpecialAnyConceptType();
-                this.raiseErrorIf(arg.value.sinfo, !(oftype instanceof ResolvedFunctionType), "Must have function type for function arg");
+                const oftype = (noExpando && (firstNameIdx === -1 || i < firstNameIdx) && i < sig.params.length && !sig.params[i].isOptional) ? sig.params[i + skipthisidx].type : undefined;
+                this.raiseErrorIf(arg.value.sinfo, oftype === undefined, "Must have function type for function arg");
                 this.raiseErrorIf(arg.value.sinfo, arg.isRef, "Cannot use ref params on function argument");
 
                 const pcode = this.checkPCodeExpression(env, arg.value, oftype as ResolvedFunctionType);
