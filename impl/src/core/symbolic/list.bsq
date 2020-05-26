@@ -452,7 +452,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_zipIndex[recursive](l, lsize, List<T>::s_unsafe_push(lp, [idx, val]), idx + 1);
+            return List<T>::s_zipIndex[recursive](l, lsize, List<[Int, T]>::s_unsafe_push(lp, [idx, val]), idx + 1);
         }
     }
 
@@ -479,18 +479,18 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             let val = List<T>::s_unsafe_get(l, idx);
             let jl = List<T>::s_joinSingle<U>[recursive](val, ol, olsize, lp, 0, p);
 
-            return List<T>::s_join<U>[recursive](l, lsize, ol, olsize, lp, idx + 1, p);
+            return List<T>::s_join<U>[recursive](l, lsize, ol, olsize, jl, idx + 1, p);
         }
     }
 
-    hidden recursive static s_joinGroupSingle<U>(v: T, ol: List<U>, olsize: Int, lp: List<[T, List<U>]>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
+    hidden recursive static s_joinGroupSingle<U>(v: T, ol: List<U>, olsize: Int, lp: List<U>, idx: Int, p: recursive? fn(_: T, _: U) -> Bool): List<U> {
         if(idx == olsize) {
             return lp;
         }
         else {
             let val = List<U>::s_unsafe_get(ol, idx);
             if(p[recursive?](v, val)) {
-                return List<T>::s_joinGroupSingle<U>[recursive](v, ol, olsize, List<T>::s_unsafe_push(lp, [v, val]), idx + 1, p);
+                return List<T>::s_joinGroupSingle<U>[recursive](v, ol, olsize, List<T>::s_unsafe_push(lp, val), idx + 1, p);
             }
             else {
                 return List<T>::s_joinGroupSingle<U>[recursive](v, ol, olsize, lp, idx + 1, p);
@@ -504,9 +504,9 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            let jl = List<T>::s_joinGroupSingle<U>[recursive](val, ol, olsize, List<[T, List<U>]>@{}, 0, p);
+            let jl = List<T>::s_joinGroupSingle<U>[recursive](val, ol, olsize, List<U>@{}, 0, p);
 
-            return List<T>::s_joinGroup<U>[recursive](l, lsize, ol, olsize, List<T>::s_unsafe_push(lp, jl), idx + 1, p);
+            return List<T>::s_joinGroup<U>[recursive](l, lsize, ol, olsize, List<[T, List<U>]>::s_unsafe_push(lp, [val, jl]), idx + 1, p);
         }
     }
 

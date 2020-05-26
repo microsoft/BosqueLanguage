@@ -491,7 +491,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     method zipIndex(): List<[Int, T]> {
-        return List<T>::s_zipIndex(this);
+        return List<T>::s_zipindex(this);
     }
 
     recursive? method join<U>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
@@ -499,7 +499,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method joinGroup<U>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, List<U>]> {
-        return List<T>::s_joinGroup<U>[recursive?](this, ol, p);
+        return List<T>::s_joingroup<U>[recursive?](this, ol, p);
     }
 
     method append(l: List<T>): List<T> {

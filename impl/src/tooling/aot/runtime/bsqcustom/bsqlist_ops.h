@@ -298,7 +298,7 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP>
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU>
     static ListU* list_project(Ty* l, MapT* m)
     {
         std::vector<U> entries;
@@ -315,7 +315,7 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename ListU, typename LU, typename UU, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP, typename LambdaCC>
+    template <typename ListU, typename LU, typename UU, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCC>
     static ListU* list_tryproject(Ty* l, MapT* m, LU unone, LambdaCC cc)
     {
         std::vector<LU> entries;
@@ -336,7 +336,7 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU, typename LambdaCMP>
+    template <typename ListU, typename U, MIRNominalTypeEnum ntype, typename MapT, typename RCIncU>
     static ListU* list_defaultproject(Ty* l, MapT* m, U dval)
     {
         std::vector<U> entries;
@@ -357,56 +357,56 @@ public:
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, MIRNominalTypeEnum ntype, typename LambdaZip>
-    static BSQList<U, U_RCDecF, U_DisplayF>* list_zipindex(Ty* l)
+    template <typename ListIT, typename IT, MIRNominalTypeEnum ntype, typename ITConsWInc>
+    static ListIT* list_zipindex(Ty* l, ITConsWInc itc)
     {
-        std::vector<U> entries;
-        entries.reserve(l->entries.size());
+        std::vector<IT> entries;
 
         for(int64_t i = 0; i < (int64_t)l->entries.size(); ++i)
         {
-            entries.push_back(LambdaZip{}(i, l->entries[i]));
+            entries.push_back(itc(i, l->entries[i]));
         }
 
-        return BSQ_NEW_NO_RC((BSQList<U, U_RCDecF, U_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListIT, ntype, move(entries));
     }
 
-    template <typename U, typename U_RCDecF, typename U_DisplayF, typename RT, typename RT_RCDecF, typename RT_DisplayF, MIRNominalTypeEnum ntype, typename LambdaP, typename LambdaZip>
-    static BSQList<RT, RT_RCDecF, RT_DisplayF>* list_join(Ty* l, BSQList<U, U_RCDecF, U_DisplayF>* ol)
+    template <typename ListTU, typename TU, typename ListU, typename U, MIRNominalTypeEnum ntype, typename TUConsWInc, typename LambdaP>
+    static ListTU* list_join(Ty* l, ListU* ol, TUConsWInc utc, LambdaP p)
     {
-        std::vector<RT> entries;
+        std::vector<TU> entries;
 
-        std::for_each(l->entries.begin(), l->entries.end(), [ol, &entries](T& v) {
-            std::for_each(ol->entries.begin(), ol->entries.end(), [&v, &entries](U& u) {
-                if(LambdaP{}(v, u))
+        std::for_each(l->entries.begin(), l->entries.end(), [utc, p, ol, &entries](T& v) {
+            std::for_each(ol->entries.begin(), ol->entries.end(), [utc, p, v, &entries](U& u) {
+                if(p(v, u))
                 {
-                    entries.push_back(LambdaZip{}(v, u));
+                    entries.push_back(utc(v, u));
                 }
             });
         });
 
-        return BSQ_NEW_NO_RC((BSQList<RT, RT_RCDecF, RT_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListTU, ntype, move(entries));
     }
 
-    template <typename U, typename U_RCIncF, typename U_RCDecF, typename U_DisplayF, typename RT, typename RT_RCDecF, typename RT_DisplayF, MIRNominalTypeEnum ntype, typename LambdaP, typename LambdaZip>
-    static BSQList<RT, RT_RCDecF, RT_DisplayF>* list_joingroup(Ty* l, BSQList<U, U_RCDecF, U_DisplayF>* ol)
+    template <typename ListTLU, typename TLU, typename ListU, typename U, MIRNominalTypeEnum lutype, MIRNominalTypeEnum ntype, typename U_RCIncF, typename TLUConsWInc, typename LambdaP>
+    static ListTLU* list_joingroup(Ty* l, ListU* ol, TLUConsWInc lutc, LambdaP p)
     {
-        std::vector<RT> entries;
+        std::vector<TLU> entries;
+        
+        std::for_each(l->entries.begin(), l->entries.end(), [lutc, p, ol, &entries](T& v) {
 
-        std::for_each(l->entries.begin(), l->entries.end(), [ol, &entries](T& v) {
             std::vector<U> ue;
-
-            std::for_each(ol->entries.begin(), ol->entries.end(), [&v, &ue](U& u) {
-                if(LambdaP{}(v, u))
+            std::for_each(ol->entries.begin(), ol->entries.end(), [p, v, &ue](U& u) {
+                if(p(v, u))
                 {
                     ue.push_back(U_RCIncF{}(u));
                 }
             });
 
-            entries.push_back(LambdaZip{}(v, ue));
+            ListU* lu = INC_REF_DIRECT(ListU, BSQ_NEW_NO_RC(ListU, lutype, std::move(ue))); 
+            entries.push_back(lutc(v, lu));
         });
 
-        return BSQ_NEW_NO_RC((BSQList<RT, RT_RCDecF, RT_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListTLU, ntype, move(entries));
     }
 
     static Ty* list_append(Ty* l, Ty* lp)

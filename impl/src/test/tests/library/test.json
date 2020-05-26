@@ -287,6 +287,21 @@
             },
             {
                 "kind": "aot",
+                "entrypoint": "zipindexop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "joinop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "joingroupop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
                 "entrypoint": "sort",
                 "expected": "0"
             },
@@ -361,7 +376,7 @@
                 "expected": null
             },
             {
-                "kind": "aot",
+                "kind": "symexec",
                 "entrypoint": "sumop",
                 "expected": "0"
             },
@@ -568,6 +583,21 @@
             {
                 "kind": "symexec",
                 "entrypoint": "defaultprojectop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "zipindexop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "joinop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "joingroupop",
                 "expected": "0"
             },
             {
