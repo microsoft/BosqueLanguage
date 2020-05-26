@@ -724,7 +724,7 @@ class TypeChecker {
                         const earg = this.checkExpression(env, arg.value, treg).getExpressionResult();
                         eargs.push({ name: arg.name, argtype: earg.etype, ref: undefined, expando: false, pcode: undefined, treg: treg });
                     }
-                    else {;
+                    else {
                         const earg = this.checkExpression(env, arg.value, treg).getExpressionResult();
                         eargs.push({ name: undefined, argtype: earg.etype, ref: undefined, expando: (arg as PositionalArgument).isSpread, pcode: undefined, treg: treg });
                     }
