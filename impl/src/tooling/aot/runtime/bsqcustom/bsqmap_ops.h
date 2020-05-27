@@ -122,47 +122,67 @@ public:
         return BSQ_NEW_NO_RC(RMType, ntype, move(entries));
     }
 
-    template <typename K_RCIncF, typename V_RCIncF, bool missingok>
-    static Ty* map_project(Ty* m, BSQSet<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ>* ds)
+    template <typename ListT, typename K_RCIncF, typename V_RCIncF>
+    static Ty* map_projectall(Ty* m, ListT* dl)
     {
         std::vector<MEntry<K, V>> entries;
 
-        if(missingok)
-        {
-            std::for_each(ds->entries.begin(), ds->entries.end(), [&entries, m](K& k) {
-                MEntry<K, V> ekey{k};
-                auto entry = m->entries.find(ekey);
+        std::for_each(dl->entries.begin(), dl->entries.end(), [&entries, m](K k) {
+            V vv;
+            if(m->tryGetValue(k, &vv))
+            {
+                entries.push_back(MEntry<K, V>{K_RCIncF{}(k), V_RCIncF{}(vv)});
+            }
+        });
 
-                if(entry != m->entries.end())
-                {
-                    entries.push_back(MEntry<K, V>{K_RCIncF{}(entry->key), V_RCIncF{}(entry->value)});
-                }
-            });
-        }
-        else
-        {
-            std::for_each(ds->entries.begin(), ds->entries.end(), [&entries, m](K& k) {
-                MEntry<K, V> ekey{k};
-                auto entry = m->entries.find(ekey);
-                BSQ_ASSERT(entry != m->entries.end(), "abort -- missing key in domain in Map<K, V>::project");
-                
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(entry->key), V_RCIncF{}(entry->value)});
-            });
-        }
+        std::stable_sort(entries.begin(), entries.end(), MEntryCMP<K, V, K_CMP>{});
+        return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
+    }
+
+    template <typename ListT, typename K_RCIncF, typename V_RCIncF>
+    static Ty* map_excludeall(Ty* m, ListT* dl)
+    {
+        std::vector<MEntry<K, V>> entries;
+
+        std::set<K, K_CMP> es(dl->entries.begin(), dl->entries.end());
+        std::for_each(m->entries.begin(), m->entries.end(), [&entries, &es](MEntry<K, V>& e) {
+            bool has = es.find(e.key) != es.end();
+            if(!has)
+            {
+                entries.push_back(MEntry<K, V>{K_RCIncF{}(e.key), V_RCIncF{}(e.value)});
+            }
+        });
 
         return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
     }
 
-    template <typename K_RCIncF, typename V_RCIncF>
-    static Ty* map_exclude(Ty* m, BSQSet<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ>* ds)
+    template <typename SetT, typename K_RCIncF, typename V_RCIncF>
+    static Ty* map_project(Ty* m, SetT* ds)
+    {
+        std::vector<MEntry<K, V>> entries;
+
+        std::for_each(ds->entries.begin(), ds->entries.end(), [&entries, m](K k) {
+            V vv;
+            if(m->tryGetValue(k, &vv))
+            {
+                entries.push_back(MEntry<K, V>{K_RCIncF{}(k), V_RCIncF{}(vv)});
+            }
+        });
+
+        std::stable_sort(entries.begin(), entries.end(), MEntryCMP<K, V, K_CMP>{});
+        return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
+    }
+
+    template <typename SetT, typename K_RCIncF, typename V_RCIncF>
+    static Ty* map_exclude(Ty* m, SetT* ds)
     {
         std::vector<MEntry<K, V>> entries;
 
         std::for_each(m->entries.begin(), m->entries.end(), [&entries, ds](MEntry<K, V>& e) {
-            bool has = std::binary_search(ds->entries.begin(), ds->entries.end(), e.key, K_CMP{});
+            bool has = ds->has(e.key);
             if(!has)
             {
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(e->key), V_RCIncF{}(e->value)});
+                entries.push_back(MEntry<K, V>{K_RCIncF{}(e.key), V_RCIncF{}(e.value)});
             }
         });
 
@@ -180,41 +200,6 @@ public:
         });
 
         return BSQ_NEW_NO_RC((BSQMap<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ, U, U_RCDecF, U_DisplayF>), ntype, move(entries));
-    }
-
-    template <typename K_RCIncF, typename V_RCIncF>
-    static Ty* map_projectall(Ty* m, BSQList<K, K_RCDecF, K_DisplayF>* dl)
-    {
-        std::vector<MEntry<K, V>> entries;
-
-        std::for_each(dl->entries.begin(), dl->entries.end(), [&entries, m](K& k) {
-            MEntry<K, V> ekey{k};
-            auto entry = m->entries.find(ekey);
-            BSQ_ASSERT(entry != m->entries.end(), "abort -- missing key in domain in Map<K, V>::projectAll");
-                
-            entries.push_back(MEntry<K, V>{K_RCIncF{}(entry->key), V_RCIncF{}(entry->value)});
-        });
-
-        std::stable_sort(entries.begin(), entries.end(), MEntryCMP<K, V, K_CMP>{});
-        return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
-    }
-
-    template <typename K_RCIncF, typename V_RCIncF>
-    static Ty* map_excludeall(Ty* m, BSQList<K, K_RCDecF, K_DisplayF>* dl)
-    {
-        std::vector<MEntry<K, V>> entries;
-
-        std::set<K, K_CMP> es(dl->entries.begin(), dl->entries.end());
-        std::for_each(m->entries.begin(), m->entries.end(), [&entries, &es](MEntry<K, V>& e) {
-            bool has = es.find(e.key) != es.end();
-            if(!has)
-            {
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(e->key), V_RCIncF{}(e->value)});
-            }
-        });
-
-        std::stable_sort(entries.begin(), entries.end(), MEntryCMP<K, V, K_CMP>{});
-        return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
     }
 
     template <typename K_RCIncF, typename V_RCIncF>

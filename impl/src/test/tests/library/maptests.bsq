@@ -121,3 +121,48 @@ entrypoint function casterr(): Int {
 
     return m.cast<Int, Int>().size();
 }
+
+entrypoint function projectops(): Int {
+    let m = Map<Int, Int>@{1 => 1, 2 => 2, 3 => 3};
+
+    let pls = m.projectAll(1, 2);
+    check pls.size() == 2;
+    check pls.get(2) == 2;
+
+    let plo = m.projectAll(2, 3, 4);
+    check plo.size() == 2;
+    check plo.get(2) == 2;
+
+    let pss = m.projectSet(Set<Int>@{1, 2});
+    check pss.size() == 2;
+    check pss.get(2) == 2;
+
+    let pso = m.projectSet(Set<Int>@{2, 3, 4});
+    check pso.size() == 2;
+    check pso.get(2) == 2;
+
+    return 0;
+}
+
+entrypoint function excludeops(): Int {
+    let m = Map<Int, Int>@{1 => 1, 2 => 2, 3 => 3};
+
+    let els = m.excludeAll(1, 2);
+    check els.size() == 1;
+    check els.get(3) == 3;
+
+    let elo = m.excludeAll(2, 3, 4);
+    check elo.size() == 1;
+    check elo.get(1) == 1;
+
+    let ess = m.excludeSet(Set<Int>@{1, 2});
+    check ess.size() == 1;
+    check ess.get(3) == 3;
+
+    let eso = m.excludeSet(Set<Int>@{2, 3, 4});
+    check eso.size() == 1;
+    check eso.get(1) == 1;
+
+    return 0;
+}
+

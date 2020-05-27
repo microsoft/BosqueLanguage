@@ -2359,6 +2359,50 @@ class CPPBodyEmitter {
                 }
                 break;
             }
+            case "map_projectall": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const ltype = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+
+                const kfuncs = this.typegen.getFunctorsForType(ktype);
+                const vfuncs = this.typegen.getFunctorsForType(vtype);
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_projectall<${ltype}, ${kfuncs.inc}, ${vfuncs.inc}>(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "map_excludeall": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const ltype = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+
+                const kfuncs = this.typegen.getFunctorsForType(ktype);
+                const vfuncs = this.typegen.getFunctorsForType(vtype);
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_excludeall<${ltype}, ${kfuncs.inc}, ${vfuncs.inc}>(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "map_project": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const stype = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+
+                const kfuncs = this.typegen.getFunctorsForType(ktype);
+                const vfuncs = this.typegen.getFunctorsForType(vtype);
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_project<${stype}, ${kfuncs.inc}, ${vfuncs.inc}>(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "map_exclude": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const stype = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[1].type)).base;
+
+                const kfuncs = this.typegen.getFunctorsForType(ktype);
+                const vfuncs = this.typegen.getFunctorsForType(vtype);
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_exclude<${stype}, ${kfuncs.inc}, ${vfuncs.inc}>(${params[0]}, ${params[1]});`;
+                break;
+            }
             /*
             case "list_unsafe_add": {
                 bodystr = `auto $$return = ${params[0]}->unsafeAdd(${scopevar}, ${params[1]});`

@@ -1934,12 +1934,6 @@ class SMTBodyEmitter {
                 bodyres = new SMTValue(`(${cons} ${size} ${has} (store ${entries} ${params[1]} ${params[3]}) ${kl})`);
                 break;
             }
-            case "map_domainincludes": {
-                const hasm = this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0]);
-                const hass = this.typegen.generateSpecialTypeFieldAccess(idecl.params[1].type, "has", params[1]);
-                bodyres = new SMTValue(`(= ((_ map and) ${hasm} ${hass}) ${hass})`);
-                break;
-            }
             /*
             case "list_size":
             case "set_size":

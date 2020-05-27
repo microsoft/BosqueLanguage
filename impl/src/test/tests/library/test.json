@@ -57,6 +57,16 @@
             },
             {
                 "kind": "aot",
+                "entrypoint": "projectops",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "excludeops",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
                 "entrypoint": "casterr",
                 "expected": null
             },
@@ -76,9 +86,9 @@
                 "expected": "0"
             },
             {
-                "kind": "symtest",
+                "kind": "symexec",
                 "entrypoint": "domainsubsetofop",
-                "error": false
+                "expected": "0"
             },
             {
                 "kind": "symexec",
@@ -114,6 +124,16 @@
                 "kind": "symexec",
                 "entrypoint": "casterr",
                 "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "projectops",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "excludeops",
+                "expected": "0"
             }
         ]
     },
