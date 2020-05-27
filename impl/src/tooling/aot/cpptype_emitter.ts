@@ -821,7 +821,7 @@ class CPPTypeEmitter {
         const crepr = this.getCPPReprFor(typet);
 
         const cops = this.getFunctorsForType(typet);
-        const bc = `BSQSet<${crepr.std}, ${cops.dec}, ${cops.display}, ${cops.eq}, ${cops.less}>`;
+        const bc = `BSQSet<${crepr.std}, ${cops.dec}, ${cops.display}, ${cops.less}, ${cops.eq}>`;
         const decl = `class ${declrepr.base} : public ${bc}\n`
         + "{\n"
         + "public:\n"

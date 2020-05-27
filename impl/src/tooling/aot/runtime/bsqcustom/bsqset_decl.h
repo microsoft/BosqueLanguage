@@ -16,6 +16,12 @@ class BSQSet : public BSQObject
 public:
     std::vector<T> entries;
 
+    inline bool has(T v)
+    {
+        auto ipos = std::lower_bound(this->entries.begin(), this->entries.end(), v, [](T a, T b){ return T_CMP{}(a, b); });
+        return ipos != this->entries.end() && T_EQ{}(v, *ipos);
+    }
+
     template <typename T_INC>
     inline static std::vector<T> processSingletonSetInit(std::vector<T> src)
     {
