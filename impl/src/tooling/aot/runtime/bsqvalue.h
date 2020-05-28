@@ -838,12 +838,11 @@ public:
     template <DATA_KIND_FLAG flag>
     static BSQRecord createFromUpdate(const BSQRecord* src, std::map<MIRPropertyEnum, Value>&& values)
     {
-        std::map<MIRPropertyEnum, Value> entries(move(values));
         auto fv = flag;
 
         for(auto iter = src->entries.begin(); iter != src->entries.end(); ++iter) {
             auto pos = values.lower_bound(iter->first);
-            if(pos != src->entries.cend() && pos->first != iter->first)
+            if(pos == values.cend() || pos->first != iter->first)
             {
                 values.emplace_hint(pos, *iter);
             }
