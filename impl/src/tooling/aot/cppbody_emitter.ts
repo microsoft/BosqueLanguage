@@ -504,7 +504,7 @@ class CPPBodyEmitter {
         else {
             const rargs: string[] = [];
             for(let i = 0; i < op.properties.length; ++i) {
-                rargs.push(`{ MIRRecordEnum::${op.properties[i]}, ${vals[i]} }`);
+                rargs.push(`{ MIRPropertyEnum::${op.properties[i]}, ${vals[i]} }`);
             }
 
             const iflag = this.typegen.generateInitialDataKindFlag(resultAccessType);
@@ -531,7 +531,7 @@ class CPPBodyEmitter {
             const pname = pmax[i];
             const upd = op.updates.find((update) => update[0] === pname);
             if (upd !== undefined) {
-                cvals.push(`{ MIRRecordEnum::${pname}, ${this.argToCpp(upd[1], this.typegen.anyType)} }`);
+                cvals.push(`{ MIRPropertyEnum::${pname}, ${this.argToCpp(upd[1], this.typegen.anyType)} }`);
             }
         }
 
@@ -551,7 +551,7 @@ class CPPBodyEmitter {
                 //nothing to do
             }
             else if (uhas === "yes") {
-                cvals.push(`{ MIRRecordEnum::${pname}, ${this.generateMIRAccessFromPropertyExpression(op.update, pname, this.typegen.anyType)} }`);
+                cvals.push(`{ MIRPropertyEnum::${pname}, ${this.generateMIRAccessFromPropertyExpression(op.update, pname, this.typegen.anyType)} }`);
             }
             else {
                 const check = `${this.generateAccessRecordPtr(op.update)}->hasProperty(MIRPropertyEnum::${pname})`;
@@ -637,7 +637,7 @@ class CPPBodyEmitter {
                     const fdecl = this.assembly.fieldDecls.get(f) as MIRFieldDecl;
                     const val = this.generateMIRAccessFromFieldExpression(op.arg, inferargtype, f, this.typegen.anyType);
 
-                    cvals.push(`{ MIRRecordEnum::${fdecl.name}, ${val} }`);
+                    cvals.push(`{ MIRPropertyEnum::${fdecl.name}, ${val} }`);
                 });
 
                 const iflag = this.typegen.generateInitialDataKindFlag(this.typegen.getMIRType(op.resultProjectType));

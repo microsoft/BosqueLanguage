@@ -327,6 +327,51 @@
                 "expected": "0"
             },
             {
+                "kind": "aot",
+                "entrypoint": "bulkaccesstuple",
+                "expected": "[7, 9]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkaccesrecord",
+                "expected": "{f=7, h=none}"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkacceschk",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkupdaterecord1",
+                "expected": "{f=-1, g=-2, h=3}"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkupdaterecord2",
+                "expected": "{f=5, g=8, h=1}"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkupdatechk",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkmergetuple",
+                "expected": "[7, 8, 9, 5, 6]"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkmergerecord",
+                "expected": "{f=5, g=8, h=1}"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "bulkmergechk",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "absC",
                 "expected": "2"
@@ -354,6 +399,21 @@
             {
                 "kind": "symexec",
                 "entrypoint": "refthread",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "bulkacceschk",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "bulkupdatechk",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "bulkmergechk",
                 "expected": "0"
             }
         ]

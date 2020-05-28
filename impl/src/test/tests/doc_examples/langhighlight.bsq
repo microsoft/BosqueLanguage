@@ -75,3 +75,81 @@ entrypoint function refthread(): Int {
     return 0;
 }
 
+entrypoint function bulkaccesstuple(): [Int, Int] {
+    let l = [7, 8, 9];
+    return l.[0, 2];
+}
+
+entrypoint function bulkaccesrecord(): {f: Int, h: None} {
+    let r = {f=7, g=8};
+    return r.{f, h};
+}
+
+entrypoint function bulkacceschk(): Int {
+    let l = [7, 8, 9];
+    let r = {f=7, g=8};
+
+    let lp = l.[0, 2];
+    check lp.0 == 7;
+    check lp.1 == 9;
+
+    let rp = r.{f, h};
+    check rp.f == 7;
+    check rp.h == none;
+
+    return 0;
+}
+
+entrypoint function bulkupdaterecord1(): {f: Int, g: Int, h: Int} {
+    let x = {f=1, g=2, h=3};
+    return x.update(f=-1, g=-2);
+}
+
+entrypoint function bulkupdaterecord2(): {f: Int, g: Int, h: Int} {
+    let r = {f=7, g=8};
+    return r.update(f=5, h=1);
+}
+
+entrypoint function bulkupdatechk(): Int {
+    let x = {f=1, g=2, h=3};
+    let xu = x.update(f=-1, g=-2);
+    check xu.f == -1;
+    check xu.g == -2;
+    check xu.h == 3; 
+
+    let r = {f=7, g=8};
+    let xr = r.update(f=5, h=1);
+    check xr.f == 5;
+    check xr.g == 8;
+    check xr.h == 1;
+
+    return 0;
+}
+
+entrypoint function bulkmergetuple(): [Int, Int, Int, Int, Int] {
+    let l = [7, 8, 9];
+    return l.merge([5, 6]);
+}
+
+entrypoint function bulkmergerecord(): {f: Int, g: Int, h: Int} {
+    let r = {f=7, g=8};
+    return r.merge({f=5, h=1});
+}
+
+entrypoint function bulkmergechk(): Int {
+    let l = [7, 8, 9];
+    let r = {f=7, g=8};
+
+    let lm = l.merge([5, 6]);
+    check lm.0 == 7;
+    check lm.2 == 9;
+    check lm.3 == 5;
+    check lm.4 == 6;
+
+    let rm = r.merge({f=5, h=1});
+    check rm.f == 5;
+    check rm.g == 8;
+    check rm.h == 1;
+
+    return 0;
+}

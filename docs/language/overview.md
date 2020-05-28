@@ -2,7 +2,7 @@
 
 The Bosque language derives from a combination of [TypeScript](https://www.typescriptlang.org/) inspired syntax and types plus [ML](https://www.smlnj.org/) and [Node/JavaScript](https://nodejs.org/en/) inspired semantics. This document provides an overview of the syntax, operations, and semantics in the Bosque language with an emphasis on the distinctive or unusual features in the language.
 
-_[Due to recent language updates some of this documentation is slightly out of date. We are working to get everything back in sync but please open issues as needed.]_
+**[Due to recent language updates some of this documentation is slightly out of date. We are working to get everything back in sync but please open issues as needed.]**
 
 # Table of Contents
 
@@ -22,6 +22,7 @@ _[Due to recent language updates some of this documentation is slightly out of d
   - [0.13 Atomic Constructors and Factories](#0.13-Atomic-Constructors-and-Factories)
   - [0.14 Synthesis Blocks](#0.14-Synthesis-Blocks)
   - [0.15 API Types](#0.15-API-Types)
+  - [0.16 Checks and Invariants](#0.16-Checks-and-Invariants)
 - [1 Type System](#1-Type-System)
   - [1.1 Nominal Types](#1.1-Nominal-Types)
   - [1.2 Structural Types](#1.2-Structural-Types)
@@ -148,7 +149,7 @@ _debug(v2);  //1
 ```
 
 A more realistic example, with a more complex environment, for interning strings to `Int` identifiers is:
-[TODO: needs DynamicMap and Test]
+**[TODO: needs DynamicMap and Test]**
 
 ```none
 function internString(ref env: DynamicMap<String, Int>, str: String): Int {
@@ -176,7 +177,7 @@ Bosque provides two flavors of typed strings, `SafeString<T>` and `StringOf<T>`,
 
 The `SafeString<T>` type is parameterized with a `Validator` regular expression type which describes the language that the string belongs to. This supports concise representation of many common string structures seen in a program, particularly at API call parameters, in a way that does not require exposing details of the program.
 
-[TODO: needs Regex fully implemented and tests -- may also want to change the example a bit]
+**[TODO: needs Regex fully implemented and tests -- may also want to change the example a bit]**
 
 ```none
 typedef SizeFormat = /(\d)+(em|px)/; //declare Validator type the size formats
@@ -201,7 +202,7 @@ function convertEMToPX(emsize: Int): Int {
 
 The `StringOf<T>` type is much richer at the cost of using customized logic and exposing internal information from the codebase. It is parameterized by any type implementing the `Parsable` concept. The contents of the string are then restricted to the language of strings accepted by the static `T::tryParse` method -- which may be arbitrarily complex code. This makes them ideal for working with data that comes in a custom format or simply for light validation and then to *tag* strings with a type to avoid confusion in code or APIs with multiple string valued parameters.
 
-[TODO: needs regex implementation, fill in regex parsing, and test]
+**[TODO: needs regex implementation, fill in regex parsing, and test]**
 
 ```none
 //Represent an EMail address + specify parsing of format
@@ -273,17 +274,46 @@ x.update(f=-1, g=-2); //{f=-1, g=-2, h=3}
 
 In addition to eliminating opportunities to forget or confuse a field these operators help focus the code on the overall intent, instead of being hidden in the individual steps, and allow a developer to perform algebraic reasoning on the data structure operations. Bosque provides several flavors of these algebraic operations for various data types, tuples, records, and nominal types, and for various operations including projection, multi-update, and merge.
 
+**[TODO: project operation not implemented]**
+
 ```none
 let l = [7, 8, 9];
 let r = {f=7, g=8};
 
-l.[0, 2]               //[7, 9]
-l.merge([5, 6])       //[7, 8, 9, 5, 6]
-l.project<Int, Int>() //[7, 8]
+l.[0, 2]                //[7, 9]
+l.merge([5, 6])         //[7, 8, 9, 5, 6]
+l.project<[Int, Int]>() //[7, 8]
 
-r.{f, h}             //{f=7, h=none}
+r.{f, h}            //{f=7, h=none}
 r.update(f=5, h=1)  //{f=5, g=8, h=1}
 r.merge({f=5, h=1}) //{f=5, g=8, h=1}
+```
+
+These bulk operations also work on entities and concepts (and even with invariant specifications!):
+
+**[TODO: virtual updates and virtual invariants are not implemented]**
+
+**[TODO: tests needed]**
+```none
+concept Person {
+    field name: String;
+
+    invariant $name != "";
+}
+
+entity Worker {
+    field job: String;
+    field hobby: String;
+
+    invariant $job != "";
+}
+
+let bob = Worker@{"bob", "programmer", "golf"};
+
+bob.update(job="manager")                  //Worker@{name="bob", job="manager", hobby="golf"}
+bob.update(job="")                         //invariant error
+bob.{name, hobby}                          //{name="bob", hobby="golf"}
+bob.merge({job="manager", hobby="tennis"}) //Worker@{name="bob", job="manager", hobby="tennis"}
 ```
 
 ## <a name="0.7-None-Processing"></a>0.7 None Processing
@@ -437,6 +467,11 @@ Using these types it is possible to define a high quality interface that is:
 3. Can be checked for common semantic version changes
 4. Can be effectively fuzzed using structure aware fuzzers
 5. Can be effectively checked using symbolic analysis techniques
+
+## <a name="0.16-Checks-and-Invariants"></a>0.16 Checks and Invariants
+
+API types are designed to support the definition of high-quality external interfaces into Bosque applications. Good types for APIs are easy to understand without looking at the source code of an application, can easily be validated for changes to an applications semantic version, and also are precise descriptions of what the value of the argument should be. Thus API types include:
+
 
 # <a name="1-Type-System"></a>1 Type System
 
