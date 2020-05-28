@@ -131,7 +131,27 @@ let q = np(...r);         //returns {x=1, y=2} -- same as explicit call
 In addition to allowing multiple assignments to variables and multi-return values, the Bosque language also allows developers to thread parameters via `ref` argument passing. This alternative to multi-return values simplifies scenarios where a variable (often some sort of environment) is passed to a method which may use and update it. Allowing the update in the parameter eliminates the extra return value management that would otherwise be needed:
 
 ```none
-function internString(ref env: Map<String, Int>, str: String): Int {
+function next(ref ctr: Int): Int {
+    let res = ctr;
+    ctr = ctr + 1;
+    return res;
+}
+
+...
+var ctr = 0;
+let v1 = next(ref ctr);
+let v2 = next(ref ctr);
+
+_debug(ctr); //2
+_debug(v1);  //0
+_debug(v2);  //1
+```
+
+A more realistic example, with a more complex environment, for interning strings to `Int` identifiers is:
+[TODO: needs DynamicMap and Test]
+
+```none
+function internString(ref env: DynamicMap<String, Int>, str: String): Int {
     if(env.has(str)) {              //use the ref parameter
         return env.get(str);
     }
@@ -142,15 +162,23 @@ function internString(ref env: Map<String, Int>, str: String): Int {
 
 
 ...
-let nameid = internString(ref env, "hello");
+var env = Map<String, Int>@{};
+let nameid1 = internString(ref env, "hello");
+let nameid2 = internString(ref env, "goodbye");
+
+_debug(env->toList()); //List<[String, Int]>@{ ["hello", 0], ["goodbye", 1] }
+
 ```
 
 ## <a name="0.5-Typed-Strings"></a>0.5 Typed Strings
 
 Bosque provides two flavors of typed strings, `SafeString<T>` and `StringOf<T>`, to address various scenarios where including meta-data about the string in the type is useful. 
 
-The `SafeString<T>` type is parameterized with a `Validator` regular expression type which describes the language that the string belongs to. This supports concise representation of many common string structures seen in a program, particularly at API call parameters, in a way that does not require exposing details of the program. 
-```
+The `SafeString<T>` type is parameterized with a `Validator` regular expression type which describes the language that the string belongs to. This supports concise representation of many common string structures seen in a program, particularly at API call parameters, in a way that does not require exposing details of the program.
+
+[TODO: needs Regex fully implemented and tests -- may also want to change the example a bit]
+
+```none
 typedef SizeFormat = /(\d)+(em|px)/; //declare Validator type the size formats
 
 entrypoint function convertToPX(size: SafeString<SizeFormat>): Int {
@@ -172,7 +200,10 @@ function convertEMToPX(emsize: Int): Int {
 ```
 
 The `StringOf<T>` type is much richer at the cost of using customized logic and exposing internal information from the codebase. It is parameterized by any type implementing the `Parsable` concept. The contents of the string are then restricted to the language of strings accepted by the static `T::tryParse` method -- which may be arbitrarily complex code. This makes them ideal for working with data that comes in a custom format or simply for light validation and then to *tag* strings with a type to avoid confusion in code or APIs with multiple string valued parameters.
-```
+
+[TODO: needs regex implementation, fill in regex parsing, and test]
+
+```none
 //Represent an EMail address + specify parsing of format
 entity EMailAddress provides Parsable {
     field local: String;
@@ -237,7 +268,7 @@ Bulk algebraic operations in Bosque start with support for bulk reads and update
 
 ```none
 let x = {f=1, g=2, h=3};
-x.update(f=-1, g=-2); //{f=-1, @g=-2, h=3}
+x.update(f=-1, g=-2); //{f=-1, g=-2, h=3}
 ```
 
 In addition to eliminating opportunities to forget or confuse a field these operators help focus the code on the overall intent, instead of being hidden in the individual steps, and allow a developer to perform algebraic reasoning on the data structure operations. Bosque provides several flavors of these algebraic operations for various data types, tuples, records, and nominal types, and for various operations including projection, multi-update, and merge.

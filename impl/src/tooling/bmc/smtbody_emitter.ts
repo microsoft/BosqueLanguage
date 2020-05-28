@@ -838,7 +838,7 @@ class SMTBodyEmitter {
     }
 
     generateMIRLoadFromEpehmeralList(op: MIRLoadFromEpehmeralList): SMTExp {
-        return new SMTLet(this.varToSMTName(op.trgt), new SMTValue(`(${this.typegen.generateEntityAccessor(op.argInferType, `entry_${op.idx}`)} ${this.varToSMTName(op.arg)})`));
+        return new SMTLet(this.varToSMTName(op.trgt), new SMTValue(`(${this.typegen.generateEntityAccessor(op.argInferType, `entry_${op.idx}`)} ${this.argToSMT(op.arg, this.typegen.getMIRType(op.argInferType)).emit()})`));
     }
 
     generateMIRInvokeFixedFunction(ivop: MIRInvokeFixedFunction, gas: number | undefined): SMTExp {
