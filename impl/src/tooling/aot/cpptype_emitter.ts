@@ -927,35 +927,11 @@ class CPPTypeEmitter {
                     };
             }
             else {
-                const copy_constructor_initializer = entity.fields.map((fd) => {
-                    return `${this.mangleStringForCpp(fd.fkey)}(src.${this.mangleStringForCpp(fd.fkey)})`;
-                });
-                const copy_cons = `${this.mangleStringForCpp(entity.tkey)}(const ${this.mangleStringForCpp(entity.tkey)}& src) ${copy_constructor_initializer.length !== 0 ? ":" : ""} ${copy_constructor_initializer.join(", ")} { ; }`;
-
-                const move_constructor_initializer = entity.fields.map((fd) => {
-                    return `${this.mangleStringForCpp(fd.fkey)}(std::move(src.${this.mangleStringForCpp(fd.fkey)}))`;
-                });
-                const move_cons = `${this.mangleStringForCpp(entity.tkey)}(${this.mangleStringForCpp(entity.tkey)}&& src) ${move_constructor_initializer.length !== 0 ? ":" : ""} ${move_constructor_initializer.join(", ")} { ; }`;
-
-                const copy_assign_ops = entity.fields.map((fd) => {
-                    return `this->${this.mangleStringForCpp(fd.fkey)} = src.${this.mangleStringForCpp(fd.fkey)};`;
-                });
-                const copy_assign = `${this.mangleStringForCpp(entity.tkey)}& operator=(const ${this.mangleStringForCpp(entity.tkey)}& src)`
-                + `{\n`
-                + `  if (this == &src) return *this;\n\n  `
-                + copy_assign_ops.join("\n  ")
-                + `return *this;\n`
-                + `}\n`;
-
-                const move_assign_ops = entity.fields.map((fd) => {
-                    return `this->${this.mangleStringForCpp(fd.fkey)} = std::move(src.${this.mangleStringForCpp(fd.fkey)});`;
-                });
-                const move_assign = `${this.mangleStringForCpp(entity.tkey)}& operator=(${this.mangleStringForCpp(entity.tkey)}&& src)`
-                + `{\n`
-                + `  if (this == &src) return *this;\n\n  `
-                +  move_assign_ops.join("\n  ")
-                + `return *this;\n`
-                + `}\n`;
+                const copy_cons = `${this.mangleStringForCpp(entity.tkey)}(const ${this.mangleStringForCpp(entity.tkey)}& src) = default;`;
+                const move_cons = `${this.mangleStringForCpp(entity.tkey)}(${this.mangleStringForCpp(entity.tkey)}&& src) = default;`;
+                
+                const copy_assign = `${this.mangleStringForCpp(entity.tkey)}& operator=(const ${this.mangleStringForCpp(entity.tkey)}& src) = default;`;
+                const move_assign = `${this.mangleStringForCpp(entity.tkey)}& operator=(${this.mangleStringForCpp(entity.tkey)}&& src) = default;`;
 
                 const incop_ops = entity.fields.map((fd) => {
                     return this.buildIncOpForType(this.getMIRType(fd.declaredType), `tt.${this.mangleStringForCpp(fd.fkey)}`) + ";";
