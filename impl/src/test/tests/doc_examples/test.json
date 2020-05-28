@@ -322,6 +322,11 @@
                 "expected": "3"
             },
             {
+                "kind": "aot",
+                "entrypoint": "refthread",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "absC",
                 "expected": "2"
@@ -345,6 +350,11 @@
                 "kind": "symexec",
                 "entrypoint": "nameExpand",
                 "expected": "3"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "refthread",
+                "expected": "0"
             }
         ]
     }

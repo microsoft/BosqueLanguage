@@ -71,7 +71,7 @@ class ValueRepr extends TypeRepr {
 
 class EphemeralListRepr extends TypeRepr {
     constructor(base: string) {
-        super(false, base, base + "*", "MIRNominalTypeEnum_Category_Empty");
+        super(false, base, base, "MIRNominalTypeEnum_Category_Empty");
     }
 }
 

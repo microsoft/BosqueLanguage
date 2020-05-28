@@ -1062,11 +1062,17 @@ class CPPTypeEmitter {
             constructor_initializer.push(`entry_${i}(e${i})`);
         }
 
+        const copy_cons = `${this.mangleStringForCpp(tt.trkey)}(const ${this.mangleStringForCpp(tt.trkey)}& src) = default;`;
+        const move_cons = `${this.mangleStringForCpp(tt.trkey)}(${this.mangleStringForCpp(tt.trkey)}&& src) = default;`;
+
+        const copy_assign = `${this.mangleStringForCpp(tt.trkey)}& operator=(const ${this.mangleStringForCpp(tt.trkey)}& src) = default;`;
+        const move_assign = `${this.mangleStringForCpp(tt.trkey)}& operator=(${this.mangleStringForCpp(tt.trkey)}&& src) = default;`;
+
         const fjoins = displayvals.map((dv) => `diagnostic_format(${dv})`).join(" + std::string(\", \") + ");
         const display = "std::string display() const\n"
             + "    {\n"
             + `        BSQRefScope ${this.mangleStringForCpp("$scope$")};\n`
-            + `        return std::string("(|) ") + ${fjoins} + std::string(" |)");\n`
+            + `        return std::string("(| ") + ${fjoins} + std::string(" |)");\n`
             + "    }";
 
         const processForCallReturn = "void processForCallReturn(BSQRefScope& scope)\n"
@@ -1080,6 +1086,10 @@ class CPPTypeEmitter {
             + `    ${fields.join("\n    ")}\n\n`
             + `    ${this.mangleStringForCpp(tt.trkey)}() { ; }\n\n`
             + `    ${this.mangleStringForCpp(tt.trkey)}(${constructor_args.join(", ")}) : ${constructor_initializer.join(", ")} { ; }\n\n`
+            + `    ${copy_cons}\n`
+            + `    ${move_cons}\n`
+            + `    ${copy_assign}\n`
+            + `    ${move_assign}\n`
             + `    ${display}\n\n`
             + `    ${processForCallReturn}\n`
             + "};"
