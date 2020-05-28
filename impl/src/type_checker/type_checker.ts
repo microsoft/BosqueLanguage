@@ -11,7 +11,7 @@ import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedSt
 import { PCode, MIREmitter, MIRKeyGenerator, MIRBodyEmitter } from "../compiler/mir_emitter";
 import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRVirtualMethodKey, MIRRegisterArgument, MIRVariable, MIRNominalTypeKey, MIRConstantKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey } from "../compiler/mir_ops";
 import { SourceInfo } from "../ast/parser";
-import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIROOTypeDecl, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIREntityType, MIRRegex } from "../compiler/mir_assembly";
+import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIROOTypeDecl, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIREntityType, MIRRegex, MIREphemeralListType } from "../compiler/mir_assembly";
 
 class TypeError extends Error {
     readonly file: string;
@@ -3693,7 +3693,8 @@ class TypeChecker {
                     const tlreg = this.m_emitter.bodyEmitter.generateTmpRegister();
                     if (this.m_emitEnabled) {
                         const eltkey = this.m_emitter.registerResolvedTypeReference(ve).trkey;
-                        this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(stmt.sinfo, etreg, eltkey, i, tlreg);
+                        const rtype = this.m_emitter.registerResolvedTypeReference(elt.types[i]).trkey;
+                        this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(stmt.sinfo, etreg, rtype, eltkey, i, tlreg);
                     }
 
                     cenv = this.checkDeclareSingleVariable(stmt.sinfo, cenv, stmt.vars[i].name, stmt.isConst, stmt.vars[i].vtype, { etype: elt.types[i], etreg: tlreg });
@@ -3751,7 +3752,8 @@ class TypeChecker {
                 const tlreg = this.m_emitter.bodyEmitter.generateTmpRegister();
                 if (this.m_emitEnabled) {
                     const eltkey = this.m_emitter.registerResolvedTypeReference(ve).trkey;
-                    this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(stmt.sinfo, etreg, eltkey, i, tlreg);
+                    const rtype = this.m_emitter.registerResolvedTypeReference(elt.types[i]).trkey;
+                    this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(stmt.sinfo, etreg, rtype, eltkey, i, tlreg);
                 }
 
                 cenv = this.checkAssignSingleVariable(stmt.sinfo, cenv, stmt.names[i], elt.types[i], tlreg);
@@ -3923,7 +3925,7 @@ class TypeChecker {
                 this.m_emitter.bodyEmitter.emitLoadField(sinfo, lt, creg, infertype, assign[i].nval, nreg);
             }
             else {
-                this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, creg, infertype, assign[i].ival, nreg);
+                this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, creg, lt, infertype, assign[i].ival, nreg);
             }
 
             creg = nreg;
@@ -3949,7 +3951,7 @@ class TypeChecker {
                 this.m_emitter.bodyEmitter.emitLoadField(sinfo, lt, creg, infertype, assign[i].nval, nreg);
             }
             else {
-                this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, creg, infertype, assign[i].ival, nreg);
+                this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, creg, lt, infertype, assign[i].ival, nreg);
             }
             
             creg = nreg;
@@ -3988,7 +3990,7 @@ class TypeChecker {
                 this.m_emitter.bodyEmitter.emitLoadField(sinfo, lt, creg, infertype, assign[i].nval, nreg);
             }
             else {
-                this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, creg, infertype, assign[i].ival, nreg);
+                this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, creg, lt, infertype, assign[i].ival, nreg);
             }
             
             creg = nreg;
@@ -4721,7 +4723,7 @@ class TypeChecker {
         else {
             const rreg = this.m_emitter.bodyEmitter.generateTmpRegister();
 
-            if(rrinfo[2] === 1) {
+            if(rrinfo[2] === -1) {
                 let args = [new MIRVariable("$__ir_ret__"), ...rrinfo[3].map((rv) => new MIRVariable(rv[0]))];
                 this.m_emitter.bodyEmitter.emitConstructorValueList(sinfo, rrinfo[1].trkey, args, rreg);
             }
@@ -4732,7 +4734,8 @@ class TypeChecker {
                     this.m_emitter.bodyEmitter.emitAccessLocalVariable(sinfo, "$__ir_ret__", elreg);
                     for (let i = 0; i < rrinfo[2]; ++i) {
                         const tlreg = this.m_emitter.bodyEmitter.generateTmpRegister();
-                        this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, elreg, rrinfo[0].trkey, i, tlreg);
+                        const lt = (rrinfo[0].options[0] as MIREphemeralListType).entries[i];
+                        this.m_emitter.bodyEmitter.emitLoadFromEpehmeralList(sinfo, elreg, lt.trkey, rrinfo[1].trkey, i, tlreg);
 
                         rargs.push(tlreg);
                     }

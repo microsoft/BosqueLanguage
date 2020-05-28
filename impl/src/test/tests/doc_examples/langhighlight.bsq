@@ -25,6 +25,12 @@ function absImpl(x: Int): Int {
     return x * sign;
 }
 
+function nextCtr(ref ctr: Int): Int {
+    let res = ctr;
+    ctr = ctr + 1;
+    return res;
+}
+
 ////
 //Tests
 
@@ -56,3 +62,16 @@ entrypoint function nameExpand(): Int {
     let rr = np(...r);
     return rr.x + rr.y;
 }
+
+entrypoint function refthread(): Int {
+    var ctr = 0;
+    let v1 = nextCtr(ref ctr);
+    let v2 = nextCtr(ref ctr);
+
+    check ctr == 2;
+    check v1 == 0;
+    check v2 == 1;
+
+    return 0;
+}
+

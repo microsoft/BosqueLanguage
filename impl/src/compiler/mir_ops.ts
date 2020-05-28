@@ -1388,12 +1388,14 @@ class MIRStructuredExtendObject extends MIRValueOp {
 
 class MIRLoadFromEpehmeralList extends MIRValueOp {
     arg: MIRRegisterArgument;
+    resultType: MIRResolvedTypeKey;
     argInferType: MIRResolvedTypeKey;
     readonly idx: number;
 
-    constructor(sinfo: SourceInfo, arg: MIRRegisterArgument, argInferType: MIRResolvedTypeKey, idx: number, trgt: MIRTempRegister) {
+    constructor(sinfo: SourceInfo, arg: MIRRegisterArgument, resultType: MIRResolvedTypeKey, argInferType: MIRResolvedTypeKey, idx: number, trgt: MIRTempRegister) {
         super(MIROpTag.MIRLoadFromEpehmeralList, sinfo, trgt);
         this.arg = arg;
+        this.resultType = resultType;
         this.argInferType = argInferType;
         this.idx = idx;
     }
@@ -1405,11 +1407,11 @@ class MIRLoadFromEpehmeralList extends MIRValueOp {
     }
 
     jemit(): object {
-        return { ...this.jbemit(), arg: this.arg.jemit(), argInferType: this.argInferType, idx: this.idx };
+        return { ...this.jbemit(), arg: this.arg.jemit(), resultType: this.resultType, argInferType: this.argInferType, idx: this.idx };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRLoadFromEpehmeralList(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.arg) as MIRRegisterArgument, jobj.argInferType, jobj.idx, MIRTempRegister.jparse(jobj.trgt));
+        return new MIRLoadFromEpehmeralList(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.arg) as MIRRegisterArgument, jobj.resultType, jobj.argInferType, jobj.idx, MIRTempRegister.jparse(jobj.trgt));
     }
 }
 
