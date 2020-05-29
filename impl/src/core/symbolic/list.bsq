@@ -528,27 +528,27 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             let val = List<T>::s_unsafe_get(ol, idx);
             let key = pf[recursive?](val);
             if(KeyType::equal(kk, key)) {
-                return List<T>::s_partitionSingle[recursive](kk, ol, olsize, List<T>::s_unsafe_push(lp, val), idx + 1, pf);
+                return List<T>::s_partitionSingle<K>[recursive](kk, ol, olsize, List<T>::s_unsafe_push(lp, val), idx + 1, pf);
             }
             else {
-                return List<T>::s_partitionSingle[recursive](kk, o, olsize, lp, idx + 1, pf);
+                return List<T>::s_partitionSingle<K>[recursive](kk, ol, olsize, lp, idx + 1, pf);
             }
         }
     }
 
     hidden recursive static s_partition<K where KeyType>(l: List<T>, lsize: Int, mp: Map<K, List<T>>, idx: Int, pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
         if(idx == lsize) {
-            return lp;
+            return mp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let key = pf[recursive?](val);
-            if(Map<K, List<T>>::s_has(key)) {
-                return List<T>::s_partition(l, lsize, mp, idx + 1, pf);
+            if(Map<K, List<T>>::s_has_key(mp, key)) {
+                return List<T>::s_partition<K>[recursive](l, lsize, mp, idx + 1, pf);
             }
             else {
-                let pfg = List<T>::s_partitionSingle<K>(key, l, lsize, List<T>@{}, idx, pf);
-                return List<T>::s_partition(l, lsize, mp.add(val, pfg), idx + 1, pf);
+                let pfg = List<T>::s_partitionSingle<K>[recursive](key, l, lsize, List<T>@{}, idx, pf);
+                return List<T>::s_partition<K>[recursive](l, lsize, Map<K, List<T>>::s_add(mp, key, pfg), idx + 1, pf);
             }
         }
     }
