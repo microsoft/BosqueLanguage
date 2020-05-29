@@ -800,11 +800,11 @@ entrypoint function prependop(): Int {
 
     return 0;
 }
-/*
+
 entrypoint function partitionop(): Int {
     let l = List<Int>@{2, -2, 0, 1};
     
-    let pp = l.partition(fn(a) => a >= 0 ? a : b);
+    let pp = l.partition<Int>(fn(a) => a >= 0 ? a : -a);
     check pp.size() == 3;
     check pp.get(2).size() == 2;
     check pp.get(2).front() == 2;
@@ -814,7 +814,7 @@ entrypoint function partitionop(): Int {
 
     return 0;
 }
-*/
+
 entrypoint function sort(): Int {
     let l = List<Int>@{2, 7, 23, 0};
     

@@ -480,6 +480,11 @@
             },
             {
                 "kind": "aot",
+                "entrypoint": "partitionop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
                 "entrypoint": "sort",
                 "expected": "0"
             },
@@ -776,6 +781,11 @@
             {
                 "kind": "symexec",
                 "entrypoint": "joingroupop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "partitionop",
                 "expected": "0"
             },
             {

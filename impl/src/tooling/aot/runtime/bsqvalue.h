@@ -217,18 +217,27 @@ class BSQRefScope
 {
 private:
     std::vector<BSQRef*> opts;
+    bool nodec;
 
 public:
-    BSQRefScope() : opts()
+    BSQRefScope() : opts(), nodec(false)
+    {
+        ;
+    }
+
+    BSQRefScope(bool nodec) : opts(), nodec(nodec)
     {
         ;
     }
 
     ~BSQRefScope()
     {
-        for(uint16_t i = 0; i < this->opts.size(); ++i)
+        if (!nodec)
         {
-           this->opts[i]->decrement();
+            for (uint16_t i = 0; i < this->opts.size(); ++i)
+            {
+                this->opts[i]->decrement();
+            }
         }
     }
 

@@ -314,16 +314,16 @@ class SMTBodyEmitter {
         const cpcetype = this.typegen.getMIRType(cpce.tkey);
         const smtctype = this.typegen.generateEntityConstructor(cpce.tkey);
         
-        if(this.typegen.typecheckIsName(cpcetype, /NSCore::List<.*>/)) {
+        if(this.typegen.typecheckIsName(cpcetype, /^NSCore::List<.*>$/)) {
             return new SMTLet(this.varToSMTName(cpce.trgt), new SMTValue(`(${smtctype} 0 ${this.typegen.generateEmptyDataArrayFor(cpce.tkey)})`));
         }
-        else if(this.typegen.typecheckIsName(cpcetype, /NSCore::Stack<.*>/)) {
+        else if(this.typegen.typecheckIsName(cpcetype, /^NSCore::Stack<.*>$/)) {
             return new SMTLet(this.varToSMTName(cpce.trgt), new SMTValue(`(${smtctype} 0 ${this.typegen.generateEmptyDataArrayFor(cpce.tkey)})`));
         }
-        else if(this.typegen.typecheckIsName(cpcetype, /NSCore::Queue<.*>/)) {
+        else if(this.typegen.typecheckIsName(cpcetype, /^NSCore::Queue<.*>$/)) {
             return new SMTLet(this.varToSMTName(cpce.trgt), new SMTValue(`(${smtctype} 0 0 ${this.typegen.generateEmptyDataArrayFor(cpce.tkey)})`));
         }
-        else if(this.typegen.typecheckIsName(cpcetype, /NSCore::Set<.*>/) || this.typegen.typecheckIsName(cpcetype, /NSCore::DynamicSet<.*>/)) {
+        else if(this.typegen.typecheckIsName(cpcetype, /^NSCore::Set<.*>$/) || this.typegen.typecheckIsName(cpcetype, /^NSCore::DynamicSet<.*>$/)) {
             return new SMTLet(this.varToSMTName(cpce.trgt), new SMTValue(`(${smtctype} 0 ${this.typegen.generateEmptyHasArrayFor(cpce.tkey)} bsqterm_none)`));
         }
         else {
@@ -335,7 +335,7 @@ class SMTBodyEmitter {
         const cpcstype = this.typegen.getMIRType(cpcs.tkey);
         const smtctype = this.typegen.generateEntityConstructor(cpcs.tkey);
 
-        if(this.typegen.typecheckIsName(cpcstype, /NSCore::List<.*>/)) {
+        if(this.typegen.typecheckIsName(cpcstype, /^NSCore::List<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
             let consv = this.typegen.generateEmptyDataArrayFor(cpcs.tkey);
             for (let i = 0; i < cpcs.args.length; ++i) {
@@ -344,7 +344,7 @@ class SMTBodyEmitter {
 
             return new SMTLet(this.varToSMTName(cpcs.trgt), new SMTValue(`(${smtctype} ${cpcs.args.length} ${consv})`));
         }
-        else if(this.typegen.typecheckIsName(cpcstype, /NSCore::Stack<.*>/)) {
+        else if(this.typegen.typecheckIsName(cpcstype, /^NSCore::Stack<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
             let consv = this.typegen.generateEmptyDataArrayFor(cpcs.tkey);
             for (let i = 0; i < cpcs.args.length; ++i) {
@@ -353,7 +353,7 @@ class SMTBodyEmitter {
 
             return new SMTLet(this.varToSMTName(cpcs.trgt), new SMTValue(`(${smtctype} ${cpcs.args.length} ${consv})`));
         }
-        else if(this.typegen.typecheckIsName(cpcstype, /NSCore::Queue<.*>/)) {
+        else if(this.typegen.typecheckIsName(cpcstype, /^NSCore::Queue<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
             let consv = this.typegen.generateEmptyDataArrayFor(cpcs.tkey);
             for (let i = 0; i < cpcs.args.length; ++i) {
@@ -362,7 +362,7 @@ class SMTBodyEmitter {
 
             return new SMTLet(this.varToSMTName(cpcs.trgt), new SMTValue(`(${smtctype} 0 ${cpcs.args.length} ${consv})`));
         }
-        else if(this.typegen.typecheckIsName(cpcstype, /NSCore::Set<.*>/) || this.typegen.typecheckIsName(cpcstype, /NSCore::DynamicSet<.*>/)) {
+        else if(this.typegen.typecheckIsName(cpcstype, /^NSCore::Set<.*>$/) || this.typegen.typecheckIsName(cpcstype, /^NSCore::DynamicSet<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
 
             const kltype = [...this.typegen.assembly.entityDecls].find((edecl) => edecl[1].ns === "NSCore" && edecl[1].name === "KeyList" && (edecl[1].terms.get("K") as MIRType).trkey === oftype.trkey) as [string, MIREntityTypeDecl];

@@ -140,11 +140,11 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         return Map<K, V>::s_defaultcomposewith(this, m, default);
     }
 
-    method {when V KeyType} invertInjection(): Map<V, K> {
+    method {when V KeyType} injectiveInvert(): Map<V, K> {
         return Map<K, V>::s_invertinj(this, m);
     }
 
-    method {when V KeyType} invertRelation(): Map<V, List<K>> {
+    method {when V KeyType} relationalInvert(): Map<V, List<K>> {
         return Map<K, V>::s_invertrel(this, m);
     }
 
@@ -160,7 +160,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return List<T>::s_unsafe_get(ml, 0);
         }
         else {
-            return Set<T>::s_unionall(ml);
+            return Map<K, V>::s_unionall(ml);
         }
     }
 
@@ -176,7 +176,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return List<T>::s_unsafe_get(ml, 0);
         }
         else {
-            return Set<T>::s_mergeall(ml);
+            return Map<K, V>::s_mergeall(ml);
         }
     }
 }
