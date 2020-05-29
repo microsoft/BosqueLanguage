@@ -10,17 +10,17 @@ entity KeyList<K where KeyType> provides Object {
     field hkey: K;
     field tail: KeyList<K>?;
 
-    hidden recursive static s_insert(kl: KeyList<K>, val: K): KeyList<T> {
-        if(!KeyType::less(val, kl.hkey)) {
+    hidden recursive static s_insert(kl: KeyList<K>, val: K): KeyList<K> {
+        if(!KeyType::less(kl.hkey, val)) {
             return KeyList<K>@{hkey=val, tail=kl};
         }
         else {
             let tl = kl.tail;
             if(tl == none) {
-                return KeyList<K>@{hkey=val, tail=none};
+                return KeyList<K>@{hkey=kl.hkey, tail=KeyList<K>@{hkey=val, tail=none}};
             }
             else {
-                return KeyList<K>@{hkey=kl.hkey, tail=KeyList<K>::s_insert[recursive](kl.tail, val)};
+                return KeyList<K>@{hkey=kl.hkey, tail=KeyList<K>::s_insert[recursive](tl, val)};
             }
         }
     }
@@ -28,10 +28,10 @@ entity KeyList<K where KeyType> provides Object {
     hidden recursive static s_sort(kl: KeyList<K>, rkl: KeyList<K>): KeyList<K> {
         let tl = kl.tail;
         if(tl == none) {
-            return rkl;
+            return KeyList<K>::s_insert[recursive](rkl, kl.hkey);
         }
         else {
-            return KeyList<K>::s_sort[recursive](tl, KeyList<K>::s_insert[recursive](rkl, tl.hkey));
+            return KeyList<K>::s_sort[recursive](tl, KeyList<K>::s_insert[recursive](rkl, kl.hkey));
         }
     }
 

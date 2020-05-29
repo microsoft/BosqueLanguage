@@ -967,9 +967,9 @@ class CPPTypeEmitter {
                 + `  }\n`
                 + `};\n`;
 
-                const displayop = `struct RCDisplayFunctor_${this.mangleStringForCpp(entity.tkey)}`
+                const displayop = `struct DisplayFunctor_${this.mangleStringForCpp(entity.tkey)}`
                 + `{\n`
-                + `  std::string operator()(${this.mangleStringForCpp(entity.tkey)}& tt) const\n` 
+                + `  std::string operator()(const ${this.mangleStringForCpp(entity.tkey)}& tt) const\n` 
                 + `  {\n` 
                 + `    return tt.display();`
                 + `  }\n`

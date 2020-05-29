@@ -2268,6 +2268,51 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${params[0]}->getValue(${params[1]});`;
                 break;
             }
+            case "map_key_list": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const ltype = this.typegen.getMIRType(idecl.resultType);
+                const ltyperepr = this.typegen.getCPPReprFor(ltype).base;
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_key_list<${ltyperepr}, ${this.typegen.getFunctorsForType(ktype).inc}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(ltype.trkey)}>(${params[0]});`;
+                break;
+            }
+            case "map_key_set": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const stype = this.typegen.getMIRType(idecl.resultType);
+                const styperepr = this.typegen.getCPPReprFor(stype).base;
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_key_set<${styperepr}, ${this.typegen.getFunctorsForType(ktype).inc}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(stype.trkey)}>(${params[0]});`;
+                break;
+            }
+            case "map_values": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const ltype = this.typegen.getMIRType(idecl.resultType);
+                const ltyperepr = this.typegen.getCPPReprFor(ltype).base;
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_values<${ltyperepr}, ${this.typegen.getFunctorsForType(vtype).inc}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(ltype.trkey)}>(${params[0]});`;
+                break;
+            }
+            case "map_entries": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const ltype = this.typegen.getMIRType(idecl.resultType);
+                const ltyperepr = this.typegen.getCPPReprFor(ltype).base;
+
+                const etype = (this.typegen.assembly.entityDecls.get(ltype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const etyperepr = this.typegen.getCPPReprFor(etype);
+
+                const lambdamec = `[](${this.typegen.getCPPReprFor(ktype).std} kk, ${this.typegen.getCPPReprFor(vtype).std} vv) -> ${etyperepr.std} { return ${etyperepr.base}{${this.typegen.getFunctorsForType(ktype).inc}{}(kk), ${this.typegen.getFunctorsForType(vtype).inc}{}(vv)}; }`;
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_entries<${ltyperepr}, ${etyperepr.std}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(ltype.trkey)}>(${params[0]}, ${lambdamec});`;
+                break;
+            }
             case "map_has_all": {
                 const mtype = this.getEnclosingMapTypeForMapOp(idecl);
                 const ktype = this.getMapKeyContentsInfoForMapOp(idecl);

@@ -1915,6 +1915,14 @@ class SMTBodyEmitter {
                 bodyres = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "keylist", params[0]);
                 break;
             }
+            case "map_keyset": {
+                const cons = this.typegen.generateEntityConstructor(idecl.resultType);
+                const size = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);
+                const has = this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0]);
+                const keylist = this.typegen.generateSpecialTypeFieldAccess(enclkey, "keylist", params[0]);
+                bodyres = new SMTValue(`(${cons} ${size} ${has} ${keylist})`);
+                break;
+            }
             case "map_unsafe_add": {
                 const cons = this.typegen.generateEntityConstructor(enclkey);
                 const size = this.typegen.generateSpecialTypeFieldAccess(enclkey, "size", params[0]);

@@ -17,6 +17,26 @@
             },
             {
                 "kind": "aot",
+                "entrypoint": "keylistop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "keysetop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "valuesop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "entriesop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
                 "entrypoint": "hasallop",
                 "expected": "0"
             },
@@ -78,6 +98,26 @@
             {
                 "kind": "symexec",
                 "entrypoint": "hasop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "keylistop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "keysetop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "valuesop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "entriesop",
                 "expected": "0"
             },
             {
