@@ -425,33 +425,32 @@ public:
         return BSQ_NEW_NO_RC(Ty, l->nominalType, move(entries));
     }
 
-    template <typename K, typename K_RCIncF, typename K_CMP, typename LambdaPF, typename MType, typename LambdaMC> 
-    static MType* list_partition(Ty* l)
+    template <typename MType, MIRNominalTypeEnum ntype, typename MECType, typename K, typename K_RCDecRef, typename K_CMP, typename LambdaPF, typename LambdaMEC> 
+    static MType* list_partition(Ty* l, LambdaPF pf, LambdaMEC lmec)
     {
         std::map<K, std::vector<T>, K_CMP> partitions;
-        std::for_each(l->entries.begin(), l->entries.end(), [&partitions](T& v) {
-            auto k = LambdaPF{}(v);
+        std::for_each(l->entries.begin(), l->entries.end(), [pf, &partitions](T& v) {
+            auto k = pf(v);
             auto pp = partitions.find(k);
 
             if(pp != partitions.end())
             {
-                pp->second.push_back(RCIncF(v));
+                pp->second.push_back(RCIncF{}(v));
+                K_RCDecRef{}(k); //pf did inc so we need to dec
             }
             else 
             {
-                partitions.emplace(k, std::vector<T>{RCIncF(v)});
+                partitions.emplace(k, std::vector<T>{RCIncF{}(v)});
             }
         });
 
-        std::map<K, Ty*, K_CMP> mentries;
-
-        auto ltype = l->nominalType;
-        std::transform(partitions.begin(), partitions.end(), std::inserter(mentries, mentries.end()), [ltype](std::pair<K, std::vector<T>>& me) -> std::pair<K, Ty*> {
-            auto le = BSQ_NEW_NO_RC(Ty, ltype, move(me.second));
-            return std::make_pair(K_RCIncF{}(me.first), INC_REF_DIRECT(Ty, le));
+        std::vector<MECType> mentries;
+        std::transform(partitions.begin(), partitions.end(), std::back_inserter(mentries), [lmec, l](std::pair<K, std::vector<T>>&& me) -> MECType {
+            auto le = BSQ_NEW_NO_RC(Ty, l->nominalType, std::move(me.second));
+            return lmec(me.first, INC_REF_DIRECT(Ty, le));
         });
 
-        return LambdaMC{}(move(mentries));
+        return BSQ_NEW_NO_RC(MType, ntype, move(mentries));
     }
 
     template <typename LambdaCMP>

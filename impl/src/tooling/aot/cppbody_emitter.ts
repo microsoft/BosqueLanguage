@@ -288,25 +288,25 @@ class CPPBodyEmitter {
         let conscall = "";
         const scopevar = this.varNameToCppName("$scope$");
         const ntype = `MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(cpcs.tkey)}`
-        if (this.typegen.typecheckIsName(cpcstype, /NSCore::List<.*>/)) {
+        if (this.typegen.typecheckIsName(cpcstype, /^NSCore::List<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
             const cvals = cpcs.args.map((arg) => this.typegen.generateConstructorArgInc(oftype, this.argToCpp(arg, oftype)));
 
             conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, { ${cvals.join(", ")} })`;
         }
-        else if (this.typegen.typecheckIsName(cpcstype, /NSCore::Stack<.*>/)) {
+        else if (this.typegen.typecheckIsName(cpcstype, /^NSCore::Stack<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
             const cvals = cpcs.args.map((arg) => this.typegen.generateConstructorArgInc(oftype, this.argToCpp(arg, oftype)));
 
             conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, { ${cvals.join(", ")} })`;
         }
-        else if (this.typegen.typecheckIsName(cpcstype, /NSCore::Queue<.*>/)) {
+        else if (this.typegen.typecheckIsName(cpcstype, /^NSCore::Queue<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
             const cvals = cpcs.args.map((arg) => this.typegen.generateConstructorArgInc(oftype, this.argToCpp(arg, oftype)));
 
             conscall = `BSQ_NEW_ADD_SCOPE(${scopevar}, ${cppctype}, ${ntype}, { ${cvals.join(", ")} })`;
         }
-        else if (this.typegen.typecheckIsName(cpcstype, /NSCore::Set<.*>/) || this.typegen.typecheckIsName(cpcstype, /NSCore::DynamicSet<.*>/)) {
+        else if (this.typegen.typecheckIsName(cpcstype, /^NSCore::Set<.*>$/) || this.typegen.typecheckIsName(cpcstype, /^NSCore::DynamicSet<.*>$/)) {
             const oftype = (this.assembly.entityDecls.get(cpcs.tkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
             const cvals = cpcs.args.map((arg) => this.argToCpp(arg, oftype));
 
@@ -1807,7 +1807,13 @@ class CPPBodyEmitter {
         const cargs = pc.cargs.map((ca) => this.typegen.mangleStringForCpp(ca));
         const rrepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(pci.resultType));
 
-        return `[=](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`
+        if(this.typegen.getRefCountableStatus(this.typegen.getMIRType(pci.resultType)) === "no") {
+            return `[=](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`;
+        }
+        else {
+            const scopevar = this.varNameToCppName("$scope_lambda$");
+            return `[=](${params.join(", ")}) -> ${rrepr.std} { BSQRefScope ${scopevar}(true); return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs, scopevar].join(", ")}); }`;
+        }
     }
 
     generateBuiltinBody(idecl: MIRInvokePrimitiveDecl, params: string[]): string {
@@ -2236,14 +2242,17 @@ class CPPBodyEmitter {
             case "list_partition": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
-                const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
             
-                const codecc = this.typegen.coerce("u", ctype, this.typegen.anyType);
-                const crepr = this.typegen.getCPPReprFor(ctype);
-                const iflag = this.typegen.generateInitialDataKindFlag(ctype); //int component goes along with everything so just ignore it
-                const lambda = `[&${scopevar}](int64_t i, ${crepr.std} u) -> ${ucontents} { return BSQTuple::createFromSingle<${iflag}>({ BSQ_ENCODE_VALUE_TAGGED_INT(i), INC_REF_CHECK(Value, ${codecc}) }); }`;
+                const maptype = this.typegen.getMIRType(idecl.resultType);
+                const mapentrytype = this.getMEntryTypeForMapType(maptype.trkey);
+                const ktype = this.getMapKeyContentsInfoForMapType(maptype.trkey);
+                const krepr = this.typegen.getCPPReprFor(ktype);
+                const kops = this.typegen.getFunctorsForType(ktype);
 
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_zipindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`
+                const lambdapf = this.createLambdaFor(idecl.pcodes.get("pf") as MIRPCode);
+                const lambdamec = `[](${this.typegen.getCPPReprFor(ktype).std} kk, ${this.typegen.getCPPReprFor(ltype).std} ll) -> ${mapentrytype} { return ${mapentrytype}{kk, ll}; }`;
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_partition<${this.typegen.getCPPReprFor(maptype).base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(maptype.trkey)}, ${mapentrytype}, ${krepr.std}, ${kops.dec}, ${kops.less}>(${params[0]}, ${lambdapf}, ${lambdamec});`
                 break;
             }
 
