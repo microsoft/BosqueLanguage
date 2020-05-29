@@ -468,8 +468,38 @@ public:
         return BSQ_NEW_NO_RC(Ty, l->nominalType, move(entries));
     }
 
+    template <typename MType, typename MEntryType, MIRNominalTypeEnum ntype, typename MEntryCons> 
+    static MType* list_toindexmap(Ty* l, MEntryCons mec)
+    {
+        std::vector<std::pair<int64_t, V>> mentries;
+        mentries.reserve(l->entries.size());
+        
+        for(int64_t i = 0; i < l->entries.size(); ++i)
+        {
+            auto v = LambdaVF{}(l->entries[i]);
+            mentries.push_back(std::make_pair(i, v));
+        }
+
+        return LambdaMC{}(move(mentries));
+    }
+
+    template <typename V, typename LambdaVF, typename MType, typename LambdaMC> 
+    static MType* list_transformindexmap(Ty* l)
+    {
+        std::vector<std::pair<int64_t, V>> mentries;
+        mentries.reserve(l->entries.size());
+        
+        for(int64_t i = 0; i < l->entries.size(); ++i)
+        {
+            auto v = LambdaVF{}(l->entries[i]);
+            mentries.push_back(std::make_pair(i, v));
+        }
+
+        return LambdaMC{}(move(mentries));
+    }
+
     template <typename K, typename K_RCDecF, typename K_CMP, typename K_EQ, typename V, typename V_RCDecF, typename LambdaKF, typename LambdaVF, typename MType, typename LambdaMC, bool merge> 
-    static MType* list_tomap(Ty* l)
+    static MType* list_transformmap(Ty* l)
     {
         std::map<K, V, K_CMP> mentries;
         
@@ -488,21 +518,6 @@ public:
 
             mentries.push_back(std::make_pair(k, vv));
         });
-
-        return LambdaMC{}(move(mentries));
-    }
-
-    template <typename V, typename LambdaVF, typename MType, typename LambdaMC> 
-    static MType* list_toindexmap(Ty* l)
-    {
-        std::vector<std::pair<int64_t, V>> mentries;
-        mentries.reserve(l->entries.size());
-        
-        for(int64_t i = 0; i < l->entries.size(); ++i)
-        {
-            auto v = LambdaVF{}(l->entries[i]);
-            mentries.push_back(std::make_pair(i, v));
-        }
 
         return LambdaMC{}(move(mentries));
     }

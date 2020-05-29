@@ -66,8 +66,8 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     hidden recursive? static s_sort(l: List<T>, cmp: recursive? fn(_: T, _: T) -> Bool): List<T> # list_sort
 
     hidden static s_toIndexMap<V>(l: List<T>): Map<Int, T> # list_toindexmap
-    hidden recursive? static s_transformIndexMap<V>(l: List<T>, vf: recursive? fn(_: T) -> V): Map<Int, V> # list_transformIndexMap
-    hidden recursive? static s_transformMap<K, V>(l: List<T>, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge: Bool): Map<K, V> # listtransformMap
+    hidden recursive? static s_transformIndexMap<V>(l: List<T>, vf: recursive? fn(_: T) -> V): Map<Int, V> # list_transformindexmap
+    hidden recursive? static s_transformMap<K where KeyType, V>(l: List<T>, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V): Map<K, V> # list_transformmap
 
     hidden static s_rangeInBounds(l: List<T>, start: Int?, end: Int?): Bool {
         let s, e = start ?| 0, end ?| List<T>::s_size(l);
@@ -523,11 +523,11 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method transformToIndexMap<V>(vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> {
-        return List<T>::s_transformIndexMap<V>[recursive](this, vf);
+        return List<T>::s_transformIndexMap<V>[recursive?](this, vf);
     }
 
-    recursive? method transformToMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge?: Bool): Map<K, V> {
-        return List<T>::s_transformMap<K, V>[recursive](this, kf, vf, Truthy::truth(merge));
+    recursive? method transformToMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V): Map<K, V> {
+        return List<T>::s_transformMap<K, V>[recursive?](this, kf, vf);
     }
 }
 

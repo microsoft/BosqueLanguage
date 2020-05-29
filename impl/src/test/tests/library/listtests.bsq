@@ -826,4 +826,15 @@ entrypoint function sort(): Int {
     return 0;
 }
 
+entrypoint function toindexmapop(): Int {
+
+}
+
+entrypoint function transformtoindexmapop(): Int {
+    
+}
+
+entrypoint function transformtomapop(): Int {
+    
+}
 

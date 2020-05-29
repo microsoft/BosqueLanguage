@@ -597,7 +597,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_toIndexMap(l, lsize, mp.add(idx, v), idx + 1);
+            return List<T>::s_toIndexMap[recursive](l, lsize, Map<Int, T>::s_add(mp, idx, v), idx + 1);
         }
     }
 
@@ -609,11 +609,11 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             let val = List<T>::s_unsafe_get(l, idx);
             let v = vf[recursive?](val);
 
-            return List<T>::s_transformIndexMap(l, lsize, mp.add(idx, v), idx + 1, idx, vf);
+            return List<T>::s_transformIndexMap[recursive](l, lsize, Map<Int, V>::s_add(mp, idx, v), idx + 1, idx, vf);
         }
     }
 
-    hidden recursive static s_transformMap<K, V>(l: List<T>, lsize: Int, mp: Map<K, V>, idx: Int, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge: Bool): Map<K, V> {
+    hidden recursive static s_transformMap<K where KeyType, V>(l: List<T>, lsize: Int, mp: Map<K, V>, idx: Int, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V): Map<K, V> {
         if(idx == lsize) {
             return lp;
         }
@@ -622,12 +622,8 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             let k = kf[recursive?](val);
             let v = vf[recursive?](val);
 
-            if(merge) {
-                return List<T>::s_transformMap(l, lsize, map.insert(k, v), idx + 1, kf, vf);
-            }
-            else {
-                return List<T>::s_transformMap(l, lsize, map.add(k, v), idx + 1, kf, vf);
-            }
+            check !Map<K, V>::s_has_key(mp, k);
+            return List<T>::s_transformMap[recursive](l, lsize, Map<K, V>::s_add(mp, k, v), idx + 1, kf, vf);
         }
     }
 
@@ -1086,7 +1082,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 
     recursive? method transformToMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge?: Bool): Map<K, V> {
-        return List<T>::s_transformMap<K, V>[recursive](this, List<T>::s_size(this), Map<K, V>@{}, 0, kf, vf, Truthy::truth(merge));
+        return List<T>::s_transformMap<K, V>[recursive](this, List<T>::s_size(this), Map<K, V>@{}, 0, kf, vf);
     }
 }
 
