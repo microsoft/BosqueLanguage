@@ -13,56 +13,56 @@ template <typename Ty, typename K, typename K_RCDecF, typename K_DisplayF, typen
 class BSQMapOps
 {
 public:
-    template <typename K_RCIncF, MIRNominalTypeEnum ntype>
-    static BSQList<K, K_RCDecF, K_DisplayF>* map_key_list(Ty* m)
+    template <typename ListT, typename K_RCIncF, MIRNominalTypeEnum ntype>
+    static ListT* map_key_list(Ty* m)
     {
         std::vector<K> entries;
         entries.reserve(m->entries.size());
 
-        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [](MEntry<K, V>& v) -> MEntry<K, V> {
+        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [](MEntry<K, V>& v) -> K {
             return K_RCIncF{}(v.key);
         });
 
-        return BSQ_NEW_NO_RC((BSQList<K, K_RCDecF, K_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListT, ntype, move(entries));
     }
 
-    template <typename K_RCIncF, MIRNominalTypeEnum ntype>
-    static BSQSet<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ>* map_key_set(Ty* m)
+    template <typename SetT, typename K_RCIncF, MIRNominalTypeEnum ntype>
+    static SetT* map_key_set(Ty* m)
     {
         std::vector<K> entries;
         entries.reserve(m->entries.size());
 
-        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [](MEntry<K, V>& v) -> MEntry<K, V> {
+        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [](MEntry<K, V>& v) -> K {
             return K_RCIncF{}(v.key);
         });
 
-        return BSQ_NEW_NO_RC((BSQSet<K, K_RCDecF, K_DisplayF, K_CMP, K_EQ>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(SetT, ntype, move(entries));
     }
 
-    template <typename V_RCIncF, MIRNominalTypeEnum ntype>
-    static BSQList<V, V_RCDecF, V_DisplayF>* map_values(Ty* m)
+    template <typename ListT, typename V_RCIncF, MIRNominalTypeEnum ntype>
+    static ListT* map_values(Ty* m)
     {
         std::vector<V> entries;
         entries.reserve(m->entries.size());
 
-        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [](MEntry<K, V>& v) -> MEntry<K, V> {
+        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [](MEntry<K, V>& v) -> V {
             return V_RCIncF{}(v.value);
         });
 
-        return BSQ_NEW_NO_RC((BSQList<V, V_RCDecF, V_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListT, ntype, move(entries));
     }
 
     template <typename ListT, typename MapEntryT, MIRNominalTypeEnum ntype, typename LambdaMEC>
-    static ListT* map_entries(Ty* m)
+    static ListT* map_entries(Ty* m, LambdaMEC lmec)
     {
         std::vector<MapEntryT> entries;
         entries.reserve(m->entries.size());
 
-        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [](MEntry<K, V>& v) -> MapEntryT {
-            return LambdaMEC{}(v.key, v.value);
+        std::transform(m->entries.begin(), m->entries.end(), std::back_inserter(entries), [lmec](MEntry<K, V>& v) -> MapEntryT {
+            return lmec(v.key, v.value);
         });
 
-        return BSQ_NEW_NO_RC((BSQList<K, K_RCDecF, K_DisplayF>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(ListT, ntype, move(entries));
     }
 
     template <typename ListT>

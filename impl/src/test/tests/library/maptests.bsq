@@ -26,6 +26,52 @@ entrypoint function hasop(): Int {
     return 0;
 }
 
+entrypoint function keylistop(): Int {
+    let m = Map<Int, Bool>@{1 => false, 2 => true};
+
+    let kl = m.keys();
+    check kl.size() == 2;
+    check kl.front() == 1;
+    check kl.back() == 2;
+
+    return 0;
+}
+
+entrypoint function keysetop(): Int {
+    let m = Map<Int, Bool>@{1 => false, 2 => true};
+
+    let ks = m.keySet();
+    check ks.size() == 2;
+    check ks.has(1);
+    check ks.has(2);
+
+    return 0;
+}
+
+entrypoint function valuesop(): Int {
+    let m = Map<Int, Bool>@{1 => false, 2 => true};
+
+    let vl = m.values();
+    check vl.size() == 2;
+    check !vl.front();
+    check vl.back();
+
+    return 0;
+}
+
+entrypoint function entriesop(): Int {
+    let m = Map<Int, Bool>@{1 => false, 2 => true};
+
+    let ke = m.entries();
+    check ke.size() == 2;
+    check ke.front().key == 1;
+    check !ke.front().value;
+    check ke.back().key == 2;
+    check ke.back().value;
+
+    return 0;
+}
+
 entrypoint function hasallop(): Int {
     let m = Map<Int, Int>@{1 => 1, 2 => 2};
     let me = Map<Int, Int>@{};

@@ -41,7 +41,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return l;
         }
         else {
-            return Map<K, V>::s_key_list[recursive](kl.tail, List<T>::s_unsafe_push(l, kl.hkey));
+            return Map<K, V>::s_key_list[recursive](kl.tail, List<K>::s_unsafe_push(l, kl.hkey));
         }
     }
 
@@ -68,17 +68,17 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         }
         else {
             let v = Map<K, V>::s_at_val(m, kl.hkey);
-            return Map<K, V>::s_value_list[recursive](m, kl.tail, List<T>::s_unsafe_push(l, v));
+            return Map<K, V>::s_value_list[recursive](m, kl.tail, List<V>::s_unsafe_push(l, v));
         }
     }
 
-    hidden recursive static s_entries_list(m: Map<K, V>, kl: KeyList<K>?, l: List<MapEntry<K, V>>): List<MapEntry<K, V>> {
+    hidden recursive static s_entry_list(m: Map<K, V>, kl: KeyList<K>?, l: List<MapEntry<K, V>>): List<MapEntry<K, V>> {
         if(kl == none) {
             return l;
         }
         else {
             let v = Map<K, V>::s_at_val(m, kl.hkey);
-            return Map<K, V>::s_value_list[recursive](m, kl.tail, List<T>::s_unsafe_push(l, MapEntry<K, V>@{ key=kl.hkey, value=v }));
+            return Map<K, V>::s_entry_list[recursive](m, kl.tail, List<MapEntry<K, V>>::s_unsafe_push(l, MapEntry<K, V>@{ key=kl.hkey, value=v }));
         }
     }
 
@@ -262,7 +262,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method keys(): List<K> {
-        return Map<K, V>::s_key_list(KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), List<K>@{});
+        return Map<K, V>::s_key_list[recursive](KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), List<K>@{});
     }
 
     method keySet(): Set<K> {
@@ -270,11 +270,11 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method values(): List<V> {
-        return Map<K, V>::s_value_list(this, KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), List<V>@{});
+        return Map<K, V>::s_value_list[recursive](this, KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), List<V>@{});
     }
 
     method entries(): List<MapEntry<K, V>> {
-        return Map<K, V>::s_entry_list(this, KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), List<MapEntry<K, V>>@{});
+        return Map<K, V>::s_entry_list[recursive](this, KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), List<MapEntry<K, V>>@{});
     }
 
     method toDynamicMap(): DynamicMap<K, V> {
