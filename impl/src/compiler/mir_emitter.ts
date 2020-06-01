@@ -76,11 +76,7 @@ class MIRKeyGenerator {
     }
 
     static generatePCodeKey(inv: InvokeDecl): MIRInvokeKey {
-        //
-        //TODO: this might not be great as we leak build environment info into the assembly :(
-        //      maybe we can do a hash of contents + basename (or something similar)?
-        //
-        return `fn--${inv.srcFile}%${inv.sourceLocation.line}%${inv.sourceLocation.column}`;
+        return `fn--${inv.srcFile}+${inv.sourceLocation.line}##${inv.sourceLocation.pos}`;
     }
 }
 
@@ -691,7 +687,7 @@ class MIREmitter {
 
         ////////////////
         //Compute the assembly hash and initialize representations
-        const hash = Crypto.createHash("sha256");
+        const hash = Crypto.createHash("sha512");
         const data = [...srcFiles].sort((a, b) => a.relativePath.localeCompare(b.relativePath));
         data.forEach((sf) => {
             hash.update(sf.relativePath);
