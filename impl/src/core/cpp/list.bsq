@@ -65,7 +65,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     hidden recursive? static s_partition<K where KeyType>(l: List<T>, pf: recursive? fn(_: T) -> K): Map<K, List<T>> # list_partition
     hidden recursive? static s_sort(l: List<T>, cmp: recursive? fn(_: T, _: T) -> Bool): List<T> # list_sort
 
-    hidden static s_toIndexMap<V>(l: List<T>): Map<Int, T> # list_toindexmap
+    hidden static s_toIndexMap(l: List<T>): Map<Int, T> # list_toindexmap
     hidden recursive? static s_transformIndexMap<V>(l: List<T>, vf: recursive? fn(_: T) -> V): Map<Int, V> # list_transformindexmap
     hidden recursive? static s_transformMap<K where KeyType, V>(l: List<T>, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V): Map<K, V> # list_transformmap
 
@@ -522,7 +522,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_toIndexMap(this);
     }
 
-    recursive? method transformToIndexMap<V>(vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> {
+    recursive? method transformToIndexMap<V>(vf: recursive? fn(_: T) -> V): Map<Int, V> {
         return List<T>::s_transformIndexMap<V>[recursive?](this, vf);
     }
 

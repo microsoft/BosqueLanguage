@@ -1795,7 +1795,7 @@ class CPPBodyEmitter {
         return `BSQMapOps<${mrepr}, ${krepr.std}, ${kops.dec}, ${kops.display}, ${kops.less}, ${kops.eq}, ${vrepr.std}, ${vops.dec}, ${vops.display}>`;
     }
 
-    createLambdaFor(pc: MIRPCode): string {
+    createLambdaFor(pc: MIRPCode, scopevar?: string): string {
         const pci = this.assembly.invokeDecls.get(pc.code) || this.assembly.primitiveInvokeDecls.get(pc.code) as MIRInvokeDecl;
         let params: string[] = [];
         let args: string[] = [];
@@ -1807,12 +1807,11 @@ class CPPBodyEmitter {
         const cargs = pc.cargs.map((ca) => this.typegen.mangleStringForCpp(ca));
         const rrepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(pci.resultType));
 
-        if(this.typegen.getRefCountableStatus(this.typegen.getMIRType(pci.resultType)) === "no") {
+        if(scopevar === undefined || this.typegen.getRefCountableStatus(this.typegen.getMIRType(pci.resultType)) === "no") {
             return `[=](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs].join(", ")}); }`;
         }
         else {
-            const scopevar = this.varNameToCppName("$scope_lambda$");
-            return `[=](${params.join(", ")}) -> ${rrepr.std} { BSQRefScope ${scopevar}(true); return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs, scopevar].join(", ")}); }`;
+            return `[=, &${scopevar}](${params.join(", ")}) -> ${rrepr.std} { return ${this.typegen.mangleStringForCpp(pc.code)}(${[...args, ...cargs, scopevar].join(", ")}); }`;
         }
     }
 
@@ -2139,8 +2138,10 @@ class CPPBodyEmitter {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
-                const lambda = this.createLambdaFor(idecl.pcodes.get("f") as MIRPCode);
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`;
+
+                const lambdascope = this.typegen.mangleStringForCpp("$lambda_scope$");
+                const lambda = this.createLambdaFor(idecl.pcodes.get("f") as MIRPCode, lambdascope);
+                bodystr = `BSQRefScope ${lambdascope}(true); auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_mapindex<${utype}, ${ucontents}, ${utag}>(${params[0]}, ${lambda});`;
                 break;
             }
             case "list_project": {
@@ -2249,13 +2250,60 @@ class CPPBodyEmitter {
                 const krepr = this.typegen.getCPPReprFor(ktype);
                 const kops = this.typegen.getFunctorsForType(ktype);
 
-                const lambdapf = this.createLambdaFor(idecl.pcodes.get("pf") as MIRPCode);
+                const lambdascope = this.typegen.mangleStringForCpp("$lambda_scope$");
+                const lambdapf = this.createLambdaFor(idecl.pcodes.get("pf") as MIRPCode, lambdascope);
                 const lambdamec = `[](${this.typegen.getCPPReprFor(ktype).std} kk, ${this.typegen.getCPPReprFor(ltype).std} ll) -> ${mapentrytype} { return ${mapentrytype}{kk, ll}; }`;
 
-                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_partition<${this.typegen.getCPPReprFor(maptype).base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(maptype.trkey)}, ${mapentrytype}, ${krepr.std}, ${kops.dec}, ${kops.less}>(${params[0]}, ${lambdapf}, ${lambdamec});`
+                bodystr = `BSQRefScope ${lambdascope}(true); auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_partition<${this.typegen.getCPPReprFor(maptype).base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(maptype.trkey)}, ${mapentrytype}, ${krepr.std}, ${kops.dec}, ${kops.less}>(${params[0]}, ${lambdapf}, ${lambdamec});`
                 break;
             }
+            case "list_toindexmap": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
 
+                const maptype = this.typegen.getMIRType(idecl.resultType);
+                const maptyperepr = this.typegen.getCPPReprFor(maptype);
+                const mapentrytype = this.getMEntryTypeForMapType(maptype.trkey);
+
+                const lambdamec = `[](int64_t kk, ${this.typegen.getCPPReprFor(ctype).std} vv) -> ${mapentrytype} { return ${mapentrytype}{kk, ${this.typegen.getFunctorsForType(ctype).inc}{}(vv)}; }`;
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_toindexmap<${maptyperepr.base}, ${mapentrytype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(maptype.trkey)}>(${params[0]}, ${lambdamec});`;
+                break;
+            }
+            case "list_transformindexmap": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+
+                const maptype = this.typegen.getMIRType(idecl.resultType);
+                const vftype = this.getMapValueContentsInfoForMapType(idecl.resultType)
+                const maptyperepr = this.typegen.getCPPReprFor(maptype);
+                const mapentrytype = this.getMEntryTypeForMapType(maptype.trkey);
+
+                const lambdascope = this.typegen.mangleStringForCpp("$lambda_scope$");
+                const lambdavf = this.createLambdaFor(idecl.pcodes.get("vf") as MIRPCode, lambdascope);
+                const lambdamec = `[](int64_t kk, ${this.typegen.getCPPReprFor(vftype).std} vv) -> ${mapentrytype} { return ${mapentrytype}{kk, vv}; }`;
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_transformindexmap<${maptyperepr.base}, ${mapentrytype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(maptype.trkey)}>(${params[0]}, ${lambdavf}, ${lambdamec});`;
+                break;
+            }
+            case "list_transformmap": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+
+                const maptype = this.typegen.getMIRType(idecl.resultType);
+                const kftype = this.getMapKeyContentsInfoForMapType(idecl.resultType)
+                const vftype = this.getMapValueContentsInfoForMapType(idecl.resultType)
+                const maptyperepr = this.typegen.getCPPReprFor(maptype);
+                const mapentrytype = this.getMEntryTypeForMapType(maptype.trkey);
+
+                const lambdascope = this.typegen.mangleStringForCpp("$lambda_scope$");
+                const lambdakf = this.createLambdaFor(idecl.pcodes.get("kf") as MIRPCode, lambdascope);
+                const lambdavf = this.createLambdaFor(idecl.pcodes.get("vf") as MIRPCode, lambdascope);
+                const lambdamec = `[](${this.typegen.getCPPReprFor(kftype).std} kk, ${this.typegen.getCPPReprFor(vftype).std} vv) -> ${mapentrytype} { return ${mapentrytype}{kk, vv}; }`;
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_transformmap<${maptyperepr.base}, ${mapentrytype}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(maptype.trkey)}, ${this.typegen.getCPPReprFor(kftype).std}, ${this.typegen.getFunctorsForType(kftype).less}, ${this.typegen.getCPPReprFor(vftype).std}>(${params[0]}, ${lambdakf}, ${lambdavf}, ${lambdamec});`;
+                break;
+            }
             case "set_size": {
                 bodystr = `auto $$return = ${params[0]}->entries.size();`;
                 break;

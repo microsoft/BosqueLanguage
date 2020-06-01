@@ -591,31 +591,31 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         }
     }
 
-    hidden recursive static s_toIndexMap<V>(l: List<T>, lsize: Int, mp: Map<Int, T>, idx: Int): Map<Int, T> {
+    hidden recursive static s_toIndexMap(l: List<T>, lsize: Int, mp: Map<Int, T>, idx: Int): Map<Int, T> {
         if(idx == lsize) {
-            return lp;
+            return mp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
-            return List<T>::s_toIndexMap[recursive](l, lsize, Map<Int, T>::s_add(mp, idx, v), idx + 1);
+            return List<T>::s_toIndexMap[recursive](l, lsize, Map<Int, T>::s_add(mp, idx, val), idx + 1);
         }
     }
 
     hidden recursive static s_transformIndexMap<V>(l: List<T>, lsize: Int, mp: Map<Int, V>, idx: Int, vf: recursive? fn(_: T) -> V): Map<Int, V> {
         if(idx == lsize) {
-            return lp;
+            return mp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
             let v = vf[recursive?](val);
 
-            return List<T>::s_transformIndexMap[recursive](l, lsize, Map<Int, V>::s_add(mp, idx, v), idx + 1, idx, vf);
+            return List<T>::s_transformIndexMap<V>[recursive](l, lsize, Map<Int, V>::s_add(mp, idx, v), idx + 1, vf);
         }
     }
 
     hidden recursive static s_transformMap<K where KeyType, V>(l: List<T>, lsize: Int, mp: Map<K, V>, idx: Int, kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V): Map<K, V> {
         if(idx == lsize) {
-            return lp;
+            return mp;
         }
         else {
             let val = List<T>::s_unsafe_get(l, idx);
@@ -623,7 +623,7 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
             let v = vf[recursive?](val);
 
             check !Map<K, V>::s_has_key(mp, k);
-            return List<T>::s_transformMap[recursive](l, lsize, Map<K, V>::s_add(mp, k, v), idx + 1, kf, vf);
+            return List<T>::s_transformMap<K, V>[recursive](l, lsize, Map<K, V>::s_add(mp, k, v), idx + 1, kf, vf);
         }
     }
 
@@ -1077,11 +1077,11 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return List<T>::s_toIndexMap[recursive](this, List<T>::s_size(this), Map<Int, T>@{}, 0);
     }
 
-    recursive? method transformToIndexMap<V>(vf: recursive? fn(_: Int, _: T) -> V): Map<Int, V> {
+    recursive? method transformToIndexMap<V>(vf: recursive? fn(_: T) -> V): Map<Int, V> {
         return List<T>::s_transformIndexMap<V>[recursive](this, List<T>::s_size(this), Map<Int, V>@{}, 0, vf);
     }
 
-    recursive? method transformToMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V, merge?: Bool): Map<K, V> {
+    recursive? method transformToMap<K where KeyType, V>(kf: recursive? fn(_: T) -> K, vf: recursive? fn(_: T) -> V): Map<K, V> {
         return List<T>::s_transformMap<K, V>[recursive](this, List<T>::s_size(this), Map<K, V>@{}, 0, kf, vf);
     }
 }

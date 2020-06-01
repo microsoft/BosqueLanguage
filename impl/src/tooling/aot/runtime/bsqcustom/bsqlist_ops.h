@@ -149,10 +149,10 @@ public:
     static Ty* list_filter(Ty* l, LambdaP p)
     {
         std::vector<T> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries, p](T& v) {
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries, p](T v) {
             if(p(v))
             {
-                entries.push_back(RCIncF{}(v));
+                entries.emplace_back(RCIncF{}(v));
             }
         });
 
@@ -163,10 +163,10 @@ public:
     static Ty* list_filternot(Ty* l, LambdaP p)
     {
         std::vector<T> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries, p](T& v) {
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries, p](T v) {
             if(!p(v))
             {
-                entries.push_back(RCIncF{}(v));
+                entries.emplace_back(RCIncF{}(v));
             }
         });
 
@@ -177,10 +177,10 @@ public:
     static ListU* list_oftype(Ty* l, LambdaTC tc, LambdaCC cc)
     {
         std::vector<U> entries;
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries, tc, cc](T& v) {
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries, tc, cc](T v) {
             if(tc(v))
             {
-                entries.push_back(cc(v));
+                entries.emplace_back(cc(v));
             }
         });
 
@@ -193,7 +193,7 @@ public:
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [tc, cc](T& v) -> U {
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [tc, cc](T v) -> U {
             BSQ_ASSERT(tc(v), "abort -- invalid element to cast List<T>::cast");
 
             return cc(v);
@@ -207,7 +207,7 @@ public:
         std::vector<T> entries;
         entries.reserve(e - s);
 
-        std::transform(l->entries.begin() + s, l->entries.begin() + e, std::back_inserter(entries), [](T& v) -> T {
+        std::transform(l->entries.begin() + s, l->entries.begin() + e, std::back_inserter(entries), [](T v) -> T {
             return RCIncF{}(v);
         });
 
@@ -248,11 +248,11 @@ public:
         std::vector<T> vv;
         std::set<T, LambdaCMP> seen;
 
-        std::for_each(l->entries.begin(), l->entries.end(), [&seen, &vv](T& v) {
+        std::for_each(l->entries.begin(), l->entries.end(), [&seen, &vv](T v) {
             if(seen.find(v) == seen.cend()) 
             {
                 seen.insert(v);
-                vv.push_back(RCIncF{}(v));
+                vv.emplace_back(RCIncF{}(v));
             }
         });
 
@@ -264,7 +264,7 @@ public:
         std::vector<T> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.rbegin(), l->entries.rend(), std::back_inserter(entries), [](T& v) -> T {
+        std::transform(l->entries.rbegin(), l->entries.rend(), std::back_inserter(entries), [](T v) -> T {
             return RCIncF{}(v);
         });
 
@@ -277,7 +277,7 @@ public:
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [f](T& v) -> U {
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [f](T v) -> U {
             return f(v);
         });
 
@@ -292,7 +292,7 @@ public:
 
         for(int64_t i = 0; i < (int64_t)l->entries.size(); ++i)
         {
-            entries.push_back(f(l->entries[i], i));
+            entries.emplace_back(f(l->entries[i], i));
         }
 
         return BSQ_NEW_NO_RC(ListU, ntype, move(entries));
@@ -304,7 +304,7 @@ public:
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m](T& v) -> U {
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m](T v) -> U {
             U vv;
             bool found = m->tryGetValue(v, &vv);
             BSQ_ASSERT(found, "abort -- missing key for List<T>::projectWith");
@@ -321,7 +321,7 @@ public:
         std::vector<LU> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m, unone, cc](T& v) -> LU {
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m, unone, cc](T v) -> LU {
             UU vv;
             if(m->tryGetValue(v, &vv))
             {
@@ -342,7 +342,7 @@ public:
         std::vector<U> entries;
         entries.reserve(l->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m, dval](T& v) -> U {
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [m, dval](T v) -> U {
             U vv;
             if(m->tryGetValue(v, &vv))
             {
@@ -364,7 +364,7 @@ public:
 
         for(int64_t i = 0; i < (int64_t)l->entries.size(); ++i)
         {
-            entries.push_back(itc(i, l->entries[i]));
+            entries.emplace_back(itc(i, l->entries[i]));
         }
 
         return BSQ_NEW_NO_RC(ListIT, ntype, move(entries));
@@ -375,11 +375,11 @@ public:
     {
         std::vector<TU> entries;
 
-        std::for_each(l->entries.begin(), l->entries.end(), [utc, p, ol, &entries](T& v) {
-            std::for_each(ol->entries.begin(), ol->entries.end(), [utc, p, v, &entries](U& u) {
+        std::for_each(l->entries.begin(), l->entries.end(), [utc, p, ol, &entries](T v) {
+            std::for_each(ol->entries.begin(), ol->entries.end(), [utc, p, v, &entries](U u) {
                 if(p(v, u))
                 {
-                    entries.push_back(utc(v, u));
+                    entries.emplace_back(utc(v, u));
                 }
             });
         });
@@ -392,18 +392,18 @@ public:
     {
         std::vector<TLU> entries;
         
-        std::for_each(l->entries.begin(), l->entries.end(), [lutc, p, ol, &entries](T& v) {
+        std::for_each(l->entries.begin(), l->entries.end(), [lutc, p, ol, &entries](T v) {
 
             std::vector<U> ue;
-            std::for_each(ol->entries.begin(), ol->entries.end(), [p, v, &ue](U& u) {
+            std::for_each(ol->entries.begin(), ol->entries.end(), [p, v, &ue](U u) {
                 if(p(v, u))
                 {
-                    ue.push_back(U_RCIncF{}(u));
+                    ue.emplace_back(U_RCIncF{}(u));
                 }
             });
 
             ListU* lu = INC_REF_DIRECT(ListU, BSQ_NEW_NO_RC(ListU, lutype, std::move(ue))); 
-            entries.push_back(lutc(v, lu));
+            entries.emplace_back(lutc(v, lu));
         });
 
         return BSQ_NEW_NO_RC(ListTLU, ntype, move(entries));
@@ -414,11 +414,11 @@ public:
         std::vector<T> entries;
         entries.reserve(l->entries.size() + lp->entries.size());
 
-        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [](T& v) -> T {
+        std::transform(l->entries.begin(), l->entries.end(), std::back_inserter(entries), [](T v) -> T {
             return RCIncF{}(v);
         });
 
-        std::transform(lp->entries.begin(), lp->entries.end(), std::back_inserter(entries), [](T& v) -> T {
+        std::transform(lp->entries.begin(), lp->entries.end(), std::back_inserter(entries), [](T v) -> T {
             return RCIncF{}(v);
         });
 
@@ -429,13 +429,13 @@ public:
     static MType* list_partition(Ty* l, LambdaPF pf, LambdaMEC lmec)
     {
         std::map<K, std::vector<T>, K_CMP> partitions;
-        std::for_each(l->entries.begin(), l->entries.end(), [pf, &partitions](T& v) {
+        std::for_each(l->entries.begin(), l->entries.end(), [pf, &partitions](T v) {
             auto k = pf(v);
             auto pp = partitions.find(k);
 
             if(pp != partitions.end())
             {
-                pp->second.push_back(RCIncF{}(v));
+                pp->second.emplace_back(RCIncF{}(v));
                 K_RCDecRef{}(k); //pf did inc so we need to dec
             }
             else 
@@ -459,8 +459,8 @@ public:
         std::vector<T> entries;
         entries.reserve(l->entries.size());
 
-        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T& v) {
-            entries.push_back(RCIncF{}(v));
+        std::for_each(l->entries.begin(), l->entries.end(), [&entries](T v) {
+            entries.emplace_back(RCIncF{}(v));
         });
         std::stable_sort(entries.begin(), entries.end(), cmp);
 
@@ -470,55 +470,49 @@ public:
     template <typename MType, typename MEntryType, MIRNominalTypeEnum ntype, typename MEntryCons> 
     static MType* list_toindexmap(Ty* l, MEntryCons mec)
     {
-        std::vector<std::pair<int64_t, V>> mentries;
+        std::vector<MEntryType> mentries;
         mentries.reserve(l->entries.size());
         
         for(int64_t i = 0; i < l->entries.size(); ++i)
         {
-            auto v = LambdaVF{}(l->entries[i]);
-            mentries.push_back(std::make_pair(i, v));
+            mentries.emplace_back(mec(i, RCIncF{}(l->entries[i])));
         }
 
-        return LambdaMC{}(move(mentries));
+        return BSQ_NEW_NO_RC(MType, ntype, move(mentries));
     }
 
-    template <typename V, typename LambdaVF, typename MType, typename LambdaMC> 
-    static MType* list_transformindexmap(Ty* l)
+    template <typename MType, typename MEntryType, MIRNominalTypeEnum ntype, typename LambdaVF, typename MEntryCons> 
+    static MType* list_transformindexmap(Ty* l, LambdaVF vf, MEntryCons mec)
     {
-        std::vector<std::pair<int64_t, V>> mentries;
+        std::vector<MEntryType> mentries;
         mentries.reserve(l->entries.size());
         
         for(int64_t i = 0; i < l->entries.size(); ++i)
         {
-            auto v = LambdaVF{}(l->entries[i]);
-            mentries.push_back(std::make_pair(i, v));
+            mentries.emplace_back(mec(i, vf(l->entries[i])));
         }
 
-        return LambdaMC{}(move(mentries));
+        return BSQ_NEW_NO_RC(MType, ntype, move(mentries));
     }
 
-    template <typename K, typename K_RCDecF, typename K_CMP, typename K_EQ, typename V, typename V_RCDecF, typename LambdaKF, typename LambdaVF, typename MType, typename LambdaMC, bool merge> 
-    static MType* list_transformmap(Ty* l)
+    template <typename MType, typename MEntryType, MIRNominalTypeEnum ntype, typename K, typename K_CMP, typename V, typename LambdaKF, typename LambdaVF, typename MEntryCons> 
+    static MType* list_transformmap(Ty* l, LambdaKF kf, LambdaVF vf, MEntryCons mec)
     {
-        std::map<K, V, K_CMP> mentries;
+        std::map<K, MEntryType, K_CMP> mentries;
         
-        std::transform(l->entries.begin(), l->entries.end(), std::inserter(mentries, mentries.end()), [&mentries](T& v) {
-            auto k = LambdaKF{}(v);
-            auto vv = LambdaVF{}(v);
+        std::transform(l->entries.begin(), l->entries.end(), std::inserter(mentries, mentries.end()), [kf, vf, mec, &mentries](T v) {
+            auto k = kf(v);
+            auto vv = vf(v);
 
             auto epos = mentries.find(k);
-            if(epos != mentries.end())
-            {
-                BSQ_ASSERT(merge, "abort -- duplicate keys are not allowed in List<T>::toMap");
-                
-                K_RCDecF{}(epos->first);
-                V_RCDecF{}(epos->second); 
-            }
+            BSQ_ASSERT(epos == mentries.end(), "abort -- duplicate keys are not allowed in List<T>::toMap");
 
-            mentries.push_back(std::make_pair(k, vv));
+            return std::make_pair(k, mec(k, vv));
         });
 
-        return LambdaMC{}(move(mentries));
+        std::vector<MEntryType> rvv;
+        std::transform(mentries.begin(), mentries.end(), std::back_inserter(rvv), [](const std::pair<K, MEntryType>& e) { return e.second; });
+        return BSQ_NEW_NO_RC(MType, ntype, move(rvv));
     }
 };
 
@@ -533,7 +527,7 @@ public:
 
         for(size_t i = 0; i < l1->entries.size(); ++i)
         {
-            entries.push_back(LambdaZ{}(l1->entries[i], l2->entries[i]));
+            entries.emplace_back(LambdaZ{}(l1->entries[i], l2->entries[i]));
         }
 
         return BSQ_NEW_NO_RC(RType, ntype, move(entries));
@@ -552,8 +546,8 @@ public:
         {
             std::pair<VType, UType> rr = LambdaUZ{}(l->entries[i]);
 
-            ventries.push_back(rr.first);
-            uentries.push_back(rr.second);
+            ventries.emplace_back(rr.first);
+            uentries.emplace_back(rr.second);
         }
 
         auto l1 = BSQ_NEW_NO_RC(RType1, ntype1, move(ventries));
@@ -570,7 +564,7 @@ public:
         for(size_t i = 0; i < l->entries.size(); ++i)
         {
             std::vector<T>& llentries = (l->entries[i])->entries;
-            std::transform(llentries.begin(), llentries.end(), std::back_inserter(entries), [](T& v) -> T {
+            std::transform(llentries.begin(), llentries.end(), std::back_inserter(entries), [](T v) -> T {
                 return RCIncF{}(v);
             });
         }
@@ -586,7 +580,7 @@ public:
 
         for(size_t i = 0; i < k; ++i)
         {
-            entries.push_back(RCIncF{}(val));
+            entries.emplace_back(RCIncF{}(val));
         }
 
         return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int64_t, DisplayFunctor_int64_t>), ntype, move(entries));
@@ -600,7 +594,7 @@ public:
 
         for(size_t i = 0; i < (end - start); ++i)
         {
-            entries.push_back(start + i);
+            entries.emplace_back(start + i);
         }
 
         return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int64_t, DisplayFunctor_int64_t>), ntype, move(entries));
