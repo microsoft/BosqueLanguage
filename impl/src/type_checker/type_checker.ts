@@ -5475,7 +5475,7 @@ class TypeChecker {
     processLambdaFunction(lkey: MIRInvokeKey, invoke: InvokeDecl, sigt: ResolvedFunctionType, binds: Map<string, ResolvedType>, cargs: [string, ResolvedType][]) {
         try {
             this.m_file = invoke.srcFile;
-            const iname = `fn::${invoke.sourceLocation.line}`;
+            const iname = `fn::${invoke.sourceLocation.line}##${invoke.sourceLocation.pos}`;
             const invinfo = this.processPCodeInfo(iname, lkey, invoke.sourceLocation, invoke, binds, sigt, cargs);
 
             if (invinfo instanceof MIRInvokePrimitiveDecl) {

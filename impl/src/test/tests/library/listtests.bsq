@@ -853,9 +853,7 @@ entrypoint function transformtoindexmapop(): Int {
 entrypoint function transformtomapop(): Int {
     let l = List<Int>@{2, -2, 0};
 
-    let ll = l.transformToMap<Int, Bool>(
-        fn(x) => x + 1, 
-        fn(x) => x >= 0);
+    let ll = l.transformToMap<Int, Bool>(fn(x) => x + 1, fn(x) => x >= 0);
     check ll.size() == 3;
     check ll.get(3);
     check !ll.get(-1);
@@ -867,9 +865,7 @@ entrypoint function transformtomapop(): Int {
 entrypoint function transformtomaperr(): Int {
     let l = List<Int>@{2, -2, 0};
 
-    let ll = l.transformToMap<Int, Bool>(
-        fn(x) => x >= 0 ? x : -x, 
-        fn(x) => x >= 0);
+    let ll = l.transformToMap<Int, Bool>(fn(x) => x >= 0 ? x : -x, fn(x) => x >= 0);
     return ll.size();
 }
 
