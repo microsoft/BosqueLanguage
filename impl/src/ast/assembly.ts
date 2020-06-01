@@ -1382,17 +1382,20 @@ class Assembly {
 
     getAllOOFields(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>, fmap?: Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>): Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]> {
         let declfields = fmap || new Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>();
-        ooptype.memberFields.forEach((mf, name) => {
-            if (!OOPTypeDecl.attributeSetContains("abstract", mf.attributes) && !declfields.has(name)) {
-                declfields.set(name, [ooptype, mf, binds]);
-            }
-        });
+
+        //Important to do traversal in Left->Right Topmost traversal order
 
         this.resolveProvides(ooptype, binds).forEach((provide) => {
             const tt = this.normalizeTypeOnly(provide, binds);
             (tt.options[0] as ResolvedConceptAtomType).conceptTypes.forEach((concept) => {
                 declfields = this.getAllOOFields(concept.concept, concept.binds, declfields);
             });
+        });
+
+        ooptype.memberFields.forEach((mf, name) => {
+            if (!declfields.has(name)) {
+                declfields.set(name, [ooptype, mf, binds]);
+            }
         });
 
         return declfields;
