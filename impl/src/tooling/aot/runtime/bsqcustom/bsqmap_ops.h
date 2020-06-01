@@ -88,7 +88,7 @@ public:
         std::for_each(m->entries.begin(), m->entries.end(), [p, &entries](MEntry<K, V>& v) {
             if(p(v.key, v.value))
             {
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(v.key), V_RCIncF{}(v.value)});
+                entries.emplace_back(MEntry<K, V>{K_RCIncF{}(v.key), V_RCIncF{}(v.value)});
             }
         });
 
@@ -102,7 +102,7 @@ public:
         std::for_each(m->entries.begin(), m->entries.end(), [tck, tcv, cc, &entries](MEntry<K, V>& v) {
             if(tck(v.key) && tcv(v.value))
             {
-                entries.push_back(cc(v.key, v.value));
+                entries.emplace_back(cc(v.key, v.value));
             }
         });
 
@@ -116,7 +116,7 @@ public:
         std::for_each(m->entries.begin(), m->entries.end(), [tck, tcv, cc, &entries](MEntry<K, V>& v) {
             BSQ_ASSERT(tck(v.key) && tcv(v.value), "abort -- invalid element in cast in Map<K, V>::cast");
 
-            entries.push_back(cc(v.key, v.value));
+            entries.emplace_back(cc(v.key, v.value));
         });
 
         return BSQ_NEW_NO_RC(RMType, ntype, move(entries));
@@ -131,7 +131,7 @@ public:
             V vv;
             if(m->tryGetValue(k, &vv))
             {
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(k), V_RCIncF{}(vv)});
+                entries.emplace_back(MEntry<K, V>{K_RCIncF{}(k), V_RCIncF{}(vv)});
             }
         });
 
@@ -149,7 +149,7 @@ public:
             bool has = es.find(e.key) != es.end();
             if(!has)
             {
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(e.key), V_RCIncF{}(e.value)});
+                entries.emplace_back(MEntry<K, V>{K_RCIncF{}(e.key), V_RCIncF{}(e.value)});
             }
         });
 
@@ -165,7 +165,7 @@ public:
             V vv;
             if(m->tryGetValue(k, &vv))
             {
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(k), V_RCIncF{}(vv)});
+                entries.emplace_back(MEntry<K, V>{K_RCIncF{}(k), V_RCIncF{}(vv)});
             }
         });
 
@@ -182,7 +182,7 @@ public:
             bool has = ds->has(e.key);
             if(!has)
             {
-                entries.push_back(MEntry<K, V>{K_RCIncF{}(e.key), V_RCIncF{}(e.value)});
+                entries.emplace_back(MEntry<K, V>{K_RCIncF{}(e.key), V_RCIncF{}(e.value)});
             }
         });
 

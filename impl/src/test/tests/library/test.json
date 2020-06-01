@@ -489,6 +489,26 @@
                 "expected": "0"
             },
             {
+                "kind": "aot",
+                "entrypoint": "toindexmapop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "transformtoindexmapop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "transformtomapop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "transformtomaperr",
+                "expected": null
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
@@ -792,7 +812,28 @@
                 "kind": "symexec",
                 "entrypoint": "sort",
                 "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "toindexmapop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "transformtoindexmapop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "transformtomapop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "transformtomaperr",
+                "expected": null
             }
+            
         ]
     }
 ]

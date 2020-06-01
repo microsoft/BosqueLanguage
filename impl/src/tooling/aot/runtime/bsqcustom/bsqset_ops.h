@@ -74,7 +74,7 @@ public:
         std::for_each(s->entries.begin(), s->entries.end(), [&entries](const T& v) {
             if(LambdaP{}(v))
             {
-                return entries.push_back(RCIncF{}(v));
+                return entries.emplace_back(RCIncF{}(v));
             }
         });
 
@@ -88,7 +88,7 @@ public:
         std::for_each(s->entries.begin(), s->entries.end(), [&entries](T& v) {
             if(LambdaTC{}(v))
             {
-                entries.push_back(LambdaCC{}(v));
+                entries.emplace_back(LambdaCC{}(v));
             }
         });
 
@@ -102,7 +102,7 @@ public:
         std::for_each(s->entries.begin(), s->entries.end(), [&entries](T& v) {
             BSQ_ASSERT(LambdaTC{}(v), "abort -- invalid element to cast in Set<T>::cast");
 
-            entries.push_back(LambdaCC{}(v));
+            entries.emplace_back(LambdaCC{}(v));
         });
 
         return BSQ_NEW_NO_RC((BSQSet<U, U_RCDecF, U_DisplayF, U_CMP, U_EQ>), ntype, move(entries));
