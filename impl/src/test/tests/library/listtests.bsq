@@ -5,6 +5,27 @@
 
 namespace NSTest;
 
+entrypoint function concatop(): Int {
+    let ll = List<Int>::concat(List<Int>@{1, 2}, List<Int>@{}, List<Int>@{3});
+
+    check ll.size() == 3;
+    check ll.front() == 1;
+    check ll.get(1) == 2;
+    check ll.back() == 3;
+
+    return 0;
+}
+
+entrypoint function fillop(): Int {
+    let ll = List<Int>::fill(2, 5);
+    
+    check ll.size() == 2;
+    check ll.front() == 5;
+    check ll.back() == 5;
+
+    return 0;
+}
+
 entrypoint function sizeAndEmpty(): Int {
     check List<Int>@{}.size() == 0;
     check List<Int>@{1, 2}.size() == 2;
