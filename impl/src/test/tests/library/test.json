@@ -185,6 +185,16 @@
             },
             {
                 "kind": "aot",
+                "entrypoint": "concatop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "fillop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
             },
@@ -507,6 +517,16 @@
                 "kind": "aot",
                 "entrypoint": "transformtomaperr",
                 "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "concatop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "fillop",
+                "expected": "0"
             },
             {
                 "kind": "symexec",

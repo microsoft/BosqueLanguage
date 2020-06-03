@@ -14,6 +14,36 @@ template <typename Ty, typename T, typename RCIncF, typename RCDecF, typename Di
 class BSQListOps
 {
 public:
+    template <typename ListT, MIRNominalTypeEnum ntype>
+    static Ty* list_concat(ListT l)
+    {
+        std::vector<T> entries;
+
+        for(size_t i = 0; i < l->entries.size(); ++i)
+        {
+            std::vector<T>& llentries = (l->entries[i])->entries;
+            std::transform(llentries.begin(), llentries.end(), std::back_inserter(entries), [](T v) -> T {
+                return RCIncF{}(v);
+            });
+        }
+
+        return BSQ_NEW_NO_RC(Ty, ntype, move(entries));
+    }
+
+    template <MIRNominalTypeEnum ntype>
+    static Ty* list_fill(int64_t k, T val)
+    {
+        std::vector<T> entries;
+        entries.reserve(k);
+
+        for(size_t i = 0; i < k; ++i)
+        {
+            entries.emplace_back(RCIncF{}(val));
+        }
+
+        return BSQ_NEW_NO_RC(Ty, ntype, move(entries));
+    }
+
     template <typename SetT, typename LambdaSC>
     static SetT* list_toset(Ty* l)
     {
@@ -527,63 +557,33 @@ public:
 
         for(size_t i = 0; i < l1->entries.size(); ++i)
         {
-            entries.emplace_back(LambdaZ{}(l1->entries[i], l2->entries[i]));
+            entries.emplace_back(zc(l1->entries[i], l2->entries[i]));
         }
 
         return BSQ_NEW_NO_RC(RType, ntype, move(entries));
     }
 
-    template <typename RType1, MIRNominalTypeEnum ntype1, typename VType, typename RType2, MIRNominalTypeEnum ntype2, typename UType, typename LType, typename LambdaUZ>
-    static std::pair<RType1*, RType2*> list_unzip(LType* l)
+    template <typename RType1, typename UType, MIRNominalTypeEnum ntype1, typename RType2, typename VType, MIRNominalTypeEnum ntype2, typename LType, typename LambdaUZ>
+    static std::pair<RType1*, RType2*> list_unzip(LType* l, LambdaUZ uz)
     {
-        std::vector<VType> ventries;
-        ventries.reserve(l->entries.size());
-
         std::vector<UType> uentries;
         uentries.reserve(l->entries.size());
 
+        std::vector<VType> ventries;
+        ventries.reserve(l->entries.size());
+
         for(size_t i = 0; i < l->entries.size(); ++i)
         {
-            std::pair<VType, UType> rr = LambdaUZ{}(l->entries[i]);
+            std::pair<UType, VType> rr = uz(l->entries[i]);
 
-            ventries.emplace_back(rr.first);
-            uentries.emplace_back(rr.second);
+            uentries.emplace_back(rr.first);
+            ventries.emplace_back(rr.second);
         }
 
-        auto l1 = BSQ_NEW_NO_RC(RType1, ntype1, move(ventries));
-        auto l2 = BSQ_NEW_NO_RC(RType2, ntype2, move(uentries));
+        auto l1 = BSQ_NEW_NO_RC(RType1, ntype1, move(uentries));
+        auto l2 = BSQ_NEW_NO_RC(RType2, ntype2, move(ventries));
 
         return std::make_pair(l1, l2);
-    }
-
-    template <typename T, typename RCIncF, typename RCDecF, typename DisplayF, MIRNominalTypeEnum ntype, typename ListT>
-    static BSQList<T, RCDecF, DisplayF>* list_concat(ListT* l)
-    {
-        std::vector<T> entries;
-
-        for(size_t i = 0; i < l->entries.size(); ++i)
-        {
-            std::vector<T>& llentries = (l->entries[i])->entries;
-            std::transform(llentries.begin(), llentries.end(), std::back_inserter(entries), [](T v) -> T {
-                return RCIncF{}(v);
-            });
-        }
-
-        return BSQ_NEW_NO_RC((BSQList<T, RCDecF, DisplayF>), ntype, move(entries));
-    }
-
-    template <typename T, typename RCIncF, typename RCDecF, typename DisplayF, MIRNominalTypeEnum ntype>
-    static BSQList<T, RCDecF, DisplayF>* list_fill(int64_t k, T val)
-    {
-        std::vector<T> entries;
-        entries.reserve(k);
-
-        for(size_t i = 0; i < k; ++i)
-        {
-            entries.emplace_back(RCIncF{}(val));
-        }
-
-        return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int64_t, DisplayFunctor_int64_t>), ntype, move(entries));
     }
 
     template <MIRNominalTypeEnum ntype>

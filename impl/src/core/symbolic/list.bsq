@@ -19,6 +19,26 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     pragma AssumeSafe
     hidden static s_unsafe_set(l: List<T>, idx: Int, v: T): List<T> # list_unsafe_set
     
+    hidden recursive static s_concat(l: List<List<T>>, lsize: Int, lp: List<T>, idx: Int): List<T> {
+        if(idx == lsize) {
+            return lp;
+        }
+        else {
+            let ll = List<List<T>>::s_unsafe_get(l, idx);
+            let cc = List<T>::s_append[recursive](ll, List<T>::s_size(ll), lp, 0);
+            return List<T>::s_concat[recursive](l, lsize, cc, idx + 1);
+        }
+    }
+
+    hidden recursive static s_fill(k: Int, val: T, lp: List<T>): List<T> {
+        if(k == 0) {
+            return lp;
+        }
+        else {
+            return List<T>::s_fill[recursive](k - 1, val, List<T>::s_unsafe_push(lp, val));
+        }
+    }
+
     hidden recursive static {when T KeyType} s_toset(l: List<T>, lsize: Int, idx: Int, r: Set<T>): Set<T> {
         if(idx == lsize) {
             return r;
@@ -633,6 +653,16 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
         return 0 <= s && s <= e && e <= List<T>::s_size(l); 
     }
 
+    static concat(...ll: List<List<T>>): List<T> {
+        return List<T>::s_concat[recursive](ll, List<List<T>>::s_size(ll), List<T>@{}, 0);
+    }
+
+    static fill(k: Int, val: T): List<T>
+        requires release k >= 0;
+    {
+        return List<T>::s_fill[recursive](k, val, List<T>@{});
+    }
+
     method size(): Int {
         return List<T>::s_size(this);
     }
@@ -1086,45 +1116,25 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
     }
 }
 
-concept ListUtil {
-    hidden recursive static s_zip<T>(size: Int, l1: List<T>, l2: List<U>, lp: List<[T, U]>, idx: Int): List<[T, U]> {
+concept ListOf {
+    hidden recursive static s_zip<T, U>(size: Int, l1: List<T>, l2: List<U>, lp: List<[T, U]>, idx: Int): List<[T, U]> {
         if(idx == size) {
             return lp;
         }
         else {
             let vt = List<T>::s_unsafe_get(l1, idx);
             let vu = List<U>::s_unsafe_get(l2, idx);
-            return ListUtil::s_zip(size, l1, l2, List<[T, U]>::s_unsafe_push(lp, [vt, vu]), idx + 1);
+            return ListOf::s_zip<T, U>(size, l1, l2, List<[T, U]>::s_unsafe_push(lp, [vt, vu]), idx + 1);
         }
     }
 
-    hidden recursive static s_unzip<T>(l: List<[T, U]>, lsize: Int, lt: List<T>, lu: List<U>, idx: Int): List<T>, List<U> {
+    hidden recursive static s_unzip<T, U>(l: List<[T, U]>, lsize: Int, lt: List<T>, lu: List<U>, idx: Int): List<T>, List<U> {
         if(idx == lsize) {
             return lt, lu;
         }
         else {
             let vp = List<[T, U]>::s_unsafe_get(l, idx);
-            return ListUtil::s_unzip(l, lsize, List<T>::s_unsafe_push(lt, vp.0), List<U>::s_unsafe_push(lu, vp.1), idx + 1);
-        }
-    }
-
-    hidden recursive static s_concat<T>(l: List<List<T>>, lsize: Int, lp: List<T>, idx: Int): List<T> {
-        if(idx == lsize) {
-            return lp;
-        }
-        else {
-            let ll = List<List<T>>::s_unsafe_get(l, idx);
-            let cc = List<T>::s_append(ll, lp, 0);
-            return List<T>::s_concat(l, lsize, lp, idx + 1);
-        }
-    }
-
-    hidden recursive static s_fill<T>(k: Int, val: T, lp: List<T>): List<T> {
-        if(k == 0) {
-            return lp;
-        }
-        else {
-            return ListUtil::s_fill[recursive](k - 1, List<Int>::s_unsafe_push(lp, val));
+            return ListOf::s_unzip<T, U>(l, lsize, List<T>::s_unsafe_push(lt, vp.0), List<U>::s_unsafe_push(lu, vp.1), idx + 1);
         }
     }
 
@@ -1133,33 +1143,23 @@ concept ListUtil {
             return lp;
         }
         else {
-            return ListUtil::s_range[recursive](start + 1, end, List<Int>::s_unsafe_push(lp, start));
+            return ListOf::s_range[recursive](start + 1, end, List<Int>::s_unsafe_push(lp, start));
         }
     }
 
-    static zip<T>(l1: List<T>, l2: List<U>): List<[T, U]>
+    static zip<T, U>(l1: List<T>, l2: List<U>): List<[T, U]>
         requires release List<T>::s_size(l1) == List<U>::s_size(l2);
     {
-        return ListUtil::s_zip<T>[recursive](List<T>::s_size(l1), l1, l2, List<[T, U]>@{}, 0);
+        return ListOf::s_zip<T, U>[recursive](List<T>::s_size(l1), l1, l2, List<[T, U]>@{}, 0);
     }
 
     static unzip<T, U>(l: List<[T, U]>): List<T>, List<U> {
-        return ListUtil::s_unzip<T>[recursive](l, List<T>::s_size(l), List<T>@{}, List<U>@{}, 0);
-    }
-
-    static concat<T>(...ll: List<List<T>>): List<T> {
-        return ListUtil::s_concat[recursive](ll, List<T>::s_size(ll), List<T>@{}, 0);
-    }
-
-    static fill<T>(k: Int, val: T): List<T>
-        requires release k >= 0;
-    {
-        return ListUtil::s_fill<T>[recursive](k, val, List<T>@{});
+        return ListOf::s_unzip<T, U>[recursive](l, List<T>::s_size(l), List<T>@{}, List<U>@{}, 0);
     }
 
     static range(start: Int, end: Int): List<Int>
-        requires release end > start;
+        requires release start <= end;
     {
-        return ListUtil::s_range[recursive](start, end, List<Int>@{});
+        return ListOf::s_range[recursive](start, end, List<Int>@{});
     }
 }

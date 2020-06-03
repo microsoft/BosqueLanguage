@@ -1881,6 +1881,23 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${params[0]}->entries[${params[1]}];`;
                 break;
             }
+            case "list_concat": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                
+                const larg = this.typegen.getMIRType(idecl.params[0].type);
+                const lrepr = this.typegen.getCPPReprFor(larg).std
+
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_concat<${lrepr}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(ltype.trkey)}>(${params[0]});`
+                break;
+            }
+            case "list_fill": {
+                const ltype = this.getEnclosingListTypeForListOp(idecl);
+                const ctype = this.getListContentsInfoForListOp(idecl);
+                
+                bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_fill<MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(ltype.trkey)}>(${params[0]}, ${params[1]});`
+                break;
+            }
             case "list_toset": {
                 const settype = this.typegen.getMIRType(idecl.resultType);
                 const setrepr = this.typegen.getCPPReprFor(settype);
