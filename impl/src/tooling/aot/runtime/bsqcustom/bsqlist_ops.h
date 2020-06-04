@@ -550,7 +550,7 @@ class BSQListUtilOps
 {
 public:
     template <typename LType1, typename LType2, typename RType, typename ZType, MIRNominalTypeEnum ntype, typename LambdaZ>
-    static RType* list_zip(LType1* l1, LType2* l2)
+    static RType* list_zip(LType1* l1, LType2* l2, LambdaZ zc)
     {
         std::vector<ZType> entries;
         entries.reserve(l1->entries.size());
@@ -586,8 +586,8 @@ public:
         return std::make_pair(l1, l2);
     }
 
-    template <MIRNominalTypeEnum ntype>
-    static BSQList<int64_t, RCDecFunctor_int64_t, DisplayFunctor_int64_t>* list_range(int64_t start, int64_t end)
+    template <typename RType, MIRNominalTypeEnum ntype>
+    static RType* list_range(int64_t start, int64_t end)
     {
         std::vector<int64_t> entries;
         entries.reserve(end - start);
@@ -597,7 +597,7 @@ public:
             entries.emplace_back(start + i);
         }
 
-        return BSQ_NEW_NO_RC((BSQList<int64_t, RCDecFunctor_int64_t, DisplayFunctor_int64_t>), ntype, move(entries));
+        return BSQ_NEW_NO_RC(RType, ntype, move(entries));
     }
 };
 

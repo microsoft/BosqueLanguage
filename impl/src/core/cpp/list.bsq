@@ -545,18 +545,18 @@ entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType 
 }
 
 concept ListOf {
-    hidden static s_zip<T>(l1: List<T>, l2: List<U>): List<[T, U]> # list_zip
-    hidden static s_unzip<T>(l: List<[T, U]>): List<T>, List<U> # list_unzip
+    hidden static s_zip<T, U>(l1: List<T>, l2: List<U>): List<[T, U]> # list_zip
+    hidden static s_unzip<T, U>(l: List<[T, U]>): List<T>, List<U> # list_unzip
     hidden static s_range(start: Int, end: Int): List<Int> # list_range
 
     static zip<T, U>(l1: List<T>, l2: List<U>): List<[T, U]>
         requires release List<T>::s_size(l1) == List<U>::s_size(l2);
     {
-        return ListOf::s_zip<T>(l1, l2);
+        return ListOf::s_zip<T, U>(l1, l2);
     }
 
     static unzip<T, U>(l: List<[T, U]>): List<T>, List<U> {
-        return ListOf::s_unzip<T>(l);
+        return ListOf::s_unzip<T, U>(l);
     }
 
     static range(start: Int, end: Int): List<Int>
