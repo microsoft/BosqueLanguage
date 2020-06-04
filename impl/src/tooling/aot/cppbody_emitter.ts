@@ -1873,8 +1873,62 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQStringOf, ${params[0]}->sdata, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)});`;
                 break;
             }
+            case "list_zip": {
+                const ltype1 = this.typegen.getMIRType(idecl.params[0].type);
+                const l1contents = (this.typegen.assembly.entityDecls.get(ltype1.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const ltype1repr = this.typegen.getCPPReprFor(ltype1);
+            
+                const ltype2 = this.typegen.getMIRType(idecl.params[1].type);
+                const l2contents = (this.typegen.assembly.entityDecls.get(ltype2.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const ltype2repr = this.typegen.getCPPReprFor(ltype2);
+
+                const rtype = this.typegen.getMIRType(idecl.resultType);
+                const rcontents = (this.typegen.assembly.entityDecls.get(rtype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const rtyperepr = this.typegen.getCPPReprFor(rtype);
+                
+                const iflag = this.typegen.generateInitialDataKindFlag(rcontents);
+                const codecc1 = this.typegen.coerce("uu", l1contents, this.typegen.anyType);
+                const codecc2 = this.typegen.coerce("vv", l2contents, this.typegen.anyType);
+                const zlambda = `[&${scopevar}](${this.typegen.getCPPReprFor(l1contents).std} uu, ${this.typegen.getCPPReprFor(l2contents).std} vv) -> ${this.typegen.getCPPReprFor(rcontents).std} { return BSQTuple::createFromSingle<${iflag}>({ INC_REF_CHECK(Value, ${codecc1}), INC_REF_CHECK(Value, ${codecc2}) }); }`;
+
+                bodystr = `auto $$return = BSQListUtilOps::list_zip<${ltype1repr.base}, ${ltype2repr.base}, ${rtyperepr.base}, ${this.typegen.getCPPReprFor(rcontents).std}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rtype.trkey)}>(${params[0]}, ${params[1]}, ${zlambda});`;
+                break;
+            }
+            case "list_unzip": {
+                const rtype = this.typegen.getMIRType(idecl.resultType);
+                const [rt1, rt2] = (rtype.options[0] as MIREphemeralListType).entries;
+                const rtyperepr = this.typegen.getCPPReprFor(rtype);
+
+                const repr1 = this.typegen.getCPPReprFor(rt1);
+                const contents1 = (this.typegen.assembly.entityDecls.get(rt1.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const contents1repr = this.typegen.getCPPReprFor(contents1);
+                const repr2 = this.typegen.getCPPReprFor(rt2);
+                const contents2 = (this.typegen.assembly.entityDecls.get(rt2.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const contents2repr = this.typegen.getCPPReprFor(contents2);
+
+                const ltype = this.typegen.getMIRType(idecl.params[0].type);
+                const ltyperepr = this.typegen.getCPPReprFor(ltype);
+                const lcontents = (this.typegen.assembly.entityDecls.get(ltype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
+                const lcontentsrepr = this.typegen.getCPPReprFor(lcontents);
+
+                const acc1 = this.typegen.coerce("cr.atFixed<0>()", this.typegen.anyType, contents1);
+                const acc2 = this.typegen.coerce("cr.atFixed<1>()", this.typegen.anyType, contents2);
+
+                const uzlambda = `[](${lcontentsrepr.std} cr) -> std::pair<${contents1repr.std}, ${contents2repr.std}> { return std::make_pair(${acc1}, ${acc2}); }`;
+                const rv = `auto $uvpair$ = BSQListUtilOps::list_unzip<${repr1.base}, ${contents1repr.std}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rt1.trkey)}, ${repr2.base}, ${contents2repr.std}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rt2.trkey)}, ${ltyperepr.base}>(${params[0]}, ${uzlambda});`;
+
+                bodystr = `${rv} auto $$return = ${rtyperepr.base}{$uvpair$.first, $uvpair$.second};`;
+                break;
+            }
+            case "list_range": {
+                const rtype = this.typegen.getMIRType(idecl.resultType);
+                const rtyperepr = this.typegen.getCPPReprFor(rtype);
+
+                bodystr = `auto $$return = BSQListUtilOps::list_range<${rtyperepr.base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rtype.trkey)}>(${params[0]}, ${params[1]});`;
+                break;
+            }
             case "list_size": {
-                bodystr = `auto $$return = (int64_t)(${params[0]}->entries.size());`
+                bodystr = `auto $$return = (int64_t)(${params[0]}->entries.size());`;
                 break;
             }
             case "list_unsafe_get": {

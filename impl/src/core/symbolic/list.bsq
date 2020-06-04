@@ -1124,7 +1124,7 @@ concept ListOf {
         else {
             let vt = List<T>::s_unsafe_get(l1, idx);
             let vu = List<U>::s_unsafe_get(l2, idx);
-            return ListOf::s_zip<T, U>(size, l1, l2, List<[T, U]>::s_unsafe_push(lp, [vt, vu]), idx + 1);
+            return ListOf::s_zip<T, U>[recursive](size, l1, l2, List<[T, U]>::s_unsafe_push(lp, [vt, vu]), idx + 1);
         }
     }
 
@@ -1134,7 +1134,7 @@ concept ListOf {
         }
         else {
             let vp = List<[T, U]>::s_unsafe_get(l, idx);
-            return ListOf::s_unzip<T, U>(l, lsize, List<T>::s_unsafe_push(lt, vp.0), List<U>::s_unsafe_push(lu, vp.1), idx + 1);
+            return ListOf::s_unzip<T, U>[recursive](l, lsize, List<T>::s_unsafe_push(lt, vp.0), List<U>::s_unsafe_push(lu, vp.1), idx + 1);
         }
     }
 
@@ -1154,7 +1154,7 @@ concept ListOf {
     }
 
     static unzip<T, U>(l: List<[T, U]>): List<T>, List<U> {
-        return ListOf::s_unzip<T, U>[recursive](l, List<T>::s_size(l), List<T>@{}, List<U>@{}, 0);
+        return ListOf::s_unzip<T, U>[recursive](l, List<[T, U]>::s_size(l), List<T>@{}, List<U>@{}, 0);
     }
 
     static range(start: Int, end: Int): List<Int>

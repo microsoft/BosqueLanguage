@@ -178,6 +178,64 @@
         ]
     },
     {
+        "src": "listoptests.bsq",
+        "tests": [
+            {
+                "kind": "compile"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "zipop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "ziperr",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "unzipop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "rangeop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "rangeerr",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "zipop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "ziperr",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "unzipop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "rangeop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "rangeerr",
+                "expected": null
+            }
+        ]
+    },
+    {
         "src": "listtests.bsq",
         "tests": [
             {
