@@ -372,6 +372,16 @@
                 "expected": "0"
             },
             {
+                "kind": "aot",
+                "entrypoint": "noneprocessing",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "equality",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "absC",
                 "expected": "2"
@@ -414,6 +424,16 @@
             {
                 "kind": "symexec",
                 "entrypoint": "bulkmergechk",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "noneprocessing",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "equality",
                 "expected": "0"
             }
         ]

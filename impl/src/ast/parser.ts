@@ -1918,7 +1918,7 @@ class Parser {
 
         let entries: MatchEntry<Expression>[] = [];
         this.ensureAndConsumeToken("{");
-        while (this.testToken("type") || this.testToken("case")) {
+        while (this.testToken("type") || this.testToken("case") || (this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "_")) {
             if (this.testToken("type")) {
                 entries.push(this.parseMatchEntry<Expression>(sinfo, true, () => this.parseExpression()));
             }
@@ -2494,7 +2494,10 @@ class Parser {
     }
 
     private parseMatchEntry<T>(sinfo: SourceInfo, istypematch: boolean, actionp: () => T): MatchEntry<T> {
-        this.consumeToken();
+        if(!this.testToken(TokenStrings.Identifier)) {
+            this.consumeToken();
+        }
+
         const guard = this.parseMatchGuard(sinfo, istypematch);
         this.ensureAndConsumeToken("=>");
         const action = actionp();
@@ -2513,7 +2516,7 @@ class Parser {
 
         let entries: MatchEntry<BlockStatement>[] = [];
         this.ensureAndConsumeToken("{");
-        while (this.testToken("type") || this.testToken("case")) {
+        while (this.testToken("type") || this.testToken("case") || (this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "_")) {
             if (this.testToken("type")) {
                 entries.push(this.parseMatchEntry<BlockStatement>(sinfo, true, () => this.parseBlockStatement()));
             }

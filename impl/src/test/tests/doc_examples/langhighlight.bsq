@@ -31,6 +31,33 @@ function nextCtr(ref ctr: Int): Int {
     return res;
 }
 
+function foo(val?: {tag: Int, value?: String}): String {
+    return val?.value ?| "[No Value]";
+}
+
+identifier UserId = Int;
+enum GlobalEnum {
+    local,
+    network
+}
+
+entity Resource {
+    field access: UserId | GlobalEnum;
+    field data: String;
+}
+
+function checkAccessForUser(user: UserId, resources: List<Resource>): Bool {
+    return resources.allOf(fn(r) => {
+            let access = r.access;
+            return switch(access) {
+                type GlobalEnum => access == GlobalEnum::local
+                type UserId => access == user
+                _ => false
+            };
+        }
+    );
+}
+
 ////
 //Tests
 
@@ -150,6 +177,46 @@ entrypoint function bulkmergechk(): Int {
     check rm.f == 5;
     check rm.g == 8;
     check rm.h == 1;
+
+    return 0;
+}
+
+entrypoint function noneprocessing(): Int {
+    check foo() == "[No Value]";
+    check foo({tag=1}) == "[No Value]";
+    check foo({tag=1, value="ok"}) == "ok";
+
+    return 0;
+}
+
+entrypoint function iterative(): Int {
+    let v: List<Int?> = List<Int?>@{1, 2, none, 4};
+
+    let dd = v.ofType<Int>().map<Int>(fn(x) => x*x);
+    check dd.size() == 3;
+    check dd.front() == 1;
+    check dd.get(1) == 4;
+    check dd.back() == 16;
+
+    return 0;
+}
+
+entrypoint function equality(): Int {
+    let user5 = UserId::create(5);
+    let user2 = UserId::create(2);
+    
+    let resources1 = List<Resource>@{ 
+            Resource@{user5, "file1"},
+            Resource@{GlobalEnum::local, "file2"}
+        };
+
+    let resources2 = List<Resource>@{ 
+            Resource@{user5, "file1"},
+            Resource@{user2, "file2"}
+        };
+
+    check checkAccessForUser(user5, resources1);
+    check !checkAccessForUser(user5, resources2);
 
     return 0;
 }
