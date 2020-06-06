@@ -331,13 +331,13 @@ function foo(val?: {tag: Int, value?: String}): String {
 A fundamental concept in a programming language is the iteration construct and a critical question is should this construct be provided as high-level functors, such as filter/map/reduce, or do programmers benefit from the flexibility available with iterative, while or for, looping constructs. To answer this question in a definitive manner the authors of [Mining Semantic Loop Idioms](https://www.microsoft.com/en-us/research/uploads/prod/2018/10/LoopIdioms.pdf) engaged in a study of all the loops "idioms" found in real-world code. The categorization and coverage results showed that almost every loop a developer would want to write falls into a small number of idiomatic patterns which correspond to higher level concepts developers are using in the code, e.g., filter, find, group, map, etc. With this result in mind the Bosque language trades structured loops for a set of high-level iterative processing constructs ([3 Collections](#3-Collections)).
 
 ```none
-let v: List<Int?> = List<Int?>{1, 2, none, 4};
+let v: List<Int?> = List<Int?>@{1, 2, none, 4};
 
-//Chained - List<Int>{1, 4, 16}
-v.filter(fn(x) => x != none).map<Int>(fn(x) => x*x)
+let dd = v.ofType<Int>().map<Int>(fn(x) => x*x);
+_debug(dd); //List<Int>@{1, 4, 16}
 ```
 
-Eliminating the boilerplate of writing the same loops repeatedly eliminates whole classes of errors including, e.g. bounds computations, and makes the intent clear with a descriptively named functor instead of relying on a shared set of mutually known loop patterns. Critically, for enabling automated program validation and optimization, eliminating loops also eliminates the need for computing loop-invariants. Instead, and with a careful design of the collection libraries, it is possible to write precise transformers for each functor. In this case the computation of _strongest-postconditions_ or _weakest-preconditions_ avoids the complexity of generating a loop invariant and instead becomes a simple and deterministic case of formula pushing!
+Eliminating the boilerplate of writing the same loops repeatedly eliminates whole classes of errors including, e.g. bounds computations, and makes the intent clear with a descriptively named functor instead of relying on a shared set of mutually known loop patterns. Critically, for enabling automated program validation and optimization, eliminating loops also eliminates the need for computing loop-invariants. Instead, and with a careful design of the collection libraries, it is possible to write precise transformers for each functor. In this case the computation of _strongest-postconditions_ or _weakest-preconditions_ avoids the complexity of generating a loop invariant and instead becomes a deterministic case of formula pushing!
 
 ## <a name="0.9-Recursion"></a>0.9 Recursion
 
@@ -347,7 +347,7 @@ Thus, Bosque is designed to encourage limited uses of recursion, increase the cl
 
 ## <a name="0.10-Determinacy"></a>0.10 Determinacy
 
-When the behavior of a code block is under-specified the result is code that is harder to reason about and more prone to errors. As a key goal of the Bosque language is to eliminate sources of unneeded complexity that lead to confusion and errors we naturally want to eliminate these under-specified behaviors. Thus, Bosque does not have any _undefined_ behavior such as allowing uninitialized variable reads and eliminates all _under defined_ behavior as well including sorting stability and all associative collections (sets and maps) have a fixed and stable enumeration order.
+When the behavior of a code block is under-specified the result is code that is harder to reason about and more prone to errors. As a key goal of the Bosque language is to eliminate sources of unneeded complexity that lead to confusion and errors we naturally want to eliminate these under-specified behaviors. Thus, Bosque does not have any _undefined_ behavior such as allowing uninitialized variable reads and eliminates all _under defined_ behavior as well including sorting stability and all associative collections (sets and maps) have a fixed and stable enumeration order based on the order of the underlying key values.
 
 As a result of these design choices there is always a single _unique_ and _canonical_ result for any Bosque program. This means that developers will never see intermittent production failures or flaky unit-tests!
 
@@ -361,25 +361,43 @@ In light of these issues the Bosque language does not allow user visible _refere
 
 ```
 identifier UserId = Int;
-composite identifier OwnedResourceId = {owner: UserId, name: String};
-guid identifier GlobalResourceId;
+enum GlobalEnum {
+    local,
+    network
+}
 
 entity Resource {
-    field id: OwnedResourceId | GlobalResourceId;
+    field access: UserId | GlobalEnum;
     field data: String;
 }
 
-function checkAccessForUser(user: UserId, ...resources: List<Resource>): Bool {
-    return resources.all(fn(r) => 
-        switch(r.id) {
-            type DurableOrchestrationContext => true
-            type OwnedResourceId => r.id.owner = user
+function checkAccessForUser(user: UserId, resources: List<Resource>): Bool {
+    return resources.allOf(fn(r) => {
+            let access = r.access;
+            return switch(access) {
+                type GlobalEnum => access == GlobalEnum::local
+                type UserId => access == user
+                _ => false
+            };
         }
     );
 }
 
-checkAccessForUser(UserId.create(5), {owner: UserId.create(5), "file1"}) //true
-checkAccessForUser(UserId.create(5), {owner: UserId.create(5), "file1"}, {owner: UserId.create(2), "file2"}) //false
+let user5 = UserId::create(5);
+let user2 = UserId::create(2);
+    
+let resources1 = List<Resource>@{ 
+        Resource@{user5, "file1"},
+        Resource@{GlobalEnum::local, "file2"}
+    };
+
+let resources2 = List<Resource>@{ 
+        Resource@{user5, "file1"},
+        Resource@{user2, "file2"}
+    };
+
+_debug(checkAccessForUser(user5, resources1)); //true
+_debug(checkAccessForUser(user5, resources2)); //false
 ```
 
 The composite key type allows a developer to create a distinct type to represent a composite equality comparable value that provides the notion of equality e.g. identity, primary key, equivalence, etc. that makes sense for their domain. The language also allows types to define a key field that will be used for equality/order by the associative containers in the language ([3 Collections](#3-Collections)).
