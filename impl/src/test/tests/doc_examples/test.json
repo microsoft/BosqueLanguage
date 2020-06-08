@@ -382,6 +382,46 @@
                 "expected": "0"
             },
             {
+                "kind": "aot",
+                "entrypoint": "fooconsfail",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "foomreqfail1",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "foomreqfail2",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "foomensfail",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "foomcheckfail",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "foomassertfail",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "foomok",
+                "expected": "1"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "factoryop",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "absC",
                 "expected": "2"
@@ -434,6 +474,46 @@
             {
                 "kind": "symexec",
                 "entrypoint": "equality",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "fooconsfail",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "foomreqfail1",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "foomreqfail2",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "foomensfail",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "foomcheckfail",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "foomassertfail",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "foomok",
+                "expected": "1"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "factoryop",
                 "expected": "0"
             }
         ]

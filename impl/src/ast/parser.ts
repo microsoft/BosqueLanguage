@@ -2894,14 +2894,10 @@ class Parser {
     private parseInvariantsInto(invs: InvariantDecl[]) {
         try {
             this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(["this"]), new NominalTypeSignature("NSCore", "Bool")));
-            while (this.testToken("invariant") || this.testToken("check")) {
-                const ischeck = this.testAndConsumeTokenIf("check");
+            while (this.testToken("invariant")) {
                 this.consumeToken();
 
-                let level: BuildLevel = ischeck ? "release" : "debug";
-                if (!ischeck) {
-                    level = this.parseBuildInfo(level);
-                }
+                let level: BuildLevel = this.parseBuildInfo("debug");
 
                 const sinfo = this.getCurrentSrcInfo();
                 const exp = this.parseExpression();
@@ -2916,14 +2912,15 @@ class Parser {
     }
 
     private parseOOPMembersCommon(thisType: TypeSignature, invariants: InvariantDecl[], staticMembers: Map<string, StaticMemberDecl>, staticFunctions: Map<string, StaticFunctionDecl>, memberFields: Map<string, MemberFieldDecl>, memberMethods: Map<string, MemberMethodDecl>) {
-        this.parseInvariantsInto(invariants);
-
         let allMemberNames = new Set<string>();
         while (!this.testToken("}")) {
             const pragmas = this.parseDeclPragmas();
             const attributes = this.parseAttributes();
 
-            if (this.testToken("const")) {
+            if (this.testToken("invariant")) {
+                this.parseInvariantsInto(invariants);
+            }
+            else if (this.testToken("const")) {
                 this.parseConstMember(staticMembers, allMemberNames, attributes, pragmas);
             }
             else if (this.testToken("static")) {
