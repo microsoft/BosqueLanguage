@@ -365,7 +365,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method union(m: Map<K, V>): Map<K, V> {
-        return Map<K, V>::s_union[recursive](s, this, Map<K, V>::s_get_keylist(s));
+        return Map<K, V>::s_union[recursive](m, this, Map<K, V>::s_get_keylist(m));
     }
 
     static unionOf(...ml: List<Map<K, V>>): Map<K, V> {
@@ -381,7 +381,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method merge(m: Map<K, V>): Map<K, V> {
-        return Map<K, V>::s_merge[recursive](s, this, Map<K, V>::s_get_keylist(s));
+        return Map<K, V>::s_merge[recursive](m, this, Map<K, V>::s_get_keylist(m));
     }
 
     static mergeOf(...ml: List<Map<K, V>>): Map<K, V> {
