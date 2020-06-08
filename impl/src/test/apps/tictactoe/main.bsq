@@ -22,7 +22,7 @@ enum BoardCell {
     r2c2
 }
 
-global _posToCellList: List<BoardCell> = List<BoardCell>@{
+global g_posToCellList: List<BoardCell> = List<BoardCell>@{
     BoardCell::r0c0,
     BoardCell::r0c1,
     BoardCell::r0c2,
@@ -77,8 +77,8 @@ entity Board {
     static convertRowColumnToCell(row: Int, col: Int): BoardCell
         requires 0 <= row && row < 3 && 0 <= col && col < 3;
     {
-        let pos = Math::mult(row, 3) + col;
-        return NSMain::_posToCellList.get(pos);
+        let pos = (row * 3) + col;
+        return NSMain::g_posToCellList.get(pos);
     }
 
     method isCellOccupied(x: Int, y: Int): Bool {
@@ -91,7 +91,8 @@ entity Board {
         requires !this.isCellOccupied(x, y);
     {
         let cellid = Board::convertRowColumnToCell(x, y);
-        return this.update(cells=this.cells.add(cellid, mark));
+        let ncells = this.cells.union(Map<BoardCell, PlayerMark>@{cellid => mark}); //TODO: change this when we add DynamicMap support
+        return this.update(cells=ncells);
     }
 
     method checkAnyWinner(): PlayerMark? {
@@ -108,8 +109,8 @@ entity Board {
 }
 
 entity Game {
-    field winner: PlayerMark? = none;
     field board: Board = Board@createEmpty();
+    field winner: PlayerMark? = none;
 
     method hasWinner(): Bool {
         return this.winner != none;
@@ -129,7 +130,7 @@ entity Game {
         requires release this.isMoveLegal(x, y);
     {
         let nboard = this.board.markCellWith(x, y, mark);
-        return Game@{ board=nboard, winner=nboard.checkAnyWinner() };
+        return Game@{ nboard, nboard.checkAnyWinner() };
     }
 }
 /*
@@ -182,6 +183,7 @@ function canIWinIn5(moves: [Move, Move, Move, Move, Move]): Result<Bool, None> {
     return Result::ok(game.hasWinner());
 }
 */
+
 entrypoint function main(): Bool {
     var game = Game@{};
 

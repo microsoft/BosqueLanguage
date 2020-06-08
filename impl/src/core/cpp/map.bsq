@@ -149,7 +149,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method union(m: Map<K, V>): Map<K, V> {
-        return Map<K, V>::s_union[](this, s);
+        return Map<K, V>::s_union(this, m);
     }
 
     static unionOf(...ml: List<Map<K, V>>): Map<K, V> {
@@ -165,7 +165,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     }
 
     method merge(m: Map<K, V>): Map<K, V> {
-        return Map<K, V>::s_merge(this, s);
+        return Map<K, V>::s_merge(this, m);
     }
 
     static mergeOf(...ml: List<Map<K, V>>): Map<K, V> {
