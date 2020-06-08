@@ -22,7 +22,6 @@ The Bosque language derives from a combination of [TypeScript](https://www.types
   - [0.13 Atomic Constructors and Factories](#0.13-Atomic-Constructors-and-Factories)
   - [0.14 Synthesis Blocks](#0.14-Synthesis-Blocks)
   - [0.15 API Types](#0.15-API-Types)
-  - [0.16 Checks and Invariants](#0.16-Checks-and-Invariants)
 - [1 Type System](#1-Type-System)
   - [1.1 Nominal Types](#1.1-Nominal-Types)
   - [1.2 Structural Types](#1.2-Structural-Types)
@@ -417,15 +416,15 @@ entity Foo {
         requires release this.x > 1;   //precondition enabled in release as well as debug
         ensures $return > 0;           //postcondition
     {
-        check this.x - y > 0;   //sanity check - enabled on optimized builds
-        assert this.x + y != y; //diagnostic assert - only for test/debug
+        check this.x - y >= 0;      //sanity check - enabled on optimized builds
+        assert this.x + y > this.x; //diagnostic assert - only for test/debug
 
-        return this.x - y + 1;
+        return this.x - (y + 1);
     }
 }
 ```
 
-The special references `$x` in the invariant and `$return` in the ensures check are instances of *implicit binder* variables in Bosque. These variables serve a number of useful roles. In the case of `$return` the variable provides a way to refer to the implicit return value. Similarly for any input reference parameter `p`, which may be rebound in the body, the variable `$p` can be used to refer to the original value. In the case of the invariant the variable `$x` refers to the value of the field `x` in the about to be created object, i.e., we check the invariants on the fields *before* construction. This choice ensures that at no point in time (or code) an object will be visible/accessible that violates its invariants.
+The special references `$x` in the invariant and `$return` in the ensures check are instances of *implicit binder* variables in Bosque. These variables serve a number of useful roles. In the case of `$return` the variable provides a way to refer to the implicit return value. Similarly for any reference parameter `p`, which may be rebound in the body, the variable `$p` can be used to refer to the original value. In the case of the invariant the variable `$x` refers to the value of the field `x` in the about to be created object, i.e., we check the invariants on the fields *before* construction. This choice ensures that at no point in time (or code) an object will be visible/accessible that violates its invariants.
 
 ## <a name="0.13-Atomic-Constructors-and-Factories"></a>0.13 Atomic Constructors and Factories
 
@@ -437,7 +436,7 @@ However, it is sometimes useful to encapsulate initialization logic and, to acco
 concept Bar {
     field f: Int;
 
-    factory default(): {f: Int} {
+    factory static default(): {f: Int} {
         return {f=1};
     }
 }
@@ -446,16 +445,16 @@ entity Baz provides Bar {
     field g: Int;
     field h: Bool = true;
 
-    factory identity(i: Int): {f: Int, g: Int} {
+    factory static identity(i: Int): {f: Int, g: Int} {
         return {f=i, g=i};
     }
 }
 
-let x = Baz{f=1, g=2};
-let y = Baz{f=1, g=2, h=false};
+let x = Baz@{1, 2};
+let y = Baz@{1, 2, h=false};
 
-let p = Baz@identity(1); //equivalent to Baz{...Baz::identity(1)}
-let q = Baz{...Bar::default(), g=2};
+let p = Baz@identity(1); //equivalent to Baz@{...Baz::identity(1)}
+let q = Baz@{...Bar::default(), g=2};
 ```
 
 In this code the two `Baz` entities are allocated via the atomic initialization constructor. In the first case the omitted `h` field is set to the provided default value of `true`. The `identity` factory defines `f` and `g` values for the entity via the returned record. When invoked with the constructor syntax
@@ -485,11 +484,6 @@ Using these types it is possible to define a high quality interface that is:
 3. Can be checked for common semantic version changes
 4. Can be effectively fuzzed using structure aware fuzzers
 5. Can be effectively checked using symbolic analysis techniques
-
-## <a name="0.16-Checks-and-Invariants"></a>0.16 Checks and Invariants
-
-API types are designed to support the definition of high-quality external interfaces into Bosque applications. Good types for APIs are easy to understand without looking at the source code of an application, can easily be validated for changes to an applications semantic version, and also are precise descriptions of what the value of the argument should be. Thus API types include:
-
 
 # <a name="1-Type-System"></a>1 Type System
 

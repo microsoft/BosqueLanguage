@@ -58,6 +58,40 @@ function checkAccessForUser(user: UserId, resources: List<Resource>): Bool {
     );
 }
 
+entity Foo {
+    field x: Int;
+
+    invariant $x > 0;
+
+    method m(y: Int): Int
+        requires y >= 0;
+        requires release this.x > 1;
+        ensures $return > 0;
+    {
+        check this.x - (y + 1) >= 0;
+        assert this.x + y > this.x;
+
+        return this.x - (y + 1);
+    }
+}
+
+concept Bar {
+    field f: Int;
+
+    factory static default(): {f: Int} {
+        return {f=1};
+    }
+}
+
+entity Baz provides Bar {
+    field g: Int;
+    field h: Bool = true;
+
+    factory static identity(i: Int): {f: Int, g: Int} {
+        return {f=i, g=i};
+    }
+}
+
 ////
 //Tests
 
@@ -217,6 +251,70 @@ entrypoint function equality(): Int {
 
     check checkAccessForUser(user5, resources1);
     check !checkAccessForUser(user5, resources2);
+
+    return 0;
+}
+
+entrypoint function fooconsfail(): Int {
+    let v = Foo@{0};
+
+    return v.m(5);
+}
+
+entrypoint function foomreqfail1(): Int {
+    let v = Foo@{3};
+
+    return v.m(-10);
+}
+
+entrypoint function foomreqfail2(): Int {
+    let v = Foo@{1};
+
+    return v.m(5);
+}
+
+entrypoint function foomensfail(): Int {
+    let v = Foo@{2};
+
+    return v.m(2);
+}
+
+entrypoint function foomcheckfail(): Int {
+    let v = Foo@{2};
+
+    return v.m(3);
+}
+
+entrypoint function foomassertfail(): Int {
+    let v = Foo@{2};
+
+    return v.m(0);
+}
+
+entrypoint function foomok(): Int {
+    let v = Foo@{4};
+
+    return v.m(2);
+}
+
+entrypoint function factoryop(): Int {
+    let x = Baz@{1, 2};
+    check x.f == 1;
+    check x.h;
+
+    let y = Baz@{1, 2, h=false};
+    check y.f == 1;
+    check !y.h;
+
+    let p = Baz@identity(1);
+    check p.f == 1;
+    check p.g == 1;
+    check p.h;
+
+    let q = Baz@{...Bar::default(), g=2};
+    check q.f == 1;
+    check q.g == 2;
+    check q.h;
 
     return 0;
 }
