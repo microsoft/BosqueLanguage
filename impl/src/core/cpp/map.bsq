@@ -29,7 +29,14 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     hidden static s_project(m: Map<K, V>, ds: Set<K>): Map<K, V> # map_project
     hidden static s_exclude(m: Map<K, V>, ds: Set<K>): Map<K, V> # map_exclude
 
-    recursive? hidden static s_remap(m: Map<K, V>, f: recursive? fn(_: K, _: V) -> U): Map<K, U> # map_remap
+    recursive? hidden static s_remap<U>(m: Map<K, V>, f: recursive? fn(_: K, _: V) -> U): Map<K, U> # map_remap
+
+    hidden static s_composewith<U>(m: Map<K, V>, cm: Map<V, U>): Map<K, U> # map_composewith
+    hidden static s_trycomposewith<U>(m: Map<K, V>, cm: Map<V, U>): Map<K, U?> # map_trycomposewith
+    hidden static s_defaultcomposewith<U>(m: Map<K, V>, cm: Map<V, U>, default: U): Map<K, U> # map_defaultcomposewith
+
+    hidden static {when V KeyType} s_invertinj(m: Map<K, V>): Map<V, K> # map_invertinj
+    hidden static {when V KeyType} s_invertrel(m: Map<K, V>): Map<V, List<K>> # map_invertrel
 
     hidden static s_union(m: Map<K, V>, om: Map<K, V>): Map<K, V> # map_union
     hidden static s_unionall(dl: List<Map<K, V>>): Map<K, V> # map_unionall
@@ -128,24 +135,24 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         return Map<K, V>::s_remap<U>[recursive?](this, f);
     }
 
-    method {when V KeyType} composeWith(m: Map<V, U>): Map<K, U> {
-        return Map<K, V>::s_composewith(this, m);
+    method {when V KeyType} composeWith<U>(m: Map<V, U>): Map<K, U> {
+        return Map<K, V>::s_composewith<U>(this, m);
     }
 
-    method {when V KeyType} tryComposeWith(m: Map<V, U>): Map<K, U?> {
-        return Map<K, V>::s_trycomposewith(this, m);
+    method {when V KeyType} tryComposeWith<U>(m: Map<V, U>): Map<K, U?> {
+        return Map<K, V>::s_trycomposewith<U>(this, m);
     }
 
-    method {when V KeyType} defaultComposeWith(m: Map<V, U>, default: U): Map<K, U> {
-        return Map<K, V>::s_defaultcomposewith(this, m, default);
+    method {when V KeyType} defaultComposeWith<U>(m: Map<V, U>, default: U): Map<K, U> {
+        return Map<K, V>::s_defaultcomposewith<U>(this, m, default);
     }
 
-    method {when V KeyType} injectiveInvert(): Map<V, K> {
-        return Map<K, V>::s_invertinj(this, m);
+    method {when V KeyType} invertInjective(): Map<V, K> {
+        return Map<K, V>::s_invertinj(this);
     }
 
-    method {when V KeyType} relationalInvert(): Map<V, List<K>> {
-        return Map<K, V>::s_invertrel(this, m);
+    method {when V KeyType} invertRelational(): Map<V, List<K>> {
+        return Map<K, V>::s_invertrel(this);
     }
 
     method union(m: Map<K, V>): Map<K, V> {

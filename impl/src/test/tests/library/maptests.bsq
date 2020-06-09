@@ -212,3 +212,74 @@ entrypoint function excludeops(): Int {
     return 0;
 }
 
+entrypoint function remapop(): Int {
+    let m = Map<Int, Int>@{1 => 1, 2 => 2, 3 => 3};
+
+    let rm = m.remap<Bool>(fn(k, v) => v > 2);
+    check rm.size() == 3;
+    check !rm.get(1);
+    check !rm.get(2);
+    check rm.get(3);
+
+    return 0;
+}
+
+entrypoint function composewithops(): Int {
+    let m1 = Map<Int, Int>@{1 => 1, 2 => 2, 3 => 3};
+    let m1t = Map<Int, Int>@{1 => 1, 2 => 4, 3 => 3};
+    let m2 = Map<Int, Bool>@{1 => true, 2 => false, 3 => true};
+
+    let cm = m1.composeWith<Bool>(m2);
+    check cm.size() == 3;
+    check cm.get(1);
+    check !cm.get(2);
+    check cm.get(3);
+
+    let trycm = m1t.tryComposeWith<Bool>(m2);
+    check trycm.size() == 3;
+    check trycm.get(1) == true;
+    check trycm.get(2) == none;
+    check trycm.get(3) == true;
+
+    let defaultcm = m1t.defaultComposeWith<Bool>(m2, true);
+    check defaultcm.size() == 3;
+    check defaultcm.get(1);
+    check defaultcm.get(2);
+    check defaultcm.get(3);
+
+    return 0;
+}
+
+entrypoint function composewitherr(): Int {
+    let m1 = Map<Int, Int>@{1 => 1, 2 => 4, 3 => 3};
+    let m2 = Map<Int, Bool>@{1 => true, 2 => false, 3 => true};
+
+    let cm = m1.composeWith<Bool>(m2);
+    return cm.size();
+}
+
+entrypoint function invertops(): Int {
+    let mi = Map<Int, Int>@{1 => 1, 2 => 4, 3 => 9};
+    let ii = mi.invertInjective();
+    check ii.size() == 3;
+    check ii.get(1) == 1;
+    check ii.get(4) == 2;
+    check ii.get(9) == 3; 
+
+    let mr = Map<Int, Bool>@{1 => true, 2 => true, 3 => false};
+    let ir = mr.invertRelational();
+    check ir.size() == 2;
+    check ir.get(true).size() == 2;
+    check ir.get(true).front() == 1;
+    check ir.get(true).back() == 2;
+    check ir.get(false).size() == 1;
+    check ir.get(false).front() == 3;
+
+    return 0;
+}
+
+entrypoint function inverterr(): Int {
+    let mr = Map<Int, Bool>@{1 => true, 2 => true, 3 => false};
+
+    return mr.invertInjective().size();
+}

@@ -91,6 +91,31 @@
                 "expected": null
             },
             {
+                "kind": "aot",
+                "entrypoint": "remapop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "composewithops",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "composewitherr",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "invertops",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "inverterr",
+                "expected": null
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
@@ -174,6 +199,31 @@
                 "kind": "symexec",
                 "entrypoint": "excludeops",
                 "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "remapop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "composewithops",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "composewitherr",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "invertops",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "inverterr",
+                "expected": null
             }
         ]
     },
