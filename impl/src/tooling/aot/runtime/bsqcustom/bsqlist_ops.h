@@ -530,7 +530,7 @@ public:
     {
         std::map<K, MEntryType, K_CMP> mentries;
         
-        std::transform(l->entries.begin(), l->entries.end(), std::inserter(mentries, mentries.end()), [kf, vf, mec, &mentries](T v) {
+        std::transform(l->entries.begin(), l->entries.end(), std::inserter(mentries, mentries.begin()), [kf, vf, mec, &mentries](T v) {
             auto k = kf(v);
             auto vv = vf(v);
 
