@@ -169,6 +169,7 @@ public:
     {
         std::set<T, T_CMP> sentries(sl->entries[0]->entries.begin(), sl->entries[0]->entries.end());
         std::for_each(sl->entries.begin() + 1, sl->entries.end(), [&sentries](Ty* s) {
+            //TODO: this doesn't seem right -- probably want to use set_union
             sentries.insert(s->entries.begin(), s->entries.end());
         });
 
@@ -187,6 +188,7 @@ public:
     {
         std::set<T, T_CMP> sentries(sl->entries[0]->entries.begin(), sl->entries[0]->entries.end());
         std::for_each(sl->entries.begin() + 1, sl->entries.end(), [&sentries](Ty* s) {
+            //TODO: this doesn't seem right -- probably want to use set_intersection
             sentries.insert(s->entries.begin(), s->entries.end());
         });
 

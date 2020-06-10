@@ -2687,6 +2687,52 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_relinvert<${ltyperepr.base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(ltype.trkey)}, ${rtyperepr.base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rtype.trkey)}, ${kops.inc}, ${vops.inc}, ${vops.less}>(${params[0]});`;
                 break;
             }
+            case "map_union": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const kops = this.typegen.getFunctorsForType(ktype);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const vops = this.typegen.getFunctorsForType(vtype);
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_union<${kops.inc}, ${vops.inc}>(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "map_unionall": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const kops = this.typegen.getFunctorsForType(ktype);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const vops = this.typegen.getFunctorsForType(vtype);
+
+                const rtype = this.typegen.getMIRType(idecl.resultType);
+                const ltyperepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[0].type));
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_unionall<${ltyperepr.base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rtype.trkey)}, ${kops.inc}, ${vops.inc}>(${params[0]});`;
+                break;
+            }
+            case "map_merge": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const kops = this.typegen.getFunctorsForType(ktype);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const vops = this.typegen.getFunctorsForType(vtype);
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_merge<${kops.inc}, ${vops.inc}>(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "map_mergeall": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const kops = this.typegen.getFunctorsForType(ktype);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const vops = this.typegen.getFunctorsForType(vtype);
+
+                const rtype = this.typegen.getMIRType(idecl.resultType);
+                const ltyperepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[0].type));
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_mergeall<${ltyperepr.base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rtype.trkey)}, ${kops.inc}, ${vops.inc}>(${params[0]});`;
+                break;
+            }
             default: {
                 assert(false, `Need to implement -- ${idecl.iname}`);
                 break;

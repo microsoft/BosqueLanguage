@@ -1939,7 +1939,7 @@ class SMTBodyEmitter {
                 const has = this.typegen.generateSpecialTypeFieldAccess(enclkey, "has", params[0]);
                 const entries = this.typegen.generateSpecialTypeFieldAccess(enclkey, "values", params[0]);
                 const kl = this.typegen.generateSpecialTypeFieldAccess(enclkey, "keylist", params[0]);
-                bodyres = new SMTValue(`(${cons} ${size} ${has} (store ${entries} ${params[1]} ${params[3]}) ${kl})`);
+                bodyres = new SMTValue(`(${cons} ${size} ${has} (store ${entries} ${params[1]} ${params[2]}) ${kl})`);
                 break;
             }
             default: {

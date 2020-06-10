@@ -337,8 +337,8 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return mp;
         }
         else {
-            let m = List<T>::s_unsafe_get(ml, idx);
-            return Map<K, V>::s_unionall[recursive](ml, mlsize, mp.union(m), idx + 1);
+            let m = List<Map<K, V>>::s_unsafe_get(ml, idx);
+            return Map<K, V>::s_unionall[recursive](ml, mlsize, mp.unionWith(m), idx + 1);
         }
     }
 
@@ -347,8 +347,8 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return mp;
         }
         else {
-            let m = List<T>::s_unsafe_get(ml, idx);
-            return Map<K, V>::s_mergeall[recursive](ml, mlsize, mp.merge(m), idx + 1);
+            let m = List<Map<K, V>>::s_unsafe_get(ml, idx);
+            return Map<K, V>::s_mergeall[recursive](ml, mlsize, mp.mergeWith(m), idx + 1);
         }
     }
 
@@ -463,35 +463,35 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         return Map<K, V>::s_invertrel[recursive](this, KeyList<K>::sort(Map<K, V>::s_get_keylist(this)), Map<V, List<K>>@{});
     }
 
-    method union(m: Map<K, V>): Map<K, V> {
+    method unionWith(m: Map<K, V>): Map<K, V> {
         return Map<K, V>::s_union[recursive](m, this, Map<K, V>::s_get_keylist(m));
     }
 
     static unionOf(...ml: List<Map<K, V>>): Map<K, V> {
-        if(List<T>::s_size(ml) == 0) {
+        if(List<Map<K, V>>::s_size(ml) == 0) {
             return Map<K, V>@{};
         }
-        elif(List<T>::s_size(ml) == 1) {
-            return List<T>::s_unsafe_get(ml, 0);
+        elif(List<Map<K, V>>::s_size(ml) == 1) {
+            return List<Map<K, V>>::s_unsafe_get(ml, 0);
         }
         else {
-            return Map<K, V>::s_unionall(ml, List<Map<K, V>>::s_size(ml), Map<K, V>@{}, 0);
+            return Map<K, V>::s_unionall[recursive](ml, List<Map<K, V>>::s_size(ml), Map<K, V>@{}, 0);
         }
     }
 
-    method merge(m: Map<K, V>): Map<K, V> {
+    method mergeWith(m: Map<K, V>): Map<K, V> {
         return Map<K, V>::s_merge[recursive](m, this, Map<K, V>::s_get_keylist(m));
     }
 
     static mergeOf(...ml: List<Map<K, V>>): Map<K, V> {
-        if(List<T>::s_size(ml) == 0) {
+        if(List<Map<K, V>>::s_size(ml) == 0) {
             return Map<K, V>@{};
         }
-        elif(List<T>::s_size(ml) == 1) {
-            return List<T>::s_unsafe_get(ml, 0);
+        elif(List<Map<K, V>>::s_size(ml) == 1) {
+            return List<Map<K, V>>::s_unsafe_get(ml, 0);
         }
         else {
-            return Map<K, V>::s_mergeall(ml, List<Map<K, V>>::s_size(ml), Map<K, V>@{}, 0);
+            return Map<K, V>::s_mergeall[recursive](ml, List<Map<K, V>>::s_size(ml), Map<K, V>@{}, 0);
         }
     }
 }

@@ -116,6 +116,21 @@
                 "expected": null
             },
             {
+                "kind": "aot",
+                "entrypoint": "unionop",
+                "expected": "0"
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "unionerr",
+                "expected": null
+            },
+            {
+                "kind": "aot",
+                "entrypoint": "mergeop",
+                "expected": "0"
+            },
+            {
                 "kind": "symexec",
                 "entrypoint": "sizeAndEmpty",
                 "expected": "0"
@@ -224,6 +239,21 @@
                 "kind": "symexec",
                 "entrypoint": "inverterr",
                 "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "unionop",
+                "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "unionerr",
+                "expected": null
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "mergeop",
+                "expected": "0"
             }
         ]
     },
