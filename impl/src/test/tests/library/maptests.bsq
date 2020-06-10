@@ -283,3 +283,50 @@ entrypoint function inverterr(): Int {
 
     return mr.invertInjective().size();
 }
+
+entrypoint function unionop(): Int {
+    let m1 = Map<Int, Int>@{1 => 1, 2 => 2};
+    let m2 = Map<Int, Int>@{0 => 1, 4 => 4};
+
+    let mm = m1.unionWith(m2);
+    check mm.size() == 4;
+    check mm.get(0) == 1;
+    check mm.get(1) == 1;
+    check mm.get(2) == 2;
+    check mm.get(4) == 4;
+
+    let ma = Map<Int, Int>::unionOf(m2, m1);
+    check ma.size() == 4;
+    check ma.get(0) == 1;
+    check ma.get(1) == 1;
+    check ma.get(2) == 2;
+    check ma.get(4) == 4;
+
+    return 0;
+}
+
+entrypoint function unionerr(): Int {
+    let m1 = Map<Int, Int>@{1 => 1, 2 => 2};
+    let m2 = Map<Int, Int>@{1 => 1, 4 => 4};
+
+    return m1.unionWith(m2).size();
+}
+
+entrypoint function mergeop(): Int {
+    let m1 = Map<Int, Int>@{1 => 1, 2 => 2};
+    let m2 = Map<Int, Int>@{1 => 2, 4 => 4};
+
+    let mm = m1.mergeWith(m2);
+    check mm.size() == 3;
+    check mm.get(1) == 2;
+    check mm.get(2) == 2;
+    check mm.get(4) == 4;
+
+    let ma = Map<Int, Int>::mergeOf(m1, m2);
+    check ma.size() == 3;
+    check ma.get(1) == 2;
+    check ma.get(2) == 2;
+    check ma.get(4) == 4;
+
+    return 0;
+}

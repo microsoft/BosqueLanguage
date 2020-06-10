@@ -155,32 +155,32 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
         return Map<K, V>::s_invertrel(this);
     }
 
-    method union(m: Map<K, V>): Map<K, V> {
+    method unionWith(m: Map<K, V>): Map<K, V> {
         return Map<K, V>::s_union(this, m);
     }
 
     static unionOf(...ml: List<Map<K, V>>): Map<K, V> {
-        if(List<T>::s_size(ml) == 0) {
+        if(List<Map<K, V>>::s_size(ml) == 0) {
             return Map<K, V>@{};
         }
-        elif(List<T>::s_size(ml) == 1) {
-            return List<T>::s_unsafe_get(ml, 0);
+        elif(List<Map<K, V>>::s_size(ml) == 1) {
+            return List<Map<K, V>>::s_unsafe_get(ml, 0);
         }
         else {
             return Map<K, V>::s_unionall(ml);
         }
     }
 
-    method merge(m: Map<K, V>): Map<K, V> {
+    method mergeWith(m: Map<K, V>): Map<K, V> {
         return Map<K, V>::s_merge(this, m);
     }
 
     static mergeOf(...ml: List<Map<K, V>>): Map<K, V> {
-        if(List<T>::s_size(ml) == 0) {
+        if(List<Map<K, V>>::s_size(ml) == 0) {
             return Map<K, V>@{};
         }
-        elif(List<T>::s_size(ml) == 1) {
-            return List<T>::s_unsafe_get(ml, 0);
+        elif(List<Map<K, V>>::s_size(ml) == 1) {
+            return List<Map<K, V>>::s_unsafe_get(ml, 0);
         }
         else {
             return Map<K, V>::s_mergeall(ml);

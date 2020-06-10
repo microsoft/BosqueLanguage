@@ -308,19 +308,19 @@ public:
     {
         std::map<K, V, K_CMP> rm;
 
-        std::transform(m->entries.begin(), m->entries.end(), std::inserter(rm, rm.begin()), [](MEntry<K, V>& e) -> std::pair<K, V> {
+        std::transform(m->entries.begin(), m->entries.end(), std::inserter(rm, rm.begin()), [](const MEntry<K, V>& e) -> std::pair<K, V> {
             return std::make_pair(e.key, e.value);
         });
 
-        std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) -> std::pair<K, V> {
+        std::for_each(om->entries.begin(), om->entries.end(), [&rm](const MEntry<K, V>& e) {
             BSQ_ASSERT(rm.find(e.key) == rm.end(), "abort -- cannot have duplicate keys in Map<K, V>::union");
 
-            rm.insert(e.key, e.value);
+            rm.insert(std::make_pair(e.key, e.value));
         });
 
         std::vector<MEntry<K, V>> entries;
-        std::transform(rm->entries.begin(), rm->entries.end(), std::back_inserter(entries), [](std::pair<K, V>& e) -> MEntry<K, V> {
-            return MEntry<K, V>(K_RCIncF{}(e.key), V_RCIncF{}(e.value));
+        std::transform(rm.begin(), rm.end(), std::back_inserter(entries), [](const std::pair<K, V>& e) -> MEntry<K, V> {
+            return MEntry<K, V>{K_RCIncF{}(e.first), V_RCIncF{}(e.second)};
         });
 
         return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
@@ -332,21 +332,17 @@ public:
         std::map<K, V, K_CMP> rm;
         std::vector<Ty*>& maps = dl->entries;
 
-        std::transform(maps.begin()->entries.begin(), maps.begin()->entries.end(), std::inserter(rm, rm.begin()), [](MEntry<K, V>& e) -> std::pair<K, V> {
-            return std::make_pair(e.key, e.value);
-        });
-
-        std::for_each(maps.begin() + 1, maps.end(), [&rm](Ty* om) {
-            std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) {
+        std::for_each(maps.begin(), maps.end(), [&rm](Ty* om) {
+            std::for_each(om->entries.begin(), om->entries.end(), [&rm](const MEntry<K, V>& e) {
                 BSQ_ASSERT(rm.find(e.key) == rm.end(), "abort -- cannot have duplicate keys in Map<K, V>::unionAll");
 
-                rm.insert(e.key, e.value);
+                rm.insert(std::make_pair(e.key, e.value));
             });
         });
 
         std::vector<MEntry<K, V>> entries;
-        std::transform(rm->entries.begin(), rm->entries.end(), std::back_inserter(entries), [](std::pair<K, V>& e) -> MEntry<K, V> {
-            return MEntry<K, V>(K_RCIncF{}(e.key), V_RCIncF{}(e.value));
+        std::transform(rm.begin(), rm.end(), std::back_inserter(entries), [](const std::pair<K, V>& e) -> MEntry<K, V> {
+            return MEntry<K, V>{K_RCIncF{}(e.first), V_RCIncF{}(e.second)};
         });
 
         return BSQ_NEW_NO_RC(Ty, ntype, move(entries));
@@ -357,17 +353,17 @@ public:
     {
         std::map<K, V, K_CMP> rm;
 
-        std::transform(m->entries.begin(), m->entries.end(), std::inserter(rm, rm.begin()), [](MEntry<K, V>& e) -> std::pair<K, V> {
+        std::transform(m->entries.begin(), m->entries.end(), std::inserter(rm, rm.begin()), [](const MEntry<K, V>& e) -> std::pair<K, V> {
             return std::make_pair(e.key, e.value);
         });
 
-        std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) -> std::pair<K, V> {
-            rm.insert(e.key, e.value);
+        std::for_each(om->entries.begin(), om->entries.end(), [&rm](const MEntry<K, V>& e) {
+            rm[e.key] = e.value;
         });
 
         std::vector<MEntry<K, V>> entries;
-        std::transform(rm->entries.begin(), rm->entries.end(), std::back_inserter(entries), [](std::pair<K, V>& e) -> MEntry<K, V> {
-            return MEntry<K, V>(K_RCIncF{}(e.key), V_RCIncF{}(e.value));
+        std::transform(rm.begin(), rm.end(), std::back_inserter(entries), [](const std::pair<K, V>& e) -> MEntry<K, V> {
+            return MEntry<K, V>{K_RCIncF{}(e.first), V_RCIncF{}(e.second)};
         });
 
         return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
@@ -379,19 +375,15 @@ public:
         std::map<K, V, K_CMP> rm;
         std::vector<Ty*>& maps = dl->entries;
 
-        std::transform(maps.begin()->entries.begin(), maps.begin()->entries.end(), std::inserter(rm, rm.begin()), [](MEntry<K, V>& e) -> std::pair<K, V> {
-            return std::make_pair(e.key, e.value);
-        });
-
-        std::for_each(maps.begin() + 1, maps.end(), [&rm](Ty* om) {
-            std::for_each(om->entries.begin(), om->entries.end(), [&rm](MEntry<K, V>& e) {
-                rm.insert(e.key, e.value);
+        std::for_each(maps.begin(), maps.end(), [&rm](Ty* om) {
+            std::for_each(om->entries.begin(), om->entries.end(), [&rm](const MEntry<K, V>& e) {
+                rm[e.key] = e.value;
             });
         });
 
         std::vector<MEntry<K, V>> entries;
-        std::transform(rm->entries.begin(), rm->entries.end(), std::back_inserter(entries), [](std::pair<K, V>& e) -> MEntry<K, V> {
-            return MEntry<K, V>(K_RCIncF{}(e.key), V_RCIncF{}(e.value));
+        std::transform(rm.begin(), rm.end(), std::back_inserter(entries), [](const std::pair<K, V>& e) -> MEntry<K, V> {
+            return MEntry<K, V>{K_RCIncF{}(e.first), V_RCIncF{}(e.second)};
         });
 
         return BSQ_NEW_NO_RC(Ty, ntype, move(entries));
