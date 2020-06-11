@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-namespace NSMain;
+namespace NSTest;
 
 enum PlayerMark {
     x,
@@ -78,7 +78,7 @@ entity Board {
         requires 0 <= row && row < 3 && 0 <= col && col < 3;
     {
         let pos = (row * 3) + col;
-        return NSMain::g_posToCellList.get(pos);
+        return NSTest::g_posToCellList.get(pos);
     }
 
     method isCellOccupied(x: Int, y: Int): Bool {
@@ -91,7 +91,7 @@ entity Board {
         requires !this.isCellOccupied(x, y);
     {
         let cellid = Board::convertRowColumnToCell(x, y);
-        let ncells = this.cells.union(Map<BoardCell, PlayerMark>@{cellid => mark}); //TODO: change this when we add DynamicMap support
+        let ncells = this.cells.unionWith(Map<BoardCell, PlayerMark>@{cellid => mark}); //TODO: change this when we add DynamicMap support
         return this.update(cells=ncells);
     }
 
@@ -184,12 +184,45 @@ function canIWinIn5(moves: [Move, Move, Move, Move, Move]): Result<Bool, None> {
 }
 */
 
-entrypoint function main(): Bool {
+entrypoint function nowinner3(): Bool {
     var game = Game@{};
 
     game = game.makeExplicitMove(0, 0, PlayerMark::x);
     game = game.makeExplicitMove(1, 1, PlayerMark::o);
     game = game.makeExplicitMove(2, 2, PlayerMark::x);
+
+    return game.hasWinner();
+}
+
+entrypoint function winner3(): Bool {
+    var game = Game@{};
+
+    game = game.makeExplicitMove(0, 0, PlayerMark::x);
+    game = game.makeExplicitMove(1, 1, PlayerMark::x);
+    game = game.makeExplicitMove(2, 2, PlayerMark::x);
+
+    return game.hasWinner();
+}
+
+entrypoint function moveerr(): Bool {
+    var game = Game@{};
+
+    game = game.makeExplicitMove(0, 0, PlayerMark::x);
+    game = game.makeExplicitMove(1, 1, PlayerMark::o);
+    game = game.makeExplicitMove(1, 1, PlayerMark::x);
+
+    return game.hasWinner();
+}
+
+entrypoint function finderr(x: Int, y: Int): Bool 
+    requires release 0 <= x && x < 3;
+    requires release 0 <= y && y < 3;
+{
+    var game = Game@{};
+
+    game = game.makeExplicitMove(0, 0, PlayerMark::x);
+    game = game.makeExplicitMove(1, 1, PlayerMark::o);
+    game = game.makeExplicitMove(x, y, PlayerMark::x);
 
     return game.hasWinner();
 }
