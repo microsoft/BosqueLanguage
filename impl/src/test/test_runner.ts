@@ -378,6 +378,7 @@ function runAll() {
     const runner = new TestRunner();
 
     runner.loadTestSet("doc_examples");
+    runner.loadTestSet("apps");
     
     //runner.loadTestSet("expression");
     //runner.loadTestSet("types");

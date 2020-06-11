@@ -333,7 +333,7 @@ class Lexer {
 
     private static readonly _s_intRe = /(0|[1-9][0-9]*)/y;
     private static readonly _s_bigintRe = /(0|[1-9][0-9]*)n/y;
-    private static readonly _s_floatRe = /[0-9]+\.[0-9]+f/y;
+    private static readonly _s_floatRe = /([0-9]+(\.[0-9]+)?|\.[0-9]+)([eE][-+]?[0-9]+)?f/y;
     private tryLexNumber(): boolean {
         Lexer._s_floatRe.lastIndex = this.m_cpos;
         const mf = Lexer._s_floatRe.exec(this.m_input);
