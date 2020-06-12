@@ -1445,7 +1445,8 @@ class CPPBodyEmitter {
                             return `${this.varToCppName(pfx.trgt)} = -${(pfx.arg as MIRConstantFloat64).digits()};`;
                         }
                         else {
-                            const opt = this.getArgType(pfx.trgt);
+                            const opt = this.typegen.getMIRType(pfx.infertype);
+                            
                             if (this.typegen.typecheckIsName(opt, /^NSCore::Int$/)) {
                                 return `${this.varToCppName(pfx.trgt)} = -${this.argToCpp(pfx.arg, this.typegen.intType)};`;
                             }
@@ -1465,7 +1466,7 @@ class CPPBodyEmitter {
             }
             case MIROpTag.MIRBinOp: {
                 const bop = op as MIRBinOp;
-                const opt = this.getArgType(bop.trgt);
+                const opt = this.typegen.getMIRType(bop.lhsInferType);
 
                 if (this.typegen.typecheckIsName(opt, /^NSCore::Int$/)) {
                     if(bop.op !== "/") {
@@ -1829,6 +1830,128 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = BSQEnum{ (uint32_t)${params[0]}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
                 break;
             }
+
+            case "float_min_value": {
+                bodystr = `auto $$return = std::numeric_limits<double>::min();`;
+                break;
+            }
+            case "float_max_value": {
+                bodystr = `auto $$return = std::numeric_limits<double>::max();`;
+                break;
+            }
+            case "float_infinity_value": {
+                bodystr = `auto $$return = std::numeric_limits<double>::infinty();`;
+                break;
+            }
+            case "float_nan_value": {
+                bodystr = `auto $$return = std::numeric_limits<double>::quiet_NaN();`;
+                break;
+            }
+            case "float64_tryparse": {
+                bodystr = `auto $$return = ;`;
+                break;
+            }
+            case "float64_tostring": {
+                bodystr = `auto $$return = ;`;
+                break;
+            }
+            case "float64_parse": {
+                bodystr = `auto $$return = ;`;
+                break;
+            }
+            case "float64_isinfinity": {
+                bodystr = `auto $$return = isinf(${params[0]});`;
+                break;
+            }
+            case "float64_isnan": {
+                bodystr = `auto $$return = isnan(${params[0]});`;
+                break;
+            }
+            case "float64_compare": {
+                const twc = `isless(${params[0]}, ${params[1]}) ? -1 : isless(${params[1]}, ${params[0]}) ? 1 : 0`
+                bodystr = `BSQ_ASSERT(!isunordered(${params[0]}, ${params[1]}), "Cannot compare nan values"); auto $$return = ${twc};`;
+                break;
+            }
+            case "float64_abs": {
+                bodystr = `auto $$return = std::abs(${params[0]});`;
+                break;
+            }
+            case "float64_ceiling": {
+                bodystr = `auto $$return = ceil(${params[0]});`;
+                break;
+            }
+            case "float64_floor": {
+                bodystr = `auto $$return = floor(${params[0]});`;
+                break;
+            }
+            case "float64_pow": {
+                bodystr = `auto $$return = pow(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "float64_pow2": {
+                bodystr = `auto $$return = exp2(${params[0]});`;
+                break;
+            }
+            case "float64_pow10": {
+                bodystr = `auto $$return = pow(10.0, ${params[0]});`;
+                break;
+            }
+            case "float64_exp": {
+                bodystr = `auto $$return = exp(${params[0]});`;
+                break;
+            }
+            case "float64_root": {
+                bodystr = `auto $$return = ;`;
+                break;
+            }
+            case "float64_square": {
+                bodystr = `auto $$return = ${params[0]} * ${params[0]};`;
+                break;
+            }
+            case "float64_sqrt": {
+                bodystr = `auto $$return = sqrt(${params[0]});`;
+                break;
+            }
+            case "float64_log": {
+                bodystr = `auto $$return = log(${params[0]});`;
+                break;
+            }
+            case "float64_log2": {
+                bodystr = `auto $$return = log2(${params[0]});`;
+                break;
+            }
+            case "float64_log10": {
+                bodystr = `auto $$return = log10(${params[0]});`;
+                break;
+            }
+            case "float64_sin": {
+                bodystr = `auto $$return = sin(${params[0]});`;
+                break;
+            }
+            case "float64_cos": {
+                bodystr = `auto $$return = cos(${params[0]});`;
+                break;
+            }
+            case "float64_tan": {
+                bodystr = `auto $$return = tan(${params[0]});`;
+                break;
+            }
+            case "float64_min": {
+                bodystr = `auto $$return = fmin(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "float64_max": {
+                bodystr = `auto $$return = fmax(${params[0]}, ${params[1]});`;
+                break;
+            }
+            case "float64_sum": {
+                bodystr = `auto $$return = std::reduce(${params[0]}->entries.begin(), ${params[0]}->entries.end(), 0.0);`;
+                break;
+            }
+            case "float64_product": {
+                bodystr = `auto $$return = std::reduce(${params[0]}->entries.begin(), ${params[0]}->entries.end(), 1.0, [](double a, double b) { return a * b; });`;
+                break;
+            }
             case "idkey_from_simple": {
                 const kv = this.typegen.coerce(params[0], this.typegen.getMIRType(idecl.params[0].type), this.typegen.keyType);
                 bodystr = `auto $$return = BSQIdKeySimple{ ${kv}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
@@ -1866,7 +1989,7 @@ class CPPBodyEmitter {
                 break;
             }
             case "stringof_string": {
-                bodystr = `auto $$return =  BSQ_NEW_NO_RC(BSQString, BSQ_GET_VALUE_PTR(${params[0]}, BSQStringOf)->sdata);`;
+                bodystr = `auto $$return = BSQ_NEW_NO_RC(BSQString, BSQ_GET_VALUE_PTR(${params[0]}, BSQStringOf)->sdata);`;
                 break;
             }
             case "stringof_unsafe_from": {
@@ -2731,6 +2854,36 @@ class CPPBodyEmitter {
                 const ltyperepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(idecl.params[0].type));
 
                 bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_mergeall<${ltyperepr.base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rtype.trkey)}, ${kops.inc}, ${vops.inc}>(${params[0]});`;
+                break;
+            }
+            case "iteration_while": {
+                assert(false, `Need to implement -- ${idecl.iname}`);
+                break;
+            }
+            case "iteration_until": {
+                assert(false, `Need to implement -- ${idecl.iname}`);
+                break;
+            }
+            case "iteration_steps": {
+                const statetype = this.typegen.getMIRType(idecl.params[0].type);
+                const staterepr = this.typegen.getCPPReprFor(statetype);
+                const statefuncs = this.typegen.getFunctorsForType(statetype);
+
+                const lambdascope = this.typegen.mangleStringForCpp("$lambda_scope$");
+                const lambdastep = this.createLambdaFor(idecl.pcodes.get("step") as MIRPCode, lambdascope);
+
+                const header = `${staterepr.std} cacc = ${params[0]};`
+                const ctrl = `for(int64_t i = 0; i < ${params[1]}; ++i)`;
+
+                const rcstatus = this.typegen.getRefCountableStatus(statetype);
+                const bodynorc = `{ cacc = ${lambdastep}(cacc); }`;
+                const bodyrc = `{ ${staterepr.std} nacc = ${lambdastep}(cacc); ${statefuncs.dec}{}(cacc); cacc = nacc; }`;
+
+                bodystr = `${header} ${ctrl} ${rcstatus === "no" ? bodynorc : bodyrc} auto $$return = cacc;`;
+                break;
+            }
+            case "iteration_reduce": {
+                assert(false, `Need to implement -- ${idecl.iname}`);
                 break;
             }
             default: {

@@ -431,7 +431,7 @@ class CPPTypeEmitter {
             else if (trfrom.base === "int64_t") {
                 cc = `BSQ_ENCODE_VALUE_TAGGED_INT(${exp})`;
             }
-            else if (trfrom.base === "BSQEnum" || trfrom.base === "BSQIdKeySimple" || trfrom.base === "BSQIdKeyCompound") {
+            else if (trfrom.base === "double" || trfrom.base === "BSQEnum" || trfrom.base === "BSQIdKeySimple" || trfrom.base === "BSQIdKeyCompound") {
                 const scope = this.mangleStringForCpp("$scope$");
                 const ops = this.getFunctorsForType(from);
                 cc = `BSQ_NEW_ADD_SCOPE(${scope}, ${trfrom.boxed}, ${trfrom.nominaltype}, ${ops.inc}{}(${exp}))`;

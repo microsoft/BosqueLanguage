@@ -1474,11 +1474,13 @@ class MIRInvokeVirtualFunction extends MIRValueOp {
 class MIRPrefixOp extends MIRValueOp {
     readonly op: string; //+, -, !
     arg: MIRArgument;
+    readonly infertype: MIRResolvedTypeKey;
 
-    constructor(sinfo: SourceInfo, op: string, arg: MIRArgument, trgt: MIRTempRegister) {
+    constructor(sinfo: SourceInfo, op: string, arg: MIRArgument, infertype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
         super(MIROpTag.MIRPrefixOp, sinfo, trgt);
         this.op = op;
         this.arg = arg;
+        this.infertype = infertype;
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
@@ -1488,11 +1490,11 @@ class MIRPrefixOp extends MIRValueOp {
     }
 
     jemit(): object {
-        return { ...this.jbemit(), op: this.op, arg: this.arg.jemit() };
+        return { ...this.jbemit(), op: this.op, arg: this.arg.jemit(), infertype: this.infertype };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRPrefixOp(jparsesinfo(jobj.sinfo), jobj.op, MIRArgument.jparse(jobj.arg), MIRTempRegister.jparse(jobj.trgt));
+        return new MIRPrefixOp(jparsesinfo(jobj.sinfo), jobj.op, MIRArgument.jparse(jobj.arg), jobj.infertype, MIRTempRegister.jparse(jobj.trgt));
     }
 }
 

@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <stdarg.h>
+#include <math.h>
 
 #include <string>
 #include <iostream>

@@ -675,7 +675,7 @@ class TypeChecker {
 
             if (arg.value instanceof ConstructorPCodeExpression) {
                 const oftype = (noExpando && (firstNameIdx === -1 || i < firstNameIdx) && i < sig.params.length && !sig.params[i].isOptional) ? sig.params[i + skipthisidx].type : undefined;
-                this.raiseErrorIf(arg.value.sinfo, oftype === undefined, "Must have function type for function arg");
+                this.raiseErrorIf(arg.value.sinfo, oftype === undefined || !(oftype instanceof ResolvedFunctionType), "Must have function type for function arg");
                 this.raiseErrorIf(arg.value.sinfo, arg.isRef, "Cannot use ref params on function argument");
 
                 const pcode = this.checkPCodeExpression(env, arg.value, oftype as ResolvedFunctionType);
@@ -2771,13 +2771,17 @@ class TypeChecker {
         if (exp.op === "+" || exp.op === "-") {
             const etreg = this.m_emitter.bodyEmitter.generateTmpRegister();
             const eres = this.checkExpression(env, exp.exp, etreg);
-            this.raiseErrorIf(exp.sinfo, !this.m_assembly.subtypeOf(eres.getExpressionResult().etype, this.m_assembly.getSpecialIntType()), "Operators + and - only applicable to numeric values");
+
+            const isinttype = this.m_assembly.subtypeOf(eres.getExpressionResult().etype, this.m_assembly.getSpecialIntType());
+            const isfloattype = this.m_assembly.subtypeOf(eres.getExpressionResult().etype, this.m_assembly.getSpecialFloat64Type());
+            this.raiseErrorIf(exp.sinfo, !(isinttype || isfloattype), "Prefix + and - only applicable to numeric values");
 
             if (this.m_emitEnabled) {
-                this.m_emitter.bodyEmitter.emitPrefixOp(exp.sinfo, exp.op, etreg, trgt);
+                const mirargtype = this.m_emitter.registerResolvedTypeReference(eres.getExpressionResult().etype).trkey;
+                this.m_emitter.bodyEmitter.emitPrefixOp(exp.sinfo, exp.op, etreg, mirargtype, trgt);
             }
 
-            return [env.setExpressionResult(this.m_assembly.getSpecialIntType())];
+            return [env.setExpressionResult(eres.getExpressionResult().etype)];
         }
         else {
             const etreg = this.m_emitter.bodyEmitter.generateTmpRegister();
@@ -2792,7 +2796,8 @@ class TypeChecker {
 
             if (this.m_emitEnabled) {
                 const isstrict = estates.every((state) => this.m_assembly.subtypeOf(state.getExpressionResult().etype, this.m_assembly.getSpecialBoolType()));
-                this.m_emitter.bodyEmitter.emitPrefixNot(exp.sinfo, "!", isstrict, etreg, trgt);
+                const boolkey = this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()).trkey;
+                this.m_emitter.bodyEmitter.emitPrefixNot(exp.sinfo, "!", isstrict, etreg, boolkey, trgt);
             } 
 
             return [...ntstates, ...nfstates];
@@ -2951,7 +2956,7 @@ class TypeChecker {
             this.m_emitter.bodyEmitter.emitBinOp(exp.sinfo, lhstype.idStr, lhsreg, exp.op, rhstype.idStr, rhsreg, trgt);
         }
 
-        return [env.setExpressionResult(this.m_assembly.getSpecialIntType())];
+        return [env.setExpressionResult(lhstype)];
     }
 
     private checkBinEq(env: TypeEnvironment, exp: BinEqExpression, trgt: MIRTempRegister): TypeEnvironment[] {
