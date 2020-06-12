@@ -158,11 +158,16 @@ entity BigInt provides KeyType, Parsable, PODType, APIType, Some {
 
 //<summary>Primitive float 64 value.</summary>
 struct entity Float64 provides Parsable, PODType, APIType, Some {
-//    const min_value: Float64 = xxxx;
-//    const max_value: Float64 = xxxx;
+    hidden static s_float_min_value(): Float64 # float_min_value
+    hidden static s_float_max_value(): Float64 # float_max_value
+    hidden static s_float_infinity_value(): Float64 # float_infinity_value
+    hidden static s_float_nan_value(): Float64 # float_nan_value
 
-//    const infinity: Float64 = xxxx;
-//    const nan: Float64 = xxxx;
+    const min_value: Float64 = Float64::s_float_min_value();
+    const max_value: Float64 = Float64::s_float_max_value();
+
+    const infinity: Float64 = Float64::s_float_infinity_value();
+    const nan: Float64 = Float64::s_float_nan_value();
     
     const pi: Float64 = 3.1415926535897931f;
     const e: Float64 = 2.7182818284590451f;
@@ -173,59 +178,37 @@ struct entity Float64 provides Parsable, PODType, APIType, Some {
     static parse(str: String): Float64 # float64_parse
 
     method isInfinite(): Bool # float64_isinfinity
-    method isNan(): Bool # float64_isinfinity
+    method isNan(): Bool # float64_isnan
 
-    static compare(a: Float64, b: Float64, eps?: Float64): Int float64_compare
+    static compare(a: Float64, b: Float64, eps?: Float64): Int # float64_compare
 
     method abs(): Float64 # float64_abs
     method ceiling(): Float64 # float64_ceiling
     method floor(): Float64 # float64_floor
 
-    method pow(v: Float64): Float64 float64_exp
-    method root(v: Float64): Float64 float64_exp
-    method log(v: Float64): Float64 float64_exp
+    static pow(x: Float64, y: Float64): Float64 # float64_pow
+    static pow2(v: Float64): Float64 # float64_pow2
+    static pow10(v: Float64): Float64 # float64_pow10
+    static exp(y: Float64): Float64 # float64_exp
 
-    static pow2(v: Float64): Float64 {
-        return 2f.exp(pow);
-    }
-
-    static pow10(v: Float64): Float64 {
-        return 10f.exp(pow);
-    }
-
-    static log2(v: Float64): Float64 {
-        return v.log(2);
-    }
-    
-    static log10(v: Float64): Float64 {
-        return v.log(10);
-    }
-
-    static exp(v: Float64): Float64 {
-        return Float64::e.pow(v);
-    }
-
-    static ln(v: Float64): Float64 {
-        return v.log(Float64::e);
-    }
+    static root(x: Float64, y: Float64): Float64 # float64_root
 
     method square(): Float64 # float64_square
     method sqrt(): Float64 # float64_sqrt
+
+    static log(v: Float64): Float64 # float64_log
+    static log2(v: Float64): Float64 # float64_log2
+    static log10(v: Float64): Float64 # float64_log10
 
     method sin(): Float64 # float64_sin
     method cos(): Float64 # float64_cos
     method tan(): Float64 # float64_tan
 
-    static max(v1: Int, v2: Int): Int {
-        return Float64::compare(v1, v2) < 0 ? v2 : v1;
-    }
+    static min(v1: Float64, v2: Float64): Float64 # float64_min
+    static max(v1: Float64, v2: Float64): Float64 # float64_max
 
-    static min(v1: Int, v2: Int): Int {
-        return Float64::compare(v1, v2) < 0 ? v1 : v2;
-    }
-
-    method sum(l: List<Float64>): Float64 # float64_sum
-    method product(l: List<Float64>): Float64 # float64_product
+    static sum(l: List<Float64>): Float64 # float64_sum
+    static product(l: List<Float64>): Float64 # float64_product
 }
 
 //<summary>Primitive string value.</summary>

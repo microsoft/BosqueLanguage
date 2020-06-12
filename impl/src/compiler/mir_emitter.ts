@@ -320,19 +320,19 @@ class MIRBodyEmitter {
         }
     }
 
-    emitPrefixNot(sinfo: SourceInfo, op: string, isstrict: boolean, arg: MIRArgument, trgt: MIRTempRegister) {
+    emitPrefixNot(sinfo: SourceInfo, op: string, isstrict: boolean, arg: MIRArgument, infertype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
         if(isstrict) {
-            this.m_currentBlock.push(new MIRPrefixOp(sinfo, op, arg, trgt));
+            this.m_currentBlock.push(new MIRPrefixOp(sinfo, op, arg, infertype, trgt));
         }
         else {
             const tr = this.generateTmpRegister();
             this.m_currentBlock.push(new MIRTruthyConvert(sinfo, arg, tr));
-            this.m_currentBlock.push(new MIRPrefixOp(sinfo, op, tr, trgt));
+            this.m_currentBlock.push(new MIRPrefixOp(sinfo, op, tr, infertype, trgt));
         }
     }
 
-    emitPrefixOp(sinfo: SourceInfo, op: string, arg: MIRArgument, trgt: MIRTempRegister) {
-        this.m_currentBlock.push(new MIRPrefixOp(sinfo, op, arg, trgt));
+    emitPrefixOp(sinfo: SourceInfo, op: string, arg: MIRArgument, infertype: MIRResolvedTypeKey, trgt: MIRTempRegister) {
+        this.m_currentBlock.push(new MIRPrefixOp(sinfo, op, arg, infertype, trgt));
     }
 
     emitBinOp(sinfo: SourceInfo, lhsInferType: MIRResolvedTypeKey, lhs: MIRArgument, op: string, rhsInferType: MIRResolvedTypeKey, rhs: MIRArgument, trgt: MIRTempRegister) {

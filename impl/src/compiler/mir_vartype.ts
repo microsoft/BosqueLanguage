@@ -220,13 +220,13 @@ function extendVariableTypeMapForOp(op: MIROp, vtypes: Map<string, MIRType>, ass
                 vtypes.set(pfx.trgt.nameID, assembly.typeMap.get("NSCore::Bool") as MIRType);
             }
             else {
-                vtypes.set(pfx.trgt.nameID, assembly.typeMap.get("NSCore::Int") as MIRType);
+                vtypes.set(pfx.trgt.nameID, assembly.typeMap.get(pfx.infertype) as MIRType);
             }
             break;
         }
         case MIROpTag.MIRBinOp: {
             const bop = op as MIRBinOp;
-            vtypes.set(bop.trgt.nameID, assembly.typeMap.get("NSCore::Int") as MIRType);
+            vtypes.set(bop.trgt.nameID, assembly.typeMap.get(bop.lhsInferType) as MIRType);
             break;
         }
         case MIROpTag.MIRBinEq: {
