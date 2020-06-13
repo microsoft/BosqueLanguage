@@ -9,7 +9,7 @@ import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue, S
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, FunctionTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionExpression, CallStaticFunctionExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixProjectFromType, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixStructuredExtend, PrefixOp, BinOpExpression, BinEqExpression, BinCmpExpression, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralIntegerExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, LiteralBigIntegerExpression, LiteralFloatExpression, ResultExpression, TailTypeExpression, MapEntryConstructorExpression } from "../ast/body";
 import { PCode, MIREmitter, MIRKeyGenerator, MIRBodyEmitter } from "../compiler/mir_emitter";
-import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRVirtualMethodKey, MIRRegisterArgument, MIRVariable, MIRNominalTypeKey, MIRConstantKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey } from "../compiler/mir_ops";
+import { MIRTempRegister, MIRArgument, MIRConstantNone, MIRBody, MIRVirtualMethodKey, MIRVariable, MIRNominalTypeKey, MIRConstantKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey } from "../compiler/mir_ops";
 import { SourceInfo } from "../ast/parser";
 import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIROOTypeDecl, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIREntityType, MIRRegex, MIREphemeralListType } from "../compiler/mir_assembly";
 
@@ -634,7 +634,6 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, exp.invoke.params.length !== expectedFunction.params.length, "Mismatch in expected parameter count and provided function parameter count");
         this.raiseErrorIf(exp.sinfo, !this.m_assembly.functionSubtypeOf(ltypetry as ResolvedFunctionType, expectedFunction), "Mismatch in expected and provided function signature");
 
-        let captured = new Map<string, MIRRegisterArgument>();
         let capturedMap: Map<string, ResolvedType> = new Map<string, ResolvedType>();
 
         let captures: string[] = [];
@@ -642,12 +641,17 @@ class TypeChecker {
         captures.sort();
 
         captures.forEach((v) => {
-            const vinfo = env.lookupVar(v) as VarInfo;
+            if(v === "$$this_captured" && env.lookupVar(v) === null) {
+                const vinfo = env.lookupVar("this") as VarInfo;
 
-            this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
+                capturedMap.set(v, vinfo.flowType);
+            }
+            else {
+                const vinfo = env.lookupVar(v) as VarInfo;
+                this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
 
-            captured.set(v, new MIRVariable(v));
-            capturedMap.set(v, vinfo.flowType);
+                capturedMap.set(v, vinfo.flowType);
+            }
         });
 
         this.m_emitter.registerPCode(exp.invoke, ltypetry as ResolvedFunctionType, env.terms, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])));
@@ -1405,12 +1409,22 @@ class TypeChecker {
             pcodes.forEach((pc) => pc.captured.forEach((v, k) => allcaptured.add(k)));
 
             const cnames = [...allcaptured].sort();
-                for (let i = 0; i < cnames.length; ++i) {
-                    const vinfo = (env.lookupVar(cnames[i]) as VarInfo);
+            for (let i = 0; i < cnames.length; ++i) {
+                const vinfo = env.lookupVar(cnames[i]);
+                if(vinfo === null) {
+                    //This is the first place we capture $$this_captured so we sould pass "this" as the arg for it
+                    const tinfo = env.lookupVar("this") as VarInfo;
+                    margs.push(new MIRVariable("this"));
+                    mtypes.push(tinfo.flowType);
+
+                    cinfo.push([cnames[i], tinfo.flowType]);
+                }
+                else {
                     margs.push(new MIRVariable(vinfo.isCaptured ? this.m_emitter.bodyEmitter.generateCapturedVarName(cnames[i]) : cnames[i]));
                     mtypes.push(vinfo.flowType);
 
                     cinfo.push([cnames[i], vinfo.flowType]);
+                }
             }
         }
 

@@ -2865,14 +2865,14 @@ class CPPBodyEmitter {
                 break;
             }
             case "iteration_steps": {
-                const statetype = this.typegen.getMIRType(idecl.params[0].type);
+                const statetype = this.typegen.getMIRType(idecl.binds.get("S") as string);
                 const staterepr = this.typegen.getCPPReprFor(statetype);
                 const statefuncs = this.typegen.getFunctorsForType(statetype);
 
                 const lambdascope = this.typegen.mangleStringForCpp("$lambda_scope$");
                 const lambdastep = this.createLambdaFor(idecl.pcodes.get("step") as MIRPCode, lambdascope);
 
-                const header = `${staterepr.std} cacc = ${params[0]};`
+                const header = `BSQRefScope ${lambdascope}(true); ${staterepr.std} cacc = ${params[0]};`
                 const ctrl = `for(int64_t i = 0; i < ${params[1]}; ++i)`;
 
                 const rcstatus = this.typegen.getRefCountableStatus(statetype);
@@ -2883,7 +2883,21 @@ class CPPBodyEmitter {
                 break;
             }
             case "iteration_reduce": {
-                assert(false, `Need to implement -- ${idecl.iname}`);
+                const ttype = this.typegen.getMIRType(idecl.binds.get("T") as string);
+                const trepr = this.typegen.getCPPReprFor(ttype);
+                const tfuncs = this.typegen.getFunctorsForType(ttype);
+
+                const lambdascope = this.typegen.mangleStringForCpp("$lambda_scope$");
+                const lambdaop = this.createLambdaFor(idecl.pcodes.get("op") as MIRPCode, lambdascope);
+
+                const header = `BSQRefScope ${lambdascope}(true); ${trepr.std} cacc = ${params[0]};`
+                const ctrl = `for(size_t i = 0; i < ${params[1]}->entries.size(); ++i)`;
+
+                const rcstatus = this.typegen.getRefCountableStatus(ttype);
+                const bodynorc = `{ cacc = ${lambdaop}(cacc); }`;
+                const bodyrc = `{ ${trepr.std} nacc = ${lambdaop}(cacc, ${params[1]}->entries[i]); ${tfuncs.dec}{}(cacc); cacc = nacc; }`;
+
+                bodystr = `${header} ${ctrl} ${rcstatus === "no" ? bodynorc : bodyrc} auto $$return = cacc;`;
                 break;
             }
             default: {
