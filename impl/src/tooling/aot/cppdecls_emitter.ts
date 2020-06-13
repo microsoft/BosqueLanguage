@@ -115,6 +115,7 @@ class CPPEmitter {
         let itypedecls: {name: string, decl: string, deps: Set<string>, ops: string[]}[] = [];
         let nominaltypeinfo: {enum: string, display: string, datakind: string}[] = [];
         let vfieldaccesses: string[] = [];
+        let dispfuncs: string[] = [];
         [...assembly.entityDecls]
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map((ee) => ee[1])
@@ -137,6 +138,10 @@ class CPPEmitter {
                     //
                     //TODO: buildup ops for unions as well later
                     //
+                }
+
+                if(cppdecl.displayimpl !== undefined) {
+                    dispfuncs.push(cppdecl.displayimpl);
                 }
             }
 
@@ -184,7 +189,7 @@ class CPPEmitter {
         const rcg = [...cginfo.topologicalOrder].reverse();
 
         let funcdecls_fwd: string[] = [];
-        let funcdecls: string[] = [];
+        let funcdecls: string[] = [...dispfuncs];
         for (let i = 0; i < rcg.length; ++i) {
             const ikey = rcg[i].invoke;
             //

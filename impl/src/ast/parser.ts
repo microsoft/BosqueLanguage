@@ -828,7 +828,7 @@ class Parser {
 
             const bodyid = `${srcFile}::${sinfo.pos}`;
             try {
-                this.m_penv.pushFunctionScope(new FunctionScope(argNames, resultInfo));
+                this.m_penv.pushFunctionScope(new FunctionScope(argNames, resultInfo, ispcode));
                 body = this.parseBody(bodyid, srcFile, fparams.map((p) => p.name));
                 captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
                 this.m_penv.popFunctionScope();
@@ -1346,10 +1346,15 @@ class Parser {
             return new LiteralRegexExpression(sinfo, restr);
         }
         else if (tk === TokenStrings.Identifier) {
-            const istr = this.consumeTokenAndGetValue();
+            let istr = this.consumeTokenAndGetValue();
 
             const ns = this.m_penv.tryResolveNamespace(undefined, istr);
             if (ns === undefined) {
+                //In lambda/pcode bodies we want to bind "this" to the enclosing this *NOT* the accidental "this" any internal method invocations
+                if(this.m_penv.getCurrentFunctionScope().isPCodeEnv() && istr === "this") {
+                    istr = "$$this_captured";
+                }
+
                 //Ignore special postcondition $return variable but everything else should be processed
                 if (istr !== "$return") {
                     this.m_penv.getCurrentFunctionScope().useLocalVar(istr);
@@ -1629,11 +1634,32 @@ class Parser {
                         ops.push(new PostfixAccessFromName(sinfo, isElvis, name));
                     }
                     else {
-                        const terms = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
-                        const pragmas = this.testToken("[") ? this.parsePragmaArguments() : new PragmaArguments("no", []);
-                        const args = this.parseArguments("(", ")");
-    
-                        ops.push(new PostfixInvoke(sinfo, isElvis, specificResolve, name, terms, pragmas, args));
+                        //ugly ambiguity with < -- the follows should be a NS, Type, or T token
+                        //
+                        //TODO: in theory it could also be a "(" and we need to do a tryParseType thing
+                        //
+                        if(this.testToken("<")) {
+                            if (this.testFollows("<", TokenStrings.Namespace) || this.testFollows("<", TokenStrings.Type) || this.testFollows("<", TokenStrings.Template)) {
+                                const terms = this.parseTemplateArguments();
+                                const pragmas = this.testToken("[") ? this.parsePragmaArguments() : new PragmaArguments("no", []);
+                                const args = this.parseArguments("(", ")");
+
+                                ops.push(new PostfixInvoke(sinfo, isElvis, specificResolve, name, terms, pragmas, args));
+                            }
+                            else {
+                                if(specificResolve !== undefined) {
+                                    this.raiseError(this.getCurrentLine(), "Encountered named access but given type resolver (only valid on method calls)");
+                                }
+        
+                                ops.push(new PostfixAccessFromName(sinfo, isElvis, name));
+                            }
+                        }
+                        else {
+                            const pragmas = this.testToken("[") ? this.parsePragmaArguments() : new PragmaArguments("no", []);
+                            const args = this.parseArguments("(", ")");
+
+                            ops.push(new PostfixInvoke(sinfo, isElvis, specificResolve, name, new TemplateArguments([]), pragmas, args));
+                        }
                     }
                 }
             }
@@ -2652,7 +2678,7 @@ class Parser {
     private parsePreAndPostConditions(sinfo: SourceInfo, argnames: Set<string>, rtype: TypeSignature): [PreConditionDecl[], PostConditionDecl[]] {
         let preconds: PreConditionDecl[] = [];
         try {
-            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(argnames), rtype));
+            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(argnames), rtype, false));
             while (this.testToken("requires") || this.testToken("validate")) {
                 const isvalidate = this.testToken("validate");
                 this.consumeToken();
@@ -2683,7 +2709,7 @@ class Parser {
 
         let postconds: PostConditionDecl[] = [];
         try {
-            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(argnames).add("$return"), rtype));
+            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(argnames).add("$return"), rtype, false));
             while (this.testToken("ensures")) {
                 this.consumeToken();
 
@@ -2893,7 +2919,7 @@ class Parser {
 
     private parseInvariantsInto(invs: InvariantDecl[]) {
         try {
-            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(["this"]), new NominalTypeSignature("NSCore", "Bool")));
+            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(["this"]), new NominalTypeSignature("NSCore", "Bool"), false));
             while (this.testToken("invariant")) {
                 this.consumeToken();
 

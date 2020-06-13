@@ -405,9 +405,10 @@ DATA_KIND_FLAG getDataKindFlag(Value v);
 
 std::string diagnostic_format(Value v);
 
+template <typename T>
 struct RCIncFunctor_BSQRef
 {
-    inline BSQRef* operator()(BSQRef* r) const { return INC_REF_DIRECT(BSQRef, r); }
+    inline T* operator()(BSQRef* r) const { return INC_REF_DIRECT(T, r); }
 };
 struct RCDecFunctor_BSQRef
 {
