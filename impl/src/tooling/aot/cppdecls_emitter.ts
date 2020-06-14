@@ -340,13 +340,12 @@ class CPPEmitter {
 
         const chkarglen = `    if(argc > ${entrypoint.params.length} + 1 || argc < ${entrypoint.params.length} + 1 - ${oprarms}) { fprintf(stderr, "Expected ${entrypoint.params.length} arguments but got %i\\n", argc - 1); exit(1); }`;
 
-        let scopev = "";
         const scopevar = bodyemitter.varNameToCppName("$scope$");
+        let scopev = `BSQRefScope ${scopevar};`;
 
         let callargs = entrypoint.params.map((p) => p.type !== "NSCore::String" ? p.name : `&${p.name}`);
         const resrc = typeemitter.getRefCountableStatus(restype);
         if (resrc !== "no") {
-            scopev = `BSQRefScope ${scopevar};`;
             callargs.push(scopevar);
         }        
         const callv = `${bodyemitter.invokenameToCPP(entrypointname)}(${callargs.join(", ")})`;
