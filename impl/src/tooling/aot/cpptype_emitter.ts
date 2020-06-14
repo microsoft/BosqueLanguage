@@ -601,7 +601,15 @@ class CPPTypeEmitter {
                 return "ephemeral";
             }
             else if (tr instanceof StructRepr) {
-                return "ops";
+                if(!this.assembly.entityDecls.has(tt.trkey)) {
+                    return "ops";
+                }
+                else {
+                    const sfields = (this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl).fields;
+                    const allnorc = sfields.every((fd) => this.getRefCountableStatus(this.getMIRType(fd.declaredType)) === "no");
+
+                    return allnorc ? "no" : "ops";
+                }
             }
             else if (tr instanceof RefRepr) {
                 return "direct";
@@ -935,9 +943,12 @@ class CPPTypeEmitter {
                 const copy_assign = `${this.mangleStringForCpp(entity.tkey)}& operator=(const ${this.mangleStringForCpp(entity.tkey)}& src) = default;`;
                 const move_assign = `${this.mangleStringForCpp(entity.tkey)}& operator=(${this.mangleStringForCpp(entity.tkey)}&& src) = default;`;
 
-                const incop_ops = entity.fields.map((fd) => {
-                    return this.buildIncOpForType(this.getMIRType(fd.declaredType), `tt.${this.mangleStringForCpp(fd.fkey)}`) + ";";
-                });
+                const incop_ops = entity.fields
+                    .filter((fd) => this.getRefCountableStatus(this.getMIRType(fd.declaredType)) !== "no")
+                    .map((fd) => {
+                        return this.buildIncOpForType(this.getMIRType(fd.declaredType), `tt.${this.mangleStringForCpp(fd.fkey)}`) + ";";
+                    });
+
                 const incop = `struct RCIncFunctor_${this.mangleStringForCpp(entity.tkey)}`
                 + `{\n`
                 + `  inline ${this.mangleStringForCpp(entity.tkey)} operator()(${this.mangleStringForCpp(entity.tkey)} tt) const\n` 

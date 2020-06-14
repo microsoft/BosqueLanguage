@@ -166,7 +166,6 @@ setImmediate(() => {
             FS.writeFileSync(outfile, contents);
         });
 
-        process.stdout.write(`Compiling C++ code with ${program.compiler} into exe file "${chalk.bold(program.outfile)}"...\n`);
         let buildOpts = "";
         if(program.level === "debug") {
             buildOpts = " -g -DBDEBUG";
@@ -182,7 +181,10 @@ setImmediate(() => {
             buildOpts += ` ${program.flags}`;
         }
 
-        execSync(`${program.compiler}${buildOpts} -std=c++17 -o ${program.outfile} ${cpppath}/*.cpp`);
+        const buildstring = `${program.compiler} ${buildOpts} -std=c++17`;
+        process.stdout.write(`Compiling C++ code with ${buildstring} into exe file "${chalk.bold(program.outfile)}"...\n`);
+        
+        execSync(`${program.compiler} ${buildOpts} -std=c++17 -o ${program.outfile} ${cpppath}/*.cpp`);
     }
     catch (ex) {
         process.stderr.write(chalk.red(`Error -- ${ex}\n`));

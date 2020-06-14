@@ -2894,7 +2894,7 @@ class CPPBodyEmitter {
                 const ctrl = `for(size_t i = 0; i < ${params[1]}->entries.size(); ++i)`;
 
                 const rcstatus = this.typegen.getRefCountableStatus(ttype);
-                const bodynorc = `{ cacc = ${lambdaop}(cacc); }`;
+                const bodynorc = `{ cacc = ${lambdaop}(cacc, ${params[1]}->entries[i]); }`;
                 const bodyrc = `{ ${trepr.std} nacc = ${lambdaop}(cacc, ${params[1]}->entries[i]); ${tfuncs.dec}{}(cacc); cacc = nacc; }`;
 
                 bodystr = `${header} ${ctrl} ${rcstatus === "no" ? bodynorc : bodyrc} auto $$return = cacc;`;
