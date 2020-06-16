@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRType, MIRInvokeDecl, MIRInvokeBodyDecl, MIRInvokePrimitiveDecl, MIRConstantDecl, MIRFieldDecl, MIREntityTypeDecl, MIREntityType, MIRTupleType, MIRRecordType, MIRConceptType, MIREphemeralListType, MIRRegex } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRType, MIRInvokeDecl, MIRInvokeBodyDecl, MIRInvokePrimitiveDecl, MIRConstantDecl, MIRFieldDecl, MIREntityTypeDecl, MIREntityType, MIRTupleType, MIRRecordType, MIRConceptType, MIREphemeralListType, MIRRegex, MIRPCode } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRArgument, MIRRegisterArgument, MIRConstantNone, MIRConstantFalse, MIRConstantTrue, MIRConstantInt, MIRConstantArgument, MIRConstantString, MIROp, MIROpTag, MIRLoadConst, MIRAccessArgVariable, MIRAccessLocalVariable, MIRInvokeFixedFunction, MIRPrefixOp, MIRBinOp, MIRBinEq, MIRBinCmp, MIRIsTypeOfNone, MIRIsTypeOfSome, MIRRegAssign, MIRTruthyConvert, MIRVarStore, MIRReturnAssign, MIRJumpCond, MIRJumpNone, MIRAbort, MIRPhi, MIRBasicBlock, MIRJump, MIRConstructorTuple, MIRConstructorRecord, MIRAccessFromIndex, MIRAccessFromProperty, MIRInvokeKey, MIRAccessConstantValue, MIRLoadFieldDefaultValue, MIRConstructorPrimary, MIRAccessFromField, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRIsTypeOf, MIRProjectFromIndecies, MIRModifyWithIndecies, MIRStructuredExtendTuple, MIRProjectFromProperties, MIRModifyWithProperties, MIRStructuredExtendRecord, MIRLoadConstTypedString, MIRConstructorEphemeralValueList, MIRProjectFromFields, MIRModifyWithFields, MIRStructuredExtendObject, MIRLoadConstSafeString, MIRInvokeInvariantCheckDirect, MIRLoadFromEpehmeralList, MIRNominalTypeKey, MIRConstantBigInt, MIRConstantFloat64, MIRFieldKey, MIRPackSlice, MIRPackExtend, MIRResolvedTypeKey, MIRBinLess, MIRConstantRegex } from "../../compiler/mir_ops";
 import { SMTExp, SMTValue, SMTCond, SMTLet, SMTFreeVar } from "./smt_exp";
@@ -14,6 +14,13 @@ import { compileRegexSMTMatch } from "./smt_regex";
 
 function NOT_IMPLEMENTED<T>(msg: string): T {
     throw new Error(`Not Implemented: ${msg}`);
+}
+
+enum AxiomLevel {
+    none,
+    basic,
+    standard,
+    full
 }
 
 class SMTBodyEmitter {
@@ -45,11 +52,17 @@ class SMTBodyEmitter {
     vfieldUpdates: { infertype: MIRType, fupds: [MIRFieldDecl, MIRArgument][], resultAccessType: MIRType, uname: string }[] = [];
     vobjmerges: { infertype: MIRType, merge: MIRArgument, infermergetype: MIRType, fieldResolves: [string, MIRFieldDecl][], resultAccessType: MIRType, mname: string }[] = [];
 
-    constructor(assembly: MIRAssembly, typegen: SMTTypeEmitter) {
+    readonly axiomgen: AxiomLevel;
+    uninterpDecl: Set<string> = new Set<string>();
+    uninterpAxioms: Set<string> = new Set<string>();
+
+    constructor(assembly: MIRAssembly, typegen: SMTTypeEmitter, isverify: boolean, axlevel?: AxiomLevel) {
         this.assembly = assembly;
         this.typegen = typegen;
 
         this.currentRType = typegen.noneType;
+
+        this.axiomgen = axlevel || (isverify ? AxiomLevel.standard : AxiomLevel.none);
     }
 
     private static cleanStrRepr(s: string): string {
@@ -872,6 +885,9 @@ class SMTBodyEmitter {
             }
             else {
                 if (gas === 0) {
+                    //
+                    //TODO: if this is a verify then we should make this an uninterp call
+                    //
                     const invokeexp = this.generateBMCLimitCreate(ivop.mkey, ivrtype);
                     return new SMTLet(tv, invokeexp, new SMTCond(checkerror, extracterror, normalassign));
                 }
@@ -1943,15 +1959,118 @@ class SMTBodyEmitter {
                 break;
             }
             default: {
-                bodyres = new SMTValue(`[Builtin not defined -- ${idecl.iname}]`);
+                const pctag = [...idecl.pcodes].map((pc) => this.typegen.mangleStringForSMT(pc[1].code)).join("$");
+                const fname = `@${idecl.implkey}` + (pctag.length !== 0 ? `$${pctag}` : "");
+                const pdecls = idecl.params.map((p) => this.typegen.getSMTTypeFor(this.typegen.getMIRType(p.type)));
+                const udecl = `(declare-fun ${fname} (${pdecls.join(" ")}) ${this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.resultType))})`;
+                
+                this.uninterpDecl.add(udecl);
+                this.generateBuiltinAxioms(fname, idecl, params);
+
+                bodyres = new SMTValue(params.length === 0 ? `(${fname})` : `(${fname} ${params.join(" ")})`);
                 break;
             }
         }
 
         return issafe ? new SMTValue(bodyres.emit()) : new SMTValue(`(result_success@${this.typegen.getSMTTypeFor(rtype)} ${bodyres.emit()})`);
     }
+
+    isAxiomLevelEnabled(lvl: AxiomLevel): boolean {
+        if (this.axiomgen === AxiomLevel.none) {
+            return false;
+        }
+        else if (this.axiomgen === AxiomLevel.basic) {
+            return lvl === AxiomLevel.basic;
+        }
+        else if (this.axiomgen === AxiomLevel.standard) {
+            return lvl === AxiomLevel.basic || this.axiomgen === AxiomLevel.standard;
+        }
+        else {
+            return true;
+        }
+    }
+
+    createLambdaForPred(pc: MIRPCode, ...args: string[]): string {
+        const cargs = pc.cargs.map((ca) => this.typegen.mangleStringForSMT(ca));
+
+        return (args.length + cargs.length === 0) ? `(result_success_value@Bool (${this.typegen.mangleStringForSMT(pc.code)}))` : `(result_success_value@Bool (${this.typegen.mangleStringForSMT(pc.code)} ${[...args, ...cargs].join(" ")}))`;
+    }
+
+    generateBuiltinAxioms(fname: string, idecl: MIRInvokePrimitiveDecl, params: string[]) {
+        const enclkey = (idecl.enclosingDecl || "[NA]") as MIRNominalTypeKey
+
+        switch (idecl.implkey) {
+            case "list_all": {
+                const ltype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.enclosingDecl as string));
+                const lsize = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "size", "l");
+                const larr = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "entries", "l");
+
+                if(this.isAxiomLevelEnabled(AxiomLevel.basic)) {
+                    this.insertAxioms(
+                        `(assert (forall ((l ${ltype})) (=> (= ${lsize.emit()} 0) (${fname} l))))`
+                    );
+                }
+                if(this.isAxiomLevelEnabled(AxiomLevel.standard)) {
+                    const lambda = this.createLambdaForPred(idecl.pcodes.get("p") as MIRPCode, `(select ${larr.emit()} i)`)
+                    this.insertAxioms(
+                        `(assert (forall ((l ${ltype}) (i Int)) (=> (${fname} l) ${lambda})))`
+                    );
+                }
+                if(this.isAxiomLevelEnabled(AxiomLevel.full)) { 
+                }
+                break;
+            }
+            case "list_none": {
+                const ltype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.enclosingDecl as string));
+                const lsize = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "size", "l");
+                const larr = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "entries", "l");
+
+                if(this.isAxiomLevelEnabled(AxiomLevel.basic)) {
+                    this.insertAxioms(
+                        `(assert (forall ((l ${ltype})) (=> (= ${lsize.emit()} 0) (${fname} l))))`
+                    );
+                }
+                if(this.isAxiomLevelEnabled(AxiomLevel.standard)) {
+                    const lambda = this.createLambdaForPred(idecl.pcodes.get("p") as MIRPCode, `(select ${larr.emit()} i)`)
+                    this.insertAxioms(
+                        `(assert (forall ((l ${ltype}) (i Int)) (=> (${fname} l) (not ${lambda}))))`
+                    );
+                }
+                if(this.isAxiomLevelEnabled(AxiomLevel.full)) { 
+                }
+                break;
+            }
+            case "list_any": {
+                const ltype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.enclosingDecl as string));
+                const lsize = this.typegen.generateSpecialTypeFieldAccessExp(enclkey, "size", "l");
+
+                if(this.isAxiomLevelEnabled(AxiomLevel.basic)) {
+                    this.insertAxioms(
+                        `(assert (forall ((l ${ltype})) (=> (= ${lsize.emit()} 0) (not (${fname} l)))))`
+                    );
+                }
+                if(this.isAxiomLevelEnabled(AxiomLevel.standard)) {
+                }
+                if(this.isAxiomLevelEnabled(AxiomLevel.full)) { 
+                }
+                break;
+            }
+            default: {
+                assert(false, `Need to implement -- ${idecl.iname}`);
+                break;
+            }
+        }
+    }
+
+    insertAxioms(...axioms: string[]) {
+        axioms.forEach((ax) => this.uninterpAxioms.add(ax));
+    }
 }
 
+const UninterpFunctions: string =
+`
+`;
+
 export {
-    SMTBodyEmitter
+    AxiomLevel, SMTBodyEmitter, UninterpFunctions
 };

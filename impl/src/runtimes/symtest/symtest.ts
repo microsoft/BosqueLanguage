@@ -66,6 +66,7 @@ function generateMASM(files: string[], corelibpath: string): MIRAssembly {
 Commander
     .option("-e --entrypoint [entrypoint]", "Entrypoint to symbolically test", "NSMain::main")
     .option("-m --model", "Try to get model for failing inputs", false)
+    .option("-v --verify", "Run verifier instead of symbolic testing", false)
     .option("-o --output [file]", "Output the model to a given file");
 
 Commander.parse(process.argv);
@@ -76,7 +77,7 @@ if (Commander.args.length === 0) {
 }
 
 process.stdout.write(`Symbolic testing of Bosque sources in files:\n${Commander.args.join("\n")}\n...\n`);
-const massembly = generateMASM(Commander.args, "symbolic");
+const massembly = generateMASM(Commander.args, Commander.verify ? "verify" : "symbolic");
 
 setImmediate(() => {
     process.stdout.write(`Transpiling Bosque assembly to bytecode with entrypoint of ${Commander.entrypoint}...\n`);
@@ -94,7 +95,7 @@ setImmediate(() => {
             process.exit(1);
         }
 
-        const sparams = SMTEmitter.emit(massembly, entrypoint, true);
+        const sparams = SMTEmitter.emit(massembly, entrypoint, true, Commander.verify);
         const lsrc = FS.readFileSync(smt_runtime).toString();
         const contents = lsrc
             .replace(";;NOMINAL_DECLS_FWD;;", sparams.NOMINAL_DECLS_FWD)
