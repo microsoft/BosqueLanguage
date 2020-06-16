@@ -198,7 +198,7 @@ function verify(masm: MIRAssembly, config: any, genmodel: boolean): [boolean, bo
             return [false, false];
         }
 
-        const sparams = SMTEmitter.emit(masm, entrypoint, true);
+        const sparams = SMTEmitter.emit(masm, entrypoint, true, false);
         const lsrc = FS.readFileSync(smt_runtime).toString();
         const contents = lsrc
             .replace(";;NOMINAL_DECLS_FWD;;", sparams.NOMINAL_DECLS_FWD)

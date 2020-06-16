@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRInvokeDecl, MIRInvokeBodyDecl, MIREntityType, MIREphemeralListType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { SMTBodyEmitter } from "./smtbody_emitter";
+import { SMTBodyEmitter, AxiomLevel } from "./smtbody_emitter";
 import { constructCallGraphInfo } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 
@@ -39,11 +39,11 @@ type SMTCode = {
 };
 
 class SMTEmitter {
-    static emit(assembly: MIRAssembly, entrypoint: MIRInvokeBodyDecl, errorcheck: boolean): SMTCode {
+    static emit(assembly: MIRAssembly, entrypoint: MIRInvokeBodyDecl, errorcheck: boolean, isverify: boolean, axlevel?: AxiomLevel): SMTCode {
         const typeemitter = new SMTTypeEmitter(assembly);
         typeemitter.initializeConceptSubtypeRelation();
 
-        const bodyemitter = new SMTBodyEmitter(assembly, typeemitter);
+        const bodyemitter = new SMTBodyEmitter(assembly, typeemitter, isverify, axlevel);
 
         let typedecls_fwd: string[] = [];
         let typedecls: string[] = [];
@@ -134,6 +134,9 @@ class SMTEmitter {
                 }
             }
         }   
+
+        const udecls = [...bodyemitter.uninterpDecl].sort();
+        const uaxioms = [...bodyemitter.uninterpAxioms].sort();
 
         let vfieldaccess: string[] = [];
         for(let i = 0; i < bodyemitter.vfieldLookups.length; ++i) {
@@ -250,7 +253,7 @@ class SMTEmitter {
 
         const bmcchk = `(assert (not (and (is-result_error@${rrtype} @smtres@) (is-result_bmc (result_error_code@${rrtype} @smtres@)))))`
 
-        let chk = errorcheck ? `(assert (is-result_error@${rrtype} @smtres@))` : `(assert (not (is-result_error@${rrtype} @smtres@)))`;
+        let chk = errorcheck || isverify ? `(assert (is-result_error@${rrtype} @smtres@))` : `(assert (not (is-result_error@${rrtype} @smtres@)))`;
 
         const callinfo = resv + "\n" + cassert + "\n" + bmcchk + "\n" + chk;
 
@@ -277,7 +280,7 @@ class SMTEmitter {
         
             VFIELD_ACCESS: vfieldaccess.join("\n"),
 
-            FUNCTION_DECLS: funcdecls.join("\n"),
+            FUNCTION_DECLS: [...udecls, ...funcdecls, ...uaxioms].join("\n"),
             ARG_VALUES: argsdecls.join("\n"),
         
             INVOKE_ACTION: callinfo
