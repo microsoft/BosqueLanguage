@@ -20,6 +20,7 @@ import chalk from "chalk";
 
 const scratchroot = Path.normalize(Path.join(__dirname, "../../scratch/"));
 const binroot = Path.normalize(Path.join(__dirname, "../../"));
+const ext = process.platform == "win32" ? "exe" : "";
 
 function generateMASM(files: string[], blevel: "debug" | "test" | "release", corelibpath: string): MIRAssembly {
     let bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
@@ -63,6 +64,10 @@ program
     .option("-f --flags <flags>", "Custom compiler flags", "")
 
     program.parse(process.argv);
+
+if (process.platform == "win32" && !program.outfile.endsWith(`.${ext}`)){
+    program.outfile += `.${ext}`;
+}
 
 if (program.args.length === 0) {
     process.stdout.write(chalk.red("Error -- Please specify at least one source file as an argument\n"));
