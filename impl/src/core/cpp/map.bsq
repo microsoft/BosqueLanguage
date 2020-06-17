@@ -15,6 +15,7 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     hidden static s_key_set(m: Map<K, V>): Set<K> # map_key_set
     hidden static s_values(m: Map<K, V>): List<V> # map_values
     hidden static s_entries(m: Map<K, V>): List<MapEntry<K, V>> # map_entries
+    hidden static s_add(m: Map<K, V>, k: K, v: V): Map<K, V> #map_add
 
     hidden static s_has_all(m: Map<K, V>, kl: List<K>): Bool # map_has_all
     hidden static s_domainincludes(m: Map<K, V>, s: Set<K>): Bool # map_domainincludes
@@ -101,6 +102,10 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
 
     method defaultGet(k: K, default: V): V {
         return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : default;
+    }
+
+    method add(k: K, v: V): Map<K, V> {
+     return Map<K, V>::s_add(this, k, v);
     }
 
     recursive? method submap(p: recursive? fn(_: K, _: V) -> Bool): Map<K, V> {

@@ -13,6 +13,19 @@ template <typename Ty, typename K, typename K_RCDecF, typename K_DisplayF, typen
 class BSQMapOps
 {
 public:
+    template <typename K_RCIncF, typename V_RCIncF>
+    static Ty* map_add(Ty* m, K k, V v)
+    {
+        std::vector<MEntry<K, V>> entries;
+        entries.reserve(m->entries.size());
+
+        for (const auto& [key, value] : m->entries) {
+            entries.push_back(MEntry<K, V>{K_RCIncF{}(key), V_RCIncF{}(value)});
+        }
+        entries.emplace_back(MEntry<K, V>{K_RCIncF{}(k), V_RCIncF{}(v)});
+        return BSQ_NEW_NO_RC(Ty, m->nominalType, move(entries));
+    }
+
     template <typename ListT, typename K_RCIncF, MIRNominalTypeEnum ntype>
     static ListT* map_key_list(Ty* m)
     {

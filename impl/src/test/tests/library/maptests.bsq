@@ -330,3 +330,11 @@ entrypoint function mergeop(): Int {
 
     return 0;
 }
+
+entrypoint function addop(): Int {
+    let m1 = Map<Int, String>@{1 => "a", 2 => "b"};
+    let m2 = m1.add(3, "c");
+    check m2.size() == 3;
+    check m2.get(2) == "c";
+    return 0;
+}

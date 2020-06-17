@@ -2856,6 +2856,16 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_mergeall<${ltyperepr.base}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(rtype.trkey)}, ${kops.inc}, ${vops.inc}>(${params[0]});`;
                 break;
             }
+            case "map_add": {
+                const mtype = this.getEnclosingMapTypeForMapOp(idecl);
+                const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
+                const kops = this.typegen.getFunctorsForType(ktype);
+                const vtype = this.getMapValueContentsInfoForMapOp(idecl);
+                const vops = this.typegen.getFunctorsForType(vtype);
+
+                bodystr = `auto $$return = ${this.createMapOpsFor(mtype, ktype, vtype)}::map_add<${kops.inc}, ${vops.inc}>(${params[0]}, ${params[1]}, ${params[2]});`;
+                break;
+            }
             case "iteration_while": {
                 assert(false, `Need to implement -- ${idecl.iname}`);
                 break;

@@ -254,6 +254,11 @@
                 "kind": "symexec",
                 "entrypoint": "mergeop",
                 "expected": "0"
+            },
+            {
+                "kind": "symexec",
+                "entrypoint": "addop",
+                "expected": "0"
             }
         ]
     },
