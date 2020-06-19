@@ -376,7 +376,6 @@ function checkAccessForUser(user: UserId, resources: List<Resource>): Bool {
             return switch(access) {
                 type GlobalEnum => access == GlobalEnum::local
                 type UserId => access == user
-                _ => false
             };
         }
     );
