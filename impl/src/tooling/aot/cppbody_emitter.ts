@@ -1830,7 +1830,14 @@ class CPPBodyEmitter {
                 bodystr = `auto $$return = BSQEnum{ (uint32_t)${params[0]}, MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(this.currentRType.trkey)} };`;
                 break;
             }
-
+            case "int_tofloat": {
+                bodystr = `auto $$return = (double)${params[0]};`;
+                break;
+            }
+            case "int_mod": {
+                bodystr = `BSQ_ASSERT(0 < ${params[1]}, "Modulo must be a positive number"); auto $$return = ${params[0]} % ${params[1]};`;
+                break;
+            }
             case "float_min_value": {
                 bodystr = `auto $$return = std::numeric_limits<double>::min();`;
                 break;
@@ -1857,6 +1864,10 @@ class CPPBodyEmitter {
             }
             case "float64_parse": {
                 bodystr = `auto $$return = ;`;
+                break;
+            }
+            case "float_toint": {
+                bodystr = `BSQ_ASSERT(MIN_BSQ_INT <= ${params[0]} && ${params[0]} <= MAX_BSQ_INT, "Float64 is out of Int range"); auto $$return = (int64_t)${params[0]};`
                 break;
             }
             case "float64_isinfinity": {

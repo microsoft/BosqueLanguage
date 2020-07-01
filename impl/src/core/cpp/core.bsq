@@ -132,6 +132,8 @@ struct entity Int provides KeyType, Parsable, PODType, APIType, Some {
     static stringify(i: Int): String # int_tostring
     static parse(str: String): Int # int_parse
 
+    method toFloat64(): Float64 # int_tofloat
+
     static max(v1: Int, v2: Int): Int {
         return v1 > v2 ? v1 : v2;
     }
@@ -172,6 +174,8 @@ struct entity Float64 provides Parsable, PODType, APIType, Some {
     static stringify(f: Float64): String # float64_tostring
     static parse(str: String): Float64 # float64_parse
 
+    method toInt(): Int # float_toint
+    
     method isInfinite(): Bool # float64_isinfinity
     method isNan(): Bool # float64_isnan
 
