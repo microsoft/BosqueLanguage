@@ -124,6 +124,8 @@ struct entity Bool provides Some, Truthy, PODType, APIType {
 
 //<summary>Primitive integer value.</summary>
 struct entity Int provides KeyType, Parsable, PODType, APIType, Some {
+    hidden static s_mod(a: Int, b: Int): Int # int_mod
+
     const min_value: Int = -9007199254740991;
     const max_value: Int = 9007199254740991;
 
@@ -142,7 +144,11 @@ struct entity Int provides KeyType, Parsable, PODType, APIType, Some {
         return v1 < v2 ? v1 : v2;
     }
 
-    static mod(a: Int, b: Int): Int # int_mod
+    static mod(a: Int, b: Int): Int
+        requires release a >= 0 && b > 0;
+    {
+        return Int::s_mod(a, b);
+    }
 }
 
 //<summary>Primitive big-integer value.</summary>
