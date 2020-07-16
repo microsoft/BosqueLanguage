@@ -1840,6 +1840,10 @@ class SMTBodyEmitter {
                 bodyres = new SMTValue(`(bsq_idkeycompound@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(enclkey)} ${kvs})`);
                 break;
             }
+            case "int_mod": {
+                bodyres = new SMTValue(`(mod ${params[0]} ${params[1]})`);
+                break;
+            }
             case "string_count": {
                 bodyres = new SMTValue(`(str.len ${params[0]})`);
                 break;

@@ -1835,7 +1835,7 @@ class CPPBodyEmitter {
                 break;
             }
             case "int_mod": {
-                bodystr = `BSQ_ASSERT(0 < ${params[1]}, "Modulo must be a positive number"); auto $$return = ${params[0]} % ${params[1]};`;
+                bodystr = `auto $$return = ${params[0]} % ${params[1]};`;
                 break;
             }
             case "float_min_value": {
