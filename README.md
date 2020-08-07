@@ -251,7 +251,7 @@ entrypoint function getSays(animal: String, catchPhrase: String): Result<String,
     validate animal != "" or return err({ msg="Invalid animal" });
     validate catchPhrase != "" or return err({ msg="Invalid catchPhrase" });
 {
-    return String::concat("The ", animal, " says ", createAnimal::(catchPhrase).says);
+    return ok(String::concat("The ", animal, " says ", createAnimal(catchPhrase).says));
 }
 
 createAnimal("woof woof") //ok always
