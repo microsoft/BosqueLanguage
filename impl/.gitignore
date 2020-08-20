@@ -1,0 +1,5 @@
+﻿/node_modules
+/bin
+/.vscode
+*.xml
+*.dgml

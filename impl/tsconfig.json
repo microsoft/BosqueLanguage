@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "strict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "target": "es6",
+        "sourceMap": true,
+        "outDir": "bin"
+    },
+    "include": [
+        "./src/ast/*.ts",
+        "./src/type_checker/*.ts",
+        "./src/compiler/*.ts",
+        "./src/test/*.ts",
+        "./src/tooling/*.ts",
+        "./src/tooling/aot/*.ts",
+        "./src/tooling/bmc/*.ts",
+        "./src/runtimes/exegen/*.ts",
+        "./src/runtimes/symtest/*.ts",
+        "./src/runtimes/vscmd/*.ts"
+    ]
+}

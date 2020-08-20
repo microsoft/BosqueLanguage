@@ -1,5 +1,4 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Bosque",
 	"patterns": [
 		{
@@ -95,11 +94,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.bosque",
-					"match": "\\b(assert|check|elif|else|if|return|yield)\\b"
+					"match": "\\b(abort|assert|case|check|elif|else|ensures|if|invariant|or|requires|return|switch|test|type|release|validate|when|where|yield)\\b"
 				},
 				{
 					"name": "keyword.bosque",
-					"match": "\\b(this|hidden|factory|virtual|abstract|override|concept|const|enum|entity|ensures|field|fn|from|function|global|ckey|invariant|method|namespace|provides|requires|static|typedef|unique|using|var|when|where)\\b"
+					"match": "\\b(pragma|struct|hidden|private|factory|virtual|abstract|override|entrypoint|recursive?|recursive|_debug|concept|const|enum|entity|false|field|fn|function|global|identifier|method|namespace|none|private|provides|ref|static|true|typeis|typeas|typetry|typedef|let|var)\\b"
 				}
 			]
 		},
@@ -107,7 +106,7 @@
 			"patterns": [
 				{
 					"name": "constant.numeric.bosque",
-					"match": "\\b[0-9]+\\b"
+					"match": "\\b(0|[1-9][0-9]*)|(0|[1-9][0-9]*)n|([0-9]+(\\.[0-9]+)?|\\.[0-9]+)([eE][-+]?[0-9]+)?f\\b"
 				},
 				{
 					"name": "constant.language",
@@ -135,7 +134,7 @@
 			"patterns": [
 				{
 					"name": "variable.name",
-					"match": "\\b[_a-z][_a-zA-Z0-9]*\\b"
+					"match": "\\b(([$]?([a-z]|([a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))|[_])\\b"
 				}
 			]
 		}
