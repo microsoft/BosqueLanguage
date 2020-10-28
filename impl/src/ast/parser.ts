@@ -804,7 +804,7 @@ class Parser {
         else {
             if (!ispcode) {
                 if(!params.some((p) => p[4])) {
-                    this.raiseError(line, "Cannot have void return unless on of the params is by-ref");
+                    this.raiseError(line, "Cannot have void return unless one of the params is by-ref");
                 }
                 resultInfo = this.m_penv.SpecialNoneSignature; //void conversion
             }
