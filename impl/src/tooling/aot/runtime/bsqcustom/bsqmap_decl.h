@@ -3,116 +3,129 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+#pragma once
+
 #include "../bsqvalue.h"
 #include "bsqlist_decl.h"
 #include "bsqset_decl.h"
 
-#pragma once
-
 namespace BSQ
 {
-template <typename K, typename V>
-struct MEntry 
+template <typename K, typename K_CMP, typename EntryT, typename OP_Key>
+struct MKeyCMP 
 {
-    K key;
-    V value;
+    inline bool operator()(const EntryT& e1, const K& k)
+    {
+        return K_CMP{}(OP_Key{}(e1), k);
+    } 
 };
 
-template <typename K, typename V, typename K_CMP>
+template <typename K, typename K_EQ, typename EntryT, typename OP_Key>
+struct MKeyEQ 
+{
+    inline bool operator()(const EntryT& e1, const K& k)
+    {
+        return K_EQ{}(OP_Key{}(e1), k);
+    } 
+};
+
+template <typename K, typename K_CMP, typename EntryT, typename OP_Key>
 struct MEntryCMP 
 {
-    bool operator()(const MEntry<K, V>& e1, const MEntry<K, V>& e2)
+    inline bool operator()(const EntryT& e1, const EntryT& e2)
     {
-        return K_CMP{}(e1.key, e2.key);
+        return K_CMP{}(OP_Key{}(e1), OP_Key{}(e2));
     } 
 };
 
-template <typename K, typename V, typename K_EQ>
+template <typename K, typename K_EQ, typename EntryT, typename OP_Key>
 struct MEntryEQ 
 {
-    bool operator()(const MEntry<K, V>& e1, const MEntry<K, V>& e2)
+    inline bool operator()(const EntryT& e1, const EntryT& e2)
     {
-        return K_EQ{}(e1.key, e2.key);
+        return K_EQ{}(OP_Key{}(e1), OP_Key{}(e2));
     } 
 };
 
-template <typename K, typename K_RCDecF, typename K_DisplayF, typename K_CMP, typename K_EQ, typename V, typename V_RCDecF, typename V_DisplayF>
-class BSQMap : public BSQObject 
+template <typename K, typename V, typename K_CMP, typename K_EQ, typename EntryT, typename OP_Key, typename OP_Val>
+struct BSQMap : public BSQObject 
 {
-public:
-    std::vector<MEntry<K, V>> entries;
+    size_t count;
     
-    inline bool hasKey(K k)
+    inline EntryT& at(size_t i)
     {
-        auto ipos = std::lower_bound(this->entries.begin(), this->entries.end(), k, [](const MEntry<K, V>& entry, K kval){ return K_CMP{}(entry.key, kval); });
-        return ipos != this->entries.end() && K_EQ{}(k, ipos->key);
+        return *((EntryT*)GET_COLLECTION_START_FIXED(this, sizeof(size_t)) + i);
     }
 
-    inline V getValue(K k)
+    inline bool hasKey(const K& k)
     {
-        return std::lower_bound(this->entries.begin(), this->entries.end(), k, [](const MEntry<K, V>& entry, K kval){ return K_CMP{}(entry.key, kval); })->value;
+        EntryT* entries = GET_COLLECTION_START_FIXED(this, sizeof(BSQMap));
+        auto ipos = std::lower_bound(entries, entries + this->count, k, [](const EntryT& e, const K& k){ 
+            return MKeyCMP<K, K_CMP, EntryT, OP_Key>{}(e, k); 
+        });
+
+        return ipos != entries + this->count && MKeyEQ<K, K_EQ, EntryT, OP_Key>{}(*ipos, k);
     }
 
-    inline bool tryGetValue(K k, V* res)
+    inline V& getValue(const K& k)
     {
-        auto ipos = std::lower_bound(this->entries.begin(), this->entries.end(), k, [](const MEntry<K, V>& entry, K kval){ return K_CMP{}(entry.key, kval); });
-        bool found = ipos != this->entries.end() && K_EQ{}(k, ipos->key);
+        EntryT* entries = GET_COLLECTION_START_FIXED(this, sizeof(BSQMap));
+        auto ipos = std::lower_bound(entries, entries + this->count, k, [](const EntryT& e, const K& k){ 
+            return MKeyCMP<K, K_CMP, EntryT, OP_Key>{}(e, k); 
+        });
+
+        return OP_Val{}(*ipos);
+    }
+
+    inline bool tryGetValue(const K& k, V& res)
+    {
+        EntryT* entries = GET_COLLECTION_START_FIXED(this, sizeof(BSQMap));
+        auto ipos = std::lower_bound(entries, entries + this->count, k, [](const EntryT& e, const K& k){ 
+            return MKeyCMP<K, K_CMP, EntryT, OP_Key>{}(e, k); 
+        });
+
+        bool found = ipos != entries + this->count && MKeyEQ<K, K_EQ, EntryT, OP_Key>{}(*ipos, k);
 
         if(found)
         {
-            *res = ipos->value;
+            res = OP_Val{}(*ipos);
         }
 
         return found;
     }
 
-    template <typename K_INC, typename V_INC>
-    inline static std::vector<MEntry<K, V>> processSingletonMapInit(std::vector<MEntry<K, V>> src) {
-        std::vector<MEntry<K, V>> res;
-        res.reserve(src.size());
+    template <typename Ty, uint16_t count>
+    inline static Ty* singletonInit(MetaData* mdata, std::initializer_list<EntryT> values)
+    {
+        EntryT* contents = nullptr;
+        Ty* alloc = Allocator::GlobalAllocator.allocateSafePlus<Ty, EntryT, count>(mdata);
 
-        std::transform(src.begin(), src.end(), back_inserter(res), [](const MEntry<K, V>& entry) {
-            return MEntry<K, V>{K_INC{}(entry.key), V_INC{}(entry.value)};
-        });
-    
-        std::stable_sort(res.begin(), res.end(), MEntryCMP<K, V, K_CMP>{});
-        auto dup = std::adjacent_find(res.begin(), res.end(), MEntryEQ<K, V, K_EQ>{});
-        BSQ_ASSERT(dup == res.end(), "abort -- duplicate key found in Map initialization");
+        std::copy(values.begin(), values.end(), contents);
+        std::stable_sort(contents, contents + count, MEntryCMP{});
 
-        return res;
+        auto dup = std::adjacent_find(contents, contents + count, MEntryEQ<K, K_EQ, EntryT, OP_Key>{});
+        BSQ_ASSERT(dup == contents + count, "abort -- duplicate key found in Map initialization");
+
+        return alloc;
     }
 
-    BSQMap(MIRNominalTypeEnum ntype) : BSQObject(ntype), entries() { ; }
-    BSQMap(MIRNominalTypeEnum ntype, std::vector<MEntry<K, V>>&& entries) : BSQObject(ntype), entries(entries) { ; }
-
-    virtual ~BSQMap()
+    template <typename E_DisplayF>
+    std::wstring display() const
     {
-        ;
-    }
-
-    virtual void destroy()
-    {
-        std::for_each(this->entries.begin(), this->entries.end(), [](MEntry<K, V>& e) {
-            K_RCDecF{}(e.key);
-            V_RCDecF{}(e.value);
-        });
-    }
-
-    virtual std::string display() const
-    {
-        std::string ms("{");
+        std::wstring ms(L"{");
+        xxxx;
         bool first = true;
         for (auto iter = this->entries.cbegin(); iter != this->entries.cend(); ++iter)
         {
             if (!first)
             {
-                ms += ", ";
+                ms += L", ";
             }
             first = false;
 
-            ms += K_DisplayF{}(iter->key) + " => " + V_DisplayF{}(iter->value);
+            ms += E_DisplayF{}(*iter);
         }
-        ms += "}";
+        ms += L"}";
 
         return ms;
     }

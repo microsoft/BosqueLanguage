@@ -5,8 +5,6 @@
 
 #pragma once
 
-#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-
 #include <assert.h>
 
 #include <cstdlib>
@@ -15,16 +13,14 @@
 #include <math.h>
 
 #include <string>
+#include <regex>
 #include <iostream>
 #include <codecvt>
 
-#include <regex>
-#include <vector>
-#include <set>
-#include <map>
-
+#include <initializer_list>
 #include <algorithm>
 #include <numeric>
+#include <execution>
 
 #ifdef BDEBUG
 #define BSQ_ASSERT(C, MSG) if(!(C)) { throw BSQAbort(MSG, __FILE__, __LINE__, __FILE__, __LINE__); }
@@ -43,9 +39,6 @@
 #else
 #define HANDLE_BSQ_ABORT(abrt) { printf("ABORT\n"); exit(1); }
 #endif
-
-#define BSQ_NEW(T, ...) (new T(__VA_ARGS__))
-#define BSQ_DELETE(ELEM) (delete ELEM)
 
 namespace BSQ
 {

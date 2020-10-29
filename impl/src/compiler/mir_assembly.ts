@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo } from "../ast/parser";
-import { MIRBody, MIRResolvedTypeKey, MIRConstantKey, MIRFieldKey, MIRInvokeKey, MIRVirtualMethodKey, MIRNominalTypeKey } from "./mir_ops";
+import { MIRBody, MIRResolvedTypeKey, MIRConstantKey, MIRFieldKey, MIRInvokeKey, MIRVirtualMethodKey, MIRGlobalKey } from "./mir_ops";
 import assert = require("assert");
 
 //
@@ -64,7 +64,8 @@ class MIRRegex {
 class MIRConstantDecl {
     readonly enclosingDecl: MIRNominalTypeKey | undefined;
     readonly cname: string;
-    readonly key: MIRConstantKey;
+    readonly gkey: MIRGlobalKey;
+    readonly key: MIRInvokeKey;
 
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
@@ -74,9 +75,10 @@ class MIRConstantDecl {
     readonly declaredType: MIRResolvedTypeKey;
     readonly value: MIRInvokeKey;
 
-    constructor(enclosingDecl: MIRNominalTypeKey | undefined, cname: string, key: MIRConstantKey, pragmas: [MIRType, string][], sinfo: SourceInfo, srcFile: string, declaredType: MIRResolvedTypeKey, value: MIRInvokeKey) {
+    constructor(enclosingDecl: MIRResolvedTypeKey | undefined, cname: string, key: MIRInvokeKey, pragmas: [MIRType, string][], sinfo: SourceInfo, srcFile: string, declaredType: MIRResolvedTypeKey, gkey: MIRGlobalKey) {
         this.enclosingDecl = enclosingDecl;
         this.cname = cname;
+        this.gkey = gkey;
         this.key = key;
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
@@ -157,7 +159,7 @@ abstract class MIRInvokeDecl {
 class MIRInvokeBodyDecl extends MIRInvokeDecl {
     readonly body: MIRBody;
 
-    constructor(enclosingDecl: MIRNominalTypeKey | undefined, name: string, iname: string, key: MIRInvokeKey, attributes: string[], recursive: boolean, pragmas: [MIRType, string][], sinfo: SourceInfo, srcFile: string, params: MIRFunctionParameter[], resultType: MIRResolvedTypeKey, preconds: MIRInvokeKey | undefined, postconds: MIRInvokeKey | undefined, body: MIRBody) {
+    constructor(enclosingDecl: MIRType | undefined, name: string, iname: string, key: MIRInvokeKey, attributes: string[], recursive: boolean, pragmas: [MIRType, string][], sinfo: SourceInfo, srcFile: string, params: MIRFunctionParameter[], resultType: MIRType, preconds: MIRInvokeKey | undefined, postconds: MIRInvokeKey | undefined, body: MIRBody) {
         super(enclosingDecl, name, iname, key, attributes, recursive, pragmas, sinfo, srcFile, params, resultType, preconds, postconds);
 
         this.body = body;
@@ -559,6 +561,11 @@ class MIRAssembly {
 
     readonly conceptDecls: Map<MIRNominalTypeKey, MIRConceptTypeDecl> = new Map<MIRNominalTypeKey, MIRConceptTypeDecl>();
     readonly entityDecls: Map<MIRNominalTypeKey, MIREntityTypeDecl> = new Map<MIRNominalTypeKey, MIREntityTypeDecl>();
+
+    readonly tupleDecls: Map<MIRNominalTypeKey, MIRTupleType> = new Map<MIRNominalTypeKey, MIRTupleType>();
+    readonly recordDecls: Map<MIRNominalTypeKey, MIRRecordType> = new Map<MIRNominalTypeKey, MIRRecordType>();
+
+    readonly ephemeralListDecls: Map<MIRNominalTypeKey, MIREphemeralListType> = new Map<MIRNominalTypeKey, MIREphemeralListType>();
 
     readonly typeMap: Map<MIRResolvedTypeKey, MIRType> = new Map<MIRResolvedTypeKey, MIRType>();
 

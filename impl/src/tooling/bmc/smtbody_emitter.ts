@@ -708,7 +708,6 @@ class SMTBodyEmitter {
                 tag = `(bsqterm_get_nominal_type ${this.argToSMT(arg, inferargtype)})`;
             }
 
-            
             const access = this.generateVFieldLookup(arg, tag, inferargtype, this.assembly.fieldDecls.get(field) as MIRFieldDecl);
             return this.typegen.coerce(access, ftype, resultAccessType);
         }
@@ -1838,10 +1837,6 @@ class SMTBodyEmitter {
                 }
                 
                 bodyres = new SMTValue(`(bsq_idkeycompound@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(enclkey)} ${kvs})`);
-                break;
-            }
-            case "int_mod": {
-                bodyres = new SMTValue(`(mod ${params[0]} ${params[1]})`);
                 break;
             }
             case "string_count": {

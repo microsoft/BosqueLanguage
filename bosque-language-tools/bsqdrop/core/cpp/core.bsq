@@ -412,7 +412,7 @@ struct concept Result<T, E=None> provides Some, Convertable, PODType when T PODT
 struct entity Ok<T, E=None> provides Result<T, E> {
     field result: T;
 
-    static of(result: T): Ok<T, E> {
+    static opt(result: T): Ok<T, E> {
         return Ok<T, E>@{ result = result };
     }
 }
@@ -420,7 +420,7 @@ struct entity Ok<T, E=None> provides Result<T, E> {
 struct entity Err<T, E=None> provides Result<T, E> {
     field failure: E;
 
-    static of(failure: E): Err<T, E> {
+    static opt(failure: E): Err<T, E> {
         return Err<T, E>@{ failure = failure };
     }
 }

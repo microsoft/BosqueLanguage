@@ -5,9 +5,10 @@
 
 import { MIRAssembly, MIRType, MIREntityTypeDecl, MIRTupleType, MIRRecordType, MIREntityType, MIRConceptType, MIREphemeralListType, MIRRecordTypeEntry, MIRConceptTypeDecl, MIRTypeOption } from "../../compiler/mir_assembly";
 import { MIRResolvedTypeKey, MIRNominalTypeKey } from "../../compiler/mir_ops";
-import { NoneRepr, StructRepr, RefRepr, EphemeralListRepr, ValueRepr, KeyValueRepr, TypeRepr, joinTypeReprs } from "./type_repr";
+import { NoneRepr, StructRepr, RefRepr, EphemeralListRepr, ValueRepr, KeyValueRepr, TypeRepr, joinTypeReprs, UnionRepr, TRRepr, MemoryByteAlignment } from "./type_repr";
 
 import * as assert from "assert";
+import { CPPFrame } from "./cpp_frame";
 
 class CPPTypeEmitter {
     readonly assembly: MIRAssembly;
@@ -37,6 +38,8 @@ class CPPTypeEmitter {
 
     conceptSubtypeRelation: Map<MIRNominalTypeKey, MIRNominalTypeKey[]> = new Map<MIRNominalTypeKey, MIRNominalTypeKey[]>();
     ephemeralListConverts: Map<string, string> = new Map<string, string>();
+
+    private reprCache: Map<string, TypeRepr> = new Map<string, TypeRepr>();
 
     constructor(assembly: MIRAssembly) {
         this.assembly = assembly;
@@ -146,15 +149,6 @@ class CPPTypeEmitter {
         return tt.options.some((opt) => (opt instanceof MIREntityType) && opt.trkey === "NSCore::None");
     }
 
-    typecheckIsStructuralEntity(tt: MIRType): boolean {
-        if(tt.options.length !== 1 || !(tt.options[0] instanceof MIREntityType)) {
-            return false;
-        }
-
-        const edecl = this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
-        return edecl.attributes.includes("struct");
-    }
-
     typecheckIsStructuralConcept(tt: MIRType): boolean {
         if(tt.options.length !== 1 || !(tt.options[0] instanceof MIRConceptType) || (tt.options[0] as MIRConceptType).ckeys.length !== 1) {
             return false;
@@ -261,16 +255,16 @@ class CPPTypeEmitter {
             return new StructRepr(true, "int64_t", "*", "MIRNominalTypeEnum_Int", "MIRNominalTypeEnum_Category_Empty");
         }
         else if (this.typecheckIsName_Option(tt, /^NSCore::BigInt$/)) {
-            return new RefRepr(true, "BigInt", "BigInt*", "MIRNominalTypeEnum_Category_BigInt");
+            return new StructRepr(true, "BigInt", "BigInt*", "MIRNominalTypeEnum_Category_BigInt");
         }
         else if (this.typecheckIsName_Option(tt, /^NSCore::String$/)) {
-            return new RefRepr(true, "BSQString", "BSQString*", "MIRNominalTypeEnum_Category_String");
+            return new StructRepr(true, "BSQString", "BSQString*", "MIRNominalTypeEnum_Category_String");
         }
         else if (this.typecheckIsName_Option(tt, /^NSCore::SafeString<.*>$/)) {
-            return new RefRepr(true, "BSQSafeString", "BSQSafeString*", "MIRNominalTypeEnum_Category_SafeString");
+            return new StructRepr(true, "BSQSafeString", "BSQSafeString*", "MIRNominalTypeEnum_Category_SafeString");
         }
         else if (this.typecheckIsName_Option(tt, /^NSCore::StringOf<.*>$/)) {
-            return new RefRepr(true, "BSQStringOf", "BSQStringOf*", "MIRNominalTypeEnum_Category_StringOf");
+            return new StructRepr(true, "BSQStringOf", "BSQStringOf*", "MIRNominalTypeEnum_Category_StringOf");
         }
         else if (this.typecheckIsName_Option(tt, /^NSCore::UUID$/)) {
             return new StructRepr(true, "BSQUUID", "Boxed_BSQUUID", "MIRNominalTypeEnum_UUID", "MIRNominalTypeEnum_Category_UUID");
@@ -301,10 +295,10 @@ class CPPTypeEmitter {
                 return new RefRepr(false, "BSQByteBuffer", "BSQByteBuffer*", "MIRNominalTypeEnum_Category_ByteBuffer");
             }
             else if (this.typecheckIsName_Option(tt, /^NSCore::Buffer<.*>$/)) {
-                return new RefRepr(false, "BSQBuffer", "BSQBuffer*", "MIRNominalTypeEnum_Category_Buffer");
+                return new StructRepr(false, "BSQBuffer", "BSQBuffer*", "MIRNominalTypeEnum_Category_Buffer");
             }
             else if (this.typecheckIsName_Option(tt, /^NSCore::BufferOf<.*>$/)) {
-                return new RefRepr(false, "BSQBufferOf", "BSQBufferOf*", "MIRNominalTypeEnum_Category_BufferOf");
+                return new StructRepr(false, "BSQBufferOf", "BSQBufferOf*", "MIRNominalTypeEnum_Category_BufferOf");
             }
             else if (this.typecheckIsName_Option(tt, /^NSCore::ISOTime$/)) {
                 return new StructRepr(false, "BSQISOTime", "Boxed_BSQISOTime", "MIRNominalTypeEnum_ISOTime", "MIRNominalTypeEnum_Category_ISOTime");
@@ -327,35 +321,9 @@ class CPPTypeEmitter {
                 const etname = this.mangleStringForCpp(tt.trkey);
 
                 if(iddecl.attributes.includes("struct")) {
-                    return new StructRepr(false, etname, `Boxed_${etname}`, `MIRNominalTypeEnum::${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_Object");
+                    return new StructRepr(false, etname, etname, `MIRNominalTypeEnum::${this.mangleStringForCpp(tt.trkey)}`, "MIRNominalTypeEnum_Category_Object");
                 }
                 else {
-                    let cat = "[INVALID]";
-                    if(this.typecheckIsName_Option(tt, /^NSCore::List<.*>$/)) {
-                        cat = "MIRNominalTypeEnum_Category_List";
-                    }
-                    else if(this.typecheckIsName_Option(tt, /^NSCore::Stack<.*>$/)) {
-                        cat = "MIRNominalTypeEnum_Category_Stack";
-                    }
-                    else if(this.typecheckIsName_Option(tt, /^NSCore::Queue<.*>$/)) {
-                        cat = "MIRNominalTypeEnum_Category_Queue";
-                    }
-                    else if(this.typecheckIsName_Option(tt, /^NSCore::Set<.*>$/)) {
-                        cat = "MIRNominalTypeEnum_Category_Set";
-                    }
-                    else if(this.typecheckIsName_Option(tt, /^NSCore::DynamicSet<.*>$/)) {
-                        cat = "MIRNominalTypeEnum_Category_DynamicSet";
-                    }
-                    else if(this.typecheckIsName_Option(tt, /^NSCore::Map<.*>$/)) {
-                        cat = "MIRNominalTypeEnum_Category_Map";
-                    }
-                    else if(this.typecheckIsName_Option(tt, /^NSCore::DynamicMap<.*>$/)) {
-                        cat = "MIRNominalTypeEnum_Category_DynamicMap";
-                    }
-                    else {
-                        cat = "MIRNominalTypeEnum_Category_Object";
-                    }
-
                     return new RefRepr(false, etname, etname + "*", cat);
                 }
             }
@@ -363,12 +331,9 @@ class CPPTypeEmitter {
                 const cdecl = this.assembly.conceptDecls.get(tt.trkey) as MIRConceptTypeDecl;
                 
                 if(cdecl.attributes.includes("struct")) {
-                    if(this.assembly.subtypeOf(MIRType.createSingle(tt), this.keyType)) {
-                        return new KeyValueRepr();
-                    }
-                    else {
-                        return new ValueRepr();
-                    }
+                    const ctype = this.getMIRType(tt.trkey);
+                    const allestructs = [...this.assembly.entityDecls].filter((ed) => this.assembly.subtypeOf(this.getMIRType(ed[0]), ctype));
+                    return joinTypeReprs(...allestructs.map((estruct) => this.getCPPReprFor(this.getMIRType(estruct[0]))));
                 }
                 else {
                     if(this.assembly.subtypeOf(MIRType.createSingle(tt), this.keyType)) {
@@ -383,152 +348,12 @@ class CPPTypeEmitter {
     }
 
     getCPPReprFor(tt: MIRType): TypeRepr {
-        const ireprs = tt.options.map((opt) => this.getCPPReprFor_Option(opt));
-        return ireprs.length === 1 ? ireprs[0] : joinTypeReprs(...ireprs);
-    }
-
-    generateEphemeralListConvert(from: MIRType, into: MIRType): string {
-        const elconvsig = `${this.mangleStringForCpp(into.trkey)} convertFROM_${this.mangleStringForCpp(from.trkey)}_TO_${this.mangleStringForCpp(into.trkey)}(const ${this.mangleStringForCpp(from.trkey)}& elist)`;
-
-        if (!this.ephemeralListConverts.has(elconvsig)) {
-            const elfrom = from.options[0] as MIREphemeralListType;
-            const elinto = into.options[0] as MIREphemeralListType;
-
-            let argp: string[] = [];
-            for(let i = 0; i < elfrom.entries.length; ++i) {
-                argp.push(this.coerce(`elist.entry_${i}`, elfrom.entries[i], elinto.entries[i]));
-            }
-            const body = `{ return ${this.mangleStringForCpp(into.trkey)}(${argp.join(", ")}); }`;
-            const elconv = `${elconvsig} ${body}`;
-
-            this.ephemeralListConverts.set(elconvsig, elconv);
+        if (!this.reprCache.has(tt.trkey)) {
+            const ireprs = tt.options.map((opt) => this.getCPPReprFor_Option(opt));
+            this.reprCache.set(tt.trkey, ireprs.length === 1 ? ireprs[0] : joinTypeReprs(...ireprs));
         }
 
-        return `convertFROM_${this.mangleStringForCpp(from.trkey)}_TO_${this.mangleStringForCpp(into.trkey)}`;
-    }
-
-    coercePrimitive(exp: string, from: MIRType, into: MIRType): string {
-        const trfrom = this.getCPPReprFor(from);
-        const trinto = this.getCPPReprFor(into);
-
-        if (trfrom instanceof NoneRepr) {
-            assert(!(trinto instanceof NoneRepr) && !(trinto instanceof StructRepr) && !(trinto instanceof RefRepr), "Should not be possible");
-
-            if (trinto instanceof KeyValueRepr) {
-                return "((KeyValue)BSQ_VALUE_NONE)";
-            }
-            else {
-                return "((Value)BSQ_VALUE_NONE)";
-            }
-        }
-        else if (trfrom instanceof StructRepr) {
-            assert(!(trinto instanceof NoneRepr) && !(trinto instanceof StructRepr) && !(trinto instanceof RefRepr), "Should not be possible");
-
-            let cc = "[INVALID]";
-            if (trfrom.base === "BSQBool") {
-                cc = `BSQ_ENCODE_VALUE_BOOL(${exp})`;
-            }
-            else if (trfrom.base === "int64_t") {
-                cc = `BSQ_ENCODE_VALUE_TAGGED_INT(${exp})`;
-            }
-            else if (trfrom.base === "double" || trfrom.base === "BSQEnum" || trfrom.base === "BSQIdKeySimple" || trfrom.base === "BSQIdKeyCompound") {
-                const scope = this.mangleStringForCpp("$scope$");
-                const ops = this.getFunctorsForType(from);
-                cc = `BSQ_NEW_ADD_SCOPE(${scope}, ${trfrom.boxed}, ${trfrom.nominaltype}, ${ops.inc}{}(${exp}))`;
-            }
-            else {
-                const scope = this.mangleStringForCpp("$scope$");
-                const ops = this.getFunctorsForType(from);
-                cc = `BSQ_NEW_ADD_SCOPE(${scope}, ${trfrom.boxed}, ${ops.inc}{}(${exp}))`;
-            }
-                
-            if (trinto instanceof KeyValueRepr) {
-                return `((KeyValue)${cc})`;
-            }
-            else {
-                return `((Value)${cc})`;
-            }
-        }
-        else if (trfrom instanceof RefRepr) {
-            assert(!(trinto instanceof NoneRepr) && !(trinto instanceof StructRepr) && !(trinto instanceof RefRepr), "Should not be possible");
-
-            if (trinto instanceof KeyValueRepr) {
-                return `((KeyValue)${exp})`;
-            }
-            else {
-                return `((Value)${exp})`;
-            }
-        }
-        else if (trfrom instanceof KeyValueRepr) {
-            if (trinto instanceof NoneRepr) {
-                return `BSQ_VALUE_NONE`;
-            }
-            else if (trinto instanceof StructRepr) {
-                if (trinto.base === "BSQBool") {
-                    return `BSQ_GET_VALUE_BOOL(${exp})`;
-                }
-                else if (trinto.base === "int64_t") {
-                    return `BSQ_GET_VALUE_TAGGED_INT(${exp})`;
-                }
-                else {
-                    if(trinto.base === "BSQTuple" || trinto.base === "BSQRecord") {
-                        return `*(BSQ_GET_VALUE_PTR(${exp}, ${trinto.base}))`;
-                    }
-                    else {
-                        return `BSQ_GET_VALUE_PTR(${exp}, ${trinto.boxed})->bval`;
-                    }
-                }
-            }
-            else if (trinto instanceof RefRepr) {
-                return `BSQ_GET_VALUE_PTR(${exp}, ${trinto.base})`;
-            }
-            else {
-                return `((Value)${exp})`;
-            }
-        }
-        else {
-            if (trinto instanceof NoneRepr) {
-                return `BSQ_VALUE_NONE`;
-            }
-            else if (trinto instanceof StructRepr) {
-                if (trinto.base === "BSQBool") {
-                    return `BSQ_GET_VALUE_BOOL(${exp})`;
-                }
-                else if (trinto.base === "int64_t") {
-                    return `BSQ_GET_VALUE_TAGGED_INT(${exp})`;
-                }
-                else {
-                    if(trinto.base === "BSQTuple" || trinto.base === "BSQRecord") {
-                        return `*(BSQ_GET_VALUE_PTR(${exp}, ${trinto.base}))`;
-                    }
-                    else {
-                        return `BSQ_GET_VALUE_PTR(${exp}, ${trinto.boxed})->bval`;
-                    }
-                }
-            }
-            else if (trinto instanceof RefRepr) {
-                return `BSQ_GET_VALUE_PTR(${exp}, ${trinto.base})`;
-            }
-            else {
-                return `((KeyValue)${exp})`;
-            } 
-        }
-    }
-
-    coerce(exp: string, from: MIRType, into: MIRType): string {
-        const trfrom = this.getCPPReprFor(from);
-        const trinto = this.getCPPReprFor(into);
-
-        if (trfrom.base === trinto.base) {
-            return exp;
-        }
-
-        if(this.typecheckEphemeral(from) && this.typecheckEphemeral(into)) {
-            const cfunc = this.generateEphemeralListConvert(from, into);
-            return `${cfunc}(${exp})`;
-        }
-
-        return this.coercePrimitive(exp, from, into);
+        return this.reprCache.get(tt.trkey) as TypeRepr;
     }
     
     tupleHasIndex(tt: MIRType, idx: number): "yes" | "no" | "maybe" {
@@ -574,162 +399,35 @@ class CPPTypeEmitter {
     getEpehmeralType(tt: MIRType): MIREphemeralListType {
         return (tt.options[0] as MIREphemeralListType);
     }
-    
-    getRefCountableStatus(tt: MIRType): "no" | "direct" | "checked" | "ephemeral" | "ops" {
-        if (this.typecheckIsName(tt, /^NSCore::None$/) || this.typecheckIsName(tt, /^NSCore::None$/) || this.typecheckIsName(tt, /^NSCore::Bool$/) || this.typecheckIsName(tt, /^NSCore::Int$/)) {
-            return "no";
-        }
-        else if (this.typecheckIsName(tt, /^NSCore::BigInt$/) || this.typecheckIsName(tt, /^NSCore::String$/) || this.typecheckIsName(tt, /^NSCore::SafeString<.*>$/) || this.typecheckIsName(tt, /^NSCore::StringOf<.*>$/)) {
-            return "direct";
-        }
-        else if (this.typecheckIsName(tt, /^NSCore::UUID$/) || this.typecheckIsName(tt, /^NSCore::LogicalTime$/)) {
-            return "no";
-        }
-        else if (this.typecheckIsName(tt, /^NSCore::UUID$/) || this.typecheckIsName(tt, /^NSCore::CryptoHash$/)) {
-            return "direct";
-        }
-        else if (this.typecheckEntityAndProvidesName(tt, this.enumtype)) {
-            return "no";
-        }
-        else if (this.typecheckEntityAndProvidesName(tt, this.idkeytype)) {
-            return "ops";
-        }
-        else {
-            const tr = this.getCPPReprFor(tt);
 
-            if (tr instanceof EphemeralListRepr) {
-                return "ephemeral";
-            }
-            else if (tr instanceof StructRepr) {
-                if(!this.assembly.entityDecls.has(tt.trkey)) {
-                    return "ops";
-                }
-                else {
-                    const sfields = (this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl).fields;
-                    const allnorc = sfields.every((fd) => this.getRefCountableStatus(this.getMIRType(fd.declaredType)) === "no");
-
-                    return allnorc ? "no" : "ops";
-                }
-            }
-            else if (tr instanceof RefRepr) {
-                return "direct";
-            }
-            else {
-                return "checked";
-            }
-        }
-    }
-
-    buildIncOpForType(tt: MIRType, arg: string): string {
-        const rcinfo = this.getRefCountableStatus(tt);
-        if (rcinfo === "no") {
-            return "";
-        }
-        else {
-            const tr = this.getCPPReprFor(tt);
-            assert(rcinfo !== "ephemeral");
-
-            if (rcinfo === "direct") {
-                return `INC_REF_DIRECT(${tr.base}, ${arg})`;
-            }
-            else if (rcinfo === "checked") {
-                return `INC_REF_CHECK(${tr.base}, ${arg})`;
-            }
-            else {
-                return `RCIncFunctor_${tr.base}{}(${arg})`;
-            }
-        }
-    }
-
-    buildReturnOpForType(tt: MIRType, arg: string, scope: string): string {
-        const rcinfo = this.getRefCountableStatus(tt);
-        if (rcinfo === "no") {
-            return "";
-        }
-        else {
-            const tr = this.getCPPReprFor(tt);
-            if (rcinfo === "ephemeral") {
-                return `(${arg}).processForCallReturn(${scope})`;
-            }
-            else if (rcinfo === "direct") {
-                return `${scope}.callReturnDirect(${arg})`;
-            }
-            else if (rcinfo === "checked") {
-                return `${scope}.processReturnChecked(${arg})`;
-            }
-            else {
-                return `RCReturnFunctor_${tr.base}{}(${arg}, ${scope})`;
-            }
-        }
-    }
-
-    buildDecOpForType(tt: MIRType, arg: string): string {
-        const rcinfo = this.getRefCountableStatus(tt);
-        if (rcinfo === "no") {
-            return "";
-        }
-        else {
-            const tr = this.getCPPReprFor(tt);
-            assert(rcinfo !== "ephemeral");
-
-            if (rcinfo === "direct") {
-                return `BSQRef::decrementDirect(${arg})`;
-            }
-            else if (rcinfo === "checked") {
-                return `BSQRef::decrementChecked(${arg})`;
-            }
-            else {
-                return `RCDecFunctor_${tr.base}{}(${arg})`
-            }
-        }
-    }
-
-    getFunctorsForType(tt: MIRType): {inc: string, dec: string, ret: string, eq: string, less: string, display: string} {
+    getFunctorsForType(tt: MIRType): {eq: string, less: string, display: string} {
         const tr = this.getCPPReprFor(tt);
         assert(!(tr instanceof EphemeralListRepr));
 
-        if (tr instanceof StructRepr) {
-            return { inc: `RCIncFunctor_${tr.base}`, dec: `RCDecFunctor_${tr.base}`, ret: `RCReturnFunctor_${tr.base}`, eq: `EqualFunctor_${tr.base}`, less: `LessFunctor_${tr.base}`, display: `DisplayFunctor_${tr.base}` };
+        if (tr instanceof NoneRepr) {
+            return { eq: "EqualFunctor_NoneValue", less: "LessFunctor_NoneValue", display: "DisplayFunctor_NoneValue" };
+        }
+        else if() {
+            xxxx;
+        }
+        else if (tr instanceof StructRepr) {
+            return { eq: `EqualFunctor_${tr.base}`, less: `LessFunctor_${tr.base}`, display: `DisplayFunctor_${tr.base}` };
+        }
+        else if (tr instanceof TRRepr) {
+            return { eq: "[INVALID_EQ]", less: "[INVALID_LESS]", display: `DisplayFunctor_${tr.base}` };
+        }
+        else if (tr instanceof UnionRepr) {
+            return { eq: "EqualFunctor_Union", less: "LessFunctor_Union", display: "DisplayFunctor_Union" };
         }
         else if (tr instanceof RefRepr) {
-            if(this.isSpecialReprEntity(tt)) {
-                return { inc: `RCIncFunctor_${tr.base}`, dec: `RCDecFunctor_${tr.base}`, ret: `RCReturnFunctor_${tr.base}`, eq: `EqualFunctor_${tr.base}`, less: `LessFunctor_${tr.base}`, display: `DisplayFunctor_${tr.base}` };
-            }
-            else {
-                return { inc: `RCIncFunctor_BSQRef<${tr.base}>`, dec: "RCDecFunctor_BSQRef", ret: "[INVALID_RET]", eq: "[INVALID_EQ]", less: "[INVALID_LESS]", display: "DisplayFunctor_BSQRef" };
-            }
+            return { eq: `EqualFunctor_${tr.base}`, less: `LessFunctor_${tr.base}`, display: `DisplayFunctor_${tr.base}` };
         }
         else {
             if(tr.iskey) {
-                return { inc: "RCIncFunctor_KeyValue", dec: "RCDecFunctor_KeyValue", ret: "[INVALID_RET]", eq: "EqualFunctor_KeyValue", less: "LessFunctor_KeyValue", display: "DisplayFunctor_KeyValue" };
+                return { eq: "EqualFunctor_KeyValue", less: "LessFunctor_KeyValue", display: "DisplayFunctor_KeyValue" };
             }
             else {
-                return { inc: "RCIncFunctor_Value", dec: "RCDecFunctor_Value", ret: "[INVALID_RET]", eq: "[INVALID_EQ]", less: "[INVALID_LESS]", display: "DisplayFunctor_Value" };
-            }
-        }
-    }
-
-    isSpecialReprEntity(tt: MIRType): boolean {
-        if (this.typecheckIsName(tt, /^NSCore::None$/) || this.typecheckIsName(tt, /^NSCore::Bool$/) || this.typecheckIsName(tt, /^NSCore::Int$/) || this.typecheckIsName(tt, /^NSCore::BigInt$/) || this.typecheckIsName(tt, /^NSCore::String$/)) {
-            return true;
-        }
-        else if (this.typecheckIsName(tt, /^NSCore::SafeString<.*>$/) || this.typecheckIsName(tt, /^NSCore::StringOf<.*>$/)) {
-            return true;
-        }
-        else if (this.typecheckIsName(tt, /^NSCore::UUID$/) || this.typecheckIsName(tt, /^NSCore::LogicalTime$/) || this.typecheckIsName(tt, /^NSCore::CryptoHash$/)) {
-            return true;
-        }
-        else if (this.typecheckEntityAndProvidesName(tt, this.enumtype) || this.typecheckEntityAndProvidesName(tt, this.idkeytype)) {
-           return true;
-        }
-        else {
-            if (this.typecheckIsName(tt, /^NSCore::Float64$/) 
-                || this.typecheckIsName(tt, /^NSCore::ByteBuffer$/) || this.typecheckIsName(tt, /^NSCore::Buffer<.*>$/) || this.typecheckIsName(tt, /^NSCore::BufferOf<.*>$/)
-                || this.typecheckIsName(tt, /^NSCore::ISOTime$/) || this.typecheckIsName(tt, /^NSCore::Regex$/)) {
-                return true;
-            }
-            else {
-                return false;
+                return { eq: "[INVALID_EQ]", less: "[INVALID_LESS]", display: "DisplayFunctor_Value" };
             }
         }
     }
@@ -752,33 +450,27 @@ class CPPTypeEmitter {
         });
     }
 
-    generateConstructorArgInc(argtype: MIRType, arg: string): string {
-        const rcinfo = this.getRefCountableStatus(argtype);
-        if (rcinfo === "no") {
-            return arg;
-        }
-
-        return this.buildIncOpForType(argtype, arg);
-    }
-
-    generateListCPPEntity(entity: MIREntityTypeDecl): { isref: boolean, fwddecl: string, fulldecl: string } {
+    generateListCPPEntity(entity: MIREntityTypeDecl): { isref: boolean, fwddecl: string, fulldecl: string, impl: string | undefined } {
         const tt = this.getMIRType(entity.tkey);
         const typet = entity.terms.get("T") as MIRType;
 
         const declrepr = this.getCPPReprFor(tt);
         const crepr = this.getCPPReprFor(typet);
-
         const cops = this.getFunctorsForType(typet);
-        const bc = `BSQList<${crepr.std}, ${cops.dec}, ${cops.display}>`;
-        const decl = `class ${declrepr.base} : public ${bc}\n`
-        + "{\n"
-        + "public:\n"
-        + `${declrepr.base}(MIRNominalTypeEnum ntype) : ${bc}(ntype) { ; }\n`
-        + `${declrepr.base}(MIRNominalTypeEnum ntype, std::vector<${crepr.std}>&& vals) : ${bc}(ntype, std::move(vals)) { ; }\n`
-        + `virtual ~${declrepr.base}() { ; }\n`
-        + "};\n"
 
-        return { isref: true, fwddecl: `class ${declrepr.base};`, fulldecl: decl };
+        const bc = `BSQList<${crepr.storage}>`;
+        const decl = `struct ${declrepr.base} : public ${bc} { };\n`
+        + `struct DisplayFunctor_${declrepr.base}\n`
+        + "{\n"
+        + `   std::wstring operator()(const ${declrepr.base}* ll) const;`
+        + `   static std::wstring display(void* v);`
+        + "};\n"
+        + `LIST_METADATA_GOES_HERE`;
+
+        const impl = `std::wstring DisplayFunctor_${declrepr.base}::operator()(const ${declrepr.base}* ll) const { return ll->display<${cops.display}>(); }\n`
+        + `std::wstring DisplayFunctor_${declrepr.base}::display(void* v) { return DisplayFunctor_${declrepr.base}{}(*((${declrepr.passing})v)); }`;
+
+        return { isref: true, fwddecl: `struct ${declrepr.base};`, fulldecl: decl, impl: impl };
     }
 
     generateStackCPPEntity(entity: MIREntityTypeDecl): { isref: boolean, fwddecl: string, fulldecl: string } {
@@ -867,6 +559,32 @@ class CPPTypeEmitter {
 
     generateCPPEntity(entity: MIREntityTypeDecl): { isref: boolean, fwddecl: string, fulldecl: string, displayimpl?: string } | { isref: boolean, fwddecl: string, fulldecl: string, boxeddecl: string, ops: string[], displayimpl?: string } | undefined {
         const tt = this.getMIRType(entity.tkey);
+
+
+        ////
+        if (this.typecheckIsName(tt, /^NSCore::None$/) || this.typecheckIsName(tt, /^NSCore::Bool$/) || this.typecheckIsName(tt, /^NSCore::Int$/) || this.typecheckIsName(tt, /^NSCore::BigInt$/) || this.typecheckIsName(tt, /^NSCore::String$/)) {
+            return true;
+        }
+        else if (this.typecheckIsName(tt, /^NSCore::SafeString<.*>$/) || this.typecheckIsName(tt, /^NSCore::StringOf<.*>$/)) {
+            return true;
+        }
+        else if (this.typecheckIsName(tt, /^NSCore::UUID$/) || this.typecheckIsName(tt, /^NSCore::LogicalTime$/) || this.typecheckIsName(tt, /^NSCore::CryptoHash$/)) {
+            return true;
+        }
+        else if (this.typecheckEntityAndProvidesName(tt, this.enumtype) || this.typecheckEntityAndProvidesName(tt, this.idkeytype)) {
+           return true;
+        }
+        else {
+            if (this.typecheckIsName(tt, /^NSCore::Float64$/) 
+                || this.typecheckIsName(tt, /^NSCore::ByteBuffer$/) || this.typecheckIsName(tt, /^NSCore::Buffer<.*>$/) || this.typecheckIsName(tt, /^NSCore::BufferOf<.*>$/)
+                || this.typecheckIsName(tt, /^NSCore::ISOTime$/) || this.typecheckIsName(tt, /^NSCore::Regex$/)) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        ////
 
         if(this.isSpecialReprEntity(tt)) {
             return undefined;

@@ -6,6 +6,14 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
+struct entity Vector<T, K=Int> provides Object, Expandoable<T>, PODType when T PODType, APIType when T APIType {
+    hidden static s_unsafe_get(l: Vector<T, K>, i: Int): T # vector_unsafe_get
+
+    //
+    //TODO: fill in here!!!
+    //
+}
+
 entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType when T APIType {
     hidden static s_size(l: List<T>): Int # list_size
     hidden static s_unsafe_get(l: List<T>, i: Int): T # list_unsafe_get

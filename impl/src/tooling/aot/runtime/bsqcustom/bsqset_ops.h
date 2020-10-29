@@ -3,9 +3,9 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-#include "bsqset_decl.h"
-
 #pragma once
+
+#include "bsqset_decl.h"
 
 namespace BSQ
 {

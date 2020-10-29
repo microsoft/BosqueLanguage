@@ -15,9 +15,6 @@
 
 #define INT_OOF_BOUNDS(X) (((X) < MIN_BSQ_INT) | ((X) > MAX_BSQ_INT))
 
-#define BSQ_IS_VALUE_NONE(V) ((V) == nullptr)
-#define BSQ_IS_VALUE_NONNONE(V) ((V) != nullptr)
-
 #define BSQ_IS_VALUE_BOOL(V) ((((uintptr_t)(V)) & 0x2) == 0x2)
 #define BSQ_IS_VALUE_TAGGED_INT(V) ((((uintptr_t)(V)) & 0x4) == 0x4)
 #define BSQ_IS_VALUE_PTR(V) ((((uintptr_t)(V)) & 0x7) == 0)

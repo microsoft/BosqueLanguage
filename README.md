@@ -6,7 +6,7 @@
 
 
 ## The Bosque Project
-The Bosque Programming Language project is a ground up language & tooling co-design effort focused on investigating the theoretical and the practical implications of:
+The Bosque Programming Language project is a ground up language & tooling co-design effort focused on is investigating the theoretical and the practical implications of:
 
 1. Explicitly designing a code intermediate representation language (bytecode) that enables deep automated code reasoning and the deployment of next-generation development tools, compilers, and runtime systems.
 2. Leveraging the power of the intermediate representation to provide a programming language that is both easily accessible to modern developers and that provides a rich set of useful language features for developing high reliability & high performance applications.
@@ -36,7 +36,7 @@ An overarching theme of the Bosque project is increasing the ability of automate
 
 ## News
 
-**August 2020:** An on demand version of the [Bosque Webinar with Q&A](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-On-Demand.html) from May 27th is now available.
+**May 2020:** We will be running a Bosque Webinar with Live Q&A on May 27th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
 
 ## Documentation
 
@@ -251,7 +251,7 @@ entrypoint function getSays(animal: String, catchPhrase: String): Result<String,
     validate animal != "" or return err({ msg="Invalid animal" });
     validate catchPhrase != "" or return err({ msg="Invalid catchPhrase" });
 {
-    return ok(String::concat("The ", animal, " says ", createAnimal(catchPhrase).says));
+    return String::concat("The ", animal, " says ", createAnimal::(catchPhrase).says);
 }
 
 createAnimal("woof woof") //ok always

@@ -2,13 +2,18 @@
 // Copyright (C) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
-#include "bsqruntime.h"
+
+#include "bsqmemory.h"
 
 namespace BSQ
 {
-//%%STATIC_STRING_CREATE%%
+    GCStackEntry GCStack::frames[8192];
+    uint32_t GCStack::stackp = 0;
 
-//%%STATIC_REGEX_CREATE%%
+    void GCOperator::collect()
+    {
+        this->alloc->collect();
+    }
 
-//%%STATIC_INT_CREATE%%
-} // namespace BSQ
+    Allocator Allocator::GlobalAllocator;
+}
