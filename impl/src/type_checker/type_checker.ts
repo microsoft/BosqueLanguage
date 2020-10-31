@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomType, ResolvedRecordAtomTypeEntry, ResolvedAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedFunctionTypeParam, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
+import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomType, ResolvedRecordAtomTypeEntry, ResolvedAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl } from "../ast/assembly";
 import { TypeEnvironment, ExpressionReturnResult, VarInfo, FlowTypeTruthValue, StructuredAssignmentPathStep } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, FunctionTypeSignature } from "../ast/type_signature";
@@ -30,7 +30,7 @@ type ExpandedArgument = {
     name: string | undefined,
     argtype: ResolvedType | ResolvedFunctionType,
     expando: boolean,
-    ref: string | undefined,
+    ref: [string, ResolvedType] | undefined,
     pcode: PCode | undefined,
     treg: MIRTempRegister
 };
@@ -38,7 +38,7 @@ type ExpandedArgument = {
 type FilledLocation = {
     vtype: ResolvedType | ResolvedFunctionType,
     mustDef: boolean,
-    ref: string | undefined,
+    ref: [string, ResolvedType] | undefined,
     pcode: PCode | undefined,
     trgt: MIRArgument
 };
@@ -720,10 +720,10 @@ class TypeChecker {
                     const earg = (env.lookupVar(rvname) as VarInfo);
 
                     if (arg instanceof NamedArgument) {
-                        eargs.push({ name: arg.name, argtype: earg.declaredType, ref: rvname, expando: false, pcode: undefined, treg: treg });
+                        eargs.push({ name: arg.name, argtype: earg.declaredType, ref: [rvname, earg.declaredType], expando: false, pcode: undefined, treg: treg });
                     }
                     else {
-                        eargs.push({ name: undefined, argtype: earg.declaredType, ref: rvname, expando: false, pcode: undefined, treg: treg });
+                        eargs.push({ name: undefined, argtype: earg.declaredType, ref: [rvname, earg.declaredType], expando: false, pcode: undefined, treg: treg });
                     }
                 }
                 else {
@@ -1219,7 +1219,7 @@ class TypeChecker {
         return ResolvedType.createSingle(oftype);
     }
 
-    private checkArgumentsSignature(sinfo: SourceInfo, env: TypeEnvironment, sig: ResolvedFunctionType, args: ExpandedArgument[]): { args: MIRArgument[], types: ResolvedType[], refs: string[], pcodes: PCode[], cinfo: [string, ResolvedType][] } {
+    private checkArgumentsSignature(sinfo: SourceInfo, env: TypeEnvironment, sig: ResolvedFunctionType, args: ExpandedArgument[]): { args: MIRArgument[], types: ResolvedType[], refs: [string, ResolvedType][], pcodes: PCode[], cinfo: [string, ResolvedType][] } {
         let filledLocations: FilledLocation[] = [];
 
         //figure out named parameter mapping first
@@ -1326,7 +1326,7 @@ class TypeChecker {
         let margs: MIRArgument[] = [];
         let mtypes: ResolvedType[] = [];
         let pcodes: PCode[] = [];
-        let refs: string[] = [];
+        let refs: [string, ResolvedType][] = [];
         for (let j = 0; j < sig.params.length; ++j) {
             const paramtype = sig.params[j].type;
             if (filledLocations[j] === undefined) {
@@ -1355,7 +1355,7 @@ class TypeChecker {
                     this.raiseErrorIf(sinfo, filledLocations[j].ref === undefined, `Parameter ${sig.params[j].name} expected reference parameter`);
                     this.raiseErrorIf(sinfo, (filledLocations[j].vtype as ResolvedType).idStr !== (paramtype as ResolvedType).idStr, `Parameter ${sig.params[j].name} expected argument of type ${paramtype.idStr} but got ${filledLocations[j].vtype.idStr}`);
 
-                    refs.push(filledLocations[j].ref as string);
+                    refs.push(filledLocations[j].ref as [string, ResolvedType]);
                     margs.push(filledLocations[j].trgt);
                     mtypes.push(filledLocations[j].vtype as ResolvedType);
                 }
@@ -1455,22 +1455,19 @@ class TypeChecker {
         }
     }
 
-    private generateRefInfoForCallEmit(fsig: ResolvedFunctionType, refs: string[], name: string, sinfo: SourceInfo): [MIRType, MIRType, number, [string, MIRType][]] {
+
+    private generateRefInfoForCallEmit(fsig: ResolvedFunctionType, refs: [string, ResolvedType][]): [MIRType, MIRType, number, [string, MIRType][]] {
         const rtype = this.m_emitter.registerResolvedTypeReference(fsig.resultType);
         const refinfo = refs.map((rn) => {
-            const rp = fsig.params.find((p) => p.name === rn);
-
-            this.raiseErrorIf(sinfo, !rp, `The ref parameter '${rn}' not found in '${name}' ref parameters list`);
-
-            const ptk = this.m_emitter.registerResolvedTypeReference((rp as ResolvedFunctionTypeParam).type as ResolvedType);
-            return [rn, ptk] as [string, MIRType];
+            const ptk = this.m_emitter.registerResolvedTypeReference(rn[1]);
+            return [rn[0], ptk] as [string, MIRType];
         });
 
         if (refinfo.length === 0) {
             return [rtype, rtype, -1, refinfo];
         }
         else {
-            const rr = refs.map((rn) => (fsig.params.find((p) => p.name === rn) as ResolvedFunctionTypeParam).type as ResolvedType);
+            const rr = refs.map((rn) => rn[1]);
 
             if (fsig.resultType.options.length !== 1 || !(fsig.resultType.options[0] instanceof ResolvedEphemeralListType)) {
                 const etl = ResolvedType.createSingle(ResolvedEphemeralListType.create([fsig.resultType, ...rr]));
