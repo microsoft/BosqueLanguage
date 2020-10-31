@@ -1847,7 +1847,7 @@ class TypeChecker {
             this.m_emitter.registerTypeInstantiation(oodecl, oobinds);
             const skey = this.m_emitter.registerStaticCall(oodecl, oobinds, fdecl as StaticFunctionDecl, exp.factoryName, binds as Map<string, ResolvedType>, rargs.pcodes, rargs.cinfo);
 
-            const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs, exp.factoryName, exp.sinfo);
+            const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
             this.m_emitter.bodyEmitter.emitInvokeFixedFunction(exp.sinfo, skey, rargs.args, refinfo, etreg);
         }
 
@@ -1941,7 +1941,7 @@ class TypeChecker {
         if (this.m_emitEnabled) {
             const ckey = this.m_emitter.registerFunctionCall(exp.ns, exp.name, fdecl, binds as Map<string, ResolvedType>, margs.pcodes, margs.cinfo);
 
-            const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, margs.refs, exp.name, exp.sinfo);
+            const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, margs.refs);
             this.m_emitter.bodyEmitter.emitInvokeFixedFunction(exp.sinfo, ckey, margs.args, refinfo, trgt);
         }
 
@@ -2001,7 +2001,7 @@ class TypeChecker {
                 this.m_emitter.registerTypeInstantiation(fdecl.contiainingType, fdecl.binds);
                 const skey = this.m_emitter.registerStaticCall(fdecl.contiainingType, fdecl.binds, fdecl.decl as StaticFunctionDecl, (fdecl.decl as StaticFunctionDecl).name, binds as Map<string, ResolvedType>, margs.pcodes, margs.cinfo);
 
-                const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, margs.refs, exp.name, exp.sinfo);
+                const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, margs.refs);
                 this.m_emitter.bodyEmitter.emitInvokeFixedFunction(exp.sinfo, skey, margs.args, refinfo, trgt);
             }
         }
@@ -2030,7 +2030,7 @@ class TypeChecker {
         this.checkRecursion(exp.sinfo, pcode.ftype, margs.pcodes, exp.pragmas.recursive);
 
         if (this.m_emitEnabled) {
-            const refinfo = this.generateRefInfoForCallEmit((pcode as PCode).ftype, margs.refs, exp.pcode, exp.sinfo);
+            const refinfo = this.generateRefInfoForCallEmit((pcode as PCode).ftype, margs.refs);
             this.m_emitter.bodyEmitter.emitInvokeFixedFunction(exp.sinfo, MIRKeyGenerator.generatePCodeKey((pcode as PCode).code), [...margs.args, ...cargsext], refinfo, trgt);
         }
 
@@ -2488,7 +2488,7 @@ class TypeChecker {
                 this.m_emitter.registerTypeInstantiation(mdecl.contiainingType, mdecl.binds);
                 const mkey = this.m_emitter.registerMethodCall(mdecl.contiainingType, mdecl.decl as MemberMethodDecl, mdecl.binds, (mdecl.decl as MemberMethodDecl).name, binds as Map<string, ResolvedType>, margs.pcodes, margs.cinfo);
 
-                const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, margs.refs, op.name, op.sinfo);
+                const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, margs.refs);
                 this.m_emitter.bodyEmitter.emitInvokeFixedFunction(op.sinfo, mkey, margs.args, refinfo, trgt);
             }
 
@@ -2585,7 +2585,7 @@ class TypeChecker {
                 else {
                     const vkey = this.m_emitter.registerVirtualMethodCall((vinfo.root as OOMemberLookupInfo).contiainingType, (vinfo.root as OOMemberLookupInfo).binds, op.name, cbindsonly, margs.pcodes, margs.cinfo);
 
-                    const refinfo = this.generateRefInfoForCallEmit(lsig, margs.refs, op.name, op.sinfo);
+                    const refinfo = this.generateRefInfoForCallEmit(lsig, margs.refs);
                     this.m_emitter.bodyEmitter.emitInvokeVirtualTarget(op.sinfo, vkey, margs.args, this.m_emitter.registerResolvedTypeReference(texp).trkey, refinfo, trgt);
                 }
             }
