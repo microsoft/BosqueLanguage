@@ -539,6 +539,9 @@ class MIREmitter {
                 rt = MIREntityType.create(MIRKeyGenerator.generateTypeKey(sopt.object, sopt.binds));
             }
             else if (sopt instanceof ResolvedConceptAtomType) {
+                if(sopt.conceptTypes.length > 1) {
+                    sopt.conceptTypes.forEach((opt) => this.registerResolvedTypeReference(ResolvedType.createSingle(ResolvedConceptAtomType.create([opt]))));
+                }
                 const natoms = sopt.conceptTypes.map((cpt) => {
                     this.registerTypeInstantiation(cpt.concept, cpt.binds);
                     return MIRKeyGenerator.generateTypeKey(cpt.concept, cpt.binds);
