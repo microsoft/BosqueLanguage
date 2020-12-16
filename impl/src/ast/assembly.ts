@@ -5,7 +5,7 @@
 
 import { ResolvedType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomTypeEntry, ResolvedAtomType, ResolvedFunctionTypeParam, ResolvedFunctionType, ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedLiteralAtomType, ResolvedTemplateUnifyType } from "./resolved_type";
 import { TemplateTypeSignature, NominalTypeSignature, TypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, ParseErrorTypeSignature, AutoTypeSignature, FunctionParameter, ProjectTypeSignature, EphemeralListTypeSignature, LiteralTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
-import { Expression, BodyImplementation, LiteralBoolExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, PrefixNotOp, CallNamespaceFunctionOrOperatorExpression, LiteralTypedNumericConstructorExpression, LiteralParamerterValueExpression, ConstantExpressionValue, LiteralComplexExpression, LiteralTypedComplexConstructorExpression, LiteralNumberinoExpression, LiteralTypedStringExpression } from "./body";
+import { Expression, BodyImplementation, LiteralBoolExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, PrefixNotOp, CallNamespaceFunctionOrOperatorExpression, LiteralTypedNumericConstructorExpression, LiteralParamerterValueExpression, ConstantExpressionValue, LiteralNumberinoExpression, LiteralTypedStringExpression } from "./body";
 import { SourceInfo } from "./parser";
 
 import * as assert from "assert";
@@ -37,15 +37,13 @@ class TemplateTermDecl {
     readonly name: string;
     readonly specialRestrictions: Set<TemplateTermSpecialRestriction>;
     readonly tconstraint: TypeSignature;
-    readonly opconstraint: { ns: string, op: string, args: TypeSignature[] } | undefined;
     readonly isInfer: boolean;
     readonly defaultType: TypeSignature | undefined;
 
-    constructor(name: string, specialRestrictions: Set<TemplateTermSpecialRestriction>, tconstraint: TypeSignature, opconstraint: { ns: string, op: string, args: TypeSignature[] } | undefined, isinfer: boolean, defaulttype: TypeSignature | undefined) {
+    constructor(name: string, specialRestrictions: Set<TemplateTermSpecialRestriction>, tconstraint: TypeSignature, isinfer: boolean, defaulttype: TypeSignature | undefined) {
         this.name = name;
         this.specialRestrictions = specialRestrictions;
         this.tconstraint = tconstraint;
-        this.opconstraint = opconstraint;
         this.isInfer = isinfer;
         this.defaultType = defaulttype;
     }
@@ -54,12 +52,10 @@ class TemplateTermDecl {
 class TemplateTypeRestriction {
     readonly t: TypeSignature;
     readonly tconstraint: TypeSignature;
-    readonly opconstraint: { ns: string, op: string, args: TypeSignature[] } | undefined;
 
-    constructor(t: TypeSignature, tconstraint: TypeSignature, opconstraint: { ns: string, op: string, args: TypeSignature[] } | undefined) {
+    constructor(t: TypeSignature, tconstraint: TypeSignature) {
         this.t = t;
         this.tconstraint = tconstraint;
-        this.opconstraint = opconstraint;
     }
 }
 
@@ -117,7 +113,6 @@ class InvokeDecl {
 
     readonly attributes: string[];
     readonly recursive: "yes" | "no" | "cond";
-    readonly pragmas: [TypeSignature, string][];
 
     readonly terms: TemplateTermDecl[];
     readonly termRestrictions: TypeConditionRestriction | undefined;
@@ -135,13 +130,12 @@ class InvokeDecl {
     readonly captureSet: Set<string>;
     readonly body: BodyImplementation | undefined;
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], isLambda: boolean, captureSet: Set<string>, body: BodyImplementation | undefined) {
+    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], isLambda: boolean, captureSet: Set<string>, body: BodyImplementation | undefined) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
         this.attributes = attributes;
         this.recursive = recursive;
-        this.pragmas = pragmas;
 
         this.terms = terms;
         this.termRestrictions = termRestrictions;
@@ -165,11 +159,11 @@ class InvokeDecl {
     }
 
     static createPCodeInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, captureSet: Set<string>, body: BodyImplementation) {
-        return new InvokeDecl(sinfo, srcFile, attributes, recursive, [], [], undefined, params, optRestName, optRestType, resultInfo, [], [], true, captureSet, body);
+        return new InvokeDecl(sinfo, srcFile, attributes, recursive, [], undefined, params, optRestName, optRestType, resultInfo, [], [], true, captureSet, body);
     }
 
-    static createStandardInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", pragmas: [TypeSignature, string][], terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], body: BodyImplementation | undefined) {
-        return new InvokeDecl(sinfo, srcFile, attributes, recursive, pragmas, terms, termRestrictions, params, optRestName, optRestType, resultInfo, preconds, postconds, false, new Set<string>(), body);
+    static createStandardInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], body: BodyImplementation | undefined) {
+        return new InvokeDecl(sinfo, srcFile, attributes, recursive, terms, termRestrictions, params, optRestName, optRestType, resultInfo, preconds, postconds, false, new Set<string>(), body);
     }
 }
 
@@ -181,17 +175,15 @@ class StaticMemberDecl implements OOMemberDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
-    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly name: string;
 
     readonly declaredType: TypeSignature;
     readonly value: ConstantExpressionValue | undefined;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], name: string, dtype: TypeSignature, value: ConstantExpressionValue | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, attributes: string[], name: string, dtype: TypeSignature, value: ConstantExpressionValue | undefined) {
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
-        this.pragmas = pragmas;
         this.attributes = attributes;
         this.name = name;
         this.declaredType = dtype;
@@ -207,15 +199,13 @@ class StaticFunctionDecl implements OOMemberDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
-    readonly attributes: string[];
     readonly name: string;
 
     readonly invoke: InvokeDecl;
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], name: string, invoke: InvokeDecl) {
+    constructor(sinfo: SourceInfo, srcFile: string, name: string, invoke: InvokeDecl) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
-        this.attributes = attributes;
         this.name = name;
 
         this.invoke = invoke;
@@ -233,18 +223,16 @@ class StaticOperatorDecl implements OOMemberDecl {
     readonly isPrefix: boolean;
     readonly isInfix: boolean;
     readonly isDynamic: boolean;
-    readonly attributes: string[];
     readonly name: string;
 
     readonly invoke: InvokeDecl;
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], name: string, invoke: InvokeDecl) {
+    constructor(sinfo: SourceInfo, srcFile: string, name: string, invoke: InvokeDecl) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
-        this.isPrefix = attributes.includes("prefix");
-        this.isInfix = attributes.includes("infix");
-        this.isDynamic = attributes.includes("dynamic");
-        this.attributes = attributes;
+        this.isPrefix = invoke.attributes.includes("prefix");
+        this.isInfix = invoke.attributes.includes("infix");
+        this.isDynamic = invoke.attributes.includes("dynamic");
         this.name = name;
 
         this.invoke = invoke;
@@ -253,23 +241,25 @@ class StaticOperatorDecl implements OOMemberDecl {
     getName(): string {
         return this.name;
     }
+
+    doesKindTagMatch(tag: "prefix" | "infix" | "std"): boolean {
+        return (tag === "prefix" && this.isPrefix) || (tag === "infix" && this.isInfix) || (tag === "std" && !this.isPrefix && !this.isInfix);
+    }
 }
 
 class MemberFieldDecl implements OOMemberDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
-    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly name: string;
 
     readonly declaredType: TypeSignature;
     readonly value: ConstantExpressionValue | undefined;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], name: string, dtype: TypeSignature, value: ConstantExpressionValue | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, attributes: string[], name: string, dtype: TypeSignature, value: ConstantExpressionValue | undefined) {
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
-        this.pragmas = pragmas;
         this.attributes = attributes;
         this.name = name;
         this.declaredType = dtype;
@@ -285,16 +275,14 @@ class MemberMethodDecl implements OOMemberDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
-    readonly attributes: string[];
     readonly name: string;
-
     readonly refRcvr: boolean;
+
     readonly invoke: InvokeDecl;
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], name: string, refrcvr: boolean, invoke: InvokeDecl) {
+    constructor(sinfo: SourceInfo, srcFile: string, name: string, refrcvr: boolean, invoke: InvokeDecl) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
-        this.attributes = attributes;
         this.refRcvr = refrcvr;
         this.name = name;
         this.invoke = invoke;
@@ -306,35 +294,33 @@ class MemberMethodDecl implements OOMemberDecl {
 }
 
 enum SpecialTypeCategory {
-    None,
-    GroundedTypeDecl,
-    ParsableTypeDecl,
-    ValidatorTypeDecl,
-    EnumTypeDecl,
-    TypeDeclDecl,
-    TypeDeclNumeric,
-    StringOfDecl,
-    DataStringDecl,
-    BufferDecl,
-    DataBufferDecl,
-    ResultDecl,
-    ResultOkDecl,
-    ResultErrDecl,
-    VectorTypeDecl,
-    ListTypeDecl,
-    StackTypeDecl,
-    QueueTypeDecl,
-    SetTypeDecl,
-    DynamicSetTypeDecl,
-    MapTypeDecl,
-    DynamicMapTypeDecl
+    GroundedTypeDecl = "GroundedTypeDecl",
+    ParsableTypeDecl = "ParsableTypeDecl",
+    ValidatorTypeDecl = "ValidatorTypeDecl",
+    EnumTypeDecl = "EnumTypeDecl",
+    TypeDeclDecl = "TypeDeclDecl",
+    TypeDeclNumeric = "TypeDeclNumeric",
+    StringOfDecl = "StringOfDecl",
+    DataStringDecl = "DataStringDecl",
+    BufferDecl = "BufferDecl",
+    DataBufferDecl = "DataBufferDecl",
+    ResultDecl = "ResultDecl",
+    ResultOkDecl = "ResultOkDecl",
+    ResultErrDecl = "ResultErrDecl",
+    VectorTypeDecl = "VectorTypeDecl",
+    ListTypeDecl = "ListTypeDecl",
+    StackTypeDecl = "StackTypeDecl",
+    QueueTypeDecl = "QueueTypeDecl",
+    SetTypeDecl = "SetTypeDecl",
+    DynamicSetTypeDecl = "DynamicSetTypeDecl",
+    MapTypeDecl = "MapTypeDecl",
+    DynamicMapTypeDecl = "DynamicMapTypeDecl"
 }
 
 class OOPTypeDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
-    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly specialDecls: Set<SpecialTypeCategory>;
     readonly ns: string;
@@ -354,14 +340,13 @@ class OOPTypeDecl {
 
     readonly nestedEntityDecls: Map<string, EntityTypeDecl>;
 
-    constructor(sourceLocation: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
+    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
         invariants: InvariantDecl[],
         staticMembers: Map<string, StaticMemberDecl>, staticFunctions: Map<string, StaticFunctionDecl>, staticOperators: Map<string, StaticOperatorDecl[]>,
         memberFields: Map<string, MemberFieldDecl>, memberMethods: Map<string, MemberMethodDecl>,
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
         this.sourceLocation = sourceLocation;
         this.srcFile = srcFile;
-        this.pragmas = pragmas;
         this.attributes = attributes;
         this.specialDecls = new Set<SpecialTypeCategory>(specialDecls);
         this.ns = ns;
@@ -411,22 +396,22 @@ class OOPTypeDecl {
 }
 
 class ConceptTypeDecl extends OOPTypeDecl {
-    constructor(sourceLocation: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
+    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
         invariants: InvariantDecl[],
         staticMembers: Map<string, StaticMemberDecl>, staticFunctions: Map<string, StaticFunctionDecl>, staticOperators: Map<string, StaticOperatorDecl[]>,
         memberFields: Map<string, MemberFieldDecl>, memberMethods: Map<string, MemberMethodDecl>,
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
-        super(sourceLocation, srcFile, pragmas, attributes, specialDecls, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
+        super(sourceLocation, srcFile, attributes, specialDecls, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
     }
 }
 
 class EntityTypeDecl extends OOPTypeDecl {
-    constructor(sourceLocation: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
+    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
         invariants: InvariantDecl[],
         staticMembers: Map<string, StaticMemberDecl>, staticFunctions: Map<string, StaticFunctionDecl>, staticOperators: Map<string, StaticOperatorDecl[]>,
         memberFields: Map<string, MemberFieldDecl>, memberMethods: Map<string, MemberMethodDecl>,
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
-        super(sourceLocation, srcFile, pragmas, attributes, specialDecls, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
+        super(sourceLocation, srcFile, attributes, specialDecls, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
     }
 }
 
@@ -434,7 +419,6 @@ class NamespaceConstDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
-    readonly pragmas: [TypeSignature, string][];
     readonly attributes: string[];
     readonly ns: string;
     readonly name: string;
@@ -442,11 +426,10 @@ class NamespaceConstDecl {
     readonly declaredType: TypeSignature;
     readonly value: ConstantExpressionValue;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, pragmas: [TypeSignature, string][], attributes: string[], ns: string, name: string, dtype: TypeSignature, value: ConstantExpressionValue) {
+    constructor(srcInfo: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, dtype: TypeSignature, value: ConstantExpressionValue) {
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
 
-        this.pragmas = pragmas;
         this.attributes = attributes;
         this.ns = ns;
         this.name = name;
@@ -459,18 +442,16 @@ class NamespaceConstDecl {
 class NamespaceFunctionDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
-    readonly attributes: string[];
 
     readonly ns: string;
     readonly name: string;
 
     readonly invoke: InvokeDecl;
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, invoke: InvokeDecl) {
+    constructor(sinfo: SourceInfo, srcFile: string, ns: string, name: string, invoke: InvokeDecl) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
-        this.attributes = attributes;
         this.ns = ns;
         this.name = name;
 
@@ -485,26 +466,28 @@ class NamespaceOperatorDecl {
     readonly isInfix: boolean;
     readonly isDynamic: boolean;
     readonly level: number;
-    readonly attributes: string[];
 
     readonly ns: string;
     readonly name: string;
 
     readonly invoke: InvokeDecl;
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, invoke: InvokeDecl, level?: number) {
+    constructor(sinfo: SourceInfo, srcFile: string, ns: string, name: string, invoke: InvokeDecl, level?: number) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
-        this.isPrefix = attributes.includes("prefix");
-        this.isInfix = attributes.includes("infix");
-        this.isDynamic = attributes.includes("dynamic");
+        this.isPrefix = invoke.attributes.includes("prefix");
+        this.isInfix = invoke.attributes.includes("infix");
+        this.isDynamic = invoke.attributes.includes("dynamic");
         this.level = level || -1;
-        this.attributes = attributes;
         this.ns = ns;
         this.name = name;
 
         this.invoke = invoke;
+    }
+
+    doesKindTagMatch(tag: "prefix" | "infix" | "std"): boolean {
+        return (tag === "prefix" && this.isPrefix) || (tag === "infix" && this.isInfix) || (tag === "std" && !this.isPrefix && !this.isInfix);
     }
 }
 
@@ -586,7 +569,7 @@ class Assembly {
     private m_conceptMap: Map<string, ConceptTypeDecl> = new Map<string, ConceptTypeDecl>();
     private m_objectMap: Map<string, EntityTypeDecl> = new Map<string, EntityTypeDecl>();
 
-    private m_literalRegexs: Set<BSQRegex> = new Set<BSQRegex>();
+    private m_literalRegexs: BSQRegex[] = [];
     private m_validatorRegexs: Map<string, BSQRegex> = new Map<string, BSQRegex>();
 
     private m_subtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
@@ -637,9 +620,6 @@ class Assembly {
         else if(infertype.isSameType(this.getSpecialRationalType())) {
             return new LiteralRationalExpression(exp.sinfo, exp.value + "/1R", this.getSpecialRationalType());
         }
-        else if (infertype.isSameType(this.getSpecialComplexType())) {
-            return new LiteralComplexExpression(exp.sinfo, exp.value, "+0j", this.getSpecialComplexType());
-        }
         else {
             if(!infertype.isUniqueCallTargetType() || !infertype.getUniqueCallTargetType().object.specialDecls.has(SpecialTypeCategory.TypeDeclNumeric)) {
                 return undefined;
@@ -649,25 +629,19 @@ class Assembly {
             const rtt = this.normalizeTypeOnly(tt, new Map<string, ResolvedType>());
 
             const le = this.processNumberinoExpressionIntoTypedExpression(exp, rtt);
-            if(le === undefined) {
+            if (le === undefined) {
                 return undefined;
             }
 
-            if(rtt.isSameType(this.getSpecialComplexType())) {
-                const cle = le as LiteralComplexExpression;
-                return new LiteralTypedComplexConstructorExpression(exp.sinfo, cle.rvalue, cle.jvalue, rtt, infertype);
+            if (le instanceof LiteralIntegralExpression) {
+                return new LiteralTypedNumericConstructorExpression(exp.sinfo, le.value, le.itype, infertype);
+            }
+            else if (le instanceof LiteralFloatPointExpression) {
+                return new LiteralTypedNumericConstructorExpression(exp.sinfo, le.value, le.fptype, infertype);
             }
             else {
-                if(le instanceof LiteralIntegralExpression) {
-                    return new LiteralTypedNumericConstructorExpression(exp.sinfo, le.value, le.itype, infertype);
-                }
-                else if(le instanceof LiteralFloatPointExpression) {
-                    return new LiteralTypedNumericConstructorExpression(exp.sinfo, le.value, le.fptype, infertype);
-                }
-                else {
-                    const re = le as LiteralRationalExpression;
-                    return new LiteralTypedNumericConstructorExpression(exp.sinfo, re.value, re.rtype, infertype);
-                }
+                const re = le as LiteralRationalExpression;
+                return new LiteralTypedNumericConstructorExpression(exp.sinfo, re.value, re.rtype, infertype);
             }
         }
     }
@@ -710,6 +684,10 @@ class Assembly {
             }
         }
         else if (exp instanceof CallNamespaceFunctionOrOperatorExpression) {
+            if(exp.opkind !== "prefix") {
+                return undefined;
+            }
+
             if(exp.name !== "+" && exp.name !== "-") {
                 return undefined;
             }
@@ -720,7 +698,7 @@ class Assembly {
             }
 
             const nsdecl = this.m_namespaceMap.get("NSMain") as NamespaceDeclaration;
-            if (earg instanceof LiteralIntegralExpression || earg instanceof LiteralFloatPointExpression || earg instanceof LiteralRationalExpression || earg instanceof LiteralComplexExpression) {
+            if (earg instanceof LiteralIntegralExpression || earg instanceof LiteralFloatPointExpression || earg instanceof LiteralRationalExpression) {
                 if(exp.name === "+") {
                     return earg;
                 }
@@ -728,21 +706,16 @@ class Assembly {
                     if(earg instanceof LiteralIntegralExpression) {
                         return new LiteralIntegralExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.itype);
                     }
-                    else if(earg instanceof LiteralRationalExpression) {
-                        return new LiteralRationalExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.rtype);
-                    }
                     else if (earg instanceof LiteralFloatPointExpression) {
                         return new LiteralFloatPointExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.fptype);
                     }
                     else {
-                        const rvalue = earg.rvalue.startsWith("-") ? earg.rvalue.slice(1) : ("-" + earg.rvalue);
-                        const jvalue = earg.jvalue.startsWith("-") ? earg.jvalue.slice(1) : ("-" + earg.jvalue);
-                        return new LiteralComplexExpression(earg.sinfo, rvalue, jvalue, earg.rtype);
+                        return new LiteralRationalExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.rtype);
                     }
                 }
             }
-            else if(earg instanceof LiteralTypedNumericConstructorExpression || earg instanceof LiteralTypedComplexConstructorExpression) {
-                const opdecls = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).filter((nso) => !OOPTypeDecl.attributeSetContains("abstract", nso.attributes));
+            else if(earg instanceof LiteralTypedNumericConstructorExpression) {
+                const opdecls = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).filter((nso) => !OOPTypeDecl.attributeSetContains("abstract", nso.invoke.attributes));
 
                 const isigs = opdecls.map((opd) => this.normalizeTypeFunction(opd.invoke.generateSig(), new Map<string, ResolvedType>()) as ResolvedFunctionType);
                 const opidx = this.tryGetUniqueStaticOperatorResolve([this.normalizeTypeOnly(earg.ntype, new Map<string, ResolvedType>())], isigs);
@@ -754,14 +727,7 @@ class Assembly {
                     return earg;
                 }
                 else {
-                    if (earg instanceof LiteralTypedNumericConstructorExpression) {
-                        return new LiteralTypedNumericConstructorExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.ntype, earg.vtype);
-                    }
-                    else {
-                        const rvalue = earg.rvalue.startsWith("-") ? earg.rvalue.slice(1) : ("-" + earg.rvalue);
-                        const jvalue = earg.jvalue.startsWith("-") ? earg.jvalue.slice(1) : ("-" + earg.jvalue);
-                        return new LiteralTypedComplexConstructorExpression(earg.sinfo, rvalue, jvalue, earg.ntype, earg.vtype);
-                    }
+                    return new LiteralTypedNumericConstructorExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.ntype, earg.vtype);
                 }
             }
             else {
@@ -801,21 +767,21 @@ class Assembly {
         }
     }
 
-    reduceLiteralValueToCanonicalForm(exp: Expression, binds: Map<string, ResolvedType>, infertype: ResolvedType | undefined): [Expression, ResolvedType, string] | undefined {
+    reduceLiteralValueToCanonicalForm(exp: Expression, binds: Map<string, ResolvedType>, infertype: ResolvedType | undefined): [Expression, ResolvedType, string, boolean | number | undefined] | undefined {
         const cexp = this.compileTimeReduceConstantExpression(exp, binds, infertype);
         if(cexp === undefined) {
             return undefined;
         }
 
         if(cexp instanceof LiteralBoolExpression) {
-            return [cexp, this.getSpecialBoolType(), `${cexp.value}`];
+            return [cexp, this.getSpecialBoolType(), `${cexp.value}`, cexp.value];
         }
         else if(cexp instanceof LiteralIntegralExpression) {
             if(this.getSpecialIntType().isSameType(this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()), cexp.value]
+                return [cexp, this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()), cexp.value, Number.parseInt(cexp.value.slice(0, cexp.value.length - 1))];
             }
             else if(this.getSpecialNatType().isSameType(this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()), cexp.value]
+                return [cexp, this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()), cexp.value, Number.parseInt(cexp.value.slice(0, cexp.value.length - 1))];
             }
             else {
                 return undefined;
@@ -823,10 +789,10 @@ class Assembly {
         }
         else if(cexp instanceof LiteralTypedNumericConstructorExpression) {
             if(this.getSpecialIntType().isSameType(this.normalizeTypeOnly(cexp.ntype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.vtype, new Map<string, ResolvedType>()), cexp.value]
+                return [cexp, this.normalizeTypeOnly(cexp.vtype, new Map<string, ResolvedType>()), cexp.value, undefined];
             }
             else if(this.getSpecialNatType().isSameType(this.normalizeTypeOnly(cexp.ntype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.vtype, new Map<string, ResolvedType>()), cexp.value]
+                return [cexp, this.normalizeTypeOnly(cexp.vtype, new Map<string, ResolvedType>()), cexp.value, undefined];
             }
             else {
                 return undefined;
@@ -834,7 +800,7 @@ class Assembly {
         }
         else if(cexp instanceof AccessStaticFieldExpression) {
             const stype = this.normalizeTypeOnly(cexp.stype, new Map<string, ResolvedType>());
-            return [cexp, stype, `${stype}.idStr}::${cexp.name}`];
+            return [cexp, stype, `${stype.idStr}::${cexp.name}`, undefined];
         }
         else {
             return undefined;
@@ -1301,7 +1267,7 @@ class Assembly {
         let ltype = cform[1];
         let tval = cform[0];
 
-        return ResolvedType.createSingle(ResolvedLiteralAtomType.create(ltype, tval, cform[2]));
+        return ResolvedType.createSingle(ResolvedLiteralAtomType.create(ltype, tval, cform[2], cform[3]));
     }
 
     private normalizeType_Tuple(t: TupleTypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
@@ -1800,7 +1766,6 @@ class Assembly {
     getSpecialBufferCompressionType(): ResolvedType { return this.internSpecialObjectType(["BufferCompression"]); }
     getSpecialByteBufferType(): ResolvedType { return this.internSpecialObjectType(["ByteBuffer"]); }
     getSpecialUUIDType(): ResolvedType { return this.internSpecialObjectType(["UUID"]); }
-    getSpecialLogicalTimeType(): ResolvedType { return this.internSpecialObjectType(["LogicalTime"]); }
     getSpecialCryptoHashType(): ResolvedType { return this.internSpecialObjectType(["CryptoHash"]); }
     getSpecialRegexType(): ResolvedType { return this.internSpecialObjectType(["Regex"]); }
     getSpecialRegexMatchType(): ResolvedType { return this.internSpecialObjectType(["RegexMatch"]); }
@@ -1877,15 +1842,23 @@ class Assembly {
     }
 
     addValidatorRegex(resolvedName: string, validator: BSQRegex) {
-        this.m_literalRegexs.add(validator);
-        this.m_validatorRegexs.set(resolvedName, validator);
+        let ere = this.m_literalRegexs.findIndex((lre) => lre.restr === validator.restr);
+        if(ere !== -1) {
+            ere = this.m_literalRegexs.length;
+            this.m_literalRegexs.push(validator);
+        }
+
+        this.m_validatorRegexs.set(resolvedName, this.m_literalRegexs[ere]);
     }
 
     addLiteralRegex(re: BSQRegex) {
-        this.m_literalRegexs.add(re);
+        const ere = this.m_literalRegexs.findIndex((lre) => lre.restr === re.restr);
+        if(ere !== -1) {
+            this.m_literalRegexs.push(re);
+        }
     }
 
-    getAllLiteralRegexs(): Set<BSQRegex> {
+    getAllLiteralRegexs(): BSQRegex[] {
         return this.m_literalRegexs;
     }
 
@@ -2159,7 +2132,7 @@ class Assembly {
         }
 
         const mmd = ooptype.memberMethods.get(name) as MemberMethodDecl;
-        if(!findspecific && OOPTypeDecl.attributeSetContains("override", mmd.attributes)) {
+        if(!findspecific && OOPTypeDecl.attributeSetContains("override", mmd.invoke.attributes)) {
             return undefined;
         }
 
@@ -2329,7 +2302,7 @@ class Assembly {
                 return undefined;
             }
 
-            if(OOPTypeDecl.attributeSetContains("override", sdecl.decl.attributes) || OOPTypeDecl.attributeSetContains("virtual", sdecl.decl.attributes) || OOPTypeDecl.attributeSetContains("abstract", sdecl.decl.attributes)) {
+            if(OOPTypeDecl.attributeSetContains("override", sdecl.decl.invoke.attributes) || OOPTypeDecl.attributeSetContains("virtual", sdecl.decl.invoke.attributes) || OOPTypeDecl.attributeSetContains("abstract", sdecl.decl.invoke.attributes)) {
                 return undefined;
             }
             else {
@@ -2627,7 +2600,7 @@ class Assembly {
             return memoval;
         }
 
-        const res = t1.options.every((t1opt) => t2.options.some((t2opt) => this.atomSubtypeOf(t1opt, t2opt)));
+        const res = (t1.idStr === t2.idStr) || t1.options.every((t1opt) => t2.options.some((t2opt) => this.atomSubtypeOf(t1opt, t2opt)));
 
         memores.set(t2.idStr, res);
         return res;

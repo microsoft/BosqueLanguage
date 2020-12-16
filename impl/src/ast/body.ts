@@ -52,15 +52,7 @@ class TemplateArguments {
     }
 }
 
-class PragmaArguments {
-    readonly recursive: "yes" | "no" | "cond";
-    readonly pragmas: [TypeSignature, string][];
-
-    constructor(rec: "yes" | "no" | "cond", pragmas: [TypeSignature, string][]) {
-        this.recursive = rec;
-        this.pragmas = pragmas;
-    }
-}
+type RecursiveAnnotation = "yes" | "no" | "cond";
 
 class CondBranchEntry<T> {
     readonly cond: Expression;
@@ -136,14 +128,12 @@ enum ExpressionTag {
     LiteralIntegralExpression = "LiteralIntegralExpression",
     LiteralRationalExpression = "LiteralRationalExpression",
     LiteralFloatPointExpression = "LiteralFloatExpression",
-    LiteralComplexExpression = "LiteralComplexExpression",
     LiteralStringExpression = "LiteralStringExpression",
     LiteralRegexExpression = "LiteralRegexExpression",
     LiteralParamerterValueExpression = "LiteralParamerterValueExpression",
     LiteralTypedStringExpression = "LiteralTypedStringExpression",
 
     LiteralTypedNumericConstructorExpression = "LiteralTypedNumericConstructorExpression",
-    LiteralTypedComplexConstructorExpression = "LiteralTypedComplexConstructorExpression",
     LiteralTypedStringConstructorExpression = "LiteralTypedStringConstructorExpression",
 
     AccessNamespaceConstantExpression = "AccessNamespaceConstantExpression",
@@ -168,8 +158,7 @@ enum ExpressionTag {
 
     PrefixNotOpExpression = "PrefixNotOpExpression",
     
-    BinCmpExpression = "BinCmpExpression",
-    BinEqExpression = "BinEqExpression",
+    BinKeyExpression = "BinKeyExpression",
     BinLogicExpression = "BinLogicExpression",
 
     MapEntryConstructorExpression = "MapEntryConstructorExpression",
@@ -293,23 +282,6 @@ class LiteralRationalExpression extends Expression {
     }
 }
 
-class LiteralComplexExpression extends Expression {
-    readonly rvalue: string;
-    readonly jvalue: string;
-    readonly rtype: TypeSignature;
-
-    constructor(sinfo: SourceInfo, rvalue: string, jvalue: string, rtype: TypeSignature) {
-        super(ExpressionTag.LiteralComplexExpression, sinfo);
-        this.rvalue = rvalue;
-        this.jvalue = jvalue;
-        this.rtype = rtype;
-    }
-
-    isCompileTimeInlineValue(): boolean {
-        return true;
-    }
-}
-
 class LiteralFloatPointExpression extends Expression {
     readonly value: string;
     readonly fptype: TypeSignature;
@@ -388,25 +360,6 @@ class LiteralTypedNumericConstructorExpression extends Expression {
     }
 }
 
-class LiteralTypedComplexConstructorExpression extends Expression {
-    readonly rvalue: string;
-    readonly jvalue: string;
-    readonly ntype: TypeSignature;
-    readonly vtype: TypeSignature;
-
-    constructor(sinfo: SourceInfo, rvalue: string, jvalue: string, ntype: TypeSignature, vtype: TypeSignature) {
-        super(ExpressionTag.LiteralTypedComplexConstructorExpression, sinfo);
-        this.rvalue = rvalue;
-        this.jvalue = jvalue;
-        this.ntype = ntype;
-        this.vtype = vtype;
-    }
-
-    isCompileTimeInlineValue(): boolean {
-        return true;
-    }
-}
-
 class LiteralTypedStringConstructorExpression extends Expression {
     readonly value: string;
     readonly stype: TypeSignature;
@@ -469,15 +422,15 @@ class ConstructorPrimaryWithFactoryExpression extends Expression {
     readonly ctype: TypeSignature;
     readonly factoryName: string;
     readonly terms: TemplateArguments;
-    readonly pragmas: PragmaArguments;
+    readonly rec: RecursiveAnnotation;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean,  ctype: TypeSignature, factory: string, pragmas: PragmaArguments, terms: TemplateArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, isvalue: boolean,  ctype: TypeSignature, factory: string, rec: RecursiveAnnotation, terms: TemplateArguments, args: Arguments) {
         super(ExpressionTag.ConstructorPrimaryWithFactoryExpression, sinfo);
         this.isvalue = isvalue;
         this.ctype = ctype;
         this.factoryName = factory;
-        this.pragmas = pragmas;
+        this.rec = rec;
         this.terms = terms;
         this.args = args;
     }
@@ -527,13 +480,13 @@ class ConstructorPCodeExpression extends Expression {
 
 class PCodeInvokeExpression extends Expression {
     readonly pcode: string;
-    readonly pragmas: PragmaArguments;
+    readonly rec: RecursiveAnnotation;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, pcode: string, pragmas: PragmaArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, pcode: string, rec: RecursiveAnnotation, args: Arguments) {
         super(ExpressionTag.PCodeInvokeExpression, sinfo);
         this.pcode = pcode;
-        this.pragmas = pragmas;
+        this.rec = rec;
         this.args = args;
     }
 }
@@ -554,34 +507,38 @@ class SpecialConstructorExpression extends Expression {
 class CallNamespaceFunctionOrOperatorExpression extends Expression {
     readonly ns: string;
     readonly name: string;
-    readonly pragmas: PragmaArguments;
+    readonly rec: RecursiveAnnotation;
     readonly terms: TemplateArguments;
     readonly args: Arguments;
+    readonly opkind: "prefix" | "infix" | "std";
 
-    constructor(sinfo: SourceInfo, ns: string, name: string, terms: TemplateArguments, pragmas: PragmaArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, ns: string, name: string, terms: TemplateArguments, rec: RecursiveAnnotation, args: Arguments, opkind: "prefix" | "infix" | "std") {
         super(ExpressionTag.CallStaticFunctionOrOperatorExpression, sinfo);
         this.ns = ns;
         this.name = name;
-        this.pragmas = pragmas;
+        this.rec = rec;
         this.terms = terms;
         this.args = args;
+        this.opkind = opkind;
     }
 }
 
 class CallStaticFunctionOrOperatorExpression extends Expression {
     readonly ttype: TypeSignature;
     readonly name: string;
-    readonly pragmas: PragmaArguments;
+    readonly rec: RecursiveAnnotation;
     readonly terms: TemplateArguments;
     readonly args: Arguments;
+    readonly opkind: "prefix" | "infix" | "std";
 
-    constructor(sinfo: SourceInfo, ttype: TypeSignature, name: string, terms: TemplateArguments, pragmas: PragmaArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, ttype: TypeSignature, name: string, terms: TemplateArguments, rec: RecursiveAnnotation, args: Arguments, opkind: "prefix" | "infix" | "std") {
         super(ExpressionTag.CallStaticFunctionOrOperatorExpression, sinfo);
         this.ttype = ttype;
         this.name = name;
-        this.pragmas = pragmas;
+        this.rec = rec;
         this.terms = terms;
         this.args = args;
+        this.opkind = opkind;
     }
 }
 
@@ -788,16 +745,16 @@ class PostfixInvoke extends PostfixOperation {
     readonly isBinder: boolean;
     readonly specificResolve: TypeSignature | undefined;
     readonly name: string;
-    readonly pragmas: PragmaArguments;
+    readonly rec: RecursiveAnnotation;
     readonly terms: TemplateArguments;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, isBinder: boolean, specificResolve: TypeSignature | undefined, name: string, terms: TemplateArguments, pragmas: PragmaArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, isBinder: boolean, specificResolve: TypeSignature | undefined, name: string, terms: TemplateArguments, rec: RecursiveAnnotation, args: Arguments) {
         super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixInvoke);
         this.isBinder = isBinder;
         this.specificResolve = specificResolve;
         this.name = name;
-        this.pragmas = pragmas;
+        this.rec = rec;
         this.terms = terms;
         this.args = args;
     }
@@ -812,26 +769,13 @@ class PrefixNotOp extends Expression {
     }
 }
 
-class BinEqExpression extends Expression {
+class BinKeyExpression extends Expression {
     readonly lhs: Expression;
-    readonly op: string; //==, !=
+    readonly op: string; //===, !==
     readonly rhs: Expression;
 
     constructor(sinfo: SourceInfo, lhs: Expression, op: string, rhs: Expression) {
-        super(ExpressionTag.BinEqExpression, sinfo);
-        this.lhs = lhs;
-        this.op = op;
-        this.rhs = rhs;
-    }
-}
-
-class BinCmpExpression extends Expression {
-    readonly lhs: Expression;
-    readonly op: string; //<, >, <=, >=
-    readonly rhs: Expression;
-
-    constructor(sinfo: SourceInfo, lhs: Expression, op: string, rhs: Expression) {
-        super(ExpressionTag.BinCmpExpression, sinfo);
+        super(ExpressionTag.BinKeyExpression, sinfo);
         this.lhs = lhs;
         this.op = op;
         this.rhs = rhs;
@@ -968,6 +912,7 @@ enum StatementTag {
     CheckStatement = "CheckStatement", //check(x > 0)
     ValidateStatement = "ValidateStatement", //validate exp or err -> if (!exp) return Result<INVOKE_RESULT>@error(err);
 
+    VerifierAssumeStatement = "VerifierAssumeStatement", //special for statements that we just want to assume as true (not actually check)
     DebugStatement = "DebugStatement", //print an arg or if empty attach debugger
     NakedCallStatement = "NakedCallStatement",
 
@@ -1221,6 +1166,15 @@ class ValidateStatement extends Statement {
     }
 }
 
+class VerifierAssumeStatement extends Statement {
+    readonly cond: Expression;
+
+    constructor(sinfo: SourceInfo, cond: Expression) {
+        super(StatementTag.VerifierAssumeStatement, sinfo);
+        this.cond = cond;
+    }
+}
+
 class DebugStatement extends Statement {
     readonly value: Expression | undefined;
 
@@ -1251,9 +1205,9 @@ class BlockStatement extends Statement {
 class BodyImplementation {
     readonly id: string;
     readonly file: string;
-    readonly body: string | BlockStatement | Expression | undefined;
+    readonly body: string | BlockStatement | Expression;
 
-    constructor(bodyid: string, file: string, body: string | BlockStatement | Expression | undefined) {
+    constructor(bodyid: string, file: string, body: string | BlockStatement | Expression) {
         this.id = bodyid;
         this.file = file;
         this.body = body;
@@ -1261,12 +1215,12 @@ class BodyImplementation {
 }
 
 export {
-    InvokeArgument, NamedArgument, PositionalArgument, Arguments, TemplateArguments, PragmaArguments, CondBranchEntry, IfElse,
+    InvokeArgument, NamedArgument, PositionalArgument, Arguments, TemplateArguments, RecursiveAnnotation, CondBranchEntry, IfElse,
     ExpressionTag, Expression, LiteralExpressionValue, ConstantExpressionValue, InvalidExpression,
     LiteralNoneExpression, LiteralBoolExpression, 
-    LiteralNumberinoExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, LiteralComplexExpression,
+    LiteralNumberinoExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression,
     LiteralStringExpression, LiteralRegexExpression, LiteralParamerterValueExpression, LiteralTypedStringExpression, 
-    LiteralTypedNumericConstructorExpression, LiteralTypedComplexConstructorExpression, LiteralTypedStringConstructorExpression,
+    LiteralTypedNumericConstructorExpression, LiteralTypedStringConstructorExpression,
     AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression,
     ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorEphemeralValueList, 
     ConstructorPCodeExpression, SpecialConstructorExpression,
@@ -1277,7 +1231,7 @@ export {
     PostfixIs, PostfixAs, PostfixHasIndex, PostfixHasProperty, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry,
     PostfixInvoke, PCodeInvokeExpression,
     PrefixNotOp, 
-    BinCmpExpression, BinEqExpression, BinLogicExpression,
+    BinKeyExpression, BinLogicExpression,
     MapEntryConstructorExpression,
     NonecheckExpression, CoalesceExpression, SelectExpression, ExpOrExpression,
     BlockStatementExpression, IfExpression, MatchExpression,
@@ -1286,7 +1240,7 @@ export {
     StructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, 
     TupleStructuredAssignment, RecordStructuredAssignment, NominalStructuredAssignment, ValueListStructuredAssignment,
     ReturnStatement, YieldStatement,
-    IfElseStatement, AbortStatement, AssertStatement, CheckStatement, ValidateStatement, DebugStatement, NakedCallStatement,
+    IfElseStatement, AbortStatement, AssertStatement, CheckStatement, ValidateStatement, DebugStatement, VerifierAssumeStatement, NakedCallStatement,
     MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, MatchEntry, MatchStatement,
     BlockStatement, BodyImplementation
 };

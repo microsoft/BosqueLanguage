@@ -56,16 +56,17 @@ class ResolvedEntityAtomType extends ResolvedAtomType {
 
 class ResolvedLiteralAtomType extends ResolvedAtomType {
     readonly oftype: ResolvedType;
+    readonly ofvalue: boolean | number | undefined;
     readonly vexp: Expression; //Literal bool, number, typed number, or enum
 
-    constructor(rstr: string, oftype: ResolvedType, vexp: Expression) {
+    constructor(rstr: string, oftype: ResolvedType, vexp: Expression, ofvalue: boolean | number | undefined) {
         super(rstr);
         this.oftype = oftype;
         this.vexp = vexp;
     }
 
-    static create(oftype: ResolvedType, vexp: Expression, ofvalue: boolean | string): ResolvedLiteralAtomType {
-        return new ResolvedLiteralAtomType(`${oftype.idStr}::${ofvalue}`, oftype, vexp);
+    static create(oftype: ResolvedType, vexp: Expression, valstr: string, ofvalue: boolean | number | undefined): ResolvedLiteralAtomType {
+        return new ResolvedLiteralAtomType(`${oftype.idStr}::${valstr}`, oftype, vexp, ofvalue);
     }
 
     hasTemplateType(): boolean {
