@@ -11,7 +11,7 @@ import * as Commander from "commander";
 
 import { MIRAssembly, PackageConfig, MIRInvokeBodyDecl, MIRType } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";
-import { SMTEmitter } from "../../tooling/bmc/smtdecls_emitter";
+import { SMTEmitter } from "../../tooling/verifier/smtdecls_emitter";
 import chalk from "chalk";
 
 const binroot = Path.normalize(Path.join(__dirname, "../../"));

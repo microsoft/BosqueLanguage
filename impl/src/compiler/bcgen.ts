@@ -10,13 +10,13 @@ import { PackageConfig, MIRAssembly } from "../compiler/mir_assembly";
 
 import * as Commander from "commander";
 
-function compile(files: string[], core: string, trgt: string) {
+function compile(files: string[], functionalize: boolean, outfile: string, dgf: string | undefined) {
     process.stdout.write("Reading app code...\n");
 
     let bosque_dir: string = Path.normalize(Path.join(__dirname, "../"));
     let code: { relativePath: string, contents: string }[] = [];
     try {
-        const coredir = Path.join(bosque_dir, "core/", core);
+        const coredir = Path.join(bosque_dir, "core/", "verify");
         const corefiles = FS.readdirSync(coredir);
 
         for (let i = 0; i < corefiles.length; ++i) {
@@ -36,7 +36,7 @@ function compile(files: string[], core: string, trgt: string) {
 
     process.stdout.write("Compiling assembly...\n");
 
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", true, Commander.functionalize !== undefined ? Commander.functionalize : false, code);
+    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", {namespace: "NSMain", names: ["main"]}, functionalize, code);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(`Parse error -- ${errors[i]}\n`);
@@ -45,9 +45,26 @@ function compile(files: string[], core: string, trgt: string) {
         process.exit(1);
     }
 
-    process.stdout.write(`Writing assembly to ${trgt}...\n`);
+    process.stdout.write(`Writing assembly to ${outfile}.json...\n`);
+    FS.writeFileSync(outfile + ".json", JSON.stringify((masm as MIRAssembly).jemit(), undefined, 4));
 
-    FS.writeFileSync(trgt, JSON.stringify((masm as MIRAssembly).jemit(), undefined, 4));
+    if(dgf !== undefined) {
+        const iiv = (masm as MIRAssembly).invokeDecls.get(dgf);
+        if(iiv === undefined) {
+            process.stdout.write(`Could not find body for ${dgf}...\n`);
+        }
+        else {
+            process.stdout.write(`Writing assembly to ${outfile}.dgml...\n`);
+
+            const sigargs = iiv.params.map((p) => `${p.name}: ${p.type}`);
+            if(iiv.takesmask) {
+                sigargs.push("#maskparam#");
+            }
+
+            const siginfo = `${iiv.key}(${sigargs.join(", ")}): ${iiv.resultType}`;
+            FS.writeFileSync(outfile + ".dgml", iiv.body.dgmlify(siginfo));
+        }
+    }
 
     process.stdout.write(`Done!\n`);
     process.exit(0);
@@ -55,9 +72,8 @@ function compile(files: string[], core: string, trgt: string) {
 
 Commander
 .usage("[--output file] <file ...>")
-.option("-s --symbolic [boolean]", "Core library version to use")
 .option("-f --functionalize [boolean]")
-.option("-j --json", "Compile to json bytecode assembly")
+.option("-d --dgml [function]", "Optional function to output in DGML format")
 .option("-o --output [file]", "Optional output file target");
 
 Commander.parse(process.argv);
@@ -67,4 +83,4 @@ if (Commander.args.length === 0) {
     process.exit(1);
 }
 
-setImmediate(() => compile(Commander.args, Commander.symbolic ? "symbolic" : "cpp",  Commander.output || "a.json"));
+setImmediate(() => compile(Commander.args, !!Commander.functionalize, Commander.output || "a", Commander.dgml));

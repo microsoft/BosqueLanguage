@@ -36,27 +36,7 @@ An overarching theme of the Bosque project is increasing the ability of automate
 
 ## News
 
-**October 2020** 
-Big news on our road to a 1.0 version of Bosque!
-
-While there are many things we liked about the initial experiments with the language there were some features missing that we really wanted to add and some things that, in hindsight, we knew could be done much better. I have been working extensively in a side branch, and while there is still much to do, wanted to get [this code](https://github.com/microsoft/BosqueLanguage/tree/road_to_1_0) into the main repo for anyone interested.
-
-Some highlights of the work include:
-- Operators with static and dynamic dispatch forms (plus overloading of builtins). With support for literal expression (literal Bools, Ints, Typed Ints, and Enums) dispatching this brings powerful ways to express computations -- `operator op(cond: Bool==true, data: string) {...} operator op(cond: Bool==false, data: string) {...}`.
-- Typed Numbers (aka unit types) to support type safe and expressive code -- `let speed = 2.0_MetersPerSecond`
-- Reworked Tuples/Records and equality to allow Tuples/Records as key types and simplify the encoding of equality in SMT.
-- Literal Template Types -- `typedef Point2D = Vector<2, Float>;`
-- Support for derived and default values of fields as well as improved optional type support.
-- Greatly improved type (and template type) inference.
-- Overall design simplifications that allow us to produce simpler SMT encodings and target specialized theories in [Z3](https://rise4fun.com/z3/tutorial) as well as to apply more aggressive compiler optimizations.
-- A new and novel reference counting GC design.
-- Binders and default variable introduction -- `switch(x.f) { type Int => $match + 1; _ => $match; }` or `x.{f=$f+1}`.
-
-There is still a lot of work to complete all of these changes but I am very excited at what the resulting language looks like and the impact is has on the verification/validation/compilation tooling story. I want to thank everyone who has contributed on this journey either through PRs, issues, comments, new ideas, and other miscellaneous feedback. 
-
-
-**May 2020:** 
-We will be running a Bosque Webinar with Live Q&A on May 27th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
+**May 2020:** We will be running a Bosque Webinar with Live Q&A on May 27th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
 
 ## Documentation
 
