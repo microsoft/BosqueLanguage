@@ -89,7 +89,7 @@ class SMTBodyEmitter {
     }
 
     getGasKeyForOperation(ikey: MIRInvokeKey): "collection" | "string" | "regex" | "default" {
-        if(ikey.startsWith("NSCore::List::") ||ikey.startsWith("NSCore::Stack::") || ikey.startsWith("NSCore::Queue::") 
+        if(ikey.startsWith("NSCore::List::") ||ikey.startsWith("NSCore::Stack::") || ikey.startsWith("NSCore::Queue::")
             || ikey.startsWith("NSCore::Set::") || ikey.startsWith("NSCore::DynamicSet::")
             || ikey.startsWith("NSCore::Map::") || ikey.startsWith("NSCore::DynamicMap::")) {
             return "collection";
@@ -252,7 +252,7 @@ class SMTBodyEmitter {
 
             const rval = new SMTValue(`(bsq_stringof@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(op.tskey)} ${sval})`);
             const ivrtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pfunc.resultType));
-            
+
             const emitstr = new SMTLet(this.varToSMTName(op.trgt), rval);
             const failchk = this.generateErrorCreate(op.sinfo, this.typegen.getSMTTypeFor(this.currentRType));
 
@@ -260,7 +260,7 @@ class SMTBodyEmitter {
             const iserr = new SMTValue(`(is-result_error@${ivrtype} ${tv})`);
             const errchk = this.generateTypeCheck(`(result_success_value@${ivrtype} ${tv})`, this.typegen.getMIRType(pfunc.resultType), this.typegen.getMIRType(pfunc.resultType), this.typegen.getMIRType(op.errtype as MIRResolvedTypeKey));
             const condop = new SMTCond(new SMTValue(`(or ${iserr.emit()} ${errchk})`), failchk, emitstr);
-    
+
             return new SMTLet(tv, new SMTValue(`(${this.invokenameToSMT(op.pfunckey)} ${sval})`), condop);
         }
     }
@@ -298,7 +298,7 @@ class SMTBodyEmitter {
     generateMIRInvokeInvariantCheckDirect(ivop: MIRInvokeInvariantCheckDirect): SMTExp {
         const fields = [...(this.typegen.assembly.entityDecls.get(ivop.tkey) as MIREntityTypeDecl).fields].sort((a, b) => a.name.localeCompare(b.name));
         let vals: string[] = fields.map((f) => `(${this.typegen.generateEntityAccessor(ivop.tkey, f.fkey)} ${this.argToSMT(ivop.rcvr, this.typegen.getMIRType(ivop.tkey)).emit()})`);
-        
+
         const tv = this.generateTempName();
         const ivrtype = this.typegen.getSMTTypeFor(this.typegen.boolType);
         const resulttype = this.typegen.getSMTTypeFor(this.currentRType);
@@ -326,7 +326,7 @@ class SMTBodyEmitter {
     generateMIRConstructorPrimaryCollectionEmpty(cpce: MIRConstructorPrimaryCollectionEmpty): SMTExp {
         const cpcetype = this.typegen.getMIRType(cpce.tkey);
         const smtctype = this.typegen.generateEntityConstructor(cpce.tkey);
-        
+
         if(this.typegen.typecheckIsName(cpcetype, /^NSCore::List<.*>$/)) {
             return new SMTLet(this.varToSMTName(cpce.trgt), new SMTValue(`(${smtctype} 0 ${this.typegen.generateEmptyDataArrayFor(cpce.tkey)})`));
         }
@@ -494,7 +494,7 @@ class SMTBodyEmitter {
         let args: string[] = [];
         for(let i = 0; i < op.args.length; ++i) {
             args.push(this.argToSMT(op.args[i], etype.entries[i]).emit());
-        } 
+        }
 
         return new SMTLet(this.varToSMTName(op.trgt), new SMTValue(`(${this.typegen.generateEntityConstructor(etype.trkey)} ${args.join(" ")})`));
     }
@@ -502,7 +502,7 @@ class SMTBodyEmitter {
     generateMIRAccessFromIndexExpression(arg: MIRArgument, idx: number, resultAccessType: MIRType): SMTExp {
         const tuptype = this.getArgType(arg);
         const hasidx = this.typegen.tupleHasIndex(tuptype, idx);
-    
+
         if(hasidx === "no") {
             return this.typegen.coerce(new SMTValue("bsqkey_none"), this.typegen.noneType, resultAccessType);
         }
@@ -513,13 +513,13 @@ class SMTBodyEmitter {
                 return this.typegen.coerce(select, this.typegen.anyType, resultAccessType);
             }
             else {
-                const getop = new SMTCond(new SMTValue(`(= ${select.emit()} bsqterm@clear)`), new SMTValue("bsqterm_none"), select); 
+                const getop = new SMTCond(new SMTValue(`(= ${select.emit()} bsqterm@clear)`), new SMTValue("bsqterm_none"), select);
                 return this.typegen.coerce(getop, this.typegen.anyType, resultAccessType);
             }
         }
     }
 
-    generateMIRProjectFromIndecies(op: MIRProjectFromIndecies, resultAccessType: MIRType): SMTExp { 
+    generateMIRProjectFromIndecies(op: MIRProjectFromIndecies, resultAccessType: MIRType): SMTExp {
         const intotypes = this.typegen.typecheckEphemeral(resultAccessType) ? (resultAccessType.options[0] as MIREphemeralListType).entries : [];
         let vals: string[] = [];
 
@@ -541,7 +541,7 @@ class SMTBodyEmitter {
             return new SMTLet(this.varToSMTName(op.trgt), new SMTValue(`(bsq_tuple@cons ${this.generateDataKindLoad(resultAccessType, fvals)} ${cvals})`));
         }
     }
-    
+
     generateMIRModifyWithIndecies(op: MIRModifyWithIndecies, resultTupleType: MIRType): SMTExp {
         const updmax = Math.max(...op.updates.map((upd) => upd[0] + 1));
 
@@ -576,7 +576,7 @@ class SMTBodyEmitter {
 
         let cvals = this.typegen.typecheckTuple(this.getArgType(op.arg)) ? `(bsq_tuple_entries ${this.varToSMTName(op.arg)})` : `(bsq_tuple_entries (bsqterm_tuple_value ${this.varToSMTName(op.arg)}))`;
         let mvals = this.typegen.typecheckTuple(this.getArgType(op.update)) ? `(bsq_tuple_entries ${this.varToSMTName(op.update)})` : `(bsq_tuple_entries (bsqterm_tuple_value ${this.varToSMTName(op.update)}))`;
-        
+
         for (let i = 0; i < ftuple; ++i) {
             cvals = `(store ${cvals} ${btuple + i} (select ${mvals} ${i}))`;
         }
@@ -588,7 +588,7 @@ class SMTBodyEmitter {
     generateMIRAccessFromPropertyExpression(arg: MIRArgument, property: string, resultAccessType: MIRType): SMTExp {
         const rectype = this.getArgType(arg);
         const hasproperty = this.typegen.recordHasField(rectype, property);
-    
+
         if(hasproperty === "no") {
             return this.typegen.coerce(new SMTValue("bsqkey_none"), this.typegen.noneType, resultAccessType);
         }
@@ -599,7 +599,7 @@ class SMTBodyEmitter {
                 return this.typegen.coerce(select, this.typegen.anyType, resultAccessType);
             }
             else {
-                const getop = new SMTCond(new SMTValue(`(= ${select.emit()} bsqterm@clear)`), new SMTValue("bsqterm_none"), select); 
+                const getop = new SMTCond(new SMTValue(`(= ${select.emit()} bsqterm@clear)`), new SMTValue("bsqterm_none"), select);
                 return this.typegen.coerce(getop, this.typegen.anyType, resultAccessType);
             }
         }
@@ -670,7 +670,7 @@ class SMTBodyEmitter {
             }
             else {
                 let mvals = this.typegen.typecheckRecord(this.getArgType(op.update)) ? `(bsq_record_entries ${this.varToSMTName(op.update)})` : `(bsq_record_entries (bsqterm_record_value ${this.varToSMTName(op.update)}))`;
-        
+
                 const check = new SMTValue(`(= (select ${mvals} "${pname}") bsqterm@clear)`);
                 const caccess = new SMTCond(check, new SMTValue(`(select ${argvals} "${pname}")`), new SMTValue(`(select ${mvals} "${pname}")`));
 
@@ -694,7 +694,7 @@ class SMTBodyEmitter {
 
     generateMIRAccessFromFieldExpression(arg: MIRArgument, inferargtype: MIRType, field: MIRFieldKey, resultAccessType: MIRType): SMTExp {
         const ftype = this.typegen.getMIRType((this.assembly.fieldDecls.get(field) as MIRFieldDecl).declaredType);
-        
+
         if (this.typegen.typecheckUEntity(inferargtype)) {
             const access = new SMTValue(`(${this.typegen.generateEntityAccessor(this.typegen.getEntityEKey(inferargtype), field)} ${this.argToSMT(arg, inferargtype).emit()})`);
             return this.typegen.coerce(access, ftype, resultAccessType);
@@ -708,7 +708,7 @@ class SMTBodyEmitter {
                 tag = `(bsqterm_get_nominal_type ${this.argToSMT(arg, inferargtype)})`;
             }
 
-            
+
             const access = this.generateVFieldLookup(arg, tag, inferargtype, this.assembly.fieldDecls.get(field) as MIRFieldDecl);
             return this.typegen.coerce(access, ftype, resultAccessType);
         }
@@ -743,7 +743,7 @@ class SMTBodyEmitter {
                 let cvals = "bsqrecord_array_empty";
                 for (let i = 0; i < op.fields.length; ++i) {
                     const fdecl = this.assembly.fieldDecls.get(op.fields[i]) as MIRFieldDecl;
-                    const access = this.generateMIRAccessFromFieldExpression(op.arg, inferargtype, op.fields[i], this.typegen.anyType);
+                    const access = this.generateMIRAccessFromFieldExpression(op.arg, inferargtype, op.fields[i], this.typegen.anyType).emit();
 
                     cvals = `(store ${cvals} "${fdecl.name}" ${access})`;
                     fvals = `(@fj ${access} ${fvals})`;
@@ -771,7 +771,7 @@ class SMTBodyEmitter {
 
     generateMIRModifyWithFields(op: MIRModifyWithFields, resultAccessType: MIRType): SMTExp {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
-        
+
         if (this.typegen.typecheckUEntity(inferargtype)) {
             const ekey = this.typegen.getEntityEKey(inferargtype);
             const utype = this.typegen.assembly.entityDecls.get(ekey) as MIREntityTypeDecl;
@@ -811,7 +811,7 @@ class SMTBodyEmitter {
     generateMIRStructuredExtendObject(op: MIRStructuredExtendObject, resultAccessType: MIRType): SMTExp {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
         const mergeargtype = this.typegen.getMIRType(op.updateInferType);
-        
+
         if (this.typegen.typecheckUEntity(inferargtype)) {
             const ekey = this.typegen.getEntityEKey(inferargtype);
             const utype = this.typegen.assembly.entityDecls.get(ekey) as MIREntityTypeDecl;
@@ -868,7 +868,7 @@ class SMTBodyEmitter {
         else if (this.isSafeInvoke(idecl)) {
             assert(this.currentSCC === undefined || !this.currentSCC.has(ivop.mkey));
             const invokeexp = new SMTValue(vals.length !== 0 ? `(${this.invokenameToSMT(ivop.mkey)} ${vals.join(" ")})` : this.invokenameToSMT(ivop.mkey));
-            return new SMTLet(this.varToSMTName(ivop.trgt), invokeexp);  
+            return new SMTLet(this.varToSMTName(ivop.trgt), invokeexp);
         }
         else {
             const tv = this.generateTempName();
@@ -1037,7 +1037,7 @@ class SMTBodyEmitter {
 
             const decl = "(define-fun " + subtypesig
             + "\n  " + op
-            + ")\n"; 
+            + ")\n";
 
             this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
         }
@@ -1143,7 +1143,7 @@ class SMTBodyEmitter {
 
             const decl = "(define-fun " + subtypesig
             + "\n  " + op
-            + ")\n"; 
+            + ")\n";
 
             this.subtypeFMap.set(subtypesig, { order: order, decl: decl });
         }
@@ -1309,7 +1309,7 @@ class SMTBodyEmitter {
             const order = this.subtypeOrderCtr++;
             let checks: string[] = [];
 
-            //do all the checks that argtype satisfies all the requirements of oftype 
+            //do all the checks that argtype satisfies all the requirements of oftype
             for (let i = 0; i < oftype.entries.length; ++i) {
                 const etype = (argtype.options[0] as MIREphemeralListType).entries[i];
                 checks.push(this.generateTypeCheck(this.typegen.generateEntityAccessor(argtype.trkey, `entry_${i}`), etype, etype, oftype.entries[i]));
@@ -1836,7 +1836,7 @@ class SMTBodyEmitter {
                     const select = this.typegen.coerce(new SMTValue(params[i]), this.typegen.getMIRType(idecl.params[i].type), this.typegen.keyType);
                     kvs = `(store ${kvs} ${i} ${select.emit()})`;
                 }
-                
+
                 bodyres = new SMTValue(`(bsq_idkeycompound@cons MIRNominalTypeEnum_${this.typegen.mangleStringForSMT(enclkey)} ${kvs})`);
                 break;
             }
@@ -1967,7 +1967,7 @@ class SMTBodyEmitter {
                 const fname = `@${idecl.implkey}` + (pctag.length !== 0 ? `$${pctag}` : "");
                 const pdecls = idecl.params.map((p) => this.typegen.getSMTTypeFor(this.typegen.getMIRType(p.type)));
                 const udecl = `(declare-fun ${fname} (${pdecls.join(" ")}) ${this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.resultType))})`;
-                
+
                 this.uninterpDecl.add(udecl);
                 this.generateBuiltinAxioms(fname, idecl, params);
 
@@ -2020,7 +2020,7 @@ class SMTBodyEmitter {
                         `(assert (forall ((l ${ltype}) (i Int)) (=> (${fname} l) ${lambda})))`
                     );
                 }
-                if(this.isAxiomLevelEnabled(AxiomLevel.full)) { 
+                if(this.isAxiomLevelEnabled(AxiomLevel.full)) {
                 }
                 break;
             }
@@ -2040,7 +2040,7 @@ class SMTBodyEmitter {
                         `(assert (forall ((l ${ltype}) (i Int)) (=> (${fname} l) (not ${lambda}))))`
                     );
                 }
-                if(this.isAxiomLevelEnabled(AxiomLevel.full)) { 
+                if(this.isAxiomLevelEnabled(AxiomLevel.full)) {
                 }
                 break;
             }
@@ -2055,7 +2055,7 @@ class SMTBodyEmitter {
                 }
                 if(this.isAxiomLevelEnabled(AxiomLevel.standard)) {
                 }
-                if(this.isAxiomLevelEnabled(AxiomLevel.full)) { 
+                if(this.isAxiomLevelEnabled(AxiomLevel.full)) {
                 }
                 break;
             }
