@@ -17,12 +17,12 @@ type CPPCode = {
 
     STATIC_INT_DECLARE: string,
     STATIC_INT_CREATE: string,
-    
+
     TYPEDECLS_FWD: string,
     TYPEDECLS: string,
     EPHEMERAL_LIST_DECLARE: string,
 
-    PROPERTY_ENUM_DECLARE: string, 
+    PROPERTY_ENUM_DECLARE: string,
     NOMINAL_TYPE_ENUM_DECLARE: string,
 
     PROPERTY_NAMES: string,
@@ -34,7 +34,7 @@ type CPPCode = {
     SPECIAL_NAME_BLOCK_BEGIN: string,
 
     VFIELD_ACCESS: string,
-    
+
     TYPECHECKS: string,
     FUNC_DECLS_FWD: string,
     FUNC_DECLS: string,
@@ -110,7 +110,7 @@ class CPPEmitter {
         typeemitter.initializeConceptSubtypeRelation();
 
         const bodyemitter = new CPPBodyEmitter(assembly, typeemitter);
-        
+
         let typedecls_fwd: string[] = [];
         let itypedecls: {name: string, decl: string, deps: Set<string>, ops: string[]}[] = [];
         let nominaltypeinfo: {enum: string, display: string, datakind: string}[] = [];
@@ -170,7 +170,7 @@ class CPPEmitter {
         .sort((a, b) => a[0]
         .localeCompare(b[0])).map((ce) => ce[1])
         .forEach((cdecl) => {
-            let enumv = "[INVALID]"; 
+            let enumv = "[INVALID]";
             if(cdecl.tkey === "NSCore::Tuple") {
                 enumv = `${typeemitter.mangleStringForCpp(cdecl.tkey)} = BUILD_MIR_NOMINAL_TYPE(MIRNominalTypeEnum_Category_Tuple, ${concepttypeinfo.length + nominaltypeinfo.length + 1})`;
             }
@@ -184,7 +184,7 @@ class CPPEmitter {
             const displayv = `"${cdecl.tkey}"`;
             concepttypeinfo.push({ enum: enumv, display: displayv, datakind: "-1" });
         });
-        
+
         const cginfo = constructCallGraphInfo(assembly.entryPoints, assembly);
         const rcg = [...cginfo.topologicalOrder].reverse();
 
@@ -219,7 +219,7 @@ class CPPEmitter {
         [...typeemitter.assembly.typeMap].forEach((te) => {
             const tt = te[1];
 
-            if(typeemitter.typecheckIsName(tt, /^NSCore::None$/) || typeemitter.typecheckIsName(tt, /^NSCore::Bool$/) || typeemitter.typecheckIsName(tt, /^NSCore::Int$/) || typeemitter.typecheckIsName(tt, /^NSCore::BigInt$/) || typeemitter.typecheckIsName(tt, /^NSCore::Float64$/) 
+            if(typeemitter.typecheckIsName(tt, /^NSCore::None$/) || typeemitter.typecheckIsName(tt, /^NSCore::Bool$/) || typeemitter.typecheckIsName(tt, /^NSCore::Int$/) || typeemitter.typecheckIsName(tt, /^NSCore::BigInt$/) || typeemitter.typecheckIsName(tt, /^NSCore::Float64$/)
                     || typeemitter.typecheckIsName(tt, /^NSCore::String$/) || typeemitter.typecheckIsName(tt, /^NSCore::UUID$/) || typeemitter.typecheckIsName(tt, /^NSCore::LogicalTime$/) || typeemitter.typecheckIsName(tt, /^NSCore::CryptoHash$/) || typeemitter.typecheckIsName(tt, /^NSCore::ByteBuffer$/)
                     || typeemitter.typecheckIsName(tt, /^NSCore::ISOTime$/) || typeemitter.typecheckIsName(tt, /^NSCore::Regex$/)) {
                         special_name_decls.push(`#define MIRNominalTypeEnum_${tt.trkey.substr(8)} MIRNominalTypeEnum::${typeemitter.mangleStringForCpp(tt.trkey)}`);
@@ -292,6 +292,8 @@ class CPPEmitter {
         //TODO: need to provide parse for API types and link in here
         //
         const entrypoint = assembly.invokeDecls.get(entrypointname) as MIRInvokeBodyDecl;
+        if (!entrypoint) throw new Error(`Entrypoint function "${entrypointname}" not found!`);
+
         const restype = typeemitter.getMIRType(entrypoint.resultType);
         const mainsig = `int main(int argc, char** argv)`;
         let oprarms = 0;
@@ -347,7 +349,7 @@ class CPPEmitter {
         const resrc = typeemitter.getRefCountableStatus(restype);
         if (resrc !== "no") {
             callargs.push(scopevar);
-        }        
+        }
         const callv = `${bodyemitter.invokenameToCPP(entrypointname)}(${callargs.join(", ")})`;
         const fcall = `std::cout << diagnostic_format(${typeemitter.coerce(callv, restype, typeemitter.anyType)}) << "\\n"`;
 
@@ -356,26 +358,26 @@ class CPPEmitter {
         return {
             STATIC_STRING_DECLARE: conststring_declare.sort().join("\n  "),
             STATIC_STRING_CREATE: conststring_create.sort().join("\n  "),
-        
+
             STATIC_REGEX_DECLARE: constregex_declare.sort().join("\n  "),
             STATIC_REGEX_CREATE: constregex_create.sort().join("\n  "),
 
             STATIC_INT_DECLARE: constint_declare.sort().join("\n  "),
             STATIC_INT_CREATE: constint_create.sort().join("\n  "),
-            
+
             TYPEDECLS_FWD: typedecls_fwd.sort().join("\n"),
             TYPEDECLS: [...typedecls.map((tde) => tde.decl), ...(([] as string[]).concat(...typedecls.map((tde) => tde.ops)))].join("\n"),
             EPHEMERAL_LIST_DECLARE: ephdecls.sort().join("\n"),
-        
-            PROPERTY_ENUM_DECLARE: [...propertyenums].sort().join(",\n  "), 
+
+            PROPERTY_ENUM_DECLARE: [...propertyenums].sort().join(",\n  "),
             NOMINAL_TYPE_ENUM_DECLARE: [...nominaltypeinfo, ...concepttypeinfo].map((nti) => nti.enum).join(",\n    "),
-        
+
             PROPERTY_NAMES: [...propertynames].sort().join(",\n  "),
             NOMINAL_TYPE_DISPLAY_NAMES: [...nominaltypeinfo, ...concepttypeinfo].map((nti) => `${nti.display}`).join(",\n  "),
-        
+
             CONCEPT_SUBTYPE_RELATION_DECLARE: conceptSubtypes.sort().join("\n"),
             NOMINAL_TYPE_TO_DATA_KIND: [...nominaltypeinfo].map((nti) => nti.datakind).join(",\n    "),
-        
+
             SPECIAL_NAME_BLOCK_BEGIN: special_name_decls.sort().join("\n"),
 
             VFIELD_ACCESS: vfieldaccess.sort().join("\n"),
@@ -383,7 +385,7 @@ class CPPEmitter {
             TYPECHECKS: typechecks.join("\n"),
             FUNC_DECLS_FWD: funcdecls_fwd.join("\n"),
             FUNC_DECLS: funcdecls.join("\n"),
-        
+
             MAIN_CALL: maincall
         };
     }
