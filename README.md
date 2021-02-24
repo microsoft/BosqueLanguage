@@ -4,7 +4,7 @@
 [![PR's Welcome](https://img.shields.io/badge/PRs%20-welcome-brightgreen.svg)](#contribute)
 [![Build Status](https://dev.azure.com/bosquepl/BosqueDevOps/_apis/build/status/Microsoft.BosqueLanguage?branchName=master)](https://dev.azure.com/bosquepl/BosqueDevOps/_build/latest?definitionId=1&branchName=master)
 
-[![Build & Test Status](https://github.com/mrkmarron/BosqueLanguage/workflows/nodeci/badge.svg)](https://github.com/mrkmarron/BosqueLanguage/actions) 
+[![nodeci Actions Status](https://github.com/mrkmarron/BosqueLanguage/workflows/nodeci/badge.svg)](https://github.com/mrkmarron/BosqueLanguage/actions) 
 
 ## The Bosque Project
 The Bosque Programming Language project is a ground up language & tooling co-design effort focused on investigating the theoretical and the practical implications of:
