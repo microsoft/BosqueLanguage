@@ -3,395 +3,476 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+import * as assert from "assert";
 import * as FS from "fs";
 import * as Path from "path";
-import { execSync } from "child_process";
 
+import * as Commander from "commander";
 import chalk from "chalk";
 
-let platpathcpp: string | undefined = undefined;
-let platpathsmt: string | undefined = undefined;
-let platexe: string | undefined = undefined;
-if (process.platform === "win32") {
-    platpathcpp = "clang.exe";
-    platpathsmt = "bin/win/z3.exe";
-    platexe = "doit.exe";
-}
-else if (process.platform === "linux") {
-    platpathcpp = "clang++";
-    platpathsmt = "bin/linux/z3";
-    platexe = "doit.out";
-}
-else {
-    platpathcpp = "clang++";
-    platpathsmt = "bin/macos/z3";
-    platexe = "doit.out";
-}
+import { enqueueSMTTest, smtlib_path, smtruntime_path } from "./smt_runner";
+import { runCompilerTest } from "./compile_runner";
 
-const testxml = `<?xml version="1.0" encoding="UTF-8"?>
-<testsuites>
-  TSLIST
-</testsuites>`;
+const testroot = Path.normalize(Path.join(__dirname, "tests"));
 
-abstract class TestInfo {
+abstract class IndividualTestInfo {
     readonly name: string;
-    readonly expected: string | null;
+    readonly fullname: string;
 
-    constructor(name: string, expected: string | null) {
+    readonly code: string;
+
+    readonly extraSrc: string | undefined;
+
+    constructor(name: string, fullname: string, code: string, extraSrc: string | undefined) {
         this.name = name;
-        this.expected = expected;
+        this.fullname = fullname;
+        this.code = code;
+        this.extraSrc = extraSrc;
+    }
+
+    generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
+        if(restriction === "*" || this.fullname.startsWith(restriction)) {
+            tests.push(this);
+        }
     }
 }
 
-class CompileTestInfo extends TestInfo {
-    constructor(name: string, expected: string | undefined) {
-        super(`${name}@compile`, expected || "");
+class IndividualCompileWarnTest extends IndividualTestInfo {
+    private static ctemplate = 
+"namespace NSMain;\n\
+\n\
+%%SIG%% {\n\
+    assert %%ACTION%%;\n\
+    return true;\n\
+}\n\
+\n\
+%%CODE%%\n\
+";
+
+    constructor(name: string, fullname: string, code: string, extraSrc: string | undefined) {
+        super(name, fullname, code, extraSrc);
+    }
+
+    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualCompileWarnTest {
+        const rcode = IndividualCompileWarnTest.ctemplate
+            .replace("%%SIG%%", sig)
+            .replace("%%ACTION%%", action)
+            .replace("%%CODE%%", code);
+
+        return new IndividualCompileWarnTest(name, fullname, rcode, extraSrc);
     }
 }
 
-class ExecuteTestInfo extends TestInfo {
-    readonly entrypoint: string;
-    readonly args: string[];
+class IndividualRefuteTestInfo extends IndividualTestInfo {
+    readonly line: number;
 
-    constructor(name: string, entry: string, expected: string | null, ctr: number, args: string[] | undefined) {
-        super(`${name}@aot--${entry}#${ctr}`, expected);
-        this.entrypoint = entry;
-        this.args = args || [];
+    private static ctemplate = 
+"namespace NSMain;\n\
+\n\
+%%SIG%% {\n\
+    assert %%ACTION%%;\n\
+    return true;\n\
+}\n\
+\n\
+%%CODE%%\n\
+";
+
+    constructor(name: string, fullname: string, code: string, line: number, extraSrc: string | undefined) {
+        super(name, fullname, code, extraSrc);
+
+        this.line = line;
+    }
+
+    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualRefuteTestInfo {
+        const rcode = IndividualRefuteTestInfo.ctemplate
+            .replace("%%SIG%%", sig)
+            .replace("%%ACTION%%", action)
+            .replace("%%CODE%%", code);
+
+        return new IndividualRefuteTestInfo(name, fullname, rcode, 4, extraSrc);
     }
 }
 
-class SymbolicCheckTestInfo extends TestInfo {
-    readonly entrypoint: string;
+class IndividualReachableTestInfo extends IndividualTestInfo {
+    readonly line: number;
 
-    constructor(name: string, entry: string, error: boolean | undefined) {
-        super(`${name}@symbolic_test--${entry}`, (error === true) ? "sat" : "unsat");
-        this.entrypoint = entry;
+    private static ctemplate = 
+"namespace NSMain;\n\
+\n\
+%%SIG%% {\n\
+    assert !(%%ACTION%%);\n\
+    return true;\n\
+}\n\
+\n\
+%%CODE%%\n\
+";
+
+    constructor(name: string, fullname: string, code: string, line: number, extraSrc: string | undefined) {
+        super(name, fullname, code, extraSrc);
+
+        this.line = line;
+    }
+
+    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualReachableTestInfo {
+        const rcode = IndividualReachableTestInfo.ctemplate
+            .replace("%%SIG%%", sig)
+            .replace("%%ACTION%%", action)
+            .replace("%%CODE%%", code);
+
+        return new IndividualReachableTestInfo(name, fullname, rcode, 4, extraSrc);
     }
 }
 
-class SymbolicExecTestInfo extends TestInfo {
-    readonly entrypoint: string;
-    
-    constructor(name: string, entry: string, expected: string | null) {
-        super(`${name}@symbolic_exec--${entry}`, expected);
-        this.entrypoint = entry;
-    }
-}
-
-class FileTestInfo {
-    readonly src: string;
-    readonly compiler_tests: CompileTestInfo[];
-    readonly aot_tests: ExecuteTestInfo[];
-    readonly symbolic_tests: SymbolicCheckTestInfo[];
-    readonly symbolic_execs: SymbolicExecTestInfo[];
-
-    constructor(src: string, compiler_tests: CompileTestInfo[], aot_tests: ExecuteTestInfo[], symbolic_tests: SymbolicCheckTestInfo[], symbolic_execs: SymbolicExecTestInfo[]) {
-        this.src = src;
-        this.compiler_tests = compiler_tests;
-        this.aot_tests = aot_tests;
-        this.symbolic_tests = symbolic_tests;
-        this.symbolic_execs = symbolic_execs;
-    }
-}
-
-type TestSet = {
-    readonly src: string;
-    readonly xmlid: string;
-    readonly tests: FileTestInfo;
+type APITestGroupJSON = {
+    test: string,
+    src: string | null,
+    sig: string,
+    code: string,
+    typechk: string[],
+    refutes: string[],
+    reachables: string[]
 };
 
-const scratchroot = Path.normalize(Path.join(__dirname, "../scratch/"));
+class APITestGroup {
+    readonly groupname: string;
+    readonly tests: IndividualTestInfo[];
 
-const cppscratch = Path.normalize(Path.join(scratchroot, "cpp/"));
-const cppexe = Path.normalize(Path.join(cppscratch, platexe));
-
-const smtscratch = Path.normalize(Path.join(scratchroot, "smt/"));
-
-const clangpath = platpathcpp;
-const z3path = Path.normalize(Path.join(__dirname, "../tooling/bmc/runtime", platpathsmt));
-
-class TestRunner {
-    tests: TestSet[];
-
-    constructor() {
-        this.tests = [];
+    constructor(groupname: string, tests: IndividualTestInfo[]) {
+        this.groupname = groupname;
+        this.tests = tests;
     }
 
-    loadTestSet(testdir: string) {
-        const testpath = Path.normalize(Path.join(__dirname, "tests", testdir, "test.json"));
-        const tdata = JSON.parse(FS.readFileSync(testpath).toString());
+    static create(scopename: string, spec: APITestGroupJSON): APITestGroup {
+        const groupname = `${scopename}.${spec.test}`;
+        const compiles = spec.typechk.map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const refutes = spec.refutes.map((tt, i) => IndividualRefuteTestInfo.create(`refute#${i}`, `${groupname}.refute#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const reachables = spec.reachables.map((tt, i) => IndividualReachableTestInfo.create(`reach#${i}`, `${groupname}.reach#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
 
-        for (let i = 0; i < tdata.length; ++i) {
-            const testentry = tdata[i];
-
-            const src = testentry.src;
-            let compiler_tests: CompileTestInfo[] = [];
-            let aot_tests: ExecuteTestInfo[] = [];
-            let symbolic_tests: SymbolicCheckTestInfo[] = [];
-            let symbolic_execs: SymbolicExecTestInfo[] = [];
-
-            for (let j = 0; j < testentry.tests.length; ++j) {
-                const test = testentry.tests[j];
-                if (test.kind === "compile") {
-                    compiler_tests.push(new CompileTestInfo(src, test.expected));
-                }
-                else if (test.kind === "aot") {
-                    aot_tests.push(new ExecuteTestInfo(src, test.entrypoint, test.expected, aot_tests.length, test.args));
-                }
-                else if (test.kind === "symtest") {
-                    symbolic_tests.push(new SymbolicCheckTestInfo(src, test.entrypoint, test.error));
-                }
-                else if (test.kind === "symexec") {
-                    symbolic_execs.push(new SymbolicExecTestInfo(src, test.entrypoint, test.expected));
-                }
-                else {
-                    process.stderr.write("Unknown test kind");
-                    process.exit(1);
-                }
-            }
-
-            const srcpath = Path.join(testdir, src);
-            this.tests.push({ src: srcpath, xmlid: `${srcpath.replace(/(\\)|(\/)/g, "_")}_tests`, tests: new FileTestInfo(src, compiler_tests, aot_tests, symbolic_tests, symbolic_execs) });
-        }
+        return new APITestGroup(groupname, [...compiles, ...refutes, ...reachables]);
     }
 
-    private runCompileTest(testsrc: string, test: CompileTestInfo): string {
-        const runnerapp = Path.join(__dirname, "runner.js");
-        try {
-            return execSync(`node ${runnerapp} -t ${testsrc}`).toString().trim();
-        }
-        catch (ex) {
-            return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
-        }
+    generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
+        this.tests.forEach((tt) => tt.generateTestPlan(restriction, tests));
+    }
+}
+
+type CategoryTestGroupJSON = {
+    suite: string,
+    tests: APITestGroupJSON[]
+};
+
+class CategoryTestGroup {
+    readonly categoryname: string;
+    readonly apitests: APITestGroup[];
+
+    constructor(categoryname: string, apitests: APITestGroup[]) {
+        this.categoryname = categoryname;
+        this.apitests = apitests;
     }
 
-    private runAOTTest(testsrc: string, test: ExecuteTestInfo): string {
-        const runnerapp = Path.join(__dirname, "runner.js");
-        try {
-            execSync(`node ${runnerapp} -c "NSTest::${test.entrypoint}" ${testsrc}`);
+    static create(scopename: string, spec: CategoryTestGroupJSON) {
+        const categoryname = `${scopename}.${spec.suite}`;
+        const apitests = spec.tests.map((tt) => APITestGroup.create(categoryname, tt));
 
-            process.chdir(cppscratch);
-            execSync(`${clangpath} -std=c++17 -g -DBDEBUG -o ${cppexe} *.cpp`);
-            const res = execSync(`${cppexe} ${test.args.join(" ")}`).toString().trim();
-            return res;
-        }
-        catch (ex) {
-            return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
-        }
+        return new CategoryTestGroup(categoryname, apitests);
     }
 
-    private runSymbolicCheckTest(testsrc: string, test: SymbolicCheckTestInfo): string {
-        const runnerapp = Path.join(__dirname, "runner.js");
-        try {
-            execSync(`node ${runnerapp} -s "NSTest::${test.entrypoint}" ${testsrc}`);
-        
-            process.chdir(smtscratch);
-            const res = execSync(`${z3path} -smt2 scratch.smt2`).toString().trim();
-            return res;
-        }
-        catch (ex) {
-            return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
-        }
+    generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
+        this.apitests.forEach((tt) => tt.generateTestPlan(restriction, tests));
+    }
+}
+
+class TestFolder {
+    readonly path: string;
+    readonly testname: string;
+
+    readonly tests: CategoryTestGroup[];
+
+    constructor(path: string, testname: string, tests: CategoryTestGroup[]) {
+        this.path = path;
+        this.testname = testname;
+        this.tests = tests;
     }
 
-    private runSymbolicExecTest(testsrc: string, test: SymbolicCheckTestInfo): string {
-        const runnerapp = Path.join(__dirname, "runner.js");
-        try {
-            execSync(`node ${runnerapp} -r "NSTest::${test.entrypoint}" ${testsrc}`);
+    generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
+        this.tests.forEach((tt) => tt.generateTestPlan(restriction, tests));
+    }
+}
 
-            process.chdir(smtscratch);
-            const res = execSync(`${z3path} -smt2 scratch.smt2`).toString().trim();
+class TestSuite {
+    readonly tests: TestFolder[];
 
-            const splits = res.split("\n");
-            const ridx = splits.findIndex((str) => str.trim().startsWith(`(define-fun @smtres@`));
-            if (ridx === -1) {
-                return "NO_MODEL";
-            }
-            else {
-                const mres = splits[ridx + 1].trim();
-                return mres.substring(mres.indexOf(" "), mres.length - 2).trim();
-            }
-        }
-        catch (ex) {
-            return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
-        }
+    constructor(tests: TestFolder[]) {
+        this.tests = tests;
     }
 
-    private runTestSet(ts: TestSet, id: number): { total: number, failed: number, results: string } {
-        const totaltests = ts.tests.compiler_tests.length + ts.tests.aot_tests.length + ts.tests.symbolic_tests.length + ts.tests.symbolic_execs.length;
+    generateTestPlan(restriction: string): TestPlan {
+        let tests: IndividualTestInfo[] = [];
+        this.tests.forEach((tt) => tt.generateTestPlan(restriction, tests));
 
-        process.stdout.write("--------\n");
-        process.stdout.write(`Running ${chalk.bold(ts.src)} suite with ${chalk.bold(totaltests.toString())} tests...\n`);
+        return new TestPlan(this, tests);
+    }
+}
 
-        const tsstring = new Date().toISOString().slice(0, -5);
-        const start = Date.now();
+class TestPlan {
+    readonly suite: TestSuite;
+    readonly tests: IndividualTestInfo[];
 
-        let tresults: string[] = [];
-        let fail = 0;
+    constructor(suite: TestSuite, tests: IndividualTestInfo[]) {
+        this.suite = suite;
+        this.tests = tests;
+    }
+}
 
-        for(let i = 0; i < ts.tests.compiler_tests.length; ++i) {
-            const ctest = ts.tests.compiler_tests[i];
-            const testsrc = Path.normalize(Path.join(__dirname, "tests", ts.src));
+class TestResult {
+    readonly test: IndividualTestInfo;
+    readonly start: Date;
+    readonly end: Date;
 
-            if(singletest !== undefined && singletest != ctest.name) {
-                continue;
-            }
+    readonly status: "pass" | "fail" | "error";
+    readonly info: string | undefined;
 
-            process.stdout.write(`Running ${ctest.name}...`);
-            const tstart = Date.now();
+    constructor(test: IndividualTestInfo, start: Date, end: Date, status: "pass" | "fail" | "error", info: string | undefined) {
+        this.test = test;
+        this.start = start;
+        this.end = end;
+        this.status = status;
+        this.info = info;
+    }
+}
 
-            const cr = this.runCompileTest(testsrc, ctest);
-            if (ctest.expected === cr) {
-                process.stdout.write(chalk.green("pass\n"));
-                tresults.push(`<testcase name="${ctest.name}" class="" time="${(Date.now() - tstart) / 1000}"/>`);
+class TestRunResults {
+    readonly suite: TestSuite;
 
-            }
-            else {
-                fail++;
-                const failmsg = `fail with ${cr} expected ${ctest.expected}`;
-                tresults.push(`<testcase name="${ctest.name}" class="" time="${(Date.now() - tstart) / 1000}"><failure message="${failmsg}"/></testcase>`);
+    start: Date = new Date(0);
+    end: Date = new Date(0);
 
-                process.stdout.write(chalk.red(`${failmsg}\n`));
-            }
-        }
+    passed: TestResult[] = [];
+    failed: TestResult[] = [];
+    errors: TestResult[] = [];
 
-        for(let i = 0; i < ts.tests.aot_tests.length; ++i) {
-            const ctest = ts.tests.aot_tests[i];
-            const testsrc = Path.normalize(Path.join(__dirname, "tests", ts.src));
+    constructor(suite: TestSuite) {
+        this.suite = suite;
+    }
 
-            if(singletest !== undefined && singletest != ctest.name) {
-                continue;
-            }
-
-            process.stdout.write(`Running ${ctest.name}...`);
-            const tstart = Date.now();
-
-            const cr = this.runAOTTest(testsrc, ctest);
-            if (ctest.expected === cr || (ctest.expected === null && (cr.includes("abort") || cr.includes("assert") || cr.includes("check") || cr.includes("Invariant") || cr.includes("pre-condition") || cr.includes("post-condition")))) {
-                process.stdout.write(chalk.green("pass\n"));
-                tresults.push(`<testcase name="${ctest.name}" class="" time="${(Date.now() - tstart) / 1000}"/>`);
-
-            }
-            else {
-                fail++;
-                const failmsg = `fail with ${cr} expected ${ctest.expected}`;
-                tresults.push(`<testcase name="${ctest.name}" class="" time="${(Date.now() - tstart) / 1000}"><failure message="${failmsg}"/></testcase>`);
-
-                process.stdout.write(chalk.red(`${failmsg}\n`));
-            }
-        }
-
-        for(let i = 0; i < ts.tests.symbolic_tests.length; ++i) {
-            const vtest = ts.tests.symbolic_tests[i];
-            const testsrc = Path.normalize(Path.join(__dirname, "tests", ts.src));
-
-            if(singletest !== undefined && singletest != vtest.name) {
-                continue;
-            }
-
-            process.stdout.write(`Running ${vtest.name}...`);
-            const tstart = Date.now();
-
-            const cr = this.runSymbolicCheckTest(testsrc, vtest);
-            if (vtest.expected === cr) {
-                process.stdout.write(chalk.green("pass\n"));
-                tresults.push(`<testcase name="${vtest.name}" class="" time="${(Date.now() - tstart) / 1000}"/>`);
-
-            }
-            else {
-                fail++;
-                const failmsg = `fail with ${cr} expected ${vtest.expected}`;
-                tresults.push(`<testcase name="${vtest.name}" class="" time="${(Date.now() - tstart) / 1000}"><failure message="${failmsg}"/></testcase>`);
-
-                process.stdout.write(chalk.red(`${failmsg}\n`));
-            }
-        }
-
-        for(let i = 0; i < ts.tests.symbolic_execs.length; ++i) {
-            const vtest = ts.tests.symbolic_execs[i];
-            const testsrc = Path.normalize(Path.join(__dirname, "tests", ts.src));
-
-            if(singletest !== undefined && singletest != vtest.name) {
-                continue;
-            }
-
-            process.stdout.write(`Running ${vtest.name}...`);
-            const tstart = Date.now();
-
-            const cr = this.runSymbolicExecTest(testsrc, vtest);
-            if (vtest.expected === cr || (vtest.expected === null && cr.includes("unsat"))) {
-                process.stdout.write(chalk.green("pass\n"));
-                tresults.push(`<testcase name="${vtest.name}" class="" time="${(Date.now() - tstart) / 1000}"/>`);
-
-            }
-            else {
-                fail++;
-                const failmsg = `fail with ${cr} expected ${vtest.expected}`;
-                tresults.push(`<testcase name="${vtest.name}" class="" time="${(Date.now() - tstart) / 1000}"><failure message="${failmsg}"/></testcase>`);
-
-                process.stdout.write(chalk.red(`${failmsg}\n`));
-            }
-        }
-
-        const tsres = `<testsuite name="${ts.xmlid}" tests="${totaltests}" errors="0" failures="${fail}" id="${id}" time="${(Date.now() - start) / 1000}" timestamp="${tsstring}" hostname="localhost" package="${ts.xmlid}"><properties></properties><system-out/><system-err/>${tresults.join("\n")}</testsuite>`;
-        if (fail === 0) {
-            process.stdout.write(chalk.green("Completed successfully.\n\n"));
-        }
-        else {
-            process.stdout.write(chalk.red(`Completed with ${chalk.bold(fail.toString())} failures.\n\n`));
-        }
-
+    getOverallResults(): {total: number, elapsed: number, passed: number, failed: number, errors: number} {
         return {
-            total: totaltests,
-            failed: fail,
-            results: tsres
-        }
-    }
-
-    run() {
-        const rootdir = process.cwd();
-        let fail = 0;
-
-        let tr = [];
-        for (let i = 0; i < this.tests.length; ++i) {
-            const results = this.runTestSet(this.tests[i], i);
-            if (results.failed !== 0) {
-                fail++;
-            }
-
-            tr.push(results.results);
-        }
-
-        process.chdir(rootdir);
-        FS.writeFileSync("TEST-RESULTS.xml", testxml.replace("TSLIST", tr.join("\n")));
-
-        if (fail === 0) {
-            process.stdout.write(chalk.green(chalk.bold(`\nAll ${this.tests.length} test suites passed!\n`)));
-        }
-        else {
-            process.stdout.write(chalk.red(chalk.bold(`\n${fail} test suites had failures...\n`)));
+            total: this.passed.length + this.failed.length + this.errors.length,
+            elapsed: (this.end.getTime() - this.start.getTime()) / 1000,
+            passed: this.passed.length,
+            failed: this.failed.length,
+            errors: this.errors.length
         }
     }
 }
 
-function runAll() {
-    const runner = new TestRunner();
+function loadTestSuite(): TestSuite {
+    const tdirs = FS.readdirSync(testroot);
 
-    runner.loadTestSet("doc_examples");
-    runner.loadTestSet("apps");
-    
-    //runner.loadTestSet("expression");
-    //runner.loadTestSet("types");
-    //runner.loadTestSet("statement");
-    
-    runner.loadTestSet("library");
+    let tfa: TestFolder[] = [];
+    for(let i = 0; i < tdirs.length; ++i) {
+        const dpath = Path.join(testroot, tdirs[i]);
+        const tfiles = FS.readdirSync(dpath).filter((fp) => fp.endsWith(".json"));
 
-    runner.run();
+        let ctgs: CategoryTestGroup[] = [];
+        for (let j = 0; j < tfiles.length; ++j) {
+            const fpath = Path.join(dpath, tfiles[j]);
+            const fcontents = JSON.parse(FS.readFileSync(fpath, "utf8")) as CategoryTestGroupJSON;
+            ctgs.push(CategoryTestGroup.create(`${tdirs[i]}.${tfiles[j].replace(".json", "")}`, fcontents));
+        }
+
+        tfa.push(new TestFolder(dpath, tdirs[i], ctgs));
+    }
+
+    return new TestSuite(tfa);
+}
+
+type SMTTestAssets = {
+    corefiles: {relativePath: string, contents: string}[],
+    runtime: string,
+    extras: Map<string, string>
+};
+
+function loadSMTTestAssets(suite: TestSuite): SMTTestAssets {
+    const smtruntime = FS.readFileSync(smtruntime_path, "utf8");
+
+    let code: { relativePath: string, contents: string }[] = [];
+    const corefiles = FS.readdirSync(smtlib_path);
+    for (let i = 0; i < corefiles.length; ++i) {
+        const cfpath = Path.join(smtlib_path, corefiles[i]);
+        code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath, "utf8") });
+    }
+
+    let extras = new Map<string, string>();
+    for(let i = 0; i < suite.tests.length; ++i) {
+        const tf = suite.tests[i];
+        for (let j = 0; j < tf.tests.length; ++j) {
+            const ctg = tf.tests[j];
+            for (let k = 0; k < ctg.apitests.length; ++k) {
+                const stg = ctg.apitests[k];
+                stg.tests.filter((iti) => iti.extraSrc !== undefined).forEach((iti) => {
+                    const cc = Path.join(testroot, iti.extraSrc as string);
+                    const contents = FS.readFileSync(cc, "utf8");
+
+                    extras.set(iti.extraSrc as string, contents);
+                });
+            }
+        }
+    }
+
+    return {
+        corefiles: code,
+        runtime: smtruntime,
+        extras: extras
+    };
+}
+
+class TestRunner {
+    readonly suite: TestSuite;
+    readonly plan: TestPlan;
+
+    pending: IndividualTestInfo[];
+    queued: string[];
+    results: TestRunResults;
+
+    maxpar: number;
+    ppos: number = 0;
+
+    inccb: (msg: string) => void = (m: string) => {;};
+    done: (results: TestRunResults) => void = (r: TestRunResults) => {;};
+
+    smt_assets: SMTTestAssets;
+    
+    private testCompleteActionProcess(test: IndividualTestInfo, result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) {
+        if (result === "pass") {
+            this.results.passed.push(new TestResult(test, start, end, "pass", undefined));
+            this.inccb(test.fullname + ": " + chalk.green("pass") + "\n");
+        }
+        else if (result === "fail") {
+            this.results.failed.push(new TestResult(test, start, end, "fail", info));
+            this.inccb(test.fullname + ": " + chalk.red("fail") + "\n");
+        }
+        else {
+            this.results.failed.push(new TestResult(test, start, end, "error", info));
+            const errinfo = info !== undefined ? ` with ${info.slice(0, 160)}${info.length > 160 ? "..." : ""}` : "";
+            this.inccb(test.fullname + ": " + chalk.magenta("error") + errinfo + "\n");
+        }
+    }
+
+    private testCompleteActionQueued(test: IndividualTestInfo, result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) {
+        const qidx = this.queued.findIndex((vv) => vv === test.fullname);
+        assert(qidx !== -1);
+
+        this.queued.splice(qidx, 1);
+
+        this.testCompleteActionProcess(test, result, start, end, info);
+    }
+
+    private testCompleteActionInline(test: IndividualTestInfo, result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) {
+        this.testCompleteActionProcess(test, result, start, end, info);
+    }
+
+    private generateTestResultCallback(test: IndividualTestInfo) {
+        return (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => {
+            this.testCompleteActionQueued(test, result, start, end, info);
+
+            this.checkAndEnqueueTests();
+
+            if(this.ppos === this.pending.length && this.queued.length === 0) {
+                this.done(this.results);
+            }
+        };
+    }
+
+    private checkAndEnqueueTests() {
+        while(this.queued.length < this.maxpar && this.ppos < this.pending.length) {
+            const tt = this.pending[this.ppos++];
+
+            if (tt instanceof IndividualCompileWarnTest) {
+                let code = tt.code;
+                if(tt.extraSrc !== undefined) {
+                    code = code + "\n\n" + this.smt_assets.extras.get(tt.extraSrc) as string;
+                }
+
+                const tinfo = runCompilerTest(this.smt_assets.corefiles, code);
+                this.testCompleteActionInline(tt, tinfo.result, tinfo.start, tinfo.end, tinfo.info);
+            }
+            else if ((tt instanceof IndividualRefuteTestInfo) || (tt instanceof IndividualReachableTestInfo)) {
+                const mode = tt instanceof IndividualRefuteTestInfo ? "Refute" : "Reach";
+
+                let code = tt.code;
+                if(tt.extraSrc !== undefined) {
+                    code = code + "\n\n" + this.smt_assets.extras.get(tt.extraSrc) as string;
+                }
+
+                const handler = this.generateTestResultCallback(tt);
+                this.queued.push(tt.fullname);
+                try {
+                    enqueueSMTTest(mode, this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
+                }
+                catch (ex) {
+                    handler("error", new Date(), new Date(), `${ex}`);
+                }
+            }
+            else {
+                assert(false);
+                break;
+            }
+        }
+    }
+
+    constructor(suite: TestSuite, smtassets: SMTTestAssets, plan: TestPlan, maxpar?: number) {
+        this.suite = suite;
+        this.plan = plan;
+        this.smt_assets = smtassets;
+
+        this.pending = [...this.plan.tests];
+        this.queued = [];
+        this.results = new TestRunResults(suite);
+
+        this.maxpar = maxpar || 8;
+    }
+
+    run(inccb: (msg: string) => void, oncomplete: (results: TestRunResults) => void) {
+        this.results.start = new Date();
+
+        this.inccb = inccb;
+        this.done = oncomplete;
+
+        this.checkAndEnqueueTests();
+    }
 }
 
 ////
-//Entrypoint
+//Application
 
-const singletest = process.argv[2];
+Commander
+    .option("-m --parallel [parallel]", "Number of parallel tests to run simultaniously", 4)
+    .option("-r --restriction [spec]", "Limit the test run to a specific set of tests", "*")
+    //
+    //TODO: maybe want to run only SMT or only compiler tests too
+    //
+    ;
 
-setImmediate(() => runAll());
+Commander.parse(process.argv);
+
+const suite = loadTestSuite();
+const plan = suite.generateTestPlan(Commander.restriction)
+
+const smt_assets = loadSMTTestAssets(suite);
+
+const runner = new TestRunner(suite, smt_assets, plan, Commander.parallel);
+runner.run(
+    (msg: string) => process.stdout.write(msg),
+    (results: TestRunResults) => {
+        const gresults = results.getOverallResults();
+        process.stdout.write(`Completed ${gresults.total} tests...\n`);
+        if(gresults.failed === 0 && gresults.errors === 0) {
+            process.stdout.write(chalk.bold(`${gresults.passed}`) + " " + chalk.green("ok") + "\n");
+        }
+        else {
+            process.stdout.write(chalk.bold(`${gresults.failed}`) + " " + chalk.red("failures") + "\n");
+            process.stdout.write(chalk.bold(`${gresults.errors}`) + " " + chalk.magenta("errors") + "\n");
+        }
+    }
+);

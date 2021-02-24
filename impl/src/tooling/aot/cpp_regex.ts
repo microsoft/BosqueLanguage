@@ -6,7 +6,7 @@
 import { MIRRegex } from "../../compiler/mir_assembly";
 
 //
-//TODO: in compiler we need to parse and build AST for regex language we support then in here we need to actually compile it to SMTLib
+//TODO: in compiler we need to parse and build AST for regex language we support then in here we need to actually compile it
 //
 
 function compileRegexCppMatch(re: MIRRegex, str: string, av: string): string {

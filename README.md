@@ -4,10 +4,11 @@
 [![PR's Welcome](https://img.shields.io/badge/PRs%20-welcome-brightgreen.svg)](#contribute)
 [![Build Status](https://dev.azure.com/bosquepl/BosqueDevOps/_apis/build/status/Microsoft.BosqueLanguage?branchName=master)](https://dev.azure.com/bosquepl/BosqueDevOps/_build/latest?definitionId=1&branchName=master)
 
-[![nodeci Actions Status](https://github.com/mrkmarron/BosqueLanguage/workflows/nodeci/badge.svg)](https://github.com/mrkmarron/BosqueLanguage/actions) 
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mrkmarron/BosqueLanguage/nodeci)](https://github.com/mrkmarron/BosqueLanguage/actions) 
+
 
 ## The Bosque Project
-The Bosque Programming Language project is a ground up language & tooling co-design effort focused on investigating the theoretical and the practical implications of:
+The Bosque Programming Language project is a ground up language & tooling co-design effort focused on is investigating the theoretical and the practical implications of:
 
 1. Explicitly designing a code intermediate representation language (bytecode) that enables deep automated code reasoning and the deployment of next-generation development tools, compilers, and runtime systems.
 2. Leveraging the power of the intermediate representation to provide a programming language that is both easily accessible to modern developers and that provides a rich set of useful language features for developing high reliability & high performance applications.
@@ -37,7 +38,7 @@ An overarching theme of the Bosque project is increasing the ability of automate
 
 ## News
 
-**August 2020:** An on demand version of the [Bosque Webinar with Q&A](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-On-Demand.html) from May 27th is now available.
+**May 2020:** We will be running a Bosque Webinar with Live Q&A on May 27th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
 
 ## Documentation
 
@@ -56,7 +57,7 @@ Detailed Documentation, Tutorials, and Technical Information:
 **Add 2 numbers:**
 
 ```none
-function add2(x: Int, y: Int): Int {
+function add2(x: Nat, y: Nat): Nat {
     return x + y;
 }
 
@@ -69,7 +70,7 @@ add2(y=2, 5)   //7
 
 ```none
 function allPositive(...args: List<Int>): Bool {
-    return args.allOf(fn(x) => x >= 0);
+    return args.allOf(fn(x) => x >= 0i);
 }
 
 allPositive(1, 3, 4) //true
@@ -78,17 +79,17 @@ allPositive(1, 3, 4) //true
 **Tuples and Records:**
 
 ```none
-function doit(tup: [Int, Bool], rec: {f: String, g: Int}): Int {
+function doit(tup: #[Int, Bool], rec: #{f: String, g: Int}): Int {
     return tup.0 + rec.g;
 }
 
-doit([1, false], {f="ok", g=3}) //4
+doit(#[1, false], #{f="ok", g=3}) //4
 ```
 
-**Sign (with optional argument):**
+**Sign (with default argument):**
 
 ```none
-function sign(x?: Int): Int {
+function sign(x?: Int=0): Int {
     var y: Int;
 
     if(x == none || x == 0) {
@@ -252,7 +253,7 @@ entrypoint function getSays(animal: String, catchPhrase: String): Result<String,
     validate animal != "" or return err({ msg="Invalid animal" });
     validate catchPhrase != "" or return err({ msg="Invalid catchPhrase" });
 {
-    return ok(String::concat("The ", animal, " says ", createAnimal(catchPhrase).says));
+    return String::concat("The ", animal, " says ", createAnimal::(catchPhrase).says);
 }
 
 createAnimal("woof woof") //ok always
@@ -264,6 +265,8 @@ getSays("dog", "woof") //Ok<String, ErrData>@{value="The dog says woof"}
 getSays("", "woof") //Err<String, ErrData>@{error={ msg="Invalid animal" }}
 getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
 ```
+
+**Numeric Types**
 
 **API Types**
 
