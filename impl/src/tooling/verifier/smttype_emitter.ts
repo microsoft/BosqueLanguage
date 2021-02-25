@@ -447,11 +447,11 @@ class SMTTypeEmitter {
     }
 
     generateResultIsSuccessTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`is-$Result_${this.getSMTTypeFor(ttype).name}@success`, [exp]);
+        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).name}@success)`, [exp]);
     }
 
     generateResultIsErrorTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`is-$Result_${this.getSMTTypeFor(ttype).name}@error`, [exp]);
+        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).name}@error)`, [exp]);
     }
 
     generateResultGetSuccess(ttype: MIRType, exp: SMTExp): SMTExp {
@@ -537,7 +537,6 @@ class SMTTypeEmitter {
             return new SMTCallGeneral(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]);
         }
     }
-
 }
 
 export {

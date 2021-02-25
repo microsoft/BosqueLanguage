@@ -237,7 +237,7 @@
 )
 
 (define-fun GetTypeTag@BTerm ((t BTerm)) TypeTag
-  (ite (is-BTerm@termbox t) (BTerm_termtype t) (BKey_type (BTerm_keyvalue t)))
+  (ite ((_ is BTerm@termbox) t) (BTerm_termtype t) (BKey_type (BTerm_keyvalue t)))
 )
 
 ;;

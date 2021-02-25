@@ -697,42 +697,42 @@ class ListOpsManager {
 
         //always slice
         tsops.push({
-            test: new SMTCallSimple(`is-${this.generateConsCallName_Direct(ltype, "slice")}`, [llv]),
+            test: new SMTCallSimple(`(_ is ${this.generateConsCallName_Direct(ltype, "slice")})`, [llv]),
             result: this.emitDestructorGet_Slice(getop, ltype, llv, new SMTVar("n"))
         });
 
         //always concat2
         tsops.push({
-            test: new SMTCallSimple(`is-${this.generateConsCallName_Direct(ltype, "concat2")}`, [llv]),
+            test: new SMTCallSimple(`(_ is ${this.generateConsCallName_Direct(ltype, "concat2")})`, [llv]),
             result: this.emitDestructorGet_Concat2(getop, ltype, llv, new SMTVar("n"))
         });
 
         if(consopts.havoc) {
             tsops.push({
-                test: new SMTCallSimple(`is-${this.generateConsCallName_Direct(ltype, "havoc")}`, [llv]),
+                test: new SMTCallSimple(`(_ is ${this.generateConsCallName_Direct(ltype, "havoc")})`, [llv]),
                 result: this.temitter.generateResultGetSuccess(ctype, this.temitter.generateHavocConstructorCall(ctype, this.generateGetULIFieldFor(ltype, "havoc", "path", llv), new SMTVar("n")))
             }); 
         }
 
         if(consopts.fill) {
             tsops.push({
-                test: new SMTCallSimple(`is-${this.generateConsCallName_Direct(ltype, "fill")}`, [llv]),
+                test: new SMTCallSimple(`(_ is ${this.generateConsCallName_Direct(ltype, "fill")})`, [llv]),
                 result: this.generateGetULIFieldFor(ltype, "fill", "v", llv)
             });
         }
 
-        //if(is-natrange) => range with new bounds
+        //if(is natrange) => range with new bounds
         if (this.rangenat && ctype.trkey === "NSCore::Nat") {
             tsops.push({ 
-                test: new SMTCallSimple(`is-${this.generateConsCallName_Direct(ltype, "rangeOfNat")}`, [llv]), 
+                test: new SMTCallSimple(`(_ is ${this.generateConsCallName_Direct(ltype, "rangeOfNat")})`, [llv]), 
                 result: new SMTCallSimple("bvadd", [this.generateGetULIFieldFor(ltype, "rangeOfNat", "start", llv), new SMTVar("n")])
             });
         }
 
-        //if(is-intrange) => range with new bounds
+        //if(is intrange) => range with new bounds
         if (this.rangeint && ctype.trkey === "NSCore::Int") {
             tsops.push({
-                test: new SMTCallSimple(`is-${this.generateConsCallName_Direct(ltype, "rangeOfInt")}`, [llv]),
+                test: new SMTCallSimple(`(_ is ${this.generateConsCallName_Direct(ltype, "rangeOfInt")})`, [llv]),
                 result: new SMTCallSimple("bvadd", [this.generateGetULIFieldFor(ltype, "rangeOfInt", "start", llv), new SMTVar("n")])
             });
         }
@@ -740,7 +740,7 @@ class ListOpsManager {
         consopts.literalk.forEach((k) => {
             if (k !== 0) {
                 tsops.push({
-                    test: new SMTCallSimple(`is-${this.generateConsCallName_Direct(ltype, `_${k}`)}`, [llv]),
+                    test: new SMTCallSimple(`(_ is ${this.generateConsCallName_Direct(ltype, `_${k}`)})`, [llv]),
                     result: this.emitDestructorGet_K(ltype, llv, new SMTVar("n"), k)
                 })
             }
@@ -748,14 +748,14 @@ class ListOpsManager {
         
         consopts.filter.forEach((pcode, code) => {
             tsops.push({
-                test: new SMTCallSimple(`is-${this.generateConsCallNameUsing_Direct(ltype, "filter", code)}`, [llv]),
+                test: new SMTCallSimple(`(_ is ${this.generateConsCallNameUsing_Direct(ltype, "filter", code)})`, [llv]),
                 result: this.emitDestructorGet_Filter(getop, ltype, code, pcode, llv, new SMTVar("n"))
             })
         });
 
         consopts.map.forEach((omi, code) => {
             tsops.push({
-                test: new SMTCallSimple(`is-${this.generateConsCallNameUsing_Direct(ltype, "map", code)}`, [llv]),
+                test: new SMTCallSimple(`(_ is ${this.generateConsCallNameUsing_Direct(ltype, "map", code)})`, [llv]),
                 result: this.emitDestructorGet_Map(ltype, ctype, this.temitter.getSMTTypeFor(omi[1]), llv, new SMTVar("n"), code, omi[0])
             })
         });
