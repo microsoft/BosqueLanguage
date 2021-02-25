@@ -40,7 +40,7 @@ __internal struct entity Vector<T, literal K=Nat> provides Object, Expandoable<T
     }
 }
 
-concept ListFrom provides Object {
+concept ListOf provides Object {
     __assume_safe private function s_rangeOfInt(start: Int, end: Int): List<Int> # list_rangeofint
     __assume_safe private function s_rangeOfNat(start: Nat, end: Nat): List<Nat> # list_rangeofnat
 

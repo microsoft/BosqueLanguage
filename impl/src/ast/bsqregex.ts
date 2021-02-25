@@ -95,23 +95,31 @@ class RegexParser {
                 return new LiteralChar("\\" + cc);
             }
             else {
-                if(!this.isToken("p{")) {
+                if(!this.isToken("p")) {
                     return "Ill formed character class";
                 }
+                this.advance();
+                if(!this.isToken("{")) {
+                    return "Ill formed character class";
+                }
+                this.advance();
 
-                this.advance(2);
                 let res: RegexComponent | string = "Ill formed character class";
                 if(this.isToken("L")) {
                     res = new CharClass(SpecialCharKind.Letter);
+                    this.advance();
                 }
                 else if(this.isToken("N")) {
                     res = new CharClass(SpecialCharKind.Number);
+                    this.advance();
                 }
                 else if(this.isToken("Z")) {
                     res = new CharClass(SpecialCharKind.WhiteSpace);
+                    this.advance();
                 }
                 else if(this.isToken("S")) {
                     res = new CharClass(SpecialCharKind.Symbol);
+                    this.advance();
                 }
                 else {
                     res = "Ill formed character class";
@@ -120,6 +128,7 @@ class RegexParser {
                 if(!this.isToken("}")) {
                     return "Ill formed character class";
                 }
+                this.advance();
 
                 return res;
             }
@@ -138,12 +147,15 @@ class RegexParser {
         while(this.isToken("*") || this.isToken("+") || this.isToken("?") || this.isToken("{")) {
             if(this.isToken("*")) {
                 rcc = new StarRepeat(rcc);
+                this.advance();
             }
             else if(this.isToken("+")) {
                 rcc = new PlusRepeat(rcc);
+                this.advance();
             }
             else if(this.isToken("?")) {
                 rcc = new Optional(rcc);
+                this.advance();
             }
             else {
                 this.advance();
@@ -186,7 +198,7 @@ class RegexParser {
     private parseSequenceComponent(): RegexComponent | string {
         let sre: RegexComponent[] = [];
 
-        while(!this.done() && !this.isToken("|")) {
+        while(!this.done() && !this.isToken("|") && !this.isToken(")")) {
             const rpe = this.parseRepeatComponent();
             if(typeof(rpe) === "string") {
                 return rpe;
@@ -211,6 +223,7 @@ class RegexParser {
         let are: RegexComponent[] = [rpei];
 
         while (!this.done() && this.isToken("|")) {
+            this.advance();
             const rpe = this.parseSequenceComponent();
             if (typeof (rpe) === "string") {
                 return rpe;

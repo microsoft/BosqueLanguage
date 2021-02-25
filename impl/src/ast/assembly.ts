@@ -2106,7 +2106,8 @@ class Assembly {
     private tryGetMemberOperatorDeclParent(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>, name: string): OOMemberLookupInfo<StaticOperatorDecl[]> | undefined {
         const rprovides = this.resolveProvides(ooptype, binds);
         for (let i = 0; i < rprovides.length; ++i) {
-            const tt = (this.normalizeTypeOnly(rprovides[i], binds).options[0] as ResolvedConceptAtomType).conceptTypes[0];
+            const tprovide = this.normalizeTypeOnly(rprovides[i], binds).options[0] as ResolvedConceptAtomType;
+            const tt = tprovide.conceptTypes[0];
             const res = this.tryGetMemberOperatorDecl(tt.concept, tt.binds, name,) || this.tryGetMemberOperatorDeclParent(tt.concept, tt.binds, name);
             if (res !== undefined) {
                 return res;
