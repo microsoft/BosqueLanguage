@@ -1,0 +1,2 @@
+z3.exe filter=lfs diff=lfs merge=lfs -text
+z3 filter=lfs diff=lfs merge=lfs -text
