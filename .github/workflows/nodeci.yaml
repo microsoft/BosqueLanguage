@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        lfs: 'true'
     - name: Setup
       uses: actions/setup-node@v1
       with:
