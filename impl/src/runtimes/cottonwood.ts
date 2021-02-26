@@ -209,7 +209,7 @@ Commander
 Commander.parse(process.argv);
 
 const smtpath = Path.normalize(Path.join(bosque_dir, Commander.prover === "z3" ? platpathz3 : platpathcvc4));
-const smtargs = (Commander.prover === "z3") ? "-smt2 -in" : "--lang=smt2";
+const smtargs = (Commander.prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi-all --tlimit=1000";
 
 const maxgas = 0;
 const timeout = 10000;

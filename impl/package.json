@@ -21,7 +21,8 @@
     },
     "scripts": {
         "build": "tsc -p tsconfig.json && node ./build/resource_copy.js",
-        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./bin/test/test_runner.js"
+        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./bin/test/test_runner.js",
+        "testcvc4": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./bin/test/test_runner.js --prover cvc4"
     },
     "files": [
         "bin/*"

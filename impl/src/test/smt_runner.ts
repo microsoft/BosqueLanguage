@@ -12,21 +12,31 @@ import { SMTAssembly } from "../tooling/verifier/smt_assembly";
 import { SMTEmitter } from "../tooling/verifier/smtdecls_emitter";
 import { VerifierOptions } from "../tooling/verifier/smt_exp";
 
-let platpathsmt: string | undefined = undefined;
+let z3pathsmt: string | undefined = undefined;
 if (process.platform === "win32") {
-    platpathsmt = "build/tools/win/z3.exe";
+    z3pathsmt = "build/tools/win/z3.exe";
 }
 else if (process.platform === "linux") {
-    platpathsmt = "build/tools/linux/z3";
+    z3pathsmt = "build/tools/linux/z3";
 }
 else {
-    platpathsmt = "build/tools/macos/z3";
+    z3pathsmt = "build/tools/macos/z3";
+}
+
+let cvc4pathsmt: string | undefined = undefined;
+if (process.platform === "win32") {
+    cvc4pathsmt = "build/tools/win/cvc4.exe";
+}
+else if (process.platform === "linux") {
+    cvc4pathsmt = "build/tools/linux/cvc4";
+}
+else {
+    cvc4pathsmt = "build/tools/macos/cvc4";
 }
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
 const smtlib_path = Path.join(bosque_dir, "bin/core/verify");
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
-const z3path = Path.normalize(Path.join(bosque_dir, platpathsmt));
 
 function generateMASM(corefiles: {relativePath: string, contents: string}[], testsrc: string): [MIRAssembly | undefined, string[]] {
     const code: { relativePath: string, contents: string }[] = [...corefiles, { relativePath: "test.bsq", contents: testsrc }];
@@ -94,8 +104,12 @@ function buildSMT2file(smtasm: SMTAssembly, smtruntime: string, timeout: number,
             .replace(";;ACTION;;", joinWithIndent(sfileinfo.ACTION, ""));
 }
 
-function runSMT2File(cfile: string, mode: "Refute" | "Reach", start: Date, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
-    const res = exec(`${z3path} -smt2 -in`, (err: ExecException | null, stdout: string, stderr: string) => {
+function runSMT2File(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Reach", start: Date, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+
+    const smtpath = Path.normalize(Path.join(bosque_dir, (prover === "z3" ? z3pathsmt : cvc4pathsmt) as string));
+    const smtflags = (prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi-all --tlimit=1000";
+
+    const res = exec(`${smtpath} ${smtflags}`, (err: ExecException | null, stdout: string, stderr: string) => {
         if (err) {
             cb("error", start, new Date(), stderr);
         }
@@ -144,7 +158,7 @@ const vopts = {
     SpecializeSmallModelGen: false
 } as VerifierOptions;
 
-function enqueueSMTTest(mode: "Refute" | "Reach", corefiles: {relativePath: string, contents: string}[], smtruntime: string, testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+function enqueueSMTTest(prover: "z3" | "cvc4", mode: "Refute" | "Reach", corefiles: {relativePath: string, contents: string}[], smtruntime: string, testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
     const massembly = generateMASM(corefiles, testsrc);
     if(massembly[0] === undefined) {
@@ -161,7 +175,7 @@ function enqueueSMTTest(mode: "Refute" | "Reach", corefiles: {relativePath: stri
         const smtasm = SMTEmitter.generateSMTAssemblyForValidate(massembly[0], vopts, errlocation, "NSMain::main", maxgas);
         const smfc = buildSMT2file(smtasm, smtruntime, timeout, mode);
 
-        runSMT2File(smfc, mode, start, cb);
+        runSMT2File(prover, smfc, mode, start, cb);
     }
 }
 
