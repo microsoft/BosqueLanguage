@@ -507,7 +507,7 @@ class SMTTypeEmitter {
             return ["BRational@UFCons_API", false];
         }
         else {
-            return [`@@cons_${this.getSMTTypeFor(tt).name}_entrypoint`, true];
+            return [`_@@cons_${this.getSMTTypeFor(tt).name}_entrypoint`, true];
         }
     }
 

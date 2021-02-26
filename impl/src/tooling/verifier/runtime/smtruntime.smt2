@@ -3,9 +3,7 @@
 ;; Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 ;;-------------------------------------------------------------------------------------------------------
 
-(set-option :smt.mbqi true)
-
-(set-option :timeout ;;TIMEOUT;;)
+(set-logic ALL)
 
 ;;
 ;; Type Tags
@@ -62,7 +60,7 @@
 ;;
 ;;UFloat kind + UF ops for strong refutation checks
 ;;
-(declare-sort UFloat)
+(declare-sort UFloat 0)
 
 ;;
 ;; Define sort aliases for Int/Nat/BigInt/BigNat/Float/Decimal/Rational/String representation options
@@ -93,7 +91,7 @@
 ;;BFLOATPOINT_CONSTANTS;;
 
 ;;Define the ISequence datatype and operators
-(declare-sort ISequence)
+(declare-sort ISequence 0)
 
 (declare-fun ISequence@size (ISequence) BNat)
 (declare-fun ISequence@get (ISequence BNat) BNat)
@@ -251,11 +249,13 @@
     ;;EPHEMERAL_CONSTRUCTORS;;
 ))
 
-(declare-datatypes () (
-  (ErrorID
-    ErrorID_AssumeCheck
-    ErrorID_Target
-  )
+(declare-datatypes (
+      (ErrorID 0)
+    ) (
+    ( 
+      (ErrorID_AssumeCheck)
+      (ErrorID_Target)
+    )
 ))
 
 (declare-datatypes (

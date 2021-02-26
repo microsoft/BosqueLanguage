@@ -685,7 +685,7 @@ class SMTBodyEmitter {
     }
 
     generateTempName(): string {
-        return `@tmpvar@${this.tmpvarctr++}`;
+        return `_@tmpvar@${this.tmpvarctr++}`;
     }
 
     generateErrorCreate(sinfo: SourceInfo, rtype: MIRType, msg: string): SMTExp {

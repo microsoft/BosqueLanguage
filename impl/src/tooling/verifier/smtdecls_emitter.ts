@@ -770,7 +770,7 @@ class SMTEmitter {
         const mirep = assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl;
         const restype = temitter.getMIRType(mirep.resultType);
 
-        const eqerrexp = new SMTCallSimple("=", [new SMTVar("@smtres@"), smtemit.temitter.generateResultTypeConstructorError(restype, new SMTConst("ErrorID_Target"))]);
+        const eqerrexp = new SMTCallSimple("=", [new SMTVar("_@smtres@"), smtemit.temitter.generateResultTypeConstructorError(restype, new SMTConst("ErrorID_Target"))]);
         smtemit.assembly.modes = {
             refute: eqerrexp,
             generate: eqerrexp

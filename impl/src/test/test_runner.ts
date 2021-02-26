@@ -469,10 +469,12 @@ runner.run(
         process.stdout.write(`Completed ${gresults.total} tests...\n`);
         if(gresults.failed === 0 && gresults.errors === 0) {
             process.stdout.write(chalk.bold(`${gresults.passed}`) + " " + chalk.green("ok") + "\n");
+            process.exit(0);
         }
         else {
             process.stdout.write(chalk.bold(`${gresults.failed}`) + " " + chalk.red("failures") + "\n");
             process.stdout.write(chalk.bold(`${gresults.errors}`) + " " + chalk.magenta("errors") + "\n");
+            process.exit(1);
         }
     }
 );

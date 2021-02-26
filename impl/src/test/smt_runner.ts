@@ -48,7 +48,6 @@ function buildSMT2file(smtasm: SMTAssembly, smtruntime: string, timeout: number,
     }
 
     return smtruntime
-            .replace(";;TIMEOUT;;", `${timeout}`)
             .replace(";;TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.TYPE_TAG_DECLS, "      "))
             .replace(";;ABSTRACT_TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.ABSTRACT_TYPE_TAG_DECLS, "      "))
             .replace(";;INDEX_TAG_DECLS;;", joinWithIndent(sfileinfo.INDEX_TAG_DECLS, "      "))

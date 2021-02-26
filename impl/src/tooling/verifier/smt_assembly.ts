@@ -652,26 +652,26 @@ class SMTAssembly {
         }
 
         if (mode === "Refute") {
-            action.push(`(declare-const @smtres@ ${this.model.checktype.name})`);
-            action.push(`(assert (= @smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
+            action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
+            action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
 
             action.push(`(assert ${this.modes.refute.emitSMT2(undefined)})`);
             action.push("(check-sat)");
         }
         else if (mode === "Reach") {
-            action.push(`(declare-const @smtres@ ${this.model.checktype.name})`);
-            action.push(`(assert (= @smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
+            action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
+            action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
 
             action.push(`(assert ${this.modes.generate.emitSMT2(undefined)})`);
             action.push("(check-sat)");
         }
         else {
-            action.push(`(declare-const @smtres@ ${this.model.checktype.name})`);
-            action.push(`(assert (= @smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
+            action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
+            action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
 
             action.push(`(assert ${this.modes.generate.emitSMT2(undefined)})`);
             action.push("(check-sat)");
-            //action.push("(get-model)");
+            action.push("(get-model)");
         }
 
         let foutput: string[] = [];

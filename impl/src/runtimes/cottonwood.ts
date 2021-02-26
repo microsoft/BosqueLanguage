@@ -17,19 +17,29 @@ import { SMTEmitter } from "../tooling/verifier/smtdecls_emitter";
 import { VerifierOptions } from "../tooling/verifier/smt_exp";
 import { MIRInvokeKey } from "../compiler/mir_ops";
 
-let platpathsmt: string | undefined = undefined;
+let platpathz3: string | undefined = undefined;
 if (process.platform === "win32") {
-    platpathsmt = "build/tools/win/z3.exe";
+    platpathz3 = "build/tools/win/z3.exe";
 }
 else if (process.platform === "linux") {
-    platpathsmt = "build/tools/linux/z3";
+    platpathz3 = "build/tools/linux/z3";
 }
 else {
-    platpathsmt = "build/tools/macos/z3";
+    platpathz3 = "build/tools/macos/z3";
+}
+
+let platpathcvc4: string | undefined = undefined;
+if (process.platform === "win32") {
+    platpathcvc4 = "build/tools/win/cvc4.exe";
+}
+else if (process.platform === "linux") {
+    platpathcvc4 = "build/tools/linux/cvc4";
+}
+else {
+    platpathcvc4 = "build/tools/macos/cvc4";
 }
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
-const z3path = Path.normalize(Path.join(bosque_dir, platpathsmt));
 
 function generateMASM(files: string[], entrypoint: string): MIRAssembly {
     let code: { relativePath: string, contents: string }[] = [];
@@ -104,7 +114,6 @@ function buildSMT2file(smtasm: SMTAssembly, timeout: number, mode: "Refute" | "G
         const smt_runtime = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
         const lsrc = FS.readFileSync(smt_runtime).toString();
         contents = lsrc
-            .replace(";;TIMEOUT;;", `${timeout}`)
             .replace(";;TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.TYPE_TAG_DECLS, "      "))
             .replace(";;ABSTRACT_TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.ABSTRACT_TYPE_TAG_DECLS, "      "))
             .replace(";;INDEX_TAG_DECLS;;", joinWithIndent(sfileinfo.INDEX_TAG_DECLS, "      "))
@@ -169,8 +178,8 @@ function emitSMT2File(cfile: string, into: string) {
 }
 
 function runSMT2File(cfile: string, mode: "Refute" | "Generate") {
-    process.stdout.write(`Running z3 on SMT encoding...\n`);
-    const res = execSync(`${z3path} -smt2 -in`, { input: cfile }).toString().trim();
+    process.stdout.write(`Running ${Commander.prover} on SMT encoding...\n`);
+    const res = execSync(`${smtpath} ${smtargs}`, { input: cfile }).toString().trim();
     process.stdout.write(`done!\n\n`);
 
     if (mode === "Refute") {
@@ -194,9 +203,13 @@ Commander
     .option("-l --location [location]", "Location (file.bsq@line#pos) with error of interest")
     .option("-e --entrypoint [entrypoint]", "Entrypoint to symbolically test", "NSMain::main")
     .option("-m --mode [mode]", "Mode to run (errorlocs | refute | generate)", "refute")
-    .option("-o --output [file]", "Output the model to a given file");
+    .option("-o --output [file]", "Output the model to a given file")
+    .option("-p --prover [prover]", "Prover to use (z3 | cvc4)", "z3");
 
 Commander.parse(process.argv);
+
+const smtpath = Path.normalize(Path.join(bosque_dir, Commander.prover === "z3" ? platpathz3 : platpathcvc4));
+const smtargs = (Commander.prover === "z3") ? "-smt2 -in" : "--lang=smt2";
 
 const maxgas = 0;
 const timeout = 10000;
