@@ -3732,7 +3732,7 @@ class Parser {
             const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
             const acceptsinvoke = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["validator_accepts", "__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody);
             const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
-            const provides = [[new NominalTypeSignature("NSCore", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+            const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
             const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), [], [SpecialTypeCategory.ValidatorTypeDecl], currentDecl.ns, tyname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
 
             currentDecl.objects.set(tyname, validatortype);

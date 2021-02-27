@@ -115,6 +115,24 @@
             "reachables": [
                 "NamedGreeting@{name=x}.sayHello() === \"hello bob\""
             ]
+        },
+        {
+            "test": "validators",
+            "src": "doc_examples/validators.txt",
+            "sig": "function main(s: String): Bool",
+            "code": "",
+            "typechk": [
+                "is3pt(\"12\")"
+            ],
+            "refutes": [
+                "ZipcodeUS::accepts(\"98052-0000\")",
+                "ZipcodeUS::accepts(\"98052\")"
+            ],
+            "reachables": [
+                "!ZipcodeUS::accepts(\"98052-\")",
+                "ZipcodeUS::accepts(s)",
+                "!ZipcodeUS::accepts(s)"
+            ]
         }
     ]
 }

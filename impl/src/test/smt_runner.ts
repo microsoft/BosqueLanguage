@@ -111,7 +111,7 @@ function runSMT2File(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Rea
 
     const res = exec(`${smtpath} ${smtflags}`, (err: ExecException | null, stdout: string, stderr: string) => {
         if (err) {
-            cb("error", start, new Date(), stderr);
+            cb("error", start, new Date(), stdout);
         }
         else {
             const res = stdout.trim();
@@ -124,7 +124,7 @@ function runSMT2File(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Rea
                     cb("fail", start, new Date());
                 }
                 else {
-                    cb("unknown/timeout", start, new Date(), stderr);
+                    cb("unknown/timeout", start, new Date(), stdout);
                 }
             }
             else {
@@ -135,7 +135,7 @@ function runSMT2File(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Rea
                     cb("fail", start, new Date());
                 }
                 else {
-                    cb("unknown/timeout", start, new Date(), stderr);
+                    cb("unknown/timeout", start, new Date(), stdout);
                 }
             }
         }

@@ -12,6 +12,7 @@ import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
 
 import * as assert from "assert";
 import { ListOpsManager } from "./smtcollection_emitter";
+import { BSQRegex } from "../../ast/bsqregex";
 
 function NOT_IMPLEMENTED(msg: string): SMTExp {
     throw new Error(`Not Implemented: ${msg}`);
@@ -2314,6 +2315,20 @@ class SMTBodyEmitter {
         switch(idecl.implkey) {
             case "default": {
                 return undefined;
+            }
+            case "validator_accepts": {
+                const bsqre = this.assembly.validatorRegexs.get(encltypekey) as BSQRegex;
+                const lre = bsqre.compileToSMTValidator(this.vopts.StringOpt === "ASCII");
+
+                let accept: SMTExp = new SMTConst("false");
+                if (this.vopts.StringOpt === "ASCII") {
+                    accept = new SMTCallSimple("str.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
+                }
+                else {
+                    accept = new SMTCallSimple("seq.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
+                }
+
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, accept);
             }
             case "string_count": {
                 if (this.vopts.StringOpt === "ASCII") {

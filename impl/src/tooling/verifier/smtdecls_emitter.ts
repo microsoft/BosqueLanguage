@@ -94,7 +94,14 @@ class SMTEmitter {
         const vre = this.bemitter.assembly.validatorRegexs.get(tt.trkey) as BSQRegex;
         const lre = vre.compileToSMTValidator(this.bemitter.vopts.StringOpt === "ASCII");
 
-        const accept = new SMTCallSimple("str.in.re", [new SMTConst(lre), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str"))]);
+        let accept: SMTExp = new SMTConst("false");
+        if (this.bemitter.vopts.StringOpt === "ASCII") {
+            accept = new SMTCallSimple("str.in.re", [this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str")), new SMTConst(lre)]);
+        }
+        else {
+            accept = new SMTCallSimple("seq.in.re", [this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str")), new SMTConst(lre)]);
+        }
+
         const construct = new SMTCallSimple(this.temitter.getSMTConstructorName(tt).cons, [this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str"))]);
 
         const fbody = new SMTLet("str", bcreate,

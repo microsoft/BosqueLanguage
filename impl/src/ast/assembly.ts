@@ -1849,7 +1849,7 @@ class Assembly {
 
     addValidatorRegex(resolvedName: string, validator: BSQRegex) {
         let ere = this.m_literalRegexs.findIndex((lre) => lre.restr === validator.restr);
-        if(ere !== -1) {
+        if(ere === -1) {
             ere = this.m_literalRegexs.length;
             this.m_literalRegexs.push(validator);
         }

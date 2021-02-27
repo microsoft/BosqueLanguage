@@ -211,7 +211,12 @@ class RegexParser {
             return "Malformed regex";
         }
 
-        return new Sequence(sre);
+        if (sre.length === 1) {
+            return sre[0];
+        }
+        else {
+            return new Sequence(sre);
+        }
     }
 
     private parseAlternationComponent(): RegexComponent | string {
@@ -232,7 +237,12 @@ class RegexParser {
             are.push(rpe);
         }
 
-        return new Alternation(are);
+        if(are.length === 1) {
+            return are[0];
+        }
+        else {
+            return new Alternation(are);
+        }
     }
 
     parseComponent(): RegexComponent | string {
@@ -384,7 +394,7 @@ class LiteralChar extends RegexComponent {
     compileToSMT(ascii: boolean): string  {
         assert(ascii);
 
-        return `(str.to.re ${this.charval})`;
+        return `(str.to.re "${this.charval}")`;
     }
 }
 
