@@ -145,17 +145,20 @@ NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 
 **Validated and Typed Strings:**
 ```
-typedef Letter = /\w/;
-typedef Digit = /\d/;
+typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
+typedef CSSpt = /\p{N}+pt/;
 
-function fss(s1: SafeString<Digit>): Bool {
-    return s1.string() == "3";
+function is3pt(s1: StringOf<CSSpt>): Bool {
+    return s1.string() == "3pt";
 }
 
-Digit::accepts("a"); //false
-Digit::accepts("2"); //true
+ZipcodeUS::accepts("98052-0000") //true
+ZipcodeUS::accepts("98052-")     //false
+ZipcodeUS::accepts("abc")        //false
 
-fss("1234")                         //type error String is not a SafeString
+is3pt("12")                        //type error String is not a StringOf
+is3pt('98052' of ZipcodeUS)        //type error StringOf<ZipcodeUS> not StringOf<CSSpt>
+
 fss(SafeString<Letter>::from("a"))  //type error incompatible SafeString types
 fss(Digit'a')                       //type error 'a' is incompatible with Digit 
 fss(SafeString<Digit>::from("a"))   //runtime error 'a' is incompatible with Digit

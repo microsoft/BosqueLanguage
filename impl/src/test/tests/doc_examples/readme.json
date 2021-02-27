@@ -122,7 +122,8 @@
             "sig": "function main(s: String): Bool",
             "code": "",
             "typechk": [
-                "is3pt(\"12\")"
+                "is3pt(\"12\")",
+                "is3pt('98052' of ZipcodeUS)"
             ],
             "refutes": [
                 "ZipcodeUS::accepts(\"98052-0000\")",

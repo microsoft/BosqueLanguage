@@ -1606,10 +1606,11 @@ class Parser {
             constype = this.consumeTokenAndGetValue() as "@" | "#";
         }
 
-        this.ensureAndConsumeToken("(");
+        if(constype === undefined) {
+            this.ensureAndConsumeToken("of");
+        }
 
         if (this.testToken(TokenStrings.Template)) {
-            this.ensureAndConsumeToken(")");
             return [constype, this.parseTemplateTypeReference()];
         }
         else {
@@ -1635,7 +1636,6 @@ class Parser {
             //      maybe this is ok but we might want to allow it (at least for stringof/datastring)
             //
 
-            this.ensureAndConsumeToken(")");
             return [constype, new NominalTypeSignature(ns as string, tnames, terms)];
         }
     }
@@ -2780,6 +2780,11 @@ class Parser {
 
         if (this.testAndConsumeTokenIf("of")) {
             const sinfo = this.getCurrentSrcInfo();
+
+            //
+            //TODO: This will have an ugly parse if we do -- x of Int < 3
+            //      It will try to parse as Int<3, ... as a type which fails
+            //
             const oftype = this.parseTypeSignature(true);
             exp = new OfTypeConvertExpression(sinfo, exp, oftype);
         }
