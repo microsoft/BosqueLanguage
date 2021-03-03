@@ -1863,7 +1863,7 @@ class CPPBodyEmitter {
                 break;
             }
             case "float64_parse": {
-                bodystr = `auto $$return = ;`;
+                bodystr = `auto $$return = std::stod(${params[0]});`;
                 break;
             }
             case "float_toint": {
