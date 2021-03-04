@@ -388,9 +388,11 @@ entity ByteBuffer provides Some, APIValue {
 }
 
 //<summary>Primitive ClockTime value.</summary>
+//TODO: should be specialized
 numeric typedecl ClockTime = BigNat;
 
 //<summary>Primitive LogicalTime value.</summary>
+//TODO: should be specialized
 numeric typedecl LogicalTime = BigNat;
 
 //<summary>Primitive UUID value.</summary>

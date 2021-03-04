@@ -2268,8 +2268,8 @@ class Parser {
                     const isvalue = this.testToken("#");
                     this.consumeToken();
 
-                    if (this.testFollows(TokenStrings.Numberino, "=") ||this.testFollows(TokenStrings.Int, "=") || this.testFollows(TokenStrings.Nat, "=")) {
-                        const updates = this.parseListOf<{ index: number, value: Expression }>("(", ")", ",", () => {
+                    if (this.testFollows("[", TokenStrings.Numberino, "=") ||this.testFollows("[", TokenStrings.Int, "=") || this.testFollows("[", TokenStrings.Nat, "=")) {
+                        const updates = this.parseListOf<{ index: number, value: Expression }>("[", "]", ",", () => {
                             const idx = this.parseTupleIndex();
                             this.ensureAndConsumeToken("=");
 
@@ -2318,8 +2318,8 @@ class Parser {
                     const isvalue = this.testToken("#");
                     this.consumeToken();
 
-                    if (this.testFollows(TokenStrings.Identifier, "=")) {
-                        const updates = this.parseListOf<{ name: string, value: Expression }>("(", ")", ",", () => {
+                    if (this.testFollows("{", TokenStrings.Identifier, "=")) {
+                        const updates = this.parseListOf<{ name: string, value: Expression }>("{", "}", ",", () => {
                             this.ensureToken(TokenStrings.Identifier);
                             const uname = this.consumeTokenAndGetValue();
                             this.ensureAndConsumeToken("=");
