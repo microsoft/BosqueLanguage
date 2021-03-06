@@ -452,13 +452,13 @@ class CharClass extends RegexComponent {
     compileToJS(): string {
         switch (this.kind) {
             case SpecialCharKind.WhiteSpace:
-                return "\p{Z}";
+                return "\\p{Z}";
             case SpecialCharKind.Number:
-                return "\p{N}";
+                return "\\p{N}";
             case SpecialCharKind.Letter:
-                return "\p{L}";
+                return "\\p{L}";
             case SpecialCharKind.Symbol:
-                return "\p{S}";
+                return "\\p{S}";
             default:
                 return ".";
         }
