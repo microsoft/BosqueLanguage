@@ -23,7 +23,7 @@ function filenameClean(file: string): string {
 class CPPBodyEmitter {
     readonly assembly: MIRAssembly;
     readonly typegen: CPPTypeEmitter;
-    
+
     readonly allPropertyNames: Set<string> = new Set<string>();
     readonly allConstStrings: Map<string, string> = new Map<string, string>();
     readonly allConstRegexes: Map<string, string> = new Map<string, string>();
@@ -47,7 +47,7 @@ class CPPBodyEmitter {
     constructor(assembly: MIRAssembly, typegen: CPPTypeEmitter) {
         this.assembly = assembly;
         this.typegen = typegen;
-        
+
         this.currentRType = typegen.noneType;
     }
 
@@ -250,7 +250,7 @@ class CPPBodyEmitter {
 
     generateMIRConstructorPrimary(cp: MIRConstructorPrimary): string {
         const ctype = this.assembly.entityDecls.get(cp.tkey) as MIREntityTypeDecl;
-       
+
         const cppcrepr = this.typegen.getCPPReprFor(this.typegen.getMIRType(cp.tkey));
         if (cppcrepr instanceof StructRepr) {
             const fvals = cp.args.map((arg, i) => {
@@ -328,7 +328,7 @@ class CPPBodyEmitter {
             const entryvaccess = this.typegen.mangleStringForCpp((entryentity.fields.find((fd) => fd.name === "value") as MIRFieldDecl).fkey);
 
             const cvals = cpcs.args.map((arg) => `MEntry<${this.typegen.getCPPReprFor(ktype).std}, ${this.typegen.getCPPReprFor(vtype).std}>{${this.argToCpp(arg, oftype)}.${entrykaccess}, ${this.argToCpp(arg, oftype)}.${entryvaccess}}`);
-            
+
             const krepr = this.typegen.getCPPReprFor(ktype);
             const kops = this.typegen.getFunctorsForType(ktype);
             const vrepr = this.typegen.getCPPReprFor(vtype);
@@ -379,7 +379,7 @@ class CPPBodyEmitter {
     generateMIRAccessFromIndexExpression(arg: MIRArgument, idx: number, resultAccessType: MIRType): string {
         const tuptype = this.getArgType(arg);
         const hasidx = this.typegen.tupleHasIndex(tuptype, idx);
-    
+
         if(hasidx === "no") {
             return `${this.typegen.coerce("BSQ_VALUE_NONE", this.typegen.noneType, resultAccessType)}`;
         }
@@ -435,7 +435,7 @@ class CPPBodyEmitter {
         }
 
         const iflag = this.typegen.generateInitialDataKindFlag(resultTupleType);
-        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${cvals.join(", ")} });`; 
+        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${cvals.join(", ")} });`;
     }
 
     generateMIRStructuredExtendTuple(op: MIRStructuredExtendTuple, resultTupleType: MIRType): string {
@@ -454,7 +454,7 @@ class CPPBodyEmitter {
         }
 
         const iflag = this.typegen.generateInitialDataKindFlag(resultTupleType);
-        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${cvals.join(", ")} });`; 
+        return `${this.varToCppName(op.trgt)} = BSQTuple::createFromSingle<${iflag}>({ ${cvals.join(", ")} });`;
     }
 
     generateMIRHasPropertyExpression(arg: MIRArgument, property: string): string {
@@ -471,7 +471,7 @@ class CPPBodyEmitter {
     generateMIRAccessFromPropertyExpression(arg: MIRArgument, property: string, resultAccessType: MIRType): string {
         const rectype = this.getArgType(arg);
         const hasproperty = this.typegen.recordHasField(rectype, property);
-    
+
         if(hasproperty === "no") {
             return `${this.typegen.coerce("BSQ_VALUE_NONE", this.typegen.noneType, resultAccessType)}`;
         }
@@ -663,7 +663,7 @@ class CPPBodyEmitter {
 
     generateMIRModifyWithFields(op: MIRModifyWithFields, resultAccessType: MIRType): string {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
-        
+
         if (this.typegen.typecheckUEntity(inferargtype)) {
             const ekey = this.typegen.getEntityEKey(inferargtype);
             const utype = this.typegen.assembly.entityDecls.get(ekey) as MIREntityTypeDecl;
@@ -680,7 +680,7 @@ class CPPBodyEmitter {
                     cvals.push([`${this.argToCpp(op.arg, inferargtype)}->${this.typegen.mangleStringForCpp(fdecl.fkey)}`, ftype]);
                 }
             }
-    
+
             const cppcrepr = this.typegen.getCPPReprFor(inferargtype);
             if (cppcrepr instanceof StructRepr) {
                 const fvals = cvals.map((val) => {
@@ -718,7 +718,7 @@ class CPPBodyEmitter {
     generateMIRStructuredExtendObject(op: MIRStructuredExtendObject, resultAccessType: MIRType): string {
         const inferargtype = this.typegen.getMIRType(op.argInferType);
         const mergeargtype = this.typegen.getMIRType(op.updateInferType);
-        
+
         if (this.typegen.typecheckUEntity(inferargtype)) {
             const ekey = this.typegen.getEntityEKey(inferargtype);
             const utype = this.typegen.assembly.entityDecls.get(ekey) as MIREntityTypeDecl;
@@ -802,7 +802,7 @@ class CPPBodyEmitter {
             coreop = `EqualFunctor_KeyValue{}(${this.argToCpp(lhs, this.typegen.keyType)}, ${this.argToCpp(rhs, this.typegen.keyType)})`;
         }
 
-        return op === "!=" ? `!${coreop}` : coreop; 
+        return op === "!=" ? `!${coreop}` : coreop;
     }
 
     generateLess(lhsinfertype: MIRType, lhs: MIRArgument, rhsinfertype: MIRType, rhs: MIRArgument, isstrict: boolean): string {
@@ -1152,7 +1152,7 @@ class CPPBodyEmitter {
         }
         else {
             const argrepr = this.typegen.getCPPReprFor(argtype);
-            
+
             if (argrepr instanceof StructRepr) {
                 //could be a tuple or record
                 return "false";
@@ -1174,7 +1174,7 @@ class CPPBodyEmitter {
             const order = this.subtypeOrderCtr++;
             let checks: string[] = [];
 
-            //do all the checks that argtype satisfies all the requirements of oftype 
+            //do all the checks that argtype satisfies all the requirements of oftype
             for (let i = 0; i < oftype.entries.length; ++i) {
                 const etype = (argtype.options[0] as MIREphemeralListType).entries[i];
                 checks.push(this.generateTypeCheck(`arg.entry_${i}`, etype, etype, oftype.entries[i]));
@@ -1446,7 +1446,7 @@ class CPPBodyEmitter {
                         }
                         else {
                             const opt = this.typegen.getMIRType(pfx.infertype);
-                            
+
                             if (this.typegen.typecheckIsName(opt, /^NSCore::Int$/)) {
                                 return `${this.varToCppName(pfx.trgt)} = -${this.argToCpp(pfx.arg, this.typegen.intType)};`;
                             }
@@ -1629,7 +1629,7 @@ class CPPBodyEmitter {
             if(rctype !== "no") {
                 gblock.push(this.typegen.buildReturnOpForType(this.currentRType, "$$return", "$callerscope$") + ";");
             }
-            
+
             gblock.push("return $$return;");
         }
 
@@ -1839,7 +1839,7 @@ class CPPBodyEmitter {
                 break;
             }
             case "float_min_value": {
-                bodystr = `auto $$return = std::numeric_limits<double>::min();`;
+                bodystr = `auto $$return = std::numeric_limits<double>::lowest();`;
                 break;
             }
             case "float_max_value": {
@@ -2011,7 +2011,7 @@ class CPPBodyEmitter {
                 const ltype1 = this.typegen.getMIRType(idecl.params[0].type);
                 const l1contents = (this.typegen.assembly.entityDecls.get(ltype1.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
                 const ltype1repr = this.typegen.getCPPReprFor(ltype1);
-            
+
                 const ltype2 = this.typegen.getMIRType(idecl.params[1].type);
                 const l2contents = (this.typegen.assembly.entityDecls.get(ltype2.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
                 const ltype2repr = this.typegen.getCPPReprFor(ltype2);
@@ -2019,7 +2019,7 @@ class CPPBodyEmitter {
                 const rtype = this.typegen.getMIRType(idecl.resultType);
                 const rcontents = (this.typegen.assembly.entityDecls.get(rtype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
                 const rtyperepr = this.typegen.getCPPReprFor(rtype);
-                
+
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const iflag = this.typegen.generateInitialDataKindFlag(rcontents);
                 const codecc1 = this.typegen.coerce("uu", l1contents, this.typegen.anyType);
@@ -2074,7 +2074,7 @@ class CPPBodyEmitter {
             case "list_concat": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
-                
+
                 const larg = this.typegen.getMIRType(idecl.params[0].type);
                 const lrepr = this.typegen.getCPPReprFor(larg).std
 
@@ -2084,7 +2084,7 @@ class CPPBodyEmitter {
             case "list_fill": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
-                
+
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_fill<MIRNominalTypeEnum::${this.typegen.mangleStringForCpp(ltype.trkey)}>(${params[0]}, ${params[1]});`
                 break;
             }
@@ -2395,7 +2395,7 @@ class CPPBodyEmitter {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
                 const [utype, ucontents, utag] = this.getListResultTypeFor(idecl);
-            
+
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const codecc = this.typegen.coerce("u", ctype, this.typegen.anyType);
                 const crepr = this.typegen.getCPPReprFor(ctype);
@@ -2411,7 +2411,7 @@ class CPPBodyEmitter {
                 const utype = this.typegen.getMIRType(idecl.params[1].type);
                 const ucontents = (this.typegen.assembly.entityDecls.get(utype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
                 const [tutype, tucontents, tutag] = this.getListResultTypeFor(idecl);
-            
+
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const codecc = this.typegen.coerce("v", ctype, this.typegen.anyType);
                 const codecu = this.typegen.coerce("u", ucontents, this.typegen.anyType);
@@ -2431,7 +2431,7 @@ class CPPBodyEmitter {
                 const utype = this.typegen.getMIRType(idecl.params[1].type);
                 const ucontents = (this.typegen.assembly.entityDecls.get(utype.trkey) as MIREntityTypeDecl).terms.get("T") as MIRType;
                 const [tutype, tucontents, tutag] = this.getListResultTypeFor(idecl);
-            
+
                 //TODO: it would be nice if we had specialized versions of these that didn't dump into our scope manager
                 const codecc = this.typegen.coerce("v", ctype, this.typegen.anyType);
                 const codecu = this.typegen.coerce("u", utype, this.typegen.anyType);
@@ -2449,14 +2449,14 @@ class CPPBodyEmitter {
             case "list_append": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
-                
+
                 bodystr = `auto $$return = ${this.createListOpsFor(ltype, ctype)}::list_append(${params[0]}, ${params[1]});`;
                 break;
             }
             case "list_partition": {
                 const ltype = this.getEnclosingListTypeForListOp(idecl);
                 const ctype = this.getListContentsInfoForListOp(idecl);
-            
+
                 const maptype = this.typegen.getMIRType(idecl.resultType);
                 const mapentrytype = this.getMEntryTypeForMapType(maptype.trkey);
                 const ktype = this.getMapKeyContentsInfoForMapType(maptype.trkey);
@@ -2724,7 +2724,7 @@ class CPPBodyEmitter {
                 const mtype = this.getEnclosingMapTypeForMapOp(idecl);
                 const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
                 const vtype = this.getMapValueContentsInfoForMapOp(idecl);
-            
+
                 const rtype = this.typegen.getMIRType(idecl.resultType);
                 const rtyperepr = this.typegen.getCPPReprFor(rtype);
                 const utype = (this.typegen.assembly.entityDecls.get(rtype.trkey) as MIREntityTypeDecl).terms.get("V") as MIRType;
@@ -2740,7 +2740,7 @@ class CPPBodyEmitter {
                 const mtype = this.getEnclosingMapTypeForMapOp(idecl);
                 const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
                 const vtype = this.getMapValueContentsInfoForMapOp(idecl);
-            
+
                 const rtype = this.typegen.getMIRType(idecl.resultType);
                 const rtyperepr = this.typegen.getCPPReprFor(rtype);
                 const utype = (this.typegen.assembly.entityDecls.get(rtype.trkey) as MIREntityTypeDecl).terms.get("V") as MIRType;
@@ -2756,7 +2756,7 @@ class CPPBodyEmitter {
                 const mtype = this.getEnclosingMapTypeForMapOp(idecl);
                 const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
                 const vtype = this.getMapValueContentsInfoForMapOp(idecl);
-            
+
                 const rtype = this.typegen.getMIRType(idecl.resultType);
                 const rtyperepr = this.typegen.getCPPReprFor(rtype);
                 const utype = (this.typegen.assembly.entityDecls.get(idecl.params[1].type) as MIREntityTypeDecl).terms.get("V") as MIRType;
@@ -2780,7 +2780,7 @@ class CPPBodyEmitter {
                 const mtype = this.getEnclosingMapTypeForMapOp(idecl);
                 const ktype = this.getMapKeyContentsInfoForMapOp(idecl);
                 const vtype = this.getMapValueContentsInfoForMapOp(idecl);
-            
+
                 const rtype = this.typegen.getMIRType(idecl.resultType);
                 const rtyperepr = this.typegen.getCPPReprFor(rtype);
                 const utype = (this.typegen.assembly.entityDecls.get(rtype.trkey) as MIREntityTypeDecl).terms.get("V") as MIRType;
@@ -2798,7 +2798,7 @@ class CPPBodyEmitter {
                 const kops = this.typegen.getFunctorsForType(ktype);
                 const vtype = this.getMapValueContentsInfoForMapOp(idecl);
                 const vops = this.typegen.getFunctorsForType(vtype);
-                
+
                 const rtype = this.typegen.getMIRType(idecl.resultType);
                 const rtyperepr = this.typegen.getCPPReprFor(rtype);
 
@@ -2811,7 +2811,7 @@ class CPPBodyEmitter {
                 const kops = this.typegen.getFunctorsForType(ktype);
                 const vtype = this.getMapValueContentsInfoForMapOp(idecl);
                 const vops = this.typegen.getFunctorsForType(vtype);
-                
+
                 const rtype = this.typegen.getMIRType(idecl.resultType);
                 const rtyperepr = this.typegen.getCPPReprFor(rtype);
 
