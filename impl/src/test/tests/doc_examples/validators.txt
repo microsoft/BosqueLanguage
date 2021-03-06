@@ -2,5 +2,5 @@ typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
 typedef CSSpt = /\p{N}+pt/;
 
 function is3pt(s1: StringOf<CSSpt>): Bool {
-    return s1.string() == "3pt";
+    return s1.string() === "3pt";
 }

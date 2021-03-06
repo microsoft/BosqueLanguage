@@ -127,7 +127,8 @@
             ],
             "refutes": [
                 "ZipcodeUS::accepts(\"98052-0000\")",
-                "ZipcodeUS::accepts(\"98052\")"
+                "ZipcodeUS::accepts(\"98052\")",
+                "is3pt('3pt' of CSSpt)"
             ],
             "reachables": [
                 "!ZipcodeUS::accepts(\"98052-\")",

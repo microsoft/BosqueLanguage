@@ -66,7 +66,7 @@ class RegexParser {
             return new CharRange(lb, ub);
         }
         else {
-            res = new LiteralChar(this.token());
+            res = new Literal(this.token());
             this.advance();
         }
 
@@ -86,13 +86,13 @@ class RegexParser {
                 const cc = this.token();
                 this.advance();
 
-                return new LiteralChar(cc);
+                return new Literal(cc);
             }
             else if(this.isToken("n") || this.isToken("t")) {
                 const cc = this.token();
                 this.advance();
 
-                return new LiteralChar("\\" + cc);
+                return new Literal("\\" + cc);
             }
             else {
                 if(!this.isToken("p")) {
@@ -204,7 +204,18 @@ class RegexParser {
                 return rpe;
             }
 
-            sre.push(rpe);
+            if(sre.length === 0) {
+                sre.push(rpe);
+            }
+            else {
+                const lcc = sre[sre.length - 1];
+                if(lcc instanceof Literal && rpe instanceof Literal && Literal.canMergeLiterals(lcc, rpe)) {
+                    sre[sre.length - 1] = Literal.mergeLiterals(lcc, rpe);
+                }
+                else {
+                    sre.push(rpe);
+                }
+            }
         }
 
         if(sre.length === 0) {
@@ -333,7 +344,7 @@ abstract class RegexComponent {
 
     static jparse(obj: any): RegexComponent {
         if(typeof(obj) === "string") {
-            return LiteralChar.jparse(obj);
+            return Literal.jparse(obj);
         }
         else {
             const tag = obj.tag;
@@ -359,31 +370,39 @@ abstract class RegexComponent {
     }
 }
 
-class LiteralChar extends RegexComponent {
-    readonly charval: string;
+class Literal extends RegexComponent {
+    readonly litval: string;
 
     static escapechars = ["\\", "/", ".", "*", "+", "?", "|", "(", ")", "[", "]", "{", "}", "$", "^"];
 
-    constructor(charval: string) {
+    constructor(litval: string) {
         super();
 
-        this.charval = charval;
+        this.litval = litval;
     }
 
     jemit(): any {
-        return this.charval;
+        return this.litval;
     }
 
     static jparse(obj: any): RegexComponent {
-        return new LiteralChar(obj);
+        return new Literal(obj);
+    }
+
+    static canMergeLiterals(l1: Literal, l2: Literal): boolean {
+        return !Literal.escapechars.includes(l1.litval) && !Literal.escapechars.includes(l2.litval);
+    }
+
+    static mergeLiterals(l1: Literal, l2: Literal): Literal {
+        return new Literal(l1.litval + l2.litval);
     }
 
     compileToJS(): string {
-        if (LiteralChar.escapechars.includes(this.charval)) {
-            return "\\" + this.charval;
+        if (Literal.escapechars.includes(this.litval)) {
+            return "\\" + this.litval;
         }
         else {
-            return this.charval;
+            return this.litval;
         }
     }
 
@@ -394,7 +413,7 @@ class LiteralChar extends RegexComponent {
     compileToSMT(ascii: boolean): string  {
         assert(ascii);
 
-        return `(str.to.re "${this.charval}")`;
+        return `(str.to.re "${this.litval}")`;
     }
 }
 
