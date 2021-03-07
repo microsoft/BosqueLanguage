@@ -172,12 +172,12 @@ class TypeChecker {
 
     private getResultSubtypes(rtype: ResolvedType): [ResolvedType, ResolvedType] {
         const binds = (rtype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds;
-        const okentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Ok") as EntityTypeDecl;
-        const errentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Err") as EntityTypeDecl;
+        const okentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
+        const errentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
 
         return [
-            ResolvedType.createSingle(ResolvedEntityAtomType.create(okentity, new Map<string, ResolvedType>().set("T", binds.get("T") as ResolvedType))),
-            ResolvedType.createSingle(ResolvedEntityAtomType.create(errentity, new Map<string, ResolvedType>().set("E", binds.get("E") as ResolvedType)))
+            ResolvedType.createSingle(ResolvedEntityAtomType.create(okentity, binds)),
+            ResolvedType.createSingle(ResolvedEntityAtomType.create(errentity, binds))
         ];
     }
 

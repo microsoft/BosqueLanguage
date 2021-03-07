@@ -165,11 +165,11 @@ is3pt('3pt' of CSSpt)              //true
 ```
 
 ```
-entity StatusCode provides Parsable {
+parsable entity StatusCode {
     field code: Int;
     field name: String;
 
-    override static tryParse(name: String): Result<StatusCode, String> {
+    function tryParse(name: String): Result<StatusCode, String> {
         return switch(name) {
             case "IO"      => ok(StatusCode@{1, name})
             case "Network" => ok(StatusCode@{2, name})
@@ -178,8 +178,8 @@ entity StatusCode provides Parsable {
     }
 }
 
-function isIOCode(s: StringOf<StatusCode>): Bool {
-    return s == StatusCode'IO';
+function isIOCode(s: DataString<StatusCode>): Bool {
+    return s === 'IO' of StatusCode;
 }
 
 isIOCode("IO");                               //type error not a StringOf<StatusCode>
