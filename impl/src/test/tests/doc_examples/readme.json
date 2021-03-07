@@ -123,7 +123,8 @@
             "code": "",
             "typechk": [
                 "is3pt(\"12\")",
-                "is3pt('98052' of ZipcodeUS)"
+                "is3pt('98052' of ZipcodeUS)",
+                "is3pt('3' of CSSpt)"
             ],
             "refutes": [
                 "ZipcodeUS::accepts(\"98052-0000\")",

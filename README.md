@@ -149,7 +149,7 @@ typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
 typedef CSSpt = /\p{N}+pt/;
 
 function is3pt(s1: StringOf<CSSpt>): Bool {
-    return s1.string() == "3pt";
+    return s1.string() === "3pt";
 }
 
 ZipcodeUS::accepts("98052-0000") //true
@@ -159,10 +159,9 @@ ZipcodeUS::accepts("abc")        //false
 is3pt("12")                        //type error String is not a StringOf
 is3pt('98052' of ZipcodeUS)        //type error StringOf<ZipcodeUS> not StringOf<CSSpt>
 
-fss(SafeString<Letter>::from("a"))  //type error incompatible SafeString types
-fss(Digit'a')                       //type error 'a' is incompatible with Digit 
-fss(SafeString<Digit>::from("a"))   //runtime error 'a' is incompatible with Digit
-fss(SafeString<Digit>::from("3"))   //true
+is3pt(StringOf<CSSpt>::from("a"))  //error not a StringOf<CSSpt> value
+is3pt('3' of CSSpt)                //type error '3' is incompatible with CSSpt 
+is3pt('3pt' of CSSpt)              //true
 ```
 
 ```

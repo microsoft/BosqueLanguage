@@ -1822,12 +1822,12 @@ class Parser {
         return new LiteralExpressionValue(this.parseLiteralTypedExpression());
     }
 
-    private parseConstExpression(capturesok: boolean): ConstantExpressionValue {
+    private parseConstExpression(capturesok: boolean, disallowMapEntry?: boolean): ConstantExpressionValue {
         const sinfo = this.getCurrentSrcInfo();
 
         try {
             this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), this.m_penv.SpecialAutoSignature, true));
-            const exp = this.parseSelectExpression();
+            const exp = this.parseSelectExpression(disallowMapEntry);
             const captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
 
             if(!capturesok && captured.size !== 0) {
@@ -2759,24 +2759,8 @@ class Parser {
         }
     }
 
-    private parseSelectExpression(disallowMapEntry?: boolean): Expression {
-        const sinfo = this.getCurrentSrcInfo();
-        const texp = this.parseMapEntryConstructorExpression(disallowMapEntry);
-
-        if (this.testAndConsumeTokenIf("?")) {
-            const exp1 = this.parseMapEntryConstructorExpression(disallowMapEntry);
-            this.ensureAndConsumeToken(":");
-            const exp2 = this.parseSelectExpression(disallowMapEntry);
-
-            return new SelectExpression(sinfo, texp, exp1, exp2);
-        }
-        else {
-            return texp;
-        }
-    }
-
-    private parseOfExpression(): Expression {
-        let exp = this.parseSelectExpression();
+    private parseOfExpression(disallowMapEntry: boolean): Expression {
+        let exp = this.parseMapEntryConstructorExpression(disallowMapEntry);
 
         if (this.testAndConsumeTokenIf("of")) {
             const sinfo = this.getCurrentSrcInfo();
@@ -2792,8 +2776,24 @@ class Parser {
         return exp;
     }
 
+    private parseSelectExpression(disallowMapEntry?: boolean): Expression {
+        const sinfo = this.getCurrentSrcInfo();
+        const texp = this.parseOfExpression(disallowMapEntry || false);
+
+        if (this.testAndConsumeTokenIf("?")) {
+            const exp1 = this.parseOfExpression(disallowMapEntry || false);
+            this.ensureAndConsumeToken(":");
+            const exp2 = this.parseSelectExpression(disallowMapEntry);
+
+            return new SelectExpression(sinfo, texp, exp1, exp2);
+        }
+        else {
+            return texp;
+        }
+    }
+
     private parseExpOrExpression(): Expression {
-        const texp = this.parseOfExpression();
+        const texp = this.parseSelectExpression();
 
         if (this.testFollows("?", "none", "?") || this.testFollows("?", "err", "?") || this.testElvisFollows("?")) {
             const ffsinfo = this.getCurrentSrcInfo();
@@ -2904,12 +2904,12 @@ class Parser {
             
             let entries: MatchEntry<Expression>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("type") || this.testToken("case") || (this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "_")) {
+            while (this.testToken("type") || this.testToken("case")) {
                 if (this.testToken("type")) {
-                    entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), true, "type", () => this.parseExpression()));
+                    entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), "type", () => this.parseExpression()));
                 }
                 else {
-                    entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), true, "case", () => this.parseExpression()));
+                    entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), "case", () => this.parseExpression()));
                 }
             }
             this.ensureAndConsumeToken("}");
@@ -2930,7 +2930,7 @@ class Parser {
 
     parseSimpleStructuredAssignment(sinfo: SourceInfo, vars: "let" | "var" | undefined, decls: Set<string>): StructuredAssignment {
         if (!this.testToken(TokenStrings.Identifier)) {
-            const expr = this.parseConstExpression(false);
+            const expr = this.parseConstExpression(false, true);
             return new ConstValueStructuredAssignment(expr);
         }
         else {
@@ -3427,16 +3427,16 @@ class Parser {
         }
     }
 
-    private parseMatchEntry<T>(sinfo: SourceInfo, expsemi: boolean, matchtype: "type" | "case", actionp: () => T): MatchEntry<T> {
-        if(!this.testToken(TokenStrings.Identifier)) {
-            this.consumeToken();
-        }
+    private parseMatchEntry<T>(sinfo: SourceInfo, matchtype: "type" | "case", actionp: () => T): MatchEntry<T> {
+        this.consumeToken();
 
         const guard = this.parseMatchGuard(sinfo, matchtype);
         this.ensureAndConsumeToken("=>");
         const action = actionp();
-        if(expsemi) {
-            this.ensureAndConsumeToken(";");
+
+        const isokfollow = this.testToken("}") || this.testToken("type") || this.testToken("case");
+        if(!isokfollow) {
+            this.raiseError(this.getCurrentLine(), "Unknown token at end of match entry");
         }
 
         return new MatchEntry<T>(guard, action);
@@ -3457,12 +3457,12 @@ class Parser {
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("type") || this.testToken("case") || (this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "_")) {
+            while (this.testToken("type") || this.testToken("case")) {
                 if (this.testToken("type")) {
-                    entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), false, "type", () => this.parseBlockStatement()));
+                    entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), "type", () => this.parseBlockStatement()));
                 }
                 else {
-                    entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), false, "case", () => this.parseBlockStatement()));
+                    entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), "case", () => this.parseBlockStatement()));
                 }
             }
             this.ensureAndConsumeToken("}");
