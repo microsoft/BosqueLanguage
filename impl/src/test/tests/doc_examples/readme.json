@@ -134,7 +134,8 @@
             "reachables": [
                 "!ZipcodeUS::accepts(\"98052-\")",
                 "ZipcodeUS::accepts(s)",
-                "!ZipcodeUS::accepts(s)"
+                "!ZipcodeUS::accepts(s)",
+                "is3pt(StringOf<CSSpt>::from(s))"
             ]
         }
     ]
