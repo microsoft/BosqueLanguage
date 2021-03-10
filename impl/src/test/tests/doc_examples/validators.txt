@@ -1,0 +1,23 @@
+typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
+typedef CSSpt = /\p{N}+pt/;
+
+function is3pt(s1: StringOf<CSSpt>): Bool {
+    return s1.string() === "3pt";
+}
+
+parsable entity StatusCode {
+    field code: Int;
+    field name: String;
+
+    function tryParse(name: String): Result<StatusCode, String> {
+        return switch(name) {
+            case "IO"      => ok(StatusCode@{1, name})
+            case "Network" => ok(StatusCode@{2, name})
+            case _         => err("Unknown code")
+        };
+    }
+}
+
+function isIOCode(s: DataString<StatusCode>): Bool {
+    return s === 'IO' of StatusCode;
+}

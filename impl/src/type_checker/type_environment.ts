@@ -374,8 +374,6 @@ class TypeEnvironment {
     }
 
     popLocalScope(): TypeEnvironment {
-        assert(this.hasNormalFlow());
-
         let localscopy = this.locals !== undefined ? (this.locals as Map<string, VarInfo>[]).slice(0, -1) : undefined;
         return new TypeEnvironment(this.scope, this.terms, this.pcodes, this.args, localscopy, this.inferResult, this.inferYield, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
     }
@@ -420,10 +418,9 @@ class TypeEnvironment {
         assert(this.hasNormalFlow());
 
         const oldv = this.lookupVar(name) as VarInfo;
-        
-        let localcopy = (this.locals as Map<string, VarInfo>[]).map((frame) => new Map<string, VarInfo>(frame));
-        localcopy[localcopy.length - 1].set(name, oldv.assign(flowtype));
+        const nv = oldv.assign(flowtype);
 
+        let localcopy = (this.locals as Map<string, VarInfo>[]).map((frame) => frame.has(name) ? new Map<string, VarInfo>(frame).set(name, nv) : new Map<string, VarInfo>(frame));
         return new TypeEnvironment(this.scope, this.terms, this.pcodes, this.args, localcopy, this.inferResult, this.inferYield, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
     }
 
@@ -431,10 +428,9 @@ class TypeEnvironment {
         assert(this.hasNormalFlow());
 
         const oldv = this.lookupVar(name) as VarInfo;
-        
-        let localcopy = (this.locals as Map<string, VarInfo>[]).map((frame) => new Map<string, VarInfo>(frame));
-        localcopy[localcopy.length - 1].set(name, oldv.assign(oldv.declaredType));
+        const nv = oldv.assign(oldv.declaredType);
 
+        let localcopy = (this.locals as Map<string, VarInfo>[]).map((frame) => frame.has(name) ? new Map<string, VarInfo>(frame).set(name, nv) : new Map<string, VarInfo>(frame));
         return new TypeEnvironment(this.scope, this.terms, this.pcodes, this.args, localcopy, this.inferResult, this.inferYield, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
     }
 

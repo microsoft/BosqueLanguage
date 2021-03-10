@@ -5,9 +5,13 @@
 
 type VerifierOptions = {
     ISize: number, //bits in the size 2-64
+    BigXMode: "BV" | "Int", //are bignums handled as Int or just large BV
     OverflowEnabled: boolean,
     FPOpt: "Real" | "UF",
-    StringOpt: "ASCII" | "UNICODE"
+    StringOpt: "ASCII" | "UNICODE",
+
+    SimpleQuantifierMode: boolean, //Set to true for a simplified version of Filter/Count that does not enforce subset/order properties but has simpler quantifiers
+    SpecializeSmallModelGen: boolean //Set to true if we want to generate special case enumerative "small" values to try and avoid quantifiers
 };
 
 class SMTMaskConstruct {
@@ -41,6 +45,8 @@ class SMTType {
 
 abstract class SMTExp {
     abstract emitSMT2(indent: string | undefined): string;
+
+    abstract computeCallees(callees: Set<string>): void;
 }
 
 class SMTVar extends SMTExp {
@@ -55,6 +61,10 @@ class SMTVar extends SMTExp {
     emitSMT2(indent: string | undefined): string {
         return this.vname;
     }
+
+    computeCallees(callees: Set<string>): void {
+        //Nothing to do in many cases
+    }
 }
 
 class SMTConst extends SMTExp {
@@ -68,6 +78,10 @@ class SMTConst extends SMTExp {
 
     emitSMT2(indent: string | undefined): string {
         return this.cname;
+    }
+
+    computeCallees(callees: Set<string>): void {
+        //Nothing to do in many cases
     }
 }
 
@@ -85,6 +99,11 @@ class SMTCallSimple extends SMTExp {
     emitSMT2(indent: string | undefined): string {
         return this.args.length === 0 ? this.fname : `(${this.fname} ${this.args.map((arg) => arg.emitSMT2(undefined)).join(" ")})`;
     }
+
+    computeCallees(callees: Set<string>): void {
+        callees.add(this.fname);
+        this.args.forEach((arg) => arg.computeCallees(callees));
+    }
 }
 
 class SMTCallGeneral extends SMTExp {
@@ -100,6 +119,11 @@ class SMTCallGeneral extends SMTExp {
 
     emitSMT2(indent: string | undefined): string {
         return this.args.length === 0 ? this.fname : `(${this.fname} ${this.args.map((arg) => arg.emitSMT2(undefined)).join(" ")})`;
+    }
+
+    computeCallees(callees: Set<string>): void {
+        callees.add(this.fname);
+        this.args.forEach((arg) => arg.computeCallees(callees));
     }
 }
 
@@ -119,6 +143,13 @@ class SMTCallGeneralWOptMask extends SMTExp {
     emitSMT2(indent: string | undefined): string {
         return this.args.length === 0 ? `(${this.fname} ${this.mask.emitSMT2()})` : `(${this.fname} ${this.args.map((arg) => arg.emitSMT2(undefined)).join(" ")} ${this.mask.emitSMT2()})`;
     }
+
+    computeCallees(callees: Set<string>): void {
+        callees.add(this.fname);
+        this.args.forEach((arg) => arg.computeCallees(callees));
+
+        this.mask.entries.forEach((mentry) => mentry.computeCallees(callees));
+    }
 }
 
 class SMTCallGeneralWPassThroughMask extends SMTExp {
@@ -136,6 +167,11 @@ class SMTCallGeneralWPassThroughMask extends SMTExp {
 
     emitSMT2(indent: string | undefined): string {
         return this.args.length === 0 ? `(${this.fname} ${this.mask})` : `(${this.fname} ${this.args.map((arg) => arg.emitSMT2(undefined)).join(" ")} ${this.mask})`;
+    }
+
+    computeCallees(callees: Set<string>): void {
+        callees.add(this.fname);
+        this.args.forEach((arg) => arg.computeCallees(callees));
     }
 }
 
@@ -160,6 +196,11 @@ class SMTLet extends SMTExp {
             return `(let ((${this.vname} ${this.value.emitSMT2(undefined)}))\n${indent + "  "}${this.inexp.emitSMT2(indent + "  ")}\n${indent})`;
         }
     }
+
+    computeCallees(callees: Set<string>): void {
+        this.value.computeCallees(callees);
+        this.inexp.computeCallees(callees);
+    }
 }
 
 class SMTLetMulti extends SMTExp {
@@ -183,6 +224,13 @@ class SMTLetMulti extends SMTExp {
             return `(let (${binds.join(" ")})\n${indent + "  "}${this.inexp.emitSMT2(indent + "  ")}\n${indent})`;
         }
     }
+
+    computeCallees(callees: Set<string>): void {
+        this.assigns.forEach((asgn) => {
+            asgn.value.computeCallees(callees);
+        });
+        this.inexp.computeCallees(callees);
+    }
 }
 
 class SMTIf extends SMTExp {
@@ -205,6 +253,12 @@ class SMTIf extends SMTExp {
         else {
             return `(ite ${this.cond.emitSMT2(undefined)}\n${indent + "  "}${this.tval.emitSMT2(indent + "  ")}\n${indent + "  "}${this.fval.emitSMT2(indent + "  ")}\n${indent})`;
         }
+    }
+
+    computeCallees(callees: Set<string>): void {
+        this.cond.computeCallees(callees);
+        this.tval.computeCallees(callees);
+        this.fval.computeCallees(callees);
     }
 }
 
@@ -235,6 +289,14 @@ class SMTCond extends SMTExp {
             return iopts;
         }
     }
+
+    computeCallees(callees: Set<string>): void {
+        this.opts.forEach((opt) => {
+            opt.test.computeCallees(callees);
+            opt.result.computeCallees(callees);
+        });
+        this.orelse.computeCallees(callees);
+    }
 }
 
 class SMTADTKindSwitch extends SMTExp {
@@ -261,6 +323,13 @@ class SMTADTKindSwitch extends SMTExp {
             return `(match ${this.value.emitSMT2(undefined)} (\n${indent + "  "}${matches.join("\n" + indent + "  ")})\n${indent})`;
         }
     }
+
+    computeCallees(callees: Set<string>): void {
+        this.value.computeCallees(callees);
+        this.opts.forEach((opt) => {
+            opt.result.computeCallees(callees);
+        });
+    }
 }
 
 class SMTForAll extends SMTExp {
@@ -284,13 +353,17 @@ class SMTForAll extends SMTExp {
             return `(forall (${terms.join(" ")})\n${indent + "  "}${this.clause.emitSMT2(indent + "  ")}\n${indent})`;
         }
     }
+
+    computeCallees(callees: Set<string>): void {
+        this.clause.computeCallees(callees);
+    }
 }
 
 class SMTExists extends SMTExp {
     readonly terms: { vname: string, vtype: SMTType }[];
     readonly clause: SMTExp;
 
-    constructor(terms: { vname: string, vtype: SMTType }[], erroridx: { vname: string, vtype: SMTType }, clause: SMTExp) {
+    constructor(terms: { vname: string, vtype: SMTType }[], clause: SMTExp) {
         super();
 
         this.terms = terms;
@@ -306,6 +379,10 @@ class SMTExists extends SMTExp {
         else {
             return `(exists (${terms.join(" ")})\n${indent + "  "}${this.clause.emitSMT2(indent + "  ")}\n${indent})`;
         }
+    }
+
+    computeCallees(callees: Set<string>): void {
+        this.clause.computeCallees(callees);
     }
 }
 

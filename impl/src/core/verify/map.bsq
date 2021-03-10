@@ -7,9 +7,9 @@
 namespace NSCore;
 
 entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, PODType when K PODType && V PODType, APIType when K APIType && V APIType {
-    __safe private static s_size(m: Map<K, V>): Nat # map_size
-    __safe private static s_has_key(m: Map<K, V>, key: K): Bool # map_has_key
-    __safe private static s_at_val(m: Map<K, V>, key: K): V # map_at_val
+    __safe private function s_size(m: Map<K, V>): Nat # map_size
+    __safe private function s_has_key(m: Map<K, V>, key: K): Bool # map_has_key
+    __safe private function s_at_val(m: Map<K, V>, key: K): V # map_at_val
     
     method size(): Nat {
         return Map<K, V>::s_size(this);

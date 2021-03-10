@@ -6,7 +6,7 @@
         "noImplicitReturns": true,
         "noImplicitThis": true,
         "noUnusedLocals": true,
-        "target": "es6",
+        "target": "es2020",
         "sourceMap": true,
         "outDir": "bin"
     },
@@ -14,6 +14,8 @@
         "src/ast/*.ts",
         "src/type_checker/*.ts",
         "src/compiler/*.ts",
-        "src/tooling/verifier/*.ts"
+        "src/tooling/verifier/*.ts",
+        "src/runtimes/*.ts",
+        "src/test/*.ts"
     ]
 }

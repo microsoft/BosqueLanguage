@@ -2,7 +2,7 @@
 
 [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Microsoft/BosqueLanguage/blob/master/LICENSE.txt)
 [![PR's Welcome](https://img.shields.io/badge/PRs%20-welcome-brightgreen.svg)](#contribute)
-[![Build Status](https://dev.azure.com/bosquepl/BosqueDevOps/_apis/build/status/Microsoft.BosqueLanguage?branchName=master)](https://dev.azure.com/bosquepl/BosqueDevOps/_build/latest?definitionId=1&branchName=master)
+[![Build Health](https://img.shields.io/github/workflow/status/mrkmarron/BosqueLanguage/nodeci)](https://github.com/mrkmarron/BosqueLanguage/actions) 
 
 
 ## The Bosque Project
@@ -55,7 +55,7 @@ Detailed Documentation, Tutorials, and Technical Information:
 **Add 2 numbers:**
 
 ```none
-function add2(x: Int, y: Int): Int {
+function add2(x: Nat, y: Nat): Nat {
     return x + y;
 }
 
@@ -68,7 +68,7 @@ add2(y=2, 5)   //7
 
 ```none
 function allPositive(...args: List<Int>): Bool {
-    return args.allOf(fn(x) => x >= 0);
+    return args.allOf(fn(x) => x >= 0i);
 }
 
 allPositive(1, 3, 4) //true
@@ -77,17 +77,17 @@ allPositive(1, 3, 4) //true
 **Tuples and Records:**
 
 ```none
-function doit(tup: [Int, Bool], rec: {f: String, g: Int}): Int {
+function doit(tup: #[Int, Bool], rec: #{f: String, g: Int}): Int {
     return tup.0 + rec.g;
 }
 
-doit([1, false], {f="ok", g=3}) //4
+doit(#[1, false], #{f="ok", g=3}) //4
 ```
 
-**Sign (with optional argument):**
+**Sign (with default argument):**
 
 ```none
-function sign(x?: Int): Int {
+function sign(x?: Int=0): Int {
     var y: Int;
 
     if(x == none || x == 0) {
@@ -145,29 +145,31 @@ NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 
 **Validated and Typed Strings:**
 ```
-typedef Letter = /\w/;
-typedef Digit = /\d/;
+typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
+typedef CSSpt = /\p{N}+pt/;
 
-function fss(s1: SafeString<Digit>): Bool {
-    return s1.string() == "3";
+function is3pt(s1: StringOf<CSSpt>): Bool {
+    return s1.string() === "3pt";
 }
 
-Digit::accepts("a"); //false
-Digit::accepts("2"); //true
+ZipcodeUS::accepts("98052-0000") //true
+ZipcodeUS::accepts("98052-")     //false
+ZipcodeUS::accepts("abc")        //false
 
-fss("1234")                         //type error String is not a SafeString
-fss(SafeString<Letter>::from("a"))  //type error incompatible SafeString types
-fss(Digit'a')                       //type error 'a' is incompatible with Digit 
-fss(SafeString<Digit>::from("a"))   //runtime error 'a' is incompatible with Digit
-fss(SafeString<Digit>::from("3"))   //true
+is3pt("12")                        //type error String is not a StringOf
+is3pt('98052' of ZipcodeUS)        //type error StringOf<ZipcodeUS> not StringOf<CSSpt>
+
+is3pt(StringOf<CSSpt>::from("a"))  //error not a StringOf<CSSpt> value
+is3pt('3' of CSSpt)                //type error '3' is incompatible with CSSpt 
+is3pt('3pt' of CSSpt)              //true
 ```
 
 ```
-entity StatusCode provides Parsable {
+parsable entity StatusCode {
     field code: Int;
     field name: String;
 
-    override static tryParse(name: String): Result<StatusCode, String> {
+    function tryParse(name: String): Result<StatusCode, String> {
         return switch(name) {
             case "IO"      => ok(StatusCode@{1, name})
             case "Network" => ok(StatusCode@{2, name})
@@ -176,8 +178,8 @@ entity StatusCode provides Parsable {
     }
 }
 
-function isIOCode(s: StringOf<StatusCode>): Bool {
-    return s == StatusCode'IO';
+function isIOCode(s: DataString<StatusCode>): Bool {
+    return s === 'IO' of StatusCode;
 }
 
 isIOCode("IO");                               //type error not a StringOf<StatusCode>
@@ -263,6 +265,8 @@ getSays("dog", "woof") //Ok<String, ErrData>@{value="The dog says woof"}
 getSays("", "woof") //Err<String, ErrData>@{error={ msg="Invalid animal" }}
 getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
 ```
+
+**Numeric Types**
 
 **API Types**
 

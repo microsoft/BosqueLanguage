@@ -4,13 +4,12 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert from "assert";
-import { MIRArgGuard, MIRArgument, MIRAssertCheck, MIRConvertValue, MIRDebug, MIREntityProjectToEphemeral, MIREntityUpdate, MIRGuard, MIRLoadConst, MIRLoadField, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIROp, MIROpTag, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRResolvedTypeKey, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRAllTrue, MIRIsTypeOf, MIRJumpCond, MIRJumpNone, MIRReturnAssign, MIRReturnAssignOfCons, MIRPhi, MIRBody, MIRBasicBlock, MIRStatmentGuard, MIRRegisterAssign, MIRVerifierAssume } from "./mir_ops";
+import { MIRArgGuard, MIRArgument, MIRAssertCheck, MIRConvertValue, MIRDebug, MIREntityProjectToEphemeral, MIREntityUpdate, MIRGuard, MIRLoadConst, MIRLoadField, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIROp, MIROpTag, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRResolvedTypeKey, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRAllTrue, MIRIsTypeOf, MIRJumpCond, MIRJumpNone, MIRReturnAssign, MIRReturnAssignOfCons, MIRPhi, MIRBody, MIRBasicBlock, MIRStatmentGuard, MIRRegisterAssign, MIRSomeTrue } from "./mir_ops";
 import { SourceInfo } from "../ast/parser";
 import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./mir_info";
-import { MIRType } from "./mir_assembly";
+import { MIRAssembly, MIRType } from "./mir_assembly";
 
 type SSAState = {
-    newtidctr: number,
     booltype: MIRResolvedTypeKey,
 
     remap: Map<string, MIRRegisterArgument>,
@@ -21,24 +20,21 @@ type SSAState = {
 function convertToSSA(reg: MIRRegisterArgument, oftype: MIRResolvedTypeKey, ssastate: SSAState): MIRRegisterArgument {
     if (!ssastate.ctrs.has(reg.nameID)) {
         ssastate.ctrs.set(reg.nameID, 0);
-
         ssastate.remap.set(reg.nameID, reg);
         ssastate.vartypes.set(reg.nameID, oftype);
 
         return reg;
     }
     else {
-        const ssaCtr = ssastate.ctrs.has(reg.nameID) ? ssastate.ctrs.get(reg.nameID) as number + 1 : 0;
+        const ssaCtr = ssastate.ctrs.get(reg.nameID) as number + 1;
         ssastate.ctrs.set(reg.nameID, ssaCtr);
 
         const vname = reg.nameID + `$${ssaCtr}`;
+        ssastate.remap.set(reg.nameID, new MIRRegisterArgument(vname, reg.nameID));
 
-        let rreg = new MIRRegisterArgument(`#tmp_${ssastate.newtidctr++}`, vname);
-        
-        ssastate.remap.set(reg.nameID, rreg);
-        ssastate.vartypes.set(rreg.nameID, oftype);
+        ssastate.vartypes.set(vname, oftype);
 
-        return rreg;
+        return ssastate.remap.get(reg.nameID) as MIRRegisterArgument;
     }
 }
 
@@ -107,11 +103,6 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
         case MIROpTag.MIRSetConstantGuardFlag:
         case MIROpTag.MIRVarLifetimeStart:
         case MIROpTag.MIRVarLifetimeEnd: {
-            return op;
-        }
-        case MIROpTag.MIRVerifierAssume: {
-            const asu = op as MIRVerifierAssume;
-            asu.arg = processSSA_Use(asu.arg, ssastate);
             return op;
         }
         case MIROpTag.MIRAssertCheck: {
@@ -365,6 +356,12 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
             at.trgt = convertToSSA(at.trgt, ssastate.booltype, ssastate);
             return op;
         }
+        case MIROpTag.MIRSomeTrue: {
+            const at = op as MIRSomeTrue;
+            at.args = processSSAUse_RemapArgs(at.args, ssastate);
+            at.trgt = convertToSSA(at.trgt, ssastate.booltype, ssastate);
+            return op;
+        }
         case MIROpTag.MIRIsTypeOf: {
             const it = op as MIRIsTypeOf;
             it.arg = processSSA_Use(it.arg, ssastate);
@@ -465,7 +462,6 @@ function convertBodyToSSA(body: MIRBody, booltype: MIRType, args: Map<string, MI
 
     let remapped = new Map<string, Map<string, MIRRegisterArgument>>();
     let ssastate = {
-        newtidctr: 100000,
         booltype: booltype.trkey,
         
         remap: new Map<string, MIRRegisterArgument>(),
@@ -489,15 +485,27 @@ function convertBodyToSSA(body: MIRBody, booltype: MIRType, args: Map<string, MI
         }
         else {
             const [phis, remap] = computePhis(body.sinfo, block.label, ssastate, remapped, links, live);
+            ssastate.remap = remap;
 
             for (let i = 0; i < block.ops.length; ++i) {
                 assignSSA(block.ops[i], ssastate);
             }
 
             block.ops.unshift(...phis);
-            remapped.set(block.label, remap);
+            remapped.set(block.label, ssastate.remap);
         }
     }
 }
 
-export { convertBodyToSSA };
+function ssaConvertInvokes(masm: MIRAssembly) {
+    masm.invokeDecls.forEach((inv) => {
+        let args = new Map<string, MIRType>();
+        inv.params.forEach((p) => {
+            args.set(p.name, masm.typeMap.get(p.type) as MIRType);
+        });
+        
+        convertBodyToSSA(inv.body, masm.typeMap.get("NSCore::Bool") as MIRType, args);
+    });
+}
+
+export { ssaConvertInvokes };

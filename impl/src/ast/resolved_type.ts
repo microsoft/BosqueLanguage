@@ -533,21 +533,23 @@ class ResolvedFunctionType {
     readonly optRestParamName: string | undefined;
     readonly optRestParamType: ResolvedType | undefined;
     readonly resultType: ResolvedType;
+    readonly isPred: boolean;
 
     readonly allParamNames: Set<string>;
 
-    constructor(rstr: string, recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType) {
+    constructor(rstr: string, recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType, isPred: boolean) {
         this.idStr = rstr;
         this.recursive = recursive;
         this.params = params;
         this.optRestParamName = optRestParamName;
         this.optRestParamType = optRestParamType;
         this.resultType = resultType;
+        this.isPred = isPred;
 
         this.allParamNames = new Set<string>();
     }
 
-    static create(recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType): ResolvedFunctionType {
+    static create(recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType, isPred: boolean): ResolvedFunctionType {
         const cvalues = params.map((param) => (param.refKind !== undefined ? param.refKind : "") + param.name + (param.isOptional ? "?: " : ": ") + param.type.idStr + (param.litexp !== undefined ? ("==" + param.litexp) : ""));
         let cvalue = cvalues.join(", ");
 
@@ -563,7 +565,8 @@ class ResolvedFunctionType {
             cvalue += ((cvalues.length !== 0 ? ", " : "") + ("..." + optRestParamName + ": " + optRestParamType.idStr));
         }
 
-        return new ResolvedFunctionType(recstr + "(" + cvalue + ") -> " + resultType.idStr, recursive, params, optRestParamName, optRestParamType, resultType);
+        const lstr = isPred ? "pred" : "fn";
+        return new ResolvedFunctionType(recstr + lstr + "(" + cvalue + ") -> " + resultType.idStr, recursive, params, optRestParamName, optRestParamType, resultType, isPred);
     }
 }
 

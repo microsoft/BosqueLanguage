@@ -7,8 +7,8 @@
 namespace NSCore;
 
 entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODType, APIType when T APIType {
-    __safe private static s_size(s: Set<T>): Nat # set_size
-    __safe private static s_has_key(s: Set<T>, key: T): Bool # set_has_key
+    __safe private function s_size(s: Set<T>): Nat # set_size
+    __safe private function s_has_key(s: Set<T>, key: T): Bool # set_has_key
 
     method size(): Nat {
         return Set<T>::s_size(this);

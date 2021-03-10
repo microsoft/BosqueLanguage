@@ -6,31 +6,21 @@
 //The core namespace implements the primitive types used in the Bosque language
 namespace NSCore;
 
-//<summary>Special builtin methods for verifier to use.</summary>
-entity Verifier {
-    __safe static term_eq(t1: Any, t2: Any): Bool # verifier_termeq
-
-    __safe static lnot(b1: Bool, b2: Bool): Bool # verifier_lnot
-    __safe static land(b1: Bool, b2: Bool): Bool # verifier_land
-    __safe static lor(b1: Bool, b2: Bool): Bool # verifier_lor
-    __safe static limplies(b1: Bool, b2: Bool): Bool # verifier_limplies
-}
-
 //<summary>Special type which all values are instances of.</summary>
 concept Any {
     method is<T>(): Bool # special_method
     method as<T>(): T # special_method
 
     method asOrNone<T>(): T? {
-        return this->is<T>() ? this->as<T>() : none;
+        return this.is<T>() ? this.as<T>() : none;
     }
 
-    method asTry<T>(ref? v: T): Bool {
-        if(!this->is<T>()) {
+    method asTry<T>(out? v: T): Bool {
+        if(!this.is<T>()) {
             return false;
         }
         else {
-            v = this->as<T>();
+            v = this.as<T>();
             return true;
         }
     }
@@ -62,120 +52,154 @@ concept APIType provides APIValue {
 }
 
 //<summary>Type for representing the none-value.</summary>
-grounded struct entity None provides KeyType, PODType, APIType {
+__internal grounded struct entity None provides KeyType, PODType, APIType {
 }
 
 //<summary>Primitive boolean value.</summary>
-grounded struct entity Bool provides Some, KeyType, PODType, APIType {
+__internal grounded struct entity Bool provides Some, KeyType, PODType, APIType {
 }
+
+abstract prefix operator +(a: Some): Some;
+abstract prefix operator -(a: Some): Some;
+abstract infix operator *(a: Some, b: Some): Some;
+abstract infix operator /(a: Some, b: Some): Some;
+abstract infix operator +(a: Some, b: Some): Some;
+abstract infix operator -(a: Some, b: Some): Some;
+abstract infix operator ==(a: Some, b: Some): Bool;
+abstract infix operator !=(a: Some, b: Some): Bool;
+abstract infix operator <(a: Some, b: Some): Bool;
+abstract infix operator >(a: Some, b: Some): Bool;
+abstract infix operator <=(a: Some, b: Some): Bool;
+abstract infix operator >=(a: Some, b: Some): Bool;
 
 //<summary>Primitive integer value.</summary>
-grounded struct entity Int provides Some, KeyType, PODType, APIType {
+__internal grounded struct entity Int provides Some, KeyType, PODType, APIType {
 }
-__safe inline prefix operator +(a: Int): Int = default;
-__safe inline prefix operator -(a: Int): Int = default;
-inline infix operator *(a: Int, b, Int): Int = default;
-inline infix operator /(a: Int, b, Int): Int = default;
-inline infix operator +(a: Int, b, Int): Int = default;
-inline infix operator -(a: Int, b, Int): Int = default;
-__safe inline infix operator ==(a: Int, b: Int): Bool = default;
-__safe inline infix operator !=(a: Int, b: Int): Bool = default;
-__safe inline infix operator <(a: Int, b: Int): Bool = default;
-__safe inline infix operator >(a: Int, b: Int): Bool = default;
-__safe inline infix operator <=(a: Int, b: Int): Bool = default;
-__safe inline infix operator >=(a: Int, b: Int): Bool = default;
+__safe __primitive inline prefix operator +(a: Int): Int = default;
+__safe __primitive inline prefix operator -(a: Int): Int = default;
+__primitive inline infix operator *(a: Int, b: Int): Int = default;
+__primitive inline infix operator /(a: Int, b: Int): Int = default;
+__primitive inline infix operator +(a: Int, b: Int): Int = default;
+__primitive inline infix operator -(a: Int, b: Int): Int = default;
+__safe __primitive inline infix operator ==(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator !=(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator <(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator >(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator <=(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 
 //<summary>Primitive natural number value.</summary>
-grounded struct entity Nat provides Some, KeyType, PODType, APIType {
+__internal grounded struct entity Nat provides Some, KeyType, PODType, APIType {
 }
-__safe inline prefix operator +(a: Nat): Nat = default;
-inline infix operator *(a: Nat, b, Nat): Nat = default;
-inline infix operator /(a: Nat, b, Nat): Nat = default;
-inline infix operator +(a: Nat, b, Nat): Nat = default;
-inline infix operator -(a: Nat, b, Nat): Nat = default;
-__safe inline infix operator ==(a: Nat, b: Nat): Bool = default;
-__safe inline infix operator !=(a: Nat, b: Nat): Bool = default;
-__safe inline infix operator <(a: Nat, b: Nat): Bool = default;
-__safe inline infix operator >(a: Nat, b: Nat): Bool = default;
-__safe inline infix operator <=(a: Nat, b: Nat): Bool = default;
-__safe inline infix operator >=(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline prefix operator +(a: Nat): Nat = default;
+__primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator /(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator +(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator -(a: Nat, b: Nat): Nat = default;
+__safe __primitive inline infix operator ==(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator !=(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator <(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator >(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator <=(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-grounded struct entity BigInt provides Some, KeyType, PODType, APIType {
+__internal grounded struct entity BigInt provides Some, KeyType, PODType, APIType {
 }
-__safe inline prefix operator +(a: BigInt): BigInt = default;
-__safe inline prefix operator -(a: BigInt): BigInt = default;
-inline infix operator *(a: BigInt, b, BigInt): BigInt = default;
-inline infix operator /(a: BigInt, b, BigInt): BigInt = default;
-inline infix operator +(a: BigInt, b, BigInt): BigInt = default;
-inline infix operator -(a: BigInt, b, BigInt): BigInt = default;
-__safe inline infix operator ==(a: BigInt, b: BigInt): Bool = default;
-__safe inline infix operator !=(a: BigInt, b: BigInt): Bool = default;
-__safe inline infix operator <(a: BigInt, b: BigInt): Bool = default;
-__safe inline infix operator >(a: BigInt, b: BigInt): Bool = default;
-__safe inline infix operator <=(a: BigInt, b: BigInt): Bool = default;
-__safe inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline prefix operator +(a: BigInt): BigInt = default;
+__safe __primitive inline prefix operator -(a: BigInt): BigInt = default;
+__primitive inline infix operator *(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator /(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator +(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator -(a: BigInt, b: BigInt): BigInt = default;
+__safe __primitive inline infix operator ==(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator !=(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator <(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator >(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator <=(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-grounded struct entity BigNat provides Some, KeyType, PODType, APIType {
+__internal grounded struct entity BigNat provides Some, KeyType, PODType, APIType {
 }
-__safe inline prefix operator +(a: BigNat): BigNat = default;
-inline infix operator *(a: BigNat, b, BigNat): BigNat = default;
-inline infix operator /(a: BigNat, b, BigNat): BigNat = default;
-inline infix operator +(a: BigNat, b, BigNat): BigNat = default;
-inline infix operator -(a: BigNat, b, BigNat): BigNat = default;
-__safe inline infix operator ==(a: BigNat, b: BigNat): Bool = default;
-__safe inline infix operator !=(a: BigNat, b: BigNat): Bool = default;
-__safe inline infix operator <(a: BigNat, b: BigNat): Bool = default;
-__safe inline infix operator >(a: BigNat, b: BigNat): Bool = default;
-__safe inline infix operator <=(a: BigNat, b: BigNat): Bool = default;
-__safe inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline prefix operator +(a: BigNat): BigNat = default;
+__primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator /(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator +(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator -(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator ==(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator !=(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator <(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator >(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator <=(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
 
 //<summary>Primitive rational value.</summary>
-grounded struct entity Rational provides Some, PODType, APIType {
+__internal grounded struct entity Rational provides Some, PODType, APIType {
 }
-__safe inline prefix operator +(a: Rational): Rational = default;
-__safe inline prefix operator -(a: Rational): Rational = default;
-inline infix operator *(a: Rational, b, Rational): Rational = default;
-inline infix operator /(a: Rational, b, Rational): Rational = default;
-inline infix operator +(a: Rational, b, Rational): Rational = default;
-inline infix operator -(a: Rational, b, Rational): Rational = default;
-__safe inline infix operator ==(a: Rational, b: Rational): Bool = default;
-__safe inline infix operator !=(a: Rational, b: Rational): Bool = default;
-__safe inline infix operator <(a: Rational, b: Rational): Bool = default;
-__safe inline infix operator >(a: Rational, b: Rational): Bool = default;
-__safe inline infix operator <=(a: Rational, b: Rational): Bool = default;
-__safe inline infix operator >=(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline prefix operator +(a: Rational): Rational = default;
+__safe __primitive inline prefix operator -(a: Rational): Rational = default;
+__primitive inline infix operator *(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator /(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator +(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator -(a: Rational, b: Rational): Rational = default;
+__safe __primitive inline infix operator ==(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator !=(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator <(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator >(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator <=(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
 
 //<summary>Primitive float value -- compiler flags control bitness -- defaults to 64bit.</summary>
-grounded struct entity Float provides Some, PODType, APIType {
+__internal grounded struct entity Float provides Some, PODType, APIType {
 }
-__safe inline prefix operator +(a: Float): Float = default;
-__safe inline prefix operator -(a: Float): Float = default;
-__safe inline infix operator *(a: Float, b, Float): Float = default;
-__safe inline infix operator /(a: Float, b, Float): Float = default;
-__safe inline infix operator +(a: Float, b, Float): Float = default;
-__safe inline infix operator -(a: Float, b, Float): Float = default;
-__safe inline infix operator <(a: Float, b: Float): Bool = default;
-__safe inline infix operator >(a: Float, b: Float): Bool = default;
+__safe __primitive inline prefix operator +(a: Float): Float = default;
+__safe __primitive inline prefix operator -(a: Float): Float = default;
+__safe __primitive inline infix operator *(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator /(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator +(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator -(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator <(a: Float, b: Float): Bool = default;
+__safe __primitive inline infix operator >(a: Float, b: Float): Bool = default;
 
 //<summary>Primitive float decimal value.</summary>
-grounded struct entity Decimal provides Some, PODType, APIType {
+__internal grounded struct entity Decimal provides Some, PODType, APIType {
 }
-__safe inline prefix operator +(a: Decimal): Decimal = default;
-__safe inline prefix operator -(a: Decimal): Decimal = default;
-__safe inline infix operator *(a: Decimal, b, Decimal): Decimal = default;
-__safe inline infix operator /(a: Decimal, b, Decimal): Decimal = default;
-__safe inline infix operator +(a: Decimal, b, Decimal): Decimal = default;
-__safe inline infix operator -(a: Decimal, b, Decimal): Decimal = default;
-__safe inline infix operator <(a: Decimal, b: Decimal): Bool = default;
-__safe inline infix operator >(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline prefix operator +(a: Decimal): Decimal = default;
+__safe __primitive inline prefix operator -(a: Decimal): Decimal = default;
+__safe __primitive inline infix operator *(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator /(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator +(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator -(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator <(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline infix operator >(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string value.</summary>
-grounded entity String provides Some, KeyType, PODType, APIType {
+__internal grounded entity String provides Some, KeyType, PODType, APIType {
     __safe private function s_length(s: String): Nat # string_count
     __assume_safe private function s_unsafe_charat(s: String, idx: Nat): String # string_charat
     
+    __assume_safe private function s_contains(s: String, val: String, start: Nat, end: Nat): Bool # string_contains
+    __assume_safe private function s_indexof(s: String, val: String, start: Nat, end: Nat): Nat # string_indexof
+
+    __assume_safe private function s_startswith(s: String, val: String): Bool # string_startswith
+    __assume_safe private function s_endswith(s: String, val: String): Bool # string_endswith
+
+    __assume_safe private function s_substring(s: String, start: Nat, end: Nat): String # string_substring
+    __assume_safe private function s_concat2(s1: String, s2: String): String # string_append
+
+    private function s_rangeInBounds(s: String, start: Nat, end: Nat): Bool {
+        return start <= end & end <= String::s_length(s); 
+    }
+
+    function concat2(s1: String, s2: String): String {
+        return String::s_concat2(s1, s2);
+    }
+
+    function concat3(s1: String, s2: String, s3: String): String {
+        return String::s_concat2(s1, String::s_concat2(s2, s3));
+    }
+
     method length(): Nat {
         return String::s_length(this);
     }
@@ -185,11 +209,125 @@ grounded entity String provides Some, KeyType, PODType, APIType {
     {
         return String::s_unsafe_charat(this, idx);
     }
+
+    method contains(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        return String::s_contains(this, s, start, end);
+    }
+
+    method indexOf(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        let idx = String::s_indexof(this, s, start, end);
+        check idx != end;
+
+        return idx;
+    }
+
+    method indexOfOrNone(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat?
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        let idx = String::s_indexof(this, s, start, end);
+        if(idx == end) {
+            return none;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    method indexOfTry(out? res: Nat, s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        let idx = String::s_indexof(this, s, start, end);
+        if(idx == end) {
+            return false;
+        } 
+        else {
+            res = idx;
+            return true;
+        }
+    }
+
+    method indexOfLast(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        let idx = String::s_indexof(this, s, start, end);
+        check idx != end;
+
+        return idx;
+    }
+
+    method indexOfLastOrNone(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat?
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        let idx = String::s_indexof(this, s, start, end);
+        if(idx == end) {
+            return none;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    method indexOfLastTry(out? res: Nat, s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        let idx = String::s_indexof(this, s, start, end);
+        if(idx == end) {
+            return false;
+        } 
+        else {
+            res = idx;
+            return true;
+        }
+    }
+
+    method startsWith(s: String): Bool {
+        return String::s_startswith(this, s);
+    }
+
+    method endsWith(s: String): Bool {
+        return String::s_endswith(this, s);
+    }
+
+    method matches(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        return String::s_substring(this, start, end) === s;
+    }
+
+    method matchesStart(s: String, start?: Nat=0n): Bool
+        requires release start <= String::s_length(this);
+    {
+        return String::s_startswith(String::s_substring(start, String::s_length(this)), s);
+    }
+
+    method matchesEnd(s: String, end?: Nat=String::s_length(this)): Bool
+        requires release end <= String::s_length(this);
+    {
+        return String::s_endswith(String::s_substring(this, 0, end), s);
+    }
+
+    method substring(start?: Nat=0, end?: Nat=String::s_length(this)): String 
+        requires release String::s_rangeInBounds(this, start, end);
+    {
+        return String::s_substring(this, start, end);
+    }
+
+    method append(s: String): String {
+        return String::s_concat2(this, s);
+    }
+
+    method prepend(s: String): String {
+        return String::s_concat2(s, this);
+    }
 }
 
 //<summary>Primitive safe string value.</summary>
 grounded struct entity StringOf<T where validator> provides Some, KeyType, PODType, APIType {
-    private str: String;
+    private field str: String;
 
     method string(): String {
         return this.str;
@@ -204,7 +342,7 @@ grounded struct entity StringOf<T where validator> provides Some, KeyType, PODTy
 
 //<summary>Primitive DataString value.</summary>
 grounded struct entity DataString<T where parsable> provides Some, APIValue {
-    private str: String;
+    private field str: String;
 
     method string(): String {
         return this.str;
@@ -219,12 +357,12 @@ grounded struct entity DataString<T where parsable> provides Some, APIValue {
 
 //<summary>An efficient buffer encoding for data.</summary>
 struct entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
-    private buf: ByteBuffer;
+    private field buf: ByteBuffer;
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
 struct entity DataBuffer<T where parsable> provides Some, APIValue {
-    private buf: ByteBuffer;
+    private field buf: ByteBuffer;
 }
 
 enum BufferFormat {
@@ -246,36 +384,36 @@ enum BufferCompression {
 
 //<summary>An efficient byte buffer for data.</summary>
 entity ByteBuffer provides Some, APIValue {
-    private bytes: String; //fake data store for verifier to use
+    private field bytes: String; //fake data store for verifier to use
 }
 
-//<summary>Primitive ISOTime value.</summary>
-grounded struct entity ISOTime provides Some, KeyType, PODType, APIType {
-}
+//<summary>Primitive ClockTime value.</summary>
+//TODO: should be specialized
+numeric typedecl ClockTime = BigNat;
 
 //<summary>Primitive LogicalTime value.</summary>
-grounded struct entity LogicalTime provides Some, KeyType, PODType, APIType {
-}
+//TODO: should be specialized
+numeric typedecl LogicalTime = BigNat;
 
 //<summary>Primitive UUID value.</summary>
 grounded struct entity UUID provides Some, KeyType, PODType, APIType {
-    private bytes: String; //fake data store for verifier to use
+    private field bytes: String; //fake data store for verifier to use
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
 grounded entity CryptoHash provides Some, KeyType, PODType, APIType {
-    private bytes: String; //fake data store for verifier to use
+    private field bytes: String; //fake data store for verifier to use
 }
 
 //<summary>Primitive regex value.</summary>
-entity Regex provides Some {
+__internal entity Regex provides Some {
 }
 
 struct entity RegexMatch provides Some {
     field index: Nat;
     field length: Nat;
 
-    invariant $index >= 0 && $length >= 0;
+    invariant $index >= 0n & $length >= 0n;
 }
 
 //<summary>Static methods for Tuples.</summary>
@@ -330,8 +468,8 @@ struct concept Result<T, E=Any> provides Some {
         return this.as<Err>().info;
     }
 
-    method convert<U?, V?>(): Result<U, V> {
-        return this.isOk() ? Result<U, V>::createOk(this.value().as<U>()) ? Result<U, V>::createErr(this.error().as<V>()); 
+    method convert<U=?, V=?>(): Result<U, V> {
+        return this.isOk()? Result<U, V>::createOk(this.value().as<U>()) : Result<U, V>::createErr(this.error().as<V>()); 
     }
 }
 

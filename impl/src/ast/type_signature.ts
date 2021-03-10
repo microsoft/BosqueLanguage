@@ -104,14 +104,16 @@ class FunctionTypeSignature extends TypeSignature {
     readonly optRestParamName: string | undefined;
     readonly optRestParamType: TypeSignature | undefined;
     readonly resultType: TypeSignature;
+    readonly isPred: boolean;
 
-    constructor(recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestParamName: string | undefined, optRestParamType: TypeSignature | undefined, resultType: TypeSignature) {
+    constructor(recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestParamName: string | undefined, optRestParamType: TypeSignature | undefined, resultType: TypeSignature, isPred: boolean) {
         super();
         this.recursive = recursive;
         this.params = params;
         this.optRestParamName = optRestParamName;
         this.optRestParamType = optRestParamType;
         this.resultType = resultType;
+        this.isPred = isPred;
     }
 }
 

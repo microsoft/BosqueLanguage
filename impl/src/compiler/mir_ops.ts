@@ -479,7 +479,6 @@ enum MIROpTag {
     MIRNop = "MIRNop",
     MIRDeadFlow = "MIRDeadFlow",
     MIRAbort = "MIRAbort",
-    MIRVerifierAssume = "MIRVerifierAssume",
     MIRAssertCheck = "MIRAssertCheck",
     MIRDebug = "MIRDebug",
 
@@ -532,6 +531,7 @@ enum MIROpTag {
     MIRBinKeyLess = "MIRBinKeyLess",
     MIRPrefixNotOp = "MIRPrefixNotOp",
     MIRAllTrue = "MIRAllTrue",
+    MIRSomeTrue = "MIRSomeTrue",
 
     MIRIsTypeOf = "MIRIsTypeOf",
 
@@ -584,8 +584,6 @@ abstract class MIROp {
                 return MIRDeadFlow.jparse(jobj);
             case MIROpTag.MIRAbort:
                 return MIRAbort.jparse(jobj);
-            case MIROpTag.MIRVerifierAssume:
-                return MIRVerifierAssume.jparse(jobj);
             case MIROpTag.MIRAssertCheck:
                 return MIRAssertCheck.jparse(jobj);
             case MIROpTag.MIRDebug:
@@ -670,6 +668,8 @@ abstract class MIROp {
                 return MIRPrefixNotOp.jparse(jobj);
             case MIROpTag.MIRAllTrue:
                 return MIRAllTrue.jparse(jobj);
+            case MIROpTag.MIRSomeTrue:
+                return MIRSomeTrue.jparse(jobj);
             case MIROpTag.MIRIsTypeOf:
                 return MIRIsTypeOf.jparse(jobj);
             case MIROpTag.MIRJump:
@@ -765,36 +765,6 @@ class MIRAbort extends MIROp {
         return new MIRAbort(jparsesinfo(jobj.sinfo), jobj.info);
     }
 }
-
-class MIRVerifierAssume extends MIROp {
-    arg: MIRArgument;
-
-    constructor(sinfo: SourceInfo, arg: MIRArgument) {
-        super(MIROpTag.MIRVerifierAssume, sinfo);
-
-        this.arg = arg;
-    }
-
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
-    getModVars(): MIRRegisterArgument[] { return []; }
-
-    stringify(): string {
-        return `_assume ${this.arg.stringify()}`;
-    }
-
-    canRaise(implicitAssumesEnabled: boolean): boolean {
-        return implicitAssumesEnabled;
-    }
-
-    jemit(): object {
-        return { ...this.jbemit(), arg: this.arg.jemit() };
-    }
-
-    static jparse(jobj: any): MIROp {
-        return new MIRVerifierAssume(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.arg));
-    }
-}
-
 
 class MIRAssertCheck extends MIROp {
     readonly info: string;
@@ -2176,7 +2146,7 @@ class MIRAllTrue extends MIROp {
     args: MIRArgument[];
 
     constructor(sinfo: SourceInfo, args: MIRArgument[], trgt: MIRRegisterArgument) {
-        super(MIROpTag.MIRPrefixNotOp, sinfo);
+        super(MIROpTag.MIRAllTrue, sinfo);
         
         this.trgt = trgt;
         this.args = args;
@@ -2195,6 +2165,34 @@ class MIRAllTrue extends MIROp {
 
     static jparse(jobj: any): MIROp {
         return new MIRAllTrue(jparsesinfo(jobj.sinfo), jobj.args.map((jarg: any) => MIRArgument.jparse(jarg)), MIRRegisterArgument.jparse(jobj.trgt));
+    }
+}
+
+
+class MIRSomeTrue extends MIROp {
+    trgt: MIRRegisterArgument;
+    args: MIRArgument[];
+
+    constructor(sinfo: SourceInfo, args: MIRArgument[], trgt: MIRRegisterArgument) {
+        super(MIROpTag.MIRSomeTrue, sinfo);
+        
+        this.trgt = trgt;
+        this.args = args;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = ${this.args.map((arg) => arg.stringify()).join(" | ")}`;
+    }
+
+    jemit(): object {
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), args: this.args.map((arg) => arg.jemit()) };
+    }
+
+    static jparse(jobj: any): MIROp {
+        return new MIRSomeTrue(jparsesinfo(jobj.sinfo), jobj.args.map((jarg: any) => MIRArgument.jparse(jarg)), MIRRegisterArgument.jparse(jobj.trgt));
     }
 }
 
@@ -2602,7 +2600,7 @@ export {
     MIRGuard, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard,
     MIRArgument, MIRRegisterArgument, MIRGlobalVariable, 
     MIRConstantArgument, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantNat, MIRConstantBigInt, MIRConstantBigNat, MIRConstantRational, MIRConstantFloat, MIRConstantDecimal, MIRConstantString, MIRConstantRegex, MIRConstantStringOf, MIRConstantDataString, MIRConstantTypedNumber,
-    MIROpTag, MIROp, MIRNop, MIRDeadFlow, MIRAbort, MIRAssertCheck, MIRVerifierAssume, MIRDebug,
+    MIROpTag, MIROp, MIRNop, MIRDeadFlow, MIRAbort, MIRAssertCheck, MIRDebug,
     MIRLoadUnintVariableValue, MIRDeclareGuardFlagLocation, MIRSetConstantGuardFlag, MIRConvertValue,
     MIRLoadConst,
     MIRTupleHasIndex, MIRRecordHasProperty,
@@ -2615,7 +2613,7 @@ export {
     MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator,
     MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIREphemeralListExtend,
     MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed,
-    MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRAllTrue,
+    MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRAllTrue, MIRSomeTrue,
     MIRIsTypeOf,
     MIRJump, MIRJumpCond, MIRJumpNone,
     MIRReturnAssign, MIRReturnAssignOfCons,

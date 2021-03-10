@@ -121,8 +121,8 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
     });
 
     assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
-        const civk = assembly.invokeDecls.get(cdecl.value) as MIRInvokeBodyDecl;
-        invokes.set(cdecl.value, processBodyInfo(cdecl.value, [civk.body], assembly));
+        roots.push(invokes.get(cdecl.value) as CallGNode);
+        topoVisit(invokes.get(cdecl.value) as CallGNode, [], tordered, invokes);
     });
 
     tordered = tordered.reverse();
@@ -145,12 +145,12 @@ function isSafeInvoke(idecl: MIRInvokeDecl): boolean {
     return idecl.attributes.includes("__safe") || idecl.attributes.includes("__assume_safe");
 }
 
-function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, implicitAssumesEnabled: boolean, errorTrgtPos: { file: string, line: number, pos: number }, callg: CallGInfo, safeinfo: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>): { safe: boolean, trgt: boolean } {
+function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file: string, line: number, pos: number }, callg: CallGInfo, safeinfo: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>): { safe: boolean, trgt: boolean } {
     if(masm.primitiveInvokeDecls.has(ikey)) {
         const pinvk = masm.primitiveInvokeDecls.get(ikey) as MIRInvokePrimitiveDecl;
         const cn = callg.invokes.get(ikey) as CallGNode;
 
-        if (isSafeInvoke(pinvk) && [...cn.callees].every((callee) => !safeinfo.has(callee) || isSafeInvoke((masm.primitiveInvokeDecls.get(callee) || masm.invokeDecls.get(callee)) as MIRInvokeDecl))) {
+        if (isSafeInvoke(pinvk)) {
             return { safe: true, trgt: false };
         }
         else {
@@ -173,8 +173,17 @@ function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, implicitAssumesEnable
         }
         else {
             const cn = callg.invokes.get(ikey) as CallGNode;
+            const allcalleesafe = [...cn.callees].every((callee) => {
+                if(isSafeInvoke((masm.primitiveInvokeDecls.get(callee) || masm.invokeDecls.get(callee)) as MIRInvokeDecl)) {
+                    return true;
+                }
+                else {
+                    const sii = safeinfo.get(callee);
+                    return sii !== undefined && sii.safe;
+                }
+            });
             
-            if (!haserrorop && [...cn.callees].every((callee) => !safeinfo.has(callee) || isSafeInvoke((masm.primitiveInvokeDecls.get(callee) || masm.invokeDecls.get(callee)) as MIRInvokeDecl))) {
+            if (!haserrorop && allcalleesafe) {
                 return { safe: true, trgt: false };
             }
             else {
@@ -185,7 +194,7 @@ function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, implicitAssumesEnable
     }
 }
 
-function markSafeCalls(entryPoints: MIRInvokeKey[], masm: MIRAssembly, implicitAssumesEnabled: boolean, errorTrgtPos?: { file: string, line: number, pos: number }): Map<MIRInvokeKey, { safe: boolean, trgt: boolean }> {
+function markSafeCalls(entryPoints: MIRInvokeKey[], masm: MIRAssembly, errorTrgtPos?: { file: string, line: number, pos: number }): Map<MIRInvokeKey, { safe: boolean, trgt: boolean }> {
     const cginfo = constructCallGraphInfo(entryPoints, masm);
     const rcg = [...cginfo.topologicalOrder].reverse();
 
@@ -200,7 +209,7 @@ function markSafeCalls(entryPoints: MIRInvokeKey[], masm: MIRAssembly, implicitA
 
         while (worklist.length !== 0) {
             const ikey = worklist.pop() as string;
-            const issafe = isBodySafe(ikey, masm, implicitAssumesEnabled, etrgt, cginfo, safeinfo);
+            const issafe = isBodySafe(ikey, masm, etrgt, cginfo, safeinfo);
 
             const osafe = safeinfo.get(ikey);
             if(osafe === undefined || issafe.safe !== osafe.safe || issafe.trgt !== osafe.trgt) {

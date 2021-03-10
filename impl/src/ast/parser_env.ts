@@ -82,7 +82,6 @@ class ParserEnvironment {
     readonly SpecialBigIntSignature: TypeSignature;
     readonly SpecialBigNatSignature: TypeSignature;
     readonly SpecialRationalSignature: TypeSignature;
-    readonly SpecialComplexSignature: TypeSignature;
 
     readonly SpecialAutoSignature: TypeSignature;
 
@@ -107,8 +106,7 @@ class ParserEnvironment {
         this.SpecialBigIntSignature = new NominalTypeSignature("NSCore", ["BigInt"], []);
         this.SpecialBigNatSignature = new NominalTypeSignature("NSCore", ["BigNat"], []);
         this.SpecialRationalSignature = new NominalTypeSignature("NSCore", ["Rational"], []);
-        this.SpecialComplexSignature = new NominalTypeSignature("NSCore", ["Complex"], []);
-
+        
         this.SpecialAutoSignature = new AutoTypeSignature();
     }
 
@@ -144,6 +142,7 @@ class ParserEnvironment {
     useLocalVar(name: string): string {
         const cscope = this.getCurrentFunctionScope();
         if (cscope.isPCodeEnv() && name === "this") {
+            cscope.getCaptureVars().add("%this_captured");
             return "%this_captured";
         }
 
@@ -191,10 +190,10 @@ class ParserEnvironment {
             return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
         }
 
-        const nsmaindecl = this.assembly.getNamespace("NSMain");
-        if (nsmaindecl.declaredNames.has("NSMain::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+        const nsmaindecl = this.assembly.getNamespace("NSCore");
+        if (nsmaindecl.declaredNames.has("NSCore::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
             const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "NSMain" : undefined;
+            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "NSCore" : undefined;
         }
 
         const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);
@@ -208,10 +207,10 @@ class ParserEnvironment {
             return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
         }
 
-        const nsmaindecl = this.assembly.getNamespace("NSMain");
-        if (nsmaindecl.declaredNames.has("NSMain::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+        const nsmaindecl = this.assembly.getNamespace("NSCore");
+        if (nsmaindecl.declaredNames.has("NSCore::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
             const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "NSMain" : undefined;
+            return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? "NSCore" : undefined;
         }
         
         const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);

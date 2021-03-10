@@ -57,7 +57,7 @@ function compile(files: string[], functionalize: boolean, outfile: string, dgf: 
             process.stdout.write(`Writing assembly to ${outfile}.dgml...\n`);
 
             const sigargs = iiv.params.map((p) => `${p.name}: ${p.type}`);
-            if(iiv.takesmask) {
+            if(iiv.masksize !== 0) {
                 sigargs.push("#maskparam#");
             }
 
