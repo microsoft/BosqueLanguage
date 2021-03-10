@@ -35,6 +35,8 @@ An overarching theme of the Bosque project is increasing the ability of automate
 **Note:** This repository and code are currently still experimental. This means that the language is subject to revision, there are bugs and missing functionality, and the performance is limited. 
 
 ## News
+**March 2021** 
+Update on road to 1.0 -- this branch now builds and runs a small set of tests for the verifier and model checker! Progress on this work has been slow and hard but it looks to be paying off.
 
 **December 2020** 
 Big news on our road to a 1.0 version of Bosque!
