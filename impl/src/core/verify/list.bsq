@@ -139,7 +139,17 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     private recursive? function s_computeISequence(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_computeisequence
     private recursive? function s_computeISequence_Idx(l: List<T>, count: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_computeisequence_idx
 
-    private function {when T grounded KeyType} s_hasCheck(l: List<T>, val: T): Bool # list_hascheck
+    private function {when T grounded KeyType} s_hasCheck_Core(l: List<T>, count: Nat, val: T): Bool # list_hascheck
+
+    private function {when T grounded KeyType} s_hasCheck(l: List<T>, val: T): Bool {
+        if(List<T>::s_empty(l)) {
+            return false;
+        }
+        else {
+            //TODO: here special case for small model
+            return List<T>::s_hasCheck_Core(l, List<T>::s_size(sl), val);
+        }
+    }
 
     private recursive? function s_hasPredCheck_Core(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): Bool # list_haspredcheck
     private recursive? function s_hasPredCheck_Idx_Core(l: List<T>, count: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool # list_haspredcheck_idx
@@ -195,8 +205,44 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         }
     }
 
-    private function {when T grounded KeyType} s_findIndexOf_KeyHelper(l: List<T>, val: T): Nat # list_findindexof_keyhelper
-    private function {when T grounded KeyType} s_findIndexOfLast_KeyHelper(l: List<T>, val: T): Nat # list_findindexoflast_keyhelper
+    private function {when T grounded KeyType} s_findIndexOf_KeyHelperCore(l: List<T>, count: Nat, val: T): Nat # list_findindexof_keyhelper
+    
+    private function {when T grounded KeyType} s_findIndexOf_KeyHelper(l: List<T>, val: T): Nat {
+        if(List<T>::s_empty(l)) {
+            return 0n;
+        }
+        else {
+            let count = List<T>::s_size(l);
+
+            //TODO: here special case for small model
+            if(List<T>::s_hasCheck_Core(l, count, val)) {
+                return List<T>::s_findIndexOf_KeyHelperCore(l, count, val);
+            }
+            else {
+                return count;
+            }
+        }
+    }
+    
+    
+    private function {when T grounded KeyType} s_findIndexOfLast_KeyHelperCore(l: List<T>, count: Nat, val: T): Nat # list_findindexoflast_keyhelper
+
+    private function {when T grounded KeyType} s_findIndexOfLast_KeyHelper(l: List<T>, val: T): Nat {
+        if(List<T>::s_empty(l)) {
+            return 0n;
+        }
+        else {
+            let count = List<T>::s_size(l);
+
+            //TODO: here special case for small model
+            if(List<T>::s_hasCheck_Core(l, count, val)) {
+                return List<T>::s_findIndexOfLast_KeyHelperCore(l, count, val);
+            }
+            else {
+                return count;
+            }
+        }
+    }
 
     private recursive? function s_findIndexOf_PredicateCore(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): Nat # list_findindexof_predicatehelper
 
@@ -562,7 +608,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     }
 
     method {when T grounded KeyType} contains(v: T): Bool {
-        return List<T>::s_findIndexOf_KeyHelper(this, v) != end;
+        return List<T>::s_hasCheck(this, v);
     }
 
     method {when T grounded KeyType} count(v: T): Int {

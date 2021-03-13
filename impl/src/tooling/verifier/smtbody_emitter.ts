@@ -2403,6 +2403,11 @@ class SMTBodyEmitter {
                 const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
             }
+            case "list_hascheck": {
+                const [l, count, val] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processHasCheck(this.typegen.getMIRType(encltypekey), l, count, val); 
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
+            }
             case "list_haspredcheck": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
@@ -2428,6 +2433,16 @@ class SMTBodyEmitter {
             case "list_concat2": {
                 const [l1, l2, count] = args.map((arg) => new SMTVar(arg.vname));
                 const fbody = this.lopsManager.processConcat2(mirrestype, l1, l2, count);
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
+            }
+            case "list_findindexof_keyhelper": {
+                const [l, count, val] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processIndexOf(this.typegen.getMIRType(encltypekey), l, count, val); 
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
+            }
+            case "list_findindexoflast_keyhelper": {
+                const [l, count, val] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processIndexOfLast(this.typegen.getMIRType(encltypekey), l, count, val); 
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
             }
             case "list_findindexof_predicatehelper": {

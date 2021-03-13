@@ -297,10 +297,25 @@ class SMTEmitter {
             this.processDestructorGenInfo(disq);
         });
 
+        if(linfo.dops.hascheck) {
+            const disq = this.bemitter.lopsManager.emitDestructorHasCheck(ltype, ctype);
+            this.processDestructorGenInfo(disq);
+        }
+
         linfo.dops.haspredcheck.forEach((pcode, code) => {
             const disq = this.bemitter.lopsManager.emitDestructorHasPredCheck(ltype, code, pcode);
             this.processDestructorGenInfo(disq);
         });
+
+        if(linfo.dops.indexOf) {
+            const disq = this.bemitter.lopsManager.emitDestructorIndexOf(ltype, ctype);
+            this.processDestructorGenInfo(disq);
+        }
+
+        if(linfo.dops.indexOfLast) {
+            const disq = this.bemitter.lopsManager.emitDestructorIndexOfLast(ltype, ctype);
+            this.processDestructorGenInfo(disq);
+        }
 
         linfo.dops.findIndexOf.forEach((pcode, code) => {
             const disq = this.bemitter.lopsManager.emitDestructorFindIndexOf(ltype, code, pcode);
