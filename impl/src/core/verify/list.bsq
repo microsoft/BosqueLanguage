@@ -533,7 +533,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         let lastidx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
 
         check lastidx == idx;
-        check idx < end;
+        check idx < List<T>::s_size(this);
 
         return List<T>::s_unsafe_get(this, idx);
     }
@@ -542,7 +542,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
         let lastidx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
 
-        if((idx != lastidx) | (idx == end)) {
+        if((idx != lastidx) | (idx == List<T>::s_size(this))) {
             return none;
         }
         else {
@@ -554,7 +554,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
         let lastidx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
 
-        if((idx != lastidx) | (idx == end)) {
+        if((idx != lastidx) | (idx == List<T>::s_size(this))) {
             return d;
         }
         else {
@@ -566,7 +566,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
         let lastidx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
 
-        if((idx != lastidx) | (idx == end)) {
+        if((idx != lastidx) | (idx == List<T>::s_size(this))) {
             return false;
         }
         else {
@@ -621,19 +621,19 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return List<T>::s_unsafe_get(this, idx);
     }
 
     recursive? method find(p: recursive? pred(_: T, _: Nat) -> Bool): T {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return List<T>::s_unsafe_get(this, idx);
     }
 
     recursive? method findOrNone(p: recursive? pred(_: T) -> Bool): T? {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -643,7 +643,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -653,7 +653,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findOrDefault(d: T, p: recursive? pred(_: T) -> Bool): T {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -663,7 +663,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findOrDefault(d: T, p: recursive? pred(_: T, _: Nat) -> Bool): T {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -673,7 +673,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -684,7 +684,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -695,19 +695,19 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findLast(p: recursive? pred(_: T) -> Bool): T {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return List<T>::s_unsafe_get(this, idx);
     }
 
     recursive? method findLast(p: recursive? pred(_: T, _: Nat) -> Bool): T {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return List<T>::s_unsafe_get(this, idx);
     }
 
     recursive? method findLastOrNone(p: recursive? pred(_: T) -> Bool): T? {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -717,7 +717,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findLastOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -727,7 +727,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findLastOrDefault(d: T, p: recursive? pred(_: T) -> Bool): T {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -737,7 +737,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findLastOrDefault(d: T, p: recursive? pred(_: T, _: Nat) -> Bool): T {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -747,7 +747,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findLastTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -758,7 +758,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findLastTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -769,19 +769,19 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOf(p: recursive? pred(_: T) -> Bool): Nat {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return idx;
     }
 
     recursive? method findIndexOf(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return idx;
     }
 
     recursive? method findIndexOfOrNone(p: recursive? pred(_: T) -> Bool): Nat? {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -791,7 +791,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -801,7 +801,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfOrDefault(d: Nat, p: recursive? pred(_: T) -> Bool): Nat {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -811,7 +811,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfOrDefault(d: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -821,7 +821,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfTry(out? res: Nat, p: recursive? pred(_: T) -> Bool): Bool {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -832,7 +832,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfTry(out? res: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
         let idx = List<T>::s_findIndexOf_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -843,19 +843,19 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfLast(p: recursive? pred(_: T) -> Bool): Nat {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return idx;
     }
 
     recursive? method findIndexOfLast(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return idx;
     }
 
     recursive? method findIndexOfLastOrNone(p: recursive? pred(_: T) -> Bool): Nat? {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -865,7 +865,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfLastOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -875,7 +875,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfLastOrDefault(d: Nat, p: recursive? pred(_: T) -> Bool): Nat {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -885,7 +885,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfLastOrDefault(d: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -895,7 +895,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfLastTry(out? res: Nat, p: recursive? pred(_: T) -> Bool): Bool {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -906,7 +906,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method findIndexOfLastTry(out? res: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
         let idx = List<T>::s_findIndexOfLast_PredicateHelper_Idx[recursive?](this, p);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -917,13 +917,13 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     method {when T grounded KeyType} indexOf(v: T): Nat {
         let idx = List<T>::s_findIndexOf_KeyHelper(this, v);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return idx;
     }
 
     method {when T grounded KeyType} indexOfOrNone(v: T): Nat? {
         let idx = List<T>::s_findIndexOf_KeyHelper(this, v);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -933,7 +933,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     method {when T grounded KeyType} indexOfOrDefault(d: T, v: T): Nat {
         let idx = List<T>::s_findIndexOf_KeyHelper(this, v);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -943,7 +943,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     method {when T grounded KeyType} indexOfTry(out? res: T, v: T): Bool {
         let idx = List<T>::s_findIndexOf_KeyHelper(this, v);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {
@@ -954,13 +954,13 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     method {when T grounded KeyType} indexOfLast(v: T): Nat {
         let idx = List<T>::s_findIndexOfLast_KeyHelper(this, v);
-        check idx != end;
+        check idx != List<T>::s_size(this);
         return idx;
     }
 
     method {when T grounded KeyType} indexOfLastOrNone(v: T): Nat? {
         let idx = List<T>::s_findIndexOfLast_KeyHelper(this, v);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return none;
         }
         else {
@@ -970,7 +970,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     method {when T grounded KeyType} indexOfLastOrDefault(d: T, v: T): Nat {
         let idx = List<T>::s_findIndexOfLast_KeyHelper(this, v);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return d;
         }
         else {
@@ -980,7 +980,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     method {when T grounded KeyType} indexOfLastTry(out? res: T, v: T): Bool {
         let idx = List<T>::s_findIndexOfLast_KeyHelper(this, v);
-        if(idx == end) {
+        if(idx == List<T>::s_size(this)) {
             return false;
         }
         else {

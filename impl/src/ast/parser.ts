@@ -4588,7 +4588,7 @@ class Parser {
         let importok = true;
         let parseok = true;
         while (this.m_cpos < this.m_epos) {
-            const rpos = this.scanTokenOptions("function", "operator", "import", "typedef", "concept", "entity", "enum", "typedecl", TokenStrings.EndOfStream);
+            const rpos = this.scanTokenOptions("function", "operator", "const", "import", "typedef", "concept", "entity", "enum", "typedecl", TokenStrings.EndOfStream);
 
             try {
                 if (rpos === this.m_epos) {
@@ -4610,7 +4610,7 @@ class Parser {
                 else if (tk === "operator") {
                     this.parseNamespaceOperator(nsdecl);
                 }
-                else if (tk === "global") {
+                else if (tk === "const") {
                     this.parseNamespaceConst(nsdecl);
                 }
                 else if (tk === "typedef") {
