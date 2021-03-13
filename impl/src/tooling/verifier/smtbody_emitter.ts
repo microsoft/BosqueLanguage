@@ -841,13 +841,13 @@ class SMTBodyEmitter {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
 
             const sctype = this.typegen.getMIRType(cval.tskey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst(cval.value)]);
+            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"")]);
         }
         else if (cval instanceof MIRConstantDataString) {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
 
             const sctype = this.typegen.getMIRType(cval.tskey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst(cval.value)]);
+            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"")]);
         }
         else {
             assert(cval instanceof MIRConstantRegex);

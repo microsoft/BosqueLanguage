@@ -172,12 +172,12 @@ class TypeChecker {
 
     private getResultSubtypes(rtype: ResolvedType): [ResolvedType, ResolvedType] {
         const binds = (rtype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds;
-        const okentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Ok") as EntityTypeDecl;
-        const errentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Err") as EntityTypeDecl;
+        const okentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
+        const errentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
 
         return [
-            ResolvedType.createSingle(ResolvedEntityAtomType.create(okentity, new Map<string, ResolvedType>().set("T", binds.get("T") as ResolvedType))),
-            ResolvedType.createSingle(ResolvedEntityAtomType.create(errentity, new Map<string, ResolvedType>().set("E", binds.get("E") as ResolvedType)))
+            ResolvedType.createSingle(ResolvedEntityAtomType.create(okentity, binds)),
+            ResolvedType.createSingle(ResolvedEntityAtomType.create(errentity, binds))
         ];
     }
 
@@ -2176,7 +2176,8 @@ class TypeChecker {
             this.raiseErrorIf(exp.sinfo, vv === undefined, `Bad Validator type for StringOf ${oftype.idStr}`);
             
             const argstr = unescapeLiteralString(exp.value.substring(1, exp.value.length - 1));
-            const mtch = new RegExp((vv as BSQRegex).compileToJS()).exec(argstr);
+            const mtchre = (vv as BSQRegex).compileToJS();
+            const mtch = new RegExp(mtchre, "u").exec(argstr);
             this.raiseErrorIf(exp.sinfo, mtch === null || mtch[0].length !== argstr.length, "Literal string failed Validator regex");
 
             const stype = this.m_emitter.registerResolvedTypeReference(aoftype.stringtype);
