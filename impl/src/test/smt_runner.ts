@@ -149,7 +149,7 @@ function runSMT2File(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Rea
 const maxgas = 0;
 const timeout = 10000;
 const vopts = {
-    ISize: 4,
+    ISize: 5,
     BigXMode: "BV",
     OverflowEnabled: false,
     FPOpt: "Real",

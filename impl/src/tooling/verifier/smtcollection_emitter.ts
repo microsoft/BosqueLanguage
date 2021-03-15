@@ -1022,15 +1022,20 @@ class ListOpsManager {
         else {
             const getop = this.generateDesCallName(ltype, "get");
 
-            ffunc = new SMTIf(
-                new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
-                    new SMTCallSimple("=>", [
-                        new SMTCallSimple("bvult", [new SMTVar("_@j"), this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), nn)]),
-                        new SMTCallSimple("not", [new SMTCallSimple("=", [new SMTVar("val"), new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])])])
-                    ])
-                ),
-                nn,
-                this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+            ffunc = new SMTLet("_@n", nn,
+                new SMTIf(this.temitter.generateResultIsErrorTest(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")),
+                    new SMTVar("_@n"),
+                    new SMTIf(
+                        new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
+                            new SMTCallSimple("=>", [
+                                new SMTCallSimple("bvult", [new SMTVar("_@j"), this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n"))]),
+                                new SMTCallSimple("not", [new SMTCallSimple("=", [new SMTVar("val"), new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])])])
+                            ])
+                        ),
+                        new SMTVar("_@n"),
+                        this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+                    )
+                )
             );
         }
 
@@ -1052,15 +1057,20 @@ class ListOpsManager {
         else {
             const getop = this.generateDesCallName(ltype, "get");
 
-            ffunc = new SMTIf(
-                new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
-                    new SMTCallSimple("=>", [
-                        new SMTCallSimple("bvult", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), nn), new SMTVar("_@j")]),
-                        new SMTCallSimple("not", [new SMTCallSimple("=", [new SMTVar("val"), new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])])])
-                    ])
-                ),
-                nn,
-                this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+            ffunc = new SMTLet("_@n", nn,
+                new SMTIf(this.temitter.generateResultIsErrorTest(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")),
+                    new SMTVar("_@n"),
+                    new SMTIf(
+                        new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
+                            new SMTCallSimple("=>", [
+                                new SMTCallSimple("bvult", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")), new SMTVar("_@j")]),
+                                new SMTCallSimple("not", [new SMTCallSimple("=", [new SMTVar("val"), new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])])])
+                            ])
+                        ),
+                        new SMTVar("_@n"),
+                        this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+                    )
+                )
             );
         }
 
@@ -1083,15 +1093,20 @@ class ListOpsManager {
         else {
             const getop = this.generateDesCallName(ltype, "get");
 
-            ffunc = new SMTIf(
-                new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
-                    new SMTCallSimple("=>", [
-                        new SMTCallSimple("bvult", [new SMTVar("_@j"), this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), nn)]),
-                        new SMTCallSimple("not", [this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), [new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])], capturedargs)])
-                    ])
-                ),
-                nn,
-                this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+            ffunc = new SMTLet("_@n", nn,
+                new SMTIf(this.temitter.generateResultIsErrorTest(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")),
+                    new SMTVar("_@n"),
+                    new SMTIf(
+                        new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
+                            new SMTCallSimple("=>", [
+                                new SMTCallSimple("bvult", [new SMTVar("_@j"), this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n"))]),
+                                new SMTCallSimple("not", [this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), [new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])], capturedargs)])
+                            ])
+                        ),
+                        new SMTVar("_@n"),
+                        this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+                    )
+                )
             );
         }
 
@@ -1114,15 +1129,20 @@ class ListOpsManager {
         else {
             const getop = this.generateDesCallName(ltype, "get");
 
-            ffunc = new SMTIf(
-                new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
-                    new SMTCallSimple("=>", [
-                        new SMTCallSimple("bvult", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), nn), new SMTVar("_@j")]),
-                        new SMTCallSimple("not", [this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), [new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])], capturedargs)])
-                    ])
-                ),
-                nn,
-                this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+            ffunc = new SMTLet("_@n", nn,
+                new SMTIf(this.temitter.generateResultIsErrorTest(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")),
+                    new SMTVar("_@n"),
+                    new SMTIf(
+                        new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
+                            new SMTCallSimple("=>", [
+                                new SMTCallSimple("bvult", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")), new SMTVar("_@j")]),
+                                new SMTCallSimple("not", [this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), [new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])], capturedargs)])
+                            ])
+                        ),
+                        new SMTVar("_@n"),
+                        this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+                    )
+                )
             );
         }
 

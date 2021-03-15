@@ -194,7 +194,7 @@ function runSMT2File(cfile: string, mode: "Refute" | "Generate") {
         }
     }
     else {
-        process.stdout.write(`Emitting raw SMTLIB model...\n`);
+        //process.stdout.write(`Emitting raw SMTLIB model...\n`);
         process.stdout.write(res + "\n\n");
     }
 }
@@ -214,7 +214,7 @@ const smtargs = (Commander.prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi
 const maxgas = 0;
 const timeout = 10000;
 const vopts = {
-    ISize: 4,
+    ISize: 5,
     BigXMode: "BV",
     OverflowEnabled: false,
     FPOpt: "Real",

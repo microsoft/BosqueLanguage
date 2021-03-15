@@ -671,7 +671,7 @@ class SMTAssembly {
 
             action.push(`(assert ${this.modes.generate.emitSMT2(undefined)})`);
             action.push("(check-sat)");
-            action.push("(get-model)");
+            //action.push("(get-model)");
         }
 
         let foutput: string[] = [];
