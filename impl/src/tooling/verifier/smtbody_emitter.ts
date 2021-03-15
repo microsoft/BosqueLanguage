@@ -1793,6 +1793,10 @@ class SMTBodyEmitter {
         //(declare-const b (_ BitVec 2))
         //(assert (= b ((_ zero_extend 1) a)))
 
+        //TODO: Suppose we try to refute the feasibility of an error on a small width bitvector say 5 and we get unsat
+        //      Hypothesis -- if the unsat core does not contain an arith overflow failure then the core also holds for any larger BV size
+        //      If so then we can A* up the bit-vector sizes
+
         if(!this.vopts.OverflowEnabled) {
             if(op === "-" && (oftype.trkey === "NSCore::Nat" || oftype.trkey === "NSCore::BigNat")) {
                 const vtmp = this.generateTempName();
