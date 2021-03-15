@@ -1786,6 +1786,13 @@ class SMTBodyEmitter {
     }
 
     processGenerateResultWithBounds(sinfo: SourceInfo, op: string, args: SMTExp[], oftype: MIRType): SMTExp {
+        //TODO: Bounds check -- also for signed need to do check for -Int::max (since range of negative values is one less than positive)
+        //https://stackoverflow.com/questions/40605207/how-to-zero-sign-extend-bitvectors-in-z3
+        //https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf
+        //(declare-const a (_ BitVec 1))
+        //(declare-const b (_ BitVec 2))
+        //(assert (= b ((_ zero_extend 1) a)))
+
         if(!this.vopts.OverflowEnabled) {
             if(op === "-" && (oftype.trkey === "NSCore::Nat" || oftype.trkey === "NSCore::BigNat")) {
                 const vtmp = this.generateTempName();
