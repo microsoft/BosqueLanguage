@@ -9,27 +9,26 @@
 
 #include <cstdlib>
 #include <cstdint>
-#include <stdarg.h>
 #include <math.h>
 
 #include <string>
 #include <regex>
-#include <iostream>
-#include <codecvt>
 
 #include <initializer_list>
 #include <algorithm>
 #include <numeric>
 #include <execution>
 
+#define BSQ_INTERNAL_ASSERT(C) if(!(C)) { assert(false); }
+
 #ifdef BDEBUG
-#define BSQ_ASSERT(C, MSG) if(!(C)) { throw BSQAbort(MSG, __FILE__, __LINE__, __FILE__, __LINE__); }
+#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) { throw BSQAbort(MSG, F, L); }
 #else
-#define BSQ_ASSERT(C, MSG) if(!(C)) { throw BSQAbort(); }
+#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) { throw BSQAbort(); }
 #endif
 
 #ifdef BDEBUG
-#define BSQ_ABORT(MSG, F, L) (throw BSQAbort(MSG, F, L, __FILE__, __LINE__))
+#define BSQ_ABORT(MSG, F, L) (throw BSQAbort(MSG, F, L))
 #else
 #define BSQ_ABORT(MSG, F, L) (throw BSQAbort())
 #endif
@@ -49,10 +48,8 @@ public:
 const char* msg;
 const char* bfile;
 int32_t bline;
-const char* cfile;
-int32_t cline;
 
-BSQAbort(const char* msg, const char* bfile, int32_t bline, const char* cfile, int32_t cline) : msg(msg), bfile(bfile), bline(bline), cfile(cfile), cline(cline) { ; }
+BSQAbort(const char* msg, const char* bfile, int32_t bline) : msg(msg), bfile(bfile), bline(bline) { ; }
 #else
 public:
 BSQAbort() { ; }

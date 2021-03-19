@@ -12,7 +12,6 @@
 #define BSQ_MEM_ALIGNMENT 8
 #define BSQ_ALIGN_SIZE(ASIZE) (((ASIZE) + 0x7) & 0xFFFFFFFFFFFFFFFC)
 
-
 //Note POD => API
 typedef size_t DATA_KIND_FLAG;
 #define DATA_KIND_CLEAR_FLAG 0x0
