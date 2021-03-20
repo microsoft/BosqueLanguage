@@ -14,6 +14,12 @@
 #include <string>
 #include <regex>
 
+#include <vector>
+#include <stack>
+#include <queue>
+#include <set>
+#include <map>
+
 #include <initializer_list>
 #include <algorithm>
 #include <numeric>
@@ -55,5 +61,9 @@ public:
 BSQAbort() { ; }
 #endif
 };
+
+typedef uint8_t bsqbool;
+typedef int64_t bsqint;
+typedef uint64_t bsqnat;
 
 } // namespace BSQ
