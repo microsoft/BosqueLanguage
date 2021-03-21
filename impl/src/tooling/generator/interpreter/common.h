@@ -62,8 +62,4 @@ BSQAbort() { ; }
 #endif
 };
 
-typedef uint8_t bsqbool;
-typedef int64_t bsqint;
-typedef uint64_t bsqnat;
-
 } // namespace BSQ

@@ -5,15 +5,12 @@
 
 #include "bsqmemory.h"
 
-namespace BSQ
+GCStackEntry GCStack::frames[8192];
+uint32_t GCStack::stackp = 0;
+
+void GCOperator::collect()
 {
-    GCStackEntry GCStack::frames[8192];
-    uint32_t GCStack::stackp = 0;
-
-    void GCOperator::collect()
-    {
-        this->alloc->collect();
-    }
-
-    Allocator Allocator::GlobalAllocator;
+    this->alloc->collect();
 }
+
+Allocator Allocator::GlobalAllocator;

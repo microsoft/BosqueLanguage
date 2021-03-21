@@ -86,8 +86,9 @@ public:
 class BSQRecordType : public BSQType
 {
 public:
+    static std::map<BSQRecordPropertyID, std::wstring> pnames;
+
     const std::vector<BSQRecordPropertyID> properties;
-    const std::map<BSQRecordPropertyID, std::wstring> pnames;
     const bool isValue;
 };
 

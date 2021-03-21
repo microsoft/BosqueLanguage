@@ -60,20 +60,19 @@ typedef uint64_t RCMeta;
 #define GC_COUNT_GET_MASK 0xFFFFFFFFFFFF
 #define GC_MARK_GET_MASK 0xFFFF000000000000
 
-#define GET_RC_HEADER(M) ((RCMeta*)((uint8_t*)M) - (sizeof(RCMeta) + sizeof(MetaData *)))
+#define GET_RC_HEADER(M) ((RCMeta*)((uint8_t*)M) - (sizeof(RCMeta) + sizeof(BSQType*)))
 #define GET_RC_COUNT(M) (*GET_RC_HEADER(M) & GC_COUNT_GET_MASK)
 #define GET_RC_MARK(M) (*GET_RC_HEADER(M) & GC_MARK_GET_MASK)
 
 #define INC_RC_HEADER(M) ((*GET_RC_HEADER(M))++)
-#define DEC_RC_HEADER(M) ((*GET_RC_HEADER(M))--)
+#define DEC_AND_CHECK_RC_HEADER(M) ((*GET_RC_HEADER(M))-- == GC_RC_CLEAR) 
 #define MARK_HEADER_SET(M) (*GET_RC_HEADER(M) = (GET_RC_COUNT(M) | GC_RC_MARK_FROM_ROOT))
-#define MARK_HEADER_CLEAR(M) (*GET_RC_HEADER(M)->rcvalue = GC_RC_CLEAR)
+#define MARK_HEADER_CLEAR(M) (*GET_RC_HEADER(M) = GC_RC_CLEAR)
 
 //Check if an object is unreachable
 #define IS_UNREACHABLE(M) (*GET_RC_HEADER(M) == GC_RC_CLEAR)
 
 //Misc operations
-#define GC_CHECK_IS_PTR(V) ((((uintptr_t)(V)) & 0x7) == 0)
 #define IS_BUMP_ALLOCATION(M, BSTART, BEND) ((BSTART <= (uintptr_t)M) & ((uintptr_t)M < BEND))
 
 #define GET_SLAB_BASE(M) ((void*)((uint8_t *)M - sizeof(BSQType*)))
@@ -149,7 +148,7 @@ private:
     void setAllocBlock(size_t asize)
     {
         this->m_allocsize = asize;
-        this->m_block = (uint8_t *)BSQ_BUMP_SPACE_ALLOC(asize);
+        this->m_block = (uint8_t*)BSQ_BUMP_SPACE_ALLOC(asize);
         GC_MEM_ZERO(this->m_block, asize);
 
         this->m_currPos = this->m_block;
@@ -227,7 +226,7 @@ public:
     template <size_t asize>
     inline uint8_t* allocateFixedSize()
     {
-        constexpr size_t rsize = asize + sizeof(BSQType*);
+        constexpr size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
         static_assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE, "We should *not* be creating individual objects this large");
 
         uint8_t *res = this->m_currPos;
@@ -256,7 +255,7 @@ public:
     template <size_t asize>
     inline uint8_t* allocateSafe()
     {
-        constexpr size_t rsize = asize + sizeof(BSQType*);
+        constexpr size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
         assert(this->m_currPos + rsize <= this->m_endPos);
 
         uint8_t *res = this->m_currPos;
@@ -298,7 +297,7 @@ public:
 
     inline uint8_t* allocateSizeFixed(size_t size)
     {
-        size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
+        size_t tsize = BSQ_ALIGN_SIZE(sizeof(RCMeta) + sizeof(BSQType*)) + size;
         MEM_STATS_OP(this->totalalloc += tsize);
 
         uint8_t *rr = (uint8_t *)BSQ_FREE_LIST_ALLOC(tsize);
@@ -325,15 +324,15 @@ private:
     NewSpaceAllocator nsalloc;
     OldSpaceAllocator osalloc;
 
-    std::deque<void **> tempRoots;
+    std::deque<void**> tempRoots;
 
-    std::vector<void *> maybeZeroCounts;
+    std::vector<void*> maybeZeroCounts;
 
     uintptr_t bstart;
     uintptr_t bend;
-    std::queue<void *> worklist;
+    std::queue<void*> worklist;
 
-    std::queue<void *> releaselist;
+    std::queue<void*> releaselist;
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
@@ -344,31 +343,21 @@ private:
     ////////
     //Operations GC mark and move
     template <bool isRoot>
-    void *moveBumpObjectToRCSpace(void *obj)
+    void* moveBumpObjectToRCSpace(void* obj)
     {
-        const MetaData *ometa = GET_TYPE_META_DATA(obj);
-        size_t osize = ometa->datasize;
-        void *nobj;
-        if (ometa->isFixedMetaData())
-        {
-            nobj = this->osalloc.allocateSizeFixed(osize);
-        }
-        else
-        {
-            size_t elemcount = *((size_t *)obj);
-            osize += BSQ_ALIGN_SIZE(elemcount * ometa->size);
+        const BSQType* ometa = GET_TYPE_META_DATA(obj);
+        size_t osize = ometa->allocsize;
+        void* nobj = this->osalloc.allocateSizeFixed(osize);
 
-            nobj = this->osalloc.allocateSizePlus(osize);
-        }
         MEM_STATS_OP(this->promotedbytes += ometa->datasize + sizeof(MetaData *));
 
-        GC_MEM_COPY(nobj, GET_TYPE_META_DATA(obj), osize + sizeof(MetaData *));
-        if (ometa->hasRefs)
+        GC_MEM_COPY(nobj, GET_TYPE_META_DATA(obj), osize + sizeof(BSQType*));
+        if (ometa->gckind != BSQGCKind::Leaf)
         {
             this->worklist.push(nobj);
         }
 
-        void *robj = (void *)((uint8_t *)nobj + sizeof(MetaData *));
+        void* robj = (void*)((uint8_t*)nobj + sizeof(BSQType*));
         if constexpr (isRoot)
         {
             MARK_HEADER_SET(robj);
@@ -386,42 +375,14 @@ private:
     }
 
     template <bool isRoot>
-    void moveFreeListObjectToRCSpace(void *obj)
+    inline static void gcProcessSlot(void** slot)
     {
-        const MetaData *ometa = GET_TYPE_META_DATA(obj);
-        size_t lasize = this->nsalloc.clearLargeAlloc(obj);
-
-        if (ometa->hasRefs)
-        {
-            this->worklist.push(obj);
-        }
-
-        if constexpr (isRoot)
-        {
-            MARK_HEADER_SET(obj);
-            this->maybeZeroCounts.push_back(obj);
-        }
-        else
-        {
-            INC_RC_HEADER(obj);
-        }
-
-        return nobj;
-    }
-
-    template <bool isRoot>
-    inline static void gcProcessSlot(void **slot)
-    {
-        void *v = *slot;
-        if (GC_CHECK_IS_PTR(v) & (v != nullptr))
+        void*v = *slot;
+        if (v != nullptr)
         {
             if (IS_BUMP_ALLOCATION(v, Allocator::GlobalAllocator.bstart, Allocator::GlobalAllocator.bend))
             {
                 *slot = Allocator::GlobalAllocator.moveBumpObjectToRCSpace<isRoot>(v);
-            }
-            else if (IS_LARGE_ALLOCATION(v))
-            {
-                Allocator::GlobalAllocator.moveFreeListObjectToRCSpace<isRoot>(v);
             }
             else
             {
@@ -438,10 +399,10 @@ private:
     }
 
     template <bool isRoot>
-    inline static void gcProcessSlots(void **slots, size_t limit)
+    inline static void gcProcessSlots(void** slots, size_t limit)
     {
-        void **cslot = slots;
-        void *end = slots + limit;
+        void** cslot = slots;
+        void* end = slots + limit;
 
         while (cslot != end)
         {
@@ -450,17 +411,17 @@ private:
     }
 
     template <bool isRoot>
-    inline static void gcProcessSlotsWithUnion(void **slots)
+    inline static void gcProcessSlotsWithUnion(void** slots)
     {
-        const MetaData *umeta = ((const MetaData *)(*slots++));
+        const BSQType* umeta = ((const BSQType*)(*slots++));
         umeta->getProcessFP<isRoot>()(umeta, slots);
     }
 
     template <bool isRoot>
-    inline static void gcProcessSlotsWithMask(void **slots, const char *mask)
+    inline static void gcProcessSlotsWithMask(void** slots, const char* mask)
     {
-        void **cslot = slots;
-        const char *cmaskop = mask;
+        void** cslot = slots;
+        const char* cmaskop = mask;
 
         while (*cmaskop)
         {
@@ -484,10 +445,9 @@ private:
     //Operations GC decrement
     inline static void gcDecrement(void *obj)
     {
-        if (GC_CHECK_IS_PTR(obj) & (obj != nullptr))
+        if (obj != nullptr)
         {
-            DEC_RC_HEADER(obj);
-            if (IS_UNREACHABLE(obj))
+            if (DEC_AND_CHECK_RC_HEADER(obj))
             {
                 Allocator::GlobalAllocator.releaselist.push(obj);
             }
@@ -507,14 +467,14 @@ private:
 
     inline static void gcDecrementSlotsWithUnion(void **slots)
     {
-        const MetaData *umeta = ((const MetaData *)(*slots++));
-        umeta->decObj(umeta, slots);
+        const BSQType* umeta = ((const BSQType*)(*slots++));
+        umeta->fpDecObj(umeta, slots);
     }
 
-    inline static void gcDecSlotsWithMask(void **slots, const char *mask)
+    inline static void gcDecSlotsWithMask(void** slots, const char* mask)
     {
-        void **cslot = slots;
-        const char *cmaskop = mask;
+        void** cslot = slots;
+        const char* cmaskop = mask;
 
         while (*cmaskop)
         {
@@ -538,13 +498,13 @@ private:
     //Operations GC mark clear
     inline static void gcClearMark(void *obj)
     {
-        if (GC_CHECK_IS_PTR(obj) & (obj != nullptr))
+        if (obj != nullptr)
         {
             MARK_HEADER_CLEAR(obj);
         }
     }
 
-    inline static void gcClearMarkSlots(void **slots, size_t limit)
+    inline static void gcClearMarkSlots(void** slots, size_t limit)
     {
         void **cslot = slots;
         void *end = slots + limit;
@@ -555,16 +515,16 @@ private:
         }
     }
 
-    inline static void gcClearMarkSlotsWithUnion(void **slots)
+    inline static void gcClearMarkSlotsWithUnion(void** slots)
     {
-        const MetaData *umeta = ((const MetaData *)(*slots++));
-        umeta->clearObj(umeta, slots);
+        const BSQType *umeta = ((const BSQType*)(*slots++));
+        umeta->fpClearObj(umeta, slots);
     }
 
-    inline static void gcClearMarkSlotsWithMask(void **slots, const char *mask)
+    inline static void gcClearMarkSlotsWithMask(void** slots, const char* mask)
     {
-        void **cslot = slots;
-        const char *cmaskop = mask;
+        void** cslot = slots;
+        const char* cmaskop = mask;
 
         while (*cmaskop)
         {
@@ -590,7 +550,7 @@ private:
     {
         for (size_t i = 0; i < GCStack::stackp; ++i)
         {
-            void **slots = GCStack::frames[i].refframep;
+            void** slots = GCStack::frames[i].refframep;
             uint32_t slotct = GCStack::frames[i].refslots;
             for (size_t j = 0; j < slotct; ++j)
             {
@@ -613,12 +573,11 @@ private:
     {
         while (!this->worklist.empty())
         {
-            void *obj = this->worklist.front();
-
-            const MetaData *umeta = GET_TYPE_META_DATA(obj);
-            umeta->getProcessFP<false>()(umeta, (void **)obj);
-
+            void* obj = this->worklist.front();
             this->worklist.pop();
+
+            const BSQType* umeta = GET_TYPE_META_DATA(obj);
+            umeta->getProcessFP<false>()(umeta, (void**)obj);
         }
     }
 
@@ -652,23 +611,16 @@ private:
     {
         while (!this->releaselist.empty())
         {
-            void *obj = this->releaselist.front();
+            void* obj = this->releaselist.front();
+            this->releaselist.pop();
 
-            const MetaData *umeta = GET_TYPE_META_DATA(obj);
-            if (umeta->hasRefs)
+            const BSQType* umeta = GET_TYPE_META_DATA(obj);
+            if (umeta->gckind != BSQGCKind::Leaf)
             {
-                umeta->decObj(umeta, (void **)obj);
-            }
-
-            size_t asize = umeta->datasize;
-            if (umeta->sizeentry != 0)
-            {
-                size_t elemcount = *((size_t *)obj);
-                asize += BSQ_ALIGN_SIZE(elemcount * umeta->sizeentry);
+                umeta->fpDecObj(umeta, (void**)obj);
             }
 
             this->osalloc.release(obj);
-            this->releaselist.pop();
         }
     }
 
@@ -710,112 +662,37 @@ public:
         ;
     }
 
-    template <typename T>
-    inline T *allocateT(MetaData *mdata)
+    template <size_t allocsize>
+    inline uint8_t* allocateT(BSQType* mdata)
     {
-        constexpr size_t asize = BSQ_ALIGNC_SIZE(sizeof(T));
-        uint8_t *alloc = this->nsalloc.allocateSize<asize>();
+        constexpr size_t asize = BSQ_ALIGN_SIZE(allocsize);
+        uint8_t* alloc = this->nsalloc.allocateFixedSize<asize>();
 
-        *((MetaData **)alloc) = mdata;
-        T *res = (T *)(alloc + sizeof(MetaData *));
+        *((BSQType**)alloc) = mdata;
+        uint_t* res = (alloc + sizeof(BSQType*));
 
         return res;
     }
 
-    template <typename T, typename U>
-    inline T *allocateTPlus(MetaData *mdata, size_t count, U **contents)
-    {
-        size_t csize = BSQ_ALIGN_SIZE(count * sizeof(U));
-        constexpr size_t asize = BSQ_ALIGN_SIZE(sizeof(T));
-
-        uint8_t *alloc = this->nsalloc.allocateSizePlus<asize>(csize, (uint8_t **)contents);
-
-        *((MetaData **)alloc) = mdata;
-        *((size_t *)(alloc + sizeof(MetaData *))) = count;
-        T *res = (T *)(alloc + sizeof(MetaData *));
-
-        return res;
-    }
-
-    template <uint16_t required>
+    template <size_t required>
     inline void ensureSpace()
     {
-        if (this->m_currPos + required > this->m_endPos)
-        {
-            this->gc.collect();
-        }
+        this->nsalloc.ensureSpace<required>();
     }
 
-    template <typename T>
-    inline T *allocateSafe(MetaData *mdata)
+    template <size_t allocsize>
+    inline uint8_t* allocateSafe(BSQType* mdata)
     {
-        constexpr size_t asize = BSQ_ALIGN_SIZE(sizeof(T));
-        uint8_t *alloc = this->nsalloc.allocateSafe<asize>();
+        constexpr size_t asize = BSQ_ALIGN_SIZE(allocsize);
+        uint8_t* alloc = this->nsalloc.allocateSafe<asize>();
 
-        *((MetaData **)alloc) = mdata;
-        T *res = (T *)(alloc + sizeof(MetaData *));
+        *((BSQType**)alloc) = mdata;
+        uint_t* res = (alloc + sizeof(BSQType*));
 
         return res;
     }
 
-    //Return uint8_t* of given asize + sizeof(MetaData*) -- must check that this does not require a GC
-    inline uint8_t *allocateSafeDynamic(size_t asize, MetaData *mdata)
-    {
-        uint8_t *alloc = this->nsalloc.allocateSafeDynamic(asize);
-
-        *((MetaData **)alloc) = mdata;
-        uint8_t *res = alloc + sizeof(MetaData *);
-
-        return res;
-    }
-
-    template <typename T, typename U, uint16_t count>
-    inline T *allocateSafePlus(MetaData *mdata, U **contents)
-    {
-        constexpr size_t asize = BSQ_ALIGN_SIZE(sizeof(T)) + BSQ_ALIGN_SIZE(sizeof(U) * count);
-        uint8_t *alloc = this->nsalloc.allocateSafeDynamic(asize);
-
-        *((MetaData **)alloc) = mdata;
-        *((size_t *)(alloc + sizeof(MetaData *))) = count;
-        T *res = (T *)(alloc + sizeof(MetaData *));
-        *contents = (U *)(alloc + sizeof(MetaData *) + BSQ_ALIGN_SIZE(sizeof(T)));
-
-        return res;
-    }
-
-    template <typename T, typename U>
-    inline T *allocateSafePlusDynamic(MetaData *mdata, U **contents, size_t count)
-    {
-        size_t asize = BSQ_ALIGN_SIZE(sizeof(T)) + BSQ_ALIGN_SIZE(sizeof(U) * count);
-        uint8_t *alloc = this->nsalloc.allocateSafeDynamic(asize);
-
-        *((MetaData **)alloc) = mdata;
-        *((size_t *)(alloc + sizeof(MetaData *))) = count;
-        T *res = (T *)(alloc + sizeof(MetaData *));
-        *contents = (U *)(alloc + sizeof(MetaData *) + BSQ_ALIGN_SIZE(sizeof(T)));
-
-        return res;
-    }
-
-    template <typename T>
-    inline T *allocateSafePrimitive(MetaData *mdata, T val)
-    {
-        T *res = this->allocateSafe<T>(mdata);
-        *res = val;
-
-        return res;
-    }
-
-    template <typename T>
-    inline T *allocateSafeStruct(MetaData *mdata, T &val)
-    {
-        T *res = this->allocateSafe<T>(mdata);
-        *res = val;
-
-        return res;
-    }
-
-    void pushRoot(void *&mem)
+    void pushRoot(void*& mem)
     {
         this->tempRoots.push_back(&mem);
     }
@@ -823,57 +700,6 @@ public:
     void popRoot()
     {
         this->tempRoots.pop_back();
-    }
-
-    void shrink(uint8_t *&mem, size_t tsize, size_t entrysize, size_t ocount, size_t ncount)
-    {
-        if (IS_BUMP_ALLOCATION(mem, Allocator::GlobalAllocator.bstart, Allocator::GlobalAllocator.bend))
-        {
-            this->nsalloc.shrinkBumpAlloc(mem, tsize, entrysize, ocount, ncount);
-        }
-
-        *((size_t *)mem) = ncount;
-    }
-
-    void grow(uint8_t *&mem, size_t tsize, size_t entrysize, size_t &capacity)
-    {
-        size_t ncapacity = std::max((capacity * 2), (size_t)256);
-        if (IS_BUMP_ALLOCATION(mem, Allocator::GlobalAllocator.bstart, Allocator::GlobalAllocator.bend))
-        {
-            bool inplace = this->nsalloc.growBumpAlloc(mem, tsize, entrysize, capacity, ncapacity);
-            if (!inplace)
-            {
-                size_t size = tsize + BSQ_ALIGN_SIZE(entrysize * ncapacity);
-                uint8_t *rr = this->osalloc.allocateSizePlus(size);
-
-                *((MetaData **)rr) = GET_TYPE_META_DATA(mem);
-                GC_MEM_COPY(rr + sizeof(MetaData *), mem, size);
-
-                mem = (rr + sizeof(MetaData *));
-            }
-        }
-        else if (IS_LARGE_ALLOCATION(mem))
-        {
-            this->nsalloc.growFreeListAlloc(mem, tsize, entrysize, capacity, ncapacity);
-        }
-        else
-        {
-            auto iter = std::find(this->maybeZeroCounts.begin(), this->maybeZeroCounts.end(), mem);
-            if (iter != this->maybeZeroCounts.end())
-            {
-                *iter = nullptr;
-            }
-
-            this->osalloc.growAlloc(mem, tsize, entrysize, capacity, ncapacity);
-
-            if (iter != this->maybeZeroCounts.end())
-            {
-                *iter = mem;
-            }
-        }
-
-        *((size_t *)mem) = capacity;
-        capacity = ncapacity;
     }
 
     void collect()
@@ -894,202 +720,5 @@ public:
 
         //Adjust the new space size if needed and reset/free the newspace allocators
         this->nsalloc.postGCProcess(this->osalloc.currentAllocatedBytes());
-    }
-
-    struct GCOperator_ProcessRoot
-    {
-        void operator()(void **slot) { Allocator::gcProcessSlot<true>(slot); }
-    };
-    struct GCOperator_ProcessHeap
-    {
-        void operator()(void **slot) { Allocator::gcProcessSlot<false>(slot); }
-    };
-    struct GCOperator_Dec
-    {
-        void operator()(void **slot) { Allocator::gcDecrement(*slot); }
-    };
-    struct GCOperator_Clear
-    {
-        void operator()(void **slot) { Allocator::gcClearMark(*slot); }
-    };
-
-    struct GCOperator_ProcessRoot_Union
-    {
-        void operator()(void **slot) { Allocator::gcProcessSlotsWithUnion<true>(slot); }
-    };
-    struct GCOperator_ProcessHeap_Union
-    {
-        void operator()(void **slot) { Allocator::gcProcessSlotsWithUnion<false>(slot); }
-    };
-    struct GCOperator_Dec_Union
-    {
-        void operator()(void **slot) { Allocator::gcDecrementSlotsWithUnion(slot); }
-    };
-    struct GCOperator_Clear_Union
-    {
-        void operator()(void **slot) { Allocator::gcClearMarkSlotsWithUnion(slot); }
-    };
-
-    inline static void MetaData_GCOperatorFP_NoRefs(const MetaData *meta, void **data)
-    {
-        ;
-    }
-
-    template <typename OP>
-    inline static void MetaData_GCOperatorFP_Packed(const MetaData *meta, void **data)
-    {
-        void **slotcurr = data;
-        void **slotend = slotcurr + meta->ptrcount;
-        while (slotcurr != slotend)
-        {
-            OP{}(slotcurr++);
-        }
-    }
-
-    template <typename OP>
-    inline static void MetaData_GCOperatorFP_PackedEntries_Direct(const MetaData *meta, void **data)
-    {
-        size_t count = *((size_t *)data);
-
-        void **slotcurr = (void **)GET_COLLECTION_START_META(data, meta);
-        for (size_t i = 0; i < count; ++i)
-        {
-            OP{}(slotcurr++);
-        }
-    }
-
-    template <typename OP>
-    inline static void MetaData_GCOperatorFP_PackedEntries(const MetaData *meta, void **data)
-    {
-        size_t count = *((size_t *)data);
-        uint32_t advancesize = meta->sizeadvance;
-
-        void **slotcurr = (void **)GET_COLLECTION_START_META(data, meta);
-        for (size_t i = 0; i < count; ++i)
-        {
-            void **slotend = slotcurr + meta->ptrcount;
-            while (slotcurr != slotend)
-            {
-                OP{}(slotcurr++);
-            }
-            slotcurr += advancesize;
-        }
-    }
-
-    template <typename OP>
-    inline static void MetaData_GCOperatorFP_Masked_Simple(const MetaData *meta, void **data)
-    {
-        void **cslot = data;
-        const char *cmaskop = meta->refmask;
-
-        while (*cmaskop)
-        {
-            char op = *cmaskop++;
-            if (op == PTR_FIELD_MASK_SCALAR)
-            {
-                cslot++;
-            }
-            else
-            {
-                OP{}(*cslot++);
-            }
-        }
-    }
-
-    template <typename OP>
-    inline static void MetaData_GCOperatorFP_MaskedEntries_Simple(const MetaData *meta, void **data)
-    {
-        size_t count = *((size_t *)data);
-        uint32_t advancesize = meta->sizeadvance;
-
-        void **slotcurr = (void **)GET_COLLECTION_START_META(data, meta);
-        for (size_t i = 0; i < count; ++i)
-        {
-            void **cslot = slotcurr;
-            const char *cmaskop = meta->refmask;
-
-            while (*cmaskop)
-            {
-                char op = *cmaskop++;
-                if (op == PTR_FIELD_MASK_SCALAR)
-                {
-                    cslot++;
-                }
-                else
-                {
-                    OP{}(*cslot++);
-                }
-            }
-
-            slotcurr += advancesize;
-        }
-    }
-
-    template <typename OP, typename UOP>
-    inline static void MetaData_GCOperatorFP_Masked_WithUnion(const MetaData *meta, void **data)
-    {
-        void **cslot = data;
-        const char *cmaskop = meta->refmask;
-
-        while (*cmaskop)
-        {
-            char op = *cmaskop++;
-            if (op == PTR_FIELD_MASK_SCALAR)
-            {
-                cslot++;
-            }
-            else if (op == PTR_FIELD_MASK_PTR)
-            {
-                OP{}(*cslot++);
-            }
-            else
-            {
-                UOP{}(cslot++);
-            }
-        }
-    }
-
-    template <typename OP, typename UOP>
-    inline static void MetaData_GCOperatorFP_MaskedEntries_WithUnion(const MetaData *meta, void **data)
-    {
-        size_t count = *((size_t *)data);
-        uint32_t advancesize = meta->sizeadvance;
-
-        void **slotcurr = (void **)GET_COLLECTION_START_META(data, meta);
-        for (size_t i = 0; i < count; ++i)
-        {
-            void **cslot = slotcurr;
-            const char *cmaskop = meta->refmask;
-
-            while (*cmaskop)
-            {
-                char op = *cmaskop++;
-                if (op == PTR_FIELD_MASK_SCALAR)
-                {
-                    cslot++;
-                }
-                else if (op == PTR_FIELD_MASK_PTR)
-                {
-                    OP{}(*cslot++);
-                }
-                else
-                {
-                    UOP{}(cslot++);
-                }
-            }
-
-            slotcurr += advancesize;
-        }
-    }
-
-    inline static size_t MetaData_ComputeSize_Simple(const MetaData *meta, void *data)
-    {
-        return sizeof(MetaData *) + meta->datasize;
-    }
-
-    inline static size_t MetaData_ComputeSize_SimpleCollection(const MetaData *meta, void *data)
-    {
-        size_t count = *((size_t *)data);
-        return sizeof(MetaData *) + meta->datasize + BSQ_ALIGN_SIZE(count * meta->sizeentry);
     }
 };

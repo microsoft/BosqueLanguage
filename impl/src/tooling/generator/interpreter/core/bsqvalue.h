@@ -5,46 +5,25 @@
 
 #pragma once
 
-#include "common.h"
-
-#include "bsqmetadata.h"
+#include "../common.h"
+#include "../assembly/bsqtype.h"
 #include "bsqmemory.h"
-
-#include <set>
-#include <map>
 
 ////
 //Value ops
+
+typedef uint64_t BSQNone;
+#define NoneValue 0
+#define BSQ_NONE_VALUE nullptr
 
 typedef uint8_t BSQBool;
 #define BSQTRUE 1
 #define BSQFALSE 0
 
-#define MIN_BSQ_INT -9007199254740991
-#define MAX_BSQ_INT 9007199254740991
+typedef uint64_t BSQNat;
+typedef int64_t BSQInt;
 
-#define INT_OOF_BOUNDS(X) (((X) < MIN_BSQ_INT) | ((X) > MAX_BSQ_INT))
 
-#define BSQ_IS_VALUE_TAGGED(V) ((((uintptr_t)(V)) & 0x7) != 0x0)
-#define BSQ_IS_VALUE_BOOL(V) ((((uintptr_t)(V)) & 0x2) == 0x2)
-#define BSQ_IS_VALUE_TAGGED_INT(V) ((((uintptr_t)(V)) & 0x4) == 0x4)
-
-#define BSQ_GET_VALUE_BOOL(V) ((BSQBool)(((uintptr_t)(V)) & 0x1))
-#define BSQ_GET_VALUE_TAGGED_INT(V) (int64_t)(((int64_t)(V)) >> 0x3)
-
-#define BSQ_ENCODE_VALUE_BOOL(B) ((void*)(((uintptr_t)(B)) | 0x2))
-#define BSQ_ENCODE_VALUE_TAGGED_INT(I) ((void*)((((uint64_t) I) << 0x3) | 0x4))
-
-#define BSQ_VALUE_TRUE BSQ_ENCODE_VALUE_BOOL(BSQTRUE)
-#define BSQ_VALUE_FALSE BSQ_ENCODE_VALUE_BOOL(BSQFALSE)
-
-typedef uint64_t None;
-typedef void* NoneValue;
-
-#define BSQ_NONE 0
-#define BSQ_NONE_VALUE nullptr
-
-#define META_DATA_DECLARE_SPECIAL_BUFFER(NAME, TYPE, DSTR) META_DATA_DECLARE_PTR_PACKED(NAME, TYPE, DATA_KIND_CLEAR_FLAG, sizeof(BSQBuffer), 1, coerceUnionToBox_RefValue, DisplayFunctor_BSQByteBuffer::display, DSTR)
 
 ////
 //Type ops
