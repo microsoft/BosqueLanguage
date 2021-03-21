@@ -5,7 +5,7 @@
 
 #include "op_eval.h"
 
-InterpValue evalArgument(Argument arg)
+SLValue evalArgument(Argument arg)
 {
     if(arg.kind == ArgumentTag::Register)
     {
@@ -15,7 +15,26 @@ InterpValue evalArgument(Argument arg)
     {
         switch(arg.kind)
         {
-            case
+            case ArgumentTag::ConstNone:
+                return &Environment::g_constNone;
+            case ArgumentTag::ConstTrue:
+                return arg.location != 0 &Environment::g_constTrue;
+            case ArgumentTag::ConstFalse:
+                return &Environment::g_constFalse;
+            case ArgumentTag::ConstNat:
+            case ArgumentTag::ConstInt:
+            case ArgumentTag::ConstBigNat:
+            case ArgumentTag::ConstBigInt:
+            case ArgumentTag::ConstRational:
+            case ArgumentTag::ConstFloat:
+            case ArgumentTag::ConstDecimal:
+            case ArgumentTag::ConstString:
+            case ArgumentTag::ConstStringOf:
+            case ArgumentTag::ConstDataString:
+            case ArgumentTag::ConstRegex:
+            default: {
+
+            }
         }
     }
 }
@@ -28,7 +47,7 @@ void evalDeadFlow()
 
 void evalAbort(const AbortOp* op)
 {
-    BSQ_LANGUAGE_ABORT(op->msg, Environment::GlobalEnv.cfile, op->sinfo.line);
+    BSQ_LANGUAGE_ABORT(op->msg, Environment::cfile, op->sinfo.line);
 }
 
 void evalAssertCheck(const AssertOp* op)
@@ -36,7 +55,7 @@ void evalAssertCheck(const AssertOp* op)
     auto val = evalArgument(op->arg);
     if(!LOAD_FROM(BSQBool, val))
     {
-        BSQ_LANGUAGE_ABORT(op->msg, Environment::GlobalEnv.cfile, op->sinfo.line);
+        BSQ_LANGUAGE_ABORT(op->msg, Environment::cfile, op->sinfo.line);
     }
 }
 

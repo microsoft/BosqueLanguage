@@ -12,7 +12,8 @@ enum class ArgumentTag
 {
     InvalidOp = 0x0,
     ConstNone,
-    ConstBool,
+    ConstTrue,
+    ConstFalse,
     ConstNat,
     ConstInt,
     ConstBigNat,

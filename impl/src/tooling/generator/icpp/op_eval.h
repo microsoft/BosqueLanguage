@@ -17,7 +17,7 @@
 #define LOAD_FROM(T, L) (*((T*)L))
 #define STORE_TO(T, L, V) ((*((T*)L)) = V)
 
-InterpValue evalArgument(Argument arg);
+SLValue evalArgument(Argument arg);
 
 void evalDeadFlow();
 void evalAbort();

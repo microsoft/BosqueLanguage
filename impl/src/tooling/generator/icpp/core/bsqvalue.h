@@ -9,8 +9,14 @@
 #include "../assembly/bsqtype.h"
 #include "bsqmemory.h"
 
+#include <boost/multiprecision/cpp_int.hpp>
+#include <boost/multiprecision/cpp_bin_float.hpp>
+#include <boost/multiprecision/cpp_dec_float.hpp>
+#include <boost/rational.hpp>
+
 //All values must be passed as uniform representation -- so we pick a void* -- then we cast and load/store the value
-typedef void* InterpValue;
+//Compiler will want to distinguish between SLValues and values that can be passed by value
+typedef void* SLValue;
 
 ////
 //Primitive value representations
@@ -25,3 +31,12 @@ typedef uint8_t BSQBool;
 
 typedef uint64_t BSQNat;
 typedef int64_t BSQInt;
+
+typedef boost::multiprecision::checked_uint256_t BSQBigNat;
+typedef boost::multiprecision::checked_uint256_t BSQBigInt;
+
+typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
+typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
+
+typedef boost::rational<BSQBigInt> BSQRational;
+

@@ -2571,7 +2571,7 @@ class MIRBody {
         });
 
         return `<?xml version="1.0" encoding="utf-8"?>
-        <DirectedGraph Title="DrivingTest" xmlns="http://schemas.microsoft.com/vs/2009/dgml">
+        <DirectedGraph Title="CFG" xmlns="http://schemas.microsoft.com/vs/2009/dgml">
            <Nodes>
                 ${nodes.join("\n")}
            </Nodes>
