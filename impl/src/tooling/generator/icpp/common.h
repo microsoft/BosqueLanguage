@@ -28,38 +28,20 @@
 #define BSQ_INTERNAL_ASSERT(C) if(!(C)) { assert(false); }
 
 #ifdef BDEBUG
-#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) { throw BSQAbort(MSG, F, L); }
+#define HANDLE_BSQ_ABORT(MSG, F, L) { wprintf(L"\"%s\" in %s on line %i\n", MSG, F, L); fflush(stdout); exit(1); }
 #else
-#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) { throw BSQAbort(); }
+#define HANDLE_BSQ_ABORT() { printf("ABORT\n"); exit(1); }
 #endif
 
 #ifdef BDEBUG
-#define BSQ_ABORT(MSG, F, L) (throw BSQAbort(MSG, F, L))
+#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) { HANDLE_BSQ_ABORT(MSG, F, L); }
 #else
-#define BSQ_ABORT(MSG, F, L) (throw BSQAbort())
+#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) { HANDLE_BSQ_ABORT(); }
 #endif
 
 #ifdef BDEBUG
-#define HANDLE_BSQ_ABORT(abrt) { printf("\"%s\" in %s on line %i\n", abrt.msg, abrt.bfile, abrt.bline); fflush(stdout); exit(1); }
+#define BSQ_LANGUAGE_ABORT(MSG, F, L) (HANDLE_BSQ_ABORT(MSG, F, L))
 #else
-#define HANDLE_BSQ_ABORT(abrt) { printf("ABORT\n"); exit(1); }
+#define BSQ_LANGUAGE_ABORT(MSG, F, L) (HANDLE_BSQ_ABORT())
 #endif
 
-namespace BSQ
-{
-class BSQAbort
-{
-#ifdef BDEBUG
-public:
-const char* msg;
-const char* bfile;
-int32_t bline;
-
-BSQAbort(const char* msg, const char* bfile, int32_t bline) : msg(msg), bfile(bfile), bline(bline) { ; }
-#else
-public:
-BSQAbort() { ; }
-#endif
-};
-
-} // namespace BSQ
