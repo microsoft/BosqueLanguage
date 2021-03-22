@@ -64,6 +64,7 @@ public:
     GCProcessOperatorFP fpProcessObjRoot;
     GCProcessOperatorFP fpProcessObjHeap;
 
+    const bool isValue;
     DisplayFP fpDisplay;
 
     const std::wstring name;
@@ -79,7 +80,6 @@ class BSQTupleType : public BSQType
 {
 public:
     const BSQTupleIndex maxIndex;
-    const bool isValue;
 };
 
 class BSQRecordType : public BSQType
@@ -88,17 +88,14 @@ public:
     static std::map<BSQRecordPropertyID, std::wstring> pnames;
 
     const std::vector<BSQRecordPropertyID> properties;
-    const bool isValue;
 };
 
 class BSQSpecialEntityType : public BSQType
 {
 public:
-    const bool isValue;
 };
 
 class BSQStdEntityType : public BSQType
 {
-public: 
-    const bool isValue;
+public:
 };

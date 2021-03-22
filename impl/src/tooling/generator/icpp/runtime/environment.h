@@ -7,6 +7,8 @@
 
 #include "../common.h"
 
+typedef void (*ConstValueLoad)(SLValue);
+
 class Environment
 {
 public:
@@ -26,4 +28,6 @@ public:
     static BSQStringOf* g_constStringOfs; 
     static BSQDataString* g_constDataStrings; 
     static BSQRegex* g_constRegexs;
+
+    static ConstValueLoad* g_constLoads;
 };

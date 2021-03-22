@@ -91,7 +91,12 @@ typedef uint64_t RCMeta;
 
 #define COMPUTE_FREE_LIST_BYTES(M) (GET_TYPE_META_DATA(M)->allocsize + sizeof(RCMeta) + sizeof(BSQType*))
 
+#ifdef __APPLE__
+#define GC_MEM_COPY(DST, SRC, BYTES) memcpy(DST, SRC, BYTES)
+#else
 #define GC_MEM_COPY(DST, SRC, BYTES) memcpy_s(DST, BYTES, SRC, BYTES)
+#endif
+
 #define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + BYTES, 0)
 
 class Allocator;
@@ -238,26 +243,6 @@ public:
     {
         constexpr size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
         static_assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE, "We should *not* be creating individual objects this large");
-
-        uint8_t *res = this->m_currPos;
-        this->m_currPos += rsize;
-
-        //Note this is technically UB!!!!
-        if (this->m_currPos <= this->m_endPos)
-        {
-            return res;
-        }
-        else
-        {
-            return this->allocateBumpSlow(rsize);
-        }
-    }
-
-    //Return uint8_t* of given asize + sizeof(MetaData*)
-    inline uint8_t* allocateDynamicSize(size_t count)
-    {
-        size_t rsize = BSQ_ALIGN_SIZE(count + sizeof(BSQType*));
-        assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE, "We should *not* be creating individual objects this large");
 
         uint8_t *res = this->m_currPos;
         this->m_currPos += rsize;
@@ -697,17 +682,6 @@ public:
     {
         constexpr size_t asize = BSQ_ALIGN_SIZE(allocsize);
         uint8_t* alloc = this->nsalloc.allocateFixedSize<asize>();
-
-        *((BSQType**)alloc) = mdata;
-        uint8_t* res = (alloc + sizeof(BSQType*));
-
-        return res;
-    }
-
-    inline uint8_t* allocateDynamic(size_t count, BSQType* mdata)
-    {
-        size_t asize = BSQ_ALIGN_SIZE(count);
-        uint8_t* alloc = this->nsalloc.allocateDynamicSize(count);
 
         *((BSQType**)alloc) = mdata;
         uint8_t* res = (alloc + sizeof(BSQType*));
