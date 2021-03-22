@@ -23,7 +23,6 @@ enum class BSQTypeKind : uint8_t
     Tuple,
     Record,
     SpecialEntity,
-    SpecialBlockEntity,
     StdEntity
 };
 
@@ -96,11 +95,6 @@ class BSQSpecialEntityType : public BSQType
 {
 public:
     const bool isValue;
-};
-
-class BSQSpecialBlockType : public BSQType
-{
-public:
 };
 
 class BSQStdEntityType : public BSQType

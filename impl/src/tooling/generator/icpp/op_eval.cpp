@@ -18,22 +18,33 @@ SLValue evalArgument(Argument arg)
             case ArgumentTag::ConstNone:
                 return &Environment::g_constNone;
             case ArgumentTag::ConstTrue:
-                return arg.location != 0 &Environment::g_constTrue;
+                return &Environment::g_constTrue;
             case ArgumentTag::ConstFalse:
                 return &Environment::g_constFalse;
             case ArgumentTag::ConstNat:
+                return Environment::g_constNats + arg.location;
             case ArgumentTag::ConstInt:
+                return Environment::g_constInts + arg.location;
             case ArgumentTag::ConstBigNat:
+                return Environment::g_constBigNats + arg.location;
             case ArgumentTag::ConstBigInt:
+                return Environment::g_constBigInts + arg.location;
             case ArgumentTag::ConstRational:
+                return Environment::g_constRationals + arg.location;
             case ArgumentTag::ConstFloat:
+                return Environment::g_constFloats + arg.location;
             case ArgumentTag::ConstDecimal:
+                return Environment::g_constDecimals + arg.location;
             case ArgumentTag::ConstString:
+                return Environment::g_constStrings + arg.location;
             case ArgumentTag::ConstStringOf:
+                return Environment::g_constStringOfs + arg.location;
             case ArgumentTag::ConstDataString:
+                return Environment::g_constDataStrings + arg.location;
             case ArgumentTag::ConstRegex:
+                return Environment::g_constRegexes + arg.location;
             default: {
-
+                xxxx;
             }
         }
     }

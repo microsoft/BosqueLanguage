@@ -14,18 +14,16 @@ public:
     static BSQNone g_constNone;
     static BSQBool g_constTrue;
     static BSQBool g_constFalse;
-    static std::vector<BSQNat> g_constNats;
-    static std::vector<BSQInt> g_constInts;
+    static BSQNat* g_constNats;
+    static BSQInt* g_constInts;
 
-    static std::vector<BSQBigNat> g_constBigNats;
-    static std::vector<BSQBigInt> g_constBigInts;
-    ConstBigNat,
-    ConstBigInt,
-    ConstRational,
-    ConstFloat,
-    ConstDecimal,
-    ConstString,
-    ConstStringOf,
-    ConstDataString,
-    ConstRegex,
+    static BSQBigNat* g_constBigNats;
+    static BSQBigInt* g_constBigInts;
+    static BSQRational* g_constRationals;
+    static BSQFloat* g_constFloats;
+    static BSQDecimal* g_constDecimals;
+    static BSQString* g_constStrings; 
+    static BSQStringOf* g_constStringOfs; 
+    static BSQDataString* g_constDataStrings; 
+    static BSQRegex* g_constRegexs;
 };

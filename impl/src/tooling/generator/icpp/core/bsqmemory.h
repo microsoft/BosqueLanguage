@@ -26,21 +26,32 @@
 
 //Compute addresses aligned at the given size
 #define BSQ_MEM_ALIGNMENT 8
-#define BSQ_ALIGN_SIZE(ASIZE) (((ASIZE) + 0x7) & 0xFFFFFFFFFFFFFFFC)
+#define BSQ_MEM_ALIGNMENT_MASK 0x7
+#define BSQ_ALIGN_SIZE(ASIZE) (((ASIZE) + BSQ_MEM_ALIGNMENT_MASK) & 0xFFFFFFFFFFFFFFFC)
 
 //Program should not contain any allocations larger than this in a single block
-#define BSQ_ALLOC_MAX_BLOCK_SIZE 1024
+#define BSQ_ALLOC_MAX_BLOCK_SIZE 2048
 
 //Min and max bump allocator size
 #define BSQ_MIN_NURSERY_SIZE 1048576
 #define BSQ_MAX_NURSERY_SIZE 16777216
 
 //Create and release bump space
+#ifdef __APPLE__
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
+#else
+#define BSQ_BUMP_SPACE_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
+#endif
+
 #define BSQ_BUMP_SPACE_RELEASE(SIZE, M) free(M)
 
 //Allocate and release free list values
+#ifdef __APPLE__
 #define BSQ_FREE_LIST_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
+#else
+#define BSQ_FREE_LIST_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
+#endif
+
 #define BSQ_FREE_LIST_RELEASE(SIZE, M) free(M)
 
 //Access type info + special forwarding pointer mark
@@ -222,12 +233,31 @@ public:
     }
 
     //Return uint8_t* of given asize + sizeof(MetaData*)
-    //If it is a large alloc then the RCMeta is just before the return pointer
     template <size_t asize>
     inline uint8_t* allocateFixedSize()
     {
         constexpr size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
         static_assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE, "We should *not* be creating individual objects this large");
+
+        uint8_t *res = this->m_currPos;
+        this->m_currPos += rsize;
+
+        //Note this is technically UB!!!!
+        if (this->m_currPos <= this->m_endPos)
+        {
+            return res;
+        }
+        else
+        {
+            return this->allocateBumpSlow(rsize);
+        }
+    }
+
+    //Return uint8_t* of given asize + sizeof(MetaData*)
+    inline uint8_t* allocateDynamicSize(size_t count)
+    {
+        size_t rsize = BSQ_ALIGN_SIZE(count + sizeof(BSQType*));
+        assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE, "We should *not* be creating individual objects this large");
 
         uint8_t *res = this->m_currPos;
         this->m_currPos += rsize;
@@ -663,13 +693,24 @@ public:
     }
 
     template <size_t allocsize>
-    inline uint8_t* allocateT(BSQType* mdata)
+    inline uint8_t* allocateFixed(BSQType* mdata)
     {
         constexpr size_t asize = BSQ_ALIGN_SIZE(allocsize);
         uint8_t* alloc = this->nsalloc.allocateFixedSize<asize>();
 
         *((BSQType**)alloc) = mdata;
-        uint_t* res = (alloc + sizeof(BSQType*));
+        uint8_t* res = (alloc + sizeof(BSQType*));
+
+        return res;
+    }
+
+    inline uint8_t* allocateDynamic(size_t count, BSQType* mdata)
+    {
+        size_t asize = BSQ_ALIGN_SIZE(count);
+        uint8_t* alloc = this->nsalloc.allocateDynamicSize(count);
+
+        *((BSQType**)alloc) = mdata;
+        uint8_t* res = (alloc + sizeof(BSQType*));
 
         return res;
     }
