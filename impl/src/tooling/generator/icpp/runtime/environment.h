@@ -6,8 +6,9 @@
 #pragma once
 
 #include "../common.h"
+#include "../core/bsqvalue.h"
 
-typedef void (*ConstValueLoad)(SLValue);
+typedef SLValue (*ConstValueLoad)();
 
 class Environment
 {
@@ -25,8 +26,6 @@ public:
     static BSQFloat* g_constFloats;
     static BSQDecimal* g_constDecimals;
     static BSQString* g_constStrings; 
-    static BSQStringOf* g_constStringOfs; 
-    static BSQDataString* g_constDataStrings; 
     static BSQRegex* g_constRegexs;
 
     static ConstValueLoad* g_constLoads;

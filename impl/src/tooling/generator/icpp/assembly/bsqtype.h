@@ -99,3 +99,21 @@ class BSQStdEntityType : public BSQType
 {
 public:
 };
+
+class BSQEphemeralListType : public BSQType
+{
+public:
+};
+
+class BSQConceptType : public BSQType
+{
+public:
+};
+
+class BSQUnionType : public BSQType
+{
+public:
+};
+
+
+

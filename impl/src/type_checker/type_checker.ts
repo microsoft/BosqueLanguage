@@ -5736,10 +5736,10 @@ class TypeChecker {
         }
         else {
             const vreg = this.m_emitter.generateTmpRegister();
-            this.checkExpression(env, stmt.value, vreg, undefined);
+            const venv = this.checkExpression(env, stmt.value, vreg, undefined);
 
             if (this.m_buildLevel !== "release") {
-                this.m_emitter.emitDebugPrint(stmt.sinfo, vreg);
+                this.m_emitter.emitDebugPrint(stmt.sinfo, this.emitInlineConvertIfNeeded(stmt.sinfo, vreg, venv.getExpressionResult().valtype, this.m_emitter.assembly.getSpecialAnyConceptType()));
             }
         }
 

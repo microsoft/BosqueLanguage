@@ -26,6 +26,7 @@ enum class ArgumentTag
     ConstDataString,
     ConstRegex,
     Register,
+    Argument,
     GlobalConst
 };
 
@@ -82,4 +83,32 @@ public:
 
     AssertOp(SourceInfo sinfo, Argument arg, const std::wstring& msg) : InterpOp(sinfo), arg(arg), msg(msg) {;}
     virtual ~AssertOp() {;}
+};
+
+class DebugOp : public InterpOp
+{
+public:
+    //Is invalid if this is a break
+    const Argument arg;
+
+    DebugOp(SourceInfo sinfo, Argument arg) : InterpOp(sinfo), arg(arg) {;}
+    virtual ~DebugOp() {;}
+};
+
+//This op does not need to be emitted if we are in a release build
+class LoadUnintVariableValueOp : public InterpOp
+{
+public:
+    const SLValue trgt;
+    const BSQType* oftype;
+
+    LoadUnintVariableValueOp(SourceInfo sinfo, SLValue trgt, BSQType* oftype) : InterpOp(sinfo), trgt(trgt), oftype(oftype) {;}
+    virtual ~LoadUnintVariableValueOp() {;}
+};
+
+class ConvertValueOp : public InterpOp
+{
+public:
+    ConvertValueOp(SourceInfo sinfo) : InterpOp(sinfo) {;}
+    virtual ~ConvertValueOp() {;}
 };

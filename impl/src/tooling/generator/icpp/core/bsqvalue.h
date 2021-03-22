@@ -18,6 +18,9 @@
 //Compiler will want to distinguish between SLValues and values that can be passed by value
 typedef void* SLValue;
 
+//All concept types (that are not struct) are boxed to the heap 
+typedef void* BoxedConceptValue;
+
 ////
 //Primitive value representations
 
@@ -173,46 +176,6 @@ struct BSQString
 };
 
 constexpr BSQString EmptyString = {nullptr};
-
-struct BSQStringOf
-{
-    BSQString str;
-
-    inline static void initializeInline(size_t count, const wchar_t* chars, BSQStringOf* into)
-    {
-        BSQString::initializeInline(count, chars, &(into->str));
-    }
-
-    static void initializeFlat(size_t count, const wchar_t* chars, BSQStringOf* into, BSQType* stype)
-    {
-        BSQString::initializeFlat(count, chars, &(into->str), stype);
-    }
-
-    inline BSQNat count() const
-    {
-        this->str.count();
-    }
-};
-
-struct BSQDataString
-{
-    BSQString str;
-
-    inline static void initializeInline(size_t count, const wchar_t* chars, BSQDataString* into)
-    {
-        BSQString::initializeInline(count, chars, &(into->str));
-    }
-
-    static void initializeFlat(size_t count, const wchar_t* chars, BSQDataString* into, BSQType* stype)
-    {
-        BSQString::initializeFlat(count, chars, &(into->str), stype);
-    }
-
-    inline BSQNat count() const
-    {
-        this->str.count();
-    }
-};
 
 struct BSQRegex
 {

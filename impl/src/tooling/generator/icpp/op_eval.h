@@ -14,33 +14,58 @@
 #include "core/bsqvalue.h"
 #include "runtime/environment.h"
 
-#define LOAD_FROM(T, L) (*((T*)L))
-#define STORE_TO(T, L, V) ((*((T*)L)) = V)
+#define SLVALUE_LOAD_FROM(T, L) (*((T*)L))
+#define SLVALUE_STORE_TO(T, L, V) ((*((T*)L)) = V)
 
-SLValue evalArgument(Argument arg);
+#define SLVALUE_CLEAR(BSQT, L) GC_MEM_ZERO(L, (BSQT->isValue ? BSQT->allocsize : sizeof(void*)))
+#define SLVALUE_COPY(BSQT, L, V) GC_MEM_COPY(L, V, (BSQT->isValue ? BSQT->allocsize : sizeof(void*)))
 
-void evalDeadFlow();
-void evalAbort();
-void evalAssertCheck();
-void evalDebug();
+class Evaluator
+{
+private:
+    std::wstring* getCurrentFile();
+    uint64_t getCurrentLine();
+    uint64_t getCurrentColumn();
 
-void evalLoadUnintVariableValue();
-void evalDeclareGuardFlagLocation();
-void evalSetConstantGuardFlag();
-void evalConvertValue();
+    SLValue evalConstArgument(Argument arg);
+
+    inline SLValue evalArgument(Argument arg)
+    {
+        if(arg.kind == ArgumentTag::Register)
+        {
+            return xxx;
+        }
+        else if(arg.kind == ArgumentTag::Argument)
+        {
+            return xxx;
+        }
+        else 
+        {
+            return evalConstArgument(arg);
+        }
+    }
+
+    void evalDeadFlow();
+    void evalAbort(const AbortOp* op);
+    void evalAssertCheck(const AssertOp* op);
+    void evalDebug(const DebugOp* op);
+
+    void evalLoadUnintVariableValue(const LoadUnintVariableValueOp* op);
+    void evalConvertValue(const ConvertValueOp* op);
+
+    void evalLoadConst(const LoadConstOp* op);
+
+    void evalTupleHasIndex(const TupleHasIndexOp* op);
+    void evalRecordHasProperty(const RecordHasPropertyOp* op);
+    void evalLoadTupleIndex(const LoadTupleIndexOp* op);
+    void evalLoadTupleIndexSetGuard(const LoadTupleIndexSetGuardOp* op);
+    void evalLoadRecordProperty(const LoadRecordPropertyOp* op);
+    void evalLoadRecordPropertySetGuard(const LoadRecordPropertySetGuardOp* op);
+
+    void evalLoadField(const LoadFieldOp* op);
+};
 
 /*
-    MIRLoadConst = "MIRLoadConst",
-
-    MIRTupleHasIndex = "MIRTupleHasIndex",
-    MIRRecordHasProperty = "MIRRecordHasProperty",
-    MIRLoadTupleIndex = "MIRLoadTupleIndex",
-    MIRLoadTupleIndexSetGuard = "MIRLoadTupleIndexSetGuard",
-    MIRLoadRecordProperty = "MIRLoadRecordProperty",
-    MIRLoadRecordPropertySetGuard = "MIRLoadRecordPropertySetGuard",
-
-    MIRLoadField = "MIRLoadField",
-
     MIRTupleProjectToEphemeral = "MIRTupleProjectToEphemeral",
     MIRRecordProjectToEphemeral = "MIRRecordProjectToEphemeral",
     MIREntityProjectToEphemeral = "MIREntityProjectToEphemeral",
