@@ -52,10 +52,21 @@ private:
 
     void evalLoadConst(const LoadConstOp* op);
 
+    const BSQTupleType* loadTupleTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+    StorageLocationPtr loadTupleDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+    
+    const BSQRecordType* loadRecordTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+    StorageLocationPtr loadRecordDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+    
+    const BSQType* loadEntityTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+    StorageLocationPtr loadEntityDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+
     void evalTupleHasIndex(const TupleHasIndexOp* op);
     void evalRecordHasProperty(const RecordHasPropertyOp* op);
-    void evalLoadTupleIndex(const LoadTupleIndexOp* op);
-    void evalLoadTupleIndexSetGuard(const LoadTupleIndexSetGuardOp* op);
+    void evalLoadTupleIndexDirect(const LoadTupleIndexDirectOp* op);
+    void evalLoadTupleIndexVirtual(const LoadTupleIndexVirtualOp* op);
+    void evalLoadTupleIndexSetGuardDirect(const LoadTupleIndexSetGuardDirectOp* op);
+    void evalLoadTupleIndexSetGuardVirtual(const LoadTupleIndexSetGuardVirtualOp* op);
     void evalLoadRecordProperty(const LoadRecordPropertyOp* op);
     void evalLoadRecordPropertySetGuard(const LoadRecordPropertySetGuardOp* op);
 

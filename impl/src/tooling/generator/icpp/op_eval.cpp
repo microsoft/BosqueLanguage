@@ -68,7 +68,7 @@ void Evaluator::evalAbort(const AbortOp *op)
 
 void Evaluator::evalAssertCheck(const AssertOp *op)
 {
-    auto val = Evaluator::evalArgument(op->arg);
+    auto val = this->evalArgument(op->arg);
     if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, val))
     {
         BSQ_LANGUAGE_ABORT(op->msg, this.getCurrentFile(), this.getCurrentLine());
@@ -84,7 +84,7 @@ void Evaluator::evalDebug(const DebugOp *op)
     }
     else
     {
-        auto val = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(Evaluator::evalArgument(op->arg));
+        auto val = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
         auto ttype = GET_TYPE_META_DATA(val);
         auto dval = ttype->fpDisplay(val);
 
@@ -95,7 +95,7 @@ void Evaluator::evalDebug(const DebugOp *op)
 
 void Evaluator::evalLoadUnintVariableValue(const LoadUnintVariableValueOp* op)
 {
-    op->oftype->slclear(Evaluator::evalTargetVar(op->trgt));
+    op->oftype->slclear(this->evalTargetVar(op->trgt));
 }
 
 void Evaluator::evalConvertValue(const ConvertValueOp* op)
@@ -105,53 +105,164 @@ void Evaluator::evalConvertValue(const ConvertValueOp* op)
 
 void Evaluator::evalLoadConst(const LoadConstOp* op)
 {
-    op->oftype->slcopy(Evaluator::evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg));
+    op->oftype->slcopy(this->evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg));
 }
 
-void Evaluator::evalTupleHasIndex(const TupleHasIndexOp* op)
+const BSQTupleType* Evaluator::loadTupleTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
 {
-    BSQBool hasindex = false;
-    auto layout = op->layouttype->tkind;
-    auto sl = Evaluator::evalArgument(op->arg);
-
+    auto layout = layouttype->tkind;
     if(layout == BSQTypeKind::InlineUnion)
     {
-        hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl))->maxIndex;
+        return ((BSQTupleType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl));
     }
     else if(layout == BSQTypeKind::HeapUnion)
     {
-        hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl))->maxIndex;
+        return ((BSQTupleType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl));
     }
     else
     {
         assert(layout == BSQTypeKind::AbstractTuple);
 
-        auto ttype = (const BSQAbstractTupleType*)op->layouttype;
-
-        if(ttype->isValue)
+        if(((const BSQAbstractTupleType*)layouttype)->isValue)
         {
-            hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl))->maxIndex;
+            return ((BSQTupleType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl));
         }
         else
         {
-            hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl))->maxIndex;
+            return ((BSQTupleType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl));
         }
     }
+}
 
-    SLPTR_STORE_CONTENTS_AS(BSQBool, Evaluator::evalTargetVar(op->trgt), hasindex);
+StorageLocationPtr Evaluator::loadTupleDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+{
+    auto layout = layouttype->tkind;
+    if(layout == BSQTypeKind::InlineUnion)
+    {
+        return SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
+
+    }
+    else if(layout == BSQTypeKind::HeapUnion)
+    {
+        return SLPTR_LOAD_UNION_HEAP_DATAPTR(sl);
+    }
+    else
+    {
+        assert(layout == BSQTypeKind::AbstractTuple);
+
+        if(((const BSQAbstractTupleType*)layouttype)->isValue)
+        {
+            return SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
+        }
+        else
+        {
+            return SLPTR_LOAD_UNION_HEAP_DATAPTR(sl);
+        }
+    }
+}
+
+const BSQRecordType* Evaluator::loadRecordTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+{
+    auto layout = layouttype->tkind;
+    if(layout == BSQTypeKind::InlineUnion)
+    {
+        return ((BSQRecordType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl));
+    }
+    else if(layout == BSQTypeKind::HeapUnion)
+    {
+        return ((BSQRecordType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl));
+    }
+    else
+    {
+        assert(layout == BSQTypeKind::AbstractRecord);
+
+        if(((const BSQAbstractRecordType*)layouttype)->isValue)
+        {
+            return ((BSQRecordType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl));
+        }
+        else
+        {
+            return ((BSQRecordType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl));
+        }
+    }
+}
+
+StorageLocationPtr Evaluator::loadRecordDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+{
+    auto layout = layouttype->tkind;
+    if(layout == BSQTypeKind::InlineUnion)
+    {
+        return SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
+    }
+    else if(layout == BSQTypeKind::HeapUnion)
+    {
+        return SLPTR_LOAD_UNION_HEAP_DATAPTR(sl);
+    }
+    else
+    {
+        assert(layout == BSQTypeKind::AbstractRecord);
+
+        if(((const BSQAbstractRecordType*)layouttype)->isValue)
+        {
+            return SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
+        }
+        else
+        {
+            return SLPTR_LOAD_UNION_HEAP_DATAPTR(sl);
+        }
+    }
+}
+
+const BSQType* Evaluator::loadEntityTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+{
+    xxxx;
+}
+
+StorageLocationPtr Evaluator::loadEntityDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+{
+    xxxx;
+}
+
+void Evaluator::evalTupleHasIndex(const TupleHasIndexOp* op)
+{
+    auto sl = this->evalArgument(op->arg);
+    BSQTupleIndex maxidx = this->loadTupleTypeFromAbstractLocation(sl, op->layouttype)->maxIndex;
+
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)(op->idx < maxidx));
 }
 
 void Evaluator::evalRecordHasProperty(const RecordHasPropertyOp* op)
 {
+    auto sl = this->evalArgument(op->arg);
+    const std::vector<BSQRecordPropertyID>& properties = this->loadRecordTypeFromAbstractLocation(sl, op->layouttype)->properties;
+    
+    BSQBool hasprop = std::find(properties.cbegin(), properties.cend(), op->propId) != properties.cend();
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), hasprop);
+}
+
+void Evaluator::evalLoadTupleIndexDirect(const LoadTupleIndexDirectOp* op)
+{
+    auto sl = this->evalArgument(op->arg);
+    auto voffset = op->argtype->idxoffsets[op->idx];
+
+    auto tdata = op->argtype->isValue ? sl : SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl);
+    op->trgttype->slcopy(this->evalTargetVar(op->trgt), SLPTR_INDEX(tdata, voffset));
+}
+
+void Evaluator::evalLoadTupleIndexVirtual(const LoadTupleIndexVirtualOp* op)
+{
+    auto sl = this->evalArgument(op->arg);
+    const BSQTupleType* ttype = this->loadTupleTypeFromAbstractLocation(sl, op->layouttype)->maxIndex;
+
     xxxx;
 }
 
-void Evaluator::evalLoadTupleIndex(const LoadTupleIndexOp* op)
+void Evaluator::evalLoadTupleIndexSetGuardDirect(const LoadTupleIndexSetGuardDirectOp* op)
 {
     xxxx;
 }
 
-void Evaluator::evalLoadTupleIndexSetGuard(const LoadTupleIndexSetGuardOp* op)
+void Evaluator::evalLoadTupleIndexSetGuardVirtual(const LoadTupleIndexSetGuardVirtualOp* op)
 {
     xxxx;
 }

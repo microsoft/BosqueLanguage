@@ -69,6 +69,9 @@ class BSQTupleType : public BSQConcreteType
 public:
     const bool isValue;
     const BSQTupleIndex maxIndex;
+    const std::vector<BSQType*> ttypes;
+    const std::vector<size_t> idxoffsets;
+    
 };
 
 class BSQRecordType : public BSQConcreteType
@@ -78,6 +81,8 @@ public:
 
     const bool isValue;
     const std::vector<BSQRecordPropertyID> properties;
+    const std::vector<BSQType*> rtypes;
+    const std::vector<size_t> propertyoffsets;
 };
 
 //Has subtypes for the special builtin entity types

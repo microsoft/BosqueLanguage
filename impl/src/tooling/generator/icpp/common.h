@@ -157,6 +157,8 @@ typedef void* StorageLocationPtr;
 #define SLPTR_LOAD_UNION_HEAP_TYPE(L) GET_TYPE_META_DATA(*((void**)L))
 #define SLPTR_LOAD_UNION_HEAP_DATAPTR(L) (*((void**)L))
 
+#define SLPTR_INDEX(SL, I) ((void*)(((uint8_t*)SL) + I))
+
 ////////////////////////////////
 //Type and GC interaction decls
 

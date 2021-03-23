@@ -41,7 +41,11 @@ enum class OpCodeTag
     ConvertValueOp,
     LoadConstOp,
     TupleHasIndexOp,
-    RecordHasPropertyOp
+    RecordHasPropertyOp,
+    LoadTupleIndexDirectOp,
+    LoadTupleIndexVirtualOp,
+    LoadTupleIndexSetGuardDirectOp,
+    LoadTupleIndexSetGuardVirtualOp
 };
 
 struct Argument
@@ -160,5 +164,54 @@ public:
     virtual ~RecordHasPropertyOp() {;}
 };
 
+class LoadTupleIndexDirectOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* trgttype;
+    const Argument arg;
+    const BSQTupleType* argtype;
+    const BSQTupleIndex idx;
 
+    LoadTupleIndexDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQTupleType* argtype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), idx(idx) {;}
+    virtual ~LoadTupleIndexDirectOp() {;}
+};
 
+class LoadTupleIndexVirtualOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQTupleIndex idx;
+
+    LoadTupleIndexVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx) {;}
+    virtual ~LoadTupleIndexVirtualOp() {;}
+};
+
+class LoadTupleIndexSetGuardDirectOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* trgttype;
+    const Argument arg;
+    const BSQTupleType* argtype;
+    const BSQTupleIndex idx;
+
+    LoadTupleIndexSetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQTupleType* argtype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), idx(idx) {;}
+    virtual ~LoadTupleIndexSetGuardDirectOp() {;}
+};
+
+class LoadTupleIndexSetGuardVirtualOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQTupleIndex idx;
+
+    LoadTupleIndexSetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx) {;}
+    virtual ~LoadTupleIndexSetGuardVirtualOp() {;}
+};
