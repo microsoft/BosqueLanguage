@@ -95,7 +95,12 @@ public:
 class BSQStdEntityType : public BSQConcreteType
 {
 public:
+    static std::map<BSQFieldID, std::wstring> pnames;
+
     const bool isValue;
+    const std::vector<BSQFieldID> fields;
+    const std::vector<BSQType*> etypes;
+    const std::vector<size_t> fieldoffsets;
 };
 
 class BSQEphemeralListType : public BSQConcreteType

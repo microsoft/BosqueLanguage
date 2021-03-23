@@ -180,3 +180,6 @@ typedef std::wstring (*DisplayFP)(void*);
 typedef uint32_t BSQTypeID;
 typedef uint32_t BSQTupleIndex;
 typedef uint32_t BSQRecordPropertyID;
+typedef uint32_t BSQFieldID;
+typedef uint32_t BSQInvokeID;
+typedef uint32_t BSQVirtualInvokeID;

@@ -1552,6 +1552,8 @@ class SMTBodyEmitter {
         const flow = this.typegen.getMIRType(op.srcflowtype);
         const oftype = this.typegen.getMIRType(op.chktype);
 
+        assert(op.guard === undefined, "TODO -- looks like I forgot this");
+
         if(this.assembly.subtypeOf(flow, oftype)) {
             //also handles the oftype is Any case
             return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTConst("true"), continuation);
