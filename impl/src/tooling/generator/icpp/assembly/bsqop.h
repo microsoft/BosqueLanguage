@@ -30,18 +30,29 @@ enum class ArgumentTag
     GlobalConst
 };
 
+enum class OpCodeTag
+{
+    Invalid = 0x0,
+    DeadFlowOp,
+    AbortOp,
+    AssertOp,
+    DebugOp,
+    LoadUnintVariableValueOp,
+    ConvertValueOp,
+    LoadConstOp,
+    TupleHasIndexOp,
+    RecordHasPropertyOp
+};
+
 struct Argument
 {
     ArgumentTag kind;
     uint32_t location;
 };
 
-enum class OPCode
+struct TargetVar
 {
-    InvalidOp = 0x0,
-    DeadFlowOp,
-    AbortOp,
-    AssertOp
+    uint32_t offset;
 };
 
 struct SourceInfo
@@ -53,16 +64,17 @@ struct SourceInfo
 class InterpOp
 {
 public:
+    const OpCodeTag tag;
     const SourceInfo sinfo;
 
-    InterpOp(SourceInfo sinfo) : sinfo(sinfo) {;}
+    InterpOp(SourceInfo sinfo, OpCodeTag tag) : sinfo(sinfo), tag(tag) {;}
     virtual ~InterpOp() {;}
 };
 
 class DeadFlowOp : public InterpOp
 {
 public:
-    DeadFlowOp(SourceInfo sinfo) : InterpOp(sinfo) {;}
+    DeadFlowOp(SourceInfo sinfo) : InterpOp(sinfo, OpCodeTag::DeadFlowOp) {;}
     virtual ~DeadFlowOp() {;}
 };
 
@@ -71,7 +83,7 @@ class AbortOp : public InterpOp
 public:
     const std::wstring msg;
 
-    AbortOp(SourceInfo sinfo, const std::wstring& msg) : InterpOp(sinfo), msg(msg) {;}
+    AbortOp(SourceInfo sinfo, const std::wstring& msg) : InterpOp(sinfo, OpCodeTag::AbortOp), msg(msg) {;}
     virtual ~AbortOp() {;}
 };
 
@@ -81,7 +93,7 @@ public:
     const Argument arg;
     const std::wstring msg;
 
-    AssertOp(SourceInfo sinfo, Argument arg, const std::wstring& msg) : InterpOp(sinfo), arg(arg), msg(msg) {;}
+    AssertOp(SourceInfo sinfo, Argument arg, const std::wstring& msg) : InterpOp(sinfo, OpCodeTag::AssertOp), arg(arg), msg(msg) {;}
     virtual ~AssertOp() {;}
 };
 
@@ -91,7 +103,7 @@ public:
     //Is invalid if this is a break
     const Argument arg;
 
-    DebugOp(SourceInfo sinfo, Argument arg) : InterpOp(sinfo), arg(arg) {;}
+    DebugOp(SourceInfo sinfo, Argument arg) : InterpOp(sinfo, OpCodeTag::DebugOp), arg(arg) {;}
     virtual ~DebugOp() {;}
 };
 
@@ -99,16 +111,54 @@ public:
 class LoadUnintVariableValueOp : public InterpOp
 {
 public:
-    const SLValue trgt;
+    const TargetVar trgt;
     const BSQType* oftype;
 
-    LoadUnintVariableValueOp(SourceInfo sinfo, SLValue trgt, BSQType* oftype) : InterpOp(sinfo), trgt(trgt), oftype(oftype) {;}
+    LoadUnintVariableValueOp(SourceInfo sinfo, TargetVar trgt, BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
     virtual ~LoadUnintVariableValueOp() {;}
 };
 
 class ConvertValueOp : public InterpOp
 {
 public:
-    ConvertValueOp(SourceInfo sinfo) : InterpOp(sinfo) {;}
+    ConvertValueOp(SourceInfo sinfo) : InterpOp(sinfo, OpCodeTag::ConvertValueOp) {;}
     virtual ~ConvertValueOp() {;}
 };
+
+class LoadConstOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    const BSQType* oftype;
+
+    LoadConstOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadConstOp), trgt(trgt), arg(arg), oftype(oftype) {;}
+    virtual ~LoadConstOp() {;}
+};
+
+class TupleHasIndexOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQTupleIndex idx;
+
+    TupleHasIndexOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
+    virtual ~TupleHasIndexOp() {;}
+};
+
+class RecordHasPropertyOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQRecordPropertyID propId;
+
+    RecordHasPropertyOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::RecordHasPropertyOp), trgt(trgt), arg(arg), layouttype(layouttype), propId(propId) {;}
+    virtual ~RecordHasPropertyOp() {;}
+};
+
+
+

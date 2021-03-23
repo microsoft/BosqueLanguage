@@ -6,9 +6,9 @@
 #pragma once
 
 #include "../common.h"
-#include "../core/bsqvalue.h"
+#include "bsqvalue.h"
 
-typedef SLValue (*ConstValueLoad)();
+typedef StorageLocationPtr (*ConstValueLoad)();
 
 class Environment
 {

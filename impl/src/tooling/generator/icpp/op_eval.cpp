@@ -20,7 +20,7 @@ uint64_t Evaluator::getCurrentColumn()
     return xxxx;
 }
 
-SLValue Evaluator::evalConstArgument(Argument arg)
+StorageLocationPtr Evaluator::evalConstArgument(Argument arg)
 {
     switch (arg.kind)
     {
@@ -69,7 +69,7 @@ void Evaluator::evalAbort(const AbortOp *op)
 void Evaluator::evalAssertCheck(const AssertOp *op)
 {
     auto val = Evaluator::evalArgument(op->arg);
-    if (!SLVALUE_LOAD_FROM(BSQBool, val))
+    if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, val))
     {
         BSQ_LANGUAGE_ABORT(op->msg, this.getCurrentFile(), this.getCurrentLine());
     }
@@ -84,7 +84,7 @@ void Evaluator::evalDebug(const DebugOp *op)
     }
     else
     {
-        auto val = SLVALUE_LOAD_FROM(BoxedConceptValue, Evaluator::evalArgument(op->arg));
+        auto val = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(Evaluator::evalArgument(op->arg));
         auto ttype = GET_TYPE_META_DATA(val);
         auto dval = ttype->fpDisplay(val);
 
@@ -95,7 +95,7 @@ void Evaluator::evalDebug(const DebugOp *op)
 
 void Evaluator::evalLoadUnintVariableValue(const LoadUnintVariableValueOp* op)
 {
-    SLVALUE_CLEAR(op->oftype, op->trgt);
+    op->oftype->slclear(Evaluator::evalTargetVar(op->trgt));
 }
 
 void Evaluator::evalConvertValue(const ConvertValueOp* op)
@@ -105,12 +105,40 @@ void Evaluator::evalConvertValue(const ConvertValueOp* op)
 
 void Evaluator::evalLoadConst(const LoadConstOp* op)
 {
-    xxxx;
+    op->oftype->slcopy(Evaluator::evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg));
 }
 
 void Evaluator::evalTupleHasIndex(const TupleHasIndexOp* op)
 {
-    xxxx;
+    BSQBool hasindex = false;
+    auto layout = op->layouttype->tkind;
+    auto sl = Evaluator::evalArgument(op->arg);
+
+    if(layout == BSQTypeKind::InlineUnion)
+    {
+        hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl))->maxIndex;
+    }
+    else if(layout == BSQTypeKind::HeapUnion)
+    {
+        hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl))->maxIndex;
+    }
+    else
+    {
+        assert(layout == BSQTypeKind::AbstractTuple);
+
+        auto ttype = (const BSQAbstractTupleType*)op->layouttype;
+
+        if(ttype->isValue)
+        {
+            hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_INLINE_TYPE(sl))->maxIndex;
+        }
+        else
+        {
+            hasindex = op->idx < ((BSQTupleType*)SLPTR_LOAD_UNION_HEAP_TYPE(sl))->maxIndex;
+        }
+    }
+
+    SLPTR_STORE_CONTENTS_AS(BSQBool, Evaluator::evalTargetVar(op->trgt), hasindex);
 }
 
 void Evaluator::evalRecordHasProperty(const RecordHasPropertyOp* op)

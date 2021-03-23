@@ -10,15 +10,7 @@
 #include "assembly/bsqtype.h"
 #include "assembly/bsqop.h"
 
-#include "core/bsqmemory.h"
-#include "core/bsqvalue.h"
 #include "runtime/environment.h"
-
-#define SLVALUE_LOAD_FROM(T, L) (*((T*)L))
-#define SLVALUE_STORE_TO(T, L, V) ((*((T*)L)) = V)
-
-#define SLVALUE_CLEAR(BSQT, L) GC_MEM_ZERO(L, (BSQT->isValue ? BSQT->allocsize : sizeof(void*)))
-#define SLVALUE_COPY(BSQT, L, V) GC_MEM_COPY(L, V, (BSQT->isValue ? BSQT->allocsize : sizeof(void*)))
 
 class Evaluator
 {
@@ -27,9 +19,9 @@ private:
     uint64_t getCurrentLine();
     uint64_t getCurrentColumn();
 
-    SLValue evalConstArgument(Argument arg);
+    StorageLocationPtr evalConstArgument(Argument arg);
 
-    inline SLValue evalArgument(Argument arg)
+    inline StorageLocationPtr evalArgument(Argument arg)
     {
         if(arg.kind == ArgumentTag::Register)
         {
@@ -43,6 +35,11 @@ private:
         {
             return evalConstArgument(arg);
         }
+    }
+
+    inline StorageLocationPtr evalTargetVar(TargetVar trgt)
+    {
+        return xxx;
     }
 
     void evalDeadFlow();

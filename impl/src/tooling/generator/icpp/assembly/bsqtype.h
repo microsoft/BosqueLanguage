@@ -6,16 +6,7 @@
 #pragma once
 
 #include "../common.h"
-
-#define PTR_FIELD_MASK_SCALAR '1'
-#define PTR_FIELD_MASK_PTR '2'
-#define PTR_FIELD_MASK_UNION '4'
-#define PTR_FIELD_MASK_END (char)0
-
-typedef uint32_t BSQTypeID;
-typedef uint32_t BSQAbstractTypeID;
-typedef uint32_t BSQTupleIndex;
-typedef uint32_t BSQRecordPropertyID;
+#include "../core/bsqmemory.h"
 
 enum class BSQTypeKind : uint8_t
 {
@@ -23,29 +14,14 @@ enum class BSQTypeKind : uint8_t
     Tuple,
     Record,
     SpecialEntity,
-    StdEntity
+    StdEntity,
+    Ephemeral,
+    AbstractTuple,
+    AbstractRecord,
+    Concept,
+    InlineUnion,
+    HeapUnion
 };
-
-enum class BSQGCKind : uint8_t
-{
-    Invalid = 0x0,
-    Leaf,
-    Packed,
-    Mixed
-};
-
-class BSQType;
-
-typedef const char* RefMask;
-
-typedef void (*GCDecOperatorFP)(const BSQType*, void**);
-typedef void (*GCClearMarkOperatorFP)(const BSQType*, void**);
-typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
-
-typedef void* (*UnionBoxToValue)(void*);
-typedef void (*UnionUnboxFromValue)(void*, void*);
-
-typedef std::wstring (*DisplayFP)(void*);
 
 class BSQType
 {
@@ -64,7 +40,6 @@ public:
     GCProcessOperatorFP fpProcessObjRoot;
     GCProcessOperatorFP fpProcessObjHeap;
 
-    const bool isValue;
     DisplayFP fpDisplay;
 
     const std::wstring name;
@@ -74,43 +49,93 @@ public:
     {
         return nullptr;
     }
+
+    virtual void slclear(StorageLocationPtr dst) const = 0;
+    virtual void slcopy(StorageLocationPtr dst, StorageLocationPtr src) const = 0;
+
+    virtual void slconvert(StorageLocationPtr dst, StorageLocationPtr src) const = 0;
 };
 
-class BSQTupleType : public BSQType
+////
+//Concrete types
+
+class BSQConcreteType : public BSQType
+{
+
+};
+
+class BSQTupleType : public BSQConcreteType
 {
 public:
+    const bool isValue;
     const BSQTupleIndex maxIndex;
 };
 
-class BSQRecordType : public BSQType
+class BSQRecordType : public BSQConcreteType
 {
 public:
     static std::map<BSQRecordPropertyID, std::wstring> pnames;
 
+    const bool isValue;
     const std::vector<BSQRecordPropertyID> properties;
 };
 
-class BSQSpecialEntityType : public BSQType
+//Has subtypes for the special builtin entity types
+class BSQSpecialEntityType : public BSQConcreteType
+{
+public:
+    const bool isValue;
+};
+
+class BSQStdEntityType : public BSQConcreteType
+{
+public:
+    const bool isValue;
+};
+
+class BSQEphemeralListType : public BSQConcreteType
 {
 public:
 };
 
-class BSQStdEntityType : public BSQType
+////
+//Abstract types
+
+class BSQAbstractType : public BSQType
+{
+
+};
+
+class BSQAbstractTupleType : public BSQAbstractType
+{
+public:
+    const bool isValue;
+};
+
+class BSQAbstractRecordType : public BSQAbstractType
+{
+public:
+    const bool isValue;
+};
+
+class BSQConceptType : public BSQAbstractType
+{
+public:
+    const bool isValue;
+};
+
+class BSQUnionType : public BSQAbstractType
 {
 public:
 };
 
-class BSQEphemeralListType : public BSQType
+class BSQInlineUnionType : public BSQUnionType
 {
 public:
+    //should always be a "value" of [type data] even when data is a ptr
 };
 
-class BSQConceptType : public BSQType
-{
-public:
-};
-
-class BSQUnionType : public BSQType
+class BSQHeapUnionType : public BSQUnionType
 {
 public:
 };

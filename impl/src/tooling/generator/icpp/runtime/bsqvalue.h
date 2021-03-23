@@ -7,19 +7,11 @@
 
 #include "../common.h"
 #include "../assembly/bsqtype.h"
-#include "bsqmemory.h"
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <boost/rational.hpp>
-
-//All values must be passed as uniform representation -- so we pick a void* -- then we cast and load/store the value
-//Compiler will want to distinguish between SLValues and values that can be passed by value
-typedef void* SLValue;
-
-//All concept types (that are not struct) are boxed to the heap 
-typedef void* BoxedConceptValue;
 
 ////
 //Primitive value representations
