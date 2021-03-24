@@ -37,6 +37,12 @@ typedef boost::rational<BSQBigInt> BSQRational;
 
 #define IS_INLINE_STRING(S) (((uintptr_t)(S->data) & BSQ_MEM_ALIGNMENT_MASK) == 0)
 
+class BSQStringEntityType : public BSQSpecialEntityType
+{
+public:
+    virtual BSQNat getLength(void* data) const = 0;
+};
+
 struct BSQStringInlineContents
 {
     wchar_t data[3];
@@ -52,12 +58,6 @@ struct BSQStringInlineContents
         into->data[3] = (end - begin);
         GC_MEM_COPY(into->data, begin, (end - begin) * sizeof(wchar_t));
     }
-};
-
-class BSQStringEntityType : public BSQSpecialEntityType
-{
-public:
-    virtual BSQNat getLength(void* data) const = 0;
 };
 
 class BSQStringEntityTypeInlineContents : public BSQStringEntityType
@@ -78,6 +78,13 @@ public:
 };
 
 template <uint16_t k>
+struct BSQStringFlatContents
+{
+    uint32_t length;
+    wchar_t data[k];
+};
+
+template <uint16_t k>
 class BSQStringEntityTypeFlatContents : public BSQStringEntityType
 {
 public:
@@ -85,13 +92,6 @@ public:
     {
         return ((BSQStringFlatContents<k>*)data)->length;
     }
-};
-
-template <uint16_t k>
-struct BSQStringFlatContents
-{
-    uint32_t length;
-    wchar_t data[k];
 };
 
 struct BSQStringRopeContents
@@ -110,42 +110,42 @@ struct BSQString
     }
 
     template <uint16_t k>
-    static void initializeFlatKnown(const wchar_t* chars, BSQString* into, BSQType* stype)
+    static void initializeFlatKnown(const wchar_t* chars, BSQString* into)
     {
         static_assert(k <= 256, "Cant overflow max mem and must match type options in bsqtype");
 
-        BSQStringFlatContents<k>* s = (BSQStringFlatContents<k>*)Allocator::GlobalAllocator.allocateFixed<sizeof(BSQStringFlatContents<k>)>(stype);
+        BSQStringFlatContents<k>* s = (BSQStringFlatContents<k>*)Allocator::GlobalAllocator.allocateDynamic(BSQStringEntityTypeFlatContents<k>);
         s->length = k;
         GC_MEM_COPY(s->data, chars, count);
 
         into->data = s;
     }
 
-    static void initializeFlat(size_t count, const wchar_t* chars, BSQString* into, BSQType* stype)
+    static void initializeFlat(size_t count, const wchar_t* chars, BSQString* into)
     {
         if(count < 8)
         {
-            initializeFlatKnown<8>(chars, into, stype);
+            initializeFlatKnown<8>(chars, into);
         }
         else if(count < 16)
         {
-            initializeFlatKnown<16>(chars, into, stype);
+            initializeFlatKnown<16>(chars, into);
         }
         else if(count < 32)
         {
-            initializeFlatKnown<32>(chars, into, stype);
+            initializeFlatKnown<32>(chars, into);
         }
         else if(count < 64)
         {
-            initializeFlatKnown<64>(chars, into, stype);
+            initializeFlatKnown<64>(chars, into);
         }
         else if(count < 128)
         {
-            initializeFlatKnown<128>(chars, into, stype);
+            initializeFlatKnown<128>(chars, into);
         }
         else
         {
-            initializeFlatKnown<256>(chars, into, stype);
+            initializeFlatKnown<256>(chars, into);
         }
     }
 

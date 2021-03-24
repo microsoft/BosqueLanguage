@@ -31,6 +31,7 @@ public:
 
     const BSQGCKind gckind;
     const uint64_t allocsize; //memory size of data (with alignment)
+    const uint64_t reprsize; //size of slot in an object or heap -- same for value types but differnent for references
 
     const RefMask* refmask;
     const uint64_t ptrcount; //if this is a packed object the number of pointers at the front
@@ -106,6 +107,8 @@ public:
 class BSQEphemeralListType : public BSQConcreteType
 {
 public:
+    const std::vector<BSQType*> etypes;
+    const std::vector<size_t> idxoffsets;
 };
 
 ////

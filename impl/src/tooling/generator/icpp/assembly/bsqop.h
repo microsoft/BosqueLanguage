@@ -412,10 +412,53 @@ public:
     virtual ~ConstructorEphemeralListOp() {;}
 };
 
-    ConstructorPrimaryCollectionEmptyOp,
-    ConstructorPrimaryCollectionSingletonsOp,
-    ConstructorPrimaryCollectionCopiesOp,
-    ConstructorPrimaryCollectionMixedOp
+
+class ConstructorPrimaryCollectionEmptyOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQListEntityType* oftype;
+    
+    ConstructorPrimaryCollectionEmptyOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionEmptyOp), trgt(trgt), oftype(oftype) {;}
+    virtual ~ConstructorPrimaryCollectionEmptyOp() {;}
+};
+
+
+class ConstructorPrimaryCollectionSingletonsOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQListEntityType* oftype;
+    const std::vector<Argument> args;
+    
+    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
+    virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
+};
+
+
+class ConstructorPrimaryCollectionCopiesOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQListEntityType* oftype;
+    const std::vector<Argument> args;
+    
+    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
+    virtual ~ConstructorPrimaryCollectionCopiesOp() {;}
+};
+
+
+class ConstructorPrimaryCollectionMixedOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQListEntityType* oftype;
+    const std::vector<Argument> args;
+    
+    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
+    virtual ~ConstructorPrimaryCollectionMixedOp() {;}
+};
+
 
 
 

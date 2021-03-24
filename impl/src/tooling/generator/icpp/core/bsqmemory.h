@@ -147,11 +147,10 @@ public:
     }
 
     //Return uint8_t* of given asize + sizeof(MetaData*)
-    template <size_t asize>
-    inline uint8_t* allocateFixedSize()
+    inline uint8_t* allocateDynamicSize(size_t asize)
     {
-        constexpr size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
-        static_assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE, "We should *not* be creating individual objects this large");
+        size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
+        assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE);
 
         uint8_t *res = this->m_currPos;
         this->m_currPos += rsize;
@@ -586,13 +585,12 @@ public:
         ;
     }
 
-    template <size_t allocsize>
-    inline uint8_t* allocateFixed(BSQType* mdata)
+    inline uint8_t* allocateDynamic(const BSQType* mdata)
     {
-        constexpr size_t asize = BSQ_ALIGN_SIZE(allocsize);
-        uint8_t* alloc = this->nsalloc.allocateFixedSize<asize>();
+        size_t asize = BSQ_ALIGN_SIZE(mdata->allocsize);
+        uint8_t* alloc = this->nsalloc.allocateDynamicSize(asize);
 
-        *((BSQType**)alloc) = mdata;
+        *((const BSQType**)alloc) = mdata;
         uint8_t* res = (alloc + sizeof(BSQType*));
 
         return res;

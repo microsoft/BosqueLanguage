@@ -394,25 +394,72 @@ void Evaluator::evalInvokeVirtualOperator(const InvokeVirtualOperatorOp* op)
 
 void Evaluator::evalConstructorTuple(const ConstructorTupleOp* op)
 {
+    StorageLocationPtr sl = this->evalTargetVar(op->trgt);
+    StorageLocationPtr tcontents = nullptr;
     if(op->oftype->isValue)
     {
-
+        tcontents = sl;
     }
     else
     {
-        
+        tcontents = Allocator::GlobalAllocator.allocateDynamic(op->oftype);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tcontents);
     }
-    xxxx;
+
+    for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
+    {
+        op->oftype->ttypes[i]->slcopy(SLPTR_INDEX(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
+    }
 }
 
 void Evaluator::evalConstructorRecord(const ConstructorRecordOp* op)
 {
-    xxxx;
+    StorageLocationPtr sl = this->evalTargetVar(op->trgt);
+    StorageLocationPtr tcontents = nullptr;
+    if(op->oftype->isValue)
+    {
+        tcontents = sl;
+    }
+    else
+    {
+        tcontents = Allocator::GlobalAllocator.allocateDynamic(op->oftype);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tcontents);
+    }
+
+    for(size_t i = 0; i < op->oftype->propertyoffsets.size(); ++i)
+    {
+        op->oftype->rtypes[i]->slcopy(SLPTR_INDEX(tcontents, op->oftype->propertyoffsets[i]), this->evalArgument(op->args[i]));
+    }
 }
 
 void Evaluator::evalConstructorEphemeralList(const ConstructorEphemeralListOp* op)
 {
+    StorageLocationPtr tcontents = this->evalTargetVar(op->trgt);
+
+    for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
+    {
+        op->oftype->etypes[i]->slcopy(SLPTR_INDEX(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
+    }
+}
+
+void Evaluator::evalConstructorPrimaryCollectionEmpty(const ConstructorPrimaryCollectionEmptyOp* op)
+{
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), nullptr);
+}
+
+void Evaluator::evalConstructorPrimaryCollectionSingletons(const ConstructorPrimaryCollectionSingletonsOp* op)
+{
     xxxx;
+}
+
+void Evaluator::evalConstructorPrimaryCollectionCopies(const ConstructorPrimaryCollectionCopiesOp* op)
+{
+    assert(false);
+}
+
+void Evaluator::evalConstructorPrimaryCollectionMixed(const ConstructorPrimaryCollectionMixedOp* op)
+{
+    assert(false);
 }
 
 

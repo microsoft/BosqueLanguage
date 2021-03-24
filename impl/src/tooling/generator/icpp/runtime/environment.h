@@ -7,6 +7,7 @@
 
 #include "../common.h"
 #include "bsqvalue.h"
+#include "bsqcollections.h"
 
 typedef StorageLocationPtr (*ConstValueLoad)();
 
