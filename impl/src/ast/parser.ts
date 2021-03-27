@@ -3025,13 +3025,20 @@ class Parser {
                 this.consumeToken();
 
                 const assigns = this.parseListOf<[string, StructuredAssignment]>("{", "}", ",", () => {
+                    if(this.testFollows(TokenStrings.Identifier, "=")) {
                     this.ensureToken(TokenStrings.Identifier);
                     const name = this.consumeTokenAndGetValue();
     
                     this.ensureAndConsumeToken("=");
                     const subg = this.parseSimpleStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
-    
+
                     return [name, subg];
+                    }
+                    else {
+                        this.raiseError(this.getCurrentLine(), "TODO: we should allow positional assignment here as well");
+
+                        return ["[ERROR]", (undefined as any) as StructuredAssignment];
+                    }
                 })[0];
 
                 return new NominalStructuredAssignment(isvalue, ttype, assigns);

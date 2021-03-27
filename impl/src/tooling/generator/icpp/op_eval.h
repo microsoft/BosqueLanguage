@@ -105,14 +105,13 @@ private:
     void evalConstructorPrimaryCollectionSingletons(const ConstructorPrimaryCollectionSingletonsOp* op);
     void evalConstructorPrimaryCollectionCopies(const ConstructorPrimaryCollectionCopiesOp* op);
     void evalConstructorPrimaryCollectionMixed(const ConstructorPrimaryCollectionMixedOp* op);
+
+    void evalPrefixNotOp(const PrefixNotOp* op);
+    void evalAllTrueOp(const AllTrueOp* op);
+    void evalSomeTrueOp(const SomeTrueOp* op);
 };
 
 /*
-    MIRBinKeyEq = "MIRBinKeyEq",
-    MIRBinKeyLess = "MIRBinKeyLess",
-    MIRPrefixNotOp = "MIRPrefixNotOp",
-    MIRAllTrue = "MIRAllTrue",
-    MIRSomeTrue = "MIRSomeTrue",
 
     MIRIsTypeOf = "MIRIsTypeOf",
 

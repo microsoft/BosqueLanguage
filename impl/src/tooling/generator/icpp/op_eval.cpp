@@ -462,6 +462,29 @@ void Evaluator::evalConstructorPrimaryCollectionMixed(const ConstructorPrimaryCo
     assert(false);
 }
 
+void Evaluator::evalPrefixNotOp(const PrefixNotOp* op)
+{
+    BSQBool sval = !SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg));
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), sval);
+}
+
+void Evaluator::evalAllTrueOp(const AllTrueOp* op)
+{
+    auto fpos = std::find_if(op->args.cbegin(), op->args.cend(), [this](Argument arg) {
+        return !SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(arg));
+    });
+
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), fpos != op->args.cend());
+}
+    
+void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)
+{
+    auto tpos = std::find_if(op->args.cbegin(), op->args.cend(), [this](Argument arg) {
+        return SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(arg));
+    });
+
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), tpos != op->args.cend());
+}
 
 
 

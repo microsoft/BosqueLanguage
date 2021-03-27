@@ -62,7 +62,10 @@ enum class OpCodeTag
     ConstructorPrimaryCollectionEmptyOp,
     ConstructorPrimaryCollectionSingletonsOp,
     ConstructorPrimaryCollectionCopiesOp,
-    ConstructorPrimaryCollectionMixedOp
+    ConstructorPrimaryCollectionMixedOp,
+    PrefixNotOp,
+    AllTrueOp,
+    SomeTrueOp
 };
 
 struct Argument
@@ -431,7 +434,7 @@ public:
     const BSQListEntityType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
 };
 
@@ -459,11 +462,35 @@ public:
     virtual ~ConstructorPrimaryCollectionMixedOp() {;}
 };
 
+class PrefixNotOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    
+    PrefixNotOp(SourceInfo sinfo, TargetVar trgt, Argument arg) : InterpOp(sinfo, OpCodeTag::PrefixNotOp), trgt(trgt), arg(arg) {;}
+    virtual ~PrefixNotOp() {;}
+};
 
+class AllTrueOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const std::vector<Argument> args;
+    
+    AllTrueOp(SourceInfo sinfo, TargetVar trgt, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::AllTrueOp), trgt(trgt), args(args) {;}
+    virtual ~AllTrueOp() {;}
+};
 
-
-
-
+class SomeTrueOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const std::vector<Argument> args;
+    
+    SomeTrueOp(SourceInfo sinfo, TargetVar trgt, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::SomeTrueOp), trgt(trgt), args(args) {;}
+    virtual ~SomeTrueOp() {;}
+};
 
 
 
