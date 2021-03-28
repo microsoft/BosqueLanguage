@@ -30,6 +30,26 @@ enum class ArgumentTag
     GlobalConst
 };
 
+enum class PrimitiveOperation
+{
+    Invalid = 0x0,
+    Add,
+    Sub,
+    Mult,
+    Div
+};
+
+enum class PrimitiveComparison
+{
+    Invalid = 0x0,
+    Equal,
+    NotEqual,
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual
+};
+
 enum class OpCodeTag
 {
     Invalid = 0x0,
@@ -53,6 +73,8 @@ enum class OpCodeTag
     LoadEnityFieldDirectOp,
     LoadEnityFieldVirtualOp,
     LoadFromEpehmeralListOp,
+    InvokePrimitiveFuncOp,
+    InvokePrimitiveCompOp,
     InvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
@@ -65,7 +87,19 @@ enum class OpCodeTag
     ConstructorPrimaryCollectionMixedOp,
     PrefixNotOp,
     AllTrueOp,
-    SomeTrueOp
+    SomeTrueOp,
+    IsNoneOp,
+    IsSomeOp,
+    TypeTagIsOp,
+    TypeTagSubtypeOfOp,
+    JumpOp,
+    JumpCondOp,
+    JumpNoneOp,
+    RegisterAssignOp,
+    ReturnAssignOp,
+    ReturnAssignOfConsOp,
+    VarLifetimeStartOp,
+    VarLifetimeEndOp
 };
 
 struct Argument
@@ -345,6 +379,32 @@ public:
     virtual ~LoadFromEpehmeralListOp() {;}
 };
 
+class InvokePrimitiveFuncOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const PrimitiveOperation op;
+    const Argument larg;
+    const Argument rarg;
+    
+    InvokePrimitiveFuncOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, PrimitiveOperation op, Argument larg, Argument rarg) : InterpOp(sinfo, OpCodeTag::InvokePrimitiveFuncOp), trgt(trgt), oftype(oftype), op(op), larg(larg), rarg(rarg) {;}
+    virtual ~InvokePrimitiveFuncOp() {;}
+};
+
+class InvokePrimitiveCompOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const PrimitiveComparison op;
+    const Argument larg;
+    const Argument rarg;
+    
+    InvokePrimitiveCompOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, PrimitiveComparison op, Argument larg, Argument rarg) : InterpOp(sinfo, OpCodeTag::InvokePrimitiveCompOp), trgt(trgt), oftype(oftype), op(op), larg(larg), rarg(rarg) {;}
+    virtual ~InvokePrimitiveCompOp() {;}
+};
+
 class InvokeFixedFunctionOp : public InterpOp
 {
 public:
@@ -493,4 +553,137 @@ public:
 };
 
 
+class IsNoneOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    const BSQType* arglayout;
+    
+    IsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, OpCodeTag::IsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout) {;}
+    virtual ~IsNoneOp() {;}
+};
 
+class IsSomeOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    const BSQType* arglayout;
+    
+    IsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, OpCodeTag::IsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout) {;}
+    virtual ~IsSomeOp() {;}
+};
+    
+class TypeTagIsOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument arg;
+    const BSQType* arglayout;
+    
+    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, OpCodeTag::TypeTagIsOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout) {;}
+    virtual ~TypeTagIsOp() {;}
+};
+
+class TypeTagSubtypeOfOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument arg;
+    const BSQType* arglayout;
+    
+    TypeTagSubtypeOfOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout) {;}
+    virtual ~TypeTagSubtypeOfOp() {;}
+};
+
+class JumpOp : public InterpOp
+{
+public:
+    const uint32_t offset;
+    const std::wstring* label;
+    
+    JumpOp(SourceInfo sinfo, uint32_t offset, const std::wstring* label) : InterpOp(sinfo, OpCodeTag::JumpOp), offset(offset), label(label) {;}
+    virtual ~JumpOp() {;}
+};
+
+class JumpCondOp : public InterpOp
+{
+public:
+    const Argument arg;
+    const uint32_t toffset;
+    const uint32_t foffset;
+    const std::wstring* tlabel;
+    const std::wstring* flabel;
+    
+    JumpCondOp(SourceInfo sinfo, Argument arg, uint32_t toffset, uint32_t foffset, const std::wstring* tlabel, const std::wstring* flabel) : InterpOp(sinfo, OpCodeTag::JumpCondOp), arg(arg), toffset(toffset), foffset(foffset), tlabel(tlabel), flabel(flabel) {;}
+    virtual ~JumpCondOp() {;}
+};
+
+class JumpNoneOp : public InterpOp
+{
+public:
+    const Argument arg;
+    const BSQType* arglayout;
+    const uint32_t noffset;
+    const uint32_t soffset;
+    const std::wstring* nlabel;
+    const std::wstring* slabel;
+    
+    JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQType* arglayout, uint32_t noffset, uint32_t soffset, const std::wstring* nlabel, const std::wstring* slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
+    virtual ~JumpNoneOp() {;}
+};
+    
+class RegisterAssignOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    const BSQType* oftype;
+    
+    RegisterAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::RegisterAssignOp), trgt(trgt), arg(arg), oftype(oftype) {;}
+    virtual ~RegisterAssignOp() {;}
+};
+
+class ReturnAssignOp : public InterpOp
+{
+public:
+    const Argument arg;
+    const BSQType* oftype;
+    
+    ReturnAssignOp(SourceInfo sinfo, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOp), arg(arg), oftype(oftype) {;}
+    virtual ~ReturnAssignOp() {;}
+};
+
+class ReturnAssignOfConsOp : public InterpOp
+{
+public:
+    const std::vector<Argument>& args;
+    const BSQType* oftype;
+    
+    ReturnAssignOfConsOp(SourceInfo sinfo, const std::vector<Argument>& args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
+    virtual ~ReturnAssignOfConsOp() {;}
+};
+
+class VarLifetimeStartOp : public InterpOp
+{
+public:
+    const Argument homelocation;
+    const BSQType* oftype;
+    const std::wstring* name;
+    
+    VarLifetimeStartOp(SourceInfo sinfo, Argument homelocation, const BSQType* oftype, const std::wstring* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
+    virtual ~VarLifetimeStartOp() {;}
+};
+
+class VarLifetimeEndOp : public InterpOp
+{
+public:
+    const std::wstring* name;
+    
+    VarLifetimeEndOp(SourceInfo sinfo, const std::wstring* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeEndOp), name(name) {;}
+    virtual ~VarLifetimeEndOp() {;}
+};
+   

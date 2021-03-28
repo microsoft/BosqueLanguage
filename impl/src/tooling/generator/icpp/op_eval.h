@@ -93,6 +93,9 @@ private:
 
     void evalLoadFromEpehmeralList(const LoadFromEpehmeralListOp* op);
 
+    void evalInvokePrimitiveFuncOp(const InvokePrimitiveFuncOp* op);
+    void evalInvokePrimitiveCompOp(const InvokePrimitiveCompOp* op);
+
     void evalInvokeFixedFunction(const InvokeFixedFunctionOp* op);
     void evalInvokeVirtualFunction(const InvokeVirtualFunctionOp* op);
     void evalInvokeVirtualOperator(const InvokeVirtualOperatorOp* op);
@@ -109,19 +112,20 @@ private:
     void evalPrefixNotOp(const PrefixNotOp* op);
     void evalAllTrueOp(const AllTrueOp* op);
     void evalSomeTrueOp(const SomeTrueOp* op);
+
+    void evalIsNoneOp(const IsNoneOp* op);
+    void evalIsSomeOp(const IsSomeOp* op);
+    void evalTypeTagIsOp(const TypeTagIsOp* op);
+    void evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp* op);
+
+    void evalJumpOp(const JumpOp* op);
+    void evalJumpCondOp(const JumpCondOp* op);
+    void evalJumpNoneOp(const JumpNoneOp* op);
+
+    void evalRegisterAssignOp(const RegisterAssignOp* op);
+    void evalReturnAssignOp(const ReturnAssignOp* op);
+    void evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op);
+
+    void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
+    void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);
 };
-
-/*
-
-    MIRIsTypeOf = "MIRIsTypeOf",
-
-    MIRJump = "MIRJump",
-    MIRJumpCond = "MIRJumpCond",
-    MIRJumpNone = "MIRJumpNone",
-
-    MIRRegisterAssign = "MIRRegisterAssign",
-    MIRReturnAssign = "MIRReturnAssign",
-    MIRReturnAssignOfCons = "MIRReturnAssignOfCons",
-    MIRVarLifetimeStart = "MIRVarLifetimeStart",
-    MIRVarLifetimeEnd = "MIRVarLifetimeEnd",
-    */

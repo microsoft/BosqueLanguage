@@ -375,6 +375,16 @@ void Evaluator::evalLoadVirtualField(const LoadEntityFieldVirtualOp* op)
     this->processEntityVirtualLoadAndStore(sl, (BSQStdEntityType*)argtype, op->fieldId, op->trgt, op->trgttype);
 }
 
+void Evaluator::evalInvokePrimitiveFuncOp(const InvokePrimitiveFuncOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalInvokePrimitiveCompOp(const InvokePrimitiveCompOp* op)
+{
+    xxxx;
+}
+
 void Evaluator::evalInvokeFixedFunction(const InvokeFixedFunctionOp* op)
 {
     xxxx;
@@ -486,6 +496,63 @@ void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), tpos != op->args.cend());
 }
 
+void Evaluator::evalIsNoneOp(const IsNoneOp* op)
+{
+    xxxx;
+}
 
+void Evaluator::evalIsSomeOp(const IsSomeOp* op)
+{
+    xxxx;
+}
 
+void Evaluator::evalTypeTagIsOp(const TypeTagIsOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalJumpOp(const JumpOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalJumpCondOp(const JumpCondOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalJumpNoneOp(const JumpNoneOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalRegisterAssignOp(const RegisterAssignOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
+{
+    assert(false);
+}
+
+void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
+{
+    assert(false);
+}
 
