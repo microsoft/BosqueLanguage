@@ -2033,14 +2033,14 @@ class TypeChecker {
         if(iitype.isSameType(this.m_assembly.getSpecialIntType()) || iitype.isSameType(this.m_assembly.getSpecialBigIntType())) {
             //TODO: should also check bounds
 
-            const ispec = iitype.isSameType(this.m_assembly.getSpecialIntType()) ? "i" : "n";
+            const ispec = iitype.isSameType(this.m_assembly.getSpecialIntType()) ? "i" : "I";
             this.m_emitter.emitLoadConstIntegralValue(exp.sinfo, this.m_emitter.registerResolvedTypeReference(iitype), exp.value + ispec, trgt);
             return env.setUniformResultExpression(iitype);
         }
         else if(iitype.isSameType(this.m_assembly.getSpecialNatType()) || iitype.isSameType(this.m_assembly.getSpecialBigNatType())) {
             this.raiseErrorIf(exp.sinfo, exp.value.startsWith("-"), "Cannot have negative BigNat literal");
 
-            const ispec = iitype.isSameType(this.m_assembly.getSpecialBigIntType()) ? "I" : "N";
+            const ispec = iitype.isSameType(this.m_assembly.getSpecialNatType()) ? "n" : "N";
             this.m_emitter.emitLoadConstIntegralValue(exp.sinfo, this.m_emitter.registerResolvedTypeReference(iitype), exp.value + ispec, trgt);
             return env.setUniformResultExpression(iitype);
         }
@@ -2062,10 +2062,10 @@ class TypeChecker {
 
             let vspec = "?";
             if(rtt.isSameType(this.m_assembly.getSpecialIntType()) || rtt.isSameType(this.m_assembly.getSpecialBigIntType())) {
-                vspec = rtt.isSameType(this.m_assembly.getSpecialIntType()) ? "i" : "n";
+                vspec = rtt.isSameType(this.m_assembly.getSpecialIntType()) ? "i" : "I";
             }
             else if(rtt.isSameType(this.m_assembly.getSpecialNatType()) || rtt.isSameType(this.m_assembly.getSpecialBigNatType())) {
-                vspec = rtt.isSameType(this.m_assembly.getSpecialBigIntType()) ? "I" : "N";
+                vspec = rtt.isSameType(this.m_assembly.getSpecialNatType()) ? "n" : "N";
             }
             else if(rtt.isSameType(this.m_assembly.getSpecialFloatType()) || rtt.isSameType(this.m_assembly.getSpecialDecimalType())) {
                 vspec = rtt.isSameType(this.m_assembly.getSpecialFloatType()) ? "f" : "d";

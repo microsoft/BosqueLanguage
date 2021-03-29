@@ -11,7 +11,6 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <boost/multiprecision/cpp_dec_float.hpp>
-#include <boost/rational.hpp>
 
 ////
 //Primitive value representations
@@ -33,7 +32,11 @@ typedef boost::multiprecision::checked_uint256_t BSQBigInt;
 typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
 typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
 
-typedef boost::rational<BSQBigInt> BSQRational;
+struct BSQRational
+{
+    BSQBigInt numerator;
+    BSQBigInt denominator;
+};
 
 #define IS_INLINE_STRING(S) (((uintptr_t)(S->data) & BSQ_MEM_ALIGNMENT_MASK) == 0)
 

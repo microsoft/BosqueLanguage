@@ -53,7 +53,17 @@ private:
     void evalDebug(const DebugOp* op);
 
     void evalLoadUnintVariableValue(const LoadUnintVariableValueOp* op);
-    void evalConvertValue(const ConvertValueOp* op);
+
+    void evalBoxUniqueStructToInlineOp(const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp>* op);
+    void evalBoxUniqueRefToInlineOp(const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp>* op);
+    void evalBoxUniqueStructToHeapOp(const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp>* op);
+    void evalBoxUniqueRefToHeapOp(const BoxOp<OpCodeTag::BoxUniqueRefToHeapOp>* op);
+    void evalBoxInlineBoxToHeapOp(const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp>* op);
+    void evalExtractUniqueStructFromInlineOp(const BoxOp<OpCodeTag::ExtractUniqueStructFromInlineOp>* op);
+    void evalExtractUniqueRefFromInlineOp(const BoxOp<OpCodeTag::ExtractUniqueRefFromInlineOp>* op);
+    void evalExtractUniqueStructFromHeapOp(const BoxOp<OpCodeTag::ExtractUniqueStructFromHeapOp>* op);
+    void evalExtractUniqueRefFromHeapOp(const BoxOp<OpCodeTag::ExtractUniqueRefFromHeapOp>* op);
+    void evalExtractInlineBoxFromHeapOp(const BoxOp<OpCodeTag::ExtractInlineBoxFromHeapOp>* op);
 
     void evalLoadConst(const LoadConstOp* op);
 
@@ -92,9 +102,6 @@ private:
     void evalLoadVirtualField(const LoadEntityFieldVirtualOp* op);
 
     void evalLoadFromEpehmeralList(const LoadFromEpehmeralListOp* op);
-
-    void evalInvokePrimitiveFuncOp(const InvokePrimitiveFuncOp* op);
-    void evalInvokePrimitiveCompOp(const InvokePrimitiveCompOp* op);
 
     void evalInvokeFixedFunction(const InvokeFixedFunctionOp* op);
     void evalInvokeVirtualFunction(const InvokeVirtualFunctionOp* op);

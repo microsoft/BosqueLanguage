@@ -98,7 +98,52 @@ void Evaluator::evalLoadUnintVariableValue(const LoadUnintVariableValueOp* op)
     op->oftype->slclear(this->evalTargetVar(op->trgt));
 }
 
-void Evaluator::evalConvertValue(const ConvertValueOp* op)
+void Evaluator::evalBoxUniqueStructToInlineOp(const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalBoxUniqueRefToInlineOp(const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalBoxUniqueRefToHeapOp(const BoxOp<OpCodeTag::BoxUniqueRefToHeapOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalExtractUniqueStructFromInlineOp(const BoxOp<OpCodeTag::ExtractUniqueStructFromInlineOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalExtractUniqueRefFromInlineOp(const BoxOp<OpCodeTag::ExtractUniqueRefFromInlineOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalExtractUniqueStructFromHeapOp(const BoxOp<OpCodeTag::ExtractUniqueStructFromHeapOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalExtractUniqueRefFromHeapOp(const BoxOp<OpCodeTag::ExtractUniqueRefFromHeapOp>* op)
+{
+    xxxx;
+}
+
+void Evaluator::evalExtractInlineBoxFromHeapOp(const BoxOp<OpCodeTag::ExtractInlineBoxFromHeapOp>* op)
 {
     xxxx;
 }
@@ -375,16 +420,6 @@ void Evaluator::evalLoadVirtualField(const LoadEntityFieldVirtualOp* op)
     this->processEntityVirtualLoadAndStore(sl, (BSQStdEntityType*)argtype, op->fieldId, op->trgt, op->trgttype);
 }
 
-void Evaluator::evalInvokePrimitiveFuncOp(const InvokePrimitiveFuncOp* op)
-{
-    xxxx;
-}
-
-void Evaluator::evalInvokePrimitiveCompOp(const InvokePrimitiveCompOp* op)
-{
-    xxxx;
-}
-
 void Evaluator::evalInvokeFixedFunction(const InvokeFixedFunctionOp* op)
 {
     xxxx;
@@ -555,4 +590,3 @@ void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 {
     assert(false);
 }
-

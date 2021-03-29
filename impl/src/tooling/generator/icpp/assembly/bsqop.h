@@ -30,26 +30,6 @@ enum class ArgumentTag
     GlobalConst
 };
 
-enum class PrimitiveOperation
-{
-    Invalid = 0x0,
-    Add,
-    Sub,
-    Mult,
-    Div
-};
-
-enum class PrimitiveComparison
-{
-    Invalid = 0x0,
-    Equal,
-    NotEqual,
-    Less,
-    Greater,
-    LessEqual,
-    GreaterEqual
-};
-
 enum class OpCodeTag
 {
     Invalid = 0x0,
@@ -58,7 +38,16 @@ enum class OpCodeTag
     AssertOp,
     DebugOp,
     LoadUnintVariableValueOp,
-    ConvertValueOp,
+    BoxUniqueStructToInlineOp,
+    BoxUniqueRefToInlineOp,
+    BoxUniqueStructToHeapOp,
+    BoxUniqueRefToHeapOp,
+    BoxInlineBoxToHeapOp,
+    ExtractUniqueStructFromInlineOp,
+    ExtractUniqueRefFromInlineOp,
+    ExtractUniqueStructFromHeapOp,
+    ExtractUniqueRefFromHeapOp,
+    ExtractInlineBoxFromHeapOp,
     LoadConstOp,
     TupleHasIndexOp,
     RecordHasPropertyOp,
@@ -73,8 +62,6 @@ enum class OpCodeTag
     LoadEnityFieldDirectOp,
     LoadEnityFieldVirtualOp,
     LoadFromEpehmeralListOp,
-    InvokePrimitiveFuncOp,
-    InvokePrimitiveCompOp,
     InvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
@@ -99,7 +86,81 @@ enum class OpCodeTag
     ReturnAssignOp,
     ReturnAssignOfConsOp,
     VarLifetimeStartOp,
-    VarLifetimeEndOp
+    VarLifetimeEndOp,
+
+    AddNatOp,
+    AddIntOp,
+    AddBigNatOp,
+    AddBigIntOp,
+    AddRationalOp,
+    AddFloatOp,
+    AddDecimalOp,
+    SubNatOp,
+    SubIntOp,
+    SubBigNatOp,
+    SubBigIntOp,
+    SubRationalOp,
+    SubFloatOp,
+    SubDecimalOp,
+    MultNatOp,
+    MultIntOp,
+    MultBigNatOp,
+    MultBigIntOp,
+    MultRationalOp,
+    MultFloatOp,
+    MultDecimalOp,
+    DivNatOp,
+    DivIntOp,
+    DivBigNatOp,
+    DivBigIntOp,
+    DivRationalOp,
+    DivFloatOp,
+    DivDecimalOp,
+
+    EqNatOp,
+    EqIntOp,
+    EqBigNatOp,
+    EqBigIntOp,
+    EqRationalOp,
+    EqStringOp,
+    NeqNatOp,
+    NeqIntOp,
+    NeqBigNatOp,
+    NeqBigIntOp,
+    NeqRationalOp,
+    NeqStringOp,
+
+    LtNatOp,
+    LtIntOp,
+    LtBigNatOp,
+    LtBigIntOp,
+    LtRationalOp,
+    LtFloatOp,
+    LtDecimalOp,
+    GtNatOp,
+    GtIntOp,
+    GtBigNatOp,
+    GtBigIntOp,
+    GtRationalOp,
+    GtFloatOp,
+    GtDecimalOp,
+
+    LeNatOp,
+    LeIntOp,
+    LeBigNatOp,
+    LeBigIntOp,
+    LeRationalOp,
+    LeFloatOp,
+    LeDecimalOp,
+    GeNatOp,
+    GeIntOp,
+    GeBigNatOp,
+    GeBigIntOp,
+    GeRationalOp,
+    GeFloatOp,
+    GeDecimalOp,
+    GeFloatOp,
+    GeDecimalOp
 };
 
 struct Argument
@@ -184,11 +245,30 @@ public:
     virtual ~LoadUnintVariableValueOp() {;}
 };
 
-class ConvertValueOp : public InterpOp
+template <OpCodeTag tag>
+class BoxOp : public InterpOp
 {
 public:
-    ConvertValueOp(SourceInfo sinfo) : InterpOp(sinfo, OpCodeTag::ConvertValueOp) {;}
-    virtual ~ConvertValueOp() {;}
+    const TargetVar trgt;
+    const BSQType* intotype;
+    const Argument arg;
+    const BSQType* fromtype;
+
+    BoxOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype) {;}
+    virtual ~BoxOp() {;}
+};
+
+template <OpCodeTag tag>
+class ExtractOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* intotype;
+    const Argument arg;
+    const BSQType* fromtype;
+
+    ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype) {;}
+    virtual ~ExtractOp() {;}
 };
 
 class LoadConstOp : public InterpOp
@@ -377,32 +457,6 @@ public:
 
     LoadFromEpehmeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQEphemeralListType* argtype, uint32_t slotoffset, uint32_t index) : InterpOp(sinfo, OpCodeTag::LoadFromEpehmeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), index(index) {;}
     virtual ~LoadFromEpehmeralListOp() {;}
-};
-
-class InvokePrimitiveFuncOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const PrimitiveOperation op;
-    const Argument larg;
-    const Argument rarg;
-    
-    InvokePrimitiveFuncOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, PrimitiveOperation op, Argument larg, Argument rarg) : InterpOp(sinfo, OpCodeTag::InvokePrimitiveFuncOp), trgt(trgt), oftype(oftype), op(op), larg(larg), rarg(rarg) {;}
-    virtual ~InvokePrimitiveFuncOp() {;}
-};
-
-class InvokePrimitiveCompOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const PrimitiveComparison op;
-    const Argument larg;
-    const Argument rarg;
-    
-    InvokePrimitiveCompOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, PrimitiveComparison op, Argument larg, Argument rarg) : InterpOp(sinfo, OpCodeTag::InvokePrimitiveCompOp), trgt(trgt), oftype(oftype), op(op), larg(larg), rarg(rarg) {;}
-    virtual ~InvokePrimitiveCompOp() {;}
 };
 
 class InvokeFixedFunctionOp : public InterpOp
@@ -686,4 +740,29 @@ public:
     VarLifetimeEndOp(SourceInfo sinfo, const std::wstring* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeEndOp), name(name) {;}
     virtual ~VarLifetimeEndOp() {;}
 };
-   
+
+template <OpCodeTag tag>
+class PrimitiveBinaryOperatorOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument larg;
+    const Argument rarg;
+    
+    PrimitiveBinaryOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
+    virtual ~PrimitiveBinaryOperatorOp() {;}
+};
+
+template <OpCodeTag tag>
+class PrimitiveBinaryCompareOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument larg;
+    const Argument rarg;
+    
+    PrimitiveBinaryCompareOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
+    virtual ~PrimitiveBinaryCompareOp() {;}
+};
