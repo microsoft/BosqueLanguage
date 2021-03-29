@@ -48,14 +48,6 @@
 ////////////////////////////////
 //Memory allocator
 
-enum class BSQGCKind : uint8_t
-{
-    Invalid = 0x0,
-    Leaf,
-    Packed,
-    Mixed
-};
-
 #if defined(BDEBUG) || defined(MEM_STATS)
 #define ENABLE_MEM_STATS
 #define MEM_STATS_OP(X) X

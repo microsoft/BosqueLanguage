@@ -40,7 +40,7 @@ struct BSQRational
 
 #define IS_INLINE_STRING(S) (((uintptr_t)(S->data) & BSQ_MEM_ALIGNMENT_MASK) == 0)
 
-class BSQStringEntityType : public BSQSpecialEntityType
+class BSQStringEntityType : public BSQFixedEntityType<void*>
 {
 public:
     virtual BSQNat getLength(void* data) const = 0;

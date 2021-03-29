@@ -47,74 +47,77 @@ private:
         return xxx;
     }
 
-    void evalDeadFlow();
-    void evalAbort(const AbortOp* op);
-    void evalAssertCheck(const AssertOp* op);
-    void evalDebug(const DebugOp* op);
+    void evalDeadFlowOp();
+    void evalAbortOp(const AbortOp* op);
+    void evalAssertCheckOp(const AssertOp* op);
+    void evalDebugOp(const DebugOp* op);
 
-    void evalLoadUnintVariableValue(const LoadUnintVariableValueOp* op);
+    void evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op);
 
     void evalBoxUniqueStructToInlineOp(const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp>* op);
     void evalBoxUniqueRefToInlineOp(const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp>* op);
     void evalBoxUniqueStructToHeapOp(const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp>* op);
     void evalBoxUniqueRefToHeapOp(const BoxOp<OpCodeTag::BoxUniqueRefToHeapOp>* op);
     void evalBoxInlineBoxToHeapOp(const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp>* op);
-    void evalExtractUniqueStructFromInlineOp(const BoxOp<OpCodeTag::ExtractUniqueStructFromInlineOp>* op);
-    void evalExtractUniqueRefFromInlineOp(const BoxOp<OpCodeTag::ExtractUniqueRefFromInlineOp>* op);
-    void evalExtractUniqueStructFromHeapOp(const BoxOp<OpCodeTag::ExtractUniqueStructFromHeapOp>* op);
-    void evalExtractUniqueRefFromHeapOp(const BoxOp<OpCodeTag::ExtractUniqueRefFromHeapOp>* op);
-    void evalExtractInlineBoxFromHeapOp(const BoxOp<OpCodeTag::ExtractInlineBoxFromHeapOp>* op);
+    void evalExtractUniqueStructFromInlineOp(const ExtractOp<OpCodeTag::ExtractUniqueStructFromInlineOp>* op);
+    void evalExtractUniqueRefFromInlineOp(const ExtractOp<OpCodeTag::ExtractUniqueRefFromInlineOp>* op);
+    void evalExtractUniqueStructFromHeapOp(const ExtractOp<OpCodeTag::ExtractUniqueStructFromHeapOp>* op);
+    void evalExtractUniqueRefFromHeapOp(const ExtractOp<OpCodeTag::ExtractUniqueRefFromHeapOp>* op);
+    void evalExtractInlineBoxFromHeapOp(const ExtractOp<OpCodeTag::ExtractInlineBoxFromHeapOp>* op);
+    void evalWidenInlineOp(const BoxOp<OpCodeTag::WidenInlineOp>* op);
+    void evalNarrowInlineOp(const ExtractOp<OpCodeTag::NarrowInlineOp>* op);
 
-    void evalLoadConst(const LoadConstOp* op);
+    void evalLoadConstOp(const LoadConstOp* op);
 
-    const BSQTupleType* loadTupleTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+    const BSQType* loadTupleTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
     StorageLocationPtr loadTupleDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
     
-    const BSQRecordType* loadRecordTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
+    const BSQType* loadRecordTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
     StorageLocationPtr loadRecordDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
     
     const BSQType* loadEntityTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
     StorageLocationPtr loadEntityDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
 
-    void processTupleDirectLoadAndStore(StorageLocationPtr src, BSQBool isvalue, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQTupleType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype);
-    void processRecordDirectLoadAndStore(StorageLocationPtr src, BSQBool isvalue, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQRecordType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype);
-    void processEntityDirectLoadAndStore(StorageLocationPtr src, BSQBool isvalue, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQStdEntityType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype);
+    void processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype);
+    void processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype);
+    void processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype);
+    void processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype);
+    void processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype);
+    void processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype);
 
     void processGuardVarStore(const BSQGuard& gv, BSQBool f);
 
-    void evalTupleHasIndex(const TupleHasIndexOp* op);
-    void evalRecordHasProperty(const RecordHasPropertyOp* op);
+    void evalTupleHasIndexOp(const TupleHasIndexOp* op);
+    void evalRecordHasPropertyOp(const RecordHasPropertyOp* op);
     
-    void evalLoadTupleIndexDirect(const LoadTupleIndexDirectOp* op);
-    void evalLoadTupleIndexVirtual(const LoadTupleIndexVirtualOp* op);
-    void evalLoadTupleIndexSetGuardDirect(const LoadTupleIndexSetGuardDirectOp* op);
-    void evalLoadTupleIndexSetGuardVirtual(const LoadTupleIndexSetGuardVirtualOp* op);
+    void evalLoadTupleIndexDirectOp(const LoadTupleIndexDirectOp* op);
+    void evalLoadTupleIndexVirtualOp(const LoadTupleIndexVirtualOp* op);
+    void evalLoadTupleIndexSetGuardDirectOp(const LoadTupleIndexSetGuardDirectOp* op);
+    void evalLoadTupleIndexSetGuardVirtualOp(const LoadTupleIndexSetGuardVirtualOp* op);
 
-    void evalLoadRecordPropertyDirect(const LoadRecordPropertyDirectOp* op);
-    void evalLoadRecordPropertyVirtual(const LoadRecordPropertyVirtualOp* op);
-    void evalLoadRecordPropertySetGuardDirect(const LoadRecordPropertySetGuardDirectOp* op);
-    void evalLoadRecordPropertySetGuardVirtual(const LoadRecordPropertySetGuardVirtualOp* op);
+    void evalLoadRecordPropertyDirectOp(const LoadRecordPropertyDirectOp* op);
+    void evalLoadRecordPropertyVirtualOp(const LoadRecordPropertyVirtualOp* op);
+    void evalLoadRecordPropertySetGuardDirectOp(const LoadRecordPropertySetGuardDirectOp* op);
+    void evalLoadRecordPropertySetGuardVirtualOp(const LoadRecordPropertySetGuardVirtualOp* op);
 
-    void evalLoadDirectField(const LoadEntityFieldDirectOp* op);
-    void evalLoadVirtualField(const LoadEntityFieldVirtualOp* op);
+    void evalLoadDirectFieldOp(const LoadEntityFieldDirectOp* op);
+    void evalLoadVirtualFieldOp(const LoadEntityFieldVirtualOp* op);
 
-    void evalLoadFromEpehmeralList(const LoadFromEpehmeralListOp* op);
+    void evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op);
 
-    void evalInvokeFixedFunction(const InvokeFixedFunctionOp* op);
-    void evalInvokeVirtualFunction(const InvokeVirtualFunctionOp* op);
-    void evalInvokeVirtualOperator(const InvokeVirtualOperatorOp* op);
+    void evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp* op);
+    void evalInvokeFixedFunctionWGuardOp(const InvokeFixedFunctionWGuardOp* op);
+    void evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op);
+    void evalInvokeVirtualOperatorOp(const InvokeVirtualOperatorOp* op);
 
-    void evalConstructorTuple(const ConstructorTupleOp* op);
-    void evalConstructorRecord(const ConstructorRecordOp* op);
-    void evalConstructorEphemeralList(const ConstructorEphemeralListOp* op);
+    void evalConstructorTupleOp(const ConstructorTupleOp* op);
+    void evalConstructorRecordOp(const ConstructorRecordOp* op);
+    void evalConstructorEphemeralListOp(const ConstructorEphemeralListOp* op);
 
-    void evalConstructorPrimaryCollectionEmpty(const ConstructorPrimaryCollectionEmptyOp* op);
-    void evalConstructorPrimaryCollectionSingletons(const ConstructorPrimaryCollectionSingletonsOp* op);
-    void evalConstructorPrimaryCollectionCopies(const ConstructorPrimaryCollectionCopiesOp* op);
-    void evalConstructorPrimaryCollectionMixed(const ConstructorPrimaryCollectionMixedOp* op);
+    void evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op);
+    void evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op);
+    void evalConstructorPrimaryCollectionCopiesOp(const ConstructorPrimaryCollectionCopiesOp* op);
+    void evalConstructorPrimaryCollectionMixedOp(const ConstructorPrimaryCollectionMixedOp* op);
 
     void evalPrefixNotOp(const PrefixNotOp* op);
     void evalAllTrueOp(const AllTrueOp* op);
@@ -135,4 +138,7 @@ private:
 
     void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
     void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);
+
+    template <bool isTTDMode>
+    void evaluateOpCode(const InterpOp* op);
 };

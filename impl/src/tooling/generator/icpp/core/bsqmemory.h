@@ -275,7 +275,7 @@ private:
         MEM_STATS_OP(this->promotedbytes += ometa->datasize + sizeof(MetaData *));
 
         GC_MEM_COPY(nobj, GET_TYPE_META_DATA(obj), osize + sizeof(BSQType*));
-        if (ometa->gckind != BSQGCKind::Leaf)
+        if (!ometa->isLeafType)
         {
             this->worklist.push(nobj);
         }
@@ -341,10 +341,10 @@ private:
     }
 
     template <bool isRoot>
-    inline static void gcProcessSlotsWithMask(void** slots, const char* mask)
+    inline static void gcProcessSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
-        const char* cmaskop = mask;
+        RefMask cmaskop = mask;
 
         while (*cmaskop)
         {
@@ -500,7 +500,21 @@ private:
             this->worklist.pop();
 
             const BSQType* umeta = GET_TYPE_META_DATA(obj);
-            umeta->getProcessFP<false>()(umeta, (void**)obj);
+
+            assert(!umeta->isLeafType);
+
+            if(umeta->ptrcount != 0)
+            {
+                Allocator::gcProcessSlots<false>((void**)obj, umeta->ptrcount);
+            }
+            else if(umeta->refmask != nullptr)
+            {
+                Allocator::gcProcessSlotsWithMask<false>((void**)obj, umeta->refmask);
+            }
+            else
+            {
+                umeta->getProcessFP<false>()(umeta, (void**)obj);
+            }
         }
     }
 
@@ -538,7 +552,7 @@ private:
             this->releaselist.pop();
 
             const BSQType* umeta = GET_TYPE_META_DATA(obj);
-            if (umeta->gckind != BSQGCKind::Leaf)
+            if (!umeta->isLeafType)
             {
                 umeta->fpDecObj(umeta, (void**)obj);
             }

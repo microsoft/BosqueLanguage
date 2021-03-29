@@ -16,5 +16,3 @@ inline GCProcessOperatorFP BSQType::getProcessFP<false>() const
 {
     return this->fpProcessObjHeap;
 }
-
-std::map<BSQRecordPropertyID, std::wstring> BSQRecordType::pnames;
