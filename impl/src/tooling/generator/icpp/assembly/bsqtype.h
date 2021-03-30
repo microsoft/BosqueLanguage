@@ -36,6 +36,7 @@ public:
 
     const bool isLeafType; //if refmask == nullptr && ptrcount == 0
 
+    const std::map<BSQVirtualInvokeID, BSQInvokeID> vtable; //TODO: This is slow indirection but nice and simple
     const std::set<BSQTypeID> subtypes;
 
     DisplayFP fpDisplay;

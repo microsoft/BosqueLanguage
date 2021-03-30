@@ -936,7 +936,7 @@ class SMTBodyEmitter {
 
     processConvertValue(op: MIRConvertValue, continuation: SMTExp): SMTExp {
         const conv = this.typegen.coerce(this.argToSMT(op.src), this.typegen.getMIRType(op.srctypelayout), this.typegen.getMIRType(op.intotype));
-        const call = op.guard !== undefined ? new SMTIf(this.generateBoolForGuard(op.guard.guard), this.generateAltForGuardStmt(op.guard.altvalue, this.typegen.getMIRType(op.intotype)), conv) : conv;
+        const call = op.guard !== undefined ? new SMTIf(this.generateBoolForGuard(op.guard.guard), conv, this.generateAltForGuardStmt(op.guard.altvalue, this.typegen.getMIRType(op.intotype))) : conv;
 
         return new SMTLet(this.varToSMTName(op.trgt).vname, call, continuation);
     }
@@ -1374,7 +1374,7 @@ class SMTBodyEmitter {
 
             const args = op.args.map((arg) => this.argToSMT(arg));
             const call = mask !== undefined ? new SMTCallGeneralWOptMask(this.typegen.mangle(op.mkey), args, mask) : new SMTCallGeneral(this.typegen.mangle(op.mkey), args);
-            const gcall = op.guard !== undefined ? new SMTIf(this.generateBoolForGuard(op.guard.guard), this.generateAltForGuardStmt(op.guard.altvalue, rtype), call) : call;
+            const gcall = op.guard !== undefined ? new SMTIf(this.generateBoolForGuard(op.guard.guard), call, this.generateAltForGuardStmt(op.guard.altvalue, rtype)) : call;
                 
             if (this.isSafeInvoke(op.mkey)) {
                 return new SMTLet(this.varToSMTName(op.trgt).vname, gcall, continuation);
@@ -1524,6 +1524,9 @@ class SMTBodyEmitter {
     }
 
     processBinKeyEq(op: MIRBinKeyEq, continuation: SMTExp): SMTExp {
+        //
+        //TODO: if the layouts are equal then no need to coerce
+        //
         const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.lhslayouttype));
         const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.rhslayouttype));
 
@@ -1553,6 +1556,10 @@ class SMTBodyEmitter {
         const oftype = this.typegen.getMIRType(op.chktype);
 
         assert(op.guard === undefined, "TODO -- looks like I forgot this");
+
+        //
+        //TODO: fix this up like in the interpreter version
+        //
 
         if(this.assembly.subtypeOf(flow, oftype)) {
             //also handles the oftype is Any case
@@ -1606,7 +1613,7 @@ class SMTBodyEmitter {
             return new SMTLet(this.varToSMTName(op.trgt).vname, this.argToSMT(op.src), continuation);
         }
         else {
-            const cassign = new SMTIf(this.generateBoolForGuard(op.guard.guard), this.generateAltForGuardStmt(op.guard.altvalue, this.typegen.getMIRType(op.layouttype)), this.argToSMT(op.src));
+            const cassign = new SMTIf(this.generateBoolForGuard(op.guard.guard), this.argToSMT(op.src), this.generateAltForGuardStmt(op.guard.altvalue, this.typegen.getMIRType(op.layouttype)));
             return new SMTLet(this.varToSMTName(op.trgt).vname, cassign, continuation);
         }
     }

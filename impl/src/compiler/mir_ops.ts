@@ -91,23 +91,23 @@ class MIRMaskGuard extends MIRGuard {
 
 class MIRStatmentGuard {
     readonly guard: MIRGuard;
-    readonly altvalue: MIRArgument | undefined;
+    readonly origvar: MIRRegisterArgument | undefined;
 
-    constructor(guard: MIRGuard, altvalue: MIRArgument | undefined) {
+    constructor(guard: MIRGuard, origvar: MIRRegisterArgument | undefined) {
         this.guard = guard;
-        this.altvalue = altvalue;
+        this.origvar = origvar;
     }
 
     stringify(): string {
-        return `${this.guard.stringify()} or ${this.altvalue !== undefined ? this.altvalue.stringify() : "UNINIT"}`;
+        return `${this.guard.stringify()} or ${this.origvar !== undefined ? this.origvar.stringify() : "UNINIT"}`;
     }
 
     jemit(): object {
-        return { guard: this.guard.jemit(), altvalue: this.altvalue !== undefined ? this.altvalue.jemit() : undefined };
+        return { guard: this.guard.jemit(), origvar: this.origvar !== undefined ? this.origvar.jemit() : undefined };
     }
 
     static jparse(gg: any): MIRStatmentGuard {
-        return new MIRStatmentGuard(MIRGuard.jparse(gg.guard), gg.altvalue !== undefined ? MIRArgument.jparse(gg.altvalue) : undefined);
+        return new MIRStatmentGuard(MIRGuard.jparse(gg.guard), gg.origvar !== undefined ? MIRRegisterArgument.jparse(gg.origvar) : undefined);
     }
 }
 
@@ -916,9 +916,9 @@ class MIRConvertValue extends MIROp {
     readonly srctypeflow: MIRResolvedTypeKey;
     readonly intotype: MIRResolvedTypeKey;
     src: MIRArgument;
-    guard: MIRStatmentGuard | undefined;
+    sguard: MIRStatmentGuard | undefined;
 
-    constructor(sinfo: SourceInfo, srctypelayout: MIRResolvedTypeKey, srctypeflow: MIRResolvedTypeKey, intotype: MIRResolvedTypeKey, src: MIRArgument, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined) {
+    constructor(sinfo: SourceInfo, srctypelayout: MIRResolvedTypeKey, srctypeflow: MIRResolvedTypeKey, intotype: MIRResolvedTypeKey, src: MIRArgument, trgt: MIRRegisterArgument, sguard: MIRStatmentGuard | undefined) {
         super(MIROpTag.MIRConvertValue, sinfo);
 
         this.trgt = trgt;
@@ -926,23 +926,23 @@ class MIRConvertValue extends MIROp {
         this.srctypeflow = srctypeflow;
         this.intotype = intotype;
         this.src = src;
-        this.guard = guard;
+        this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return (this.guard !== undefined && this.guard instanceof MIRArgGuard) ? varsOnlyHelper([this.guard.greg, this.src]) : varsOnlyHelper([this.src]); }
+    getUsedVars(): MIRRegisterArgument[] { return (this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? varsOnlyHelper([this.sguard.guard.greg, this.src]) : varsOnlyHelper([this.src]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        const gstring = this.guard !== undefined ? ` | ${this.guard.stringify()}` : "";
+        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
         return `${this.trgt.stringify()} = ${this.src} convert ${this.intotype}${gstring}`;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), srctypelayout: this.srctypelayout, srctypeflow: this.srctypeflow, intotype: this.intotype, src: this.src.jemit(), guard: this.guard !== undefined ? this.guard.jemit() : undefined };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), srctypelayout: this.srctypelayout, srctypeflow: this.srctypeflow, intotype: this.intotype, src: this.src.jemit(), sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRConvertValue(jparsesinfo(jobj.sinfo), jobj.srctypelayout, jobj.srctypeflow, jobj.intotype, MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt), jobj.guard !== undefined ? MIRStatmentGuard.jparse(jobj.guard) : undefined);
+        return new MIRConvertValue(jparsesinfo(jobj.sinfo), jobj.srctypelayout, jobj.srctypeflow, jobj.intotype, MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt), jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined);
     }
 }
 
@@ -1564,9 +1564,9 @@ class MIRInvokeFixedFunction extends MIROp {
     readonly mkey: MIRInvokeKey;
     args: MIRArgument[]; //this is args[0] for methods
     optmask: string | undefined;
-    guard: MIRStatmentGuard | undefined;
+    sguard: MIRStatmentGuard | undefined;
 
-    constructor(sinfo: SourceInfo, resultType: MIRResolvedTypeKey, mkey: MIRInvokeKey, args: MIRArgument[], optmask: string | undefined, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined) {
+    constructor(sinfo: SourceInfo, resultType: MIRResolvedTypeKey, mkey: MIRInvokeKey, args: MIRArgument[], optmask: string | undefined, trgt: MIRRegisterArgument, sguard: MIRStatmentGuard | undefined) {
         super(MIROpTag.MIRInvokeFixedFunction, sinfo,);
 
         this.trgt = trgt;
@@ -1574,24 +1574,24 @@ class MIRInvokeFixedFunction extends MIROp {
         this.mkey = mkey;
         this.args = args;
         this.optmask = optmask;
-        this.guard = guard;
+        this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.guard !== undefined && this.guard instanceof MIRArgGuard) ? [this.guard.greg, ...this.args] : [...this.args]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? [this.sguard.guard.greg, ...this.args] : [...this.args]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        const gstring = this.guard !== undefined ? ` | ${this.guard.stringify()}` : "";
+        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
         const oinfo = this.optmask !== undefined ? `, ${this.optmask}` : "";
         return `${this.trgt.stringify()} = ${this.mkey}::(${this.args.map((arg) => arg.stringify()).join(", ")}${oinfo})${gstring}`;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), resultType: this.resultType, mkey: this.mkey, args: this.args.map((arg) => arg.jemit()), optmask: this.optmask, guard: this.guard !== undefined ? this.guard.jemit() : undefined };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), resultType: this.resultType, mkey: this.mkey, args: this.args.map((arg) => arg.jemit()), optmask: this.optmask, sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRInvokeFixedFunction(jparsesinfo(jobj.sinfo), jobj.resultType, jobj.mkey, jobj.args.map((arg: any) => MIRArgument.jparse(arg)), jobj.optmask, MIRRegisterArgument.jparse(jobj.trgt), jobj.guard !== undefined ? MIRStatmentGuard.jparse(jobj.guard) : undefined);
+        return new MIRInvokeFixedFunction(jparsesinfo(jobj.sinfo), jobj.resultType, jobj.mkey, jobj.args.map((arg: any) => MIRArgument.jparse(arg)), jobj.optmask, MIRRegisterArgument.jparse(jobj.trgt), jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined);
     }
 }
 
@@ -2202,9 +2202,9 @@ class MIRIsTypeOf extends MIROp {
     arg: MIRArgument;
     readonly srclayouttype: MIRResolvedTypeKey;
     readonly srcflowtype: MIRResolvedTypeKey;
-    guard: MIRStatmentGuard | undefined;
+    sguard: MIRStatmentGuard | undefined;
 
-    constructor(sinfo: SourceInfo, trgt: MIRRegisterArgument, chktype: MIRResolvedTypeKey, src: MIRArgument, srclayouttype: MIRResolvedTypeKey, srcflowtype: MIRResolvedTypeKey, guard: MIRStatmentGuard | undefined) {
+    constructor(sinfo: SourceInfo, trgt: MIRRegisterArgument, chktype: MIRResolvedTypeKey, src: MIRArgument, srclayouttype: MIRResolvedTypeKey, srcflowtype: MIRResolvedTypeKey, sguard: MIRStatmentGuard | undefined) {
         super(MIROpTag.MIRIsTypeOf, sinfo);
 
         this.trgt = trgt;
@@ -2212,23 +2212,23 @@ class MIRIsTypeOf extends MIROp {
         this.arg = src;
         this.srclayouttype = srclayouttype;
         this.srcflowtype = srcflowtype;
-        this.guard = guard;
+        this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.guard !== undefined && this.guard instanceof MIRArgGuard) ? [this.arg, this.guard.greg] : [this.arg]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? [this.arg, this.sguard.guard.greg] : [this.arg]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        const gstring = this.guard !== undefined ? ` | ${this.guard.stringify()}` : "";
+        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
         return `${this.trgt.stringify()} = $isTypeOf(${this.arg.stringify()}, ${this.chktype})${gstring}`;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), chktype: this.chktype, arg: this.arg.jemit(), srclayouttype: this.srclayouttype, srcflowtype: this.srcflowtype, guard: this.guard !== undefined ? this.guard.jemit() : undefined };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), chktype: this.chktype, arg: this.arg.jemit(), srclayouttype: this.srclayouttype, srcflowtype: this.srcflowtype, sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRIsTypeOf(jparsesinfo(jobj.sinfo), MIRRegisterArgument.jparse(jobj.trgt), jobj.chktype, MIRArgument.jparse(jobj.arg), jobj.srclayouttype, jobj.srcflowtype, jobj.guard !== undefined ? MIRStatmentGuard.jparse(jobj.guard) : undefined);
+        return new MIRIsTypeOf(jparsesinfo(jobj.sinfo), MIRRegisterArgument.jparse(jobj.trgt), jobj.chktype, MIRArgument.jparse(jobj.arg), jobj.srclayouttype, jobj.srcflowtype, jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined);
     }
 }
 
@@ -2236,31 +2236,31 @@ class MIRRegisterAssign extends MIROp {
     trgt: MIRRegisterArgument;
     src: MIRArgument;
     readonly layouttype: MIRResolvedTypeKey;
-    guard: MIRStatmentGuard | undefined;
+    sguard: MIRStatmentGuard | undefined;
 
-    constructor(sinfo: SourceInfo, src: MIRArgument, trgt: MIRRegisterArgument, layouttype: MIRResolvedTypeKey, guard: MIRStatmentGuard | undefined) {
+    constructor(sinfo: SourceInfo, src: MIRArgument, trgt: MIRRegisterArgument, layouttype: MIRResolvedTypeKey, sguard: MIRStatmentGuard | undefined) {
         super(MIROpTag.MIRRegisterAssign, sinfo);
 
         this.trgt = trgt;
         this.src = src;
         this.layouttype = layouttype;
-        this.guard = guard;
+        this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.guard !== undefined && this.guard instanceof MIRArgGuard) ? [this.src, this.guard.greg] : [this.src]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? [this.src, this.sguard.guard.greg] : [this.src]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        const gstring = this.guard !== undefined ? ` | ${this.guard.stringify()}` : "";
+        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
         return `${this.trgt.stringify()} = ${this.src.stringify()}${gstring}`;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), src: this.src.jemit(), layouttype: this.layouttype, trgt: this.trgt.jemit(), guard: this.guard !== undefined ? this.guard.jemit() : undefined };
+        return { ...this.jbemit(), src: this.src.jemit(), layouttype: this.layouttype, trgt: this.trgt.jemit(), sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRRegisterAssign(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt), jobj.layouttype, jobj.guard !== undefined ? MIRStatmentGuard.jparse(jobj.guard) : undefined);
+        return new MIRRegisterAssign(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt), jobj.layouttype, jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined);
     }
 }
 

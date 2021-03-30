@@ -15,9 +15,8 @@
 class Evaluator
 {
 private:
-    std::wstring* getCurrentFile();
-    uint64_t getCurrentLine();
-    uint64_t getCurrentColumn();
+    std::wstring* dbg_currentFile;
+    int64_t dbg_currentLine;
 
     StorageLocationPtr evalConstArgument(Argument arg);
 
@@ -47,6 +46,51 @@ private:
         return xxx;
     }
 
+    inline StorageLocationPtr evalGuardVar(uint32_t gvaroffset)
+    {
+        return xxx;
+    }
+
+    inline static bool isEnabledGuardStmt(const BSQStatementGuard& sguard)
+    {
+        return sguard.arg.kind != ArgumentTag::InvalidOp;
+    }
+
+    inline BSQBool evalGuardStmt(const BSQGuard& guard)
+    {
+        if(guard.gindex != -1)
+        {
+            auto maskptr = this->evalMaskLocation(guard.gmaskoffset);
+            return maskptr[guard.gindex];
+        }
+        else {
+            return SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalGuardVar(guard.gvaroffset));
+        }
+    }
+
+    inline void evalStoreAltValueForGuardStmt(TargetVar trgt, Argument arg, const BSQType* oftype)
+    {
+        if(arg.kind != ArgumentTag::UninterpFill)
+        {
+            oftype->slcopy(this->evalTargetVar(trgt), this->evalArgument(arg));
+        }
+    }
+
+    template <bool isEnabled>
+    inline bool tryProcessGuardStmt(TargetVar trgt, const BSQType* trgttype, const BSQStatementGuard& sguard)
+    {
+        if(isEnabled & Evaluator::isEnabledGuardStmt(sguard))
+        {
+            if(!this->evalGuard(sguard.guard))
+            {
+                this->evalStoreAltValueForGuardStmt(op->trgt, op->sguard.arg, op->intotype);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     void evalDeadFlowOp();
     void evalAbortOp(const AbortOp* op);
     void evalAssertCheckOp(const AssertOp* op);
@@ -54,16 +98,36 @@ private:
 
     void evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op);
 
-    void evalBoxUniqueStructToInlineOp(const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp>* op);
-    void evalBoxUniqueRefToInlineOp(const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp>* op);
-    void evalBoxUniqueStructToHeapOp(const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp>* op);
-    void evalBoxUniqueRefToHeapOp(const BoxOp<OpCodeTag::BoxUniqueRefToHeapOp>* op);
-    void evalBoxInlineBoxToHeapOp(const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp>* op);
-    void evalExtractUniqueStructFromInlineOp(const ExtractOp<OpCodeTag::ExtractUniqueStructFromInlineOp>* op);
-    void evalExtractUniqueRefFromInlineOp(const ExtractOp<OpCodeTag::ExtractUniqueRefFromInlineOp>* op);
-    void evalExtractUniqueStructFromHeapOp(const ExtractOp<OpCodeTag::ExtractUniqueStructFromHeapOp>* op);
-    void evalExtractUniqueRefFromHeapOp(const ExtractOp<OpCodeTag::ExtractUniqueRefFromHeapOp>* op);
-    void evalExtractInlineBoxFromHeapOp(const ExtractOp<OpCodeTag::ExtractInlineBoxFromHeapOp>* op);
+    template <OpCodeTag tag, bool isGuarded>
+    void evalBoxUniqueStructToInlineOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalBoxUniqueRefToInlineOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalBoxUniqueRefToHeapOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalExtractUniqueStructFromInlineOp(const ExtractOp<tag, isGuarded>* op);
+    
+    template <OpCodeTag tag, bool isGuarded>
+    void evalExtractUniqueRefFromInlineOp(const ExtractOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalExtractUniqueRefFromHeapOp(const ExtractOp<tag,isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* op);
+
     void evalWidenInlineOp(const BoxOp<OpCodeTag::WidenInlineOp>* op);
     void evalNarrowInlineOp(const ExtractOp<OpCodeTag::NarrowInlineOp>* op);
 

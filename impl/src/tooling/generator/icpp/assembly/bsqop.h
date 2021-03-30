@@ -39,6 +39,7 @@ enum class OpCodeTag
     AssertOp,
     DebugOp,
     LoadUnintVariableValueOp,
+
     BoxUniqueStructToInlineOp,
     BoxUniqueRefToInlineOp,
     BoxUniqueStructToHeapOp,
@@ -51,6 +52,19 @@ enum class OpCodeTag
     ExtractInlineBoxFromHeapOp,
     WidenInlineOp,
     NarrowInlineOp,
+    GuardedBoxUniqueStructToInlineOp,
+    GuardedBoxUniqueRefToInlineOp,
+    GuardedBoxUniqueStructToHeapOp,
+    GuardedBoxUniqueRefToHeapOp,
+    GuardedBoxInlineBoxToHeapOp,
+    GuardedExtractUniqueStructFromInlineOp,
+    GuardedExtractUniqueRefFromInlineOp,
+    GuardedExtractUniqueStructFromHeapOp,
+    GuardedExtractUniqueRefFromHeapOp,
+    GuardedExtractInlineBoxFromHeapOp,
+    GuardedWidenInlineOp,
+    GuardedNarrowInlineOp,
+
     LoadConstOp,
     TupleHasIndexOp,
     RecordHasPropertyOp,
@@ -66,7 +80,7 @@ enum class OpCodeTag
     LoadEnityFieldVirtualOp,
     LoadFromEpehmeralListOp,
     InvokeFixedFunctionOp,
-    InvokeFixedFunctionWGuardOp,
+    GuardedInvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
     ConstructorTupleOp,
@@ -79,14 +93,24 @@ enum class OpCodeTag
     PrefixNotOp,
     AllTrueOp,
     SomeTrueOp,
-    IsNoneOp,
-    IsSomeOp,
+
+    BinKeyEqVirtualOp,
+    BinKeyLessVirtualOp,
+
+    TypeIsNoneOp,
+    TypeIsSomeOp,
     TypeTagIsOp,
     TypeTagSubtypeOfOp,
+    GuardedTypeIsNoneOp,
+    GuardedTypeIsSomeOp,
+    GuardedTypeTagIsOp,
+    GuardedTypeTagSubtypeOfOp,
+    
     JumpOp,
     JumpCondOp,
     JumpNoneOp,
     RegisterAssignOp,
+    GuardedRegisterAssignOp,
     ReturnAssignOp,
     ReturnAssignOfConsOp,
     VarLifetimeStartOp,
@@ -141,6 +165,7 @@ enum class OpCodeTag
     LtRationalOp,
     LtFloatOp,
     LtDecimalOp,
+    LtStringOp,
     GtNatOp,
     GtIntOp,
     GtBigNatOp,
@@ -148,6 +173,7 @@ enum class OpCodeTag
     GtRationalOp,
     GtFloatOp,
     GtDecimalOp,
+    GtStringOp,
 
     LeNatOp,
     LeIntOp,
@@ -189,7 +215,7 @@ struct BSQGuard
     uint32_t gmaskoffset; 
     int32_t gindex; //-1 if this is var guard
 
-    TargetVar gvar; //if gindex is -1
+    uint32_t gvaroffset; //if gindex is -1
 };
 
 struct BSQStatementGuard
@@ -255,7 +281,7 @@ public:
     virtual ~LoadUnintVariableValueOp() {;}
 };
 
-template <OpCodeTag tag>
+template <OpCodeTag tag, bool isGuarded>
 class BoxOp : public InterpOp
 {
 public:
@@ -263,12 +289,13 @@ public:
     const BSQType* intotype;
     const Argument arg;
     const BSQType* fromtype;
+    const BSQStatementGuard sguard;
 
-    BoxOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype) {;}
+    BoxOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~BoxOp() {;}
 };
 
-template <OpCodeTag tag>
+template <OpCodeTag tag, bool isGuarded>
 class ExtractOp : public InterpOp
 {
 public:
@@ -276,8 +303,9 @@ public:
     const BSQType* intotype;
     const Argument arg;
     const BSQType* fromtype;
+    const BSQStatementGuard sguard;
 
-    ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype) {;}
+    ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~ExtractOp() {;}
 };
 
@@ -322,11 +350,11 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* argtype;
+    const BSQType* layouttype;
     const uint32_t slotoffset;
     const BSQTupleIndex idx;
 
-    LoadTupleIndexDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* argtype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), idx(idx) {;}
+    LoadTupleIndexDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx) {;}
     virtual ~LoadTupleIndexDirectOp() {;}
 };
 
@@ -349,12 +377,12 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* argtype;
+    const BSQType* layouttype;
     const uint32_t slotoffset;
     const BSQTupleIndex idx;
     const BSQGuard guard;
 
-    LoadTupleIndexSetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* argtype, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), idx(idx), guard(guard) {;}
+    LoadTupleIndexSetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx), guard(guard) {;}
     virtual ~LoadTupleIndexSetGuardDirectOp() {;}
 };
 
@@ -378,11 +406,11 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* argtype;
+    const BSQType* layouttype;
     const uint32_t slotoffset;
     const BSQRecordPropertyID propId;
 
-    LoadRecordPropertyDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* argtype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), propId(propId) {;}
+    LoadRecordPropertyDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId) {;}
     virtual ~LoadRecordPropertyDirectOp() {;}
 };
 
@@ -405,12 +433,12 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* argtype;
+    const BSQType* layouttype;
     const uint32_t slotoffset;
     const BSQRecordPropertyID propId;
     const BSQGuard guard;
 
-    LoadRecordPropertySetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* argtype, uint32_t slotoffset, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), propId(propId), guard(guard) {;}
+    LoadRecordPropertySetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId), guard(guard) {;}
     virtual ~LoadRecordPropertySetGuardDirectOp() {;}
 };
 
@@ -434,11 +462,11 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* argtype;
+    const BSQType* layouttype;
     const uint32_t slotoffset;
     const BSQFieldID fieldId;
 
-    LoadEntityFieldDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* argtype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadEnityFieldDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), fieldId(fieldId) {;}
+    LoadEntityFieldDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadEnityFieldDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldDirectOp() {;}
 };
 
@@ -469,6 +497,7 @@ public:
     virtual ~LoadFromEpehmeralListOp() {;}
 };
 
+template <OpCodeTag tag, bool isGuarded>
 class InvokeFixedFunctionOp : public InterpOp
 {
 public:
@@ -477,22 +506,9 @@ public:
     const BSQInvokeID invokeId;
     const std::vector<Argument> args;
     const int32_t optmaskoffset;
+    const BSQStatementGuard sguard;
 
-    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, const std::vector<Argument>& args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeFixedFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), optmaskoffset(optmaskoffset) {;}
-    virtual ~InvokeFixedFunctionOp() {;}
-};
-
-class InvokeFixedFunctionWGuardOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const BSQInvokeID invokeId;
-    const std::vector<Argument> args;
-    const int32_t optmaskoffset;
-    const BSQStatementGuard guard;
-
-    InvokeFixedFunctionWGuardOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, const std::vector<Argument>& args, BSQStatementGuard guard, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeFixedFunctionWGuardOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), guard(guard), optmaskoffset(optmaskoffset) {;}
+    InvokeFixedFunctionWGuardOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, const std::vector<Argument>& args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, tag), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
     virtual ~InvokeFixedFunctionWGuardOp() {;}
 };
 
@@ -630,29 +646,61 @@ public:
     virtual ~SomeTrueOp() {;}
 };
 
+class BinKeyEqOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument argl;
+    const BSQType* argltype;
+    const BSQType* argllayout;
+    const Argument argr;
+    const BSQType* argrtype;
+    const BSQType* argrlayout;
+    
+    BinKeyEqOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argltype, const BSQType* argllayout, Argument argr, const BSQType* argrtype, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), argl(argl), argltype(argltype), argllayout(argllayout), argr(argr), argrtype(argrtype), argrlayout(argrlayout) {;}
+    virtual ~BinKeyEqOp() {;}
+};
 
-class IsNoneOp : public InterpOp
+class BinKeyLessVirtualOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument argl;
+    const BSQType* argltype;
+    const BSQType* argllayout;
+    const Argument argr;
+    const BSQType* argrtype;
+    const BSQType* argrlayout;
+    
+    BinKeyLessVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argltype, const BSQType* argllayout, Argument argr, const BSQType* argrtype, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), argl(argl), argltype(argltype), argllayout(argllayout), argr(argr), argrtype(argrtype), argrlayout(argrlayout) {;}
+    virtual ~BinKeyLessVirtualOp() {;}
+};
+
+template <OpCodeTag tag, bool isGuarded>
+class TypeIsNoneOp : public InterpOp
 {
 public:
     const TargetVar trgt;
     const Argument arg;
     const BSQType* arglayout;
     
-    IsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, OpCodeTag::IsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout) {;}
-    virtual ~IsNoneOp() {;}
+    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout) {;}
+    virtual ~TypeTagIsOp() {;}
 };
 
-class IsSomeOp : public InterpOp
+template <OpCodeTag tag, bool isGuarded>
+class TypeIsSomeOp : public InterpOp
 {
 public:
     const TargetVar trgt;
     const Argument arg;
     const BSQType* arglayout;
     
-    IsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, OpCodeTag::IsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout) {;}
-    virtual ~IsSomeOp() {;}
+    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout) {;}
+    virtual ~TypeTagIsOp() {;}
 };
-    
+
+template <OpCodeTag tag, bool isGuarded>
 class TypeTagIsOp : public InterpOp
 {
 public:
@@ -665,6 +713,7 @@ public:
     virtual ~TypeTagIsOp() {;}
 };
 
+template <OpCodeTag tag, bool isGuarded>
 class TypeTagSubtypeOfOp : public InterpOp
 {
 public:
@@ -713,7 +762,8 @@ public:
     JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQType* arglayout, uint32_t noffset, uint32_t soffset, const std::wstring* nlabel, const std::wstring* slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
     virtual ~JumpNoneOp() {;}
 };
-    
+
+template <OpCodeTag tag, bool isGuarded>
 class RegisterAssignOp : public InterpOp
 {
 public:
@@ -721,7 +771,7 @@ public:
     const Argument arg;
     const BSQType* oftype;
     
-    RegisterAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::RegisterAssignOp), trgt(trgt), arg(arg), oftype(oftype) {;}
+    RegisterAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), oftype(oftype) {;}
     virtual ~RegisterAssignOp() {;}
 };
 
@@ -738,7 +788,7 @@ public:
 class ReturnAssignOfConsOp : public InterpOp
 {
 public:
-    const std::vector<Argument>& args;
+    const std::vector<Argument> args;
     const BSQType* oftype;
     
     ReturnAssignOfConsOp(SourceInfo sinfo, const std::vector<Argument>& args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}

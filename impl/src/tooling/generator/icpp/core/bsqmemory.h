@@ -610,6 +610,17 @@ public:
         return res;
     }
 
+    inline uint8_t* allocateUnionOf(size_t usize, const BSQType* mdata)
+    {
+        size_t asize = BSQ_ALIGN_SIZE(usize);
+        uint8_t* alloc = this->nsalloc.allocateDynamicSize(asize);
+
+        *((const BSQType**)alloc) = mdata;
+        uint8_t* res = (alloc + sizeof(BSQType*));
+
+        return res;
+    }
+
     template <size_t required>
     inline void ensureSpace()
     {

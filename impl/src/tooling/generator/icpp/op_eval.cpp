@@ -5,21 +5,6 @@
 
 #include "op_eval.h"
 
-std::wstring* Evaluator::getCurrentFile()
-{
-    return xxx;
-}
-
-uint64_t Evaluator::getCurrentLine()
-{
-    return xxxx;
-}
-
-uint64_t Evaluator::getCurrentColumn()
-{
-    return xxxx;
-}
-
 StorageLocationPtr Evaluator::evalConstArgument(Argument arg)
 {
     switch (arg.kind)
@@ -98,52 +83,93 @@ void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
     op->oftype->slclear(this->evalTargetVar(op->trgt));
 }
 
-void Evaluator::evalBoxUniqueStructToInlineOp(const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp>* op)
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalBoxUniqueStructToInlineOp(const BoxOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto isl = this->evalTargetVar(op->trgt);
+        SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
+        GC_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocsize));
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalBoxUniqueRefToInlineOp(const BoxOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto isl = this->evalTargetVar(op->trgt);
+        SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg));
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto isl = this->evalTargetVar(op->trgt);
+        auto balloc = Allocator::allocateUnionOf(op->fromtype->allocsize, op->fromtype);
+        GC_MEM_COPY(balloc, this->evalArgument(op->arg), op->fromtype->allocsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalBoxUniqueRefToHeapOp(const BoxOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto isl = this->evalTargetVar(op->trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, this->evalArgument(op->arg));
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto srcl = this->evalArgument(op->arg);
+        auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(srcl);
+
+        auto isl = this->evalTargetVar(op->trgt);
+        auto balloc = Allocator::allocateUnionOf(rtype->allocsize, rtype);
+        GC_MEM_COPY(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalExtractUniqueStructFromInlineOp(const ExtractOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalExtractUniqueRefFromInlineOp(const ExtractOp<tag, isGuarded>* op)
 {
     xxxx;
 }
 
-void Evaluator::evalBoxUniqueRefToInlineOp(const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp>* op)
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded>* op)
 {
     xxxx;
 }
 
-void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp>* op)
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalExtractUniqueRefFromHeapOp(const ExtractOp<tag, isGuarded>* op)
 {
     xxxx;
 }
 
-void Evaluator::evalBoxUniqueRefToHeapOp(const BoxOp<OpCodeTag::BoxUniqueRefToHeapOp>* op)
-{
-    xxxx;
-}
-
-void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp>* op)
-{
-    xxxx;
-}
-
-void Evaluator::evalExtractUniqueStructFromInlineOp(const ExtractOp<OpCodeTag::ExtractUniqueStructFromInlineOp>* op)
-{
-    xxxx;
-}
-
-void Evaluator::evalExtractUniqueRefFromInlineOp(const ExtractOp<OpCodeTag::ExtractUniqueRefFromInlineOp>* op)
-{
-    xxxx;
-}
-
-void Evaluator::evalExtractUniqueStructFromHeapOp(const ExtractOp<OpCodeTag::ExtractUniqueStructFromHeapOp>* op)
-{
-    xxxx;
-}
-
-void Evaluator::evalExtractUniqueRefFromHeapOp(const ExtractOp<OpCodeTag::ExtractUniqueRefFromHeapOp>* op)
-{
-    xxxx;
-}
-
-void Evaluator::evalExtractInlineBoxFromHeapOp(const ExtractOp<OpCodeTag::ExtractInlineBoxFromHeapOp>* op)
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* op)
 {
     xxxx;
 }
