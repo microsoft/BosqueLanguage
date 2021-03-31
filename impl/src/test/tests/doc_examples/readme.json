@@ -69,7 +69,8 @@
             "refutes": [
                 "sign() == 0i",
                 "sign(4i) == 1i",
-                "sign(-4i) == -1i"
+                "sign(-4i) == -1i",
+                "sign(x) <= 1i"
             ],
             "reachables": [
                 "sign(x) == 1i",
