@@ -80,9 +80,9 @@ function processSSAUse_RemapStatementGuard(sguard: MIRStatmentGuard | undefined,
     }
     else {
         const rguard = processSSAUse_RemapGuard(sguard.guard, ssastate) as MIRGuard;
-        const ralt = sguard.altvalue !== undefined ? processSSA_Use(sguard.altvalue, ssastate) : undefined;
+        const ralt = sguard.defaultvar !== undefined ? processSSA_Use(sguard.defaultvar, ssastate) : undefined;
 
-        return new MIRStatmentGuard(rguard, ralt);
+        return new MIRStatmentGuard(rguard, sguard.usedefault, ralt);
     }
 }
 
@@ -125,7 +125,7 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
         case MIROpTag.MIRConvertValue: {
             const conv = op as MIRConvertValue;
             conv.src = processSSA_Use(conv.src, ssastate);
-            conv.guard = processSSAUse_RemapStatementGuard(conv.guard, ssastate);
+            conv.sguard = processSSAUse_RemapStatementGuard(conv.sguard, ssastate);
             conv.trgt = convertToSSA(conv.trgt, conv.intotype, ssastate);
             return op;
         }
@@ -240,7 +240,7 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
         case MIROpTag.MIRInvokeFixedFunction: {
             const invk = op as MIRInvokeFixedFunction;
             invk.args = processSSAUse_RemapArgs(invk.args, ssastate);
-            invk.guard = processSSAUse_RemapStatementGuard(invk.guard, ssastate);
+            invk.sguard = processSSAUse_RemapStatementGuard(invk.sguard, ssastate);
             invk.trgt = convertToSSA(invk.trgt, invk.resultType, ssastate);
             return op;
         }
@@ -365,7 +365,7 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
         case MIROpTag.MIRIsTypeOf: {
             const it = op as MIRIsTypeOf;
             it.arg = processSSA_Use(it.arg, ssastate);
-            it.guard = processSSAUse_RemapStatementGuard(it.guard, ssastate);
+            it.sguard = processSSAUse_RemapStatementGuard(it.sguard, ssastate);
             it.trgt = convertToSSA(it.trgt, ssastate.booltype, ssastate);
             return op;
         }
@@ -385,7 +385,7 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
         case MIROpTag.MIRRegisterAssign: {
             const regop = op as MIRRegisterAssign;
             regop.src = processSSA_Use(regop.src, ssastate);
-            regop.guard = processSSAUse_RemapStatementGuard(regop.guard, ssastate);
+            regop.sguard = processSSAUse_RemapStatementGuard(regop.sguard, ssastate);
             regop.trgt = convertToSSA(regop.trgt, regop.layouttype, ssastate);
             return op;
         }

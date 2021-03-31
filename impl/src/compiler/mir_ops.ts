@@ -31,6 +31,8 @@ abstract class MIRGuard {
     abstract stringify(): string;
     abstract jemit(): object;
 
+    abstract tryGetGuardVars(): MIRRegisterArgument | undefined;
+
     static jparse(gg: any) : MIRGuard {
         if(gg.kind === "ArgGuard") {
             return MIRArgGuard.jparse(gg);
@@ -48,6 +50,10 @@ class MIRArgGuard extends MIRGuard {
         super();
 
         this.greg = greg;
+    }
+
+    tryGetGuardVars(): MIRRegisterArgument | undefined {
+        return this.greg instanceof MIRRegisterArgument ? this.greg : undefined;
     }
 
     stringify(): string {
@@ -76,6 +82,10 @@ class MIRMaskGuard extends MIRGuard {
         this.gsize = gsize;
     }
 
+    tryGetGuardVars(): MIRRegisterArgument | undefined {
+        return undefined;
+    }
+
     stringify(): string {
         return `${this.gmask}[${this.gindex}]`;
     }
@@ -91,23 +101,39 @@ class MIRMaskGuard extends MIRGuard {
 
 class MIRStatmentGuard {
     readonly guard: MIRGuard;
-    readonly origvar: MIRRegisterArgument | undefined;
+    readonly usedefault: "defaultontrue" | "defaultonfalse";
+    readonly defaultvar: MIRArgument | undefined;
 
-    constructor(guard: MIRGuard, origvar: MIRRegisterArgument | undefined) {
+    constructor(guard: MIRGuard, usedefault: "defaultontrue" | "defaultonfalse", defaultvar: MIRArgument | undefined) {
         this.guard = guard;
-        this.origvar = origvar;
+        this.usedefault = usedefault;
+        this.defaultvar = defaultvar;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] {
+        let uvs: MIRRegisterArgument[] = [];
+        
+        if(this.guard.tryGetGuardVars() !== undefined) {
+            uvs.push(this.guard.tryGetGuardVars() as MIRRegisterArgument);
+        }
+
+        if(this.defaultvar !== undefined && this.defaultvar instanceof MIRRegisterArgument) {
+            uvs.push(this.defaultvar);
+        }
+
+        return uvs;
     }
 
     stringify(): string {
-        return `${this.guard.stringify()} or ${this.origvar !== undefined ? this.origvar.stringify() : "UNINIT"}`;
+        return `${this.guard.stringify()} ${this.usedefault} ${this.defaultvar !== undefined ? this.defaultvar.stringify() : "UNINIT"}`;
     }
 
     jemit(): object {
-        return { guard: this.guard.jemit(), origvar: this.origvar !== undefined ? this.origvar.jemit() : undefined };
+        return { guard: this.guard.jemit(), usedefault: this.usedefault, origvar: this.defaultvar !== undefined ? this.defaultvar.jemit() : undefined };
     }
 
     static jparse(gg: any): MIRStatmentGuard {
-        return new MIRStatmentGuard(MIRGuard.jparse(gg.guard), gg.origvar !== undefined ? MIRRegisterArgument.jparse(gg.origvar) : undefined);
+        return new MIRStatmentGuard(MIRGuard.jparse(gg.guard), gg.usedefault as "defaultontrue" | "defaultonfalse",  gg.defaultvar !== undefined ? MIRArgument.jparse(gg.defaultvar) : undefined);
     }
 }
 
@@ -929,7 +955,7 @@ class MIRConvertValue extends MIROp {
         this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return (this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? varsOnlyHelper([this.sguard.guard.greg, this.src]) : varsOnlyHelper([this.src]); }
+    getUsedVars(): MIRRegisterArgument[] { return this.sguard !== undefined ? varsOnlyHelper([...this.sguard.getUsedVars(), this.src]) : varsOnlyHelper([this.src]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -1102,7 +1128,7 @@ class MIRLoadTupleIndexSetGuard extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
-    getModVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.guard instanceof MIRArgGuard ? [this.trgt, this.guard.greg] : [this.trgt]); }
+    getModVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.guard.tryGetGuardVars() !== undefined ? [this.trgt, this.guard.tryGetGuardVars() as MIRRegisterArgument] : [this.trgt]); }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}.${this.idx} | ${this.guard.stringify()}]`;
@@ -1178,7 +1204,7 @@ class MIRLoadRecordPropertySetGuard extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
-    getModVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.guard instanceof MIRArgGuard ? [this.trgt, this.guard.greg] : [this.trgt]); }
+    getModVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.guard.tryGetGuardVars() !== undefined ? [this.trgt, this.guard.tryGetGuardVars() as MIRRegisterArgument] : [this.trgt]); }
 
     stringify(): string {
         return `${this.trgt.stringify()} = ${this.arg.stringify()}.${this.pname} | ${this.guard.stringify()}]`;
@@ -1577,7 +1603,7 @@ class MIRInvokeFixedFunction extends MIROp {
         this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? [this.sguard.guard.greg, ...this.args] : [...this.args]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [...this.sguard.getUsedVars(), ...this.args] : [...this.args]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2215,7 +2241,7 @@ class MIRIsTypeOf extends MIROp {
         this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? [this.arg, this.sguard.guard.greg] : [this.arg]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.arg, ...this.sguard.getUsedVars()] : [this.arg]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2247,7 +2273,7 @@ class MIRRegisterAssign extends MIROp {
         this.sguard = sguard;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper((this.sguard !== undefined && this.sguard.guard instanceof MIRArgGuard) ? [this.src, this.sguard.guard.greg] : [this.src]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.src, ...this.sguard.getUsedVars()] : [this.src]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {

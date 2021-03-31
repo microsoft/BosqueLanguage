@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRPCode, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
+import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTType, VerifierOptions } from "./smt_exp";
 import { SourceInfo } from "../../ast/parser";
 import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
@@ -121,6 +121,22 @@ class SMTBodyEmitter {
 
     private generateAltForGuardStmt(arg: MIRArgument | undefined, oftype: MIRType): SMTExp {
         return arg !== undefined ? this.argToSMT(arg) : new SMTConst(this.generateUFConstantForType(oftype));
+    }
+
+    private generateGuardStmtCond(sguard: MIRStatmentGuard | undefined, gexp: SMTExp, rtype: MIRResolvedTypeKey): SMTExp {
+        if(sguard === undefined) {
+            return gexp;
+        }
+        else {
+            const gcond = this.generateBoolForGuard(sguard.guard);
+            const galt = this.generateAltForGuardStmt(sguard.defaultvar, this.typegen.getMIRType(rtype));
+            if(sguard.usedefault === "defaultonfalse") {
+                return new SMTIf(gcond, gexp, galt);
+            }
+            else {
+                return new SMTIf(gcond, galt, gexp);
+            }
+        }
     }
 
     private generateGeneralCallValueProcessing(callerrtype: MIRType, calleertype: MIRType, gcall: SMTExp, trgt: MIRRegisterArgument, continuation: SMTExp): SMTLet {
@@ -936,7 +952,7 @@ class SMTBodyEmitter {
 
     processConvertValue(op: MIRConvertValue, continuation: SMTExp): SMTExp {
         const conv = this.typegen.coerce(this.argToSMT(op.src), this.typegen.getMIRType(op.srctypelayout), this.typegen.getMIRType(op.intotype));
-        const call = op.guard !== undefined ? new SMTIf(this.generateBoolForGuard(op.guard.guard), conv, this.generateAltForGuardStmt(op.guard.altvalue, this.typegen.getMIRType(op.intotype))) : conv;
+        const call = this.generateGuardStmtCond(op.sguard, conv, op.intotype);
 
         return new SMTLet(this.varToSMTName(op.trgt).vname, call, continuation);
     }
@@ -1360,7 +1376,7 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getMIRType(invk.resultType);
 
         if(invk instanceof MIRInvokePrimitiveDecl && invk.implkey === "default") {
-            assert(op.guard === undefined && op.optmask === undefined);
+            assert(op.sguard === undefined && op.optmask === undefined);
 
             const args = op.args.map((arg) => this.argToSMT(arg));
             return this.processDefaultOperatorInvokePrimitiveType(op.sinfo, op.trgt, op.mkey, args, continuation);
@@ -1374,8 +1390,8 @@ class SMTBodyEmitter {
 
             const args = op.args.map((arg) => this.argToSMT(arg));
             const call = mask !== undefined ? new SMTCallGeneralWOptMask(this.typegen.mangle(op.mkey), args, mask) : new SMTCallGeneral(this.typegen.mangle(op.mkey), args);
-            const gcall = op.guard !== undefined ? new SMTIf(this.generateBoolForGuard(op.guard.guard), call, this.generateAltForGuardStmt(op.guard.altvalue, rtype)) : call;
-                
+            const gcall = this.generateGuardStmtCond(op.sguard, call, invk.resultType);
+
             if (this.isSafeInvoke(op.mkey)) {
                 return new SMTLet(this.varToSMTName(op.trgt).vname, gcall, continuation);
             }
@@ -1555,21 +1571,20 @@ class SMTBodyEmitter {
         const flow = this.typegen.getMIRType(op.srcflowtype);
         const oftype = this.typegen.getMIRType(op.chktype);
 
-        assert(op.guard === undefined, "TODO -- looks like I forgot this");
-
         //
-        //TODO: fix this up like in the interpreter version
+        //TODO: to complicated in the sub options? Maybe should look more like the interpreter version
         //
 
+        let ttop: SMTExp = new SMTConst("false");
         if(this.assembly.subtypeOf(flow, oftype)) {
             //also handles the oftype is Any case
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTConst("true"), continuation);
+            ttop = new SMTConst("true");
         }
         else if(this.typegen.isType(oftype, "NSCore::None")) {
-            return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateNoneCheck(op.arg, layout), continuation);
+            ttop = this.generateNoneCheck(op.arg, layout);
         }
         else if (this.typegen.isType(oftype, "NSCore::Some")) {
-            return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSomeCheck(op.arg, layout), continuation);
+            ttop = this.generateSomeCheck(op.arg, layout);
         }
         else {
             const tests = oftype.options.map((topt) => {
@@ -1594,26 +1609,29 @@ class SMTBodyEmitter {
             .filter((test) => !(test instanceof SMTConst) || test.cname !== "false");
     
             if(tests.length === 0) {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTConst("false"), continuation);
+                ttop = new SMTConst("false");
             }
             else if(tests.findIndex((test) => (test instanceof SMTConst) && test.cname === "true") !== -1) {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTConst("true"), continuation);
+                ttop = new SMTConst("true");
             }
             else if(tests.length === 1) {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, tests[0], continuation);
+                ttop = tests[0];
             }
             else {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("or", tests), continuation);
+                ttop = new SMTCallSimple("or", tests);
             }
         }
+
+        const gop = this.generateGuardStmtCond(op.sguard, ttop, "NSCore::Bool");
+        return new SMTLet(this.varToSMTName(op.trgt).vname, gop, continuation);
     }
 
     processRegisterAssign(op: MIRRegisterAssign, continuation: SMTExp): SMTExp {
-        if(op.guard === undefined) {
+        if(op.sguard === undefined) {
             return new SMTLet(this.varToSMTName(op.trgt).vname, this.argToSMT(op.src), continuation);
         }
         else {
-            const cassign = new SMTIf(this.generateBoolForGuard(op.guard.guard), this.argToSMT(op.src), this.generateAltForGuardStmt(op.guard.altvalue, this.typegen.getMIRType(op.layouttype)));
+            const cassign = this.generateGuardStmtCond(op.sguard, this.argToSMT(op.src), op.layouttype);
             return new SMTLet(this.varToSMTName(op.trgt).vname, cassign, continuation);
         }
     }

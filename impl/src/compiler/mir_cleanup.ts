@@ -80,9 +80,9 @@ function propagateAssign_RemapStatementGuard(arg: MIRStatmentGuard | undefined, 
     }
     else {
         const rguard = propagateAssign_RemapGuard(arg.guard, propMap) as MIRGuard;
-        const ralt = arg.altvalue !== undefined ? propagateAssign_Remap(arg.altvalue, propMap) : undefined;
+        const ralt = arg.defaultvar !== undefined ? propagateAssign_Remap(arg.defaultvar, propMap) : undefined;
 
-        return new MIRStatmentGuard(rguard, ralt);
+        return new MIRStatmentGuard(rguard, arg.usedefault, ralt);
     }
 }
 
@@ -121,7 +121,7 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
         case MIROpTag.MIRConvertValue: {
             const conv = op as MIRConvertValue;
             conv.src = propagateAssign_Remap(conv.src, propMap);
-            conv.guard = propagateAssign_RemapStatementGuard(conv.guard, propMap);
+            conv.sguard = propagateAssign_RemapStatementGuard(conv.sguard, propMap);
             break;
         }
         case MIROpTag.MIRTupleHasIndex: {
@@ -210,7 +210,7 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
         case MIROpTag.MIRInvokeFixedFunction: {
             const invk = op as MIRInvokeFixedFunction;
             invk.args = propagateAssign_RemapArgs(invk.args, propMap);
-            invk.guard = propagateAssign_RemapStatementGuard(invk.guard, propMap);
+            invk.sguard = propagateAssign_RemapStatementGuard(invk.sguard, propMap);
             break;
         }
         case MIROpTag.MIRInvokeVirtualFunction: {
@@ -314,7 +314,7 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
         case MIROpTag.MIRIsTypeOf: {
             const it = op as MIRIsTypeOf;
             it.arg = propagateAssign_Remap(it.arg, propMap);
-            it.guard = propagateAssign_RemapStatementGuard(it.guard, propMap);
+            it.sguard = propagateAssign_RemapStatementGuard(it.sguard, propMap);
             break;
         }
         case MIROpTag.MIRJump: {
@@ -333,7 +333,7 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
         case MIROpTag.MIRRegisterAssign: {
             const regop = op as MIRRegisterAssign;
             regop.src = propagateAssign_Remap(regop.src, propMap);
-            regop.guard = propagateAssign_RemapStatementGuard(regop.guard, propMap);
+            regop.sguard = propagateAssign_RemapStatementGuard(regop.sguard, propMap);
             break;
         }
         case MIROpTag.MIRReturnAssign: {
@@ -368,7 +368,7 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
         }
         case MIROpTag.MIRRegisterAssign: {
             const regop = op as MIRRegisterAssign;
-            if(regop.guard === undefined) {
+            if(regop.sguard === undefined) {
                 propagateAssign_Bind(regop.trgt, regop.src, propMap);
             }
             break;
@@ -414,7 +414,7 @@ function removeSelfAssigns(body: MIRBody) {
     (body.body as Map<string, MIRBasicBlock>).forEach((blk, tag) => {
         const nblock = blk.ops.filter((op) => {
             if(op instanceof MIRRegisterAssign) {
-                return op.trgt.nameID !== op.src.nameID;
+                return op.trgt.nameID !== op.src.nameID || op.sguard !== undefined;
             }
             else {
                 return true;
