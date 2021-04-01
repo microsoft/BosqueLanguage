@@ -221,7 +221,8 @@ struct BSQGuard
 struct BSQStatementGuard
 {
     BSQGuard guard;
-    Argument arg; //may be uninterp fill kind
+    bool usedefaulton;
+    Argument defaultvar; //may be uninterp fill kind
 };
 
 class InterpOp
@@ -540,10 +541,10 @@ class ConstructorTupleOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQType* oftype;
+    const BSQTupleType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQTupleType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorTupleOp() {;}
 };
 
@@ -551,10 +552,10 @@ class ConstructorRecordOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQType* oftype;
+    const BSQRecordType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQRecordType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorRecordOp() {;}
 };
 
@@ -646,7 +647,7 @@ public:
     virtual ~SomeTrueOp() {;}
 };
 
-class BinKeyEqOp : public InterpOp
+class BinKeyEqVirtualOp : public InterpOp
 {
 public:
     const TargetVar trgt;
@@ -657,8 +658,8 @@ public:
     const BSQType* argrtype;
     const BSQType* argrlayout;
     
-    BinKeyEqOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argltype, const BSQType* argllayout, Argument argr, const BSQType* argrtype, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), argl(argl), argltype(argltype), argllayout(argllayout), argr(argr), argrtype(argrtype), argrlayout(argrlayout) {;}
-    virtual ~BinKeyEqOp() {;}
+    BinKeyEqVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argltype, const BSQType* argllayout, Argument argr, const BSQType* argrtype, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), argl(argl), argltype(argltype), argllayout(argllayout), argr(argr), argrtype(argrtype), argrlayout(argrlayout) {;}
+    virtual ~BinKeyEqVirtualOp() {;}
 };
 
 class BinKeyLessVirtualOp : public InterpOp

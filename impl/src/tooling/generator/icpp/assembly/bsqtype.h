@@ -11,7 +11,6 @@
 enum class BSQTypeKind : uint32_t
 {
     Invalid = 0x0,
-    Fixed,
     Struct,
     Ref,
     InlineUnion,
@@ -48,137 +47,36 @@ public:
     {
         return nullptr;
     }
-
-    virtual void slclear(StorageLocationPtr dst) const = 0;
-    virtual void slcopy(StorageLocationPtr dst, StorageLocationPtr src) const = 0;
-
-    virtual StorageLocationPtr slindex(StorageLocationPtr src, size_t offset) const
-    {
-        return SLPTR_INDEX(src, offset);
-    }
-
-    virtual void* getExtraTypeInfo() const
-    {
-        return nullptr;
-    }
-};
-
-template <typename T>
-class BSQFixedLayoutType : public BSQType
-{
-public:
-    virtual void slclear(StorageLocationPtr dst) const override 
-    {
-        SLPTR_STORE_CONTENTS_AS(T, dst, {0});
-    }
-
-    virtual void slcopy(StorageLocationPtr dst, StorageLocationPtr src) const override 
-    {
-        SLPTR_STORE_CONTENTS_AS(T, dst, SLPTR_LOAD_CONTENTS_AS(T, src));
-    }
-};
-
-class BSQStructType : public BSQType
-{
-public:
-    virtual void slclear(StorageLocationPtr dst) const override 
-    {
-        GC_MEM_ZERO(dst, this->allocsize);
-    }
-
-    virtual void slcopy(StorageLocationPtr dst, StorageLocationPtr src) const override 
-    {
-        GC_MEM_COPY(dst, src, this->allocsize);
-    }
-};
-
-class BSQRefType : public BSQType
-{
-public:
-    virtual void slclear(StorageLocationPtr dst) const override 
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(dst, nullptr);
-    }
-
-    virtual void slcopy(StorageLocationPtr dst, StorageLocationPtr src) const override 
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(dst, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
-    }
-
-    virtual StorageLocationPtr slindex(StorageLocationPtr src, size_t offset) const override
-    {
-        return SLPTR_INDEX(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src), offset);
-    }
 };
 
 ////
 //Concrete types
 
-struct BSQTupleTypeInfo
+class BSQTupleType : public BSQType
 {
+public:
     BSQTupleIndex maxIndex;
     std::vector<BSQType*> ttypes;
     std::vector<size_t> idxoffsets;
 };
 
-class BSQStructTupleType : public BSQStructType
+class BSQRecordType : public BSQType
 {
 public:
-    const BSQTupleTypeInfo tinfo;
-};
-
-class BSQRefTupleType : public BSQRefType
-{
-public:
-    const BSQTupleTypeInfo tinfo;
-};
-
-struct BSQRecordTypeInfo
-{
     const std::vector<BSQRecordPropertyID> properties;
     const std::vector<BSQType*> rtypes;
     const std::vector<size_t> propertyoffsets;
 };
 
-class BSQStructRecordType : public BSQStructType
+class BSQEntityType : public BSQType
 {
 public:
-    const BSQRecordTypeInfo rinfo;
-};
-
-class BSQRefRecordType : public BSQRefType
-{
-public:
-    const BSQRecordTypeInfo rinfo;
-};
-
-struct BSQEntityTypeInfo
-{
     const std::vector<BSQFieldID> fields;
     const std::vector<BSQType*> etypes;
     const std::vector<size_t> fieldoffsets;
 };
 
-//Has subtypes for the special builtin entity types
-template <typename T>
-class BSQFixedEntityType : public BSQFixedLayoutType<T>
-{
-public:
-};
-
-class BSQStructEntityType : public BSQStructType
-{
-public:
-    const BSQEntityTypeInfo rinfo;
-};
-
-class BSQRefEntityType : public BSQRefType
-{
-public:
-    const BSQEntityTypeInfo rinfo;
-};
-
-class BSQEphemeralListType : public BSQStructType
+class BSQEphemeralListType : public BSQType
 {
 public:
     const std::vector<BSQType*> etypes;
@@ -188,12 +86,16 @@ public:
 ////
 //Abstract types
 
-class BSQInlineUnionType : BSQStructType
+class BSQInlineUnionType : public BSQType
 {
 public:
+    inline uint64_t getAllocSizePlusType() const
+    {
+        return this->allocsize + sizeof(BSQType*);
+    }
 };
 
-class BSQHeapUnionType : BSQRefType
+class BSQHeapUnionType : public BSQType
 {
 public:
 };

@@ -27,19 +27,19 @@
 
 #define BSQ_INTERNAL_ASSERT(C) if(!(C)) { assert(false); }
 
-#ifdef BDEBUG
+#ifdef BSQ_DEBUG_BUILD
 #define HANDLE_BSQ_ABORT(MSG, F, L) { wprintf(L"\"%s\" in %s on line %i\n", MSG, F, L); fflush(stdout); exit(1); }
 #else
 #define HANDLE_BSQ_ABORT() { printf("ABORT\n"); exit(1); }
 #endif
 
-#ifdef BDEBUG
+#ifdef BSQ_DEBUG_BUILD
 #define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT(MSG, F, L);
 #else
 #define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT();
 #endif
 
-#ifdef BDEBUG
+#ifdef BSQ_DEBUG_BUILD
 #define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT(MSG, F, L)
 #else
 #define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT()
@@ -48,7 +48,7 @@
 ////////////////////////////////
 //Memory allocator
 
-#if defined(BDEBUG) || defined(MEM_STATS)
+#if defined(MEM_STATS)
 #define ENABLE_MEM_STATS
 #define MEM_STATS_OP(X) X
 #define MEM_STATS_ARG(X) X
@@ -60,7 +60,7 @@
 //Compute addresses aligned at the given size
 #define BSQ_MEM_ALIGNMENT 8
 #define BSQ_MEM_ALIGNMENT_MASK 0x7
-#define BSQ_ALIGN_SIZE(ASIZE) (((ASIZE) + BSQ_MEM_ALIGNMENT_MASK) & 0xFFFFFFFFFFFFFFFC)
+#define BSQ_ALIGN_SIZE(ASIZE) (((ASIZE) + BSQ_MEM_ALIGNMENT_MASK) & 0xFFFFFFFFFFFFFFF8)
 
 //Program should not contain any allocations larger than this in a single block
 #define BSQ_ALLOC_MAX_BLOCK_SIZE 2048
@@ -150,9 +150,12 @@ typedef void* StorageLocationPtr;
 #define SLPTR_LOAD_UNION_HEAP_TYPE(L) GET_TYPE_META_DATA(*((void**)L))
 #define SLPTR_LOAD_UNION_HEAP_DATAPTR(L) (*((void**)L))
 
-#define SLPTR_INDEX(SL, I) ((void*)(((uint8_t*)SL) + I))
+#define SLPTR_INDEX_INLINE(SL, I) ((void*)(((uint8_t*)SL) + I))
+#define SLPTR_INDEX_HEAP(SL, I) SLPTR_INDEX_INLINE(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SL), I)
 
 #define SLPTR_STORE_UNION_INLINE_TYPE(L, T) (*((const BSQType**)L) = T)
+
+#define SLPTR_COPY_CONTENTS(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
 
 ////////////////////////////////
 //Type and GC interaction decls

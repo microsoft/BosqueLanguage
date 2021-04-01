@@ -20,6 +20,65 @@ private:
 
     StorageLocationPtr evalConstArgument(Argument arg);
 
+    inline void clearValue(StorageLocationPtr trgt, const BSQType* oftype)
+    {
+#ifdef BSQ_DEBUG_BUILD
+        if((oftype->tkind == BSQTypeKind::Ref) | (oftype->tkind == BSQTypeKind::HeapUnion)) 
+        {
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+        }
+        else 
+        {
+            if(oftype->tkind == BSQTypeKind::Struct)
+            {
+                GC_MEM_ZERO(trgt, oftype->allocsize);
+            }
+            else
+            {
+                GC_MEM_ZERO(trgt, static_cast<const BSQInlineUnionType*>(oftype)->getAllocSizePlusType());
+            }
+        }
+#endif
+    }
+
+    inline void storeValue(StorageLocationPtr trgt, StorageLocationPtr src, const BSQType* oftype)
+    {
+        if((oftype->tkind == BSQTypeKind::Ref) | (oftype->tkind == BSQTypeKind::HeapUnion)) 
+        {
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+        }
+        else 
+        {
+            if(oftype->tkind == BSQTypeKind::Struct)
+            {
+                SLPTR_COPY_CONTENTS(trgt, src, oftype->allocsize);
+            }
+            else
+            {
+                SLPTR_COPY_CONTENTS(trgt, src, static_cast<const BSQInlineUnionType*>(oftype)->getAllocSizePlusType());
+            }
+        }
+    }
+
+    inline StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, uint32_t offset, const BSQType* oftype)
+    {
+        if((oftype->tkind == BSQTypeKind::Ref) | (oftype->tkind == BSQTypeKind::HeapUnion)) 
+        {
+            SLPTR_INDEX_HEAP(src, offset);
+        }
+        else 
+        {
+            if(oftype->tkind == BSQTypeKind::Struct)
+            {
+                SLPTR_INDEX_INLINE(src, offset);
+            }
+            else
+            {
+                SLPTR_INDEX_INLINE(src, offset + sizeof(BSQType*));
+            }
+        }
+    }
+
     inline StorageLocationPtr evalArgument(Argument arg)
     {
         if(arg.kind == ArgumentTag::Register)
@@ -53,7 +112,7 @@ private:
 
     inline static bool isEnabledGuardStmt(const BSQStatementGuard& sguard)
     {
-        return sguard.arg.kind != ArgumentTag::InvalidOp;
+        return sguard.defaultvar.kind != ArgumentTag::InvalidOp;
     }
 
     inline BSQBool evalGuardStmt(const BSQGuard& guard)
@@ -72,23 +131,70 @@ private:
     {
         if(arg.kind != ArgumentTag::UninterpFill)
         {
-            oftype->slcopy(this->evalTargetVar(trgt), this->evalArgument(arg));
+            this->storeValue(this->evalTargetVar(trgt), this->evalArgument(arg), oftype);
+        }
+        else
+        {
+            this->clearValue(this->evalTargetVar(trgt), oftype);
         }
     }
 
     template <bool isEnabled>
     inline bool tryProcessGuardStmt(TargetVar trgt, const BSQType* trgttype, const BSQStatementGuard& sguard)
     {
-        if(isEnabled & Evaluator::isEnabledGuardStmt(sguard))
+        if(!isEnabled)
         {
-            if(!this->evalGuard(sguard.guard))
+            return true;
+        }
+        else
+        {
+            if(!Evaluator::isEnabledGuardStmt(sguard))
             {
-                this->evalStoreAltValueForGuardStmt(op->trgt, op->sguard.arg, op->intotype);
-                return false;
+                return true;
+            }
+            else
+            {
+                auto gval = this->evalGuard(sguard.guard);
+                auto dodefault = sguard.usedefaulton ? gval : !gval;
+
+                if(dodefault)
+                {
+                    this->evalStoreAltValueForGuardStmt(op->trgt, op->sguard.arg, op->intotype);
+                }
+
+                return dodefault;
             }
         }
+    }
 
-        return true;
+    template <typename T>
+    inline const T* loadBSQTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+    {
+        auto layout = layouttype->tkind;
+        if(layout == BSQTypeKind::InlineUnion)
+        {
+            return static_cast<const T*>((SLPTR_LOAD_UNION_INLINE_TYPE(sl)));
+        }
+        else
+        {
+            assert(layout == BSQTypeKind::HeapUnion);
+            return static_cast<const T*>(SLPTR_LOAD_UNION_HEAP_TYPE(sl)));
+        }
+    }
+
+    inline StorageLocationPtr Evaluator::loadDataPtrFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+    {
+        auto layout = layouttype->tkind;
+        if(layout == BSQTypeKind::InlineUnion)
+        {
+            return SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
+
+        }
+        else
+        {
+            assert(layout == BSQTypeKind::HeapUnion);
+            return SLPTR_LOAD_UNION_HEAP_DATAPTR(sl);
+        }
     }
 
     void evalDeadFlowOp();
@@ -128,19 +234,13 @@ private:
     template <OpCodeTag tag, bool isGuarded>
     void evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* op);
 
-    void evalWidenInlineOp(const BoxOp<OpCodeTag::WidenInlineOp>* op);
-    void evalNarrowInlineOp(const ExtractOp<OpCodeTag::NarrowInlineOp>* op);
+    template <OpCodeTag tag, bool isGuarded>
+    void evalWidenInlineOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalNarrowInlineOp(const ExtractOp<tag, isGuarded>* op);
 
     void evalLoadConstOp(const LoadConstOp* op);
-
-    const BSQType* loadTupleTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
-    StorageLocationPtr loadTupleDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
-    
-    const BSQType* loadRecordTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
-    StorageLocationPtr loadRecordDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
-    
-    const BSQType* loadEntityTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
-    StorageLocationPtr loadEntityDataFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype);
 
     void processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype);
     void processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype);
@@ -169,8 +269,9 @@ private:
 
     void evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op);
 
-    void evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp* op);
-    void evalInvokeFixedFunctionWGuardOp(const InvokeFixedFunctionWGuardOp* op);
+    template <OpCodeTag tag, bool isGuarded>
+    void evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp<tag, isGuarded>* op);
+
     void evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op);
     void evalInvokeVirtualOperatorOp(const InvokeVirtualOperatorOp* op);
 
@@ -187,10 +288,20 @@ private:
     void evalAllTrueOp(const AllTrueOp* op);
     void evalSomeTrueOp(const SomeTrueOp* op);
 
-    void evalIsNoneOp(const IsNoneOp* op);
-    void evalIsSomeOp(const IsSomeOp* op);
-    void evalTypeTagIsOp(const TypeTagIsOp* op);
-    void evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp* op);
+    void evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op);
+    void evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalIsNoneOp(const TypeIsNoneOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalIsSomeOp(const TypeIsSomeOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalTypeTagIsOp(const TypeTagIsOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp<tag, isGuarded>* op);
 
     void evalJumpOp(const JumpOp* op);
     void evalJumpCondOp(const JumpCondOp* op);

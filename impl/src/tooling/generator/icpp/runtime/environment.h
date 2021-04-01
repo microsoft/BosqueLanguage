@@ -15,7 +15,7 @@ class Environment
 {
 public:
     //Constant storage locations
-    static BSQNone g_constNone;
+    static BSQNone* g_constNone;
     static BSQBool g_constTrue;
     static BSQBool g_constFalse;
     static BSQNat* g_constNats;

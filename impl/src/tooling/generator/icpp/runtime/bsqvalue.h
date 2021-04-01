@@ -15,9 +15,15 @@
 ////
 //Primitive value representations
 
-typedef uint64_t BSQNone;
-#define NoneValue 0
-#define BSQ_NONE_VALUE nullptr
+class BSQNoneType : public BSQEntityType
+{
+    xxxx;
+};
+
+struct BSQNone
+{
+    xxxx;
+};
 
 typedef uint8_t BSQBool;
 #define BSQTRUE 1
@@ -40,9 +46,10 @@ struct BSQRational
 
 #define IS_INLINE_STRING(S) (((uintptr_t)(S->data) & BSQ_MEM_ALIGNMENT_MASK) == 0)
 
-class BSQStringEntityType : public BSQFixedEntityType<void*>
+class BSQStringEntityType : public BSQEntityType
 {
 public:
+    //TODO: should be a union of the data repers we care about -- 
     virtual BSQNat getLength(void* data) const = 0;
 };
 

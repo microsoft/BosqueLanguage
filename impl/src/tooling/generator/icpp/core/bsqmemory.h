@@ -149,7 +149,8 @@ public:
     //Return uint8_t* of given asize + sizeof(MetaData*)
     inline uint8_t* allocateDynamicSize(size_t asize)
     {
-        size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
+        size_t rsize = asize + sizeof(BSQType*);
+        assert(rsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
         assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE);
 
         uint8_t *res = this->m_currPos;
@@ -166,8 +167,7 @@ public:
         }
     }
 
-    template <size_t required>
-    inline void ensureSpace()
+    inline void ensureSpace(size_t required)
     {
         if (this->m_currPos + required > this->m_endPos)
         {
@@ -175,10 +175,10 @@ public:
         }
     }
 
-    template <size_t asize>
-    inline uint8_t* allocateSafe()
+    inline uint8_t* allocateSafe(size_t asize)
     {
-        constexpr size_t rsize = BSQ_ALIGN_SIZE(asize + sizeof(BSQType*));
+        size_t rsize = asize + sizeof(BSQType*);
+        assert(rsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
         assert(this->m_currPos + rsize <= this->m_endPos);
 
         uint8_t *res = this->m_currPos;
@@ -220,7 +220,9 @@ public:
 
     inline uint8_t* allocateSizeFixed(size_t size)
     {
-        size_t tsize = BSQ_ALIGN_SIZE(sizeof(RCMeta) + sizeof(BSQType*)) + size;
+        size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
+        assert(tsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
+
         MEM_STATS_OP(this->totalalloc += tsize);
 
         uint8_t *rr = (uint8_t *)BSQ_FREE_LIST_ALLOC(tsize);
@@ -610,31 +612,18 @@ public:
         return res;
     }
 
-    inline uint8_t* allocateUnionOf(size_t usize, const BSQType* mdata)
+    inline void ensureSpace(size_t required)
     {
-        size_t asize = BSQ_ALIGN_SIZE(usize);
-        uint8_t* alloc = this->nsalloc.allocateDynamicSize(asize);
-
-        *((const BSQType**)alloc) = mdata;
-        uint8_t* res = (alloc + sizeof(BSQType*));
-
-        return res;
+        this->nsalloc.ensureSpace(required);
     }
 
-    template <size_t required>
-    inline void ensureSpace()
+    inline uint8_t* allocateSafe(size_t allocsize, BSQType* mdata)
     {
-        this->nsalloc.ensureSpace<required>();
-    }
-
-    template <size_t allocsize>
-    inline uint8_t* allocateSafe(BSQType* mdata)
-    {
-        constexpr size_t asize = BSQ_ALIGN_SIZE(allocsize);
-        uint8_t* alloc = this->nsalloc.allocateSafe<asize>();
+        size_t asize = BSQ_ALIGN_SIZE(allocsize);
+        uint8_t* alloc = this->nsalloc.allocateSafe(asize);
 
         *((BSQType**)alloc) = mdata;
-        uint_t* res = (alloc + sizeof(BSQType*));
+        uint8_t* res = (alloc + sizeof(BSQType*));
 
         return res;
     }
