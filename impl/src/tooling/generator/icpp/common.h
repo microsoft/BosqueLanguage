@@ -181,3 +181,9 @@ typedef uint32_t BSQRecordPropertyID;
 typedef uint32_t BSQFieldID;
 typedef uint32_t BSQInvokeID;
 typedef uint32_t BSQVirtualInvokeID;
+
+
+#define BSQ_TYPE_ID_NONE 0
+#define BSQ_TYPE_ID_BOOL 1
+#define BSQ_TYPE_ID_NAT 2
+#define BSQ_TYPE_ID_INT 3

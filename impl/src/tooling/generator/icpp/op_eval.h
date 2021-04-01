@@ -307,7 +307,9 @@ private:
     void evalJumpCondOp(const JumpCondOp* op);
     void evalJumpNoneOp(const JumpNoneOp* op);
 
-    void evalRegisterAssignOp(const RegisterAssignOp* op);
+    template <OpCodeTag tag, bool isGuarded>
+    void evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op);
+
     void evalReturnAssignOp(const ReturnAssignOp* op);
     void evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op);
 

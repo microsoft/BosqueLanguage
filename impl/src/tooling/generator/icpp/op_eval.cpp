@@ -509,25 +509,42 @@ void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalIsNoneOp(const TypeIsNoneOp<tag, isGuarded>* op)
 {
-    this->loadBSQTypeFromAbstractLocation(this->evalArgument(op->arg), op->arglayout)->tkind = BSQTypeKind::None;
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    {
+        BSQBool isnone = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout)->tid = BSQ_TYPE_ID_NONE;
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isnone);
+    }
 }
 
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalIsSomeOp(const TypeIsSomeOp<tag, isGuarded>* op)
 {
-    this->loadBSQTypeFromAbstractLocation(this->evalArgument(op->arg), op->arglayout)->tkind != BSQTypeKind::None;
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    {
+        BSQBool issome = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout)->tid != BSQ_TYPE_ID_NONE;
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), issome);
+    }
 }
 
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalTypeTagIsOp(const TypeTagIsOp<tag, isGuarded>* op)
 {
-    this->loadBSQTypeFromAbstractLocation(this->evalArgument(op->arg), op->arglayout)->tkind == op->oftype->tkind;
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    {
+        auto istype = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout)->tid == op->oftype->tid;
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), istype);
+    }
 }
 
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp<tag, isGuarded>* op)
 {
-    xxxx;
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    {
+        auto tt = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout);
+        BSQBool subtype = tt->subtypes.find(op->oftype->tid) != tt->subtypes.cend();
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), subtype);
+    }
 }
 
 void Evaluator::evalJumpOp(const JumpOp* op)
@@ -545,9 +562,13 @@ void Evaluator::evalJumpNoneOp(const JumpNoneOp* op)
     xxxx;
 }
 
-void Evaluator::evalRegisterAssignOp(const RegisterAssignOp* op)
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op)
 {
-    xxxx;
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->oftype, op->sguard))
+    {
+        this->storeValue(this->evalTargetVar(op->trgt), this->evalArgument(op->arg), op->oftype);
+    }
 }
 
 void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op)
@@ -604,52 +625,55 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
 #endif
     case OpCodeTag::BoxUniqueStructToInlineOp:
     {
-        this->evalBoxUniqueStructToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp>*>(op));
+        this->evalBoxUniqueStructToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp, false>*>(op));
     }
     case OpCodeTag::BoxUniqueRefToInlineOp:
     {
-        this->evalBoxUniqueRefToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp>*>(op));
+        this->evalBoxUniqueRefToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp, false>*>(op));
     }
     case OpCodeTag::BoxUniqueStructToHeapOp:
     {
-        this->evalBoxUniqueStructToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp>*>(op));
+        this->evalBoxUniqueStructToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp, false>*>(op));
     }
     case OpCodeTag::BoxUniqueRefToHeapOp:
     {
-        this->evalBoxUniqueRefToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRefToHeapOp>*>(op));
+        this->evalBoxUniqueRefToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRefToHeapOp, false>*>(op));
     }
     case OpCodeTag::BoxInlineBoxToHeapOp:
     {
-        this->evalBoxInlineBoxToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp>*>(op));
+        this->evalBoxInlineBoxToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueStructFromInlineOp:
     {
-        this->evalExtractUniqueStructFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructFromInlineOp>*>(op));
+        this->evalExtractUniqueStructFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructFromInlineOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueRefFromInlineOp:
     {
-        this->evalExtractUniqueRefFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRefFromInlineOp>*>(op));
+        this->evalExtractUniqueRefFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRefFromInlineOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueStructFromHeapOp:
     {
-        this->evalExtractUniqueStructFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructFromHeapOp>*>(op));
+        this->evalExtractUniqueStructFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructFromHeapOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueRefFromHeapOp:
     {
-        this->evalExtractUniqueRefFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRefFromHeapOp>*>(op));
+        this->evalExtractUniqueRefFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRefFromHeapOp, false>*>(op));
     }
     case OpCodeTag::ExtractInlineBoxFromHeapOp:
     {
-        this->evalExtractInlineBoxFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractInlineBoxFromHeapOp>*>(op));
+        this->evalExtractInlineBoxFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractInlineBoxFromHeapOp, false>*>(op));
     }
     case OpCodeTag::WidenInlineOp:
     {
-        this->evalWidenInlineOp(static_cast<const BoxOp<OpCodeTag::WidenInlineOp>*>(op));
+        this->evalWidenInlineOp(static_cast<const BoxOp<OpCodeTag::WidenInlineOp, false>*>(op));
     }
     case OpCodeTag::NarrowInlineOp:
     {
-        this->evalNarrowInlineOp(static_cast<const ExtractOp<OpCodeTag::NarrowInlineOp>*>(op));
+        this->evalNarrowInlineOp(static_cast<const ExtractOp<OpCodeTag::NarrowInlineOp, false>*>(op));
     }
+
+    xxxx;
+
     case OpCodeTag::LoadConstOp:
     {
         this->evalLoadConstOp(static_cast<const ExtractOp<OpCodeTag::LoadConstOp*>(op));

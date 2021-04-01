@@ -22,7 +22,7 @@ class BSQNoneType : public BSQEntityType
 
 struct BSQNone
 {
-    xxxx;
+    uint64_t emptydata;
 };
 
 typedef uint8_t BSQBool;
@@ -46,67 +46,11 @@ struct BSQRational
 
 #define IS_INLINE_STRING(S) (((uintptr_t)(S->data) & BSQ_MEM_ALIGNMENT_MASK) == 0)
 
-class BSQStringEntityType : public BSQEntityType
+class BSQStringType : public BSQEntityType
 {
 public:
     //TODO: should be a union of the data repers we care about -- 
     virtual BSQNat getLength(void* data) const = 0;
-};
-
-struct BSQStringInlineContents
-{
-    wchar_t data[3];
-    
-    inline static void fromchar(wchar_t c, BSQStringInlineContents* into)
-    {
-        into->data[3] = 1;
-        into->data[0] = c;
-    }
-
-    inline static void fromchars(const wchar_t* begin, const wchar_t* end, BSQStringInlineContents* into)
-    {
-        into->data[3] = (end - begin);
-        GC_MEM_COPY(into->data, begin, (end - begin) * sizeof(wchar_t));
-    }
-};
-
-class BSQStringEntityTypeInlineContents : public BSQStringEntityType
-{
-public:
-    virtual BSQNat getLength(void* data) const override
-    {
-        BSQString* s = (BSQString*)data;
-        if(s->data == nullptr)
-        {
-            return 0;
-        }
-        else
-        {
-            return ((BSQStringInlineContents*)s->data)->data[3];
-        }
-    }
-};
-
-template <uint16_t k>
-struct BSQStringFlatContents
-{
-    uint32_t length;
-    wchar_t data[k];
-};
-
-template <uint16_t k>
-class BSQStringEntityTypeFlatContents : public BSQStringEntityType
-{
-public:
-    virtual BSQNat getLength(void* data) const override
-    {
-        return ((BSQStringFlatContents<k>*)data)->length;
-    }
-};
-
-struct BSQStringRopeContents
-{
-    //TODO
 };
 
 struct BSQString
