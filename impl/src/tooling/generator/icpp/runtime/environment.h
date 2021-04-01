@@ -14,8 +14,14 @@ typedef StorageLocationPtr (*ConstValueLoad)();
 class Environment
 {
 public:
+    //Well known types
+    static BSQNoneType* g_typeNone;
+    static BSQBoolType* g_typeBool;
+    static BSQNatType* g_typeNat;
+    static BSQIntType* g_typeInt;
+
     //Constant storage locations
-    static BSQNone* g_constNone;
+    static BSQNone g_constNone;
     static BSQBool g_constTrue;
     static BSQBool g_constFalse;
     static BSQNat* g_constNats;

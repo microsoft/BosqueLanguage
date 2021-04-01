@@ -167,19 +167,31 @@ private:
         }
     }
 
-    template <typename T>
-    inline const T* loadBSQTypeFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+    inline const BSQType* loadBSQTypeFromAbstractLocationGeneral(StorageLocationPtr sl, const BSQType* layouttype)
     {
         auto layout = layouttype->tkind;
         if(layout == BSQTypeKind::InlineUnion)
         {
-            return static_cast<const T*>((SLPTR_LOAD_UNION_INLINE_TYPE(sl)));
+            return SLPTR_LOAD_UNION_INLINE_TYPE(sl);
         }
         else
         {
             assert(layout == BSQTypeKind::HeapUnion);
-            return static_cast<const T*>(SLPTR_LOAD_UNION_HEAP_TYPE(sl)));
+            if(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl) == BSQNoneHeapValue)
+            {
+                return Environment::g_typeNone;
+            }
+            else
+            {
+                return SLPTR_LOAD_UNION_HEAP_TYPE(sl);
+            }
         }
+    }
+
+    template <typename T>
+    inline const T* loadBSQTypeFromAbstractLocationOfType(StorageLocationPtr sl, const BSQType* layouttype)
+    {
+        return static_cast<const T*>(this->loadBSQTypeFromAbstractLocationGeneral(sl, layouttype));
     }
 
     inline StorageLocationPtr Evaluator::loadDataPtrFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)

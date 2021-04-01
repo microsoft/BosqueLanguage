@@ -111,9 +111,16 @@ void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op)
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
         auto isl = this->evalTargetVar(op->trgt);
-        auto balloc = Allocator::allocateDynamic(op->fromtype);
-        SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+        if(op->fromtype->tid == BSQ_TYPE_ID_NONE)
+        {
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, BSQNoneHeapValue);
+        }
+        else
+        {
+            auto balloc = Allocator::allocateDynamic(op->fromtype);
+            SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocsize);
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+        }
     }
 }
 
@@ -136,9 +143,16 @@ void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op)
         auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(srcl);
 
         auto isl = this->evalTargetVar(op->trgt);
-        auto balloc = Allocator::allocateDynamic(rtype);
-        SLPTR_COPY_CONTENTS(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+        if(rtype->tid == BSQ_TYPE_ID_NONE)
+        {
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, BSQNoneHeapValue);
+        }
+        else
+        {
+            auto balloc = Allocator::allocateDynamic(rtype);
+            SLPTR_COPY_CONTENTS(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocsize);
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+        }
     }
 }
 
@@ -171,7 +185,15 @@ void Evaluator::evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded
     {
         auto srcl = this->evalArgument(op->arg);
         auto sldata = SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl);
-        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
+
+        if(sldata == BSQNoneHeapValue)
+        {
+            SLPTR_STORE_CONTENTS_AS(BSQNone, isl, BSQNoneValue);
+        }
+        else
+        {
+            SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
+        }
     }
 }
 
@@ -191,11 +213,21 @@ void Evaluator::evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* 
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
         auto srcl = this->evalArgument(op->arg);
-        auto rtype = SLPTR_LOAD_UNION_HEAP_TYPE(srcl);
+        auto sldata = SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl);
 
         auto isl = this->evalTargetVar(op->trgt);
-        SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl), rtype->allocsize);
+        if(sldata == BSQNoneHeapValue)
+        {
+            SLPTR_STORE_UNION_INLINE_TYPE(isl, Environment::g_typeNone);
+            SLPTR_STORE_CONTENTS_AS(BSQNone, SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), BSQNoneValue);
+        }
+        else
+        {
+            auto rtype = SLPTR_LOAD_UNION_HEAP_TYPE(srcl);
+        
+            SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
+            SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata, rtype->allocsize);
+        }
     }
 }
 
@@ -239,7 +271,7 @@ void Evaluator::processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQ
 
 void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype)
 {
-    auto ttype = this->loadBSQTypeFromAbstractLocation<BSQTupleType>(src, srctype);
+    auto ttype = this->loadBSQTypeFromAbstractLocationOfType<BSQTupleType>(src, srctype);
     auto voffset = ttype->idxoffsets[idx];
     this->processTupleDirectLoadAndStore(src, srctype, voffset, dst, dsttype);
 }
@@ -251,7 +283,7 @@ void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BS
 
 void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype)
 {
-    auto rtype = this->loadBSQTypeFromAbstractLocation<BSQRecordType>(src, srctype);
+    auto rtype = this->loadBSQTypeFromAbstractLocationOfType<BSQRecordType>(src, srctype);
     auto proppos = std::find(rtype->properties.cbegin(), rtype->properties.cend(), propId);
     assert(proppos != rtype->properties.cend());
 
@@ -268,7 +300,7 @@ void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BS
 
 void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype)
 {
-    auto etype = this->loadBSQTypeFromAbstractLocation<BSQEntityType>(src, srctype);
+    auto etype = this->loadBSQTypeFromAbstractLocationOfType<BSQEntityType>(src, srctype);
     auto fldpos = std::find(etype->fields.cbegin(), etype->fields.cend(), fldId);
     assert(fldpos != etype->fields.cend());
 
@@ -294,7 +326,7 @@ void Evaluator::processGuardVarStore(const BSQGuard& gv, BSQBool f)
 void Evaluator::evalTupleHasIndexOp(const TupleHasIndexOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    auto ttype = this->loadBSQTypeFromAbstractLocation<BSQTupleType>(sl, op->layouttype);
+    auto ttype = this->loadBSQTypeFromAbstractLocationOfType<BSQTupleType>(sl, op->layouttype);
     
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)(op->idx < ttype->maxIndex));
 }
@@ -302,7 +334,7 @@ void Evaluator::evalTupleHasIndexOp(const TupleHasIndexOp* op)
 void Evaluator::evalRecordHasPropertyOp(const RecordHasPropertyOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    auto rtype = this->loadBSQTypeFromAbstractLocation<BSQRecordType>(sl, op->layouttype);
+    auto rtype = this->loadBSQTypeFromAbstractLocationOfType<BSQRecordType>(sl, op->layouttype);
     BSQBool hasprop = std::find(rtype->properties.cbegin(), rtype->properties.cend(), op->propId) != rtype->properties.cend();
 
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), hasprop);
@@ -328,7 +360,7 @@ void Evaluator::evalLoadTupleIndexSetGuardDirectOp(const LoadTupleIndexSetGuardD
 void Evaluator::evalLoadTupleIndexSetGuardVirtualOp(const LoadTupleIndexSetGuardVirtualOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    auto argtype = this->loadBSQTypeFromAbstractLocation<BSQTupleType>(sl, op->layouttype);
+    auto argtype = this->loadBSQTypeFromAbstractLocationOfType<BSQTupleType>(sl, op->layouttype);
     
     BSQBool loadsafe = op->idx < argtype->maxIndex;
     if(loadsafe)
@@ -359,7 +391,7 @@ void Evaluator::evalLoadRecordPropertySetGuardDirectOp(const LoadRecordPropertyS
 void Evaluator::evalLoadRecordPropertySetGuardVirtualOp(const LoadRecordPropertySetGuardVirtualOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    auto argtype = this->loadBSQTypeFromAbstractLocation<BSQRecordType>(sl, op->layouttype);
+    auto argtype = this->loadBSQTypeFromAbstractLocationOfType<BSQRecordType>(sl, op->layouttype);
 
     BSQBool loadsafe = std::find(argtype->properties.cbegin(), argtype->properties.cend(), op->propId) != argtype->properties.cend();
     if(loadsafe)

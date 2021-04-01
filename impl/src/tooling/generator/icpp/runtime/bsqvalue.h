@@ -15,43 +15,98 @@
 ////
 //Primitive value representations
 
+////
+//None
 class BSQNoneType : public BSQEntityType
 {
     xxxx;
 };
 
-struct BSQNone
+typedef uint64_t BSQNone;
+#define BSQNoneValue 0
+
+typedef void* BSQNoneHeap;
+#define BSQNoneHeapValue nullptr
+
+////
+//Bool
+class BSQBoolType : public BSQEntityType
 {
-    uint64_t emptydata;
+    xxxx;
 };
 
 typedef uint8_t BSQBool;
 #define BSQTRUE 1
 #define BSQFALSE 0
 
+////
+//Nat
+class BSQNatType : public BSQEntityType
+{
+    xxxx;
+};
 typedef uint64_t BSQNat;
+
+////
+//Int
+class BSQIntType : public BSQEntityType
+{
+    xxxx;
+};
 typedef int64_t BSQInt;
 
+////
+//BigNat
+class BSQBigNatType : public BSQEntityType
+{
+    xxxx;
+};
 typedef boost::multiprecision::checked_uint256_t BSQBigNat;
+
+////
+//BigInt
+class BSQBigIntType : public BSQEntityType
+{
+    xxxx;
+};
 typedef boost::multiprecision::checked_uint256_t BSQBigInt;
 
+////
+//Float
+class BSQFloatType : public BSQEntityType
+{
+    xxxx;
+};
 typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
+
+////
+//Decimal
+class BSQDecimalType : public BSQEntityType
+{
+    xxxx;
+};
 typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
 
+////
+//Rational
+class BSQRationalType : public BSQEntityType
+{
+    xxxx;
+};
 struct BSQRational
 {
     BSQBigInt numerator;
     BSQBigInt denominator;
 };
 
-#define IS_INLINE_STRING(S) (((uintptr_t)(S->data) & BSQ_MEM_ALIGNMENT_MASK) == 0)
-
+////
+//String
 class BSQStringType : public BSQEntityType
 {
-public:
-    //TODO: should be a union of the data repers we care about -- 
-    virtual BSQNat getLength(void* data) const = 0;
+    xxxx;
 };
+
+#define IS_INLINE_STRING(S) ((S)->sdata == BSQNoneHeapValue)
 
 struct BSQString
 {
