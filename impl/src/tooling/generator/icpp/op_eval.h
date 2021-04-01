@@ -29,7 +29,7 @@ private:
         }
         else 
         {
-            if(oftype->tkind == BSQTypeKind::Struct)
+            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct)
             {
                 GC_MEM_ZERO(trgt, oftype->allocsize);
             }
@@ -49,7 +49,7 @@ private:
         }
         else 
         {
-            if(oftype->tkind == BSQTypeKind::Struct)
+            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct)
             {
                 SLPTR_COPY_CONTENTS(trgt, src, oftype->allocsize);
             }
@@ -68,7 +68,7 @@ private:
         }
         else 
         {
-            if(oftype->tkind == BSQTypeKind::Struct)
+            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct)
             {
                 SLPTR_INDEX_INLINE(src, offset);
             }
@@ -217,10 +217,16 @@ private:
     void evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op);
 
     template <OpCodeTag tag, bool isGuarded>
+    void evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
     void evalBoxUniqueStructToInlineOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalBoxUniqueRefToInlineOp(const BoxOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op);
@@ -232,10 +238,16 @@ private:
     void evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
+    void evalExtractUniqueRegisterFromInlineOp(const ExtractOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
     void evalExtractUniqueStructFromInlineOp(const ExtractOp<tag, isGuarded>* op);
     
     template <OpCodeTag tag, bool isGuarded>
     void evalExtractUniqueRefFromInlineOp(const ExtractOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded>* op);

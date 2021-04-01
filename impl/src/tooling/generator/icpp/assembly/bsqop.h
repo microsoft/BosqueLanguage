@@ -40,25 +40,33 @@ enum class OpCodeTag
     DebugOp,
     LoadUnintVariableValueOp,
 
+    BoxUniqueRegisterToInlineOp,
     BoxUniqueStructToInlineOp,
     BoxUniqueRefToInlineOp,
+    BoxUniqueRegisterToHeapOp,
     BoxUniqueStructToHeapOp,
     BoxUniqueRefToHeapOp,
     BoxInlineBoxToHeapOp,
+    ExtractUniqueRegisterFromInlineOp,
     ExtractUniqueStructFromInlineOp,
     ExtractUniqueRefFromInlineOp,
+    ExtractUniqueRegisterFromHeapOp,
     ExtractUniqueStructFromHeapOp,
     ExtractUniqueRefFromHeapOp,
     ExtractInlineBoxFromHeapOp,
     WidenInlineOp,
     NarrowInlineOp,
+    GuardedBoxUniqueRegisterToInlineOp,
     GuardedBoxUniqueStructToInlineOp,
     GuardedBoxUniqueRefToInlineOp,
+    GuardedBoxUniqueRegisterToHeapOp,
     GuardedBoxUniqueStructToHeapOp,
     GuardedBoxUniqueRefToHeapOp,
     GuardedBoxInlineBoxToHeapOp,
+    GuardedExtractUniqueRegisterFromInlineOp,
     GuardedExtractUniqueStructFromInlineOp,
     GuardedExtractUniqueRefFromInlineOp,
+    GuardedExtractUniqueRegisterFromHeapOp,
     GuardedExtractUniqueStructFromHeapOp,
     GuardedExtractUniqueRefFromHeapOp,
     GuardedExtractInlineBoxFromHeapOp,
@@ -76,8 +84,8 @@ enum class OpCodeTag
     LoadRecordPropertyVirtualOp,
     LoadRecordPropertySetGuardDirectOp,
     LoadRecordPropertySetGuardVirtualOp,
-    LoadEnityFieldDirectOp,
-    LoadEnityFieldVirtualOp,
+    LoadEntityFieldDirectOp,
+    LoadEntityFieldVirtualOp,
     LoadFromEpehmeralListOp,
     InvokeFixedFunctionOp,
     GuardedInvokeFixedFunctionOp,
@@ -150,13 +158,11 @@ enum class OpCodeTag
     EqBigNatOp,
     EqBigIntOp,
     EqRationalOp,
-    EqStringOp,
     NeqNatOp,
     NeqIntOp,
     NeqBigNatOp,
     NeqBigIntOp,
     NeqRationalOp,
-    NeqStringOp,
 
     LtNatOp,
     LtIntOp,
@@ -189,8 +195,10 @@ enum class OpCodeTag
     GeRationalOp,
     GeFloatOp,
     GeDecimalOp,
-    GeFloatOp,
-    GeDecimalOp
+
+    EqStringOp,
+    NeqStringOp,
+    LessStringOp
 };
 
 struct Argument
@@ -467,7 +475,7 @@ public:
     const uint32_t slotoffset;
     const BSQFieldID fieldId;
 
-    LoadEntityFieldDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadEnityFieldDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), fieldId(fieldId) {;}
+    LoadEntityFieldDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldDirectOp() {;}
 };
 
@@ -480,7 +488,7 @@ public:
     const BSQType* layouttype;
     const BSQFieldID fieldId;
 
-    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadEnityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
+    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldVirtualOp() {;}
 };
 

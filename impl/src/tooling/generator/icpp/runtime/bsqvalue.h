@@ -11,6 +11,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <boost/multiprecision/cpp_dec_float.hpp>
+#include <boost/math/special_functions/fpclassify.hpp>
 
 ////
 //Primitive value representations
@@ -111,72 +112,28 @@ class BSQStringType : public BSQEntityType
 struct BSQString
 {
     void* data;
+    BSQNat size;
 
-    inline static void initializeInline(size_t count, const wchar_t* chars, BSQString* into)
+    static BSQBool equalOperator(const BSQString& s1, const BSQString& s2);
+    static BSQBool lessOperator(const BSQString& s1, const BSQString& s2);
+
+    static BSQNat count(const BSQString& s);
+
+    inline static BSQBool equalOperator(StorageLocationPtr s1, StorageLocationPtr s2)
     {
-        
-        BSQStringInlineContents::fromchars(chars, chars + count, (BSQStringInlineContents*)into->data);
+        return equalOperator(SLPTR_LOAD_CONTENTS_AS(BSQString, s1), SLPTR_LOAD_CONTENTS_AS(BSQString, s2));
     }
 
-    template <uint16_t k>
-    static void initializeFlatKnown(const wchar_t* chars, BSQString* into)
+    inline static BSQBool lessOperator(StorageLocationPtr s1, StorageLocationPtr s2)
     {
-        static_assert(k <= 256, "Cant overflow max mem and must match type options in bsqtype");
-
-        BSQStringFlatContents<k>* s = (BSQStringFlatContents<k>*)Allocator::GlobalAllocator.allocateDynamic(BSQStringEntityTypeFlatContents<k>);
-        s->length = k;
-        GC_MEM_COPY(s->data, chars, count);
-
-        into->data = s;
+        return lessOperator(SLPTR_LOAD_CONTENTS_AS(BSQString, s1), SLPTR_LOAD_CONTENTS_AS(BSQString, s2));
     }
 
-    static void initializeFlat(size_t count, const wchar_t* chars, BSQString* into)
+    inline static BSQNat count(StorageLocationPtr s)
     {
-        if(count < 8)
-        {
-            initializeFlatKnown<8>(chars, into);
-        }
-        else if(count < 16)
-        {
-            initializeFlatKnown<16>(chars, into);
-        }
-        else if(count < 32)
-        {
-            initializeFlatKnown<32>(chars, into);
-        }
-        else if(count < 64)
-        {
-            initializeFlatKnown<64>(chars, into);
-        }
-        else if(count < 128)
-        {
-            initializeFlatKnown<128>(chars, into);
-        }
-        else
-        {
-            initializeFlatKnown<256>(chars, into);
-        }
-    }
-
-    inline BSQNat count() const
-    {
-        if(this->data == nullptr)
-        {
-            return 0;
-        }
-        else if(IS_INLINE_STRING(this))
-        {
-            return ((BSQStringInlineContents*)this->data)->data[3];
-        }
-        else
-        {
-            void* sobj = *((void**)this->data);
-            return ((BSQStringEntityType*)GET_TYPE_META_DATA(sobj))->getLength(sobj);
-        }
+        return count(SLPTR_LOAD_CONTENTS_AS(BSQString, s));
     }
 };
-
-constexpr BSQString EmptyString = {nullptr};
 
 struct BSQRegex
 {

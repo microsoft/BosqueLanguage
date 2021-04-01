@@ -5,12 +5,55 @@
 
 #include "op_eval.h"
 
+//Big Macro for generating code for primitive checked binary operations
+#define PrimitiveBinaryOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATOR, ERROR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
+REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
+REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
+\
+REPRTYPE res; \
+bool safe = OPERATOR(larg, rarg, res); \
+BSQ_LANGUAGE_ASSERT(safe, THIS->dbg_currentFile, THIS->dbg_currentLine, ERROR); \
+\
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
+
+//Big Macro for generating code for primitive checked rhsarg is non-zero binary operations
+#define PrimitiveBinaryOperatorMacroCheckedDiv(THIS, OP, TAG, REPRTYPE) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
+REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
+REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
+\
+BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->dbg_currentFile, THIS->dbg_currentLine, "Division by 0"); \
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg / rarg);
+
+//Big Macro for generating code for primitive un-checked infix binary operations
+#define PrimitiveBinaryOperatorMacroSafe(THIS, OP, TAG, REPRTYPE, OPERATOR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
+REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
+REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
+\
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
+
+//Big Macro for generating code for primitive infix equality operations
+#define PrimitiveBinaryComparatorMacroSafe(THIS, OP, TAG, REPRTYPE, OPERATOR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
+REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
+REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
+\
+SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
+
+//Big Macro for generating code for primitive infix equality operations
+#define PrimitiveBinaryComparatorMacroFP(THIS, OP, TAG, REPRTYPE, ISNAN, ISINFINITE, OPERATOR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
+REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
+REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
+\
+BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->dbg_currentFile, THIS->dbg_currentLine, "NaN cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->dbg_currentFile, THIS->dbg_currentLine, "Infinte values cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->dbg_currentFile, THIS->dbg_currentLine, "Division by 0"); \
+SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
+
 StorageLocationPtr Evaluator::evalConstArgument(Argument arg)
 {
     switch (arg.kind)
     {
     case ArgumentTag::ConstNone:
-        return Environment::g_constNone;
+        return &Environment::g_constNone;
     case ArgumentTag::ConstTrue:
         return &Environment::g_constTrue;
     case ArgumentTag::ConstFalse:
@@ -84,6 +127,17 @@ void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
 }
 
 template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto isl = this->evalTargetVar(op->trgt);
+        SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
+        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocsize));
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalBoxUniqueStructToInlineOp(const BoxOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
@@ -106,7 +160,7 @@ void Evaluator::evalBoxUniqueRefToInlineOp(const BoxOp<tag, isGuarded>* op)
 }
 
 template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op)
+void Evaluator::evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
@@ -121,6 +175,18 @@ void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op)
             SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocsize);
             SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
         }
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto isl = this->evalTargetVar(op->trgt);
+        auto balloc = Allocator::allocateDynamic(op->fromtype);
+        SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
     }
 }
 
@@ -157,6 +223,17 @@ void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op)
 }
 
 template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalExtractUniqueRegisterFromInlineOp(const ExtractOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto srcl = this->evalArgument(op->arg);
+        auto sldata = SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl);
+        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalExtractUniqueStructFromInlineOp(const ExtractOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
@@ -179,7 +256,7 @@ void Evaluator::evalExtractUniqueRefFromInlineOp(const ExtractOp<tag, isGuarded>
 }
 
 template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded>* op)
+void Evaluator::evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
@@ -194,6 +271,17 @@ void Evaluator::evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded
         {
             SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
         }
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto srcl = this->evalArgument(op->arg);
+        auto sldata = SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl);
+        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
     }
 }
 
@@ -528,6 +616,16 @@ void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
 {
     //Get types for the values -- either virtual or direct
     //Make sure they are equal -- otherwise call virtual eq op
+    const BSQType* tl = nullptr;
+    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::Ref)
+    {
+        tl = op->argltype;
+    }
+    else
+    {
+        xxxx;
+    }
+
     xxxx;
 }
 
@@ -655,6 +753,10 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         this->evalLoadUnintVariableValueOp(static_cast<const LoadUnintVariableValueOp*>(op));
     }
 #endif
+    case OpCodeTag::BoxUniqueRegisterToInlineOp:
+    {
+        this->evalBoxUniqueRegisterToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRegisterToInlineOp, false>*>(op));
+    }
     case OpCodeTag::BoxUniqueStructToInlineOp:
     {
         this->evalBoxUniqueStructToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp, false>*>(op));
@@ -662,6 +764,10 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::BoxUniqueRefToInlineOp:
     {
         this->evalBoxUniqueRefToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRefToInlineOp, false>*>(op));
+    }
+    case OpCodeTag::BoxUniqueRegisterToHeapOp:
+    {
+        this->evalBoxUniqueRegisterToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRegisterToHeapOp, false>*>(op));
     }
     case OpCodeTag::BoxUniqueStructToHeapOp:
     {
@@ -675,6 +781,10 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalBoxInlineBoxToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxInlineBoxToHeapOp, false>*>(op));
     }
+    case OpCodeTag::ExtractUniqueRegisterFromInlineOp:
+    {
+        this->evalExtractUniqueRegisterFromInlineOp(static_cast<const BoxOp<OpCodeTag::ExtractUniqueRegisterFromInlineOp, false>*>(op));
+    }
     case OpCodeTag::ExtractUniqueStructFromInlineOp:
     {
         this->evalExtractUniqueStructFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructFromInlineOp, false>*>(op));
@@ -682,6 +792,10 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::ExtractUniqueRefFromInlineOp:
     {
         this->evalExtractUniqueRefFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRefFromInlineOp, false>*>(op));
+    }
+    case OpCodeTag::ExtractUniqueRegisterFromHeapOp:
+    {
+        this->evalExtractUniqueRegisterFromHeapOp(static_cast<const BoxOp<OpCodeTag::ExtractUniqueRegisterFromHeapOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueStructFromHeapOp:
     {
@@ -703,172 +817,544 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalNarrowInlineOp(static_cast<const ExtractOp<OpCodeTag::NarrowInlineOp, false>*>(op));
     }
-
-    xxxx;
-
+    case OpCodeTag::GuardedBoxUniqueRegisterToInlineOp:
+    {
+        this->evalBoxUniqueRegisterToInlineOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueRegisterToInlineOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedBoxUniqueStructToInlineOp:
+    {
+        this->evalBoxUniqueStructToInlineOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueStructToInlineOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedBoxUniqueRefToInlineOp:
+    {
+        this->evalBoxUniqueRefToInlineOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueRefToInlineOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedBoxUniqueRegisterToHeapOp:
+    {
+        this->evalBoxUniqueRegisterToHeapOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueRegisterToHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedBoxUniqueStructToHeapOp:
+    {
+        this->evalBoxUniqueStructToHeapOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueStructToHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedBoxUniqueRefToHeapOp:
+    {
+        this->evalBoxUniqueRefToHeapOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueRefToHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedBoxInlineBoxToHeapOp:
+    {
+        this->evalBoxInlineBoxToHeapOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxInlineBoxToHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedExtractUniqueRegisterFromInlineOp:
+    {
+        this->evalExtractUniqueRegisterFromInlineOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueRegisterFromInlineOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedExtractUniqueStructFromInlineOp:
+    {
+        this->evalExtractUniqueStructFromInlineOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueStructFromInlineOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedExtractUniqueRefFromInlineOp:
+    {
+        this->evalExtractUniqueRefFromInlineOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueRefFromInlineOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedExtractUniqueRegisterFromHeapOp:
+    {
+        this->evalExtractUniqueRegisterFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueRegisterFromHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedExtractUniqueStructFromHeapOp:
+    {
+        this->evalExtractUniqueStructFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueStructFromHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedExtractUniqueRefFromHeapOp:
+    {
+        this->evalExtractUniqueRefFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueRefFromHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedExtractInlineBoxFromHeapOp:
+    {
+        this->evalExtractInlineBoxFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractInlineBoxFromHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedWidenInlineOp:
+    {
+        this->evalWidenInlineOp(static_cast<const BoxOp<OpCodeTag::GuardedWidenInlineOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedNarrowInlineOp:
+    {
+        this->evalNarrowInlineOp(static_cast<const ExtractOp<OpCodeTag::GuardedNarrowInlineOp, true>*>(op));
+    }
     case OpCodeTag::LoadConstOp:
     {
         this->evalLoadConstOp(static_cast<const ExtractOp<OpCodeTag::LoadConstOp*>(op));
     }
     case OpCodeTag::TupleHasIndexOp:
     {
-        this->evalTupleHasIndexOp(static_cast<const OpCodeTag::TupleHasIndexOp*>(op));
+        this->evalTupleHasIndexOp(static_cast<const TupleHasIndexOp*>(op));
     }
     case OpCodeTag::RecordHasPropertyOp:
     {
-        this->evalRecordHasPropertyOp(static_cast<const OpCodeTag::RecordHasPropertyOp*>(op));
+        this->evalRecordHasPropertyOp(static_cast<const RecordHasPropertyOp*>(op));
     }
     case OpCodeTag::LoadTupleIndexDirectOp:
     {
-        this->evalLoadTupleIndexDirectOp(static_cast<const OpCodeTag::LoadTupleIndexDirectOp*>(op));
+        this->evalLoadTupleIndexDirectOp(static_cast<const LoadTupleIndexDirectOp*>(op));
     }
     case OpCodeTag::LoadTupleIndexVirtualOp:
     {
-        this->evalLoadTupleIndexVirtualOp(static_cast<const OpCodeTag::LoadTupleIndexVirtualOp*>(op));
+        this->evalLoadTupleIndexVirtualOp(static_cast<const LoadTupleIndexVirtualOp*>(op));
     }
     case OpCodeTag::LoadTupleIndexSetGuardDirectOp:
     {
-        this->evalLoadTupleIndexSetGuardDirectOp(static_cast<const OpCodeTag::LoadTupleIndexSetGuardDirectOp*>(op));
+        this->evalLoadTupleIndexSetGuardDirectOp(static_cast<const LoadTupleIndexSetGuardDirectOp*>(op));
     }
     case OpCodeTag::LoadTupleIndexSetGuardVirtualOp:
     {
-        this->evalLoadTupleIndexSetGuardVirtualOp(static_cast<const OpCodeTag::LoadTupleIndexSetGuardVirtualOp*>(op));
+        this->evalLoadTupleIndexSetGuardVirtualOp(static_cast<const LoadTupleIndexSetGuardVirtualOp*>(op));
     }
     case OpCodeTag::LoadRecordPropertyDirectOp:
     {
-        this->evalLoadRecordPropertyDirectOp(static_cast<const OpCodeTag::LoadRecordPropertyDirectOp*>(op));
+        this->evalLoadRecordPropertyDirectOp(static_cast<const LoadRecordPropertyDirectOp*>(op));
     }
     case OpCodeTag::LoadRecordPropertyVirtualOp:
     {
-        this->evalLoadRecordPropertyVirtualOp(static_cast<const OpCodeTag::LoadRecordPropertyVirtualOp*>(op));
+        this->evalLoadRecordPropertyVirtualOp(static_cast<const LoadRecordPropertyVirtualOp*>(op));
     }
     case OpCodeTag::LoadRecordPropertySetGuardDirectOp:
     {
-        this->evalLoadRecordPropertySetGuardDirectOp(static_cast<const OpCodeTag::LoadRecordPropertySetGuardDirectOp*>(op));
+        this->evalLoadRecordPropertySetGuardDirectOp(static_cast<const LoadRecordPropertySetGuardDirectOp*>(op));
     }
     case OpCodeTag::LoadRecordPropertySetGuardVirtualOp:
     {
-        this->evalLoadRecordPropertySetGuardVirtualOp(static_cast<const OpCodeTag::LoadRecordPropertySetGuardVirtualOp*>(op));
+        this->evalLoadRecordPropertySetGuardVirtualOp(static_cast<const LoadRecordPropertySetGuardVirtualOp*>(op));
     }
-    case OpCodeTag::LoadEnityFieldDirectOp:
+    case OpCodeTag::LoadEntityFieldDirectOp:
     {
-        this->evalLoadDirectFieldOp(static_cast<const OpCodeTag::LoadEnityFieldDirectOp*>(op));
+        this->evalLoadDirectFieldOp(static_cast<const LoadEntityFieldDirectOp*>(op));
     }
-    case OpCodeTag::LoadEnityFieldVirtualOp:
+    case OpCodeTag::LoadEntityFieldVirtualOp:
     {
-        this->evalLoadVirtualFieldOp(static_cast<const OpCodeTag::LoadEnityFieldVirtualOp*>(op));
+        this->evalLoadVirtualFieldOp(static_cast<const LoadEntityFieldVirtualOp*>(op));
     }
     case OpCodeTag::LoadFromEpehmeralListOp:
     {
-        this->evalLoadFromEpehmeralListOp(static_cast<const OpCodeTag::LoadFromEpehmeralListOp*>(op));
+        this->evalLoadFromEpehmeralListOp(static_cast<const LoadFromEpehmeralListOp*>(op));
     }
     case OpCodeTag::InvokeFixedFunctionOp:
     {
-        this->evalInvokeFixedFunctionOp(static_cast<const OpCodeTag::InvokeFixedFunctionOp*>(op));
+        this->evalInvokeFixedFunctionOp(static_cast<const InvokeFixedFunctionOp<OpCodeTag::InvokeFixedFunctionOp, false>*>(op));
     }
-    case OpCodeTag::InvokeFixedFunctionWGuardOp:
+    case OpCodeTag::GuardedInvokeFixedFunctionOp:
     {
-        this->evalInvokeFixedFunctionWGuardOp(static_cast<const OpCodeTag::InvokeFixedFunctionWGuardOp*>(op));
+        this->evalInvokeFixedFunctionOp(static_cast<const InvokeFixedFunctionOp<OpCodeTag::GuardedInvokeFixedFunctionOp, true>*>(op));
     }
-    case OpCodeTag::InvokeVirtualFunctionOp,
-    case OpCodeTag::InvokeVirtualOperatorOp,
-    case OpCodeTag::ConstructorTupleOp,
-    case OpCodeTag::ConstructorRecordOp,
-    case OpCodeTag::ConstructorEphemeralListOp,
-    case OpCodeTag::ConstructorPrimaryCollectionEmptyOp,
-    case OpCodeTag::ConstructorPrimaryCollectionSingletonsOp,
-    case OpCodeTag::ConstructorPrimaryCollectionCopiesOp,
-    case OpCodeTag::ConstructorPrimaryCollectionMixedOp,
-    case OpCodeTag::PrefixNotOp,
-    case OpCodeTag::AllTrueOp,
-    case OpCodeTag::SomeTrueOp,
-    case OpCodeTag::IsNoneOp,
-    case OpCodeTag::IsSomeOp,
-    case OpCodeTag::TypeTagIsOp,
-    case OpCodeTag::TypeTagSubtypeOfOp,
-    case OpCodeTag::JumpOp,
-    case OpCodeTag::JumpCondOp,
-    case OpCodeTag::JumpNoneOp,
-    case OpCodeTag::RegisterAssignOp,
-    case OpCodeTag::ReturnAssignOp,
-    case OpCodeTag::ReturnAssignOfConsOp,
-    case OpCodeTag::VarLifetimeStartOp,
-    case OpCodeTag::VarLifetimeEndOp,
-
-    AddNatOp,
-    AddIntOp,
-    AddBigNatOp,
-    AddBigIntOp,
-    AddRationalOp,
-    AddFloatOp,
-    AddDecimalOp,
-    SubNatOp,
-    SubIntOp,
-    SubBigNatOp,
-    SubBigIntOp,
-    SubRationalOp,
-    SubFloatOp,
-    SubDecimalOp,
-    MultNatOp,
-    MultIntOp,
-    MultBigNatOp,
-    MultBigIntOp,
-    MultRationalOp,
-    MultFloatOp,
-    MultDecimalOp,
-    DivNatOp,
-    DivIntOp,
-    DivBigNatOp,
-    DivBigIntOp,
-    DivRationalOp,
-    DivFloatOp,
-    DivDecimalOp,
-
-    EqNatOp,
-    EqIntOp,
-    EqBigNatOp,
-    EqBigIntOp,
-    EqRationalOp,
-    EqStringOp,
-    NeqNatOp,
-    NeqIntOp,
-    NeqBigNatOp,
-    NeqBigIntOp,
-    NeqRationalOp,
-    NeqStringOp,
-
-    LtNatOp,
-    LtIntOp,
-    LtBigNatOp,
-    LtBigIntOp,
-    LtRationalOp,
-    LtFloatOp,
-    LtDecimalOp,
-    GtNatOp,
-    GtIntOp,
-    GtBigNatOp,
-    GtBigIntOp,
-    GtRationalOp,
-    GtFloatOp,
-    GtDecimalOp,
-
-    LeNatOp,
-    LeIntOp,
-    LeBigNatOp,
-    LeBigIntOp,
-    LeRationalOp,
-    LeFloatOp,
-    LeDecimalOp,
-    GeNatOp,
-    GeIntOp,
-    GeBigNatOp,
-    GeBigIntOp,
-    GeRationalOp,
-    GeFloatOp,
-    GeDecimalOp,
-    GeFloatOp,
-    GeDecimalOp
-    };
+    case OpCodeTag::InvokeVirtualFunctionOp:
+    {
+        this->evalInvokeVirtualFunctionOp(static_cast<const InvokeVirtualFunctionOp*>(op));
+    }
+    case OpCodeTag::InvokeVirtualOperatorOp:
+    {
+        this->evalInvokeVirtualOperatorOp(static_cast<const InvokeVirtualOperatorOp*>(op));
+    }
+    case OpCodeTag::ConstructorTupleOp:
+    {
+        this->evalConstructorTupleOp(static_cast<const ConstructorTupleOp*>(op));
+    }
+    case OpCodeTag::ConstructorRecordOp:
+    {
+        this->evalConstructorRecordOp(static_cast<const ConstructorRecordOp*>(op));
+    }
+    case OpCodeTag::ConstructorEphemeralListOp:
+    {
+        this->evalConstructorEphemeralListOp(static_cast<const ConstructorEphemeralListOp*>(op));
+    }
+    case OpCodeTag::ConstructorPrimaryCollectionEmptyOp:
+    {
+        this->evalConstructorPrimaryCollectionEmptyOp(static_cast<const ConstructorPrimaryCollectionEmptyOp*>(op));
+    }
+    case OpCodeTag::ConstructorPrimaryCollectionSingletonsOp:
+    {
+        this->evalConstructorPrimaryCollectionSingletonsOp(static_cast<const ConstructorPrimaryCollectionSingletonsOp*>(op));
+    }
+    case OpCodeTag::ConstructorPrimaryCollectionCopiesOp:
+    {
+        this->evalConstructorPrimaryCollectionCopiesOp(static_cast<const ConstructorPrimaryCollectionCopiesOp*>(op));
+    }
+    case OpCodeTag::ConstructorPrimaryCollectionMixedOp:
+    {
+        this->evalConstructorPrimaryCollectionMixedOp(static_cast<const ConstructorPrimaryCollectionMixedOp*>(op));
+    }
+    case OpCodeTag::PrefixNotOp:
+    {
+        this->evalPrefixNotOp(static_cast<const PrefixNotOp*>(op));
+    }
+    case OpCodeTag::AllTrueOp:
+    {
+        this->evalAllTrueOp(static_cast<const AllTrueOp*>(op));
+    }
+    case OpCodeTag::SomeTrueOp:
+    {
+        this->evalSomeTrueOp(static_cast<const SomeTrueOp*>(op));
+    }
+    case OpCodeTag::BinKeyEqVirtualOp:
+    {
+        this->evalBinKeyEqVirtualOp(static_cast<const BinKeyEqVirtualOp*>(op));
+    }
+    case OpCodeTag::BinKeyLessVirtualOp:
+    {
+        this->evalBinKeyLessVirtualOp(static_cast<const BinKeyLessVirtualOp*>(op));
+    }
+    case OpCodeTag::TypeIsNoneOp:
+    {
+        this->evalIsNoneOp(static_cast<const TypeIsNoneOp<OpCodeTag::TypeIsNoneOp, false>*>(op));
+    }
+    case OpCodeTag::TypeIsSomeOp:
+    {
+        this->evalIsSomeOp(static_cast<const TypeIsSomeOp<OpCodeTag::TypeIsSomeOp, false>*>(op));
+    }
+    case OpCodeTag::TypeTagIsOp:
+    {
+        this->evalTypeTagIsOp(static_cast<const TypeTagIsOp<OpCodeTag::TypeTagIsOp, false>*>(op));
+    }
+    case OpCodeTag::TypeTagSubtypeOfOp:
+    {
+        this->evalTypeTagSubtypeOfOp(static_cast<const TypeTagSubtypeOfOp<OpCodeTag::TypeTagSubtypeOfOp, false>*>(op));
+    }
+    case OpCodeTag::GuardedTypeIsNoneOp:
+    {
+        this->evalIsNoneOp(static_cast<const TypeIsNoneOp<OpCodeTag::GuardedTypeIsNoneOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedTypeIsSomeOp:
+    {
+        this->evalIsSomeOp(static_cast<const TypeIsSomeOp<OpCodeTag::GuardedTypeIsSomeOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedTypeTagIsOp:
+    {
+        this->evalTypeTagIsOp(static_cast<const TypeTagIsOp<OpCodeTag::GuardedTypeTagIsOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedTypeTagSubtypeOfOp:
+    {
+        this->evalTypeTagSubtypeOfOp(static_cast<const TypeTagSubtypeOfOp<OpCodeTag::GuardedTypeTagSubtypeOfOp, true>*>(op));
+    }
+    case OpCodeTag::JumpOp:
+    {
+        this->evalJumpOp(static_cast<const JumpOp*>(op));
+    }
+    case OpCodeTag::JumpCondOp:
+    {
+        this->evalJumpCondOp(static_cast<const JumpCondOp*>(op));
+    }
+    case OpCodeTag::JumpNoneOp:
+    {
+        this->evalJumpNoneOp(static_cast<const JumpNoneOp*>(op));
+    }
+    case OpCodeTag::RegisterAssignOp:
+    {
+        this->evalRegisterAssignOp(static_cast<const TypeTagSubtypeOfOp<OpCodeTag::RegisterAssignOp, false>*>(op));
+    }
+    case OpCodeTag::GuardedRegisterAssignOp:
+    {
+        this->evalRegisterAssignOp(static_cast<const TypeTagSubtypeOfOp<OpCodeTag::GuardedRegisterAssignOp, true>*>(op));
+    }
+    case OpCodeTag::ReturnAssignOp:
+    {
+        this->evalReturnAssignOp(static_cast<const ReturnAssignOp*>(op));
+    }
+    case OpCodeTag::ReturnAssignOfConsOp:
+    {
+        this->evalReturnAssignOfConsOp(static_cast<const ReturnAssignOfConsOp*>(op));
+    }
+#ifdef BSQ_DEBUG_BUILD 
+    case OpCodeTag::VarLifetimeStartOp:
+    {
+        this->evalVarLifetimeStartOp(static_cast<const VarLifetimeStartOp*>(op));
+    }
+    case OpCodeTag::VarLifetimeEndOp:
+    {
+        this->evalVarLifetimeEndOp(static_cast<const VarLifetimeEndOp*>(op));
+    }
+#endif
+    case OpCodeTag::AddNatOp:
+    {
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddNatOp, BSQNat, __builtin_add_overflow, "Nat addition overflow")
+    }
+    case OpCodeTag::AddIntOp:
+    {
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddIntOp, BSQInt, __builtin_add_overflow, "Int addition overflow/underflow")
+    }
+    case OpCodeTag::AddBigNatOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::AddBigIntOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::AddRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::AddFloatOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddFloatOp, BSQFloat, +)
+    }
+    case OpCodeTag::AddDecimalOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddDecimalOp, BSQDecimal, +)
+    }
+    case OpCodeTag::SubNatOp:
+    {
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubNatOp, BSQNat, __builtin_sub_overflow, "Nat subtraction overflow")
+    }
+    case OpCodeTag::SubIntOp:
+    {
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubIntOp, BSQInt, __builtin_sub_overflow, "Int subtraction overflow/underflow")
+    }
+    case OpCodeTag::SubBigNatOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::SubBigIntOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::SubRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::SubFloatOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubFloatOp, BSQFloat, -)
+    }
+    case OpCodeTag::SubDecimalOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubDecimalOp, BSQDecimal, -)
+    }
+    case OpCodeTag::MultNatOp:
+    {
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultNatOp, BSQNat, __builtin_mul_overflow, "Nat multiplication overflow")
+    }
+    case OpCodeTag::MultIntOp:
+    {
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultIntOp, BSQInt, __builtin_mul_overflow, "Int multiplication underflow/overflow")
+    }
+    case OpCodeTag::MultBigNatOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::MultBigIntOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::MultRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::MultFloatOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultFloatOp, BSQFloat, *)
+    }
+    case OpCodeTag::MultDecimalOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultDecimalOp, BSQDecimal, *)
+    }
+    case OpCodeTag::DivNatOp:
+    {
+        PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivNatOp, BSQNat)
+    }
+    case OpCodeTag::DivIntOp:
+    {
+        PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivIntOp, BSQInt)
+    }
+    case OpCodeTag::DivBigNatOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::DivBigIntOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::DivRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::DivFloatOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::DivFloatOp, BSQFloat, /)
+    }
+    case OpCodeTag::DivDecimalOp:
+    {
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::DivDecimalOp, BSQDecimal, /)
+    }
+    case OpCodeTag::EqNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqNatOp, BSQNat, ==)
+    }
+    case OpCodeTag::EqIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqIntOp, BSQInt, ==)
+    }
+    case OpCodeTag::EqBigNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqBigNatOp, BSQBigNat, ==)
+    }
+    case OpCodeTag::EqBigIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqBigIntOp, BSQBigInt, ==)
+    }
+    case OpCodeTag::EqRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::NeqNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqNatOp, BSQNat, !=)
+    }
+    case OpCodeTag::NeqIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqIntOp, BSQInt, !=)
+    }
+    case OpCodeTag::NeqBigNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqBigNatOp, BSQBigNat, !=)
+    }
+    case OpCodeTag::NeqBigIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqBigIntOp, BSQBigInt, !=)
+    }
+    case OpCodeTag::NeqRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::LtNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtNatOp, BSQNat, <)
+    }
+    case OpCodeTag::LtIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtIntOp, BSQInt, <)
+    }
+    case OpCodeTag::LtBigNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtBigNatOp, BSQBigNat, <)
+    }
+    case OpCodeTag::LtBigIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtBigIntOp, BSQBigInt, <)
+    }
+    case OpCodeTag::LtRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::LtFloatOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, <)
+    }
+    case OpCodeTag::LtDecimalOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, <)
+    }
+    case OpCodeTag::GtNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtNatOp, BSQNat, >)
+    }
+    case OpCodeTag::GtIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtIntOp, BSQInt, >)
+    }
+    case OpCodeTag::GtBigNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtBigNatOp, BSQBigNat, >)
+    }
+    case OpCodeTag::GtBigIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtBigIntOp, BSQBigInt, >)
+    }
+    case OpCodeTag::GtRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::GtFloatOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, >)
+    }
+    case OpCodeTag::GtDecimalOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, >)
+    }
+    case OpCodeTag::LeNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeNatOp, BSQNat, <=)
+    }
+    case OpCodeTag::LeIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeIntOp, BSQInt, <=)
+    }
+    case OpCodeTag::LeBigNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeBigNatOp, BSQBigNat, <=)
+    }
+    case OpCodeTag::LeBigIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeBigIntOp, BSQBigInt, <=)
+    }
+    case OpCodeTag::LeRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::LeFloatOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, <=)
+    }
+    case OpCodeTag::LeDecimalOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, <=)
+    }
+    case OpCodeTag::GeNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeNatOp, BSQNat, >=)
+    }
+    case OpCodeTag::GeIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeIntOp, BSQInt, >=)
+    }
+    case OpCodeTag::GeBigNatOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeBigNatOp, BSQBigNat, >=)
+    }
+    case OpCodeTag::GeBigIntOp:
+    {
+        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeBigIntOp, BSQBigInt, >=)
+    }
+    case OpCodeTag::GeRationalOp:
+    {
+        assert(false);
+    }
+    case OpCodeTag::GeFloatOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, >=)
+    }
+    case OpCodeTag::GeDecimalOp:
+    {
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, >=)
+    }
+    case OpCodeTag::EqStringOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>*>(op);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::StringEq(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+    }
+    case OpCodeTag::NeqStringOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStringOp>*>(op);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !BSQString::StringEq(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+    }
+    case OpCodeTag::LessStringOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::LessStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LessStringOp>*>(op);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::StringLess(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+    }
+    default:
+    {
+        assert(false);
+    }
+    }
 }
 
 

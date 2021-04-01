@@ -11,6 +11,7 @@
 enum class BSQTypeKind : uint32_t
 {
     Invalid = 0x0,
+    Register,
     Struct,
     Ref,
     InlineUnion,
@@ -37,6 +38,9 @@ public:
 
     const std::map<BSQVirtualInvokeID, BSQInvokeID> vtable; //TODO: This is slow indirection but nice and simple
     const std::set<BSQTypeID> subtypes;
+
+    KeyEqualFP fpKeyEqual;
+    KeyLessFP fpKeyLess;
 
     DisplayFP fpDisplay;
 
