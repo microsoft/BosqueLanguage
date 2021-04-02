@@ -12,11 +12,95 @@
 
 #include "runtime/environment.h"
 
+class EvaluatorFrame
+{
+public:
+#ifdef BSQ_DEBUG_BUILD
+    const std::wstring* dbg_file;
+    const std::wstring* dbg_function;
+    int64_t dbg_prevline;
+    int64_t dbg_line;
+#endif
+
+    void* argsbase;
+    void* localsbase;
+
+    const std::vector<InterpOp*>* ops;
+    std::vector<InterpOp*>::const_iterator cpos;
+
+#ifdef BSQ_DEBUG_BUILD
+    EvaluatorFrame(std::wstring* dbg_file, std::wstring* dbg_function, void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), ops(ops), cpos(ops->cbegin()) 
+    {
+        this->dbg_line = this->cpos->sinfo.line;
+    }
+#else
+    EvaluatorFrame(void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops) : argsbase(argsbase), localsbase(localsbase), ops(ops), cpos(ops->cbegin()) {;}
+#endif
+};
+
 class Evaluator
 {
 private:
-    std::wstring* dbg_currentFile;
-    int64_t dbg_currentLine;
+    EvaluatorFrame* cframe;
+    std::deque<EvaluatorFrame> callstack;
+
+#ifdef BSQ_DEBUG_BUILD
+    inline void pushFrame(std::wstring* dbg_file, std::wstring* dbg_function, void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops)
+    {
+        tthis->callstack.emplace_back(dbg_file, dbg_function, argsbase, localsbase, ops);
+    }
+#else
+    inline void pushFrame(void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops) 
+    {
+        this->callstack.emplace_back(argsbase, localsbase, ops);
+    }
+#endif
+
+    inline void popFrame()
+    {
+        this->callstack.pop_back();
+    }
+
+#ifdef BSQ_DEBUG_BUILD
+    const std::wstring* getCurrentFile() { return cframe->dbg_file; }
+    const std::wstring* getCurrentfunction() { return cframe->dbg_function; }
+    int64_t getPrevLine() { return cframe->dbg_prevline; }
+    int64_t getCurrentLine() { return cframe->dbg_line; }
+#else
+    const std::wstring* getCurrentFile() { return nullptr; }
+    const std::wstring* getCurrentfunction() { return nullptr; }
+    int64_t getPrevLine() { return -1; }
+    int64_t getCurrentLine() { return 0; }
+#endif
+
+    inline InterpOp* getCurrentOp()
+    {
+        return *this->cframe->cpos;
+    }
+
+    inline InterpOp* advanceCurrentOp(uint32_t offset)
+    {
+        this->cframe->cpos += offset;
+
+#ifdef BSQ_DEBUG_BUILD
+        this->cframe->dbg_prevline = this->cframe->dbg_line;
+        this->dbg_line = this->cframe->cpos->sinfo.line;  
+#endif
+
+        return *this->cframe->cpos;
+    }
+
+    inline InterpOp* advanceCurrentOp()
+    {
+        this->cframe->cpos++;
+
+#ifdef BSQ_DEBUG_BUILD
+        this->cframe->dbg_prevline = this->cframe->dbg_line;
+        this->dbg_line = this->cframe->cpos->sinfo.line;  
+#endif
+
+        return *this->cframe->cpos;
+    }
 
     StorageLocationPtr evalConstArgument(Argument arg);
 

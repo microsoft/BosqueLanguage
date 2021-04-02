@@ -617,23 +617,87 @@ void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
     //Get types for the values -- either virtual or direct
     //Make sure they are equal -- otherwise call virtual eq op
     const BSQType* tl = nullptr;
+    StorageLocationPtr cl = nullptr; 
+    StorageLocationPtr sll = this->evalArgument(op->argl);
     if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::Ref)
     {
         tl = op->argltype;
+        cl = sll;
     }
     else
     {
-        xxxx;
+        tl = this->loadBSQTypeFromAbstractLocationGeneral(sll, op->argllayout);
+        cl = this->loadDataPtrFromAbstractLocation(sll, op->argllayout);
     }
 
-    xxxx;
+    const BSQType* tr = nullptr;
+    StorageLocationPtr cr = nullptr; 
+    StorageLocationPtr slr = this->evalArgument(op->argr);
+    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argrtype->tkind == BSQTypeKind::Ref)
+    {
+        tr = op->argrtype;
+        cr = slr;
+    }
+    else
+    {
+        tr = this->loadBSQTypeFromAbstractLocationGeneral(slr, op->argrlayout);
+        cr = this->loadDataPtrFromAbstractLocation(slr, op->argrlayout);
+    }
+
+    if(tl->tid != tr->tid)
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), BSQFALSE);
+    }
+    else
+    {
+        bool eqcontents = tl->fpKeyEqual(cl, cr);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)eqcontents);
+    }
 }
 
 void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
 {
     //Get types for the values -- either virtual or direct
     //Make sure they are ordered -- otherwise call virtual < op
-    xxxx;
+    //Get types for the values -- either virtual or direct
+    //Make sure they are equal -- otherwise call virtual eq op
+    const BSQType* tl = nullptr;
+    StorageLocationPtr cl = nullptr; 
+    StorageLocationPtr sll = this->evalArgument(op->argl);
+    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::Ref)
+    {
+        tl = op->argltype;
+        cl = sll;
+    }
+    else
+    {
+        tl = this->loadBSQTypeFromAbstractLocationGeneral(sll, op->argllayout);
+        cl = this->loadDataPtrFromAbstractLocation(sll, op->argllayout);
+    }
+
+    const BSQType* tr = nullptr;
+    StorageLocationPtr cr = nullptr; 
+    StorageLocationPtr slr = this->evalArgument(op->argr);
+    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argrtype->tkind == BSQTypeKind::Ref)
+    {
+        tr = op->argrtype;
+        cr = slr;
+    }
+    else
+    {
+        tr = this->loadBSQTypeFromAbstractLocationGeneral(slr, op->argrlayout);
+        cr = this->loadDataPtrFromAbstractLocation(slr, op->argrlayout);
+    }
+
+    if(tl->tid != tr->tid)
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)tl->tid < tr->tid);
+    }
+    else
+    {
+        bool lesscontents = tl->fpKeyLess(cl, cr);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)lesscontents);
+    }
 }
 
 template <OpCodeTag tag, bool isGuarded>
