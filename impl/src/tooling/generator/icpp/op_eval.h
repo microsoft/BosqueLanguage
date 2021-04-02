@@ -22,19 +22,20 @@ public:
     int64_t dbg_line;
 #endif
 
-    void* argsbase;
+    StorageLocationPtr* argsbase;
     void* localsbase;
+    BSQBool* masksbase;
 
     const std::vector<InterpOp*>* ops;
     std::vector<InterpOp*>::const_iterator cpos;
 
 #ifdef BSQ_DEBUG_BUILD
-    EvaluatorFrame(std::wstring* dbg_file, std::wstring* dbg_function, void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), ops(ops), cpos(ops->cbegin()) 
+    EvaluatorFrame(std::wstring* dbg_file, std::wstring* dbg_function, StorageLocationPtr* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
     {
         this->dbg_line = this->cpos->sinfo.line;
     }
 #else
-    EvaluatorFrame(void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops) : argsbase(argsbase), localsbase(localsbase), ops(ops), cpos(ops->cbegin()) {;}
+    EvaluatorFrame(StorageLocationPtr* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin()) {;}
 #endif
 };
 
@@ -165,13 +166,13 @@ private:
 
     inline StorageLocationPtr evalArgument(Argument arg)
     {
-        if(arg.kind == ArgumentTag::Register)
+        if(arg.kind == ArgumentTag::Local)
         {
-            return xxx;
+            return this->cframe->localsbase + arg.location;
         }
         else if(arg.kind == ArgumentTag::Argument)
         {
-            return xxx;
+            return this->cframe->argsbase[arg.location];
         }
         else 
         {
@@ -181,17 +182,17 @@ private:
 
     inline StorageLocationPtr evalTargetVar(TargetVar trgt)
     {
-        return xxx;
+        return this->cframe->localsbase + trgt.offset;
     }
 
     inline BSQBool* evalMaskLocation(uint32_t gmaskoffset)
     {
-        return xxx;
+        return this->cframe->masksbase + gmaskoffset;
     }
 
     inline StorageLocationPtr evalGuardVar(uint32_t gvaroffset)
     {
-        return xxx;
+        return this->cframe->localsbase + gvaroffset;
     }
 
     inline static bool isEnabledGuardStmt(const BSQStatementGuard& sguard)
@@ -411,19 +412,21 @@ private:
     template <OpCodeTag tag, bool isGuarded>
     void evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp<tag, isGuarded>* op);
 
-    void evalJumpOp(const JumpOp* op);
-    void evalJumpCondOp(const JumpCondOp* op);
-    void evalJumpNoneOp(const JumpNoneOp* op);
+    InterpOp* evalJumpOp(const JumpOp* op);
+    InterpOp* evalJumpCondOp(const JumpCondOp* op);
+    InterpOp* evalJumpNoneOp(const JumpNoneOp* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op);
 
-    void evalReturnAssignOp(const ReturnAssignOp* op);
-    void evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op);
+    void evalReturnAssignOp(const ReturnAssignOp* op, StorageLocationPtr resultsl);
+    void evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, StorageLocationPtr resultsl);
 
     void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
     void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);
 
-    template <bool isTTDMode>
     void evaluateOpCode(const InterpOp* op);
+
+    void evaluateOpCodeBlocks();
+    void evaluateBody(StorageLocationPtr resultsl);
 };

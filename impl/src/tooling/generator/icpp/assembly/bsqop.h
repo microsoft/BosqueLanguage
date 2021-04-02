@@ -25,7 +25,7 @@ enum class ArgumentTag
     ConstStringOf,
     ConstDataString,
     ConstRegex,
-    Register,
+    Local,
     Argument,
     GlobalConst,
     UninterpFill
@@ -798,9 +798,9 @@ class ReturnAssignOfConsOp : public InterpOp
 {
 public:
     const std::vector<Argument> args;
-    const BSQType* oftype;
+    const BSQEntityType* oftype;
     
-    ReturnAssignOfConsOp(SourceInfo sinfo, const std::vector<Argument>& args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
+    ReturnAssignOfConsOp(SourceInfo sinfo, const std::vector<Argument>& args, const BSQEntityType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
     virtual ~ReturnAssignOfConsOp() {;}
 };
 

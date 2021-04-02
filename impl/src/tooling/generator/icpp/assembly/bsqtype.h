@@ -76,7 +76,7 @@ class BSQEntityType : public BSQType
 {
 public:
     const std::vector<BSQFieldID> fields;
-    const std::vector<BSQType*> etypes;
+    const std::vector<BSQType*> ftypes;
     const std::vector<size_t> fieldoffsets;
 };
 

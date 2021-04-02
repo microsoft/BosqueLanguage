@@ -705,7 +705,7 @@ void Evaluator::evalIsNoneOp(const TypeIsNoneOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
     {
-        BSQBool isnone = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout)->tid = BSQ_TYPE_ID_NONE;
+        BSQBool isnone = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == BSQ_TYPE_ID_NONE;
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isnone);
     }
 }
@@ -715,7 +715,7 @@ void Evaluator::evalIsSomeOp(const TypeIsSomeOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
     {
-        BSQBool issome = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout)->tid != BSQ_TYPE_ID_NONE;
+        BSQBool issome = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid != BSQ_TYPE_ID_NONE;
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), issome);
     }
 }
@@ -725,7 +725,7 @@ void Evaluator::evalTypeTagIsOp(const TypeTagIsOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
     {
-        auto istype = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout)->tid == op->oftype->tid;
+        auto istype = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == op->oftype->tid;
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), istype);
     }
 }
@@ -735,25 +735,42 @@ void Evaluator::evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp<tag, isGuarded>*
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
     {
-        auto tt = this->loadBSQTypeFromAbstractLocation<BSQType>(this->evalArgument(op->arg), op->arglayout);
+        auto tt = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout);
         BSQBool subtype = tt->subtypes.find(op->oftype->tid) != tt->subtypes.cend();
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), subtype);
     }
 }
 
-void Evaluator::evalJumpOp(const JumpOp* op)
+InterpOp* Evaluator::evalJumpOp(const JumpOp* op)
 {
-    xxxx;
+    return this->advanceCurrentOp(op->offset);
 }
 
-void Evaluator::evalJumpCondOp(const JumpCondOp* op)
+InterpOp* Evaluator::evalJumpCondOp(const JumpCondOp* op)
 {
-    xxxx;
+    BSQBool jc = SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg));
+    if(jc)
+    {
+        return this->advanceCurrentOp(op->toffset);
+    }
+    else
+    {
+        return this->advanceCurrentOp(op->foffset);
+    }
 }
 
-void Evaluator::evalJumpNoneOp(const JumpNoneOp* op)
+InterpOp* Evaluator::evalJumpNoneOp(const JumpNoneOp* op)
 {
-    xxxx;
+    BSQBool isnone = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == BSQ_TYPE_ID_NONE;
+    
+    if(isnone)
+    {
+        return this->advanceCurrentOp(op->noffset);
+    }
+    else
+    {
+        return this->advanceCurrentOp(op->soffset);
+    }
 }
 
 template <OpCodeTag tag, bool isGuarded>
@@ -765,14 +782,28 @@ void Evaluator::evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op)
     }
 }
 
-void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op)
+void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op, StorageLocationPtr resultsl)
 {
-    xxxx;
+    this->storeValue(resultsl, this->evalArgument(op->arg), op->oftype);
 }
 
-void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
+void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, StorageLocationPtr resultsl)
 {
-    xxxx;
+    StorageLocationPtr tcontents = nullptr;
+    if(op->oftype->tkind == BSQTypeKind::Register || op->oftype->tkind == BSQTypeKind::Struct)
+    {
+        tcontents = resultsl;
+    }
+    else
+    {
+        tcontents = Allocator::GlobalAllocator.allocateDynamic(op->oftype);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, tcontents);
+    }
+
+    for(size_t i = 0; i < op->oftype->fieldoffsets.size(); ++i)
+    {
+        this->storeValue(this->indexStorageLocationOffset(tcontents, op->oftype->fieldoffsets[i], op->oftype), this->evalArgument(op->args[i]), op->oftype->ftypes[i]);
+    }
 }
 
 void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
@@ -780,13 +811,11 @@ void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
     assert(false);
 }
 
-
 void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 {
     assert(false);
 }
 
-template <bool isTTDMode>
 void Evaluator::evaluateOpCode(const InterpOp* op)
 {
 #ifdef BSQ_DEBUG_BUILD 
@@ -847,7 +876,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::ExtractUniqueRegisterFromInlineOp:
     {
-        this->evalExtractUniqueRegisterFromInlineOp(static_cast<const BoxOp<OpCodeTag::ExtractUniqueRegisterFromInlineOp, false>*>(op));
+        this->evalExtractUniqueRegisterFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRegisterFromInlineOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueStructFromInlineOp:
     {
@@ -859,7 +888,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::ExtractUniqueRegisterFromHeapOp:
     {
-        this->evalExtractUniqueRegisterFromHeapOp(static_cast<const BoxOp<OpCodeTag::ExtractUniqueRegisterFromHeapOp, false>*>(op));
+        this->evalExtractUniqueRegisterFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRegisterFromHeapOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueStructFromHeapOp:
     {
@@ -947,7 +976,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::LoadConstOp:
     {
-        this->evalLoadConstOp(static_cast<const ExtractOp<OpCodeTag::LoadConstOp*>(op));
+        this->evalLoadConstOp(static_cast<const LoadConstOp*>(op));
     }
     case OpCodeTag::TupleHasIndexOp:
     {
@@ -1097,34 +1126,20 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalTypeTagSubtypeOfOp(static_cast<const TypeTagSubtypeOfOp<OpCodeTag::GuardedTypeTagSubtypeOfOp, true>*>(op));
     }
-    case OpCodeTag::JumpOp:
-    {
-        this->evalJumpOp(static_cast<const JumpOp*>(op));
-    }
-    case OpCodeTag::JumpCondOp:
-    {
-        this->evalJumpCondOp(static_cast<const JumpCondOp*>(op));
-    }
-    case OpCodeTag::JumpNoneOp:
-    {
-        this->evalJumpNoneOp(static_cast<const JumpNoneOp*>(op));
-    }
+    //
+    // ---- jump operations are handled in the outer loop ----
+    //
     case OpCodeTag::RegisterAssignOp:
     {
-        this->evalRegisterAssignOp(static_cast<const TypeTagSubtypeOfOp<OpCodeTag::RegisterAssignOp, false>*>(op));
+        this->evalRegisterAssignOp(static_cast<const RegisterAssignOp<OpCodeTag::RegisterAssignOp, false>*>(op));
     }
     case OpCodeTag::GuardedRegisterAssignOp:
     {
-        this->evalRegisterAssignOp(static_cast<const TypeTagSubtypeOfOp<OpCodeTag::GuardedRegisterAssignOp, true>*>(op));
+        this->evalRegisterAssignOp(static_cast<const RegisterAssignOp<OpCodeTag::GuardedRegisterAssignOp, true>*>(op));
     }
-    case OpCodeTag::ReturnAssignOp:
-    {
-        this->evalReturnAssignOp(static_cast<const ReturnAssignOp*>(op));
-    }
-    case OpCodeTag::ReturnAssignOfConsOp:
-    {
-        this->evalReturnAssignOfConsOp(static_cast<const ReturnAssignOfConsOp*>(op));
-    }
+    //
+    // ---- return operations are handled in the outer loop ----
+    //
 #ifdef BSQ_DEBUG_BUILD 
     case OpCodeTag::VarLifetimeStartOp:
     {
@@ -1402,22 +1417,71 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::EqStringOp:
     {
         const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>*>(op);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::StringEq(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::equalOperator(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
     }
     case OpCodeTag::NeqStringOp:
     {
         const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStringOp>*>(op);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !BSQString::StringEq(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !BSQString::equalOperator(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
     }
     case OpCodeTag::LessStringOp:
     {
         const PrimitiveBinaryOperatorOp<OpCodeTag::LessStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LessStringOp>*>(op);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::StringLess(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::lessOperator(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
     }
     default:
     {
         assert(false);
     }
+    }
+}
+
+void Evaluator::evaluateOpCodeBlocks()
+{
+    InterpOp* op = this->getCurrentOp();
+    while(true)
+    {
+        switch(op->tag)
+        {
+        case OpCodeTag::ReturnAssignOp:
+        case OpCodeTag::ReturnAssignOfConsOp:
+        {
+            break;
+        }
+        case OpCodeTag::JumpOp:
+        {
+            op = this->evalJumpOp(static_cast<const JumpOp*>(op));
+        }
+        case OpCodeTag::JumpCondOp:
+        {
+            op = this->evalJumpCondOp(static_cast<const JumpCondOp*>(op));
+        }
+        case OpCodeTag::JumpNoneOp:
+        {
+            op = this->evalJumpNoneOp(static_cast<const JumpNoneOp*>(op));
+        }
+        default:
+        {
+            this->evaluateOpCode(op);
+            op = this->advanceCurrentOp();
+        }
+        }
+    }
+}
+    
+void Evaluator::evaluateBody(StorageLocationPtr resultsl)
+{
+    this->evaluateOpCodeBlocks();
+    
+    InterpOp* op = this->getCurrentOp();
+    if(op->tag == OpCodeTag::ReturnAssignOp)
+    {  
+        this->evalReturnAssignOp(static_cast<const ReturnAssignOp*>(op), resultsl);
+    }
+    else 
+    {
+        assert(op->tag == OpCodeTag::ReturnAssignOfConsOp);
+        this->evalReturnAssignOfConsOp(static_cast<const ReturnAssignOfConsOp*>(op), resultsl);
     }
 }
 
