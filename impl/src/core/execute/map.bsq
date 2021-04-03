@@ -1,0 +1,54 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, PODType when K PODType && V PODType, APIType when K APIType && V APIType {
+    __safe private function s_size(m: Map<K, V>): Nat # map_size
+    __safe private function s_has_key(m: Map<K, V>, key: K): Bool # map_has_key
+    __safe private function s_at_val(m: Map<K, V>, key: K): V # map_at_val
+    
+    method size(): Nat {
+        return Map<K, V>::s_size(this);
+    }
+
+    method empty(): Bool {
+        return Map<K, V>::s_size(this) == 0n;
+    }
+
+    method has(key: K): Bool {
+        return Map<K, V>::s_has_key(this, key);
+    }
+
+    method get(key: K): V 
+        requires release Map<K, V>::s_has_key(this, key);
+    {
+        return Map<K, V>::s_at_val(this, key);
+    }
+
+    method getOrNone(k: K): V? {
+        return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : none;
+    }
+
+    method getOrDefault(k: K, d: V): V {
+        return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : d;
+    }
+
+    method getTry(k: K, out? v: V): Bool {
+        if(Map<K, V>::s_has_key(this, k)) {
+            v = Map<K, V>::s_at_val(this, k);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+}
+
+entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>> {
+}
+
+

@@ -1,0 +1,27 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+entity Set<T where KeyType> provides Object, Expandoable<T>, PODType when T PODType, APIType when T APIType {
+    __safe private function s_size(s: Set<T>): Nat # set_size
+    __safe private function s_has_key(s: Set<T>, key: T): Bool # set_has_key
+
+    method size(): Nat {
+        return Set<T>::s_size(this);
+    }
+
+    method empty(): Bool {
+        return Set<T>::s_size(this) == 0n;
+    }
+
+    method has(v: T): Bool {
+        return Set<T>::s_has_key(this, v);
+    }
+}
+
+entity DynamicSet<T where KeyType> provides Object, Expandoable<T> {
+}
