@@ -27,10 +27,6 @@ concept Any {
 
     method isSome(): Bool # special_method
     method isNone(): Bool # special_method
-
-    method asSome(): Some {
-        return this.as<Some>();
-    }
 }
 
 //<summary>Special type for representing all non-none values.</summary>
@@ -189,12 +185,6 @@ concept StringRepr {
 
 concept StringK provides StringRepr {
     function size(s: StringK): Nat # stringk_size
-    function free(s: StringK): StringK # stringk_free
-    function pack(other: StringRepr): StringK # stringk_pack
-
-    method canPack(othersize: Nat): Bool {
-        return StringK::availableSpace(this) >= othersize;
-   }
 }
 
 __internal entity String8 provides StringK {
@@ -222,48 +212,90 @@ entity StringSlice provides StringRepr {
 }
 
 entity StringConcat provides StringRepr {
+    field size: Nat;
     field s1: StringRepr;
     field s2: StringRepr;
-    field size: Nat;
 }
 
 __internal struct entity InlineString {
-    //Inline char + size info -- 8 bytes total
+    function createempty(): InlineString # inlinestring_createempty
+    const g_emptystr: InlineString = InlineString::createempty();
 
-    function concatTry(s1: String, s1size: Nat, s2: String, s2size: Nat, out? ires: InlineString): Bool # inlinestring_concattry
+    function size(istr: InlineString): Nat # inlinestring_size
+    function convertToK(istr: InlineString): String8 # inlinestring_convertk
+    function concatTry(s1: String, s1size: Nat, s2: String, s2size: Nat): InlineString? # inlinestring_concattry
+    function slice(istr: InlineString, start: Nat, end: Nat): InlineString # inlinestring_slice
 }
 
 grounded struct entity String provides Some, KeyType, PODType, APIType {
     private field data: StringRepr?;
     private field istr: InlineString;
 
-    private function s_length(s: String): Nat # string_count
-    private function s_empty(s: String): Bool # string_empty
+    private const g_emptystr: String = String#{none, InlineString::g_emptystr};
 
     private function s_rangeInBounds(s: String, start: Nat, end: Nat): Bool {
         return start <= end & end <= String::s_length(s); 
     }
 
-    function concat2(s1: String, s2: String): String {
-        if(String::s_empty(s1)) {
+    function s_concat2(s1: String, s2: String): String {
+        let s1size = s1.length();
+        let s2size = s2.length();
+
+        if(s1size == 0 & s2size == 0) {
+            String::g_emptystr;
+        }
+        elif(s1size == 0) {
             s2;
         }
-        elif(String::s_empty(s2)) {
+        elif(s2size == 0) {
             s1;
         }
         else {
-            let s1size = String::s_length(s1);
-            let s2size = String::s_length(s2);
-
-            var ires: InlineString;
-            if(InlineString::concatTry(s1, s1size, s2, s2size, out? ires)) {
-                return String#{data=none, istr=ires};
-            }
-            elif(??????) {
-                return pack();
+            var ires: InlineString = InlineString::concatTry(s1, s1size, s2, s2size);
+            if(ires !== none) {
+                return String#{none, ires};
             }
             else {
-                return String#{data: _concat2(s1, s2);
+                let lhs = s1.data ?| InlineString::convertToK(s1.istr);
+                let rhs = s2.data ?| InlineString::convertToK(s2.istr);
+                let cstr = StringConcat@{lhs + rhs, lhs, rhs}
+
+                return String#{cstr, InlineString::g_emptystr};
+            }
+        }
+    }
+
+    recursive function s_slice(s: String, start: Nat, end: Nat): String {
+        if(start == end) {
+            String::g_emptystr;
+        }
+        elif(s.data == none) {
+            return String#{none, InlineString::slice(s.istr, start, end)};
+        }
+        else {
+            let repr = s.data;
+            if(repr.is<StringSlice>()) {
+                return String::s_slice[recursive](repr.s, repr.start + start, repr.start + end);
+            }
+            elif(repr.is<StringConcat>()) {
+                let s1size = repr.s1.length();
+
+                if(start >= s1size) {
+                    return String::s_slice[recursive](repr.s2, start - s1size, end - s1size);
+                }
+                else if(end <= s1size) {
+                    return String::s_slice[recursive](repr.s1, start, end);
+                }
+                else {
+                    let lhs = String::s_slice[recursive](repr.s1, start, s1size);
+                    let rhs = String::s_slice[recursive](repr.s2, 0, end - s1size);
+
+                    return String::s_concat2(lhs, rhs);
+                }
+            }
+            else {
+                let cstr = StringSlice@{s, start, end}
+                return String#{cstr, InlineString::g_emptystr};
             }
         }
     }
@@ -273,34 +305,28 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
     }
 
     method length(): Nat {
-        return String::s_length(this);
+        return (data ?& data.size()) ?| InlineString::size(data.istr);
     }
 
     method charAt(idx: Nat): String
-        requires release 0n <= idx && idx < String::s_length(this);
+        requires release 0n <= idx && idx < this.length();
     {
-        return String::s_unsafe_charat(this, idx);
+        xxxx;
     }
 
-    method contains(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        return String::s_contains(this, s, start, end);
+    method contains(s: String): Bool {
+        return String::s_contains(this, s);
     }
 
-    method indexOf(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        let idx = String::s_indexof(this, s, start, end);
+    method indexOf(s: String): Nat {
+        let idx = String::s_indexof(this, s);
         check idx != end;
 
         return idx;
     }
 
-    method indexOfOrNone(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat?
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        let idx = String::s_indexof(this, s, start, end);
+    method indexOfOrNone(s: String): Nat? {
+        let idx = String::s_indexof(this, s);
         if(idx == end) {
             return none;
         }
@@ -309,9 +335,7 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
-    method indexOfTry(out? res: Nat, s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfTry(s: String, out? res: Nat): Bool {
         let idx = String::s_indexof(this, s, start, end);
         if(idx == end) {
             return false;
@@ -322,18 +346,14 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
-    method indexOfLast(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfLast(s: String): Nat {
         let idx = String::s_indexof(this, s, start, end);
         check idx != end;
 
         return idx;
     }
 
-    method indexOfLastOrNone(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat?
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfLastOrNone(s: String): Nat? {
         let idx = String::s_indexof(this, s, start, end);
         if(idx == end) {
             return none;
@@ -343,9 +363,7 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
-    method indexOfLastTry(out? res: Nat, s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfLastTry(s: String, out? res: Nat): Bool {
         let idx = String::s_indexof(this, s, start, end);
         if(idx == end) {
             return false;
@@ -362,24 +380,6 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
 
     method endsWith(s: String): Bool {
         return String::s_endswith(this, s);
-    }
-
-    method matches(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        return String::s_substring(this, start, end) === s;
-    }
-
-    method matchesStart(s: String, start?: Nat=0n): Bool
-        requires release start <= String::s_length(this);
-    {
-        return String::s_startswith(String::s_substring(start, String::s_length(this)), s);
-    }
-
-    method matchesEnd(s: String, end?: Nat=String::s_length(this)): Bool
-        requires release end <= String::s_length(this);
-    {
-        return String::s_endswith(String::s_substring(this, 0, end), s);
     }
 
     method substring(start?: Nat=0, end?: Nat=String::s_length(this)): String 

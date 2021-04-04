@@ -27,10 +27,6 @@ concept Any {
 
     method isSome(): Bool # special_method
     method isNone(): Bool # special_method
-
-    method asSome(): Some {
-        return this.as<Some>();
-    }
 }
 
 //<summary>Special type for representing all non-none values.</summary>
@@ -187,8 +183,8 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
     __safe private function s_length(s: String): Nat # string_count
     __assume_safe private function s_unsafe_charat(s: String, idx: Nat): String # string_charat
     
-    __assume_safe private function s_contains(s: String, val: String, start: Nat, end: Nat): Bool # string_contains
-    __assume_safe private function s_indexof(s: String, val: String, start: Nat, end: Nat): Nat # string_indexof
+    __assume_safe private function s_contains(s: String, val: String): Bool # string_contains
+    __assume_safe private function s_indexof(s: String, val: String): Nat # string_indexof
 
     __assume_safe private function s_startswith(s: String, val: String): Bool # string_startswith
     __assume_safe private function s_endswith(s: String, val: String): Bool # string_endswith
@@ -218,25 +214,19 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
         return String::s_unsafe_charat(this, idx);
     }
 
-    method contains(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        return String::s_contains(this, s, start, end);
+    method contains(s: String): Bool {
+        return String::s_contains(this, s);
     }
 
-    method indexOf(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        let idx = String::s_indexof(this, s, start, end);
+    method indexOf(s: String): Nat {
+        let idx = String::s_indexof(this, s);
         check idx != end;
 
         return idx;
     }
 
-    method indexOfOrNone(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat?
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        let idx = String::s_indexof(this, s, start, end);
+    method indexOfOrNone(s: String): Nat? {
+        let idx = String::s_indexof(this, s);
         if(idx == end) {
             return none;
         }
@@ -245,9 +235,7 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
-    method indexOfTry(out? res: Nat, s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfTry(s: String, out? res: Nat): Bool {
         let idx = String::s_indexof(this, s, start, end);
         if(idx == end) {
             return false;
@@ -258,18 +246,14 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
-    method indexOfLast(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfLast(s: String): Nat {
         let idx = String::s_indexof(this, s, start, end);
         check idx != end;
 
         return idx;
     }
 
-    method indexOfLastOrNone(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Nat?
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfLastOrNone(s: String): Nat? {
         let idx = String::s_indexof(this, s, start, end);
         if(idx == end) {
             return none;
@@ -279,9 +263,7 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
-    method indexOfLastTry(out? res: Nat, s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
+    method indexOfLastTry(s: String, out? res: Nat): Bool {
         let idx = String::s_indexof(this, s, start, end);
         if(idx == end) {
             return false;
@@ -298,24 +280,6 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
 
     method endsWith(s: String): Bool {
         return String::s_endswith(this, s);
-    }
-
-    method matches(s: String, start?: Nat=0n, end?: Nat=String::s_length(this)): Bool
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        return String::s_substring(this, start, end) === s;
-    }
-
-    method matchesStart(s: String, start?: Nat=0n): Bool
-        requires release start <= String::s_length(this);
-    {
-        return String::s_startswith(String::s_substring(start, String::s_length(this)), s);
-    }
-
-    method matchesEnd(s: String, end?: Nat=String::s_length(this)): Bool
-        requires release end <= String::s_length(this);
-    {
-        return String::s_endswith(String::s_substring(this, 0, end), s);
     }
 
     method substring(start?: Nat=0, end?: Nat=String::s_length(this)): String 
