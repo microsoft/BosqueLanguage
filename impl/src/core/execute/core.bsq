@@ -180,11 +180,11 @@ __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string value.</summary>
 concept StringRepr {
-    abstract method size(): Nat;
+    abstract method length(): Nat;
+    abstract recursive method get(i: Nat): InlineString; 
 }
 
 concept StringK provides StringRepr {
-    function size(s: StringK): Nat # stringk_size
 }
 
 __internal entity String8 provides StringK {
@@ -206,7 +206,7 @@ __internal entity String256 provides StringK {
 }
 
 entity StringSlice provides StringRepr {
-    field s: StringK;
+    field s: StringRepr;
     field start: Nat;
     field end: Nat;
 }
@@ -251,7 +251,7 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
             s1;
         }
         else {
-            var ires: InlineString = InlineString::concatTry(s1, s1size, s2, s2size);
+            let ires = InlineString::concatTry(s1, s1size, s2, s2size);
             if(ires !== none) {
                 return String#{none, ires};
             }
@@ -265,37 +265,43 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
-    recursive function s_slice(s: String, start: Nat, end: Nat): String {
+    recursive function s_sliceRepr(repr: StringRepr, start: Nat, end: Nat): String {
+        if(repr.is<StringSlice>()) {
+            return String::s_sliceRepr[recursive](repr.s, repr.start + start, repr.start + end);
+        }
+        elif(repr.is<StringConcat>()) {
+            let s1size = repr.s1.length();
+
+            if(start >= s1size) {
+                return String::s_sliceRepr[recursive](repr.s2, start - s1size, end - s1size);
+            }
+            else if(end <= s1size) {
+                return String::s_sliceRepr[recursive](repr.s1, start, end);
+            }
+            else {
+                let lhs = String::s_sliceRepr[recursive](repr.s1, start, s1size);
+                let rhs = String::s_sliceRepr[recursive](repr.s2, 0, end - s1size);
+
+                return String::s_concat2(lhs, rhs);
+            }
+            }
+        else {
+            let cstr = StringSlice@{repr, start, end}
+            return String#{cstr, InlineString::g_emptystr};
+        }
+    }
+
+    function s_slice(s: String, start: Nat, end: Nat): String {
         if(start == end) {
             String::g_emptystr;
         }
-        elif(s.data == none) {
-            return String#{none, InlineString::slice(s.istr, start, end)};
-        }
         else {
             let repr = s.data;
-            if(repr.is<StringSlice>()) {
-                return String::s_slice[recursive](repr.s, repr.start + start, repr.start + end);
-            }
-            elif(repr.is<StringConcat>()) {
-                let s1size = repr.s1.length();
-
-                if(start >= s1size) {
-                    return String::s_slice[recursive](repr.s2, start - s1size, end - s1size);
-                }
-                else if(end <= s1size) {
-                    return String::s_slice[recursive](repr.s1, start, end);
-                }
-                else {
-                    let lhs = String::s_slice[recursive](repr.s1, start, s1size);
-                    let rhs = String::s_slice[recursive](repr.s2, 0, end - s1size);
-
-                    return String::s_concat2(lhs, rhs);
-                }
+            if(repr === none) {
+                return String#{none, InlineString::slice(s.istr, start, end)};
             }
             else {
-                let cstr = StringSlice@{s, start, end}
-                return String#{cstr, InlineString::g_emptystr};
+                return String::s_sliceRepr[recursive](s.data, start, end);
             }
         }
     }
@@ -305,13 +311,20 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
     }
 
     method length(): Nat {
-        return (data ?& data.size()) ?| InlineString::size(data.istr);
+        let repr = s.data
+        return (repr ?& repr.size()) ?| InlineString::size(s.istr);
     }
 
     method charAt(idx: Nat): String
         requires release 0n <= idx && idx < this.length();
     {
-        xxxx;
+        let repr = s.data;
+        if(repr === none) {
+            return xxxx;
+        }
+        else {
+            return repr.get[recursive](idx);
+        }
     }
 
     method contains(s: String): Bool {
