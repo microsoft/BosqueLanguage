@@ -182,39 +182,9 @@ __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 concept StringRepr {
     abstract method length(): Nat;
     abstract recursive method get(i: Nat): InlineString; 
-}
 
-concept StringK provides StringRepr {
-}
-
-__internal entity String8 provides StringK {
-}
-
-__internal entity String16 provides StringK {
-}
-
-__internal entity String32 provides StringK {
-}
-
-__internal entity String64 provides StringK {
-}
-
-__internal entity String128 provides StringK {
-}
-
-__internal entity String256 provides StringK {
-}
-
-entity StringSlice provides StringRepr {
-    field s: StringRepr;
-    field start: Nat;
-    field end: Nat;
-}
-
-entity StringConcat provides StringRepr {
-    field size: Nat;
-    field s1: StringRepr;
-    field s2: StringRepr;
+    function flattenInto(repr: StringRepr): StringK # stringrepr_flatteninto
+    function indexof(repr: StringRepr, ofrepr: StringRepr, start: Nat, end: Nat): Nat # stringrepr_indexof
 }
 
 __internal struct entity InlineString {
@@ -222,9 +192,14 @@ __internal struct entity InlineString {
     const g_emptystr: InlineString = InlineString::createempty();
 
     function size(istr: InlineString): Nat # inlinestring_size
+    function get(istr: InlineString, i: Nat): # inlinestring_get
+
     function convertToK(istr: InlineString): String8 # inlinestring_convertk
+
     function concatTry(s1: String, s1size: Nat, s2: String, s2size: Nat): InlineString? # inlinestring_concattry
     function slice(istr: InlineString, start: Nat, end: Nat): InlineString # inlinestring_slice
+
+    function indexof(repr: InlineString, ofrepr: InlineString, start: Nat, end: Nat): Nat # inlinestring_indexof
 }
 
 grounded struct entity String provides Some, KeyType, PODType, APIType {
@@ -306,6 +281,29 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
         }
     }
 
+    function s_indexof(s: String, ofstr: String, start: Nat, end: Nat): Nat {
+        if(ofstr.empty() | (end - start) < ofstr.length())) {
+            return end;
+        }
+        else {
+            let repr = s.data;
+            let ofrepr = ofstr.data;
+
+            if(repr === none & ofrepr === none) {
+                return InlineString::indexof(s.istr, ofstr.istr, start, end);
+            }
+            elif(repr === none & ofrepr !== none) {
+                return InlineString::indexof(s.istr, StringRepr::flattenInto(ofrepr), start, end);
+            }
+            elif(repr !== none & srepr === none) {
+                return StringRepr::indexof(repr, InlineString::convertToK(ofrepr), start, end);
+            }
+            else {
+                return StringRepr::indexof(repr, ofrepr, start, end);
+            }
+        }
+    }
+
     function concat3(s1: String, s2: String, s3: String): String {
         return String::s_concat2(s1, String::s_concat2(s2, s3));
     }
@@ -315,12 +313,16 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
         return (repr ?& repr.size()) ?| InlineString::size(s.istr);
     }
 
+    method empty(): Bool {
+        return s.data === none & InlineString::size(s.istr) == 0;
+    }
+
     method charAt(idx: Nat): String
         requires release 0n <= idx && idx < this.length();
     {
         let repr = s.data;
         if(repr === none) {
-            return xxxx;
+            return InlineString::get(s.istr, idx);
         }
         else {
             return repr.get[recursive](idx);
@@ -328,12 +330,12 @@ grounded struct entity String provides Some, KeyType, PODType, APIType {
     }
 
     method contains(s: String): Bool {
-        return String::s_contains(this, s);
+        return String::s_indexof(s) != s.length();
     }
 
     method indexOf(s: String): Nat {
         let idx = String::s_indexof(this, s);
-        check idx != end;
+        check idx != s.length();
 
         return idx;
     }

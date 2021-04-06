@@ -18,93 +18,201 @@
 
 ////
 //None
-class BSQNoneType : public BSQEntityType
-{
-    xxxx;
-};
-
 typedef uint64_t BSQNone;
 #define BSQNoneValue 0
 
 typedef void* BSQNoneHeap;
 #define BSQNoneHeapValue nullptr
 
+class BSQNoneType : public BSQEntityType
+{
+    xxxx;
+};
+
 ////
 //Bool
+typedef uint8_t BSQBool;
+#define BSQTRUE 1
+#define BSQFALSE 0
+
 class BSQBoolType : public BSQEntityType
 {
     xxxx;
 };
 
-typedef uint8_t BSQBool;
-#define BSQTRUE 1
-#define BSQFALSE 0
-
 ////
 //Nat
+typedef uint64_t BSQNat;
+
 class BSQNatType : public BSQEntityType
 {
     xxxx;
 };
-typedef uint64_t BSQNat;
 
 ////
 //Int
+typedef int64_t BSQInt;
+
 class BSQIntType : public BSQEntityType
 {
     xxxx;
 };
-typedef int64_t BSQInt;
 
 ////
 //BigNat
+typedef boost::multiprecision::checked_uint256_t BSQBigNat;
+
 class BSQBigNatType : public BSQEntityType
 {
     xxxx;
 };
-typedef boost::multiprecision::checked_uint256_t BSQBigNat;
 
 ////
 //BigInt
+typedef boost::multiprecision::checked_uint256_t BSQBigInt;
+
 class BSQBigIntType : public BSQEntityType
 {
     xxxx;
 };
-typedef boost::multiprecision::checked_uint256_t BSQBigInt;
 
 ////
 //Float
+typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
+
 class BSQFloatType : public BSQEntityType
 {
     xxxx;
 };
-typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
 
 ////
 //Decimal
+typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
+
 class BSQDecimalType : public BSQEntityType
 {
     xxxx;
 };
-typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
 
 ////
 //Rational
-class BSQRationalType : public BSQEntityType
-{
-    xxxx;
-};
 struct BSQRational
 {
     BSQBigInt numerator;
     BSQBigInt denominator;
 };
 
-////
-//String
-class BSQStringType : public BSQEntityType
+class BSQRationalType : public BSQEntityType
 {
     xxxx;
+};
+
+////
+//String
+struct BSQInlineString
+{
+    wchar_t vals[4];
+
+    static BSQNat length(const BSQInlineString& istr)
+    {
+        return (BSQNat)istr.vals[0];
+    }
+
+    static wchar_t* vals(BSQInlineString& istr)
+    {
+        return istr.vals + 1;
+    }
+};
+constexpr BSQInlineString g_emptyInlineString = {0};
+
+class BSQStringReprType : public BSQEntityType
+{
+public:
+    virtual BSQNat length(void* repr) const = 0;
+
+    virtual wchar_t getAt(void* repr, BSQNat i) = 0;
+    virtual uint64_t indexof();
+};
+
+template <size_t k>
+struct BSQStringKRepr
+{
+    BSQNat size;
+    wchar_t elems[k];
+
+    static void flattenInlineString(xxxx)
+};
+
+template <size_t k>
+class BSQStringKReprType : public BSQStringReprType
+{
+public:
+    virtual BSQNat length(void* repr) const override
+    {
+        return ((BSQStringKRepr<k>*)repr)->size;
+    }
+};
+
+struct BSQStringSliceRepr
+{
+    void* srepr;
+    BSQNat start;
+    BSQNat end;
+};
+
+class BSQStringSliceReprType : public BSQStringReprType
+{
+public:
+    virtual BSQNat length(void* repr) const override
+    {
+        auto srepr = (BSQStringSliceRepr*)repr;
+        return (srepr->end - srepr->start);
+    }
+};
+
+struct BSQStringConcatRepr
+{
+    void* srepr1;
+    void* srepr2;
+    BSQNat size;
+};
+
+class BSQStringConcatReprType : public BSQStringReprType
+{
+public:
+    virtual BSQNat length(void* repr) const override
+    {
+        return ((BSQStringConcatRepr*)repr)->size;
+    }
+};
+
+class BSQStringReprIterator
+{
+public:
+    std::stack<void*> parents;
+    wchar_t* current;
+    wchar_t* currentLimit;
+
+    uint64_t pos;
+
+    inline bool done() const
+    {
+        return this->current == nullptr;
+    }
+
+    void incrementTree();
+    inline void increment()
+    {
+        this->current++;
+        this->pos++;
+        if(this->current == this->currentLimit)
+        {
+            this->incrementTree();
+        }
+    }
+    
+    static void initialize(BSQStringReprIterator& iv, void* repr);
+    static void initializePosition(BSQStringReprIterator& iv, void* repr, uint64_t pos);
 };
 
 #define IS_INLINE_STRING(S) ((S)->sdata == BSQNoneHeapValue)
@@ -135,7 +243,20 @@ struct BSQString
     }
 };
 
+class BSQStringType : public BSQEntityType
+{
+    xxxx;
+};
+
+////
+//Regex
+
 struct BSQRegex
 {
     std::wregex* regex;
+};
+
+class BSQRegexType : public BSQEntityType
+{
+    xxxx;
 };
