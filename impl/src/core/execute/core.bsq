@@ -179,107 +179,13 @@ __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;
 __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string value.</summary>
-concept StringRepr {
-    abstract method length(): Nat;
-    abstract recursive method get(i: Nat): InlineString; 
-
-    function flattenInto(repr: StringRepr): StringK # stringrepr_flatteninto
-    function indexof(repr: StringRepr, ofrepr: StringRepr, start: Nat, end: Nat): Nat # stringrepr_indexof
-}
-
-__internal struct entity InlineString {
-    function createempty(): InlineString # inlinestring_createempty
-    const g_emptystr: InlineString = InlineString::createempty();
-
-    function size(istr: InlineString): Nat # inlinestring_size
-    function get(istr: InlineString, i: Nat): # inlinestring_get
-
-    function convertToK(istr: InlineString): String8 # inlinestring_convertk
-
-    function concatTry(s1: String, s1size: Nat, s2: String, s2size: Nat): InlineString? # inlinestring_concattry
-    function slice(istr: InlineString, start: Nat, end: Nat): InlineString # inlinestring_slice
-
-    function indexof(repr: InlineString, ofrepr: InlineString, start: Nat, end: Nat): Nat # inlinestring_indexof
-}
-
 grounded struct entity String provides Some, KeyType, PODType, APIType {
-    private field data: StringRepr?;
-    private field istr: InlineString;
-
-    private const g_emptystr: String = String#{none, InlineString::g_emptystr};
-
     private function s_rangeInBounds(s: String, start: Nat, end: Nat): Bool {
         return start <= end & end <= String::s_length(s); 
     }
 
-    function s_concat2(s1: String, s2: String): String {
-        let s1size = s1.length();
-        let s2size = s2.length();
-
-        if(s1size == 0 & s2size == 0) {
-            String::g_emptystr;
-        }
-        elif(s1size == 0) {
-            s2;
-        }
-        elif(s2size == 0) {
-            s1;
-        }
-        else {
-            let ires = InlineString::concatTry(s1, s1size, s2, s2size);
-            if(ires !== none) {
-                return String#{none, ires};
-            }
-            else {
-                let lhs = s1.data ?| InlineString::convertToK(s1.istr);
-                let rhs = s2.data ?| InlineString::convertToK(s2.istr);
-                let cstr = StringConcat@{lhs + rhs, lhs, rhs}
-
-                return String#{cstr, InlineString::g_emptystr};
-            }
-        }
-    }
-
-    recursive function s_sliceRepr(repr: StringRepr, start: Nat, end: Nat): String {
-        if(repr.is<StringSlice>()) {
-            return String::s_sliceRepr[recursive](repr.s, repr.start + start, repr.start + end);
-        }
-        elif(repr.is<StringConcat>()) {
-            let s1size = repr.s1.length();
-
-            if(start >= s1size) {
-                return String::s_sliceRepr[recursive](repr.s2, start - s1size, end - s1size);
-            }
-            else if(end <= s1size) {
-                return String::s_sliceRepr[recursive](repr.s1, start, end);
-            }
-            else {
-                let lhs = String::s_sliceRepr[recursive](repr.s1, start, s1size);
-                let rhs = String::s_sliceRepr[recursive](repr.s2, 0, end - s1size);
-
-                return String::s_concat2(lhs, rhs);
-            }
-            }
-        else {
-            let cstr = StringSlice@{repr, start, end}
-            return String#{cstr, InlineString::g_emptystr};
-        }
-    }
-
-    function s_slice(s: String, start: Nat, end: Nat): String {
-        if(start == end) {
-            String::g_emptystr;
-        }
-        else {
-            let repr = s.data;
-            if(repr === none) {
-                return String#{none, InlineString::slice(s.istr, start, end)};
-            }
-            else {
-                return String::s_sliceRepr[recursive](s.data, start, end);
-            }
-        }
-    }
+    function s_concat2(s1: String, s2: String): String # string_concat2
+    function s_slice(s: String, start: Nat, end: Nat): String # string_slice
 
     function s_indexof(s: String, ofstr: String, start: Nat, end: Nat): Nat {
         if(ofstr.empty() | (end - start) < ofstr.length())) {

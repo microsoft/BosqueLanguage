@@ -91,6 +91,7 @@
 //Access type info + special forwarding pointer mark
 #define TYPE_INFO_FORWARD_SENTINAL nullptr
 #define GET_TYPE_META_DATA(M) ((BSQType*)((uint8_t*)M - sizeof(BSQType*)))
+#define GET_TYPE_META_DATA_AS(T, M) ((const T*)GET_TYPE_META_DATA(M))
 #define SET_TYPE_META_DATA_FORWARD_SENTINAL(M) *((void**)((uint8_t*)M - sizeof(BSQType*))) = TYPE_INFO_FORWARD_SENTINAL
 
 #define GET_FORWARD_PTR(M) *((void**)M)

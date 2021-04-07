@@ -113,25 +113,45 @@ struct BSQInlineString
 {
     wchar_t vals[4];
 
-    static BSQNat length(const BSQInlineString& istr)
+    inline static BSQInlineString create(const wchar_t* chars, size_t len)
+    {
+        BSQInlineString istr = {len, 0, 0, 0};
+        std::copy(chars, chars + len, istr.vals + 1);
+    }
+
+    inline static BSQNat length(BSQInlineString istr)
     {
         return (BSQNat)istr.vals[0];
     }
 
-    static wchar_t* vals(BSQInlineString& istr)
+    inline static wchar_t* vals(BSQInlineString istr)
     {
         return istr.vals + 1;
+    }
+
+    inline static wchar_t* valsend(BSQInlineString istr)
+    {
+        return istr.vals + 1 + istr.vals[0];
     }
 };
 constexpr BSQInlineString g_emptyInlineString = {0};
 
+enum class BSQStringReprTypeTag
+{
+    ReprK,
+    Concat,
+    Slice
+};
+
 class BSQStringReprType : public BSQEntityType
 {
 public:
-    virtual BSQNat length(void* repr) const = 0;
+    BSQStringReprTypeTag tag;
 
-    virtual wchar_t getAt(void* repr, BSQNat i) = 0;
-    virtual uint64_t indexof();
+    virtual BSQNat length(void* repr) const = 0;
+    virtual wchar_t getAt(void* repr, BSQNat i) const = 0;
+
+    static size_t getKReprSizeFor(size_t v);
 };
 
 template <size_t k>
@@ -139,8 +159,6 @@ struct BSQStringKRepr
 {
     BSQNat size;
     wchar_t elems[k];
-
-    static void flattenInlineString(xxxx)
 };
 
 template <size_t k>
@@ -151,7 +169,14 @@ public:
     {
         return ((BSQStringKRepr<k>*)repr)->size;
     }
+
+    virtual wchar_t getAt(void* repr, BSQNat i) const override
+    {
+        return ((BSQStringKRepr<k>*)repr)->elems[i];
+    }
 };
+constexpr size_t g_kreprsizes[] = { 4, 8, 16, 32, 64, 128, 256 };
+constexpr size_t g_kreprcount = 7;
 
 struct BSQStringSliceRepr
 {
@@ -168,6 +193,14 @@ public:
         auto srepr = (BSQStringSliceRepr*)repr;
         return (srepr->end - srepr->start);
     }
+
+    virtual wchar_t getAt(void* repr, BSQNat i) const override
+    {
+        auto thisrepr = (BSQStringSliceRepr*)repr;
+        auto reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, thisrepr->srepr);
+
+        return reprtype->getAt(thisrepr->srepr, i + thisrepr->start);
+    }
 };
 
 struct BSQStringConcatRepr
@@ -183,6 +216,22 @@ public:
     virtual BSQNat length(void* repr) const override
     {
         return ((BSQStringConcatRepr*)repr)->size;
+    }
+
+    virtual wchar_t getAt(void* repr, BSQNat i) const override
+    {
+        auto thisrepr = (BSQStringConcatRepr*)repr;
+        auto repr1type = GET_TYPE_META_DATA_AS(BSQStringReprType, thisrepr->srepr1);
+        auto s1len = repr1type->length(thisrepr->srepr1);
+        if(i < s1len)
+        {
+            return repr1type->getAt(thisrepr->srepr1, i);
+        }
+        else
+        {
+            auto repr2type = GET_TYPE_META_DATA_AS(BSQStringReprType, thisrepr->srepr2);
+            return repr2type->getAt(thisrepr->srepr2, i - s1len);
+        }
     }
 };
 
@@ -215,17 +264,24 @@ public:
     static void initializePosition(BSQStringReprIterator& iv, void* repr, uint64_t pos);
 };
 
-#define IS_INLINE_STRING(S) ((S)->sdata == BSQNoneHeapValue)
+#define IS_INLINE_STRING(S) ((S).data == BSQNoneHeapValue)
 
 struct BSQString
 {
     void* data;
-    BSQNat size;
+    union { BSQNat u_size; BSQInlineString u_inlineString; };
+};
+constexpr BSQString g_emptyString = {0};
 
+class BSQStringType : public BSQEntityType
+{
+private:
+    static void* allocateStringKForSize(size_t k, wchar_t** dataptr);
+    static BSQStringKRepr<4>* boxInlineString(BSQInlineString istr);
+
+public:
     static BSQBool equalOperator(const BSQString& s1, const BSQString& s2);
     static BSQBool lessOperator(const BSQString& s1, const BSQString& s2);
-
-    static BSQNat count(const BSQString& s);
 
     inline static BSQBool equalOperator(StorageLocationPtr s1, StorageLocationPtr s2)
     {
@@ -237,15 +293,23 @@ struct BSQString
         return lessOperator(SLPTR_LOAD_CONTENTS_AS(BSQString, s1), SLPTR_LOAD_CONTENTS_AS(BSQString, s2));
     }
 
-    inline static BSQNat count(StorageLocationPtr s)
+    inline BSQNat length(BSQString s) const
     {
-        return count(SLPTR_LOAD_CONTENTS_AS(BSQString, s));
+        if(IS_INLINE_STRING(s))
+        {
+            return BSQInlineString::length(s.u_inlineString);
+        }
+        else
+        {
+            return s.u_size;
+        }
     }
-};
 
-class BSQStringType : public BSQEntityType
-{
-    xxxx;
+    BSQString concat2(BSQString s1, BSQString s2) const;
+
+    BSQString sliceRepr(void* repr, BSQNat start, BSQNat end);
+    BSQString slice(BSQString s, BSQNat start, BSQNat end);
+    BSQNat indexOf(BSQString s, BSQString oftr);
 };
 
 ////

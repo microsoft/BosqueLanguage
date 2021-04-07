@@ -19,6 +19,24 @@ public:
     static BSQBoolType* g_typeBool;
     static BSQNatType* g_typeNat;
     static BSQIntType* g_typeInt;
+    static BSQBigNatType* g_typeBigNat;
+    static BSQBigIntType* g_typeBigInt;
+    static BSQFloatType* g_typeFloat;
+    static BSQDecimalType* g_typeDecimal;
+    static BSQRationalType* g_typeRational;
+
+    static BSQStringKReprType<4>* g_typeStringKRepr4;
+    static BSQStringKReprType<8>* g_typeStringKRepr8;
+    static BSQStringKReprType<16>* g_typeStringKRepr16;
+    static BSQStringKReprType<32>* g_typeStringKRepr32;
+    static BSQStringKReprType<64>* g_typeStringKRepr64;
+    static BSQStringKReprType<128>* g_typeStringKRepr128;
+    static BSQStringKReprType<256>* g_typeStringKRepr256;
+
+    static BSQStringConcatReprType* g_typeStringConcatRepr;
+    static BSQStringSliceReprType* g_typeStringSliceRepr;
+
+    static BSQStringType* g_typeString;
 
     //Constant storage locations
     static BSQNone g_constNone;
