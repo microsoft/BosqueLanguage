@@ -739,9 +739,9 @@ class JumpOp : public InterpOp
 {
 public:
     const uint32_t offset;
-    const std::wstring* label;
+    const std::string* label;
     
-    JumpOp(SourceInfo sinfo, uint32_t offset, const std::wstring* label) : InterpOp(sinfo, OpCodeTag::JumpOp), offset(offset), label(label) {;}
+    JumpOp(SourceInfo sinfo, uint32_t offset, const std::string* label) : InterpOp(sinfo, OpCodeTag::JumpOp), offset(offset), label(label) {;}
     virtual ~JumpOp() {;}
 };
 
@@ -751,10 +751,10 @@ public:
     const Argument arg;
     const uint32_t toffset;
     const uint32_t foffset;
-    const std::wstring* tlabel;
-    const std::wstring* flabel;
+    const std::string* tlabel;
+    const std::string* flabel;
     
-    JumpCondOp(SourceInfo sinfo, Argument arg, uint32_t toffset, uint32_t foffset, const std::wstring* tlabel, const std::wstring* flabel) : InterpOp(sinfo, OpCodeTag::JumpCondOp), arg(arg), toffset(toffset), foffset(foffset), tlabel(tlabel), flabel(flabel) {;}
+    JumpCondOp(SourceInfo sinfo, Argument arg, uint32_t toffset, uint32_t foffset, const std::string* tlabel, const std::string* flabel) : InterpOp(sinfo, OpCodeTag::JumpCondOp), arg(arg), toffset(toffset), foffset(foffset), tlabel(tlabel), flabel(flabel) {;}
     virtual ~JumpCondOp() {;}
 };
 
@@ -765,10 +765,10 @@ public:
     const BSQType* arglayout;
     const uint32_t noffset;
     const uint32_t soffset;
-    const std::wstring* nlabel;
-    const std::wstring* slabel;
+    const std::string* nlabel;
+    const std::string* slabel;
     
-    JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQType* arglayout, uint32_t noffset, uint32_t soffset, const std::wstring* nlabel, const std::wstring* slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
+    JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQType* arglayout, uint32_t noffset, uint32_t soffset, const std::string* nlabel, const std::string* slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
     virtual ~JumpNoneOp() {;}
 };
 
@@ -809,18 +809,18 @@ class VarLifetimeStartOp : public InterpOp
 public:
     const Argument homelocation;
     const BSQType* oftype;
-    const std::wstring* name;
+    const std::string* name;
     
-    VarLifetimeStartOp(SourceInfo sinfo, Argument homelocation, const BSQType* oftype, const std::wstring* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
+    VarLifetimeStartOp(SourceInfo sinfo, Argument homelocation, const BSQType* oftype, const std::string* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
     virtual ~VarLifetimeStartOp() {;}
 };
 
 class VarLifetimeEndOp : public InterpOp
 {
 public:
-    const std::wstring* name;
+    const std::string* name;
     
-    VarLifetimeEndOp(SourceInfo sinfo, const std::wstring* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeEndOp), name(name) {;}
+    VarLifetimeEndOp(SourceInfo sinfo, const std::string* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeEndOp), name(name) {;}
     virtual ~VarLifetimeEndOp() {;}
 };
 

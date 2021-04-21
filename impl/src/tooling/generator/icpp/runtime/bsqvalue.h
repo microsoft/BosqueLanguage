@@ -24,9 +24,13 @@ typedef uint64_t BSQNone;
 typedef void* BSQNoneHeap;
 #define BSQNoneHeapValue nullptr
 
+std::string entityNoneDisplay_impl(const BSQType* btype, void** data);
+
 class BSQNoneType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNone)), {}, {}, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
+    virtual ~BSQNoneType() {;}
 };
 
 ////
@@ -35,45 +39,65 @@ typedef uint8_t BSQBool;
 #define BSQTRUE 1
 #define BSQFALSE 0
 
+std::string entityBoolDisplay_impl(const BSQType* btype, void** data);
+
 class BSQBoolType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBool)), {}, {}, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
+    virtual ~BSQBoolType() {;}
 };
 
 ////
 //Nat
 typedef uint64_t BSQNat;
 
+std::string entityNatDisplay_impl(const BSQType* btype, void** data);
+
 class BSQNatType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNat)), {}, {}, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
+    virtual ~BSQNatType() {;}
 };
 
 ////
 //Int
 typedef int64_t BSQInt;
 
+std::string entityIntDisplay_impl(const BSQType* btype, void** data);
+
 class BSQIntType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQInt)), {}, {}, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
+    virtual ~BSQIntType() {;}
 };
 
 ////
 //BigNat
 typedef boost::multiprecision::checked_uint256_t BSQBigNat;
 
+std::string entityBigNatDisplay_impl(const BSQType* btype, void** data);
+
 class BSQBigNatType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), {}, {}, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
+    virtual ~BSQBigNatType() {;}
 };
 
 ////
 //BigInt
 typedef boost::multiprecision::checked_uint256_t BSQBigInt;
 
+std::string entityBigIntDisplay_impl(const BSQType* btype, void** data);
+
 class BSQBigIntType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), {}, {}, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    virtual ~BSQBigIntType() {;}
 };
 
 ////

@@ -180,8 +180,7 @@ __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = defa
 
 //<summary>Primitive string value.</summary>
 __internal grounded entity String provides Some, KeyType, PODType, APIType {
-    __safe private function s_length(s: String): Nat # string_count
-    __assume_safe private function s_unsafe_charat(s: String, idx: Nat): String # string_charat
+    __safe private function s_empty(s: String): Bool # string_empty
     
     __assume_safe private function s_contains(s: String, val: String): Bool # string_contains
     __assume_safe private function s_indexof(s: String, val: String): Nat # string_indexof
@@ -191,10 +190,6 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
 
     __assume_safe private function s_substring(s: String, start: Nat, end: Nat): String # string_substring
     __assume_safe private function s_concat2(s1: String, s2: String): String # string_append
-
-    private function s_rangeInBounds(s: String, start: Nat, end: Nat): Bool {
-        return start <= end & end <= String::s_length(s); 
-    }
 
     function concat2(s1: String, s2: String): String {
         return String::s_concat2(s1, s2);
@@ -208,70 +203,8 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
         return String::s_length(this);
     }
 
-    method charAt(idx: Nat): String
-        requires release 0n <= idx && idx < String::s_length(this);
-    {
-        return String::s_unsafe_charat(this, idx);
-    }
-
     method contains(s: String): Bool {
         return String::s_contains(this, s);
-    }
-
-    method indexOf(s: String): Nat {
-        let idx = String::s_indexof(this, s);
-        check idx != end;
-
-        return idx;
-    }
-
-    method indexOfOrNone(s: String): Nat? {
-        let idx = String::s_indexof(this, s);
-        if(idx == end) {
-            return none;
-        }
-        else {
-            return idx;
-        }
-    }
-
-    method indexOfTry(s: String, out? res: Nat): Bool {
-        let idx = String::s_indexof(this, s, start, end);
-        if(idx == end) {
-            return false;
-        } 
-        else {
-            res = idx;
-            return true;
-        }
-    }
-
-    method indexOfLast(s: String): Nat {
-        let idx = String::s_indexof(this, s, start, end);
-        check idx != end;
-
-        return idx;
-    }
-
-    method indexOfLastOrNone(s: String): Nat? {
-        let idx = String::s_indexof(this, s, start, end);
-        if(idx == end) {
-            return none;
-        }
-        else {
-            return idx;
-        }
-    }
-
-    method indexOfLastTry(s: String, out? res: Nat): Bool {
-        let idx = String::s_indexof(this, s, start, end);
-        if(idx == end) {
-            return false;
-        } 
-        else {
-            res = idx;
-            return true;
-        }
     }
 
     method startsWith(s: String): Bool {

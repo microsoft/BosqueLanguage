@@ -299,6 +299,7 @@ private:
         return robj;
     }
 
+public:
     template <bool isRoot>
     inline static void gcProcessSlot(void** slot)
     {
@@ -469,6 +470,7 @@ private:
         }
     }
 
+private:
     ////////
     //GC algorithm
     static void processRoots()

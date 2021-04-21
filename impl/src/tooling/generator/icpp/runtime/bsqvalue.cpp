@@ -6,10 +6,40 @@
 #include "bsqvalue.h"
 #include "environment.h"
 
+
+std::string entityNoneDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
+std::string entityBoolDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
+std::string entityNatDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
+std::string entityIntDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
+std::string entityBigNatDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
+std::string entityBigIntDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
 ////
 //Define some safe constants for memory allocation during various builtin operations
 #define SAFE_STRING_CONCAT_SIZE 128
-
 
 size_t BSQStringReprType::getKReprSizeFor(size_t v)
 {

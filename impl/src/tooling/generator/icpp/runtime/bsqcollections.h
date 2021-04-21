@@ -14,7 +14,6 @@ public:
     virtual BSQNat getLength(void* data) const = 0;
 };
 
-
 class BSQListEmptyType : public BSQListEntityType
 {
 public:

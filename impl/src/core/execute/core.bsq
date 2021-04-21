@@ -180,10 +180,6 @@ __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string value.</summary>
 grounded struct entity String provides Some, KeyType, PODType, APIType {
-    private function s_rangeInBounds(s: String, start: Nat, end: Nat): Bool {
-        return start <= end & end <= String::s_length(s); 
-    }
-
     function s_concat2(s1: String, s2: String): String # string_concat2
     function s_slice(s: String, start: Nat, end: Nat): String # string_slice
 

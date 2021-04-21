@@ -178,7 +178,7 @@ typedef void (*GCDecOperatorFP)(const BSQType*, void**);
 typedef void (*GCClearMarkOperatorFP)(const BSQType*, void**);
 typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
 
-typedef std::string (*DisplayFP)(void*);
+typedef std::string (*DisplayFP)(const BSQType*, void**);
 
 typedef uint32_t BSQTypeID;
 typedef uint32_t BSQTupleIndex;
@@ -191,3 +191,7 @@ typedef uint32_t BSQVirtualInvokeID;
 #define BSQ_TYPE_ID_BOOL 1
 #define BSQ_TYPE_ID_NAT 2
 #define BSQ_TYPE_ID_INT 3
+#define BSQ_TYPE_ID_BIGNAT 4
+#define BSQ_TYPE_ID_BIGINT 5
+
+#define BSQ_TYPE_ID_BUILTIN_MAX 50
