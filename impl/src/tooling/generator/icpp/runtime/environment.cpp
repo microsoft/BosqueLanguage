@@ -5,7 +5,7 @@
 
 #include "environment.h"
 
-BSQNone* Environment::g_constNone = nullptr;
+BSQNone Environment::g_constNone = 0;
 BSQBool Environment::g_constTrue = (BSQBool)true;
 BSQBool Environment::g_constFalse = (BSQBool)false;
 BSQNat* Environment::g_constNats = nullptr;

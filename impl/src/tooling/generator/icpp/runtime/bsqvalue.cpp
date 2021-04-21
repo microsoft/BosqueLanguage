@@ -44,16 +44,13 @@ void BSQStringReprIterator::initializePosition(BSQStringReprIterator& iv, void* 
     static BSQBool lessOperator(const BSQString& s1, const BSQString& s2);
 
 
-void* BSQStringType::allocateStringKForSize(size_t k, wchar_t** dataptr)
+void* BSQStringType::allocateStringKForSize(size_t k, uint8_t** dataptr)
 {
     size_t osize = BSQStringReprType::getKReprSizeFor(k);
     void* res = nullptr;
 
     switch(osize)
     {
-    case 4:
-        res = (BSQStringKRepr<4>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr4);
-        break;
     case 8:
         res = (BSQStringKRepr<8>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr8);
         break;
@@ -75,11 +72,11 @@ void* BSQStringType::allocateStringKForSize(size_t k, wchar_t** dataptr)
     }
 
     *((BSQNat*)res) = k;
-    *dataptr = (wchar_t*)((uint8_t*)res) + sizeof(BSQNat);
+    *dataptr = (uint8_t*)((uint8_t*)res) + sizeof(BSQNat);
     return res;
 }
 
-BSQStringKRepr<4>* BSQStringType::boxInlineString(BSQInlineString istr)
+BSQStringKRepr<8>* BSQStringType::boxInlineString(BSQInlineString istr)
 {
     auto res = (BSQStringKRepr<4>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr4);
     res->size = BSQInlineString::length(istr);

@@ -44,7 +44,7 @@ public:
 
     DisplayFP fpDisplay;
 
-    const std::wstring name;
+    const std::string name;
 
     template <bool isRoot>
     GCProcessOperatorFP getProcessFP() const

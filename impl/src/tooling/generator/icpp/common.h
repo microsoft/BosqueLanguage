@@ -178,7 +178,7 @@ typedef void (*GCDecOperatorFP)(const BSQType*, void**);
 typedef void (*GCClearMarkOperatorFP)(const BSQType*, void**);
 typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
 
-typedef std::wstring (*DisplayFP)(void*);
+typedef std::string (*DisplayFP)(void*);
 
 typedef uint32_t BSQTypeID;
 typedef uint32_t BSQTupleIndex;

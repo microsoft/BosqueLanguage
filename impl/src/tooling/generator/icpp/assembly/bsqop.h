@@ -253,9 +253,9 @@ public:
 class AbortOp : public InterpOp
 {
 public:
-    const std::wstring* msg;
+    const std::string* msg;
 
-    AbortOp(SourceInfo sinfo, const std::wstring* msg) : InterpOp(sinfo, OpCodeTag::AbortOp), msg(msg) {;}
+    AbortOp(SourceInfo sinfo, const std::string* msg) : InterpOp(sinfo, OpCodeTag::AbortOp), msg(msg) {;}
     virtual ~AbortOp() {;}
 };
 
@@ -263,9 +263,9 @@ class AssertOp : public InterpOp
 {
 public:
     const Argument arg;
-    const std::wstring* msg;
+    const std::string* msg;
 
-    AssertOp(SourceInfo sinfo, Argument arg, const std::wstring* msg) : InterpOp(sinfo, OpCodeTag::AssertOp), arg(arg), msg(msg) {;}
+    AssertOp(SourceInfo sinfo, Argument arg, const std::string* msg) : InterpOp(sinfo, OpCodeTag::AssertOp), arg(arg), msg(msg) {;}
     virtual ~AssertOp() {;}
 };
 
@@ -517,8 +517,8 @@ public:
     const int32_t optmaskoffset;
     const BSQStatementGuard sguard;
 
-    InvokeFixedFunctionWGuardOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, const std::vector<Argument>& args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, tag), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
-    virtual ~InvokeFixedFunctionWGuardOp() {;}
+    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, const std::vector<Argument>& args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, tag), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
+    virtual ~InvokeFixedFunctionOp() {;}
 };
 
 class InvokeVirtualFunctionOp : public InterpOp

@@ -16,8 +16,8 @@ class EvaluatorFrame
 {
 public:
 #ifdef BSQ_DEBUG_BUILD
-    const std::wstring* dbg_file;
-    const std::wstring* dbg_function;
+    const std::* dbg_file;
+    const std::string* dbg_function;
     int64_t dbg_prevline;
     int64_t dbg_line;
 #endif
@@ -30,7 +30,7 @@ public:
     std::vector<InterpOp*>::const_iterator cpos;
 
 #ifdef BSQ_DEBUG_BUILD
-    EvaluatorFrame(std::wstring* dbg_file, std::wstring* dbg_function, StorageLocationPtr* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
+    EvaluatorFrame(std::string* dbg_file, std::string* dbg_function, StorageLocationPtr* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
     {
         this->dbg_line = this->cpos->sinfo.line;
     }
@@ -46,7 +46,7 @@ private:
     std::deque<EvaluatorFrame> callstack;
 
 #ifdef BSQ_DEBUG_BUILD
-    inline void pushFrame(std::wstring* dbg_file, std::wstring* dbg_function, void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(std::string* dbg_file, std::string* dbg_function, void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops)
     {
         tthis->callstack.emplace_back(dbg_file, dbg_function, argsbase, localsbase, ops);
     }
@@ -63,13 +63,13 @@ private:
     }
 
 #ifdef BSQ_DEBUG_BUILD
-    const std::wstring* getCurrentFile() { return cframe->dbg_file; }
-    const std::wstring* getCurrentfunction() { return cframe->dbg_function; }
+    const std::string* getCurrentFile() { return cframe->dbg_file; }
+    const std::string* getCurrentfunction() { return cframe->dbg_function; }
     int64_t getPrevLine() { return cframe->dbg_prevline; }
     int64_t getCurrentLine() { return cframe->dbg_line; }
 #else
-    const std::wstring* getCurrentFile() { return nullptr; }
-    const std::wstring* getCurrentfunction() { return nullptr; }
+    const std::string* getCurrentFile() { return nullptr; }
+    const std::string* getCurrentfunction() { return nullptr; }
     int64_t getPrevLine() { return -1; }
     int64_t getCurrentLine() { return 0; }
 #endif
