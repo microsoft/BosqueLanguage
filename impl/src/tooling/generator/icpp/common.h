@@ -162,6 +162,8 @@ typedef void* StorageLocationPtr;
 typedef bool (*KeyEqualFP)(StorageLocationPtr, StorageLocationPtr);
 typedef bool (*KeyLessFP)(StorageLocationPtr, StorageLocationPtr);
 
+#define IS_INLINE_STRING(S) ((*(((uint8_t*)(S)) + 7) & 0x1) == 0x1)
+
 ////////////////////////////////
 //Type and GC interaction decls
 
@@ -169,6 +171,7 @@ class BSQType;
 
 #define PTR_FIELD_MASK_SCALAR '1'
 #define PTR_FIELD_MASK_PTR '2'
+#define PTR_FIELD_MASK_STRING '3'
 #define PTR_FIELD_MASK_UNION '4'
 #define PTR_FIELD_MASK_END (char)0
 
@@ -178,7 +181,7 @@ typedef void (*GCDecOperatorFP)(const BSQType*, void**);
 typedef void (*GCClearMarkOperatorFP)(const BSQType*, void**);
 typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
 
-typedef std::string (*DisplayFP)(const BSQType*, void**);
+typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr);
 
 typedef uint32_t BSQTypeID;
 typedef uint32_t BSQTupleIndex;
@@ -196,5 +199,9 @@ typedef uint32_t BSQVirtualInvokeID;
 #define BSQ_TYPE_ID_FLOAT 6
 #define BSQ_TYPE_ID_DECIMAL 7
 #define BSQ_TYPE_ID_RATIONAL 8
+
+#define BSQ_TYPE_ID_STRINGKREPR 30
+#define BSQ_TYPE_ID_STRINGAPPENDREPR 31
+#define BSQ_TYPE_ID_STRINGSLICEREPR 32
 
 #define BSQ_TYPE_ID_BUILTIN_MAX 50

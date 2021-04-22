@@ -24,12 +24,14 @@ typedef uint64_t BSQNone;
 typedef void* BSQNoneHeap;
 #define BSQNoneHeapValue nullptr
 
-std::string entityNoneDisplay_impl(const BSQType* btype, void** data);
+std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool enityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
 class BSQNoneType : public BSQEntityType
 {
 public:
-    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNone)), {}, {}, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
+    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNone)), {}, {}, entityNoneEqual_impl, enityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
     virtual ~BSQNoneType() {;}
 };
 
@@ -39,72 +41,97 @@ typedef uint8_t BSQBool;
 #define BSQTRUE 1
 #define BSQFALSE 0
 
-std::string entityBoolDisplay_impl(const BSQType* btype, void** data);
+std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityBoolEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool enityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
 class BSQBoolType : public BSQEntityType
 {
 public:
-    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBool)), {}, {}, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
+    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBool)), {}, {}, entityBoolEqual_impl, enityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
     virtual ~BSQBoolType() {;}
+
+    inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
+    inline static bool lessThan(BSQBool v1, BSQBool v2) { return !v1 & v2; }
 };
 
 ////
 //Nat
 typedef uint64_t BSQNat;
 
-std::string entityNatDisplay_impl(const BSQType* btype, void** data);
+std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool enityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
 class BSQNatType : public BSQEntityType
 {
 public:
-    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNat)), {}, {}, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
+    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNat)), {}, {}, entityNatEqual_impl, enityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
     virtual ~BSQNatType() {;}
+
+    inline static bool equal(BSQNat v1, BSQNat v2) { return v1 == v2; }
+    inline static bool lessThan(BSQNat v1, BSQNat v2) { return v1 < v2; }
 };
 
 ////
 //Int
 typedef int64_t BSQInt;
 
-std::string entityIntDisplay_impl(const BSQType* btype, void** data);
+std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool enityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
 class BSQIntType : public BSQEntityType
 {
 public:
-    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQInt)), {}, {}, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
+    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQInt)), {}, {}, entityIntEqual_impl, enityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
     virtual ~BSQIntType() {;}
+
+    inline static bool equal(BSQInt v1, BSQInt v2) { return v1 == v2; }
+    inline static bool lessThan(BSQInt v1, BSQInt v2) { return v1 < v2; }
 };
 
 ////
 //BigNat
 typedef boost::multiprecision::checked_uint256_t BSQBigNat;
 
-std::string entityBigNatDisplay_impl(const BSQType* btype, void** data);
+std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool enityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
 class BSQBigNatType : public BSQEntityType
 {
 public:
-    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), {}, {}, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
+    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), {}, {}, entityBigNatEqual_impl, enityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
     virtual ~BSQBigNatType() {;}
+
+    inline static bool equal(BSQBigNat v1, BSQBigNat v2) { return v1 == v2; }
+    inline static bool lessThan(BSQBigNat v1, BSQBigNat v2) { return v1 < v2; }
 };
 
 ////
 //BigInt
 typedef boost::multiprecision::checked_uint256_t BSQBigInt;
 
-std::string entityBigIntDisplay_impl(const BSQType* btype, void** data);
+std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityBigIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool enityBigIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
 class BSQBigIntType : public BSQEntityType
 {
 public:
-    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), {}, {}, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), {}, {}, entityBigIntEqual_impl, enityBigIntLessThan_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
     virtual ~BSQBigIntType() {;}
+
+    inline static bool equal(BSQBigInt v1, BSQBigInt v2) { return v1 == v2; }
+    inline static bool lessThan(BSQBigInt v1, BSQBigInt v2) { return v1 < v2; }
 };
 
 ////
 //Float
 typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
 
-std::string entityFloatDisplay_impl(const BSQType* btype, void** data);
+std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQFloatType : public BSQEntityType
 {
@@ -117,7 +144,7 @@ public:
 //Decimal
 typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
 
-std::string entityDecimalDisplay_impl(const BSQType* btype, void** data);
+std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQDecimalType : public BSQEntityType
 {
@@ -134,7 +161,7 @@ struct BSQRational
     BSQBigInt denominator;
 };
 
-std::string entityRationalDisplay_impl(const BSQType* btype, void** data);
+std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQRationalType : public BSQEntityType
 {
@@ -151,13 +178,15 @@ struct BSQInlineString
 
     inline static BSQInlineString create(const uint8_t* chars, size_t len)
     {
-        BSQInlineString istr = {len, 0, 0, 0, 0, 0, 0, 0};
+        BSQInlineString istr = {len << 1, 0, 0, 0, 0, 0, 0, 0};
+        assert(IS_INLINE_STRING(&istr.vals));
+
         std::copy(chars, chars + len, istr.vals + 1);
     }
 
-    inline static BSQNat length(BSQInlineString istr)
+    inline static size_t codePointCount(BSQInlineString istr)
     {
-        return (BSQNat)istr.vals[0];
+        return istr.vals[0] >> 1;
     }
 
     inline static uint8_t* vals(BSQInlineString istr)
@@ -172,21 +201,18 @@ struct BSQInlineString
 };
 constexpr BSQInlineString g_emptyInlineString = {0};
 
-enum class BSQStringReprTypeTag
-{
-    ReprK,
-    Concat,
-    Slice
-};
-
 class BSQStringReprType : public BSQEntityType
 {
 public:
-    BSQStringReprTypeTag tag;
-
-    virtual BSQNat length(void* repr) const = 0;
-
     static size_t getKReprSizeFor(size_t v);
+
+    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, uint64_t gcptrcount, DisplayFP fpDisplay, std::string name) 
+    : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, gcptrcount, {}, {}, fpDisplay, name, {}, {}, {}) 
+    {;}
+
+    virtual ~BSQStringReprType() {;}
+
+    virtual size_t codePointCount(void* repr) const = 0;
 };
 
 template <size_t k>
@@ -197,10 +223,19 @@ struct BSQStringKRepr
 };
 
 template <size_t k>
+std::string entityStringKReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+template <size_t k>
 class BSQStringKReprType : public BSQStringReprType
 {
 public:
-    virtual BSQNat length(void* repr) const override
+    BSQStringKReprType(DisplayFP fpDisplay) 
+    : BSQStringReprType(BSQ_TYPE_ID_STRINGKREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringKRepr<k>)), fpDisplay, "[Internal::StringKRepr]") 
+    {;}
+
+    virtual ~BSQStringKReprType() {;}
+
+    virtual size_t codePointCount(void* repr) const override
     {
         return ((BSQStringKRepr<k>*)repr)->size;
     }
@@ -210,15 +245,24 @@ constexpr size_t g_kreprcount = 6;
 
 struct BSQStringSliceRepr
 {
-    void* srepr;
-    BSQNat start;
-    BSQNat end;
+    void* srepr; //a krepr string
+    size_t start;
+    size_t end;
+    void* parent; //dont gc ptr this so it is like a weak ref
 };
+
+std::string entityStringSliceReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQStringSliceReprType : public BSQStringReprType
 {
 public:
-    virtual BSQNat length(void* repr) const override
+    BSQStringSliceReprType() 
+    : BSQStringReprType(BSQ_TYPE_ID_STRINGSLICEREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringSliceRepr)), 1, entityStringSliceReprDisplay_impl, "[Internal::StringSliceRepr]") 
+    {;}
+
+    virtual ~BSQStringSliceReprType() {;}
+
+    virtual size_t codePointCount(void* repr) const override
     {
         auto srepr = (BSQStringSliceRepr*)repr;
         return (srepr->end - srepr->start);
@@ -229,13 +273,22 @@ struct BSQStringConcatRepr
 {
     void* srepr1;
     void* srepr2;
-    BSQNat size;
+    size_t size;
+    void* parent; //dont gc ptr this so it is like a weak ref
 };
+
+std::string entityStringConcatReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQStringConcatReprType : public BSQStringReprType
 {
 public:
-    virtual BSQNat length(void* repr) const override
+    BSQStringConcatReprType() 
+    : BSQStringReprType(BSQ_TYPE_ID_STRINGAPPENDREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringConcatRepr)), 2, entityStringConcatReprDisplay_impl, "[Internal::StringConcatRepr]") 
+    {;}
+
+    virtual ~BSQStringConcatReprType() {;}
+
+    virtual size_t codePointCount(void* repr) const override
     {
         return ((BSQStringConcatRepr*)repr)->size;
     }
@@ -244,40 +297,22 @@ public:
 class BSQStringReprIterator
 {
 public:
-    std::stack<void*> parents;
-    wchar_t* current;
-    wchar_t* currentLimit;
+    void* activeparent;
+    uint8_t* current;
 
-    uint64_t pos;
-
-    inline bool done() const
-    {
-        return this->current == nullptr;
-    }
-
-    void incrementTree();
-    inline void increment()
-    {
-        this->current++;
-        this->pos++;
-        if(this->current == this->currentLimit)
-        {
-            this->incrementTree();
-        }
-    }
-    
-    static void initialize(BSQStringReprIterator& iv, void* repr);
-    static void initializePosition(BSQStringReprIterator& iv, void* repr, uint64_t pos);
+    void increment();
+    void decrement();
 };
-
-#define IS_INLINE_STRING(S) ((S).data == BSQNoneHeapValue)
 
 struct BSQString
 {
-    void* data;
-    union { BSQNat u_size; BSQInlineString u_inlineString; };
+    union { void* u_data; BSQInlineString u_inlineString; };
 };
 constexpr BSQString g_emptyString = {0};
+
+std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityStringEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool enityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
 class BSQStringType : public BSQEntityType
 {
@@ -286,36 +321,44 @@ private:
     static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
 
 public:
-    static BSQBool equalOperator(const BSQString& s1, const BSQString& s2);
-    static BSQBool lessOperator(const BSQString& s1, const BSQString& s2);
-
-    inline static BSQBool equalOperator(StorageLocationPtr s1, StorageLocationPtr s2)
+    BSQStringReprIterator begin(BSQString s) const
     {
-        return equalOperator(SLPTR_LOAD_CONTENTS_AS(BSQString, s1), SLPTR_LOAD_CONTENTS_AS(BSQString, s2));
+
     }
 
-    inline static BSQBool lessOperator(StorageLocationPtr s1, StorageLocationPtr s2)
+    BSQStringReprIterator end(BSQString s) const
     {
-        return lessOperator(SLPTR_LOAD_CONTENTS_AS(BSQString, s1), SLPTR_LOAD_CONTENTS_AS(BSQString, s2));
+
     }
 
-    inline BSQNat length(BSQString s) const
+    inline static bool equalOperator(BSQString v1, BSQString v2)
     {
-        if(IS_INLINE_STRING(s))
+
+    }
+
+    inline static bool lessOperator(BSQString v1, BSQString v2)
+    {
+
+    }
+
+    size_t codePointCount(BSQString s) const
+    {
+        if(IS_INLINE_STRING(&s))
         {
-            return BSQInlineString::length(s.u_inlineString);
+            return BSQInlineString::codePointCount(s.u_inlineString);
         }
         else
         {
-            return s.u_size;
+            return GET_TYPE_META_DATA_AS(BSQStringReprType, s.u_data)->codePointCount(s.u_data);
         }
     }
 
-    BSQString concat2(BSQString s1, BSQString s2) const;
+    inline BSQBool empty(BSQString s) const
+    {
+        s.u_data == nullptr;
+    }
 
-    BSQString sliceRepr(void* repr, BSQNat start, BSQNat end);
-    BSQString slice(BSQString s, BSQNat start, BSQNat end);
-    BSQNat indexOf(BSQString s, BSQString oftr);
+    BSQString concat2(BSQString s1, BSQString s2) const;
 };
 
 ////

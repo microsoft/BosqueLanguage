@@ -178,23 +178,11 @@ __safe __primitive inline infix operator >(a: Decimal, b: Decimal): Bool = defau
 __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
-//<summary>Opaque cursor into string contents.</summary>
-__internal struct entity StringCursor provides Some {
-}
-
 //<summary>Primitive string value.</summary>
 __internal grounded entity String provides Some, KeyType, PODType, APIType {
     __safe private function s_empty(s: String): Bool # string_empty
-    
-    __assume_safe private function s_contains(s: String, val: String): Bool # string_contains
-    __assume_safe private function s_indexof(s: String, val: String): Nat # string_indexof
-
-    __assume_safe private function s_startswith(s: String, val: String): Bool # string_startswith
-    __assume_safe private function s_endswith(s: String, val: String): Bool # string_endswith
-
-    __assume_safe private function s_substring(s: String, start: Nat, end: Nat): String # string_substring
     __assume_safe private function s_concat2(s1: String, s2: String): String # string_append
-
+    
     function concat2(s1: String, s2: String): String {
         return String::s_concat2(s1, s2);
     }
@@ -203,26 +191,8 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
         return String::s_concat2(s1, String::s_concat2(s2, s3));
     }
 
-    method length(): Nat {
-        return String::s_length(this);
-    }
-
-    method contains(s: String): Bool {
-        return String::s_contains(this, s);
-    }
-
-    method startsWith(s: String): Bool {
-        return String::s_startswith(this, s);
-    }
-
-    method endsWith(s: String): Bool {
-        return String::s_endswith(this, s);
-    }
-
-    method substring(start?: Nat=0, end?: Nat=String::s_length(this)): String 
-        requires release String::s_rangeInBounds(this, start, end);
-    {
-        return String::s_substring(this, start, end);
+    method empty(): Bool {
+        return String::s_empty(this);
     }
 
     method append(s: String): String {

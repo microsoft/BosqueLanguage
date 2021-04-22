@@ -7,47 +7,123 @@
 #include "environment.h"
 
 
-std::string entityNoneDisplay_impl(const BSQType* btype, void** data)
+std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     xxxx;
 }
 
-std::string entityBoolDisplay_impl(const BSQType* btype, void** data)
+bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     xxxx;
 }
 
-std::string entityNatDisplay_impl(const BSQType* btype, void** data)
+bool enityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     xxxx;
 }
 
-std::string entityIntDisplay_impl(const BSQType* btype, void** data)
+std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     xxxx;
 }
 
-std::string entityBigNatDisplay_impl(const BSQType* btype, void** data)
+bool entityBoolEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     xxxx;
 }
 
-std::string entityBigIntDisplay_impl(const BSQType* btype, void** data)
+bool enityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     xxxx;
 }
 
-std::string entityFloatDisplay_impl(const BSQType* btype, void** data)
+std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     xxxx;
 }
 
-std::string entityDecimalDisplay_impl(const BSQType* btype, void** data)
+bool entityNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     xxxx;
 }
 
-std::string entityRationalDisplay_impl(const BSQType* btype, void** data)
+bool enityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+bool entityIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+bool enityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+bool enityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+bool entityBigIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+bool enityBigIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+template <size_t k>
+std::string entityStringKReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+std::string entityStringSliceReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+std::string entityStringConcatReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     xxxx;
 }
@@ -84,10 +160,6 @@ void BSQStringReprIterator::initializePosition(BSQStringReprIterator& iv, void* 
 {
     xxxx;
 }
-
-    static BSQBool equalOperator(const BSQString& s1, const BSQString& s2);
-    static BSQBool lessOperator(const BSQString& s1, const BSQString& s2);
-
 
 void* BSQStringType::allocateStringKForSize(size_t k, uint8_t** dataptr)
 {

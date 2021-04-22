@@ -2369,41 +2369,8 @@ class SMTBodyEmitter {
 
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, accept);
             }
-            case "string_count": {
-                if (this.vopts.StringOpt === "ASCII") {
-                    return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("nat2bv", [new SMTCallSimple("str.len", [new SMTVar(args[0].vname)])]));
-                }
-                else {
-                    return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("nat2bv", [new SMTCallSimple("seq.len", [new SMTVar(args[0].vname)])]));
-                }
-            }
-            case "string_charat": {
-                if (this.vopts.StringOpt === "ASCII") {
-                    return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("str.at", [new SMTVar(args[0].vname), new SMTCallSimple("bv2nat", [new SMTVar(args[1].vname)])]));
-                }
-                else {
-                    return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("seq.at", [new SMTVar(args[0].vname), new SMTCallSimple("bv2nat", [new SMTVar(args[1].vname)])]));
-                }
-            }
-            case "string_contains": {
-                NOT_IMPLEMENTED("string_contains");
-                return (undefined as any as SMTFunction);
-            }
-            case "string_indexof": {
-                NOT_IMPLEMENTED("string_indexof");
-                return (undefined as any as SMTFunction);
-            }
-            case "string_startswith": {
-                NOT_IMPLEMENTED("string_startswith");
-                return (undefined as any as SMTFunction);
-            }
-            case "string_endswith": {
-                NOT_IMPLEMENTED("string_endswith");
-                return (undefined as any as SMTFunction);
-            } 
-            case "string_substring": {
-                NOT_IMPLEMENTED("string_substring");
-                return (undefined as any as SMTFunction);
+            case "string_empty": {
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("=", [new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")]));
             }
             case "string_append": {
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));

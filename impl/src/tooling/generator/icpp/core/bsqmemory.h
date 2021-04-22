@@ -337,6 +337,15 @@ public:
     }
 
     template <bool isRoot>
+    inline static void gcProcessSlotWithString(void** slot)
+    {
+        if (!IS_INLINE_STRING(slot))
+        {
+            Allocator::gcProcessSlot(slot);
+        }
+    }
+
+    template <bool isRoot>
     inline static void gcProcessSlotsWithUnion(void** slots)
     {
         const BSQType* umeta = ((const BSQType*)(*slots++));
@@ -352,24 +361,27 @@ public:
         while (*cmaskop)
         {
             char op = *cmaskop++;
-            if (op == PTR_FIELD_MASK_SCALAR)
+            switch(op)
             {
-                cslot++;
-            }
-            else if (op == PTR_FIELD_MASK_PTR)
-            {
-                Allocator::gcProcessSlot<isRoot>(cslot++);
-            }
-            else
-            {
-                Allocator::gcProcessSlotsWithUnion<isRoot>(cslot++);
+                case PTR_FIELD_MASK_SCALAR:
+                    cslot++;
+                    break;
+                case PTR_FIELD_MASK_PTR:
+                    Allocator::gcProcessSlot<isRoot>(cslot++);
+                    break;
+                case PTR_FIELD_MASK_STRING:
+                    Allocator::gcProcessSlotWithString<isRoot>(cslot++);
+                    break;
+                default:
+                    Allocator::gcProcessSlotsWithUnion<isRoot>(cslot++);
+                    break;
             }
         }
     }
 
     ////////
     //Operations GC decrement
-    inline static void gcDecrement(void *obj)
+    inline static void gcDecrement(void* obj)
     {
         if (obj != nullptr)
         {
@@ -380,7 +392,7 @@ public:
         }
     }
 
-    inline static void gcDecrementSlots(void **slots, size_t limit)
+    inline static void gcDecrementSlots(void** slots, size_t limit)
     {
         void **cslot = slots;
         void *end = slots + limit;
@@ -391,7 +403,15 @@ public:
         }
     }
 
-    inline static void gcDecrementSlotsWithUnion(void **slots)
+    inline static void gcDecrementString(void** slot)
+    {
+        if (!IS_INLINE_STRING(slot))
+        {
+            Allocator::gcDecrement(*slot);
+        }
+    }
+
+    inline static void gcDecrementSlotsWithUnion(void** slots)
     {
         const BSQType* umeta = ((const BSQType*)(*slots++));
         umeta->fpDecObj(umeta, slots);
@@ -405,17 +425,20 @@ public:
         while (*cmaskop)
         {
             char op = *cmaskop++;
-            if (op == PTR_FIELD_MASK_SCALAR)
+            switch(op)
             {
-                cslot++;
-            }
-            else if (op == PTR_FIELD_MASK_PTR)
-            {
-                Allocator::gcDecrement(*cslot++);
-            }
-            else
-            {
-                Allocator::gcDecrementSlotsWithUnion(cslot++);
+                case PTR_FIELD_MASK_SCALAR:
+                    cslot++;
+                    break;
+                case PTR_FIELD_MASK_PTR:
+                    Allocator::gcDecrement(*cslot++);
+                    break;
+                case PTR_FIELD_MASK_STRING:
+                    Allocator::gcDecrementString(cslot++);
+                    break;
+                default:
+                    Allocator::gcDecrementSlotsWithUnion(cslot++);
+                    break;
             }
         }
     }
@@ -441,6 +464,14 @@ public:
         }
     }
 
+    inline static void gcClearMarkString(void** slot)
+    {
+        if (!IS_INLINE_STRING(slot))
+        {
+            Allocator::gcClearMark(*slot);
+        }
+    }
+
     inline static void gcClearMarkSlotsWithUnion(void** slots)
     {
         const BSQType *umeta = ((const BSQType*)(*slots++));
@@ -455,17 +486,20 @@ public:
         while (*cmaskop)
         {
             char op = *cmaskop++;
-            if (op == PTR_FIELD_MASK_SCALAR)
+            switch(op)
             {
-                cslot++;
-            }
-            else if (op == PTR_FIELD_MASK_PTR)
-            {
-                Allocator::gcClearMark(*cslot++);
-            }
-            else
-            {
-                Allocator::gcClearMarkSlotsWithUnion(cslot++);
+                case PTR_FIELD_MASK_SCALAR:
+                    cslot++;
+                    break;
+                case PTR_FIELD_MASK_PTR:
+                    Allocator::gcClearMark(*cslot++);
+                    break;
+                case PTR_FIELD_MASK_STRING:
+                    Allocator::gcClearMarkString(cslot++);
+                    break;
+                default:
+                    Allocator::gcClearMarkSlotsWithUnion(cslot++);
+                    break;
             }
         }
     }

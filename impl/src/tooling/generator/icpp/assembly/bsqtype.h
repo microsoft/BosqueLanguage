@@ -120,13 +120,28 @@ public:
     : BSQType(tid, tkind, allocsize, refmask, 0, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, subtypes, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
+    //Constructor for string types
+    BSQType(BSQTypeID tid, uint64_t allocsize,
+        GCDecOperatorFP fpDecObj, GCClearMarkOperatorFP fpClearObj, GCProcessOperatorFP fpProcessObjRoot, GCProcessOperatorFP fpProcessObjHeap,
+        std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::set<BSQTypeID> subtypes,
+        KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay,
+        std::string name
+    ) 
+    : BSQType(tid, BSQTypeKind::Struct, allocsize, nullptr, 0,
+        fpDecObj, fpClearObj, fpProcessObjRoot, fpProcessObjHeap,
+        false, vtable, subtypes,
+        fpKeyEqual, fpKeyLess, fpDisplay,
+        name
+    )
+    {;}
+
     virtual ~BSQType() {;}
 };
 
 ////
 //Concrete types
 
-std::string tupleDisplay_impl(const BSQType* btype, void** data);
+std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQTupleType : public BSQType
 {
@@ -180,7 +195,7 @@ public:
     virtual ~BSQTupleType() {;}
 };
 
-std::string recordDisplay_impl(const BSQType* btype, void** data);
+std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQRecordType : public BSQType
 {
@@ -234,7 +249,7 @@ public:
     virtual ~BSQRecordType() {;}
 };
 
-std::string entityDisplay_impl(const BSQType* btype, void** data);
+std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQEntityType : public BSQType
 {
@@ -285,10 +300,20 @@ public:
     fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
+    //Constructor for special string action
+    BSQEntityType(BSQTypeID tid, uint64_t allocsize, GCDecOperatorFP fpDecObj, GCClearMarkOperatorFP fpClearObj, GCProcessOperatorFP fpProcessObjRoot, GCProcessOperatorFP fpProcessObjHeap, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay)
+    : BSQType(tid, allocsize, fpDecObj, fpClearObj, fpProcessObjRoot, fpProcessObjHeap,
+        std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::set<BSQTypeID> subtypes,
+        KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay,
+        std::string name
+    ) ),
+    fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    {;}
+
     virtual ~BSQEntityType() {;}
 };
 
-std::string ephemeralDisplay_impl(const BSQType* btype, void** data);
+std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQEphemeralListType : public BSQType
 {
