@@ -137,12 +137,12 @@ __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
 //<summary>Primitive rational value.</summary>
 __internal grounded struct entity Rational provides Some, PODType, APIType {
 }
-__primitive inline prefix operator +(a: Rational?): Rational? = default;
-__primitive inline prefix operator -(a: Rational?): Rational? = default;
-__primitive inline infix operator *(a: Rational?, b: Rational?): Rational? = default;
-__primitive inline infix operator /(a: Rational?, b: Rational?): Rational? = default;
-__primitive inline infix operator +(a: Rational?, b: Rational?): Rational? = default;
-__primitive inline infix operator -(a: Rational?, b: Rational?): Rational? = default;
+__primitive inline prefix operator +(a: Rational): Rational = default;
+__primitive inline prefix operator -(a: Rational): Rational = default;
+__primitive inline infix operator *(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator /(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator +(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator -(a: Rational, b: Rational): Rational = default;
 __primitive inline infix operator ==(a: Rational, b: Rational): Bool = default;
 __primitive inline infix operator !=(a: Rational, b: Rational): Bool = default;
 __primitive inline infix operator <(a: Rational, b: Rational): Bool = default;

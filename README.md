@@ -146,7 +146,7 @@ NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 **Validated and Typed Strings:**
 ```
 typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
-typedef CSSpt = /\p{N}+pt/;
+typedef CSSpt = /[0-9]+pt/;
 
 function is3pt(s1: StringOf<CSSpt>): Bool {
     return s1.string() === "3pt";

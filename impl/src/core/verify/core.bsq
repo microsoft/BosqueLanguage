@@ -137,12 +137,12 @@ __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = defaul
 //<summary>Primitive rational value.</summary>
 __internal grounded struct entity Rational provides Some, PODType, APIType {
 }
-__safe __primitive inline prefix operator +(a: Rational?): Rational? = default;
-__safe __primitive inline prefix operator -(a: Rational?): Rational? = default;
-__safe __primitive inline infix operator *(a: Rational?, b: Rational?): Rational? = default;
-__safe __primitive inline infix operator /(a: Rational?, b: Rational?): Rational? = default;
-__safe __primitive inline infix operator +(a: Rational?, b: Rational?): Rational? = default;
-__safe __primitive inline infix operator -(a: Rational?, b: Rational?): Rational? = default;
+__safe __primitive inline prefix operator +(a: Rational): Rational? = default;
+__safe __primitive inline prefix operator -(a: Rational): Rational? = default;
+__safe __primitive inline infix operator *(a: Rational, b: Rational): Rational? = default;
+__safe __primitive inline infix operator /(a: Rational, b: Rational): Rational? = default;
+__safe __primitive inline infix operator +(a: Rational, b: Rational): Rational? = default;
+__safe __primitive inline infix operator -(a: Rational, b: Rational): Rational? = default;
 __safe __primitive inline infix operator ==(a: Rational, b: Rational): Bool = default;
 __safe __primitive inline infix operator !=(a: Rational, b: Rational): Bool = default;
 __safe __primitive inline infix operator <(a: Rational, b: Rational): Bool = default;
@@ -177,6 +177,10 @@ __safe __primitive inline infix operator <(a: Decimal, b: Decimal): Bool = defau
 __safe __primitive inline infix operator >(a: Decimal, b: Decimal): Bool = default;
 __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
+
+//<summary>Opaque cursor into string contents.</summary>
+__internal struct entity StringCursor provides Some {
+}
 
 //<summary>Primitive string value.</summary>
 __internal grounded entity String provides Some, KeyType, PODType, APIType {

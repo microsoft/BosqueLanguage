@@ -104,18 +104,26 @@ public:
 //Float
 typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
 
+std::string entityFloatDisplay_impl(const BSQType* btype, void** data);
+
 class BSQFloatType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQFloatType() : BSQEntityType(BSQ_TYPE_ID_FLOAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQFloat)), {}, {}, entityFloatDisplay_impl, "NSCore::Float", {}, {}, {}) {;}
+    virtual ~BSQFloatType() {;}
 };
 
 ////
 //Decimal
 typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
 
+std::string entityDecimalDisplay_impl(const BSQType* btype, void** data);
+
 class BSQDecimalType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQDecimalType() : BSQEntityType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), {}, {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {}) {;}
+    virtual ~BSQDecimalType() {;}
 };
 
 ////
@@ -126,9 +134,13 @@ struct BSQRational
     BSQBigInt denominator;
 };
 
+std::string entityRationalDisplay_impl(const BSQType* btype, void** data);
+
 class BSQRationalType : public BSQEntityType
 {
-    xxxx;
+public:
+    BSQRationalType() : BSQEntityType(BSQ_TYPE_ID_RATIONAL, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQRational)), {}, {}, entityRationalDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    virtual ~BSQRationalType() {;}
 };
 
 ////

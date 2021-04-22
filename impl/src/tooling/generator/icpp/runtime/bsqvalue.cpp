@@ -37,6 +37,21 @@ std::string entityBigIntDisplay_impl(const BSQType* btype, void** data)
     xxxx;
 }
 
+std::string entityFloatDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
+std::string entityDecimalDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
+std::string entityRationalDisplay_impl(const BSQType* btype, void** data)
+{
+    xxxx;
+}
+
 ////
 //Define some safe constants for memory allocation during various builtin operations
 #define SAFE_STRING_CONCAT_SIZE 128

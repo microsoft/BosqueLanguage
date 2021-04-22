@@ -105,20 +105,8 @@ class RegexParser {
                 this.advance();
 
                 let res: RegexComponent | string = "Ill formed character class";
-                if(this.isToken("L")) {
-                    res = new CharClass(SpecialCharKind.Letter);
-                    this.advance();
-                }
-                else if(this.isToken("N")) {
-                    res = new CharClass(SpecialCharKind.Number);
-                    this.advance();
-                }
-                else if(this.isToken("Z")) {
+                if(this.isToken("Z")) {
                     res = new CharClass(SpecialCharKind.WhiteSpace);
-                    this.advance();
-                }
-                else if(this.isToken("S")) {
-                    res = new CharClass(SpecialCharKind.Symbol);
                     this.advance();
                 }
                 else {
@@ -325,10 +313,7 @@ class BSQRegex {
 
 enum SpecialCharKind {
     Wildcard = "Wildcard",
-    WhiteSpace = "WhiteSpace",
-    Number = "Number",
-    Letter = "Letter",
-    Symbol = "Symbol"
+    WhiteSpace = "WhiteSpace"
 }
 
 abstract class RegexComponent {
@@ -472,12 +457,6 @@ class CharClass extends RegexComponent {
         switch (this.kind) {
             case SpecialCharKind.WhiteSpace:
                 return "\\p{Z}";
-            case SpecialCharKind.Number:
-                return "\\p{N}";
-            case SpecialCharKind.Letter:
-                return "\\p{L}";
-            case SpecialCharKind.Symbol:
-                return "\\p{S}";
             default:
                 return ".";
         }
@@ -486,13 +465,7 @@ class CharClass extends RegexComponent {
     compileToCPP(): string {
         switch (this.kind) {
             case SpecialCharKind.WhiteSpace:
-                return "\p{Z}";
-            case SpecialCharKind.Number:
-                return "\p{N}";
-            case SpecialCharKind.Letter:
-                return "\p{L}";
-            case SpecialCharKind.Symbol:
-                return "\p{L}";
+                return "\\p{Z}";
             default:
                 return ".";
         }
@@ -504,12 +477,6 @@ class CharClass extends RegexComponent {
         switch (this.kind) {
             case SpecialCharKind.WhiteSpace:
                 return "(re.union (str.to.re \" \") (str.to.re \"\\t\") (str.to.re \"\\n\") (str.to.re \"\\r\"))";
-            case SpecialCharKind.Number:
-                return "(re.range \"0\" \"9\")";
-            case SpecialCharKind.Letter:
-                return "(re.union (str.range \"A\" \"Z\") (str.range \"a\" \"z\"))";
-            case SpecialCharKind.Symbol:
-                return "(re.union (str.range \"!\" \"/\") (str.range \":\" \"@\") (str.range \"[\" \"`\") (str.range \"{\" \"~\"))";
             default:
                 return "re.allchar";
         }

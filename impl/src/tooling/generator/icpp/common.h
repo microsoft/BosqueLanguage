@@ -193,5 +193,8 @@ typedef uint32_t BSQVirtualInvokeID;
 #define BSQ_TYPE_ID_INT 3
 #define BSQ_TYPE_ID_BIGNAT 4
 #define BSQ_TYPE_ID_BIGINT 5
+#define BSQ_TYPE_ID_FLOAT 6
+#define BSQ_TYPE_ID_DECIMAL 7
+#define BSQ_TYPE_ID_RATIONAL 8
 
 #define BSQ_TYPE_ID_BUILTIN_MAX 50
