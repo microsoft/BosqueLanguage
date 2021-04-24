@@ -25,7 +25,7 @@ public:
     static BSQDecimalType* g_typeDecimal;
     static BSQRationalType* g_typeRational;
 
-    static BSQStringKReprType<4>* g_typeStringKRepr4;
+    static BSQStringKReprTypeAbstract g_typeStringKReprAbstract;
     static BSQStringKReprType<8>* g_typeStringKRepr8;
     static BSQStringKReprType<16>* g_typeStringKRepr16;
     static BSQStringKReprType<32>* g_typeStringKRepr32;

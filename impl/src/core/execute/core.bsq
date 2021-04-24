@@ -178,6 +178,10 @@ __primitive inline infix operator >(a: Decimal, b: Decimal): Bool = default;
 __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;
 __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
+//<summary>Primitive string position value.</summary>
+__internal struct entity StringPos provides Some {
+}
+
 //<summary>Primitive string value.</summary>
 __internal grounded struct entity String provides Some, KeyType, PODType, APIType {
      __safe private function s_empty(s: String): Bool # string_empty

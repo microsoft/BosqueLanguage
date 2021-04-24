@@ -31,7 +31,7 @@ bool enityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQNoneType : public BSQEntityType
 {
 public:
-    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNone)), {}, {}, entityNoneEqual_impl, enityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
+    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNone)), {}, entityNoneEqual_impl, enityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
     virtual ~BSQNoneType() {;}
 };
 
@@ -48,7 +48,7 @@ bool enityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQBoolType : public BSQEntityType
 {
 public:
-    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBool)), {}, {}, entityBoolEqual_impl, enityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
+    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBool)), {}, entityBoolEqual_impl, enityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
     virtual ~BSQBoolType() {;}
 
     inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
@@ -66,7 +66,7 @@ bool enityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQNatType : public BSQEntityType
 {
 public:
-    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNat)), {}, {}, entityNatEqual_impl, enityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
+    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNat)), {}, entityNatEqual_impl, enityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
     virtual ~BSQNatType() {;}
 
     inline static bool equal(BSQNat v1, BSQNat v2) { return v1 == v2; }
@@ -84,7 +84,7 @@ bool enityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQIntType : public BSQEntityType
 {
 public:
-    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQInt)), {}, {}, entityIntEqual_impl, enityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
+    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQInt)), {}, entityIntEqual_impl, enityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
     virtual ~BSQIntType() {;}
 
     inline static bool equal(BSQInt v1, BSQInt v2) { return v1 == v2; }
@@ -102,7 +102,7 @@ bool enityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2
 class BSQBigNatType : public BSQEntityType
 {
 public:
-    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), {}, {}, entityBigNatEqual_impl, enityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
+    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), {}, entityBigNatEqual_impl, enityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
     virtual ~BSQBigNatType() {;}
 
     inline static bool equal(BSQBigNat v1, BSQBigNat v2) { return v1 == v2; }
@@ -120,7 +120,7 @@ bool enityBigIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2
 class BSQBigIntType : public BSQEntityType
 {
 public:
-    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), {}, {}, entityBigIntEqual_impl, enityBigIntLessThan_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), {}, entityBigIntEqual_impl, enityBigIntLessThan_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
     virtual ~BSQBigIntType() {;}
 
     inline static bool equal(BSQBigInt v1, BSQBigInt v2) { return v1 == v2; }
@@ -136,7 +136,7 @@ std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 class BSQFloatType : public BSQEntityType
 {
 public:
-    BSQFloatType() : BSQEntityType(BSQ_TYPE_ID_FLOAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQFloat)), {}, {}, entityFloatDisplay_impl, "NSCore::Float", {}, {}, {}) {;}
+    BSQFloatType() : BSQEntityType(BSQ_TYPE_ID_FLOAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQFloat)), {}, entityFloatDisplay_impl, "NSCore::Float", {}, {}, {}) {;}
     virtual ~BSQFloatType() {;}
 };
 
@@ -149,7 +149,7 @@ std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr d
 class BSQDecimalType : public BSQEntityType
 {
 public:
-    BSQDecimalType() : BSQEntityType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), {}, {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {}) {;}
+    BSQDecimalType() : BSQEntityType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {}) {;}
     virtual ~BSQDecimalType() {;}
 };
 
@@ -166,7 +166,7 @@ std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr 
 class BSQRationalType : public BSQEntityType
 {
 public:
-    BSQRationalType() : BSQEntityType(BSQ_TYPE_ID_RATIONAL, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQRational)), {}, {}, entityRationalDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    BSQRationalType() : BSQEntityType(BSQ_TYPE_ID_RATIONAL, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQRational)), {}, entityRationalDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
     virtual ~BSQRationalType() {;}
 };
 
@@ -207,7 +207,7 @@ public:
     static size_t getKReprSizeFor(size_t v);
 
     BSQStringReprType(BSQTypeID tid, uint64_t allocsize, uint64_t gcptrcount, DisplayFP fpDisplay, std::string name) 
-    : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, gcptrcount, {}, {}, fpDisplay, name, {}, {}, {}) 
+    : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, gcptrcount, {}, fpDisplay, name, {}, {}, {}) 
     {;}
 
     virtual ~BSQStringReprType() {;}
@@ -218,27 +218,47 @@ public:
 template <size_t k>
 struct BSQStringKRepr
 {
-    BSQNat size;
+    size_t size;
     uint8_t elems[k];
 };
 
 template <size_t k>
 std::string entityStringKReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-template <size_t k>
-class BSQStringKReprType : public BSQStringReprType
+class BSQStringKReprTypeAbstract : public BSQStringReprType
 {
 public:
-    BSQStringKReprType(DisplayFP fpDisplay) 
-    : BSQStringReprType(BSQ_TYPE_ID_STRINGKREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringKRepr<k>)), fpDisplay, "[Internal::StringKRepr]") 
+    BSQStringKReprTypeAbstract(uint64_t allocsize, DisplayFP fpDisplay, std::string name) 
+    : BSQStringReprType(BSQ_TYPE_ID_STRINGKREPR, allocsize, fpDisplay, name) 
     {;}
 
-    virtual ~BSQStringKReprType() {;}
+    virtual ~BSQStringKReprTypeAbstract() {;}
+
+    static size_t getCodePointCount(void* repr)
+    {
+        return *((size_t*)repr);
+    }
+
+    static uint8_t* getCodePointData(void* repr)
+    {
+        return ((uint8_t*)repr) + sizeof(size_t);
+    }
 
     virtual size_t codePointCount(void* repr) const override
     {
-        return ((BSQStringKRepr<k>*)repr)->size;
+        return BSQStringKReprTypeAbstract::getCodePointCount(repr);
     }
+};
+
+template <size_t k>
+class BSQStringKReprType : public BSQStringKReprTypeAbstract
+{
+public:
+    BSQStringKReprType(DisplayFP fpDisplay) 
+    : BSQStringKReprTypeAbstract(BSQ_TYPE_ID_STRINGKREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringKRepr<k>)), fpDisplay, "[Internal::StringKRepr]") 
+    {;}
+
+    virtual ~BSQStringKReprType() {;}
 };
 constexpr size_t g_kreprsizes[] = { 8, 16, 32, 64, 128, 256 };
 constexpr size_t g_kreprcount = 6;
@@ -294,21 +314,38 @@ public:
     }
 };
 
-class BSQStringReprIterator
-{
-public:
-    void* activeparent;
-    uint8_t* current;
-
-    void increment();
-    void decrement();
-};
-
 struct BSQString
 {
     union { void* u_data; BSQInlineString u_inlineString; };
 };
 constexpr BSQString g_emptyString = {0};
+
+struct BSQStringIterator
+{
+    BSQString str;
+    void* activeparent;
+    uint8_t* cbuff;
+    uint16_t cpos;
+    uint16_t minpos;
+    uint16_t maxpos;
+};
+
+std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+bool iteratorIsValid(BSQStringIterator* iter);
+uint8_t iteratorGet(BSQStringIterator* iter);
+void incrementStringIterator_uchar(BSQStringIterator* iter);
+void decrementStringIterator_uchar(BSQStringIterator* iter);
+
+class BSQStringIteratorType : public BSQEntityType
+{
+public:
+    BSQStringIteratorType() 
+    : BSQEntityType(BSQ_TYPE_ID_STRINGITERATOR, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), "3", {}, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos", {}, {}, {})
+    {;}
+
+    virtual ~BSQStringIteratorType() {;}
+};
 
 std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityStringEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
