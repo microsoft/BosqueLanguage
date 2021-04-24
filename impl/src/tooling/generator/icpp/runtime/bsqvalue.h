@@ -174,29 +174,38 @@ public:
 //String
 struct BSQInlineString
 {
-    uint8_t vals[8];
+    uint8_t utf8bytes[8];
 
     inline static BSQInlineString create(const uint8_t* chars, size_t len)
     {
         BSQInlineString istr = {len << 1, 0, 0, 0, 0, 0, 0, 0};
-        assert(IS_INLINE_STRING(&istr.vals));
+        assert(IS_INLINE_STRING(&istr));
 
-        std::copy(chars, chars + len, istr.vals + 1);
+        std::copy(chars, chars + len, istr.utf8bytes + 1);
     }
 
-    inline static size_t codePointCount(BSQInlineString istr)
+    inline static BSQInlineString create2(const uint8_t* chars1, size_t len1, const uint8_t* chars2, size_t len2)
     {
-        return istr.vals[0] >> 1;
+        BSQInlineString istr = {(len1 + len2) << 1, 0, 0, 0, 0, 0, 0, 0};
+        assert(IS_INLINE_STRING(&istr));
+
+        std::copy(chars1, chars1 + len1, istr.utf8bytes + 1);
+        std::copy(chars2, chars2 + len2, istr.utf8bytes + 1 + len1);
     }
 
-    inline static uint8_t* vals(BSQInlineString istr)
+    inline static size_t utf8ByteCount(BSQInlineString istr)
     {
-        return istr.vals + 1;
+        return istr.utf8bytes[0] >> 1;
     }
 
-    inline static uint8_t* valsend(BSQInlineString istr)
+    inline static uint8_t* utf8Bytes(BSQInlineString istr)
     {
-        return istr.vals + 1 + istr.vals[0];
+        return istr.utf8bytes + 1;
+    }
+
+    inline static uint8_t* utf8BytesEnd(BSQInlineString istr)
+    {
+        return istr.utf8bytes + 1 + istr.utf8bytes[0];
     }
 };
 constexpr BSQInlineString g_emptyInlineString = {0};
@@ -210,16 +219,20 @@ public:
     : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, gcptrcount, {}, fpDisplay, name, {}, {}, {}) 
     {;}
 
+    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, DisplayFP fpDisplay, std::string name) 
+    : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, {}, fpDisplay, name, {}, {}, {}) 
+    {;}
+
     virtual ~BSQStringReprType() {;}
 
-    virtual size_t codePointCount(void* repr) const = 0;
+    virtual size_t utf8ByteCount(void* repr) const = 0;
 };
 
 template <size_t k>
 struct BSQStringKRepr
 {
     size_t size;
-    uint8_t elems[k];
+    uint8_t utf8bytes[k];
 };
 
 template <size_t k>
@@ -234,19 +247,19 @@ public:
 
     virtual ~BSQStringKReprTypeAbstract() {;}
 
-    static size_t getCodePointCount(void* repr)
+    static size_t getUTF8ByteCount(void* repr)
     {
         return *((size_t*)repr);
     }
 
-    static uint8_t* getCodePointData(void* repr)
+    static uint8_t* getUTF8Bytes(void* repr)
     {
         return ((uint8_t*)repr) + sizeof(size_t);
     }
 
-    virtual size_t codePointCount(void* repr) const override
+    virtual size_t utf8ByteCount(void* repr) const override
     {
-        return BSQStringKReprTypeAbstract::getCodePointCount(repr);
+        return BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
     }
 };
 
@@ -282,7 +295,7 @@ public:
 
     virtual ~BSQStringSliceReprType() {;}
 
-    virtual size_t codePointCount(void* repr) const override
+    virtual size_t utf8ByteCount(void* repr) const override
     {
         auto srepr = (BSQStringSliceRepr*)repr;
         return (srepr->end - srepr->start);
@@ -308,7 +321,7 @@ public:
 
     virtual ~BSQStringConcatReprType() {;}
 
-    virtual size_t codePointCount(void* repr) const override
+    virtual size_t utf8ByteCount(void* repr) const override
     {
         return ((BSQStringConcatRepr*)repr)->size;
     }
@@ -324,6 +337,7 @@ struct BSQStringIterator
 {
     BSQString str;
     void* activeparent;
+    void* activerepr;
     uint8_t* cbuff;
     uint16_t cpos;
     uint16_t minpos;
@@ -333,9 +347,9 @@ struct BSQStringIterator
 std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 bool iteratorIsValid(BSQStringIterator* iter);
-uint8_t iteratorGet(BSQStringIterator* iter);
-void incrementStringIterator_uchar(BSQStringIterator* iter);
-void decrementStringIterator_uchar(BSQStringIterator* iter);
+uint8_t iteratorGetUTF8Byte(BSQStringIterator* iter);
+void incrementStringIterator_utf8byte(BSQStringIterator* iter);
+void decrementStringIterator_utf8byte(BSQStringIterator* iter);
 
 class BSQStringIteratorType : public BSQEntityType
 {
@@ -358,44 +372,31 @@ private:
     static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
 
 public:
-    BSQStringReprIterator begin(BSQString s) const
-    {
+    static void initializeIteratorBegin(BSQStringIterator* iter, BSQString str);
+    static void initializeIteratorEnd(BSQStringIterator* iter, BSQString str);
 
-    }
+    static bool equal(BSQString v1, BSQString v2);
+    static bool lessThan(BSQString v1, BSQString v2);
 
-    BSQStringReprIterator end(BSQString s) const
-    {
-
-    }
-
-    inline static bool equalOperator(BSQString v1, BSQString v2)
-    {
-
-    }
-
-    inline static bool lessOperator(BSQString v1, BSQString v2)
-    {
-
-    }
-
-    size_t codePointCount(BSQString s) const
+    static size_t utf8ByteCount(BSQString s)
     {
         if(IS_INLINE_STRING(&s))
         {
-            return BSQInlineString::codePointCount(s.u_inlineString);
+            return BSQInlineString::utf8ByteCount(s.u_inlineString);
         }
         else
         {
-            return GET_TYPE_META_DATA_AS(BSQStringReprType, s.u_data)->codePointCount(s.u_data);
+            return GET_TYPE_META_DATA_AS(BSQStringReprType, s.u_data)->utf8ByteCount(s.u_data);
         }
     }
 
-    inline BSQBool empty(BSQString s) const
+    static inline BSQBool empty(BSQString s)
     {
         s.u_data == nullptr;
     }
 
-    BSQString concat2(BSQString s1, BSQString s2) const;
+    static BSQString concat2(StorageLocationPtr s1, StorageLocationPtr s2);
+    static BSQString slice(StorageLocationPtr str, StorageLocationPtr startpos, StorageLocationPtr endpos);
 };
 
 ////

@@ -148,7 +148,7 @@ bool iteratorIsValid(BSQStringIterator* iter)
     iter->cbuff != nullptr;
 }
 
-uint8_t iteratorGet(BSQStringIterator* iter)
+uint8_t iteratorGetUTF8Byte(BSQStringIterator* iter)
 {
     return iter->cbuff[iter->cpos];
 }
@@ -158,36 +158,37 @@ void initializeStringIterStart(BSQStringIterator* iter, void* activeparent, cons
     if(reprtype->tid == BSQ_TYPE_ID_STRINGKREPR)
     {
         iter->activeparent = activeparent;
-        iter->cbuff = BSQStringKReprTypeAbstract::getCodePointData(srepr);
+        iter->activerepr = srepr;
+        iter->cbuff = BSQStringKReprTypeAbstract::getUTF8Bytes(srepr);
 
         const BSQStringReprType* parenttype = (activeparent != nullptr) ? GET_TYPE_META_DATA_AS(BSQStringReprType, activeparent) : nullptr;
         if(parenttype != nullptr && parenttype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
         {
             auto slicerepr = (BSQStringSliceRepr*)activeparent;
             iter->minpos = slicerepr->start;
-            iter->cpos = slicerepr->start;
             iter->maxpos = slicerepr->end;
+            iter->cpos = slicerepr->start;
         }
         else
         {
             iter->minpos = 0;
+            iter->maxpos = BSQStringKReprTypeAbstract::getUTF8ByteCount(srepr);
             iter->cpos = 0;
-            iter->maxpos = BSQStringKReprTypeAbstract::getCodePointCount(srepr);
         }
     }
     else if(reprtype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
     {
         auto slicerepr = (BSQStringSliceRepr*)srepr;
-        initializeStringIterStart(iter, srepr, GET_TYPE_META_DATA_AS(BSQStringReprType, slicerepr->srepr), slicerepr->srepr);
+        initializeStringIterStart(iter, slicerepr, GET_TYPE_META_DATA_AS(BSQStringReprType, slicerepr->srepr), slicerepr->srepr);
     }
     else
     {
         auto concatrepr = (BSQStringConcatRepr*)srepr;
-        initializeStringIterStart(iter, srepr, GET_TYPE_META_DATA_AS(BSQStringReprType, concatrepr->srepr1), concatrepr->srepr1);
+        initializeStringIterStart(iter, concatrepr, GET_TYPE_META_DATA_AS(BSQStringReprType, concatrepr->srepr1), concatrepr->srepr1);
     }
 }
 
-void incrementStringIterator_ucharSlow(BSQStringIterator* iter)
+void incrementStringIterator_utf8byteSlow(BSQStringIterator* iter)
 {
     if(iter->activeparent == nullptr)
     {
@@ -195,30 +196,33 @@ void incrementStringIterator_ucharSlow(BSQStringIterator* iter)
     }
     else
     {
-        const BSQStringReprType* reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, iter->activeparent);
-        void* srepr = nullptr;
+        if(GET_TYPE_META_DATA_AS(BSQStringReprType, iter->activeparent)->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
+        {
+            iter->activerepr = iter->activeparent;
+            iter->activeparent = ((BSQStringSliceRepr*)iter->activeparent)->parent;
+        }
+
         while(iter->activeparent != nullptr)
         {
-            if(reprtype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
+            //it is always a concat
+            auto crepr = ((BSQStringConcatRepr*)iter->activeparent);
+
+            //if we are the left child then we switch to the right child and are done otherwise keep going up the tree
+            if(crepr->srepr1 == iter->activerepr)
             {
-                iter->activeparent = ((BSQStringSliceRepr*)iter->activeparent)->parent;
+                initializeStringIterStart(iter, iter->activeparent, GET_TYPE_META_DATA_AS(BSQStringReprType, crepr->srepr2), crepr->srepr2);
+                break;
             }
             else
             {
-                xxxx;
-                
-                srepr = ;
+                iter->activerepr = crepr;
+                iter->activeparent = crepr->parent;
             }
-        }
-
-        if(iter->activeparent != nullptr)
-        {
-            initializeStringIterStart(iter, iter->activeparent, GET_TYPE_META_DATA_AS(BSQStringReprType, srepr), srepr);
         }
     }
 }
 
-void incrementStringIterator_uchar(BSQStringIterator* iter)
+void incrementStringIterator_utf8byte(BSQStringIterator* iter)
 {
     if(iter->cpos < iter->maxpos)
     {
@@ -226,16 +230,80 @@ void incrementStringIterator_uchar(BSQStringIterator* iter)
     }
     else
     {
-        incrementStringIterator_ucharSlow(iter);
+        incrementStringIterator_utf8byteSlow(iter);
     }
 }
 
-void decrementStringIterator_ucharSlow(BSQStringIterator* iter)
+void initializeStringIterEnd(BSQStringIterator* iter, void* activeparent, const BSQStringReprType* reprtype, void* srepr)
 {
-    xxxx;
+    if(reprtype->tid == BSQ_TYPE_ID_STRINGKREPR)
+    {
+        iter->activeparent = activeparent;
+        iter->activerepr = srepr;
+        iter->cbuff = BSQStringKReprTypeAbstract::getUTF8Bytes(srepr);
+
+        const BSQStringReprType* parenttype = (activeparent != nullptr) ? GET_TYPE_META_DATA_AS(BSQStringReprType, activeparent) : nullptr;
+        if(parenttype != nullptr && parenttype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
+        {
+            auto slicerepr = (BSQStringSliceRepr*)activeparent;
+            iter->minpos = slicerepr->start;
+            iter->maxpos = slicerepr->end;
+            iter->cpos = iter->maxpos - 1;
+        }
+        else
+        {
+            iter->minpos = 0;
+            iter->maxpos = BSQStringKReprTypeAbstract::getUTF8ByteCount(srepr);
+            iter->cpos = iter->maxpos - 1;
+        }
+    }
+    else if(reprtype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
+    {
+        auto slicerepr = (BSQStringSliceRepr*)srepr;
+        initializeStringIterEnd(iter, slicerepr, GET_TYPE_META_DATA_AS(BSQStringReprType, slicerepr->srepr), slicerepr->srepr);
+    }
+    else
+    {
+        auto concatrepr = (BSQStringConcatRepr*)srepr;
+        initializeStringIterEnd(iter, concatrepr, GET_TYPE_META_DATA_AS(BSQStringReprType, concatrepr->srepr2), concatrepr->srepr2);
+    }
 }
 
-void decrementStringIterator_uchar(BSQStringIterator* iter)
+void decrementStringIterator_utf8byteSlow(BSQStringIterator* iter)
+{
+    if(iter->activeparent == nullptr)
+    {
+        iter->cbuff = nullptr;
+    }
+    else
+    {
+        if(GET_TYPE_META_DATA_AS(BSQStringReprType, iter->activeparent)->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
+        {
+            iter->activerepr = iter->activeparent;
+            iter->activeparent = ((BSQStringSliceRepr*)iter->activeparent)->parent;
+        }
+
+        while(iter->activeparent != nullptr)
+        {
+            //it is always a concat
+            auto crepr = ((BSQStringConcatRepr*)iter->activeparent);
+
+            //if we are the right child then we switch to the left child and are done otherwise keep going up the tree
+            if(crepr->srepr2 == iter->activerepr)
+            {
+                initializeStringIterEnd(iter, iter->activeparent, GET_TYPE_META_DATA_AS(BSQStringReprType, crepr->srepr1), crepr->srepr1);
+                break;
+            }
+            else
+            {
+                iter->activerepr = crepr;
+                iter->activeparent = crepr->parent;
+            }
+        }
+    }
+}
+
+void decrementStringIterator_utf8byte(BSQStringIterator* iter)
 {
     if(iter->minpos < iter->cpos)
     {
@@ -243,28 +311,37 @@ void decrementStringIterator_uchar(BSQStringIterator* iter)
     }
     else
     {
-        incrementStringIterator_ucharSlow(iter);
+        incrementStringIterator_utf8byteSlow(iter);
     }
 }
 
 std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    xxxx;
+    BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, data);
+    std::string res;
+    BSQStringIterator iter;
+
+    res.reserve(BSQStringType::utf8ByteCount(str));
+
+    BSQStringType::initializeIteratorBegin(&iter, str);
+    while(iteratorIsValid(&iter))
+    {
+        res.push_back(iteratorGetUTF8Byte(&iter));
+        incrementStringIterator_utf8byte(&iter);
+    }
+
+    return res;
 }
 
 bool entityStringEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    xxxx;
+    return BSQStringType::equal(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
 }
 
 bool enityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    xxxx;
+    return BSQStringType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
 }
-
-////
-//Define some safe constants for memory allocation during various builtin operations
-#define SAFE_STRING_CONCAT_SIZE 128
 
 size_t BSQStringReprType::getKReprSizeFor(size_t v)
 {
@@ -278,21 +355,6 @@ size_t BSQStringReprType::getKReprSizeFor(size_t v)
         i--;
     }
     return g_kreprsizes[i];
-}
-
-void BSQStringReprIterator::incrementTree()
-{
-    xxxx;
-}
-
-void BSQStringReprIterator::initialize(BSQStringReprIterator& iv, void* repr)
-{
-    xxxx;
-}
-
-void BSQStringReprIterator::initializePosition(BSQStringReprIterator& iv, void* repr, uint64_t pos)
-{
-    xxxx;
 }
 
 void* BSQStringType::allocateStringKForSize(size_t k, uint8_t** dataptr)
@@ -329,24 +391,238 @@ void* BSQStringType::allocateStringKForSize(size_t k, uint8_t** dataptr)
 
 BSQStringKRepr<8>* BSQStringType::boxInlineString(BSQInlineString istr)
 {
-    auto res = (BSQStringKRepr<4>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr4);
-    res->size = BSQInlineString::length(istr);
-    std::copy(BSQInlineString::vals(istr), BSQInlineString::valsend(istr), res->elems);
+    auto res = (BSQStringKRepr<8>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<8>), Environment::g_typeStringKRepr8);
+    res->size = BSQInlineString::utf8ByteCount(istr);
+    std::copy(BSQInlineString::utf8Bytes(istr), BSQInlineString::utf8BytesEnd(istr), res->utf8bytes);
 
     return res;
 }
 
-BSQBool BSQStringType::equalOperator(const BSQString& s1, const BSQString& s2)
+void BSQStringType::initializeIteratorBegin(BSQStringIterator* iter, BSQString str)
 {
-    xxxx;
+    iter->str = str;
+    if(BSQStringType::empty(str))
+    {
+        iter->activeparent = nullptr;
+        iter->activerepr = nullptr;
+        iter->cbuff = nullptr;
+    }
+    else
+    {
+        if (IS_INLINE_STRING(&str))
+        {
+            iter->activeparent = nullptr;
+            iter->activerepr = nullptr;
+            iter->cbuff = BSQInlineString::utf8Bytes(str.u_inlineString);
+            iter->minpos = 0;
+            iter->maxpos = BSQInlineString::utf8ByteCount(str.u_inlineString);
+            iter->cpos = 0;
+        }
+        else
+        {
+            initializeStringIterStart(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, str.u_data), str.u_data);
+        }
+    }
 }
 
-BSQBool BSQStringType::lessOperator(const BSQString& s1, const BSQString& s2)
+void BSQStringType::initializeIteratorEnd(BSQStringIterator* iter, BSQString str)
 {
-    xxxx;
+    iter->str = str;
+    if(BSQStringType::empty(str))
+    {
+        iter->activeparent = nullptr;
+        iter->activerepr = nullptr;
+        iter->cbuff = nullptr;
+    }
+    else
+    {
+        if(IS_INLINE_STRING(&str))
+        {
+            iter->activeparent = nullptr;
+            iter->activerepr = nullptr;
+            iter->cbuff = BSQInlineString::utf8Bytes(str.u_inlineString);
+            iter->minpos = 0;
+            iter->maxpos = BSQInlineString::utf8ByteCount(str.u_inlineString);
+            iter->cpos = iter->maxpos - 1;
+        }
+        else
+        {
+            initializeStringIterEnd(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, str.u_data), str.u_data);
+        }
+    }
 }
 
-BSQString BSQStringType::concat2(BSQString s1, BSQString s2) const
+bool BSQStringType::equal(BSQString v1, BSQString v2)
+{
+    if(BSQStringType::empty(v1) & BSQStringType::empty(v2))
+    {
+        return true;
+    }
+    else if(IS_INLINE_STRING(&v1) && IS_INLINE_STRING(&v2))
+    {
+        return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 8) == 0;
+    }
+    else
+    {
+        if(BSQStringType::utf8ByteCount(v1) != BSQStringType::utf8ByteCount(v2))
+        {
+            return false;
+        }   
+        else
+        {
+            BSQStringIterator iter1;
+            BSQStringType::initializeIteratorBegin(&iter1, v1);
+
+            BSQStringIterator iter2;
+            BSQStringType::initializeIteratorBegin(&iter2, v2);
+
+            while(iteratorIsValid(&iter1) && iteratorIsValid(&iter2))
+            {
+                if(iteratorGetUTF8Byte(&iter1) != iteratorGetUTF8Byte(&iter2))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+}
+
+bool BSQStringType::lessThan(BSQString v1, BSQString v2)
+{
+    if(BSQStringType::empty(v1) & BSQStringType::empty(v2))
+    {
+        return false;
+    }
+    else if(IS_INLINE_STRING(&v1) && IS_INLINE_STRING(&v2))
+    {
+        return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 8) < 0;
+    }
+    else
+    {
+        auto bdiff = BSQStringType::utf8ByteCount(v1) - BSQStringType::utf8ByteCount(v2);
+        if(bdiff != 0)
+        {
+            return bdiff < 0;
+        }   
+        else
+        {
+            BSQStringIterator iter1;
+            BSQStringType::initializeIteratorBegin(&iter1, v1);
+
+            BSQStringIterator iter2;
+            BSQStringType::initializeIteratorBegin(&iter2, v2);
+
+            while(iteratorIsValid(&iter1) && iteratorIsValid(&iter2))
+            {
+                if(iteratorGetUTF8Byte(&iter1) < iteratorGetUTF8Byte(&iter2))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+}
+
+BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
+{
+    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQStringConcatRepr) + sizeof(BSQStringKRepr<16>));
+
+    BSQString str1 = SLPTR_LOAD_CONTENTS_AS(BSQString, s1);
+    BSQString str2 = SLPTR_LOAD_CONTENTS_AS(BSQString, s2);
+
+    if(BSQStringType::empty(str1) & BSQStringType::empty(str2))
+    {
+        return g_emptyString;
+    }
+    else if(BSQStringType::empty(str1))
+    {
+        return str2;
+    }
+    else if(BSQStringType::empty(str2))
+    {
+        return str1;
+    }
+    else
+    {
+        auto len1 = BSQStringType::utf8ByteCount(str1);
+        auto len2 = BSQStringType::utf8ByteCount(str2);
+
+        BSQString res;
+        if(IS_INLINE_STRING(&str1) & IS_INLINE_STRING(&str2))
+        {
+            if(len1 + len2 < 16)
+            {
+                BSQInlineString irepr = BSQInlineString::create2(BSQInlineString::utf8Bytes(str1.u_inlineString), len1, BSQInlineString::utf8Bytes(str2.u_inlineString), len2);
+
+                res.u_inlineString = irepr;
+            }
+            else
+            {
+                auto crepr = (BSQStringKRepr<16>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<16>), Environment::g_typeStringKRepr16);
+                uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
+
+                crepr->size = len1 + len2;
+                std::copy(BSQInlineString::utf8Bytes(str1.u_inlineString), BSQInlineString::utf8BytesEnd(str1.u_inlineString), curr);
+                std::copy(BSQInlineString::utf8Bytes(str1.u_inlineString), BSQInlineString::utf8BytesEnd(str1.u_inlineString), curr + len1);
+
+                res.u_data = crepr;
+            }
+        }
+        else
+        {
+            if(len1 + len2 < 16)
+            {
+                auto crepr = (BSQStringKRepr<16>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<16>), Environment::g_typeStringKRepr16);
+                uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
+
+                crepr->size = len1 + len2;
+
+                BSQStringIterator iter1;
+                BSQStringType::initializeIteratorBegin(&iter1, str1);
+                while(iteratorIsValid(&iter1))
+                {
+                    *curr = iteratorGetUTF8Byte(&iter1);
+                    curr++;
+                    incrementStringIterator_utf8byte(&iter1);
+                }
+
+                BSQStringIterator iter2;
+                BSQStringType::initializeIteratorBegin(&iter2, str2);
+                while(iteratorIsValid(&iter2))
+                {
+                    *curr = iteratorGetUTF8Byte(&iter2);
+                    curr++;
+                    incrementStringIterator_utf8byte(&iter2);
+                }
+
+                res.u_data = crepr;
+            }
+            else
+            {
+                auto crepr = (BSQStringConcatRepr*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringConcatRepr), Environment::g_typeStringConcatRepr);
+                crepr->parent = nullptr;
+                crepr->size = len1 + len2;
+                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringType::boxInlineString(str1.u_inlineString) : str1.u_data;
+                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringType::boxInlineString(str2.u_inlineString) : str2.u_data;
+                
+                res.u_data = crepr;
+            }
+        }
+
+        return res;
+    }
+}
+
+BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startpos, StorageLocationPtr endpos)
+{
+
+}
+
+BSQString BSQStringType::xxconcat2(BSQString s1, BSQString s2) const
 {
     auto s1size = this->length(s1);
     auto s2size = this->length(s2);
@@ -419,27 +695,6 @@ BSQString BSQStringType::sliceRepr(void* repr, BSQNat start, BSQNat end)
             return String#{cstr, InlineString::g_emptystr};
         }
 
-}
-
-BSQString BSQStringType::slice(BSQString s, BSQNat start, BSQNat end)
-{
-            if(start == end) {
-            String::g_emptystr;
-        }
-        else {
-            let repr = s.data;
-            if(repr === none) {
-                return String#{none, InlineString::slice(s.istr, start, end)};
-            }
-            else {
-                return String::s_sliceRepr[recursive](s.data, start, end);
-            }
-        }
-}
-
-BSQNat BSQStringType::indexOf(BSQString s, BSQString oftr)
-{
-    xxxx;
 }
 
 

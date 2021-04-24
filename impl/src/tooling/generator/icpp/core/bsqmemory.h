@@ -650,7 +650,7 @@ public:
 
     inline void ensureSpace(size_t required)
     {
-        this->nsalloc.ensureSpace(required);
+        this->nsalloc.ensureSpace(BSQ_ALIGN_SIZE(required) + sizeof(BSQType*));
     }
 
     inline uint8_t* allocateSafe(size_t allocsize, BSQType* mdata)
@@ -664,9 +664,9 @@ public:
         return res;
     }
 
-    void pushRoot(void*& mem)
+    void pushRoot(void** mem)
     {
-        this->tempRoots.push_back(&mem);
+        this->tempRoots.push_back(mem);
     }
 
     void popRoot()
