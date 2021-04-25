@@ -336,6 +336,7 @@ constexpr BSQString g_emptyString = {0};
 struct BSQStringIterator
 {
     BSQString str;
+    xxxx; //put in actual index in string
     void* activeparent;
     void* activerepr;
     uint8_t* cbuff;
@@ -346,10 +347,16 @@ struct BSQStringIterator
 
 std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool iteratorIsValid(BSQStringIterator* iter);
-uint8_t iteratorGetUTF8Byte(BSQStringIterator* iter);
+bool iteratorIsValid(const BSQStringIterator* iter);
+uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter);
 void incrementStringIterator_utf8byte(BSQStringIterator* iter);
 void decrementStringIterator_utf8byte(BSQStringIterator* iter);
+
+uint32_t iteratorGetCodePoint(BSQStringIterator* iter);
+void incrementStringIterator_codePoint(BSQStringIterator* iter);
+void decrementStringIterator_codePoint(BSQStringIterator* iter);
+
+bool iteratorIsLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2);
 
 class BSQStringIteratorType : public BSQEntityType
 {

@@ -143,12 +143,12 @@ std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, Stor
     return "[StringIterator]";
 }
 
-bool iteratorIsValid(BSQStringIterator* iter)
+bool iteratorIsValid(const BSQStringIterator* iter)
 {
     iter->cbuff != nullptr;
 }
 
-uint8_t iteratorGetUTF8Byte(BSQStringIterator* iter)
+uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter)
 {
     return iter->cbuff[iter->cpos];
 }
@@ -315,6 +315,57 @@ void decrementStringIterator_utf8byte(BSQStringIterator* iter)
     }
 }
 
+uint32_t iteratorGetCodePoint(BSQStringIterator* iter)
+{
+    auto utfbyte = iteratorGetCodePoint(iter);
+    if((utfbyte & 0x8) == 0)
+    {
+        utfbyte;
+    }
+    else
+    {
+        //not implemented
+        assert(false);
+    }
+}
+
+void incrementStringIterator_codePoint(BSQStringIterator* iter)
+{
+    auto utfbyte = iteratorGetCodePoint(iter);
+    if((utfbyte & 0x8) == 0)
+    {
+        incrementStringIterator_utf8byte(iter);
+    }
+    else
+    {
+        //not implemented
+        assert(false);
+    }
+}
+
+void decrementStringIterator_codePoint(BSQStringIterator* iter)
+{
+    decrementStringIterator_utf8byte(iter);
+    auto utfbyte = iteratorGetCodePoint(iter);
+    if((utfbyte & 0x8) != 0)
+    {
+        //not implemented
+        assert(false);
+    }
+}
+
+bool iteratorIsLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2)
+{
+    if(!iteratorIsValid(iter1))
+    {
+        return false;
+    }
+    else
+    {
+        return xxx; //just compare actual index values here
+    }
+}
+
 std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, data);
@@ -443,12 +494,13 @@ void BSQStringType::initializeIteratorEnd(BSQStringIterator* iter, BSQString str
             iter->cbuff = BSQInlineString::utf8Bytes(str.u_inlineString);
             iter->minpos = 0;
             iter->maxpos = BSQInlineString::utf8ByteCount(str.u_inlineString);
-            iter->cpos = iter->maxpos - 1;
         }
         else
         {
             initializeStringIterEnd(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, str.u_data), str.u_data);
         }
+        
+        iter->cpos = iter->maxpos;
     }
 }
 
@@ -619,39 +671,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 
 BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startpos, StorageLocationPtr endpos)
 {
-
-}
-
-BSQString BSQStringType::xxconcat2(BSQString s1, BSQString s2) const
-{
-    auto s1size = this->length(s1);
-    auto s2size = this->length(s2);
-
-    if(s1size == 0 & s2size == 0) 
-    {
-        g_emptyString;
-    }
-    else if(s1size == 0) 
-    {
-        s2;
-    }
-    else if(s2size == 0) 
-    {
-        s1;
-    }
-    else 
-    {
-        Allocator::GlobalAllocator.ensureSpace(SAFE_STRING_CONCAT_SIZE);
-
-        void* lhs = IS_INLINE_STRING(s1) ? BSQStringType::boxInlineString(s1.u_inlineString) : s1.data;
-        void* rhs = IS_INLINE_STRING(s2) ? BSQStringType::boxInlineString(s2.u_inlineString) : s2.data;
-        BSQStringConcatRepr* cct = (BSQStringConcatRepr*)Allocator::GlobalAllocator.allocateSafe(Environment::g_typeStringConcatRepr->allocsize, Environment::g_typeStringConcatRepr);
-        cct->size = s1size + s2size;
-        cct->srepr1 = lhs;
-        cct->srepr2 = rhs;
-
-        return {cct, s1size + s2size};
-    }
+    xxxx;
 }
 
 BSQString BSQStringType::sliceRepr(void* repr, BSQNat start, BSQNat end)
