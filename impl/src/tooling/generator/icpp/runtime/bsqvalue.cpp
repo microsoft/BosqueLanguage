@@ -143,6 +143,11 @@ std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, Stor
     return "[StringIterator]";
 }
 
+bool iteratorIsValid(const BSQStringIterator* iter)
+{
+    return iter->cbuff != nullptr;
+}
+
 uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter)
 {
     return iter->cbuff[iter->cpos];
@@ -344,7 +349,9 @@ void decrementStringIterator_utf8byte(BSQStringIterator* iter)
 
 uint32_t iteratorGetCodePoint(BSQStringIterator* iter)
 {
-    auto utfbyte = iteratorGetCodePoint(iter);
+    assert(iteratorIsValid(iter));
+
+    auto utfbyte = iteratorGetUTF8Byte(iter);
     if((utfbyte & 0x8) == 0)
     {
         utfbyte;
@@ -358,7 +365,9 @@ uint32_t iteratorGetCodePoint(BSQStringIterator* iter)
 
 void incrementStringIterator_codePoint(BSQStringIterator* iter)
 {
-    auto utfbyte = iteratorGetCodePoint(iter);
+    assert(iteratorIsValid(iter));
+
+    auto utfbyte = iteratorGetUTF8Byte(iter);
     if((utfbyte & 0x8) == 0)
     {
         incrementStringIterator_utf8byte(iter);
@@ -375,7 +384,9 @@ void decrementStringIterator_codePoint(BSQStringIterator* iter)
     decrementStringIterator_utf8byte(iter);
     if(iter->strpos != -1)
     {
-        auto utfbyte = iteratorGetCodePoint(iter);
+        assert(iteratorIsValid(iter));
+
+        auto utfbyte = iteratorGetUTF8Byte(iter);
         if((utfbyte & 0x8) != 0)
         {
             //not implemented
@@ -468,6 +479,16 @@ BSQStringKRepr<8>* BSQStringType::boxInlineString(BSQInlineString istr)
     std::copy(BSQInlineString::utf8Bytes(istr), BSQInlineString::utf8BytesEnd(istr), res->utf8bytes);
 
     return res;
+}
+
+void initializeIteratorMin(BSQStringIterator* iter, BSQString str)
+{
+    xxxx;
+}
+
+void initializeIteratorMax(BSQStringIterator* iter, BSQString str)
+{
+    xxxx;
 }
 
 void BSQStringType::initializeIteratorBegin(BSQStringIterator* iter, BSQString str)

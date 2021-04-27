@@ -336,6 +336,7 @@ constexpr BSQString g_emptyString = {0};
 struct BSQStringIterator
 {
     BSQString str;
+    int64_t strpos;
     void* activeparent;
     void* activerepr;
     uint8_t* cbuff;
@@ -346,6 +347,7 @@ struct BSQStringIterator
 
 std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
+bool iteratorIsValid(const BSQStringIterator* iter);
 uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter);
 void incrementStringIterator_utf8byte(BSQStringIterator* iter);
 void decrementStringIterator_utf8byte(BSQStringIterator* iter);
@@ -375,6 +377,9 @@ private:
     static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
 
 public:
+    static void initializeIteratorMin(BSQStringIterator* iter, BSQString str);
+    static void initializeIteratorMax(BSQStringIterator* iter, BSQString str);
+
     static void initializeIteratorBegin(BSQStringIterator* iter, BSQString str);
     static void initializeIteratorEnd(BSQStringIterator* iter, BSQString str);
 
