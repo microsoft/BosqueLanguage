@@ -113,7 +113,7 @@ std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr 
     return rval.numerator.str() + "/" + rval.denominator.str() + "R";
 }
 
-template <size_t k>
+template <uint64_t k>
 std::string entityStringKReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     const BSQStringKRepr<k>* kstr = (BSQStringKRepr<k>*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
@@ -141,11 +141,6 @@ std::string entityStringConcatReprDisplay_impl(const BSQType* btype, StorageLoca
 std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return "[StringIterator]";
-}
-
-bool iteratorIsValid(const BSQStringIterator* iter)
-{
-    iter->cbuff != nullptr;
 }
 
 uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter)
@@ -190,9 +185,26 @@ void initializeStringIterStart(BSQStringIterator* iter, void* activeparent, cons
 
 void incrementStringIterator_utf8byteSlow(BSQStringIterator* iter)
 {
-    if(iter->activeparent == nullptr)
+    if(iter->strpos == (int64_t)BSQStringType::utf8ByteCount(iter->str))
     {
+        assert(iter->activeparent == nullptr);
         iter->cbuff = nullptr;
+    }
+    else if(iter->strpos == 0)
+    {
+        if (IS_INLINE_STRING(&iter->str))
+        {
+            iter->activeparent = nullptr;
+            iter->activerepr = nullptr;
+            iter->cbuff = BSQInlineString::utf8Bytes(iter->str.u_inlineString);
+            iter->minpos = 0;
+            iter->maxpos = BSQInlineString::utf8ByteCount(iter->str.u_inlineString);
+            iter->cpos = 0;
+        }
+        else
+        {
+            initializeStringIterStart(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, iter->str.u_data), iter->str.u_data);
+        }
     }
     else
     {
@@ -224,11 +236,10 @@ void incrementStringIterator_utf8byteSlow(BSQStringIterator* iter)
 
 void incrementStringIterator_utf8byte(BSQStringIterator* iter)
 {
-    if(iter->cpos < iter->maxpos)
-    {
-        iter->cpos++;
-    }
-    else
+    iter->strpos++;
+    iter->cpos++;
+    
+    if((iter->cpos == iter->maxpos) || (iter->strpos == 0))
     {
         incrementStringIterator_utf8byteSlow(iter);
     }
@@ -271,9 +282,26 @@ void initializeStringIterEnd(BSQStringIterator* iter, void* activeparent, const 
 
 void decrementStringIterator_utf8byteSlow(BSQStringIterator* iter)
 {
-    if(iter->activeparent == nullptr)
+    if(iter->strpos == -1)
     {
+        assert(iter->activeparent == nullptr);
         iter->cbuff = nullptr;
+    }
+    else if(iter->strpos == (int64_t)BSQStringType::utf8ByteCount(iter->str) - 1)
+    {
+        if(IS_INLINE_STRING(&iter->str))
+        {
+            iter->activeparent = nullptr;
+            iter->activerepr = nullptr;
+            iter->cbuff = BSQInlineString::utf8Bytes(iter->str.u_inlineString);
+            iter->minpos = 0;
+            iter->maxpos = BSQInlineString::utf8ByteCount(iter->str.u_inlineString);
+            iter->cpos = iter->maxpos - 1;
+        }
+        else
+        {
+            initializeStringIterEnd(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, iter->str.u_data), iter->str.u_data);
+        }
     }
     else
     {
@@ -305,11 +333,10 @@ void decrementStringIterator_utf8byteSlow(BSQStringIterator* iter)
 
 void decrementStringIterator_utf8byte(BSQStringIterator* iter)
 {
-    if(iter->minpos < iter->cpos)
-    {
-        iter->cpos--;
-    }
-    else
+    iter->strpos--;
+    iter->cpos--;
+    
+    if((iter->cpos < iter->minpos) || (iter->strpos == (int64_t)BSQStringType::utf8ByteCount(iter->str) - 1))
     {
         incrementStringIterator_utf8byteSlow(iter);
     }
@@ -346,36 +373,30 @@ void incrementStringIterator_codePoint(BSQStringIterator* iter)
 void decrementStringIterator_codePoint(BSQStringIterator* iter)
 {
     decrementStringIterator_utf8byte(iter);
-    auto utfbyte = iteratorGetCodePoint(iter);
-    if((utfbyte & 0x8) != 0)
+    if(iter->strpos != -1)
     {
-        //not implemented
-        assert(false);
-    }
-}
-
-bool iteratorIsLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2)
-{
-    if(!iteratorIsValid(iter1))
-    {
-        return false;
-    }
-    else
-    {
-        return xxx; //just compare actual index values here
+        auto utfbyte = iteratorGetCodePoint(iter);
+        if((utfbyte & 0x8) != 0)
+        {
+            //not implemented
+            assert(false);
+        }
     }
 }
 
 std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, data);
-    std::string res;
-    BSQStringIterator iter;
 
+    std::string res;
     res.reserve(BSQStringType::utf8ByteCount(str));
 
+    BSQStringIterator iter;
+    BSQStringIterator iend;
     BSQStringType::initializeIteratorBegin(&iter, str);
-    while(iteratorIsValid(&iter))
+    BSQStringType::initializeIteratorEnd(&iend, str);
+    
+    while(iteratorIsLess(&iter, &iend))
     {
         res.push_back(iteratorGetUTF8Byte(&iter));
         incrementStringIterator_utf8byte(&iter);
@@ -394,9 +415,9 @@ bool enityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2
     return BSQStringType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
 }
 
-size_t BSQStringReprType::getKReprSizeFor(size_t v)
+uint64_t BSQStringReprType::getKReprSizeFor(uint64_t v)
 {
-    size_t i = g_kreprcount - 1;
+    uint64_t i = g_kreprcount - 1;
     while(i > 0)
     {
         if(g_kreprsizes[i - 1] < v)
@@ -408,9 +429,9 @@ size_t BSQStringReprType::getKReprSizeFor(size_t v)
     return g_kreprsizes[i];
 }
 
-void* BSQStringType::allocateStringKForSize(size_t k, uint8_t** dataptr)
+void* BSQStringType::allocateStringKForSize(uint64_t k, uint8_t** dataptr)
 {
-    size_t osize = BSQStringReprType::getKReprSizeFor(k);
+    uint64_t osize = BSQStringReprType::getKReprSizeFor(k);
     void* res = nullptr;
 
     switch(osize)
@@ -452,56 +473,23 @@ BSQStringKRepr<8>* BSQStringType::boxInlineString(BSQInlineString istr)
 void BSQStringType::initializeIteratorBegin(BSQStringIterator* iter, BSQString str)
 {
     iter->str = str;
-    if(BSQStringType::empty(str))
-    {
-        iter->activeparent = nullptr;
-        iter->activerepr = nullptr;
-        iter->cbuff = nullptr;
-    }
-    else
-    {
-        if (IS_INLINE_STRING(&str))
-        {
-            iter->activeparent = nullptr;
-            iter->activerepr = nullptr;
-            iter->cbuff = BSQInlineString::utf8Bytes(str.u_inlineString);
-            iter->minpos = 0;
-            iter->maxpos = BSQInlineString::utf8ByteCount(str.u_inlineString);
-            iter->cpos = 0;
-        }
-        else
-        {
-            initializeStringIterStart(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, str.u_data), str.u_data);
-        }
-    }
+    iter->strpos = 0;
+    iter->activeparent = nullptr;
+    iter->activerepr = nullptr;
+    iter->cbuff = nullptr;
+
+    initializeStringIterStart(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, str.u_data), str.u_data);
 }
 
 void BSQStringType::initializeIteratorEnd(BSQStringIterator* iter, BSQString str)
 {
     iter->str = str;
-    if(BSQStringType::empty(str))
-    {
-        iter->activeparent = nullptr;
-        iter->activerepr = nullptr;
-        iter->cbuff = nullptr;
-    }
-    else
-    {
-        if(IS_INLINE_STRING(&str))
-        {
-            iter->activeparent = nullptr;
-            iter->activerepr = nullptr;
-            iter->cbuff = BSQInlineString::utf8Bytes(str.u_inlineString);
-            iter->minpos = 0;
-            iter->maxpos = BSQInlineString::utf8ByteCount(str.u_inlineString);
-        }
-        else
-        {
-            initializeStringIterEnd(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, str.u_data), str.u_data);
-        }
-        
-        iter->cpos = iter->maxpos;
-    }
+    iter->strpos = BSQStringType::utf8ByteCount(str);
+    iter->activeparent = nullptr;
+    iter->activerepr = nullptr;
+    iter->cbuff = nullptr;
+
+    initializeStringIterEnd(iter, nullptr, GET_TYPE_META_DATA_AS(BSQStringReprType, str.u_data), str.u_data);
 }
 
 bool BSQStringType::equal(BSQString v1, BSQString v2)
@@ -523,12 +511,16 @@ bool BSQStringType::equal(BSQString v1, BSQString v2)
         else
         {
             BSQStringIterator iter1;
+            BSQStringIterator iend1;
             BSQStringType::initializeIteratorBegin(&iter1, v1);
+            BSQStringType::initializeIteratorEnd(&iend1, v1);
 
             BSQStringIterator iter2;
+            BSQStringIterator iend2;
             BSQStringType::initializeIteratorBegin(&iter2, v2);
+            BSQStringType::initializeIteratorEnd(&iend2, v1);
 
-            while(iteratorIsValid(&iter1) && iteratorIsValid(&iter2))
+            while(iteratorIsLess(&iter1, &iend1) && iteratorIsLess(&iter2, &iend2))
             {
                 if(iteratorGetUTF8Byte(&iter1) != iteratorGetUTF8Byte(&iter2))
                 {

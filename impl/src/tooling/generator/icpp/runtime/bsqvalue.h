@@ -176,7 +176,7 @@ struct BSQInlineString
 {
     uint8_t utf8bytes[8];
 
-    inline static BSQInlineString create(const uint8_t* chars, size_t len)
+    inline static BSQInlineString create(const uint8_t* chars, uint64_t len)
     {
         BSQInlineString istr = {len << 1, 0, 0, 0, 0, 0, 0, 0};
         assert(IS_INLINE_STRING(&istr));
@@ -184,7 +184,7 @@ struct BSQInlineString
         std::copy(chars, chars + len, istr.utf8bytes + 1);
     }
 
-    inline static BSQInlineString create2(const uint8_t* chars1, size_t len1, const uint8_t* chars2, size_t len2)
+    inline static BSQInlineString create2(const uint8_t* chars1, uint64_t len1, const uint8_t* chars2, uint64_t len2)
     {
         BSQInlineString istr = {(len1 + len2) << 1, 0, 0, 0, 0, 0, 0, 0};
         assert(IS_INLINE_STRING(&istr));
@@ -193,7 +193,7 @@ struct BSQInlineString
         std::copy(chars2, chars2 + len2, istr.utf8bytes + 1 + len1);
     }
 
-    inline static size_t utf8ByteCount(BSQInlineString istr)
+    inline static uint64_t utf8ByteCount(BSQInlineString istr)
     {
         return istr.utf8bytes[0] >> 1;
     }
@@ -213,7 +213,7 @@ constexpr BSQInlineString g_emptyInlineString = {0};
 class BSQStringReprType : public BSQEntityType
 {
 public:
-    static size_t getKReprSizeFor(size_t v);
+    static uint64_t getKReprSizeFor(uint64_t v);
 
     BSQStringReprType(BSQTypeID tid, uint64_t allocsize, uint64_t gcptrcount, DisplayFP fpDisplay, std::string name) 
     : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, gcptrcount, {}, fpDisplay, name, {}, {}, {}) 
@@ -225,17 +225,17 @@ public:
 
     virtual ~BSQStringReprType() {;}
 
-    virtual size_t utf8ByteCount(void* repr) const = 0;
+    virtual uint64_t utf8ByteCount(void* repr) const = 0;
 };
 
-template <size_t k>
+template <uint64_t k>
 struct BSQStringKRepr
 {
-    size_t size;
+    uint64_t size;
     uint8_t utf8bytes[k];
 };
 
-template <size_t k>
+template <uint64_t k>
 std::string entityStringKReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQStringKReprTypeAbstract : public BSQStringReprType
@@ -247,23 +247,23 @@ public:
 
     virtual ~BSQStringKReprTypeAbstract() {;}
 
-    static size_t getUTF8ByteCount(void* repr)
+    static uint64_t getUTF8ByteCount(void* repr)
     {
-        return *((size_t*)repr);
+        return *((uint64_t*)repr);
     }
 
     static uint8_t* getUTF8Bytes(void* repr)
     {
-        return ((uint8_t*)repr) + sizeof(size_t);
+        return ((uint8_t*)repr) + sizeof(uint64_t);
     }
 
-    virtual size_t utf8ByteCount(void* repr) const override
+    virtual uint64_t utf8ByteCount(void* repr) const override
     {
         return BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
     }
 };
 
-template <size_t k>
+template <uint64_t k>
 class BSQStringKReprType : public BSQStringKReprTypeAbstract
 {
 public:
@@ -273,14 +273,14 @@ public:
 
     virtual ~BSQStringKReprType() {;}
 };
-constexpr size_t g_kreprsizes[] = { 8, 16, 32, 64, 128, 256 };
-constexpr size_t g_kreprcount = 6;
+constexpr uint64_t g_kreprsizes[] = { 8, 16, 32, 64, 128, 256 };
+constexpr uint64_t g_kreprcount = 6;
 
 struct BSQStringSliceRepr
 {
     void* srepr; //a krepr string
-    size_t start;
-    size_t end;
+    uint64_t start;
+    uint64_t end;
     void* parent; //dont gc ptr this so it is like a weak ref
 };
 
@@ -295,7 +295,7 @@ public:
 
     virtual ~BSQStringSliceReprType() {;}
 
-    virtual size_t utf8ByteCount(void* repr) const override
+    virtual uint64_t utf8ByteCount(void* repr) const override
     {
         auto srepr = (BSQStringSliceRepr*)repr;
         return (srepr->end - srepr->start);
@@ -306,7 +306,7 @@ struct BSQStringConcatRepr
 {
     void* srepr1;
     void* srepr2;
-    size_t size;
+    uint64_t size;
     void* parent; //dont gc ptr this so it is like a weak ref
 };
 
@@ -321,7 +321,7 @@ public:
 
     virtual ~BSQStringConcatReprType() {;}
 
-    virtual size_t utf8ByteCount(void* repr) const override
+    virtual uint64_t utf8ByteCount(void* repr) const override
     {
         return ((BSQStringConcatRepr*)repr)->size;
     }
@@ -336,18 +336,16 @@ constexpr BSQString g_emptyString = {0};
 struct BSQStringIterator
 {
     BSQString str;
-    xxxx; //put in actual index in string
     void* activeparent;
     void* activerepr;
     uint8_t* cbuff;
-    uint16_t cpos;
-    uint16_t minpos;
-    uint16_t maxpos;
+    int16_t cpos;
+    int16_t minpos;
+    int16_t maxpos;
 };
 
 std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool iteratorIsValid(const BSQStringIterator* iter);
 uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter);
 void incrementStringIterator_utf8byte(BSQStringIterator* iter);
 void decrementStringIterator_utf8byte(BSQStringIterator* iter);
@@ -355,8 +353,6 @@ void decrementStringIterator_utf8byte(BSQStringIterator* iter);
 uint32_t iteratorGetCodePoint(BSQStringIterator* iter);
 void incrementStringIterator_codePoint(BSQStringIterator* iter);
 void decrementStringIterator_codePoint(BSQStringIterator* iter);
-
-bool iteratorIsLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2);
 
 class BSQStringIteratorType : public BSQEntityType
 {
@@ -375,7 +371,7 @@ bool enityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2
 class BSQStringType : public BSQEntityType
 {
 private:
-    static void* allocateStringKForSize(size_t k, uint8_t** dataptr);
+    static void* allocateStringKForSize(uint64_t k, uint8_t** dataptr);
     static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
 
 public:
@@ -385,7 +381,7 @@ public:
     static bool equal(BSQString v1, BSQString v2);
     static bool lessThan(BSQString v1, BSQString v2);
 
-    static size_t utf8ByteCount(BSQString s)
+    inline static int64_t utf8ByteCount(BSQString s)
     {
         if(IS_INLINE_STRING(&s))
         {
