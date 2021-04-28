@@ -389,7 +389,7 @@ private:
     static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
 
 public:
-    BSQStringType() : BSQEntityType(BSQ_TYPE_ID_STRING, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQString)), "3", {}, entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String", {}, {}, {}) {;}
+    BSQStringType() : BSQEntityType(BSQ_ALIGN_SIZE(sizeof(BSQString)), entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String") {;}
     virtual ~BSQStringType() {;}
 
     static void initializeIteratorMin(BSQStringIterator* iter, BSQString str);
@@ -430,6 +430,12 @@ struct BSQByteBuffer
     uint64_t bytecount;
     uint8_t bytes[256];
 };
+
+//
+//TODO: at some point in the future we might want to split this out with the 256 buffer as a 
+//      carefully memory aligned thing and a overall object that know the total lenght of the 
+//      buffer
+//
 
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 

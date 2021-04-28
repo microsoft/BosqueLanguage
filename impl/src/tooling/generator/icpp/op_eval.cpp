@@ -619,7 +619,7 @@ void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
     const BSQType* tl = nullptr;
     StorageLocationPtr cl = nullptr; 
     StorageLocationPtr sll = this->evalArgument(op->argl);
-    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::Ref)
+    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argltype->tkind == BSQTypeKind::Ref)
     {
         tl = op->argltype;
         cl = sll;
@@ -633,7 +633,7 @@ void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
     const BSQType* tr = nullptr;
     StorageLocationPtr cr = nullptr; 
     StorageLocationPtr slr = this->evalArgument(op->argr);
-    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argrtype->tkind == BSQTypeKind::Ref)
+    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argrtype->tkind == BSQTypeKind::Ref)
     {
         tr = op->argrtype;
         cr = slr;
@@ -664,7 +664,7 @@ void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
     const BSQType* tl = nullptr;
     StorageLocationPtr cl = nullptr; 
     StorageLocationPtr sll = this->evalArgument(op->argl);
-    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::Ref)
+    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argltype->tkind == BSQTypeKind::Ref)
     {
         tl = op->argltype;
         cl = sll;
@@ -678,7 +678,7 @@ void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
     const BSQType* tr = nullptr;
     StorageLocationPtr cr = nullptr; 
     StorageLocationPtr slr = this->evalArgument(op->argr);
-    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argrtype->tkind == BSQTypeKind::Ref)
+    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argrtype->tkind == BSQTypeKind::Ref)
     {
         tr = op->argrtype;
         cr = slr;
@@ -790,7 +790,7 @@ void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op, StorageLocationPtr 
 void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, StorageLocationPtr resultsl)
 {
     StorageLocationPtr tcontents = nullptr;
-    if(op->oftype->tkind == BSQTypeKind::Register || op->oftype->tkind == BSQTypeKind::Struct)
+    if(op->oftype->tkind == BSQTypeKind::Struct)
     {
         tcontents = resultsl;
     }

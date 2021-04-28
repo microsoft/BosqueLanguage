@@ -114,7 +114,7 @@ private:
         }
         else 
         {
-            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct)
+            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct || oftype->tkind == BSQTypeKind::String)
             {
                 GC_MEM_ZERO(trgt, oftype->allocsize);
             }
@@ -134,7 +134,7 @@ private:
         }
         else 
         {
-            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct)
+            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct || oftype->tkind == BSQTypeKind::String)
             {
                 SLPTR_COPY_CONTENTS(trgt, src, oftype->allocsize);
             }
@@ -153,7 +153,7 @@ private:
         }
         else 
         {
-            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct)
+            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct|| oftype->tkind == BSQTypeKind::String)
             {
                 SLPTR_INDEX_INLINE(src, offset);
             }

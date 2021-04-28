@@ -13,6 +13,7 @@ enum class BSQTypeKind : uint32_t
     Invalid = 0x0,
     Register,
     Struct,
+    String,
     Ref,
     InlineUnion,
     HeapUnion
@@ -22,15 +23,19 @@ enum class BSQTypeKind : uint32_t
 //Standard memory function pointer definitions
 void gcDecOperator_packedImpl(const BSQType* btype, void** data);
 void gcDecOperator_maskImpl(const BSQType* btype, void** data);
+void gcDecOperator_stringImpl(const BSQType* btype, void** data);
 
 void gcClearOperator_packedImpl(const BSQType* btype, void** data);
 void gcClearOperator_maskImpl(const BSQType* btype, void** data);
+void gcClearOperator_stringImpl(const BSQType* btype, void** data);
 
 void gcProcessRootOperator_packedImpl(const BSQType* btype, void** data);
 void gcProcessRootOperator_maskImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data);
 
 void gcProcessHeapOperator_packedImpl(const BSQType* btype, void** data);
 void gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data);
 
 ////
 //BSQType abstract base class
@@ -115,13 +120,13 @@ public:
     {;}
 
     //Constructor for string type
-    BSQType(uint64_t allocsize, GCDecOperatorFP fpDecObj, GCClearMarkOperatorFP fpClearObj, GCProcessOperatorFP fpProcessObjRoot, GCProcessOperatorFP fpProcessObjHeap, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::Struct, allocsize, nullptr, 0, fpDecObj, fpClearObj, fpProcessObjRoot, fpProcessObjHeap, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    BSQType(uint64_t allocsize, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
+    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, allocsize, nullptr, 0, gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor abstract type
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::string name)
-    : BSQType(tid, tkind, allocsize, nullptr, 0, nullptr, nullptr, nullptr, nullptr, false, {}, nullptr, nullptr, nullptr, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, DisplayFP fpDisplay, std::string name)
+    : BSQType(tid, tkind, allocsize, nullptr, 0, nullptr, nullptr, nullptr, nullptr, false, {}, nullptr, nullptr, fpDisplay, name)
     {;}
 
     virtual ~BSQType() {;}
@@ -183,6 +188,8 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 class BSQRecordType : public BSQType
 {
 public:
+    static std::map<BSQRecordPropertyID, std::string> s_propertymap;
+
     const std::vector<BSQRecordPropertyID> properties;
     const std::vector<BSQType*> rtypes;
     const std::vector<size_t> propertyoffsets;
@@ -231,6 +238,8 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 class BSQEntityType : public BSQType
 {
 public:
+    static std::map<BSQFieldID, std::string> BSQEntityType::s_fieldmap;
+
     const std::vector<BSQFieldID> fields;
     const std::vector<BSQType*> ftypes;
     const std::vector<size_t> fieldoffsets;
@@ -272,8 +281,8 @@ public:
     {;}
 
     //Constructor for special string action
-    BSQEntityType(uint64_t allocsize, GCDecOperatorFP fpDecObj, GCClearMarkOperatorFP fpClearObj, GCProcessOperatorFP fpProcessObjRoot, GCProcessOperatorFP fpProcessObjHeap, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
-    : BSQType(allocsize, fpDecObj, fpClearObj, fpProcessObjRoot, fpProcessObjHeap, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    BSQEntityType(uint64_t allocsize, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
+    : BSQType(allocsize, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     virtual ~BSQEntityType() {;}
@@ -313,16 +322,18 @@ class BSQAbstractType : public BSQType
 public:
     const std::set<BSQTypeID> subtypes;
 
-    BSQAbstractType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::string name, std::set<BSQTypeID> subtypes)
-    : BSQType(tid, tkind, allocsize, name), subtypes(subtypes)
+    BSQAbstractType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, DisplayFP fpDisplay, std::string name, std::set<BSQTypeID> subtypes)
+    : BSQType(tid, tkind, allocsize, fpDisplay, name), subtypes(subtypes)
     {;}
 };
+
+std::string inlineUnionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQInlineUnionType : public BSQAbstractType
 {
 public:
     BSQInlineUnionType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::string name, std::set<BSQTypeID> subtypes)
-    : BSQAbstractType(tid, tkind, allocsize, name, subtypes)
+    : BSQAbstractType(tid, tkind, allocsize, inlineUnionDisplay_impl, name, subtypes)
     {;}
 
     virtual ~BSQInlineUnionType() {;}
@@ -333,11 +344,13 @@ public:
     }
 };
 
+std::string heapUnionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
 class BSQHeapUnionType : public BSQAbstractType
 {
 public:
     BSQHeapUnionType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::string name, std::set<BSQTypeID> subtypes)
-    : BSQAbstractType(tid, tkind, allocsize, name, subtypes)
+    : BSQAbstractType(tid, tkind, allocsize, heapUnionDisplay_impl, name, subtypes)
     {;}
 
     virtual ~BSQHeapUnionType() {;}
