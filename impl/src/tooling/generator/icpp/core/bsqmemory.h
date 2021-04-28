@@ -225,7 +225,7 @@ public:
 
         MEM_STATS_OP(this->totalalloc += tsize);
 
-        uint8_t *rr = (uint8_t *)BSQ_FREE_LIST_ALLOC(tsize);
+        uint8_t* rr = (uint8_t*)BSQ_FREE_LIST_ALLOC(tsize);
         *((RCMeta*)rr) = GC_RC_CLEAR;
 
         this->livealloc += tsize;
@@ -233,7 +233,7 @@ public:
         return (rr + sizeof(RCMeta));
     }
 
-    inline void release(void *m)
+    inline void release(void* m)
     {
         size_t bytes = COMPUTE_FREE_LIST_BYTES(m);
         this->livealloc -= bytes;

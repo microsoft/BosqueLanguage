@@ -181,12 +181,23 @@ __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = defa
 //<summary>Primitive string position value.</summary>
 __internal struct entity StringPos provides Some {
 }
+__primitive inline infix operator <(a: StringPos, b: StringPos): Bool = default;
+__primitive inline infix operator >(a: StringPos, b: StringPos): Bool = default;
+__primitive inline infix operator <=(a: StringPos, b: StringPos): Bool = default;
+__primitive inline infix operator >=(a: StringPos, b: StringPos): Bool = default;
 
 //<summary>Primitive string value.</summary>
 __internal grounded entity String provides Some, KeyType, PODType, APIType {
     __safe private function s_empty(s: String): Bool # string_empty
+
+    __safe private function s_iteratorMin(s: String): StringPos # string_iterator_min
+    __safe private function s_iteratorMax(s: String): StringPos # string_iterator_max
+    __safe private function s_iteratorBegin(s: String): StringPos # string_iterator_begin
+    __safe private function s_iteratorEnd(s: String): StringPos # string_iterator_end
+
     __assume_safe private function s_concat2(s1: String, s2: String): String # string_append
-    
+    __assume_safe private function s_slice(s: String, start: StringPos, end: StringPos): String # string_slice
+
     function concat2(s1: String, s2: String): String {
         return String::s_concat2(s1, s2);
     }
@@ -205,6 +216,28 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
 
     method prepend(s: String): String {
         return String::s_concat2(s, this);
+    }
+
+    method slice(start?: StringPos=this.iteratorBegin(), end?: StringPos=this.iteratorMax()): String 
+        requires release this.iteratorMin() < start & start <= end & end <= this.iteratorMax();
+    {
+        return String::s_slice(this, start, end);
+    }
+
+    method iteratorMin(): StringPos {
+        return String::s_iteratorMin(this);
+    }
+
+    method iteratorMax(): StringPos {
+        return String::s_iteratorMax(this);
+    }
+
+    method iteratorBegin(): StringPos {
+        return String::s_iteratorBegin(this);
+    }
+
+    method iteratorEnd(): StringPos {
+        return String::s_iteratorEnd(this);
     }
 }
 
@@ -238,16 +271,6 @@ grounded struct entity DataString<T where parsable> provides Some, APIValue {
     }
 }
 
-//<summary>An efficient buffer encoding for data.</summary>
-struct entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
-    private field buf: ByteBuffer;
-}
-
-//<summary>An efficient buffer encoding for data.</summary>
-struct entity DataBuffer<T where parsable> provides Some, APIValue {
-    private field buf: ByteBuffer;
-}
-
 enum BufferFormat {
     text,
     bosque,
@@ -265,27 +288,40 @@ enum BufferCompression {
     space
 }
 
-//<summary>An efficient byte buffer for data.</summary>
-entity ByteBuffer provides Some, APIValue {
-    private field bytes: String; //fake data store for verifier to use
+//<summary>An efficient buffer encoding for data.</summary>
+struct entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
+    private field format: BufferFormat;
+    private field encoding: BufferEncoding;
+    private field compression: BufferCompression;
+    private field buf: ByteBuffer;
 }
 
-//<summary>Primitive ClockTime value.</summary>
-//TODO: should be specialized
-numeric typedecl ClockTime = BigNat;
+//<summary>An efficient buffer encoding for data.</summary>
+struct entity DataBuffer<T where parsable> provides Some, APIValue {
+    private field format: BufferFormat;
+    private field encoding: BufferEncoding;
+    private field compression: BufferCompression;
+    private field buf: ByteBuffer;
+}
+
+//<summary>An efficient byte buffer for data.</summary>
+__internal entity ByteBuffer provides Some, APIValue {
+}
+
+//<summary>Primitive ISOTime value.</summary>
+__internal grounded struct entity ISOTime provides Some, PODType, APIType {
+}
 
 //<summary>Primitive LogicalTime value.</summary>
-//TODO: should be specialized
-numeric typedecl LogicalTime = BigNat;
+__internal grounded struct entity LogicalTime provides Some, KeyType, PODType, APIType {
+}
 
 //<summary>Primitive UUID value.</summary>
-grounded struct entity UUID provides Some, KeyType, PODType, APIType {
-    private field bytes: String; //fake data store for verifier to use
+__internal grounded entity UUID provides Some, KeyType, PODType, APIType {
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
-grounded entity CryptoHash provides Some, KeyType, PODType, APIType {
-    private field bytes: String; //fake data store for verifier to use
+__internal grounded entity CryptoHash provides Some, KeyType, PODType, APIType {
 }
 
 //<summary>Primitive regex value.</summary>
