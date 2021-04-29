@@ -106,12 +106,12 @@ __safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 //<summary>Primitive big-integer value.</summary>
 __internal grounded struct entity BigInt provides Some, KeyType, PODType, APIType {
 }
-__safe __primitive inline prefix operator +(a: BigInt?): BigInt? = default;
-__safe __primitive inline prefix operator -(a: BigInt?): BigInt? = default;
-__safe __primitive inline infix operator *(a: BigInt?, b: BigInt?): BigInt? = default;
-__safe __primitive inline infix operator /(a: BigInt?, b: BigInt?): BigInt? = default;
-__safe __primitive inline infix operator +(a: BigInt?, b: BigInt?): BigInt? = default;
-__safe __primitive inline infix operator -(a: BigInt?, b: BigInt?): BigInt? = default;
+__safe __primitive inline prefix operator +(a: BigInt): BigInt = default;
+__safe __primitive inline prefix operator -(a: BigInt): BigInt = default;
+__safe __primitive inline infix operator *(a: BigInt, b: BigInt): BigInt = default;
+__safe __primitive inline infix operator /(a: BigInt, b: BigInt): BigInt = default;
+__safe __primitive inline infix operator +(a: BigInt, b: BigInt): BigInt = default;
+__safe __primitive inline infix operator -(a: BigInt, b: BigInt): BigInt = default;
 __safe __primitive inline infix operator ==(a: BigInt, b: BigInt): Bool = default;
 __safe __primitive inline infix operator !=(a: BigInt, b: BigInt): Bool = default;
 __safe __primitive inline infix operator <(a: BigInt, b: BigInt): Bool = default;
@@ -122,12 +122,12 @@ __safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = defaul
 //<summary>Primitive big-integer value.</summary>
 __internal grounded struct entity BigNat provides Some, KeyType, PODType, APIType {
 }
-__safe __primitive inline prefix operator +(a: BigNat?): BigNat? = default;
-__safe __primitive inline infix operator *(a: BigNat?, b: BigNat?): BigNat? = default;
-__safe __primitive inline infix operator /(a: BigNat?, b: BigNat?): BigNat? = default;
-__safe __primitive inline infix operator +(a: BigNat?, b: BigNat?): BigNat? = default;
-__safe __primitive inline infix operator -(a: BigNat?, b: BigNat?): BigNat? = default;
-__safe __primitive inline infix operator ==(a: BigNat?, b: BigNat): Bool = default;
+__safe __primitive inline prefix operator +(a: BigNat): BigNat = default;
+__safe __primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator /(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator +(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator -(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator ==(a: BigNat, b: BigNat): Bool = default;
 __safe __primitive inline infix operator !=(a: BigNat, b: BigNat): Bool = default;
 __safe __primitive inline infix operator <(a: BigNat, b: BigNat): Bool = default;
 __safe __primitive inline infix operator >(a: BigNat, b: BigNat): Bool = default;

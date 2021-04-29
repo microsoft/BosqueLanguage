@@ -95,7 +95,7 @@ public:
 
 ////
 //BigNat
-typedef boost::multiprecision::checked_uint256_t BSQBigNat;
+typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<0, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::checked>> BSQBigNat;
 
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -113,7 +113,7 @@ public:
 
 ////
 //BigInt
-typedef boost::multiprecision::checked_uint256_t BSQBigInt;
+typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<0, 0, boost::multiprecision::signed_magnitude, boost::multiprecision::checked>> BSQBigInt;
 
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityBigIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -159,8 +159,8 @@ public:
 //Rational
 struct BSQRational
 {
-    BSQBigInt numerator;
-    BSQBigInt denominator;
+    boost::multiprecision::int128_t numerator;
+    uint64_t denominator;
 };
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);

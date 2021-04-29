@@ -111,7 +111,7 @@ std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr d
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto rval = SLPTR_LOAD_CONTENTS_AS(BSQRational, data);
-    return rval.numerator.str() + "/" + rval.denominator.str() + "R";
+    return rval.numerator.str() + "/" + std::to_string(rval.denominator) + "R";
 }
 
 template <uint64_t k>
