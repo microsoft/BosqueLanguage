@@ -15,7 +15,6 @@ struct BSQListIterator
     void* cbuff;
     uint64_t entrysize;
     int16_t cpos;
-    int16_t minpos;
     int16_t maxpos;
 };
 
