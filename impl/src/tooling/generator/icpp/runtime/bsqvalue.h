@@ -342,7 +342,7 @@ struct BSQStringIterator
 {
     BSQString str;
     int64_t strpos;
-    uint8_t* cbuff;
+    void* cbuff;
     int16_t cpos;
     int16_t minpos;
     int16_t maxpos;
@@ -376,6 +376,9 @@ public:
     {;}
 
     virtual ~BSQStringIteratorType() {;}
+
+    void registerIteratorGCRoots(BSQStringIterator* iter);
+    void releaseIteratorGCRoots(BSQStringIterator* iter);
 };
 
 std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);

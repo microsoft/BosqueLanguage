@@ -161,7 +161,14 @@ bool iteratorEqual(const BSQStringIterator* iter1, const BSQStringIterator* iter
 
 uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter)
 {
-    return iter->cbuff[iter->cpos];
+    if(IS_INLINE_STRING(&iter->str))
+    {
+        return *(((uint8_t*)iter->cbuff) + iter->cpos);
+    }
+    else
+    {
+        return *(BSQStringKReprTypeAbstract::getUTF8Bytes(iter->cbuff) + iter->cpos);
+    }
 }
 
 void initializeStringIterPosition_Helper(BSQStringIterator* iter, int64_t pos, void* optsliceparent, void* srepr)
@@ -170,7 +177,7 @@ void initializeStringIterPosition_Helper(BSQStringIterator* iter, int64_t pos, v
 
     if(reprtype->tid == BSQ_TYPE_ID_STRINGKREPR)
     {
-        iter->cbuff = BSQStringKReprTypeAbstract::getUTF8Bytes(srepr);
+        iter->cbuff = srepr;
 
         if(optsliceparent != nullptr)
         {
@@ -296,6 +303,23 @@ void decrementStringIterator_codePoint(BSQStringIterator* iter)
             //not implemented
             assert(false);
         }
+    }
+}
+
+void BSQStringIteratorType::registerIteratorGCRoots(BSQStringIterator* iter)
+{
+    if(!IS_INLINE_STRING(&iter->str))
+    {
+        Allocator::GlobalAllocator.pushRoot(&(iter->str.u_data));
+        Allocator::GlobalAllocator.pushRoot(&(iter->cbuff));
+    }
+}
+    
+void BSQStringIteratorType::releaseIteratorGCRoots(BSQStringIterator* iter)
+{
+    if(!IS_INLINE_STRING(&iter->str))
+    {
+        Allocator::GlobalAllocator.popRoots<2>();
     }
 }
 
@@ -587,43 +611,45 @@ void* traverseReprTreeSliceFront(void* repr, int64_t count)
     }
 
     const BSQStringReprType* reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, repr);
+    Allocator::GlobalAllocator.pushRoot(&repr);
+    
+    void* res = nullptr;
     if(reprtype->tid == BSQ_TYPE_ID_STRINGKREPR)
     {
-        auto crepr = (BSQStringSliceRepr*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
-        crepr->srepr = repr;
-        crepr->start = count;
-        crepr->end = BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
+        res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
+        ((BSQStringSliceRepr*)res)->srepr = repr;
+        ((BSQStringSliceRepr*)res)->start = count;
+        ((BSQStringSliceRepr*)res)->end = BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
     }
     else if(reprtype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
     {
-        auto slrepr =  (BSQStringSliceRepr*)repr;
-
-        auto crepr = (BSQStringSliceRepr*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
-        crepr->srepr = slrepr->srepr;
-        crepr->start = slrepr->start + count;
-        crepr->end = slrepr->end;
+        res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
+        ((BSQStringSliceRepr*)res)->srepr = ((BSQStringSliceRepr*)repr)->srepr;
+        ((BSQStringSliceRepr*)res)->start = ((BSQStringSliceRepr*)repr)->start + count;
+        ((BSQStringSliceRepr*)res)->end = ((BSQStringSliceRepr*)repr)->end;
     }
     else
     {
-        auto ctrepr =  (BSQStringConcatRepr*)repr;
-        auto s1size = (int64_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(ctrepr->srepr1);
+        auto s1size = (int64_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(((BSQStringConcatRepr*)repr)->srepr1);
         if(count < s1size)
         {
-            void* lt = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringConcatRepr);
-            Allocator::GlobalAllocator.pushRoot(&lt);
+            res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringConcatRepr);
+            Allocator::GlobalAllocator.pushRoot(&res);
 
-            ((BSQStringConcatRepr*)lt)->srepr1 = traverseReprTreeSliceFront(ctrepr->srepr1, count);
-            ((BSQStringConcatRepr*)lt)->srepr2 = ctrepr->srepr2;
-            ((BSQStringConcatRepr*)lt)->size = ctrepr->size - count;
+            ((BSQStringConcatRepr*)res)->srepr1 = traverseReprTreeSliceFront(((BSQStringConcatRepr*)repr)->srepr1, count);
+            ((BSQStringConcatRepr*)res)->srepr2 = ((BSQStringConcatRepr*)repr)->srepr2;
+            ((BSQStringConcatRepr*)res)->size = ((BSQStringConcatRepr*)repr)->size - count;
 
-            Allocator::GlobalAllocator.popRoot();
-            return lt;
+            Allocator::GlobalAllocator.popRoot();        
         }
         else
         {
-            return traverseReprTreeSliceFront(ctrepr->srepr2, count - s1size);
+            res = traverseReprTreeSliceFront(((BSQStringConcatRepr*)repr)->srepr2, count - s1size);
         }
     }
+
+    Allocator::GlobalAllocator.popRoot();
+    return res;
 }
 
 void* traverseReprTreeSliceBack(void* repr, int64_t count)
@@ -634,43 +660,45 @@ void* traverseReprTreeSliceBack(void* repr, int64_t count)
     }
 
     const BSQStringReprType* reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, repr);
+    Allocator::GlobalAllocator.pushRoot(&repr);
+    
+    void* res = nullptr;
     if(reprtype->tid == BSQ_TYPE_ID_STRINGKREPR)
     {
-        auto crepr = (BSQStringSliceRepr*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
-        crepr->srepr = repr;
-        crepr->start = 0;
-        crepr->end = BSQStringKReprTypeAbstract::getUTF8ByteCount(repr) - count;
+        res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
+        ((BSQStringSliceRepr*)res)->srepr = repr;
+        ((BSQStringSliceRepr*)res)->start = 0;
+        ((BSQStringSliceRepr*)res)->end = BSQStringKReprTypeAbstract::getUTF8ByteCount(repr) - count;
     }
     else if(reprtype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
     {
-        auto slrepr =  (BSQStringSliceRepr*)repr;
-
-        auto crepr = (BSQStringSliceRepr*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
-        crepr->srepr = slrepr->srepr;
-        crepr->start = slrepr->start;
-        crepr->end = slrepr->end - count;
+        res = (BSQStringSliceRepr*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
+        ((BSQStringSliceRepr*)res)->srepr = ((BSQStringSliceRepr*)repr)->srepr;
+        ((BSQStringSliceRepr*)res)->start = ((BSQStringSliceRepr*)repr)->start;
+        ((BSQStringSliceRepr*)res)->end = ((BSQStringSliceRepr*)repr)->end - count;
     }
     else
     {
-        auto ctrepr =  (BSQStringConcatRepr*)repr;
-        auto s2size = (int64_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(ctrepr->srepr2);
+        auto s2size = (int64_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(((BSQStringConcatRepr*)repr)->srepr2);
         if(count < s2size)
         {
-            void* lt = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringConcatRepr);
-            Allocator::GlobalAllocator.pushRoot(&lt);
+            res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringConcatRepr);
+            Allocator::GlobalAllocator.pushRoot(&res);
 
-            ((BSQStringConcatRepr*)lt)->srepr1 = ctrepr->srepr1;
-            ((BSQStringConcatRepr*)lt)->srepr2 = traverseReprTreeSliceBack(ctrepr->srepr2, count);;
-            ((BSQStringConcatRepr*)lt)->size = ctrepr->size - count;
+            ((BSQStringConcatRepr*)res)->srepr1 = ((BSQStringConcatRepr*)repr)->srepr1;
+            ((BSQStringConcatRepr*)res)->srepr2 = traverseReprTreeSliceBack(((BSQStringConcatRepr*)repr)->srepr2, count);;
+            ((BSQStringConcatRepr*)res)->size = ((BSQStringConcatRepr*)repr)->size - count;
 
             Allocator::GlobalAllocator.popRoot();
-            return lt;
         }
         else
         {
-            return traverseReprTreeSliceFront(ctrepr->srepr1, count - s2size);
+            res = traverseReprTreeSliceFront(((BSQStringConcatRepr*)repr)->srepr1, count - s2size);
         }
     }
+
+    Allocator::GlobalAllocator.popRoot();
+    return res;
 }
 
 BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startpos, StorageLocationPtr endpos)

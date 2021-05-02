@@ -664,14 +664,21 @@ public:
         return res;
     }
 
-    void pushRoot(void** mem)
+    template<typename T>
+    void pushRoot(T** mem)
     {
-        this->tempRoots.push_back(mem);
+        this->tempRoots.push_back((void**)((void*)mem));
     }
 
     void popRoot()
     {
         this->tempRoots.pop_back();
+    }
+
+    template<size_t ct>
+    void popRoots()
+    {
+        this->tempRoots.erase(this->tempRoots.end() - ct, this->tempRoots.end());
     }
 
     void collect()
