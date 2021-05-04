@@ -249,7 +249,7 @@ class BSQStringKReprTypeAbstract : public BSQStringReprType
 {
 public:
     BSQStringKReprTypeAbstract(uint64_t allocsize, DisplayFP fpDisplay, std::string name) 
-    : BSQStringReprType(BSQ_TYPE_ID_STRINGKREPR, allocsize, fpDisplay, name) 
+    : BSQStringReprType(BSQ_TYPE_ID_STRINGREPR, allocsize, fpDisplay, name) 
     {;}
 
     virtual ~BSQStringKReprTypeAbstract() {;}

@@ -23,7 +23,7 @@ void releaseIteratorGCRoots(BSQListIterator* iter);
 
 bool iteratorIsValid(const BSQListIterator* iter);
 
-void* iteratorGetElement(const BSQListIterator* iter);
+StorageLocationPtr iteratorGetElement(const BSQListIterator* iter);
 void incrementListIterator(BSQListIterator* iter);
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -69,22 +69,9 @@ public:
         return 0;
     }
 
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override
-    {
-        //NOP
-    }
-
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override
-    {
-        assert(false);
-        return nullptr;
-    }
-
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override
-    {
-        assert((nstart == 0) & (nend == 0));
-        return data;
-    }
+    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 template <uint16_t k>
@@ -109,55 +96,25 @@ public:
    
     virtual ~BSQListFlatKTypeAbstract() {;}
 
-    static uint64_t getStorageBytesCount(void* data)
+    inline static uint64_t getStorageBytesCount(void* data)
     {
         return *((uint32_t*)data);
     }
 
-    static uint64_t getElementCount(void* data)
+    inline static uint64_t getElementCount(void* data)
     {
         return *((uint32_t*)(((uint8_t*)data) + sizeof(uint32_t)));
     }
 
-    static StorageLocationPtr getDataInfo(void* data)
+    inline static uint8_t* getDataBytes(void* data)
     {
-        return (StorageLocationPtr)(((uint8_t*)data) + sizeof(uint32_t) + sizeof(uint32_t));
+        return ((uint8_t*)data) + sizeof(uint32_t) + sizeof(uint32_t);
     }
 
-    virtual uint64_t getLength(void* data) const override
-    {
-        return BSQListFlatKTypeAbstract::getElementCount(data);
-    }
-
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override
-    {
-        iter->cbuff = (void*)BSQListFlatKTypeAbstract::getDataInfo(data);
-        iter->cpos = pos * this->esize;
-        iter->maxpos = BSQListFlatKTypeAbstract::getStorageBytesCount(data);
-    }
-
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override
-    {
-        return BSQListFlatKTypeAbstract::getDataInfo(data) + (pos * this->esize);
-    }
-
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override
-    {
-        if((nstart == 0) & (nend == this->getLength(data)))
-        {
-            return data;
-        }
-
-        Allocator::GlobalAllocator.pushRoot(&data);
-        
-        auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeListSlice);
-        ((BSQListSlice*)res)->lrepr = data;
-        ((BSQListSlice*)res)->start = nstart;
-        ((BSQListSlice*)res)->end = nend;
-
-        Allocator::GlobalAllocator.popRoot();
-        return data;
-    }
+    virtual uint64_t getLength(void* data) const override;
+    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 template<uint16_t k>
@@ -189,43 +146,10 @@ public:
     BSQListSliceType(BSQTypeID tid, std::string name, uint64_t esize): BSQListEntityType(tid, BSQ_ALIGN_SIZE(sizeof(BSQListSlice)), 1, name, esize) {;}
     virtual ~BSQListSliceType() {;}
 
-    virtual uint64_t getLength(void* data) const override
-    {
-        auto sl = (BSQListSlice*)data;
-        return sl->end - sl->start;
-    }
-
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override
-    {
-        auto sl = (BSQListSlice*)data;
-        auto kltype = GET_TYPE_META_DATA_AS(BSQListFlatKTypeAbstract, sl->lrepr);
-        kltype->initializeListIterPosition(iter, sl->lrepr, pos + sl->start);
-    }
-
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override 
-    {
-        auto sl = (BSQListSlice*)data;
-        auto kltype = GET_TYPE_META_DATA_AS(BSQListFlatKTypeAbstract, sl->lrepr);
-        return kltype->getValueAtPosition(sl->lrepr, pos + sl->start);
-    }
-
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override
-    {
-        if((nstart == 0) & (nend == this->getLength(data)))
-        {
-            return data;
-        }
-
-        Allocator::GlobalAllocator.pushRoot(&data);
-        
-        auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeListSlice);
-        ((BSQListSlice*)res)->lrepr = ((BSQListSlice*)data)->lrepr;
-        ((BSQListSlice*)res)->start = ((BSQListSlice*)data)->start + nstart;
-        ((BSQListSlice*)res)->end = ((BSQListSlice*)data)->end - nend;
-
-        Allocator::GlobalAllocator.popRoot();
-        return data;
-    }
+    virtual uint64_t getLength(void* data) const override;
+    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 struct BSQListConcat
@@ -241,80 +165,8 @@ public:
     BSQListConcatType(BSQTypeID tid, std::string name, uint64_t esize): BSQListEntityType(tid, BSQ_ALIGN_SIZE(sizeof(BSQListConcat)), 2, name, esize) {;}
     virtual ~BSQListConcatType() {;}
 
-    virtual uint64_t getLength(void* data) const override
-    {
-        auto cl = (BSQListConcat*)data;
-        return cl->size;
-    }
-
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override
-    {
-        auto cl = (BSQListConcat*)data;
-        auto l1size = (int64_t)cl->size;
-        if(pos < l1size)
-        {
-            auto l1type = GET_TYPE_META_DATA_AS(BSQListEntityType, cl->lrepr1);
-            l1type->initializeListIterPosition(iter, cl->lrepr1, pos);
-        }
-        else
-        {
-            auto l2type = GET_TYPE_META_DATA_AS(BSQListEntityType, cl->lrepr2);
-            l2type->initializeListIterPosition(iter, cl->lrepr2, pos - l1size);
-        }
-    }
-
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override 
-    {
-        auto cl = (BSQListConcat*)data;
-
-        auto l1size = (int64_t)cl->size;
-        if(pos < l1size)
-        {
-            auto l1type = GET_TYPE_META_DATA_AS(BSQListEntityType, cl->lrepr1);
-            l1type->getValueAtPosition(cl->lrepr1, pos);
-        }
-        else
-        {
-            auto l2type = GET_TYPE_META_DATA_AS(BSQListEntityType, cl->lrepr2);
-            l2type->getValueAtPosition(cl->lrepr2, pos - l1size);
-        }
-    }
-
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override
-    {
-        if((nstart == 0) & (nend == this->getLength(data)))
-        {
-            return data;
-        }
-
-        auto l1type = GET_TYPE_META_DATA_AS(BSQListEntityType, ((BSQListConcat*)data)->lrepr1);
-        auto l2type = GET_TYPE_META_DATA_AS(BSQListEntityType, ((BSQListConcat*)data)->lrepr2);
-
-        Allocator::GlobalAllocator.pushRoot(&data);
-        
-        void* res = nullptr;
-        auto l1size = l1type->getLength(((BSQListConcat*)data)->lrepr1);
-        if(nend <= l1size)
-        {
-            res = l1type->slice(((BSQListConcat*)data)->lrepr1, nstart, nend);
-        }
-        else if(l1size <= nstart)
-        {
-            res = l2type->slice(((BSQListConcat*)data)->lrepr2, nstart - l1size, nend - l1size);
-        }
-        else
-        {
-            res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeListConcat);
-            Allocator::GlobalAllocator.pushRoot(&res);
-
-            ((BSQListConcat*)res)->lrepr1 = l1type->slice(((BSQListConcat*)data)->lrepr1, nstart, l1type->getLength(((BSQListConcat*)data)->lrepr1));
-            ((BSQListConcat*)res)->lrepr2 = l2type->slice(((BSQListConcat*)data)->lrepr2, 0, nend - l1type->getLength(((BSQListConcat*)data)->lrepr1));
-            ((BSQListConcat*)res)->size = nend - nstart;
-
-            Allocator::GlobalAllocator.popRoot(); 
-        }
-
-        Allocator::GlobalAllocator.popRoot();
-        return res;
-    }
+    virtual uint64_t getLength(void* data) const override;
+    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
