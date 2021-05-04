@@ -25,6 +25,7 @@ public:
     static BSQDecimalType* g_typeDecimal;
     static BSQRationalType* g_typeRational;
 
+    //String flavors
     static BSQStringKReprTypeAbstract g_typeStringKReprAbstract;
     static BSQStringKReprType<8>* g_typeStringKRepr8;
     static BSQStringKReprType<16>* g_typeStringKRepr16;
@@ -37,6 +38,19 @@ public:
     static BSQStringSliceReprType* g_typeStringSliceRepr;
 
     static BSQStringType* g_typeString;
+
+    //List flavors
+    static BSQListEmptyType* g_typeListEmpty;
+    static BSQListFlatKTypeAbstract* g_typeListFlatKAbstract;
+    static BSQListFlatKType<8>* g_typeListFlatK8;
+    static BSQListFlatKType<16>* g_typeListFlatK16;
+    static BSQListFlatKType<32>* g_typeListFlatK32;
+    static BSQListFlatKType<64>* g_typeListFlatK64;
+    static BSQListFlatKType<128>* g_typeListFlatK128;
+    static BSQListFlatKType<256>* g_typeListFlatK256;
+
+    static BSQListConcatType* g_typeListConcat;
+    static BSQListSliceType* g_typeListSlice;
 
     //Constant storage locations
     static BSQNone g_constNone;

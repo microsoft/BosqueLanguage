@@ -352,52 +352,6 @@ bool entityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
     return BSQStringType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
 }
 
-uint64_t BSQStringReprType::getKReprSizeFor(uint64_t v)
-{
-    uint64_t i = g_kreprcount - 1;
-    while(i > 0)
-    {
-        if(g_kreprsizes[i - 1] < v)
-        {
-            break;
-        }
-        i--;
-    }
-    return g_kreprsizes[i];
-}
-
-void* BSQStringType::allocateStringKForSize(uint64_t k, uint8_t** dataptr)
-{
-    uint64_t osize = BSQStringReprType::getKReprSizeFor(k);
-    void* res = nullptr;
-
-    switch(osize)
-    {
-    case 8:
-        res = (BSQStringKRepr<8>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr8);
-        break;
-    case 16:
-        res = (BSQStringKRepr<16>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr16);
-        break;
-    case 32: 
-        res = (BSQStringKRepr<32>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr32);
-        break;
-    case 64:
-        res = (BSQStringKRepr<64>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr64);
-        break;
-    case 128:
-        res = (BSQStringKRepr<128>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr128);
-        break;
-    default:
-        res = (BSQStringKRepr<256>*)Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringKRepr256);
-        break;
-    }
-
-    *((BSQNat*)res) = k;
-    *dataptr = (uint8_t*)((uint8_t*)res) + sizeof(BSQNat);
-    return res;
-}
-
 BSQStringKRepr<8>* BSQStringType::boxInlineString(BSQInlineString istr)
 {
     auto res = (BSQStringKRepr<8>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<8>), Environment::g_typeStringKRepr8);
@@ -619,6 +573,7 @@ void* traverseReprTreeSliceFront(void* repr, int64_t count)
         res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
         ((BSQStringSliceRepr*)res)->srepr = repr;
         ((BSQStringSliceRepr*)res)->start = count;
+        xxxx;
         ((BSQStringSliceRepr*)res)->end = BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
     }
     else if(reprtype->tid == BSQ_TYPE_ID_STRINGSLICEREPR)
@@ -630,7 +585,7 @@ void* traverseReprTreeSliceFront(void* repr, int64_t count)
     }
     else
     {
-        auto s1size = (int64_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(((BSQStringConcatRepr*)repr)->srepr1);
+        auto s1size = (int64_t)BSQStringReprType::getKReprSizeFor(((BSQStringConcatRepr*)repr)->srepr1);
         if(count < s1size)
         {
             res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringConcatRepr);

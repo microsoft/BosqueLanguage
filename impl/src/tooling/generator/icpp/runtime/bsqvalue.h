@@ -238,7 +238,7 @@ public:
 template <uint64_t k>
 struct BSQStringKRepr
 {
-    uint64_t size;
+    uint16_t size;
     uint8_t utf8bytes[k];
 };
 
@@ -256,12 +256,12 @@ public:
 
     static uint64_t getUTF8ByteCount(void* repr)
     {
-        return *((uint64_t*)repr);
+        return *((uint16_t*)repr);
     }
 
     static uint8_t* getUTF8Bytes(void* repr)
     {
-        return ((uint8_t*)repr) + sizeof(uint64_t);
+        return ((uint8_t*)repr) + sizeof(uint16_t);
     }
 
     virtual uint64_t utf8ByteCount(void* repr) const override
@@ -280,8 +280,6 @@ public:
 
     virtual ~BSQStringKReprType() {;}
 };
-constexpr uint64_t g_kreprsizes[] = { 8, 16, 32, 64, 128, 256 };
-constexpr uint64_t g_kreprcount = 6;
 
 struct BSQStringSliceRepr
 {

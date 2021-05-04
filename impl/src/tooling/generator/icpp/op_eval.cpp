@@ -114,7 +114,7 @@ void Evaluator::evalDebugOp(const DebugOp *op)
     {
         auto val = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
         auto ttype = GET_TYPE_META_DATA(val);
-        auto dval = ttype->fpDisplay(val);
+        auto dval = ttype->fpDisplay(ttype, val);
 
         wprintf(L"%s\n", dval.c_str());
         fflush(stdout);
@@ -1417,17 +1417,17 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::EqStringOp:
     {
         const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>*>(op);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::equalOperator(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), entityStringEqual_impl(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
     }
     case OpCodeTag::NeqStringOp:
     {
         const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStringOp>*>(op);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !BSQString::equalOperator(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !entityStringEqual_impl(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
     }
     case OpCodeTag::LessStringOp:
     {
         const PrimitiveBinaryOperatorOp<OpCodeTag::LessStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LessStringOp>*>(op);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), BSQString::lessOperator(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), entityStringLessThan_impl(this->evalArgument(bop->larg), this->evalArgument(bop->rarg)));
     }
     default:
     {
