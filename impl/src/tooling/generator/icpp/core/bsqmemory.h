@@ -639,7 +639,7 @@ public:
 
     inline uint8_t* allocateDynamic(const BSQType* mdata)
     {
-        size_t asize = BSQ_ALIGN_SIZE(mdata->allocsize);
+        size_t asize = BSQ_ALIGN_SIZE(mdata->allocinfo.heapsize);
         uint8_t* alloc = this->nsalloc.allocateDynamicSize(asize);
 
         *((const BSQType**)alloc) = mdata;

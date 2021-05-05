@@ -37,6 +37,16 @@ void gcProcessHeapOperator_packedImpl(const BSQType* btype, void** data);
 void gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data);
 void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data);
 
+class BSQTypeSizeInfo
+{
+public:
+    const uint64_t heapsize;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
+    const uint64_t sldatasize; //number of bytes needed in storage location for this -- 4 bytes for refs, same as heap size for others
+    const uint64_t slfullsize; //number of bytes + typeptr tag if needed in storage location for this -- inline union is bigger
+
+    const RefMask slmask; //The mask to use to traverse this object (even if this isn't a mixed obj -- e.g. it may be embedded in a mixed obj and we need to use this)   
+};
+
 ////
 //BSQType abstract base class
 class BSQType
@@ -45,7 +55,7 @@ public:
     const BSQTypeID tid;
     const BSQTypeKind tkind;
     
-    const uint64_t allocsize; //memory size of data (with alignment)
+    const BSQTypeSizeInfo allocinfo; //memory size information
     
     RefMask refmask;
     const uint64_t ptrcount; //if this is a packed object the number of pointers at the front
@@ -75,13 +85,13 @@ public:
 private:
     //Constructor that everyone delegates to
     BSQType(
-        BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, uint64_t ptrcount,
+        BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, uint64_t ptrcount,
         GCDecOperatorFP fpDecObj, GCClearMarkOperatorFP fpClearObj, GCProcessOperatorFP fpProcessObjRoot, GCProcessOperatorFP fpProcessObjHeap,
         bool isLeafType, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable,
         KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay,
         std::string name
     ) 
-    : tid(tid), tkind(tkind), allocsize(allocsize), refmask(refmask), ptrcount(ptrcount), 
+    : tid(tid), tkind(tkind), allocinfo(allocinfo), refmask(refmask), ptrcount(ptrcount), 
     fpDecObj(fpDecObj), fpClearObj(fpClearObj), fpProcessObjRoot(fpProcessObjRoot), fpProcessObjHeap(fpProcessObjHeap),
     isLeafType(isLeafType), vtable(vtable),
     fpKeyEqual(fpKeyEqual), fpKeyLess(fpKeyLess), fpDisplay(fpDisplay),
@@ -90,46 +100,84 @@ private:
 
 public:
     //Constructor for leaf type
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name)
-    : BSQType(tid, tkind, allocsize, nullptr, 0, nullptr, nullptr, nullptr, nullptr, true, vtable, nullptr, nullptr, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name)
+    : BSQType(tid, tkind, allocinfo, nullptr, 0, nullptr, nullptr, nullptr, nullptr, true, vtable, nullptr, nullptr, fpDisplay, name)
     {;}
 
     //Constructor for key leaf type
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
-    : BSQType(tid, tkind, allocsize, nullptr, 0, nullptr, nullptr, nullptr, nullptr, true, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
+    : BSQType(tid, tkind, allocinfo, nullptr, 0, nullptr, nullptr, nullptr, nullptr, true, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor with ptrcount
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocsize, nullptr, ptrcount, gcDecOperator_packedImpl, gcClearOperator_packedImpl, gcProcessRootOperator_packedImpl, gcProcessHeapOperator_packedImpl, false, vtable, nullptr, nullptr, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name) 
+    : BSQType(tid, tkind, allocinfo, nullptr, ptrcount, gcDecOperator_packedImpl, gcClearOperator_packedImpl, gcProcessRootOperator_packedImpl, gcProcessHeapOperator_packedImpl, false, vtable, nullptr, nullptr, fpDisplay, name)
     {;}
 
     //Constructor with key ptrcount
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocsize, nullptr, ptrcount, gcDecOperator_packedImpl, gcClearOperator_packedImpl, gcProcessRootOperator_packedImpl, gcProcessHeapOperator_packedImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
+    : BSQType(tid, tkind, allocinfo, nullptr, ptrcount, gcDecOperator_packedImpl, gcClearOperator_packedImpl, gcProcessRootOperator_packedImpl, gcProcessHeapOperator_packedImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor for general refmask
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocsize, refmask, 0, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, nullptr, nullptr, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name) 
+    : BSQType(tid, tkind, allocinfo, refmask, 0, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, nullptr, nullptr, fpDisplay, name)
     {;}
 
     //Constructor with key general refmask
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocsize, refmask, 0, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
+    : BSQType(tid, tkind, allocinfo, refmask, 0, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor for string type
-    BSQType(uint64_t allocsize, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, allocsize, nullptr, 0, gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    BSQType(BSQTypeSizeInfo allocinfo, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
+    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, allocinfo, nullptr, 0, gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor abstract type
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, DisplayFP fpDisplay, std::string name)
-    : BSQType(tid, tkind, allocsize, nullptr, 0, nullptr, nullptr, nullptr, nullptr, false, {}, nullptr, nullptr, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, DisplayFP fpDisplay, std::string name)
+    : BSQType(tid, tkind, allocinfo, nullptr, 0, nullptr, nullptr, nullptr, nullptr, false, {}, nullptr, nullptr, fpDisplay, name)
     {;}
 
     virtual ~BSQType() {;}
+
+    inline void clearValue(StorageLocationPtr trgt) const
+    {
+#ifdef BSQ_DEBUG_BUILD
+        if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
+        {
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+        }
+        else 
+        {
+            GC_MEM_ZERO(trgt, this->allocinfo.slfullsize);
+        }
+#endif
+    }
+
+    inline void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
+        {
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+        }
+        else 
+        {
+            SLPTR_COPY_CONTENTS(trgt, src, this->allocinfo.slfullsize);
+        }
+    }
+
+    inline StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, uint32_t offset) const
+    {
+        if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
+        {
+            SLPTR_INDEX_HEAP(src, offset);
+        }
+        else 
+        {
+            SLPTR_INDEX_INLINE(src, offset + (this->tkind == BSQTypeKind::InlineUnion ? sizeof(BSQType*) : 0));
+        }
+    }
 };
 
 ////
@@ -145,39 +193,39 @@ public:
     const std::vector<size_t> idxoffsets;
 
     //Constructor for leaf type
-    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, 
+    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, 
                 BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
-    : BSQType(tid, tkind, allocsize, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor for key leaf type
-    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name, 
+    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name, 
                 BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
-    : BSQType(tid, tkind, allocsize, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with ptrcount
-    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
+    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
                 BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
-    : BSQType(tid, tkind, allocsize, ptrcount, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    : BSQType(tid, tkind, allocinfo, ptrcount, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with key ptrcount
-    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
+    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
                 BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
-    : BSQType(tid, tkind, allocsize, ptrcount, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor for general refmask
-    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
+    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
                 BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
-    : BSQType(tid, tkind, allocsize, refmask, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with key general refmask
-    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
+    BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
                 BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
-    : BSQType(tid, tkind, allocsize, refmask, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     virtual ~BSQTupleType() {;}
@@ -195,39 +243,39 @@ public:
     const std::vector<size_t> propertyoffsets;
 
     //Constructor for leaf type
-    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
+    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
                 std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
-    : BSQType(tid, tkind, allocsize, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor for key leaf type
-    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
+    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
                 std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
-    : BSQType(tid, tkind, allocsize, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor with ptrcount
-    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
+    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
                  std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
-    : BSQType(tid, tkind, allocsize, ptrcount, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
+    : BSQType(tid, tkind, allocinfo, ptrcount, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor with key ptrcount
-    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
+    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
                 std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
-    : BSQType(tid, tkind, allocsize, ptrcount, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
+    : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor for general refmask
-    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
+    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
                 std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
-    : BSQType(tid, tkind, allocsize, refmask, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor with key general refmask
-    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
+    BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
                 std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
-    : BSQType(tid, tkind, allocsize, refmask, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     virtual ~BSQRecordType() {;}
@@ -245,44 +293,44 @@ public:
     const std::vector<size_t> fieldoffsets;
 
     //Constructor for leaf type
-    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
+    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
                 std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
-    : BSQType(tid, tkind, allocsize, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor for key leaf type
-    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
+    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
                 std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
-    : BSQType(tid, tkind, allocsize, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor with ptrcount
-    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
+    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
                  std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
-    : BSQType(tid, tkind, allocsize, ptrcount, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor with key ptrcount
-    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
+    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
                 std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
-    : BSQType(tid, tkind, allocsize, ptrcount, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor for general refmask
-    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
+    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
                 std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
-    : BSQType(tid, tkind, allocsize, refmask, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor with key general refmask
-    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
+    BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
                 std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
-    : BSQType(tid, tkind, allocsize, refmask, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor for special string action
-    BSQEntityType(uint64_t allocsize, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
-    : BSQType(allocsize, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    BSQEntityType(BSQTypeSizeInfo allocinfo, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
+    : BSQType(allocinfo, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     virtual ~BSQEntityType() {;}
@@ -297,18 +345,18 @@ public:
     const std::vector<size_t> idxoffsets;
 
     //Constructor for leaf type
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
-    : BSQType(tid, tkind, allocsize, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
+    : BSQType(tid, tkind, allocinfo, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with ptrcount
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, uint64_t ptrcount, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
-    : BSQType(tid, tkind, allocsize, ptrcount, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
+    : BSQType(tid, tkind, allocinfo, ptrcount, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor for general refmask
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, RefMask refmask, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
-    : BSQType(tid, tkind, allocsize, refmask, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     virtual ~BSQEphemeralListType() {;}
@@ -322,8 +370,8 @@ class BSQAbstractType : public BSQType
 public:
     const std::set<BSQTypeID> subtypes;
 
-    BSQAbstractType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, DisplayFP fpDisplay, std::string name, std::set<BSQTypeID> subtypes)
-    : BSQType(tid, tkind, allocsize, fpDisplay, name), subtypes(subtypes)
+    BSQAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, DisplayFP fpDisplay, std::string name, std::set<BSQTypeID> subtypes)
+    : BSQType(tid, tkind, allocinfo, fpDisplay, name), subtypes(subtypes)
     {;}
 };
 
@@ -332,16 +380,11 @@ std::string inlineUnionDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 class BSQInlineUnionType : public BSQAbstractType
 {
 public:
-    BSQInlineUnionType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::string name, std::set<BSQTypeID> subtypes)
-    : BSQAbstractType(tid, tkind, allocsize, inlineUnionDisplay_impl, name, subtypes)
+    BSQInlineUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::set<BSQTypeID> subtypes)
+    : BSQAbstractType(tid, tkind, allocinfo, inlineUnionDisplay_impl, name, subtypes)
     {;}
 
     virtual ~BSQInlineUnionType() {;}
-
-    inline uint64_t getAllocSizePlusType() const
-    {
-        return this->allocsize + sizeof(BSQType*);
-    }
 };
 
 std::string heapUnionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -349,8 +392,8 @@ std::string heapUnionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 class BSQHeapUnionType : public BSQAbstractType
 {
 public:
-    BSQHeapUnionType(BSQTypeID tid, BSQTypeKind tkind, uint64_t allocsize, std::string name, std::set<BSQTypeID> subtypes)
-    : BSQAbstractType(tid, tkind, allocsize, heapUnionDisplay_impl, name, subtypes)
+    BSQHeapUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::set<BSQTypeID> subtypes)
+    : BSQAbstractType(tid, tkind, allocinfo, heapUnionDisplay_impl, name, subtypes)
     {;}
 
     virtual ~BSQHeapUnionType() {;}

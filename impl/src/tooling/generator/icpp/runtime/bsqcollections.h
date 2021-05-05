@@ -19,11 +19,11 @@ struct BSQListIterator
 };
 
 void registerIteratorGCRoots(BSQListIterator* iter);
-void releaseIteratorGCRoots(BSQListIterator* iter);
+void releaseIteratorGCRoots();
 
 bool iteratorIsValid(const BSQListIterator* iter);
 
-StorageLocationPtr iteratorGetElement(const BSQListIterator* iter);
+void iteratorGetElement(const BSQListIterator* iter, void* into, const BSQType* etype);
 void incrementListIterator(BSQListIterator* iter);
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -32,15 +32,22 @@ class BSQListEntityType : public BSQEntityType
 {
 public:
     const uint64_t esize;
+    const BSQType* etype;
 
     //Constructor for leaf type
-    BSQListEntityType(BSQTypeID tid, uint64_t allocsize, std::string name, uint64_t esize): BSQEntityType(tid, BSQTypeKind::Ref, allocsize, {}, entityListDisplay_impl, name, {}, {}, {}), esize(esize) {;}
+    BSQListEntityType(BSQTypeID tid, BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype)
+    : BSQEntityType(tid, BSQTypeKind::Ref, allocinfo, {}, entityListDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.slfullsize), etype(etype)
+    {;}
 
     //Constructor with ptrcount
-    BSQListEntityType(BSQTypeID tid, uint64_t allocsize, uint64_t ptrcount, std::string name, uint64_t esize): BSQEntityType(tid, BSQTypeKind::Ref, allocsize, ptrcount, {}, entityListDisplay_impl, name, {}, {}, {}), esize(esize) {;}
+    BSQListEntityType(BSQTypeID tid, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, const BSQType* etype)
+    : BSQEntityType(tid, BSQTypeKind::Ref, allocinfo, ptrcount, {}, entityListDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.slfullsize), etype(etype)
+    {;}
 
     //Constructor for general refmask
-    BSQListEntityType(BSQTypeID tid, uint64_t allocsize, RefMask refmask, std::string name, uint64_t esize): BSQEntityType(tid, BSQTypeKind::Ref, allocsize, refmask, {}, entityListDisplay_impl, name, {}, {}, {}), esize(esize) {;}
+    BSQListEntityType(BSQTypeID tid, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, const BSQType* etype)
+    : BSQEntityType(tid, BSQTypeKind::Ref, allocinfo, refmask, {}, entityListDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.slfullsize), etype(etype)
+    {;}
    
     virtual ~BSQListEntityType() {;}
 
@@ -60,7 +67,7 @@ class BSQListEmptyType : public BSQListEntityType
 {
 public:
     //Constructor for leaf type
-    BSQListEmptyType(BSQTypeID tid, std::string name): BSQListEntityType(tid, 8, name, 8) {;}
+    BSQListEmptyType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {sizeof(BSQEmptyList), sizeof(void*), sizeof(void*), "2"}, name, etype) {;}
 
     virtual ~BSQListEmptyType() {;}
 
@@ -86,13 +93,13 @@ class BSQListFlatKTypeAbstract : public BSQListEntityType
 {
 public:
     //Constructor for leaf type
-    BSQListFlatKTypeAbstract(BSQTypeID tid, uint64_t allocsize, std::string name, uint64_t entrysize): BSQListEntityType(tid, allocsize, name, entrysize) {;}
+    BSQListFlatKTypeAbstract(BSQTypeID tid, BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype): BSQListEntityType(tid, allocinfo, name, etype) {;}
 
     //Constructor with ptrcount
-    BSQListFlatKTypeAbstract(BSQTypeID tid, uint64_t allocsize, uint64_t ptrcount, std::string name, uint64_t entrysize): BSQListEntityType(tid, allocsize, ptrcount, name, entrysize) {;}
+    BSQListFlatKTypeAbstract(BSQTypeID tid, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, const BSQType* etype): BSQListEntityType(tid, allocinfo, ptrcount, name, etype) {;}
 
     //Constructor for general refmask
-    BSQListFlatKTypeAbstract(BSQTypeID tid, uint64_t allocsize, RefMask refmask, std::string name, uint64_t entrysize): BSQListEntityType(tid, allocsize, refmask, entrysize) {;}
+    BSQListFlatKTypeAbstract(BSQTypeID tid, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, const BSQType* etype): BSQListEntityType(tid, allocinfo, refmask, etype) {;}
    
     virtual ~BSQListFlatKTypeAbstract() {;}
 
@@ -122,13 +129,13 @@ class BSQListFlatKType : public BSQListFlatKTypeAbstract
 {
 public:
     //Constructor for leaf type
-    BSQListFlatKType(BSQTypeID tid, std::string name, uint64_t entrysize): BSQListFlatKTypeAbstract(tid, BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>))), name) {;}
+    BSQListFlatKType(BSQTypeID tid, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, name, etype) {;}
 
     //Constructor with ptrcount
-    BSQListFlatKType(BSQTypeID tid, std::string name): BSQListFlatKTypeAbstract(tid, BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>))), k, name, BSQ_ALIGN_SIZE(void*)) {;}
+    BSQListFlatKType(BSQTypeID tid, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, k, name, etype) {;}
 
     //Constructor for general refmask
-    BSQListFlatKType(BSQTypeID tid, RefMask refmask, std::string name, uint64_t entrysize): BSQListFlatKTypeAbstract(tid, BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>))), refmask, entrysize) {;}
+    BSQListFlatKType(BSQTypeID tid, RefMask refmask, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, refmask, etype) {;}
    
     virtual ~BSQListFlatKType() {;}
 };
@@ -143,7 +150,7 @@ struct BSQListSlice
 class BSQListSliceType : public BSQListEntityType
 {
 public:
-    BSQListSliceType(BSQTypeID tid, std::string name, uint64_t esize): BSQListEntityType(tid, BSQ_ALIGN_SIZE(sizeof(BSQListSlice)), 1, name, esize) {;}
+    BSQListSliceType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {BSQ_ALIGN_SIZE(sizeof(BSQListSlice)), sizeof(void*), sizeof(void*), "2"}, 1, name, etype) {;}
     virtual ~BSQListSliceType() {;}
 
     virtual uint64_t getLength(void* data) const override;
@@ -162,7 +169,7 @@ struct BSQListConcat
 class BSQListConcatType : public BSQListEntityType
 {
 public:
-    BSQListConcatType(BSQTypeID tid, std::string name, uint64_t esize): BSQListEntityType(tid, BSQ_ALIGN_SIZE(sizeof(BSQListConcat)), 2, name, esize) {;}
+    BSQListConcatType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {BSQ_ALIGN_SIZE(sizeof(BSQListConcat)), sizeof(void*), sizeof(void*), "2"}, 2, name, etype) {;}
     virtual ~BSQListConcatType() {;}
 
     virtual uint64_t getLength(void* data) const override;

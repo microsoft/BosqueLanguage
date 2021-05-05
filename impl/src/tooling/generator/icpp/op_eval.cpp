@@ -123,7 +123,7 @@ void Evaluator::evalDebugOp(const DebugOp *op)
 
 void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
 {
-    this->clearValue(this->evalTargetVar(op->trgt), op->oftype);
+    op->oftype->clearValue(this->evalTargetVar(op->trgt));
 }
 
 template <OpCodeTag tag, bool isGuarded>
@@ -349,12 +349,12 @@ void Evaluator::evalNarrowInlineOp(const ExtractOp<tag, isGuarded>* op)
 
 void Evaluator::evalLoadConstOp(const LoadConstOp* op)
 {
-    this->storeValue(this->evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg), op->oftype);
+    op->oftype->storeValue(this->evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg));
 }
 
 void Evaluator::processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype)
 {
-    this->storeValue(this->evalTargetVar(dst), this->indexStorageLocationOffset(src, slotoffset, srctype), dsttype);
+    dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
 void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype)
@@ -366,7 +366,7 @@ void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BS
 
 void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype)
 {
-    this->storeValue(this->evalTargetVar(dst), this->indexStorageLocationOffset(src, slotoffset, srctype), dsttype);
+    dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
 void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype)
@@ -383,7 +383,7 @@ void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const B
     
 void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype)
 {
-    this->storeValue(this->evalTargetVar(dst), this->indexStorageLocationOffset(src, slotoffset, srctype), dsttype);
+    dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
 void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype)
@@ -534,7 +534,7 @@ void Evaluator::evalConstructorTupleOp(const ConstructorTupleOp* op)
 
     for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
     {
-        this->storeValue(this->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i], op->oftype), this->evalArgument(op->args[i]), op->oftype->ttypes[i]);
+        op->oftype->ttypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -554,7 +554,7 @@ void Evaluator::evalConstructorRecordOp(const ConstructorRecordOp* op)
 
     for(size_t i = 0; i < op->oftype->propertyoffsets.size(); ++i)
     {
-        this->storeValue(this->indexStorageLocationOffset(tcontents, op->oftype->propertyoffsets[i], op->oftype), this->evalArgument(op->args[i]), op->oftype->rtypes[i]);
+        op->oftype->rtypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->propertyoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -564,7 +564,7 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
 
     for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
     {
-        this->storeValue(this->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i], op->oftype), this->evalArgument(op->args[i]), op->oftype->etypes[i]);
+        op->oftype->etypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -784,7 +784,7 @@ void Evaluator::evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op)
 
 void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op, StorageLocationPtr resultsl)
 {
-    this->storeValue(resultsl, this->evalArgument(op->arg), op->oftype);
+    op->oftype->storeValue(resultsl, this->evalArgument(op->arg));
 }
 
 void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, StorageLocationPtr resultsl)
@@ -802,7 +802,7 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, Storage
 
     for(size_t i = 0; i < op->oftype->fieldoffsets.size(); ++i)
     {
-        this->storeValue(this->indexStorageLocationOffset(tcontents, op->oftype->fieldoffsets[i], op->oftype), this->evalArgument(op->args[i]), op->oftype->ftypes[i]);
+        op->oftype->ftypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->fieldoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 

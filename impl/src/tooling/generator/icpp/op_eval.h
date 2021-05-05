@@ -23,19 +23,19 @@ public:
 #endif
 
     StorageLocationPtr* argsbase;
-    void* localsbase;
+    uint8_t* localsbase;
     BSQBool* masksbase;
 
     const std::vector<InterpOp*>* ops;
     std::vector<InterpOp*>::const_iterator cpos;
 
 #ifdef BSQ_DEBUG_BUILD
-    EvaluatorFrame(std::string* dbg_file, std::string* dbg_function, StorageLocationPtr* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
+    EvaluatorFrame(std::string* dbg_file, std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
     {
         this->dbg_line = this->cpos->sinfo.line;
     }
 #else
-    EvaluatorFrame(StorageLocationPtr* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin()) {;}
+    EvaluatorFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin()) {;}
 #endif
 };
 
@@ -105,65 +105,6 @@ private:
 
     StorageLocationPtr evalConstArgument(Argument arg);
 
-    inline void clearValue(StorageLocationPtr trgt, const BSQType* oftype)
-    {
-#ifdef BSQ_DEBUG_BUILD
-        if((oftype->tkind == BSQTypeKind::Ref) | (oftype->tkind == BSQTypeKind::HeapUnion)) 
-        {
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
-        }
-        else 
-        {
-            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct || oftype->tkind == BSQTypeKind::String)
-            {
-                GC_MEM_ZERO(trgt, oftype->allocsize);
-            }
-            else
-            {
-                GC_MEM_ZERO(trgt, static_cast<const BSQInlineUnionType*>(oftype)->getAllocSizePlusType());
-            }
-        }
-#endif
-    }
-
-    inline void storeValue(StorageLocationPtr trgt, StorageLocationPtr src, const BSQType* oftype)
-    {
-        if((oftype->tkind == BSQTypeKind::Ref) | (oftype->tkind == BSQTypeKind::HeapUnion)) 
-        {
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
-        }
-        else 
-        {
-            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct || oftype->tkind == BSQTypeKind::String)
-            {
-                SLPTR_COPY_CONTENTS(trgt, src, oftype->allocsize);
-            }
-            else
-            {
-                SLPTR_COPY_CONTENTS(trgt, src, static_cast<const BSQInlineUnionType*>(oftype)->getAllocSizePlusType());
-            }
-        }
-    }
-
-    inline StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, uint32_t offset, const BSQType* oftype)
-    {
-        if((oftype->tkind == BSQTypeKind::Ref) | (oftype->tkind == BSQTypeKind::HeapUnion)) 
-        {
-            SLPTR_INDEX_HEAP(src, offset);
-        }
-        else 
-        {
-            if(oftype->tkind == BSQTypeKind::Register || oftype->tkind == BSQTypeKind::Struct|| oftype->tkind == BSQTypeKind::String)
-            {
-                SLPTR_INDEX_INLINE(src, offset);
-            }
-            else
-            {
-                SLPTR_INDEX_INLINE(src, offset + sizeof(BSQType*));
-            }
-        }
-    }
-
     inline StorageLocationPtr evalArgument(Argument arg)
     {
         if(arg.kind == ArgumentTag::Local)
@@ -216,11 +157,11 @@ private:
     {
         if(arg.kind != ArgumentTag::UninterpFill)
         {
-            this->storeValue(this->evalTargetVar(trgt), this->evalArgument(arg), oftype);
+            oftype->storeValue(this->evalTargetVar(trgt), this->evalArgument(arg));
         }
         else
         {
-            this->clearValue(this->evalTargetVar(trgt), oftype);
+            oftype->clearValue(this->evalTargetVar(trgt));
         }
     }
 

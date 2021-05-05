@@ -12,7 +12,7 @@ void registerIteratorGCRoots(BSQListIterator* iter)
     Allocator::GlobalAllocator.pushRoot(&(iter->cbuff));
 }
 
-void releaseIteratorGCRoots(BSQListIterator* iter)
+void releaseIteratorGCRoots()
 {
     Allocator::GlobalAllocator.popRoots<2>();
 }
@@ -22,9 +22,9 @@ bool iteratorIsValid(const BSQListIterator* iter)
     return iter->cbuff != nullptr;
 }
 
-StorageLocationPtr iteratorGetElement(const BSQListIterator* iter)
+void iteratorGetElement(const BSQListIterator* iter, void* into, const BSQType* etype)
 {
-    return BSQListFlatKTypeAbstract::getDataBytes(iter->cbuff) + iter->cpos;
+    etype->storeValue(into, BSQListFlatKTypeAbstract::getDataBytes(iter->cbuff) + iter->cpos);
 }
 
 void incrementListIterator(BSQListIterator* iter)
@@ -32,7 +32,7 @@ void incrementListIterator(BSQListIterator* iter)
     iter->lpos++;
     iter->cpos += iter->esize;
     
-    if(iter->cbuff == nullptr || iter->cpos == iter->maxpos)
+    if(iter->cpos == iter->maxpos)
     {
         auto ltype = GET_TYPE_META_DATA_AS(BSQListEntityType, iter->lroot);
         ltype->initializeListIterPosition(iter, iter->lroot, iter->lpos);
@@ -42,15 +42,23 @@ void incrementListIterator(BSQListIterator* iter)
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     BSQListIterator iter;
-    xxxx;
     registerIteratorGCRoots(&iter);
 
+    auto etype = ((BSQListEntityType*)btype)->etype;
+    void* estack = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.slfullsize);
+    etype->clearValue(estack);
+
+    GCStack::pushFrame(nullptr, 0, &estack, etype->allocinfo.slmask);
+
     std::string ll = ((BSQListEntityType*)btype)->name + "@{";
-    xxx; //interior pointer roots??
     while(iteratorIsValid(&iter))
     {
-
+        iteratorGetElement(&iter, estack, etype);
+        ll += etype->fpDisplay(etype, estack);
     }
+
+    GCStack::popFrame();
+    releaseIteratorGCRoots();
 }
 
 void BSQListEmptyType::initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const

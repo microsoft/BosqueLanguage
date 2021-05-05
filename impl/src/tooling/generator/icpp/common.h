@@ -70,20 +70,24 @@
 #define BSQ_MIN_NURSERY_SIZE 1048576
 #define BSQ_MAX_NURSERY_SIZE 16777216
 
-//Create and release bump space
+//Create and release bump space or stack allocations
 #ifdef __APPLE__
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
+#define BSQ_STACK_SPACE_ALLOC(SIZE) alloca(SIZE)
 #else
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
+#define BSQ_STACK_SPACE_ALLOC(SIZE) _alloca(SIZE)
 #endif
 
 #define BSQ_BUMP_SPACE_RELEASE(SIZE, M) free(M)
 
-//Allocate and release free list values
+//Allocate and release free list values + stack allocate
 #ifdef __APPLE__
 #define BSQ_FREE_LIST_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
+#define BSQ_STACK_ALLOCATE(SIZE) alloca(SIZE)
 #else
 #define BSQ_FREE_LIST_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
+#define BSQ_STACK_ALLOCATE(SIZE) _alloca(SIZE)
 #endif
 
 #define BSQ_FREE_LIST_RELEASE(SIZE, M) free(M)
@@ -124,7 +128,7 @@ typedef uint64_t RCMeta;
 #define GET_SLAB_BASE(M) ((void*)((uint8_t *)M - sizeof(BSQType*)))
 #define GET_FREE_LIST_BASE(M) ((void*)((uint8_t *)M - (sizeof(RCMeta) + sizeof(BSQType*))))
 
-#define COMPUTE_FREE_LIST_BYTES(M) (GET_TYPE_META_DATA(M)->allocsize + sizeof(RCMeta) + sizeof(BSQType*))
+#define COMPUTE_FREE_LIST_BYTES(M) (GET_TYPE_META_DATA(M)->allocinfo.heapsize + sizeof(RCMeta) + sizeof(BSQType*))
 
 #ifdef __APPLE__
 #define GC_MEM_COPY(DST, SRC, BYTES) memcpy(DST, SRC, BYTES)
