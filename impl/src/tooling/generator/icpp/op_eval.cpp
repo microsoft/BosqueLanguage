@@ -138,7 +138,7 @@ void Evaluator::evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op)
 }
 
 template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueStructToInlineOp(const BoxOp<tag, isGuarded>* op)
+void Evaluator::evalBoxUniqueStructOrStringToInlineOp(const BoxOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
@@ -179,7 +179,7 @@ void Evaluator::evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op)
 }
 
 template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op)
+void Evaluator::evalBoxUniqueStructOrStringToHeapOp(const BoxOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
@@ -234,7 +234,7 @@ void Evaluator::evalExtractUniqueRegisterFromInlineOp(const ExtractOp<tag, isGua
 }
 
 template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueStructFromInlineOp(const ExtractOp<tag, isGuarded>* op)
+void Evaluator::evalExtractUniqueStructOrStringFromInlineOp(const ExtractOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
@@ -275,7 +275,7 @@ void Evaluator::evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuard
 }
 
 template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded>* op)
+void Evaluator::evalExtractUniqueStructOrStringFromHeapOp(const ExtractOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
@@ -570,12 +570,60 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
 
 void Evaluator::evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op)
 {
-    xxxx;
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), Environment::g_listTypeMap[op->oftype->tid].empty->generateEmptyList());
 }
 
 void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op)
 {
-    xxxx;
+    auto lbytes = op->args.size() * op->oftype->esize <= 256;
+    const ListTypeConstructorInfo& glistalloc = Environment::g_listTypeMap[op->oftype->tid];
+
+    if(lbytes <= 256)
+    {
+        BSQListFlatKTypeAbstract* fltype = nullptr;
+        if(lbytes <= 64)
+        {
+            fltype = glistalloc.list64;
+        }
+        else if(lbytes <= 96)
+        {
+            fltype = glistalloc.list96;
+        }
+        else if(lbytes <= 128)
+        {
+            fltype = glistalloc.list128;
+        }
+        else if(lbytes <= 160)
+        {
+            fltype = glistalloc.list160;
+        }
+        else if(lbytes <= 192)
+        {
+            fltype = glistalloc.list192;
+        }
+        else if(lbytes <= 224)
+        {
+            fltype = glistalloc.list224;
+        }
+        else
+        {
+            fltype = glistalloc.list256;
+        }
+
+        void* res = Allocator::GlobalAllocator.allocateDynamic(fltype);
+        uint8_t* iter = fltype->initializeWriteIter(res);
+        for(size_t i = 0; i < op->args.size(); ++i)
+        {
+            fltype->storeDataToPostion(iter, this->evalArgument(op->args[i]));
+            fltype->advanceWriteIter(&iter);
+        }
+        
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), res);
+    }
+    else
+    {
+        assert(false);
+    }
 }
 
 void Evaluator::evalConstructorPrimaryCollectionCopiesOp(const ConstructorPrimaryCollectionCopiesOp* op)
@@ -1160,11 +1208,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::AddBigNatOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddBigNatOp, BSQBigNat, +)
     }
     case OpCodeTag::AddBigIntOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddBigIntOp, BSQBigInt, +)
     }
     case OpCodeTag::AddRationalOp:
     {
@@ -1188,11 +1236,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::SubBigNatOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubBigNatOp, BSQBigNat, -)
     }
     case OpCodeTag::SubBigIntOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubBigIntOp, BSQBigInt, -)
     }
     case OpCodeTag::SubRationalOp:
     {
@@ -1216,11 +1264,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::MultBigNatOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultBigNatOp, BSQBigNat, *)
     }
     case OpCodeTag::MultBigIntOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultBigIntOp, BSQBigInt, *)
     }
     case OpCodeTag::MultRationalOp:
     {
@@ -1244,11 +1292,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::DivBigNatOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivBigNatOp, BSQBigNat)
     }
     case OpCodeTag::DivBigIntOp:
     {
-        assert(false);
+        PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivBigIntOp, BSQBigInt)
     }
     case OpCodeTag::DivRationalOp:
     {

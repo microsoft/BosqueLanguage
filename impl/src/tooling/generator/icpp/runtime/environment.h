@@ -11,6 +11,20 @@
 
 typedef StorageLocationPtr (*ConstValueLoad)();
 
+struct ListTypeConstructorInfo
+{
+    BSQListEmptyType* empty;
+    BSQListFlatKType<64>* list64;
+    BSQListFlatKType<96>* list96;
+    BSQListFlatKType<128>* list128;
+    BSQListFlatKType<160>* list160;
+    BSQListFlatKType<192>* list192;
+    BSQListFlatKType<224>* list224;
+    BSQListFlatKType<256>* list256;
+    BSQListSliceType* slice;
+    BSQListConcatType* concat;
+};
+
 class Environment
 {
 public:
@@ -38,6 +52,8 @@ public:
     static BSQStringSliceReprType* g_typeStringSliceRepr;
 
     static BSQStringType* g_typeString;
+
+    static std::map<BSQTypeID, ListTypeConstructorInfo> g_listTypeMap;
 
     //Constant storage locations
     static BSQNone g_constNone;

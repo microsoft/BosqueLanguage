@@ -58,6 +58,7 @@ public:
 
     virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const = 0;
 
+    static void initializeIteratorGivenPosition(BSQListIterator* iter, void* data, int64_t pos);
     static void initializeIteratorBegin(BSQListIterator* iter, void* data);
 
     inline static bool empty(void* data)
@@ -77,10 +78,22 @@ struct BSQEmptyList
 class BSQListEmptyType : public BSQListEntityType
 {
 public:
+    BSQEmptyList* lempty;
+
     //Constructor for leaf type
-    BSQListEmptyType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {sizeof(BSQEmptyList), sizeof(void*), sizeof(void*), "2"}, name, etype) {;}
+    BSQListEmptyType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {sizeof(BSQEmptyList), sizeof(void*), sizeof(void*), "2"}, name, etype), lempty(nullptr) {;}
 
     virtual ~BSQListEmptyType() {;}
+
+    BSQEmptyList* generateEmptyList() const
+    {
+        if(this->lempty == nullptr)
+        {
+            Allocator::GlobalAllocator.allocateEternal(this->allocinfo.heapsize, this);
+        }
+
+        return this->lempty;
+    }
 
     virtual uint64_t getLength(void* data) const override
     {
@@ -127,6 +140,21 @@ public:
     inline static uint8_t* getDataBytes(void* data)
     {
         return ((uint8_t*)data) + sizeof(uint32_t) + sizeof(uint32_t);
+    }
+
+    inline uint8_t* initializeWriteIter(void* l) const
+    {
+        return this->getDataBytes(l);
+    }
+
+    inline void advanceWriteIter(uint8_t** iter) const
+    {
+        *iter = *iter + this->esize;
+    }
+
+    inline void storeDataToPostion(uint8_t* iter, StorageLocationPtr slptr) const
+    {
+        GC_MEM_COPY(iter, slptr, this->esize);
     }
 
     void initializeIterPositionWSlice(BSQListIterator* iter, void* data, int64_t pos, int64_t maxpos) const;

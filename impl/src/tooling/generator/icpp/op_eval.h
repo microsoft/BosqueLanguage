@@ -246,7 +246,7 @@ private:
     void evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueStructToInlineOp(const BoxOp<tag, isGuarded>* op);
+    void evalBoxUniqueStructOrStringToInlineOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalBoxUniqueRefToInlineOp(const BoxOp<tag, isGuarded>* op);
@@ -255,7 +255,7 @@ private:
     void evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueStructToHeapOp(const BoxOp<tag, isGuarded>* op);
+    void evalBoxUniqueStructOrStringToHeapOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalBoxUniqueRefToHeapOp(const BoxOp<tag, isGuarded>* op);
@@ -267,7 +267,7 @@ private:
     void evalExtractUniqueRegisterFromInlineOp(const ExtractOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueStructFromInlineOp(const ExtractOp<tag, isGuarded>* op);
+    void evalExtractUniqueStructOrStringFromInlineOp(const ExtractOp<tag, isGuarded>* op);
     
     template <OpCodeTag tag, bool isGuarded>
     void evalExtractUniqueRefFromInlineOp(const ExtractOp<tag, isGuarded>* op);
@@ -276,7 +276,7 @@ private:
     void evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueStructFromHeapOp(const ExtractOp<tag, isGuarded>* op);
+    void evalExtractUniqueStructOrStringFromHeapOp(const ExtractOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalExtractUniqueRefFromHeapOp(const ExtractOp<tag,isGuarded>* op);

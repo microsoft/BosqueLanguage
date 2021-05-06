@@ -233,6 +233,21 @@ public:
         return (rr + sizeof(RCMeta));
     }
 
+    inline uint8_t* allocateEternal(size_t size)
+    {
+        size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
+        assert(tsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
+
+        MEM_STATS_OP(this->totalalloc += tsize);
+
+        uint8_t* rr = (uint8_t*)BSQ_FREE_LIST_ALLOC(tsize);
+        *((RCMeta*)rr) = GC_RC_ETERNAL_INIT;
+
+        this->livealloc += tsize;
+
+        return (rr + sizeof(RCMeta));
+    }
+
     inline void release(void* m)
     {
         size_t bytes = COMPUTE_FREE_LIST_BYTES(m);
@@ -653,12 +668,23 @@ public:
         this->nsalloc.ensureSpace(BSQ_ALIGN_SIZE(required) + sizeof(BSQType*));
     }
 
-    inline uint8_t* allocateSafe(size_t allocsize, BSQType* mdata)
+    inline uint8_t* allocateSafe(size_t allocsize, const BSQType* mdata)
     {
         size_t asize = BSQ_ALIGN_SIZE(allocsize);
         uint8_t* alloc = this->nsalloc.allocateSafe(asize);
 
-        *((BSQType**)alloc) = mdata;
+        *((const BSQType**)alloc) = mdata;
+        uint8_t* res = (alloc + sizeof(BSQType*));
+
+        return res;
+    }
+
+    uint8_t* allocateEternal(size_t allocsize, const BSQType* mdata)
+    {
+        size_t asize = BSQ_ALIGN_SIZE(allocsize);
+        uint8_t* alloc = this->osalloc.allocateEternal(asize);
+
+        *((const BSQType**)alloc) = mdata;
         uint8_t* res = (alloc + sizeof(BSQType*));
 
         return res;

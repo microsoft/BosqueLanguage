@@ -54,16 +54,17 @@ void incrementListIterator(BSQListIterator* iter)
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     BSQListIterator iter;
-    initializeListIterPosition(&iter, );
-    registerIteratorGCRoots(&iter);
+    BSQListEntityType::initializeIteratorBegin(&iter, data);
 
     auto etype = ((BSQListEntityType*)btype)->etype;
     void* estack = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.slfullsize);
     etype->clearValue(estack);
 
+    std::string ll = ((BSQListEntityType*)btype)->name + "@{";
+
+    registerIteratorGCRoots(&iter);
     GCStack::pushFrame(nullptr, 0, &estack, etype->allocinfo.slmask);
 
-    std::string ll = ((BSQListEntityType*)btype)->name + "@{";
     while(iteratorIsValid(&iter))
     {
         iteratorGetElement(&iter, estack, etype);
@@ -72,6 +73,8 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
 
     GCStack::popFrame();
     releaseIteratorGCRoots();
+
+    return ll;
 }
 
 void BSQListEmptyType::initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const
@@ -124,7 +127,7 @@ void* BSQListFlatKTypeAbstract::slice_impl(void* data, uint64_t nstart, uint64_t
 
     Allocator::GlobalAllocator.pushRoot(&data);
   
-    auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeListSlice);
+    auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_listTypeMap[this->tid].slice);
     ((BSQListSlice*)res)->lrepr = data;
     ((BSQListSlice*)res)->start = nstart;
     ((BSQListSlice*)res)->end = nend;
@@ -162,7 +165,7 @@ void* BSQListSliceType::slice_impl(void* data, uint64_t nstart, uint64_t nend) c
 
     Allocator::GlobalAllocator.pushRoot(&data);
       
-    auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeListSlice);
+    auto res = Allocator::GlobalAllocator.allocateDynamic(this);
     ((BSQListSlice*)res)->lrepr = ((BSQListSlice*)data)->lrepr;
     ((BSQListSlice*)res)->start = ((BSQListSlice*)data)->start + nstart;
     ((BSQListSlice*)res)->end = ((BSQListSlice*)data)->end - nend;
@@ -234,7 +237,7 @@ void* BSQListConcatType::slice_impl(void* data, uint64_t nstart, uint64_t nend) 
     }
     else
     {
-        res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeListConcat);
+        res = Allocator::GlobalAllocator.allocateDynamic(this);
         Allocator::GlobalAllocator.pushRoot(&res);
 
         ((BSQListConcat*)res)->lrepr1 = l1type->slice_impl(((BSQListConcat*)data)->lrepr1, nstart, l1type->getLength(((BSQListConcat*)data)->lrepr1));
@@ -248,18 +251,23 @@ void* BSQListConcatType::slice_impl(void* data, uint64_t nstart, uint64_t nend) 
     return res;
 }
 
-void BSQListEntityType::initializeIteratorBegin(BSQListIterator* iter, void* data)
+void BSQListEntityType::initializeIteratorGivenPosition(BSQListIterator* iter, void* data, int64_t pos)
 {
     iter->lroot = data;
     iter->lpos = 0;
     iter->cbuff = nullptr;
 
-    initializeListIterPosition(iter, 0);
+     initializeListIterPosition(iter, pos);
+}
+
+void BSQListEntityType::initializeIteratorBegin(BSQListIterator* iter, void* data)
+{
+    BSQListEntityType::initializeIteratorGivenPosition(iter, data, 0);
 }
 
 void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 {
-    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQListConcat) + sizeof(BSQListFlatK<64>));
+    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQListConcat) + sizeof(BSQListFlatK<128>));
 
     void* l1 = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(s1);
     const BSQListEntityType* l1type = GET_TYPE_META_DATA_AS(BSQListEntityType, l1);
@@ -269,7 +277,7 @@ void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 
     if(BSQListEntityType::empty(l1) & BSQListEntityType::empty(l2))
     {
-        return BSQListEntityType::getDefaultEmpty(xxxx);
+        return Environment::g_listTypeMap[l1type->tid].empty->generateEmptyList();
     }
     else if(BSQListEntityType::empty(l1))
     {
@@ -287,12 +295,12 @@ void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
         auto size2 = len2 * l2type->esize;;
 
         void* res;
-        if(size1 + size2 < 64)
+        if(size1 + size2 <= 128)
         {
-            res = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListFlatK<64>), xxxx);
+            res = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListFlatK<128>), Environment::g_listTypeMap[l1type->tid].list128);
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
 
-            ((BSQListFlatK<64>*)res)->ecount = len1 + len2;
+            ((BSQListFlatK<128>*)res)->ecount = len1 + len2;
 
             BSQListIterator iter1;
             initializeIteratorBegin(&iter1, l1);
@@ -303,32 +311,64 @@ void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
                 incrementListIterator(&iter1);
             }
 
-                BSQStringIterator iter2;
-                BSQStringType::initializeIteratorBegin(&iter2, str2);
-                while(iteratorIsValid(&iter2))
-                {
-                    *curr = iteratorGetUTF8Byte(&iter2);
-                    curr++;
-                    incrementStringIterator_utf8byte(&iter2);
-                }
-
-                res.u_data = crepr;
-        }
-            else
+            BSQListIterator iter2;
+            initializeIteratorBegin(&iter2, l2);
+            while(iteratorIsValid(&iter2))
             {
-                auto crepr = (BSQListConcat*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListConcat), Environment::g_typeStringConcatRepr);
-                crepr->size = len1 + len2;
-                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringType::boxInlineString(str1.u_inlineString) : str1.u_data;
-                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringType::boxInlineString(str2.u_inlineString) : str2.u_data;
-                
-                res.u_data = crepr;
+                iteratorGetElement(&iter2, curr, l2type->etype);
+                curr += l2type->esize;
+                incrementListIterator(&iter2);
             }
+        }
+        else
+        {
+            auto crepr = (BSQListConcat*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListConcat), Environment::g_listTypeMap[l1type->tid].concat);
+            crepr->size = len1 + len2;
+            crepr->lrepr1 = l1;
+            crepr->lrepr2 = l2;
+        }
 
         return res;
     }
 }
 
-void* BSQListEntityType::slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos)
+void* BSQListEntityType::slice(StorageLocationPtr l, uint64_t startpos, uint64_t endpos)
 {
+    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQStringKRepr<128>));
 
+    void* ll = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(l);
+    const BSQListEntityType* ltype = GET_TYPE_META_DATA_AS(BSQListEntityType, ll);
+
+    if(startpos >= endpos)
+    {
+        return Environment::g_listTypeMap[ltype->tid].empty->generateEmptyList();
+    }
+    else
+    {
+        auto dist = endpos - startpos;
+
+        void* res;
+        if(dist <= 128 && (ltype->getLength(ll) * ltype->esize) >= 512)
+        {
+            res = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<128>), Environment::g_listTypeMap[ltype->tid].list128);
+            uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
+
+            BSQListIterator iter;
+            BSQListEntityType::initializeIteratorGivenPosition(&iter, ll, (int64_t)startpos);
+
+            for(uint64_t i = 0; i < dist; ++i)
+            {
+                iteratorGetElement(&iter, curr, ltype->etype);
+
+                curr += ltype->esize;
+                incrementListIterator(&iter);
+            }
+        }
+        else
+        {
+            res = ltype->slice(ll, startpos, endpos);
+        }
+
+        return res;
+    }
 }

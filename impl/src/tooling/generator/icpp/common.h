@@ -105,6 +105,7 @@
 typedef uint64_t RCMeta;
 
 #define GC_RC_CLEAR ((uint64_t)0)
+#define GC_RC_ETERNAL_INIT ((uint64_t)1)
 #define GC_RC_MARK_FROM_ROOT ((uint64_t)(1 << 60))
 
 #define GC_COUNT_GET_MASK 0xFFFFFFFFFFFF

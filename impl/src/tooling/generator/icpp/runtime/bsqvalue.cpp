@@ -668,15 +668,8 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
             {
                 auto repr = rstr.u_data;
                 auto reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, repr);
-
-                auto frontcount = istart.strpos;
-                auto backcount = (int64_t)BSQStringType::utf8ByteCount(rstr) - iend.strpos;
-
-                auto fronttrim = traverseReprTreeSliceFront(repr, frontcount);
-                Allocator::GlobalAllocator.pushRoot(&fronttrim);
     
-                res.u_data = traverseReprTreeSliceBack(fronttrim, backcount);
-                Allocator::GlobalAllocator.popRoot();
+                res.u_data = reprtype->slice(repr, istart.strpos, iend.strpos);
             }
         }
 
