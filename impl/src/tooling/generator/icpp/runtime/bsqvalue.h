@@ -33,7 +33,7 @@ bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 class BSQNoneType : public BSQEntityType
 {
 public:
-    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNone)), {}, entityNoneEqual_impl, entityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
+    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQNone)), BSQ_ALIGN_SIZE(sizeof(BSQNone)), BSQ_ALIGN_SIZE(sizeof(BSQNone)), "1" }, {}, entityNoneEqual_impl, entityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
     virtual ~BSQNoneType() {;}
 };
 
@@ -50,7 +50,7 @@ bool entityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 class BSQBoolType : public BSQEntityType
 {
 public:
-    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBool)), {}, entityBoolEqual_impl, entityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
+    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQBool)), BSQ_ALIGN_SIZE(sizeof(BSQBool)), BSQ_ALIGN_SIZE(sizeof(BSQBool)), "1" }, {}, entityBoolEqual_impl, entityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
     virtual ~BSQBoolType() {;}
 
     inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
@@ -68,7 +68,7 @@ bool entityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQNatType : public BSQEntityType
 {
 public:
-    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQNat)), {}, entityNatEqual_impl, entityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
+    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQNat)), BSQ_ALIGN_SIZE(sizeof(BSQNat)), BSQ_ALIGN_SIZE(sizeof(BSQNat)), "1" }, {}, entityNatEqual_impl, entityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
     virtual ~BSQNatType() {;}
 
     inline static bool equal(BSQNat v1, BSQNat v2) { return v1 == v2; }
@@ -86,7 +86,7 @@ bool entityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQIntType : public BSQEntityType
 {
 public:
-    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQInt)), {}, entityIntEqual_impl, entityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
+    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQInt)), BSQ_ALIGN_SIZE(sizeof(BSQInt)), BSQ_ALIGN_SIZE(sizeof(BSQInt)), "1" }, {}, entityIntEqual_impl, entityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
     virtual ~BSQIntType() {;}
 
     inline static bool equal(BSQInt v1, BSQInt v2) { return v1 == v2; }
@@ -104,7 +104,7 @@ bool entityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
 class BSQBigNatType : public BSQEntityType
 {
 public:
-    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), {}, entityBigNatEqual_impl, entityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
+    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), "1" }, {}, entityBigNatEqual_impl, entityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
     virtual ~BSQBigNatType() {;}
 
     inline static bool equal(BSQBigNat v1, BSQBigNat v2) { return v1 == v2; }
@@ -122,7 +122,7 @@ bool entityBigIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
 class BSQBigIntType : public BSQEntityType
 {
 public:
-    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), {}, entityBigIntEqual_impl, entityBigIntLessThan_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), "1" }, {}, entityBigIntEqual_impl, entityBigIntLessThan_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
     virtual ~BSQBigIntType() {;}
 
     inline static bool equal(BSQBigInt v1, BSQBigInt v2) { return v1 == v2; }
@@ -138,7 +138,7 @@ std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 class BSQFloatType : public BSQEntityType
 {
 public:
-    BSQFloatType() : BSQEntityType(BSQ_TYPE_ID_FLOAT, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQFloat)), {}, entityFloatDisplay_impl, "NSCore::Float", {}, {}, {}) {;}
+    BSQFloatType() : BSQEntityType(BSQ_TYPE_ID_FLOAT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQFloat)), BSQ_ALIGN_SIZE(sizeof(BSQFloat)), BSQ_ALIGN_SIZE(sizeof(BSQFloat)), "1" }, {}, entityFloatDisplay_impl, "NSCore::Float", {}, {}, {}) {;}
     virtual ~BSQFloatType() {;}
 };
 
@@ -151,7 +151,7 @@ std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr d
 class BSQDecimalType : public BSQEntityType
 {
 public:
-    BSQDecimalType() : BSQEntityType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {}) {;}
+    BSQDecimalType() : BSQEntityType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), "11" }, {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {}) {;}
     virtual ~BSQDecimalType() {;}
 };
 
@@ -168,12 +168,14 @@ std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr 
 class BSQRationalType : public BSQEntityType
 {
 public:
-    BSQRationalType() : BSQEntityType(BSQ_TYPE_ID_RATIONAL, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQRational)), {}, entityRationalDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    BSQRationalType() : BSQEntityType(BSQ_TYPE_ID_RATIONAL, BSQTypeKind::Struct, {BSQ_ALIGN_SIZE(sizeof(BSQRational)), BSQ_ALIGN_SIZE(sizeof(BSQRational)), BSQ_ALIGN_SIZE(sizeof(BSQRational)), "111" }, {}, entityRationalDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
     virtual ~BSQRationalType() {;}
 };
 
 ////
 //String
+struct BSQStringIterator; //forward decl
+
 struct BSQInlineString
 {
     uint8_t utf8bytes[8];
@@ -184,15 +186,6 @@ struct BSQInlineString
         assert(IS_INLINE_STRING(&istr));
 
         std::copy(chars, chars + len, istr.utf8bytes + 1);
-    }
-
-    inline static BSQInlineString create2(const uint8_t* chars1, uint64_t len1, const uint8_t* chars2, uint64_t len2)
-    {
-        BSQInlineString istr = {(len1 + len2) << 1, 0, 0, 0, 0, 0, 0, 0};
-        assert(IS_INLINE_STRING(&istr));
-
-        std::copy(chars1, chars1 + len1, istr.utf8bytes + 1);
-        std::copy(chars2, chars2 + len2, istr.utf8bytes + 1 + len1);
     }
 
     inline static uint64_t utf8ByteCount(BSQInlineString istr)
@@ -217,22 +210,26 @@ struct BSQInlineString
 };
 constexpr BSQInlineString g_emptyInlineString = {0};
 
+std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
 class BSQStringReprType : public BSQEntityType
 {
 public:
     static uint64_t getKReprSizeFor(uint64_t v);
 
-    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, uint64_t gcptrcount, DisplayFP fpDisplay, std::string name) 
-    : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, gcptrcount, {}, fpDisplay, name, {}, {}, {}) 
+    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, uint64_t gcptrcount, std::string name) 
+    : BSQEntityType(tid, BSQTypeKind::Ref, { allocsize, allocsize, allocsize, "2" }, gcptrcount, {}, entityStringReprDisplay_impl, name, {}, {}, {}) 
     {;}
 
-    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, DisplayFP fpDisplay, std::string name) 
-    : BSQEntityType(tid, BSQTypeKind::Ref, allocsize, {}, fpDisplay, name, {}, {}, {}) 
+    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, std::string name) 
+    : BSQEntityType(tid, BSQTypeKind::Ref, { allocsize, allocsize, allocsize, "2" }, {}, entityStringReprDisplay_impl, name, {}, {}, {}) 
     {;}
 
     virtual ~BSQStringReprType() {;}
 
     virtual uint64_t utf8ByteCount(void* repr) const = 0;
+    virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const = 0;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const = 0;
 };
 
 template <uint64_t k>
@@ -242,14 +239,11 @@ struct BSQStringKRepr
     uint8_t utf8bytes[k];
 };
 
-template <uint64_t k>
-std::string entityStringKReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
 class BSQStringKReprTypeAbstract : public BSQStringReprType
 {
 public:
-    BSQStringKReprTypeAbstract(uint64_t allocsize, DisplayFP fpDisplay, std::string name) 
-    : BSQStringReprType(BSQ_TYPE_ID_STRINGREPR, allocsize, fpDisplay, name) 
+    BSQStringKReprTypeAbstract(uint64_t allocsize, std::string name) 
+    : BSQStringReprType(BSQ_TYPE_ID_STRINGREPR, allocsize, name) 
     {;}
 
     virtual ~BSQStringKReprTypeAbstract() {;}
@@ -268,6 +262,11 @@ public:
     {
         return BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
     }
+
+    void initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos) const;
+
+    virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const override;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 template <uint64_t k>
@@ -275,7 +274,7 @@ class BSQStringKReprType : public BSQStringKReprTypeAbstract
 {
 public:
     BSQStringKReprType(DisplayFP fpDisplay) 
-    : BSQStringKReprTypeAbstract(BSQ_TYPE_ID_STRINGKREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringKRepr<k>)), fpDisplay, "[Internal::StringKRepr]") 
+    : BSQStringKReprTypeAbstract(BSQ_ALIGN_SIZE(sizeof(BSQStringKRepr<k>)), "[Internal::StringKRepr]") 
     {;}
 
     virtual ~BSQStringKReprType() {;}
@@ -288,13 +287,11 @@ struct BSQStringSliceRepr
     uint64_t end;
 };
 
-std::string entityStringSliceReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
 class BSQStringSliceReprType : public BSQStringReprType
 {
 public:
     BSQStringSliceReprType() 
-    : BSQStringReprType(BSQ_TYPE_ID_STRINGSLICEREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringSliceRepr)), 1, entityStringSliceReprDisplay_impl, "[Internal::StringSliceRepr]") 
+    : BSQStringReprType(BSQ_ALIGN_SIZE(sizeof(BSQStringSliceRepr)), 1, "[Internal::StringSliceRepr]") 
     {;}
 
     virtual ~BSQStringSliceReprType() {;}
@@ -304,6 +301,9 @@ public:
         auto srepr = (BSQStringSliceRepr*)repr;
         return (srepr->end - srepr->start);
     }
+
+    virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const override;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 struct BSQStringConcatRepr
@@ -313,13 +313,11 @@ struct BSQStringConcatRepr
     uint64_t size;
 };
 
-std::string entityStringConcatReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
 class BSQStringConcatReprType : public BSQStringReprType
 {
 public:
     BSQStringConcatReprType() 
-    : BSQStringReprType(BSQ_TYPE_ID_STRINGAPPENDREPR, BSQ_ALIGN_SIZE(sizeof(BSQStringConcatRepr)), 2, entityStringConcatReprDisplay_impl, "[Internal::StringConcatRepr]") 
+    : BSQStringReprType(BSQ_ALIGN_SIZE(sizeof(BSQStringConcatRepr)), 2, "[Internal::StringConcatRepr]") 
     {;}
 
     virtual ~BSQStringConcatReprType() {;}
@@ -328,6 +326,9 @@ public:
     {
         return ((BSQStringConcatRepr*)repr)->size;
     }
+
+    virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const override;
+    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 struct BSQString
@@ -352,7 +353,6 @@ bool iteratorIsValid(const BSQStringIterator* iter);
 bool iteratorLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2);
 bool iteratorEqual(const BSQStringIterator* iter1, const BSQStringIterator* iter2);
 
-void initializeStringIterPosition_Helper(BSQStringIterator* iter, int64_t pos, void* optsliceparent, void* srepr);
 void initializeStringIterPosition(BSQStringIterator* iter, int64_t pos);
 
 uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter);
@@ -363,14 +363,11 @@ uint32_t iteratorGetCodePoint(BSQStringIterator* iter);
 void incrementStringIterator_codePoint(BSQStringIterator* iter);
 void decrementStringIterator_codePoint(BSQStringIterator* iter);
 
-void* traverseReprTreeSliceFront(void* repr, int64_t count);
-void* traverseReprTreeSliceBack(void* repr, int64_t count);
-
 class BSQStringIteratorType : public BSQEntityType
 {
 public:
     BSQStringIteratorType() 
-    : BSQEntityType(BSQ_TYPE_ID_STRINGITERATOR, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), "3", {}, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos", {}, {}, {})
+    : BSQEntityType(BSQ_TYPE_ID_STRINGITERATOR, BSQTypeKind::Struct, { BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), "3121" }, "3", {}, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos", {}, {}, {})
     {;}
 
     virtual ~BSQStringIteratorType() {;}
@@ -386,11 +383,10 @@ bool entityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
 class BSQStringType : public BSQEntityType
 {
 private:
-    static void* allocateStringKForSize(uint64_t k, uint8_t** dataptr);
     static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
 
 public:
-    BSQStringType() : BSQEntityType(BSQ_ALIGN_SIZE(sizeof(BSQString)), entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String") {;}
+    BSQStringType() : BSQEntityType({ BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), "3" }, entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String") {;}
     virtual ~BSQStringType() {;}
 
     static void initializeIteratorMin(BSQStringIterator* iter, BSQString str);
@@ -443,7 +439,7 @@ std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPt
 class BSQByteBufferType : public BSQEntityType
 {
 public:
-    BSQByteBufferType() : BSQEntityType(BSQ_TYPE_ID_BYTEBUFFER, BSQTypeKind::Ref, sizeof(BSQByteBuffer), 1, {}, entityByteBufferDisplay_impl, "NSCore::ByteBuffer", {}, {}, {}) {;}
+    BSQByteBufferType() : BSQEntityType(BSQ_TYPE_ID_BYTEBUFFER, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQByteBuffer)), sizeof(void*), sizeof(void*), "2" }, 1, {}, entityByteBufferDisplay_impl, "NSCore::ByteBuffer", {}, {}, {}) {;}
     virtual ~BSQByteBufferType() {;}
 };
 
@@ -456,7 +452,7 @@ std::string entityISOTimeDisplay_impl(const BSQType* btype, StorageLocationPtr d
 class BSQISOTimeType : public BSQEntityType
 {
 public:
-    BSQISOTimeType() : BSQEntityType(BSQ_TYPE_ID_ISOTIME, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQISOTime)), {}, entityISOTimeDisplay_impl, "NSCore::ISOTime", {}, {}, {}) {;}
+    BSQISOTimeType() : BSQEntityType(BSQ_TYPE_ID_ISOTIME, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQISOTime)), BSQ_ALIGN_SIZE(sizeof(BSQISOTime)), BSQ_ALIGN_SIZE(sizeof(BSQISOTime)), "1" }, {}, entityISOTimeDisplay_impl, "NSCore::ISOTime", {}, {}, {}) {;}
     virtual ~BSQISOTimeType() {;}
 };
 
@@ -471,7 +467,7 @@ bool entityLogicalTimeLessThan_impl(StorageLocationPtr data1, StorageLocationPtr
 class BSQLogicalTimeType : public BSQEntityType
 {
 public:
-    BSQLogicalTimeType() : BSQEntityType(BSQ_TYPE_ID_LOGICALTIME, BSQTypeKind::Register, BSQ_ALIGN_SIZE(sizeof(BSQLogicalTime)), {}, entityLogicalTimeEqual_impl, entityLogicalTimeLessThan_impl, entityLogicalTimeDisplay_impl, "NSCore::LogicalTime", {}, {}, {}) {;}
+    BSQLogicalTimeType() : BSQEntityType(BSQ_TYPE_ID_LOGICALTIME, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQLogicalTime)), BSQ_ALIGN_SIZE(sizeof(BSQLogicalTime)), BSQ_ALIGN_SIZE(sizeof(BSQLogicalTime)), "1"}, {}, entityLogicalTimeEqual_impl, entityLogicalTimeLessThan_impl, entityLogicalTimeDisplay_impl, "NSCore::LogicalTime", {}, {}, {}) {;}
     virtual ~BSQLogicalTimeType() {;}
 
     inline static bool equal(BSQLogicalTime v1, BSQLogicalTime v2) { return v1 == v2; }
@@ -489,7 +485,7 @@ bool entityUUIDLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 class BSQUUIDType : public BSQEntityType
 {
 public:
-    BSQUUIDType() : BSQEntityType(BSQ_TYPE_ID_UUID, BSQTypeKind::Ref, BSQ_ALIGN_SIZE(sizeof(BSQUUID)), {}, entityUUIDEqual_impl, entityUUIDLessThan_impl, entityUUIDDisplay_impl, "NSCore::UUID", {}, {}, {}) {;}
+    BSQUUIDType() : BSQEntityType(BSQ_TYPE_ID_UUID, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQUUID)), sizeof(void*), sizeof(void*), "2" }, {}, entityUUIDEqual_impl, entityUUIDLessThan_impl, entityUUIDDisplay_impl, "NSCore::UUID", {}, {}, {}) {;}
     virtual ~BSQUUIDType() {;}
 
     inline static bool equal(BSQUUID* v1, BSQUUID* v2) { return *v1 == *v2; }
@@ -507,7 +503,7 @@ bool entityCryptoHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr 
 class BSQCryptoHashType : public BSQEntityType
 {
 public:
-    BSQCryptoHashType() : BSQEntityType(BSQ_TYPE_ID_CRYPTOHASH, BSQTypeKind::Ref, BSQ_ALIGN_SIZE(sizeof(BSQCryptoHash)), {}, entityCryptoHashEqual_impl, entityCryptoHashLessThan_impl, entityCryptoHashDisplay_impl, "NSCore::CryptoHash", {}, {}, {}) {;}
+    BSQCryptoHashType() : BSQEntityType(BSQ_TYPE_ID_CRYPTOHASH, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQCryptoHash)), sizeof(void*), sizeof(void*), "2" }, {}, entityCryptoHashEqual_impl, entityCryptoHashLessThan_impl, entityCryptoHashDisplay_impl, "NSCore::CryptoHash", {}, {}, {}) {;}
     virtual ~BSQCryptoHashType() {;}
 
     inline static bool equal(BSQCryptoHash* v1, BSQCryptoHash* v2) { return *v1 == *v2; }
@@ -528,6 +524,6 @@ std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 class BSQRegexType : public BSQEntityType
 {
 public:
-    BSQRegexType() : BSQEntityType(BSQ_TYPE_ID_CRYPTOHASH, BSQTypeKind::Struct, BSQ_ALIGN_SIZE(sizeof(BSQCryptoHash)), {}, entityRegexDisplay_impl, "NSCore::Regex", {}, {}, {}) {;}
+    BSQRegexType() : BSQEntityType(BSQ_TYPE_ID_REGEX, BSQTypeKind::Struct, { BSQ_ALIGN_SIZE(sizeof(BSQRegex)), BSQ_ALIGN_SIZE(sizeof(BSQRegex)), BSQ_ALIGN_SIZE(sizeof(BSQRegex)), "11" }, {}, entityRegexDisplay_impl, "NSCore::Regex", {}, {}, {}) {;}
     virtual ~BSQRegexType() {;}
 };

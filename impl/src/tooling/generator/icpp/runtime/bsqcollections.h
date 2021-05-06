@@ -22,6 +22,7 @@ void registerIteratorGCRoots(BSQListIterator* iter);
 void releaseIteratorGCRoots();
 
 bool iteratorIsValid(const BSQListIterator* iter);
+void initializeListIterPosition(BSQListIterator* iter, int64_t pos);
 
 void iteratorGetElement(const BSQListIterator* iter, void* into, const BSQType* etype);
 void incrementListIterator(BSQListIterator* iter);
@@ -52,10 +53,20 @@ public:
     virtual ~BSQListEntityType() {;}
 
     virtual uint64_t getLength(void* data) const = 0;
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const = 0;
+    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const = 0;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const = 0;
 
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const = 0;
+    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const = 0;
+
+    static void initializeIteratorBegin(BSQListIterator* iter, void* data);
+
+    inline static bool empty(void* data)
+    {
+        return GET_TYPE_META_DATA_AS(BSQListEntityType, data)->getLength(data) == 0;
+    }
+
+    static void* concat2(StorageLocationPtr s1, StorageLocationPtr s2);
+    static void* slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos);
 };
 
 struct BSQEmptyList
@@ -76,9 +87,9 @@ public:
         return 0;
     }
 
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
+    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 template <uint16_t k>
@@ -118,10 +129,12 @@ public:
         return ((uint8_t*)data) + sizeof(uint32_t) + sizeof(uint32_t);
     }
 
+    void initializeIterPositionWSlice(BSQListIterator* iter, void* data, int64_t pos, int64_t maxpos) const;
+
     virtual uint64_t getLength(void* data) const override;
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
+    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 template<uint16_t k>
@@ -154,9 +167,9 @@ public:
     virtual ~BSQListSliceType() {;}
 
     virtual uint64_t getLength(void* data) const override;
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
+    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 struct BSQListConcat
@@ -173,7 +186,7 @@ public:
     virtual ~BSQListConcatType() {;}
 
     virtual uint64_t getLength(void* data) const override;
-    virtual void initializeListIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
+    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };

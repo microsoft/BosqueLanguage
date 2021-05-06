@@ -210,6 +210,9 @@ typedef uint32_t BSQVirtualInvokeID;
 #define BSQ_TYPE_ID_LOGICALTIME 13
 #define BSQ_TYPE_ID_UUID 14
 #define BSQ_TYPE_ID_CRYPTOHASH 15
+#define BSQ_TYPE_ID_REGEX 16
+
+#define BSQ_TYPE_ID_LIST 20
 
 #define BSQ_TYPE_ID_STRINGREPR 30
 
