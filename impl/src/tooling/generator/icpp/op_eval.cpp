@@ -77,8 +77,10 @@ StorageLocationPtr Evaluator::evalConstArgument(Argument arg)
     case ArgumentTag::ConstRegex:
         return Environment::g_constRegexs + arg.location;
     default: {
-            const ConstValueLoad loadfp = Environment::g_constLoads[arg.location];
-            return loadfp();
+        assert(false);
+        //TODO: add a cache (that GC knows about) to hold memoized results
+        //TODO: otherwise take slow path that looksup function and applies it 
+        return nullptr;
         }
     }
 }
@@ -503,7 +505,11 @@ void Evaluator::evalLoadVirtualFieldOp(const LoadEntityFieldVirtualOp* op)
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp<tag, isGuarded>* op)
 {
-    xxxx;
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->trgttype, op->sguard))
+    {
+        StorageLocationPtr resl = this->evalTargetVar(op->trgt);
+        this->invoke(Environment::g_invokes[op->invokeId], resl);
+    }
 }
 
 void Evaluator::evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op)
@@ -570,13 +576,15 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
 
 void Evaluator::evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op)
 {
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), Environment::g_listTypeMap[op->oftype->tid].empty->generateEmptyList());
+    auto ltype = (BSQListEntityType*)op->oftype;
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), Environment::g_listTypeMap[ltype->tid].empty->generateEmptyList());
 }
 
 void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op)
 {
-    auto lbytes = op->args.size() * op->oftype->esize <= 256;
-    const ListTypeConstructorInfo& glistalloc = Environment::g_listTypeMap[op->oftype->tid];
+    auto ltype = (BSQListEntityType*)op->oftype;
+    auto lbytes = op->args.size() * ltype->esize <= 256;
+    const ListTypeConstructorInfo& glistalloc = Environment::g_listTypeMap[ltype->tid];
 
     if(lbytes <= 256)
     {
@@ -898,9 +906,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalBoxUniqueRegisterToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRegisterToInlineOp, false>*>(op));
     }
-    case OpCodeTag::BoxUniqueStructToInlineOp:
+    case OpCodeTag::BoxUniqueStructOrStringToInlineOp:
     {
-        this->evalBoxUniqueStructToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructToInlineOp, false>*>(op));
+        this->evalBoxUniqueStructOrStringToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructOrStringToInlineOp, false>*>(op));
     }
     case OpCodeTag::BoxUniqueRefToInlineOp:
     {
@@ -910,9 +918,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalBoxUniqueRegisterToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRegisterToHeapOp, false>*>(op));
     }
-    case OpCodeTag::BoxUniqueStructToHeapOp:
+    case OpCodeTag::BoxUniqueStructOrStringToHeapOp:
     {
-        this->evalBoxUniqueStructToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructToHeapOp, false>*>(op));
+        this->evalBoxUniqueStructOrStringToHeapOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueStructOrStringToHeapOp, false>*>(op));
     }
     case OpCodeTag::BoxUniqueRefToHeapOp:
     {
@@ -926,9 +934,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalExtractUniqueRegisterFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRegisterFromInlineOp, false>*>(op));
     }
-    case OpCodeTag::ExtractUniqueStructFromInlineOp:
+    case OpCodeTag::ExtractUniqueStructOrStringFromInlineOp:
     {
-        this->evalExtractUniqueStructFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructFromInlineOp, false>*>(op));
+        this->evalExtractUniqueStructOrStringFromInlineOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructOrStringFromInlineOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueRefFromInlineOp:
     {
@@ -938,9 +946,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalExtractUniqueRegisterFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueRegisterFromHeapOp, false>*>(op));
     }
-    case OpCodeTag::ExtractUniqueStructFromHeapOp:
+    case OpCodeTag::ExtractUniqueStructOrStringFromHeapOp:
     {
-        this->evalExtractUniqueStructFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructFromHeapOp, false>*>(op));
+        this->evalExtractUniqueStructOrStringFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractUniqueStructOrStringFromHeapOp, false>*>(op));
     }
     case OpCodeTag::ExtractUniqueRefFromHeapOp:
     {
@@ -962,9 +970,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalBoxUniqueRegisterToInlineOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueRegisterToInlineOp, true>*>(op));
     }
-    case OpCodeTag::GuardedBoxUniqueStructToInlineOp:
+    case OpCodeTag::GuardedBoxUniqueStructOrStringToInlineOp:
     {
-        this->evalBoxUniqueStructToInlineOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueStructToInlineOp, true>*>(op));
+        this->evalBoxUniqueStructOrStringToInlineOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueStructOrStringToInlineOp, true>*>(op));
     }
     case OpCodeTag::GuardedBoxUniqueRefToInlineOp:
     {
@@ -974,9 +982,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalBoxUniqueRegisterToHeapOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueRegisterToHeapOp, true>*>(op));
     }
-    case OpCodeTag::GuardedBoxUniqueStructToHeapOp:
+    case OpCodeTag::GuardedBoxUniqueStructOrStringToHeapOp:
     {
-        this->evalBoxUniqueStructToHeapOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueStructToHeapOp, true>*>(op));
+        this->evalBoxUniqueStructOrStringToHeapOp(static_cast<const BoxOp<OpCodeTag::GuardedBoxUniqueStructOrStringToHeapOp, true>*>(op));
     }
     case OpCodeTag::GuardedBoxUniqueRefToHeapOp:
     {
@@ -990,9 +998,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalExtractUniqueRegisterFromInlineOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueRegisterFromInlineOp, true>*>(op));
     }
-    case OpCodeTag::GuardedExtractUniqueStructFromInlineOp:
+    case OpCodeTag::GuardedExtractUniqueStructOrStringFromInlineOp:
     {
-        this->evalExtractUniqueStructFromInlineOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueStructFromInlineOp, true>*>(op));
+        this->evalExtractUniqueStructOrStringFromInlineOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueStructOrStringFromInlineOp, true>*>(op));
     }
     case OpCodeTag::GuardedExtractUniqueRefFromInlineOp:
     {
@@ -1002,9 +1010,9 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalExtractUniqueRegisterFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueRegisterFromHeapOp, true>*>(op));
     }
-    case OpCodeTag::GuardedExtractUniqueStructFromHeapOp:
+    case OpCodeTag::GuardedExtractUniqueStructOrStringFromHeapOp:
     {
-        this->evalExtractUniqueStructFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueStructFromHeapOp, true>*>(op));
+        this->evalExtractUniqueStructOrStringFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractUniqueStructOrStringFromHeapOp, true>*>(op));
     }
     case OpCodeTag::GuardedExtractUniqueRefFromHeapOp:
     {
@@ -1462,6 +1470,48 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, >=)
     }
+    case OpCodeTag::EqStrPosOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::EqStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::EqStrPosOp>*>(op);
+        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
+        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorEqual(&i1, &i2));
+    }
+    case OpCodeTag::NeqStrPosOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStrPosOp>*>(op);
+        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
+        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorEqual(&i1, &i2));
+    }
+    case OpCodeTag::LtStrPosOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
+        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
+        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorLess(&i1, &i2));
+    }
+    case OpCodeTag::GtStrPosOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
+        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
+        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorLess(&i2, &i1));
+    }
+    case OpCodeTag::LeStrPosOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
+        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
+        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorLess(&i2, &i1));
+    }
+    case OpCodeTag::GeStrPosOp:
+    {
+        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
+        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
+        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorLess(&i1, &i2));
+    }
     case OpCodeTag::EqStringOp:
     {
         const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::EqStringOp>*>(op);
@@ -1533,4 +1583,41 @@ void Evaluator::evaluateBody(StorageLocationPtr resultsl)
     }
 }
 
+
+void Evaluator::invoke(const BSQInvokeDecl* call, StorageLocationPtr resultsl)
+{
+    if(call->isPrimitive())
+    {
+        this->invokePrimitivePrelude((const BSQInvokePrimitiveDecl*)call);
+        this->evaluatePrimitiveBody((const BSQInvokePrimitiveDecl*)call, resultsl);
+    }
+    else
+    {
+        this->invokePrelude((const BSQInvokeBodyDecl*)call);
+        this->evaluateBody(resultsl);
+    }
+
+    this->invokePostlude();
+}
+
+void Evaluator::invokePrelude(const BSQInvokeBodyDecl* _Invoke)
+{
+    xxxx;
+}
+    
+void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk)
+{
+    xxxx;
+}
+    
+void Evaluator::invokePostlude()
+{
+    this->popFrame();
+}
+
+void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl)
+{
+    assert(false);
+    //TODO: put in the switch or dispatch to handle primitive operations here
+}
 

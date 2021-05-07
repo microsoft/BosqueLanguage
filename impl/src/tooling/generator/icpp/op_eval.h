@@ -6,8 +6,6 @@
 #pragma once
 
 #include "common.h"
-
-#include "assembly/bsqtype.h"
 #include "assembly/bsqop.h"
 
 #include "runtime/environment.h"
@@ -370,4 +368,12 @@ private:
 
     void evaluateOpCodeBlocks();
     void evaluateBody(StorageLocationPtr resultsl);
+
+    void invoke(const BSQInvokeDecl* call, StorageLocationPtr resultsl);
+
+    void invokePrelude(const BSQInvokeBodyDecl* invk);
+    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk);
+    void invokePostlude();
+
+    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl);
 };

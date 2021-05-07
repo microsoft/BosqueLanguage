@@ -467,7 +467,7 @@ bool BSQStringType::equal(BSQString v1, BSQString v2)
     }
     else if(IS_INLINE_STRING(&v1) && IS_INLINE_STRING(&v2))
     {
-        return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 8) == 0;
+        return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 16) == 0;
     }
     else
     {
@@ -504,7 +504,7 @@ bool BSQStringType::lessThan(BSQString v1, BSQString v2)
     }
     else if(IS_INLINE_STRING(&v1) && IS_INLINE_STRING(&v2))
     {
-        return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 8) < 0;
+        return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 16) < 0;
     }
     else
     {
@@ -581,9 +581,9 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
         }
         else
         {
-            if(len1 + len2 < 16)
+            if(len1 + len2 < 32)
             {
-                auto crepr = (BSQStringKRepr<16>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<16>), Environment::g_typeStringKRepr16);
+                auto crepr = (BSQStringKRepr<16>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<32>), Environment::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 crepr->size = len1 + len2;

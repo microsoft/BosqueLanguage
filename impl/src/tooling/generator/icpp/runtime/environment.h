@@ -9,7 +9,8 @@
 #include "bsqvalue.h"
 #include "bsqcollections.h"
 
-typedef StorageLocationPtr (*ConstValueLoad)();
+#include "../assembly/bsqtype.h"
+#include "../assembly/bsqassembly.h"
 
 struct ListTypeConstructorInfo
 {
@@ -70,5 +71,5 @@ public:
     static BSQString* g_constStrings; 
     static BSQRegex* g_constRegexs;
 
-    static ConstValueLoad* g_constLoads;
+    static std::vector<BSQInvokeDecl*> g_invokes;
 };

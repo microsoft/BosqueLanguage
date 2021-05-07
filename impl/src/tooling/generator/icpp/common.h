@@ -167,7 +167,7 @@ typedef void* StorageLocationPtr;
 typedef bool (*KeyEqualFP)(StorageLocationPtr, StorageLocationPtr);
 typedef bool (*KeyLessFP)(StorageLocationPtr, StorageLocationPtr);
 
-#define IS_INLINE_STRING(S) ((*(((uint8_t*)(S)) + 7) & 0x1) == 0x1)
+#define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
 
 ////////////////////////////////
 //Type and GC interaction decls
@@ -194,6 +194,7 @@ typedef uint32_t BSQRecordPropertyID;
 typedef uint32_t BSQFieldID;
 typedef uint32_t BSQInvokeID;
 typedef uint32_t BSQVirtualInvokeID;
+typedef uint32_t BSQConstantID;
 
 #define BSQ_TYPE_ID_NONE 0
 #define BSQ_TYPE_ID_BOOL 1

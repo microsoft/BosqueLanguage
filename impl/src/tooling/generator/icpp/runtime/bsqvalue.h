@@ -178,34 +178,34 @@ struct BSQStringIterator; //forward decl
 
 struct BSQInlineString
 {
-    uint8_t utf8bytes[8];
+    uint8_t utf8bytes[16];
 
     inline static BSQInlineString create(const uint8_t* chars, uint64_t len)
     {
-        BSQInlineString istr = {len << 1, 0, 0, 0, 0, 0, 0, 0};
+        BSQInlineString istr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (uint8_t)len};
         assert(IS_INLINE_STRING(&istr));
 
-        std::copy(chars, chars + len, istr.utf8bytes + 1);
+        std::copy(chars, chars + len, istr.utf8bytes);
     }
 
     inline static uint64_t utf8ByteCount(BSQInlineString istr)
     {
-        return istr.utf8bytes[0] >> 1;
+        return istr.utf8bytes[15];
     }
 
     static void utf8ByteCount_Initialize(BSQInlineString& istr, uint64_t len)
     {
-        istr.utf8bytes[0] = (len << 1);
+        istr.utf8bytes[15] = (uint8_t)len;
     }
 
     inline static uint8_t* utf8Bytes(BSQInlineString istr)
     {
-        return istr.utf8bytes + 1;
+        return istr.utf8bytes;
     }
 
     inline static uint8_t* utf8BytesEnd(BSQInlineString istr)
     {
-        return istr.utf8bytes + 1 + istr.utf8bytes[0];
+        return istr.utf8bytes + istr.utf8bytes[15];
     }
 };
 constexpr BSQInlineString g_emptyInlineString = {0};

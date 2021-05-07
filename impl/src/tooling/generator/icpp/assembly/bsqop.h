@@ -196,6 +196,13 @@ enum class OpCodeTag
     GeFloatOp,
     GeDecimalOp,
 
+    EqStrPosOp,
+    NeqStrPosOp,
+    LtStrPosOp,
+    GtStrPosOp,
+    LeStrPosOp,
+    GeStrPosOp,
+
     EqStringOp,
     NeqStringOp,
     LessStringOp
@@ -583,9 +590,9 @@ class ConstructorPrimaryCollectionEmptyOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQListEntityType* oftype;
+    const BSQEntityType* oftype;
     
-    ConstructorPrimaryCollectionEmptyOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionEmptyOp), trgt(trgt), oftype(oftype) {;}
+    ConstructorPrimaryCollectionEmptyOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionEmptyOp), trgt(trgt), oftype(oftype) {;}
     virtual ~ConstructorPrimaryCollectionEmptyOp() {;}
 };
 
@@ -594,10 +601,10 @@ class ConstructorPrimaryCollectionSingletonsOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQListEntityType* oftype;
+    const BSQEntityType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
 };
 
@@ -606,10 +613,10 @@ class ConstructorPrimaryCollectionCopiesOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQListEntityType* oftype;
+    const BSQEntityType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionCopiesOp() {;}
 };
 
@@ -618,10 +625,10 @@ class ConstructorPrimaryCollectionMixedOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQListEntityType* oftype;
+    const BSQEntityType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQListEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionMixedOp() {;}
 };
 
@@ -693,8 +700,8 @@ public:
     const Argument arg;
     const BSQType* arglayout;
     
-    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout) {;}
-    virtual ~TypeTagIsOp() {;}
+    TypeIsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout) {;}
+    virtual ~TypeIsNoneOp() {;}
 };
 
 template <OpCodeTag tag, bool isGuarded>
@@ -705,8 +712,8 @@ public:
     const Argument arg;
     const BSQType* arglayout;
     
-    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout) {;}
-    virtual ~TypeTagIsOp() {;}
+    TypeIsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout) {;}
+    virtual ~TypeIsSomeOp() {;}
 };
 
 template <OpCodeTag tag, bool isGuarded>

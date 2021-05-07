@@ -399,3 +399,5 @@ public:
     virtual ~BSQHeapUnionType() {;}
 };
 
+//Forward type decls for special types we want to refer to in the ops
+
