@@ -28,12 +28,12 @@ public:
     std::vector<InterpOp*>::const_iterator cpos;
 
 #ifdef BSQ_DEBUG_BUILD
-    EvaluatorFrame(std::string* dbg_file, std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
+    EvaluatorFrame(std::string* dbg_file, std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
     {
         this->dbg_line = this->cpos->sinfo.line;
     }
 #else
-    EvaluatorFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops, StorageLocationPtr resultsl) : argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin()) {;}
+    EvaluatorFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) : argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin()) {;}
 #endif
 };
 
@@ -44,14 +44,14 @@ private:
     std::deque<EvaluatorFrame> callstack;
 
 #ifdef BSQ_DEBUG_BUILD
-    inline void pushFrame(std::string* dbg_file, std::string* dbg_function, void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(std::string* dbg_file, std::string* dbg_function, void* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
-        tthis->callstack.emplace_back(dbg_file, dbg_function, argsbase, localsbase, ops);
+        tthis->callstack.emplace_back(dbg_file, dbg_function, argsbase, localsbase, masksbase ops);
     }
 #else
-    inline void pushFrame(void* argsbase, void* localsbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(void* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
-        this->callstack.emplace_back(argsbase, localsbase, ops);
+        this->callstack.emplace_back(argsbase, localsbase, masksbase, ops);
     }
 #endif
 
@@ -369,11 +369,11 @@ private:
     void evaluateOpCodeBlocks();
     void evaluateBody(StorageLocationPtr resultsl);
 
-    void invoke(const BSQInvokeDecl* call, StorageLocationPtr resultsl);
+    void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
 
-    void invokePrelude(const BSQInvokeBodyDecl* invk);
+    void invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<Argument>& args, BSQBool* optmask);
     void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk);
     void invokePostlude();
 
-    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl);
+    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args, StorageLocationPtr resultsl);
 };

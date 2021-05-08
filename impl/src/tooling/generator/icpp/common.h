@@ -219,3 +219,11 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_STRINGREPR 30
 
 #define BSQ_TYPE_ID_BUILTIN_MAX 50
+
+enum class BSQPrimitiveImplTag
+{
+    Invalid = 0x0,
+    validator_accepts,
+    string_empty,
+    string_append
+};

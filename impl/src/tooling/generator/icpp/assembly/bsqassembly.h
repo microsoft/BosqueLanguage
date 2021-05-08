@@ -96,12 +96,13 @@ public:
 class BSQInvokePrimitiveDecl : public BSQInvokeDecl 
 {
 public:
-    const std::string implkey;
+    const BSQPrimitiveImplTag implkey; 
+    const std::string implkeyname;
     const std::map<char, BSQTypeID> binds;
     const std::map<std::string, BSQPCode> pcodes;
 
-    BSQInvokePrimitiveDecl(std::string name, std::string iname, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, BSQType* resultType, size_t scalarstackBytes, uint32_t refstackSlots, size_t mixedstackBytes, RefMask mixedMask, std::string implkey, std::map<char, BSQTypeID> binds, std::map<std::string, BSQPCode> pcodes)
-    : BSQInvokeDecl(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask), implkey(implkey), binds(binds), pcodes(pcodes)
+    BSQInvokePrimitiveDecl(std::string name, std::string iname, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, BSQType* resultType, size_t scalarstackBytes, uint32_t refstackSlots, size_t mixedstackBytes, RefMask mixedMask, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<char, BSQTypeID> binds, std::map<std::string, BSQPCode> pcodes)
+    : BSQInvokeDecl(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask), implkey(implkey), implkeyname(implkeyname), binds(binds), pcodes(pcodes)
     {;}
 
     ~BSQInvokePrimitiveDecl() {;}
