@@ -73,10 +73,10 @@
 //Create and release bump space or stack allocations
 #ifdef __APPLE__
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
-#define BSQ_STACK_SPACE_ALLOC(SIZE) alloca(SIZE)
+#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
 #else
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
-#define BSQ_STACK_SPACE_ALLOC(SIZE) _alloca(SIZE)
+#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
 #endif
 
 #define BSQ_BUMP_SPACE_RELEASE(SIZE, M) free(M)
@@ -84,10 +84,8 @@
 //Allocate and release free list values + stack allocate
 #ifdef __APPLE__
 #define BSQ_FREE_LIST_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
-#define BSQ_STACK_ALLOCATE(SIZE) alloca(SIZE)
 #else
 #define BSQ_FREE_LIST_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
-#define BSQ_STACK_ALLOCATE(SIZE) _alloca(SIZE)
 #endif
 
 #define BSQ_FREE_LIST_RELEASE(SIZE, M) free(M)
