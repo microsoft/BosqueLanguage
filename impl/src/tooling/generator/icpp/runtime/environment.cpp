@@ -5,28 +5,27 @@
 
 #include "environment.h"
 
-BSQNoneType* Environment::g_typeNone;
-BSQBoolType* Environment::g_typeBool;
-BSQNatType* Environment::g_typeNat;
-BSQIntType* Environment::g_typeInt;
-BSQBigNatType* Environment::g_typeBigNat;
-BSQBigIntType* Environment::g_typeBigInt;
-BSQFloatType* Environment::g_typeFloat;
-BSQDecimalType* Environment::g_typeDecimal;
-BSQRationalType* Environment::g_typeRational;
+BSQNoneType* Environment::g_typeNone = new BSQNoneType();
+BSQBoolType* Environment::g_typeBool = new BSQBoolType();
+BSQNatType* Environment::g_typeNat = new BSQNatType();
+BSQIntType* Environment::g_typeInt = new BSQIntType();
+BSQBigNatType* Environment::g_typeBigNat = new BSQBigNatType();
+BSQBigIntType* Environment::g_typeBigInt = new BSQBigIntType();
+BSQFloatType* Environment::g_typeFloat = new BSQFloatType();
+BSQDecimalType* Environment::g_typeDecimal = new BSQDecimalType();
+BSQRationalType* Environment::g_typeRational = new BSQRationalType();
 
-BSQStringKReprTypeAbstract Environment::g_typeStringKReprAbstract;
-BSQStringKReprType<8>* Environment::g_typeStringKRepr8;
-BSQStringKReprType<16>* Environment::g_typeStringKRepr16;
-BSQStringKReprType<32>* Environment::g_typeStringKRepr32;
-BSQStringKReprType<64>* Environment::g_typeStringKRepr64;
-BSQStringKReprType<128>* Environment::g_typeStringKRepr128;
-BSQStringKReprType<256>* Environment::g_typeStringKRepr256;
+BSQStringKReprType<8>* Environment::g_typeStringKRepr8 = new BSQStringKReprType<8>();
+BSQStringKReprType<16>* Environment::g_typeStringKRepr16 = new BSQStringKReprType<16>();
+BSQStringKReprType<32>* Environment::g_typeStringKRepr32 = new BSQStringKReprType<32>(); 
+BSQStringKReprType<64>* Environment::g_typeStringKRepr64 = new BSQStringKReprType<64>();
+BSQStringKReprType<128>* Environment::g_typeStringKRepr128 = new BSQStringKReprType<128>();
+BSQStringKReprType<256>* Environment::g_typeStringKRepr256 = new BSQStringKReprType<256>();
 
-BSQStringConcatReprType* Environment::g_typeStringConcatRepr;
-BSQStringSliceReprType* Environment::g_typeStringSliceRepr;
+BSQStringConcatReprType* Environment::g_typeStringConcatRepr = new BSQStringConcatReprType();
+BSQStringSliceReprType* Environment::g_typeStringSliceRepr = new BSQStringSliceReprType();
 
-BSQStringType* Environment::g_typeString;
+BSQStringType* Environment::g_typeString = new BSQStringType();
 
 std::map<BSQTypeID, ListTypeConstructorInfo> Environment::g_listTypeMap;
 

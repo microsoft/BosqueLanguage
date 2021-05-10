@@ -273,7 +273,7 @@ template <uint64_t k>
 class BSQStringKReprType : public BSQStringKReprTypeAbstract
 {
 public:
-    BSQStringKReprType(DisplayFP fpDisplay) 
+    BSQStringKReprType() 
     : BSQStringKReprTypeAbstract(BSQ_ALIGN_SIZE(sizeof(BSQStringKRepr<k>)), "[Internal::StringKRepr]") 
     {;}
 

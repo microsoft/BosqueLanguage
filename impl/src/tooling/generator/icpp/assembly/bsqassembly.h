@@ -69,7 +69,7 @@ public:
     const uint32_t argmaskSize;
 
     BSQInvokeBodyDecl(std::string name, std::string iname, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, BSQType* resultType, size_t scalarstackBytes, uint32_t refstackSlots, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, std::vector<InterpOp*> body, uint32_t argmaskSize)
-    : BSQInvokeDecl(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, maskSlots), body(body), argmaskSize(argMaskSize)
+    : BSQInvokeDecl(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, maskSlots), body(body), argmaskSize(argmaskSize)
     {;}
 
     ~BSQInvokeBodyDecl()

@@ -376,4 +376,7 @@ private:
     void invokePostlude();
 
     void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args, StorageLocationPtr resultsl);
+
+public:
+    void invokeMain(const BSQInvokeBodyDecl* call, const std::vector<void*>& argslocs, StorageLocationPtr resultsl);
 };
