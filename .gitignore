@@ -2,3 +2,6 @@ impl/node_modules/
 **/.vscode/
 
 **/.DS_Store
+
+**/icpp
+**/icpp.exe
