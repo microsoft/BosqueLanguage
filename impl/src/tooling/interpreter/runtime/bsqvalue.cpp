@@ -293,7 +293,7 @@ void initializeStringIterPosition(BSQStringIterator* iter, int64_t pos)
             iter->cbuff = nullptr;
             iter->minpos = 0;
             iter->maxpos = BSQInlineString::utf8ByteCount(iter->str.u_inlineString);
-            iter->cpos = pos;
+            iter->cpos = (int16_t)pos;
         }
         else
         {
@@ -331,12 +331,13 @@ uint32_t iteratorGetCodePoint(BSQStringIterator* iter)
     auto utfbyte = iteratorGetUTF8Byte(iter);
     if((utfbyte & 0x8) == 0)
     {
-        utfbyte;
+        return utfbyte;
     }
     else
     {
         //not implemented
         assert(false);
+        return 0;
     }
 }
 

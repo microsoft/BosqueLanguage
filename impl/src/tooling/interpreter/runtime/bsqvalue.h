@@ -205,7 +205,17 @@ struct BSQInlineString
         return istr.utf8bytes;
     }
 
+    inline static const uint8_t* utf8Bytes(const BSQInlineString& istr)
+    {
+        return istr.utf8bytes;
+    }
+
     inline static uint8_t* utf8BytesEnd(BSQInlineString& istr)
+    {
+        return istr.utf8bytes + istr.utf8bytes[15];
+    }
+
+    inline static const uint8_t* utf8BytesEnd(const BSQInlineString& istr)
     {
         return istr.utf8bytes + istr.utf8bytes[15];
     }

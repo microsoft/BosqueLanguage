@@ -9,7 +9,7 @@ const path = require("path");
 const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/interpreter"));
 const cppfiles = [rootsrc, path.join(rootsrc, "assembly"), path.join(rootsrc, "core"), path.join(rootsrc, "runtime")].map((pp) => pp + "/*.cpp");
 
-const ccflags = "-g -BSQ_DEBUG_BUILD -Wall -std=c++17";  
+const ccflags = "-g -DBSQ_DEBUG_BUILD -Wall -std=c++17";  
 
 //-Wextra
 

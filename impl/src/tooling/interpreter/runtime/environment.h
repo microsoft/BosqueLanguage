@@ -73,5 +73,6 @@ public:
     static BSQString* g_constStrings; 
     static BSQRegex* g_constRegexs;
 
+    static std::vector<std::set<BSQTypeID>> g_subtypes;
     static std::vector<BSQInvokeDecl*> g_invokes;
 };

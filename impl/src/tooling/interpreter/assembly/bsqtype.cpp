@@ -67,18 +67,6 @@ void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data)
     Allocator::gcProcessSlotWithString<false>(data);
 }
 
-template <>
-GCProcessOperatorFP BSQType::getProcessFP<true>() const
-{
-    return this->fpProcessObjRoot;
-}
-
-template <>
-inline GCProcessOperatorFP BSQType::getProcessFP<false>() const
-{
-    return this->fpProcessObjHeap;
-}
-
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     const BSQTupleType* ttype = (const BSQTupleType*)btype;

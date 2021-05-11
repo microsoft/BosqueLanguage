@@ -26,13 +26,22 @@ public:
     std::vector<InterpOp*>::const_iterator cpos;
 
 #ifdef BSQ_DEBUG_BUILD
-    EvaluatorFrame(std::string* dbg_file, std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
+    EvaluatorFrame() : dbg_file(nullptr), dbg_function(nullptr), dbg_prevline(-1), dbg_line(-1), argsbase(nullptr), localsbase(nullptr), masksbase(nullptr), ops(nullptr), cpos() {;}
+    
+    EvaluatorFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
     {
         this->dbg_line = (*this->cpos)->sinfo.line;
     }
 #else
+    EvaluatorFrame() : argsbase(nullptr), localsbase(nullptr), masksbase(nullptr), ops(nullptr), cpos() {;}
+    
     EvaluatorFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) : argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin()) {;}
 #endif
+
+    EvaluatorFrame(const EvaluatorFrame&) = default;
+    EvaluatorFrame& operator=(const EvaluatorFrame&) = default;
+    EvaluatorFrame(EvaluatorFrame&&) = default;
+    EvaluatorFrame& operator=(EvaluatorFrame&&) = default;
 };
 
 class Evaluator
@@ -42,12 +51,12 @@ private:
     std::deque<EvaluatorFrame> callstack;
 
 #ifdef BSQ_DEBUG_BUILD
-    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, void* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->callstack.emplace_back(dbg_file, dbg_function, argsbase, localsbase, masksbase, ops);
     }
 #else
-    inline void pushFrame(void* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->callstack.emplace_back(argsbase, localsbase, masksbase, ops);
     }
@@ -176,12 +185,12 @@ private:
             }
             else
             {
-                auto gval = this->evalGuard(sguard.guard);
+                auto gval = this->evalGuardStmt(sguard.guard);
                 auto dodefault = sguard.usedefaulton ? gval : !gval;
 
                 if(dodefault)
                 {
-                    this->evalStoreAltValueForGuardStmt(op->trgt, op->sguard.arg, op->intotype);
+                    this->evalStoreAltValueForGuardStmt(trgt, sguard.defaultvar, trgttype);
                 }
 
                 return dodefault;

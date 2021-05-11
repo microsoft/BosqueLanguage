@@ -46,5 +46,6 @@ BSQDecimal* Environment::g_constDecimals = nullptr;
 BSQString* Environment::g_constStrings = nullptr; 
 BSQRegex* Environment::g_constRegexs = nullptr;
 
+std::vector<std::set<BSQTypeID>> Environment::g_subtypes;
 std::vector<BSQInvokeDecl*> Environment::g_invokes;
 

@@ -81,6 +81,18 @@ public:
         return nullptr;
     }
 
+    template <>
+    GCProcessOperatorFP getProcessFP<true>() const
+    {
+        return this->fpProcessObjRoot;
+    }
+
+    template <>
+    inline GCProcessOperatorFP getProcessFP<false>() const
+    {
+        return this->fpProcessObjHeap;
+    }
+
 private:
     //Constructor that everyone delegates to
     BSQType(

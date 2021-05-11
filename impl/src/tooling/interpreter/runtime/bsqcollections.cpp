@@ -204,12 +204,12 @@ StorageLocationPtr BSQListConcatType::getValueAtPosition(void* data, uint64_t po
     if(pos < l1size)
     {
         auto l1type = GET_TYPE_META_DATA_AS(BSQListEntityType, cl->lrepr1);
-        l1type->getValueAtPosition(cl->lrepr1, pos);
+        return l1type->getValueAtPosition(cl->lrepr1, pos);
     }
     else
     {
         auto l2type = GET_TYPE_META_DATA_AS(BSQListEntityType, cl->lrepr2);
-        l2type->getValueAtPosition(cl->lrepr2, pos - l1size);
+        return l2type->getValueAtPosition(cl->lrepr2, pos - l1size);
     }
 }
 
@@ -294,7 +294,7 @@ void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
         auto len2 = l2type->getLength(l2);
         auto size2 = len2 * l2type->esize;;
 
-        void* res;
+        void* res = nullptr;
         if(size1 + size2 <= 128)
         {
             res = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListFlatK<128>), Environment::g_listTypeMap[l1type->tid].list128);

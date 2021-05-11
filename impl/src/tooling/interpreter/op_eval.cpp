@@ -135,7 +135,7 @@ void Evaluator::evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op)
     {
         auto isl = this->evalTargetVar(op->trgt);
         SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize));
+        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
     }
 }
 
@@ -146,7 +146,7 @@ void Evaluator::evalBoxUniqueStructOrStringToInlineOp(const BoxOp<tag, isGuarded
     {
         auto isl = this->evalTargetVar(op->trgt);
         SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize));
+        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
     }
 }
 
@@ -173,7 +173,7 @@ void Evaluator::evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op)
         }
         else
         {
-            auto balloc = Allocator::allocateDynamic(op->fromtype);
+            auto balloc = Allocator::GlobalAllocator.allocateDynamic(op->fromtype);
             SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
             SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
         }
@@ -186,7 +186,7 @@ void Evaluator::evalBoxUniqueStructOrStringToHeapOp(const BoxOp<tag, isGuarded>*
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
     {
         auto isl = this->evalTargetVar(op->trgt);
-        auto balloc = Allocator::allocateDynamic(op->fromtype);
+        auto balloc = Allocator::GlobalAllocator.allocateDynamic(op->fromtype);
         SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
     }
@@ -217,9 +217,16 @@ void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op)
         }
         else
         {
-            auto balloc = Allocator::allocateDynamic(rtype);
-            SLPTR_COPY_CONTENTS(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+            if(rtype->tkind == BSQTypeKind::Ref)
+            {
+                SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl)));
+            }
+            else
+            {
+                auto balloc = Allocator::GlobalAllocator.allocateDynamic(rtype);
+                SLPTR_COPY_CONTENTS(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
+                SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
+            }
         }
     }
 }
@@ -267,7 +274,7 @@ void Evaluator::evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuard
 
         if(sldata == BSQNoneHeapValue)
         {
-            SLPTR_STORE_CONTENTS_AS(BSQNone, isl, BSQNoneValue);
+            SLPTR_STORE_CONTENTS_AS(BSQNone, sldata, BSQNoneValue);
         }
         else
         {
@@ -314,9 +321,16 @@ void Evaluator::evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* 
         else
         {
             auto rtype = SLPTR_LOAD_UNION_HEAP_TYPE(srcl);
-        
             SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-            SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata, rtype->allocinfo.sldatasize);
+
+            if(rtype->tkind == BSQTypeKind::Ref)
+            {
+                SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata);
+            }
+            else
+            {
+                SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata, rtype->allocinfo.sldatasize);
+            }
         }
     }
 }
@@ -508,7 +522,7 @@ void Evaluator::evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp<tag, isGua
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->trgttype, op->sguard))
     {
         StorageLocationPtr resl = this->evalTargetVar(op->trgt);
-        this->invoke(Environment::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset);
+        this->invoke(Environment::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
     }
 }
 
@@ -759,7 +773,7 @@ void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalIsNoneOp(const TypeIsNoneOp<tag, isGuarded>* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
     {
         BSQBool isnone = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == BSQ_TYPE_ID_NONE;
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isnone);
@@ -769,7 +783,7 @@ void Evaluator::evalIsNoneOp(const TypeIsNoneOp<tag, isGuarded>* op)
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalIsSomeOp(const TypeIsSomeOp<tag, isGuarded>* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
     {
         BSQBool issome = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid != BSQ_TYPE_ID_NONE;
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), issome);
@@ -779,7 +793,7 @@ void Evaluator::evalIsSomeOp(const TypeIsSomeOp<tag, isGuarded>* op)
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalTypeTagIsOp(const TypeTagIsOp<tag, isGuarded>* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
     {
         auto istype = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == op->oftype->tid;
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), istype);
@@ -789,10 +803,10 @@ void Evaluator::evalTypeTagIsOp(const TypeTagIsOp<tag, isGuarded>* op)
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp<tag, isGuarded>* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, &Evaluator::g_boolType, op->sguard))
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
     {
         auto tt = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout);
-        BSQBool subtype = tt->subtypes.find(op->oftype->tid) != tt->subtypes.cend();
+        BSQBool subtype = Environment::g_subtypes[op->oftype->tid].find(tt->tid) != Environment::g_subtypes[op->oftype->tid].cend();
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), subtype);
     }
 }
@@ -834,7 +848,7 @@ void Evaluator::evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->oftype, op->sguard))
     {
-        this->storeValue(this->evalTargetVar(op->trgt), this->evalArgument(op->arg), op->oftype);
+        op->oftype->storeValue(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
     }
 }
 
@@ -1627,9 +1641,9 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
 
     GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, maskslots, cstack, &invk->body);
 #else
-    this->pushFrame(argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame((StorageLocationPtr*)argsbase, maskslots, cstack, &invk->body);
 #endif
 }
     
@@ -1700,7 +1714,7 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
 
     GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, maskslots, cstack, &invk->body);
 #else
     this->pushFrame(argsbase, maskslots, cstack, &invk->body);
 #endif
