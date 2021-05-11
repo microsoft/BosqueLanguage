@@ -6,8 +6,6 @@
 #pragma once
 
 #include "common.h"
-#include "assembly/bsqop.h"
-
 #include "runtime/environment.h"
 
 class EvaluatorFrame
@@ -44,7 +42,7 @@ private:
     std::deque<EvaluatorFrame> callstack;
 
 #ifdef BSQ_DEBUG_BUILD
-    inline void pushFrame(std::string* dbg_file, std::string* dbg_function, void* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, void* argsbase, void* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->callstack.emplace_back(dbg_file, dbg_function, argsbase, localsbase, masksbase, ops);
     }
@@ -218,7 +216,7 @@ private:
         return static_cast<const T*>(this->loadBSQTypeFromAbstractLocationGeneral(sl, layouttype));
     }
 
-    inline StorageLocationPtr Evaluator::loadDataPtrFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
+    inline StorageLocationPtr loadDataPtrFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
     {
         auto layout = layouttype->tkind;
         if(layout == BSQTypeKind::InlineUnion)

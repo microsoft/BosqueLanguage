@@ -7,6 +7,7 @@
 
 #include "../common.h"
 #include "../assembly/bsqtype.h"
+#include "../core/bsqmemory.h"
 
 struct BSQListIterator
 {
@@ -173,7 +174,7 @@ public:
     BSQListFlatKType(BSQTypeID tid, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, name, etype) {;}
 
     //Constructor with ptrcount
-    BSQListFlatKType(BSQTypeID tid, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, k, name, etype) {;}
+    BSQListFlatKType(BSQTypeID tid, uint64_t pcount, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, pcount, name, etype) {;}
 
     //Constructor for general refmask
     BSQListFlatKType(BSQTypeID tid, RefMask refmask, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, refmask, etype) {;}

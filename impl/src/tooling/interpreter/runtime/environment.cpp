@@ -5,6 +5,9 @@
 
 #include "environment.h"
 
+std::map<BSQRecordPropertyID, std::string> Environment::g_propertymap;
+std::map<BSQFieldID, std::string> Environment::g_fieldmap;
+
 BSQNoneType* Environment::g_typeNone = new BSQNoneType();
 BSQBoolType* Environment::g_typeBool = new BSQBoolType();
 BSQNatType* Environment::g_typeNat = new BSQNatType();

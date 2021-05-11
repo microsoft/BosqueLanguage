@@ -130,7 +130,7 @@ public:
 
     //Constructor for string type
     BSQType(BSQTypeSizeInfo allocinfo, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, allocinfo, nullptr, 0, gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, allocinfo, nullptr, 0, gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl, false, {}, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor abstract type
@@ -170,11 +170,11 @@ public:
     {
         if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
         {
-            SLPTR_INDEX_HEAP(src, offset);
+            return SLPTR_INDEX_HEAP(src, offset);
         }
         else 
         {
-            SLPTR_INDEX_INLINE(src, offset + (this->tkind == BSQTypeKind::InlineUnion ? sizeof(BSQType*) : 0));
+            return SLPTR_INDEX_INLINE(src, offset + (this->tkind == BSQTypeKind::InlineUnion ? sizeof(BSQType*) : 0));
         }
     }
 };
@@ -235,8 +235,6 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 class BSQRecordType : public BSQType
 {
 public:
-    static std::map<BSQRecordPropertyID, std::string> s_propertymap;
-
     const std::vector<BSQRecordPropertyID> properties;
     const std::vector<BSQType*> rtypes;
     const std::vector<size_t> propertyoffsets;
@@ -285,8 +283,6 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 class BSQEntityType : public BSQType
 {
 public:
-    static std::map<BSQFieldID, std::string> BSQEntityType::s_fieldmap;
-
     const std::vector<BSQFieldID> fields;
     const std::vector<BSQType*> ftypes;
     const std::vector<size_t> fieldoffsets;

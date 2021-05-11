@@ -9,7 +9,6 @@
 #include "bsqvalue.h"
 #include "bsqcollections.h"
 
-#include "../assembly/bsqtype.h"
 #include "../assembly/bsqassembly.h"
 
 struct ListTypeConstructorInfo
@@ -29,6 +28,9 @@ struct ListTypeConstructorInfo
 class Environment
 {
 public:
+    static std::map<BSQRecordPropertyID, std::string> g_propertymap;
+    static std::map<BSQFieldID, std::string> g_fieldmap;
+
     //Well known types
     static BSQNoneType* g_typeNone;
     static BSQBoolType* g_typeBool;

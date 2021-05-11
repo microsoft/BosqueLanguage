@@ -4,10 +4,8 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "bsqtype.h"
-
-std::map<BSQRecordPropertyID, std::string> BSQRecordType::s_propertymap;
-
-std::map<BSQFieldID, std::string> BSQEntityType::s_fieldmap;
+#include "../core/bsqmemory.h"
+#include "../runtime/environment.h"
 
 void gcDecOperator_packedImpl(const BSQType* btype, void** data)
 {
@@ -114,7 +112,7 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQRecordType::s_propertymap[ttype->properties[i]] + ":";
+        res += Environment::g_propertymap[ttype->properties[i]] + ":";
 
         auto itype = ttype->rtypes[i];
         auto idata = isstruct ? SLPTR_INDEX_INLINE(data, ttype->propertyoffsets[i]) : SLPTR_INDEX_HEAP(data, ttype->propertyoffsets[i]);
@@ -137,7 +135,7 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQEntityType::s_fieldmap[ttype->fields[i]] + ":";
+        res += Environment::g_fieldmap[ttype->fields[i]] + ":";
 
         auto itype = ttype->ftypes[i];
         auto idata = isstruct ? SLPTR_INDEX_INLINE(data, ttype->fieldoffsets[i]) : SLPTR_INDEX_HEAP(data, ttype->fieldoffsets[i]);

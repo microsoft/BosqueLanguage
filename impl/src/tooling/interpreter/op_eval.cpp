@@ -11,8 +11,8 @@ REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg));
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
 REPRTYPE res; \
-bool safe = OPERATOR(larg, rarg, res); \
-BSQ_LANGUAGE_ASSERT(safe, THIS->dbg_currentFile, THIS->dbg_currentLine, ERROR); \
+bool safe = OPERATOR(larg, rarg, &res); \
+BSQ_LANGUAGE_ASSERT(safe, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
 \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 
@@ -21,7 +21,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
-BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->dbg_currentFile, THIS->dbg_currentLine, "Division by 0"); \
+BSQ_LANGUAGE_ASSERT(rarg != (REPRTYPE)0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by 0"); \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg / rarg);
 
 //Big Macro for generating code for primitive un-checked infix binary operations
@@ -43,9 +43,9 @@ SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR r
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
-BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->dbg_currentFile, THIS->dbg_currentLine, "NaN cannot be ordered"); \
-BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->dbg_currentFile, THIS->dbg_currentLine, "Infinte values cannot be ordered"); \
-BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->dbg_currentFile, THIS->dbg_currentLine, "Division by 0"); \
+BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "NaN cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by 0"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
 StorageLocationPtr Evaluator::evalConstArgument(Argument arg)
@@ -93,7 +93,7 @@ void Evaluator::evalDeadFlowOp()
 
 void Evaluator::evalAbortOp(const AbortOp *op)
 {
-    BSQ_LANGUAGE_ABORT(op->msg, this.getCurrentFile(), this.getCurrentLine());
+    BSQ_LANGUAGE_ABORT(op->msg, this->cframe->dbg_file, this->cframe->dbg_line);
 }
 
 void Evaluator::evalAssertCheckOp(const AssertOp *op)
@@ -101,7 +101,7 @@ void Evaluator::evalAssertCheckOp(const AssertOp *op)
     auto val = this->evalArgument(op->arg);
     if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, val))
     {
-        BSQ_LANGUAGE_ABORT(op->msg, this.getCurrentFile(), this.getCurrentLine());
+        BSQ_LANGUAGE_ABORT(op->msg, this->cframe->dbg_file, this->cframe->dbg_line);
     }
 }
 
@@ -135,7 +135,7 @@ void Evaluator::evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op)
     {
         auto isl = this->evalTargetVar(op->trgt);
         SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocsize));
+        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize));
     }
 }
 
@@ -146,7 +146,7 @@ void Evaluator::evalBoxUniqueStructOrStringToInlineOp(const BoxOp<tag, isGuarded
     {
         auto isl = this->evalTargetVar(op->trgt);
         SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocsize));
+        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize));
     }
 }
 
@@ -174,7 +174,7 @@ void Evaluator::evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op)
         else
         {
             auto balloc = Allocator::allocateDynamic(op->fromtype);
-            SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocsize);
+            SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
             SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
         }
     }
@@ -187,7 +187,7 @@ void Evaluator::evalBoxUniqueStructOrStringToHeapOp(const BoxOp<tag, isGuarded>*
     {
         auto isl = this->evalTargetVar(op->trgt);
         auto balloc = Allocator::allocateDynamic(op->fromtype);
-        SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocsize);
+        SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
     }
 }
@@ -218,7 +218,7 @@ void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op)
         else
         {
             auto balloc = Allocator::allocateDynamic(rtype);
-            SLPTR_COPY_CONTENTS(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocsize);
+            SLPTR_COPY_CONTENTS(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
             SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
         }
     }
@@ -231,7 +231,7 @@ void Evaluator::evalExtractUniqueRegisterFromInlineOp(const ExtractOp<tag, isGua
     {
         auto srcl = this->evalArgument(op->arg);
         auto sldata = SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl);
-        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
+        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
     }
 }
 
@@ -242,7 +242,7 @@ void Evaluator::evalExtractUniqueStructOrStringFromInlineOp(const ExtractOp<tag,
     {
         auto srcl = this->evalArgument(op->arg);
         auto sldata = SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl);
-        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
+        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
     }
 }
 
@@ -271,7 +271,7 @@ void Evaluator::evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuard
         }
         else
         {
-            SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
+            SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
         }
     }
 }
@@ -283,7 +283,7 @@ void Evaluator::evalExtractUniqueStructOrStringFromHeapOp(const ExtractOp<tag, i
     {
         auto srcl = this->evalArgument(op->arg);
         auto sldata = SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl);
-        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocsize);
+        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
     }
 }
 
@@ -316,7 +316,7 @@ void Evaluator::evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* 
             auto rtype = SLPTR_LOAD_UNION_HEAP_TYPE(srcl);
         
             SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-            SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata, rtype->allocsize);
+            SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata, rtype->allocinfo.sldatasize);
         }
     }
 }
@@ -331,7 +331,7 @@ void Evaluator::evalWidenInlineOp(const BoxOp<tag, isGuarded>* op)
 
         auto isl = this->evalTargetVar(op->trgt);
         SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocsize);
+        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
     }
 }
 
@@ -345,7 +345,7 @@ void Evaluator::evalNarrowInlineOp(const ExtractOp<tag, isGuarded>* op)
 
         auto isl = this->evalTargetVar(op->trgt);
         SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocsize);
+        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
     }
 }
 
@@ -583,7 +583,7 @@ void Evaluator::evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimary
 void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op)
 {
     auto ltype = (BSQListEntityType*)op->oftype;
-    auto lbytes = op->args.size() * ltype->esize <= 256;
+    auto lbytes = op->args.size() * ltype->esize;
     const ListTypeConstructorInfo& glistalloc = Environment::g_listTypeMap[ltype->tid];
 
     if(lbytes <= 256)
@@ -1627,7 +1627,7 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
 
     GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(invk->srcFile, invk->name, argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, argsbase, maskslots, cstack, &invk->body);
 #else
     this->pushFrame(argsbase, maskslots, cstack, &invk->body);
 #endif
@@ -1644,7 +1644,7 @@ void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk)
 
     GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(invk->srcFile, invk->name, nullptr, cstack, nullptr, nullptr);
+    this->pushFrame(&invk->srcFile, &invk->name, nullptr, cstack, nullptr, nullptr);
 #else
     this->pushFrame(nullptr, cstack, nullptr, nullptr);
 #endif
@@ -1700,7 +1700,7 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
 
     GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(invk->srcFile, invk->name, argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, argsbase, maskslots, cstack, &invk->body);
 #else
     this->pushFrame(argsbase, maskslots, cstack, &invk->body);
 #endif

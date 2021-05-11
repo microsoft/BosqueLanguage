@@ -7,6 +7,7 @@
 
 #include "../common.h"
 #include "../assembly/bsqtype.h"
+#include "../core/bsqmemory.h"
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/cpp_bin_float.hpp>
@@ -54,7 +55,7 @@ public:
     virtual ~BSQBoolType() {;}
 
     inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
-    inline static bool lessThan(BSQBool v1, BSQBool v2) { return !v1 & v2; }
+    inline static bool lessThan(BSQBool v1, BSQBool v2) { return (!v1) & v2; }
 };
 
 ////
@@ -95,7 +96,7 @@ public:
 
 ////
 //BigNat
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<0, 0, boost::multiprecision::unsigned_magnitude, boost::multiprecision::checked>> BSQBigNat;
+typedef boost::multiprecision::cpp_int BSQBigNat;
 
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -113,7 +114,7 @@ public:
 
 ////
 //BigInt
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<0, 0, boost::multiprecision::signed_magnitude, boost::multiprecision::checked>> BSQBigInt;
+typedef boost::multiprecision::cpp_int BSQBigInt;
 
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityBigIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -186,9 +187,10 @@ struct BSQInlineString
         assert(IS_INLINE_STRING(&istr));
 
         std::copy(chars, chars + len, istr.utf8bytes);
+        return istr;
     }
 
-    inline static uint64_t utf8ByteCount(BSQInlineString istr)
+    inline static uint64_t utf8ByteCount(const BSQInlineString& istr)
     {
         return istr.utf8bytes[15];
     }
@@ -198,12 +200,12 @@ struct BSQInlineString
         istr.utf8bytes[15] = (uint8_t)len;
     }
 
-    inline static uint8_t* utf8Bytes(BSQInlineString istr)
+    inline static uint8_t* utf8Bytes(BSQInlineString& istr)
     {
         return istr.utf8bytes;
     }
 
-    inline static uint8_t* utf8BytesEnd(BSQInlineString istr)
+    inline static uint8_t* utf8BytesEnd(BSQInlineString& istr)
     {
         return istr.utf8bytes + istr.utf8bytes[15];
     }
@@ -398,7 +400,7 @@ public:
     static bool equal(BSQString v1, BSQString v2);
     static bool lessThan(BSQString v1, BSQString v2);
 
-    inline static int64_t utf8ByteCount(BSQString s)
+    inline static int64_t utf8ByteCount(const BSQString& s)
     {
         if(IS_INLINE_STRING(&s))
         {
@@ -410,9 +412,9 @@ public:
         }
     }
 
-    static inline BSQBool empty(BSQString s)
+    static inline BSQBool empty(const BSQString& s)
     {
-        s.u_data == nullptr;
+        return (BSQBool)(s.u_data == nullptr);
     }
 
     static BSQString concat2(StorageLocationPtr s1, StorageLocationPtr s2);

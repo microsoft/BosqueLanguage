@@ -286,10 +286,10 @@ private:
     void* moveBumpObjectToRCSpace(void* obj)
     {
         const BSQType* ometa = GET_TYPE_META_DATA(obj);
-        size_t osize = ometa->allocsize;
+        size_t osize = ometa->allocinfo.heapsize;
         void* nobj = this->osalloc.allocateSizeFixed(osize);
 
-        MEM_STATS_OP(this->promotedbytes += ometa->datasize + sizeof(MetaData *));
+        MEM_STATS_OP(this->promotedbytes += osize + sizeof(MetaData *));
 
         GC_MEM_COPY(nobj, GET_TYPE_META_DATA(obj), osize + sizeof(BSQType*));
         if (!ometa->isLeafType)
@@ -356,7 +356,7 @@ public:
     {
         if (!IS_INLINE_STRING(slot))
         {
-            Allocator::gcProcessSlot(slot);
+            Allocator::gcProcessSlot<isRoot>(slot);
         }
     }
 

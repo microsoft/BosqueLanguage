@@ -11,6 +11,8 @@ const cppfiles = [rootsrc, path.join(rootsrc, "assembly"), path.join(rootsrc, "c
 
 const ccflags = "-g -BSQ_DEBUG_BUILD -Wall -std=c++17";  
 
+//-Wextra
+
 let compiler = "";
 let includes = " ";
 let outfile = "";
