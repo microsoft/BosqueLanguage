@@ -6,7 +6,6 @@
 #pragma once
 
 #include "../common.h"
-#include "../core/bsqmemory.h"
 
 enum class BSQTypeKind : uint32_t
 {
@@ -330,7 +329,7 @@ public:
 
     //Constructor for special string action
     BSQEntityType(BSQTypeSizeInfo allocinfo, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
-    : BSQType(allocinfo, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    : BSQType(allocinfo, fpKeyEqual, fpKeyLess, fpDisplay, name), fields({}), ftypes({}), fieldoffsets({})
     {;}
 
     virtual ~BSQEntityType() {;}
@@ -345,17 +344,17 @@ public:
     const std::vector<size_t> idxoffsets;
 
     //Constructor for leaf type
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with ptrcount
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor for general refmask
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 

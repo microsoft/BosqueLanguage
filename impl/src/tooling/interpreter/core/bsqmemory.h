@@ -150,7 +150,7 @@ public:
     inline uint8_t* allocateDynamicSize(size_t asize)
     {
         size_t rsize = asize + sizeof(BSQType*);
-        assert(rsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
+        assert((rsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
         assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE);
 
         uint8_t *res = this->m_currPos;
@@ -178,7 +178,7 @@ public:
     inline uint8_t* allocateSafe(size_t asize)
     {
         size_t rsize = asize + sizeof(BSQType*);
-        assert(rsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
+        assert((rsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
         assert(this->m_currPos + rsize <= this->m_endPos);
 
         uint8_t *res = this->m_currPos;
@@ -221,7 +221,7 @@ public:
     inline uint8_t* allocateSizeFixed(size_t size)
     {
         size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
-        assert(tsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
+        assert((tsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
 
         MEM_STATS_OP(this->totalalloc += tsize);
 
@@ -236,7 +236,7 @@ public:
     inline uint8_t* allocateEternal(size_t size)
     {
         size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
-        assert(tsize & BSQ_MEM_ALIGNMENT_MASK == 0x0);
+        assert((tsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
 
         MEM_STATS_OP(this->totalalloc += tsize);
 
