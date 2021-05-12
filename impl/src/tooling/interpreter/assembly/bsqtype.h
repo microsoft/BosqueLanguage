@@ -178,7 +178,7 @@ public:
         }
     }
 
-    inline StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, uint32_t offset) const
+    inline StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
     {
         if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
         {

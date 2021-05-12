@@ -34,15 +34,16 @@ bool parseJSONArgs(const boost::json::value& args, const std::vector<BSQFunction
 
 void run(const std::string& main, const boost::json::value& args, uint64_t argsbytes, RefMask argsmask, StorageLocationPtr res)
 {
+    auto filename = std::string("[INITIALIZE]");
     BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
-    BSQ_LANGUAGE_ASSERT(call != nullptr, "[INITIALIZE]", -1, "Could not load given entrypoint");
+    BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
 
     uint8_t* argsroot = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
     GCStack::pushFrame(nullptr, 0, (void**)argsroot, argsmask);
  
     std::vector<void*> argslocs;
     bool argsok = parseJSONArgs(args, call->params, argsroot, argslocs);
-    BSQ_LANGUAGE_ASSERT(argsok, "[INITIALIZE]", -1, "Could not parse entrypoint arguments");
+    BSQ_LANGUAGE_ASSERT(argsok, &filename, -1, "Could not parse entrypoint arguments");
 
     Evaluator runner;
     runner.invokeMain(call, argslocs, res);

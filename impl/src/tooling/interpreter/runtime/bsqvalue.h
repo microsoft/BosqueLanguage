@@ -414,11 +414,11 @@ public:
     {
         if(IS_INLINE_STRING(&s))
         {
-            return BSQInlineString::utf8ByteCount(s.u_inlineString);
+            return (int64_t)BSQInlineString::utf8ByteCount(s.u_inlineString);
         }
         else
         {
-            return GET_TYPE_META_DATA_AS(BSQStringReprType, s.u_data)->utf8ByteCount(s.u_data);
+            return (int64_t)GET_TYPE_META_DATA_AS(BSQStringReprType, s.u_data)->utf8ByteCount(s.u_data);
         }
     }
 

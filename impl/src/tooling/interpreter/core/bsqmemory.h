@@ -42,17 +42,6 @@ public:
     }
 };
 
-class GCOperator
-{
-private:
-    Allocator *alloc;
-
-public:
-    GCOperator(Allocator *alloc) : alloc(alloc) { ; }
-
-    void collect();
-};
-
 //A class that implements our bump pointer nursery space
 class NewSpaceAllocator
 {
@@ -63,8 +52,6 @@ private:
 
     size_t m_allocsize;
     uint8_t *m_block;
-
-    GCOperator gc;
 
 #ifdef ENABLE_MEM_STATS
     size_t totalalloc;
@@ -82,7 +69,7 @@ private:
 
     void resizeAllocatorAsNeeded(size_t rcalloc)
     {
-        bool shouldgrow = this->m_allocsize < BSQ_MAX_NURSERY_SIZE && this->m_allocsize < rcalloc * 0.5;
+        bool shouldgrow = this->m_allocsize < BSQ_MAX_NURSERY_SIZE && this->m_allocsize < rcalloc / 2;
         bool shouldshrink = BSQ_MIN_NURSERY_SIZE < this->m_allocsize && rcalloc < this->m_allocsize;
 
         if (!(shouldgrow || shouldshrink))
@@ -104,7 +91,7 @@ private:
     }
 
 public:
-    NewSpaceAllocator(Allocator* alloc) : m_block(nullptr), gc(alloc)
+    NewSpaceAllocator() : m_block(nullptr)
     {
         MEM_STATS_OP(this->totalalloc = 0);
 
@@ -129,22 +116,11 @@ public:
 
     size_t currentAllocatedBytes() const
     {
-        return (this->m_currPos - this->m_block);
+        return (size_t)(this->m_currPos - this->m_block);
     }
 
     //Return do a GC and return uint8_t* of given rsize from the bumplist implementation
-    uint8_t* allocateBumpSlow(size_t rsize)
-    {
-        //Note this is technically UB!!!!
-        MEM_STATS_OP(this->totalalloc += (this->m_currPos - this->m_block));
-
-        this->gc.collect();
-
-        uint8_t* res = this->m_currPos;
-        this->m_currPos += rsize;
-
-        return res;
-    }
+    uint8_t* allocateBumpSlow(size_t rsize);
 
     //Return uint8_t* of given asize + sizeof(MetaData*)
     inline uint8_t* allocateDynamicSize(size_t asize)
@@ -167,11 +143,13 @@ public:
         }
     }
 
+    void ensureSpace_slow();
+
     inline void ensureSpace(size_t required)
     {
         if (this->m_currPos + required > this->m_endPos)
         {
-            this->gc.collect();
+            this->ensureSpace_slow();
         }
     }
 
@@ -638,7 +616,7 @@ private:
     }
 
 public:
-    Allocator() : nsalloc(this), osalloc(), maybeZeroCounts(), bstart(0), bend(0), worklist(), releaselist()
+    Allocator() : nsalloc(), osalloc(), maybeZeroCounts(), bstart(0), bend(0), worklist(), releaselist()
     {
         this->maybeZeroCounts.reserve(256);
 

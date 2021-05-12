@@ -29,19 +29,19 @@
 #define BSQ_INTERNAL_ASSERT(C) if(!(C)) { assert(false); }
 
 #ifdef BSQ_DEBUG_BUILD
-#define HANDLE_BSQ_ABORT(MSG, F, L) { wprintf(L"\"%s\" in %s on line %i\n", MSG, F, L); fflush(stdout); exit(1); }
+#define HANDLE_BSQ_ABORT(MSG, F, L) { printf("\"%s\" in %s on line %i\n", MSG, F, (int)L); fflush(stdout); exit(1); }
 #else
 #define HANDLE_BSQ_ABORT() { printf("ABORT\n"); exit(1); }
 #endif
 
 #ifdef BSQ_DEBUG_BUILD
-#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT(MSG, F, L);
+#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L);
 #else
 #define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT();
 #endif
 
 #ifdef BSQ_DEBUG_BUILD
-#define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT(MSG, F, L)
+#define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L)
 #else
 #define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT()
 #endif
@@ -135,7 +135,7 @@ typedef uint64_t RCMeta;
 #define GC_MEM_COPY(DST, SRC, BYTES) memcpy_s(DST, BYTES, SRC, BYTES)
 #endif
 
-#define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + BYTES, 0)
+#define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + BYTES, (uint8_t)0)
 
 ////////////////////////////////
 //Storage location ops

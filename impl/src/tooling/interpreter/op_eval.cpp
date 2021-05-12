@@ -48,6 +48,41 @@ BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0
 BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by 0"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
+//TODO: ugh actually check here
+#ifdef _WIN32
+bool __builtin_add_overflow(BSQNat x, BSQNat y, BSQNat* res)
+{
+    *res = x + y;
+    return true;
+}
+bool __builtin_sub_overflow(BSQNat x, BSQNat y, BSQNat* res)
+{
+    *res = x - y;
+    return true;
+}
+bool __builtin_mul_overflow(BSQNat x, BSQNat y, BSQNat* res)
+{
+    *res = x * y;
+    return true;
+}
+
+bool __builtin_add_overflow(BSQInt x, BSQInt y, BSQInt* res)
+{
+    *res = x + y;
+    return true;
+}
+bool __builtin_sub_overflow(BSQInt x, BSQInt y, BSQInt* res)
+{
+    *res = x - y;
+    return true;
+}
+bool __builtin_mul_overflow(BSQInt x, BSQInt y, BSQInt* res)
+{
+    *res = x * y;
+    return true;
+}
+#endif
+
 StorageLocationPtr Evaluator::evalConstArgument(Argument arg)
 {
     switch (arg.kind)
@@ -93,7 +128,7 @@ void Evaluator::evalDeadFlowOp()
 
 void Evaluator::evalAbortOp(const AbortOp *op)
 {
-    BSQ_LANGUAGE_ABORT(op->msg, this->cframe->dbg_file, this->cframe->dbg_line);
+    BSQ_LANGUAGE_ABORT(op->msg->c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
 }
 
 void Evaluator::evalAssertCheckOp(const AssertOp *op)
@@ -101,7 +136,7 @@ void Evaluator::evalAssertCheckOp(const AssertOp *op)
     auto val = this->evalArgument(op->arg);
     if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, val))
     {
-        BSQ_LANGUAGE_ABORT(op->msg, this->cframe->dbg_file, this->cframe->dbg_line);
+        BSQ_LANGUAGE_ABORT(op->msg->c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
     }
 }
 
@@ -118,7 +153,7 @@ void Evaluator::evalDebugOp(const DebugOp *op)
         auto ttype = GET_TYPE_META_DATA(val);
         auto dval = ttype->fpDisplay(ttype, val);
 
-        wprintf(L"%s\n", dval.c_str());
+        printf("%s\n", dval.c_str());
         fflush(stdout);
     }
 }
@@ -368,7 +403,7 @@ void Evaluator::evalLoadConstOp(const LoadConstOp* op)
     op->oftype->storeValue(this->evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg));
 }
 
-void Evaluator::processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype)
 {
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
@@ -380,7 +415,7 @@ void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BS
     this->processTupleDirectLoadAndStore(src, srctype, voffset, dst, dsttype);
 }
 
-void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype)
 {
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
@@ -391,13 +426,13 @@ void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const B
     auto proppos = std::find(rtype->properties.cbegin(), rtype->properties.cend(), propId);
     assert(proppos != rtype->properties.cend());
 
-    auto propidx = std::distance(rtype->properties.cbegin(), proppos);
+    auto propidx = (size_t)std::distance(rtype->properties.cbegin(), proppos);
     auto voffset = rtype->propertyoffsets[propidx];
 
     this->processRecordDirectLoadAndStore(src, srctype, voffset, dst, dsttype);
 }
     
-void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, uint32_t slotoffset, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype)
 {
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
@@ -408,7 +443,7 @@ void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const B
     auto fldpos = std::find(etype->fields.cbegin(), etype->fields.cend(), fldId);
     assert(fldpos != etype->fields.cend());
 
-    auto fldidx = std::distance(etype->fields.cbegin(), fldpos);
+    auto fldidx = (size_t)std::distance(etype->fields.cbegin(), fldpos);
     auto voffset = etype->fieldoffsets[fldidx];
 
     this->processEntityDirectLoadAndStore(src, srctype, voffset, dst, dsttype);
@@ -1623,14 +1658,14 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
         curr++;
     }
 
-    uint32_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
+    size_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
     uint8_t* refslots = cstack + invk->scalarstackBytes;
     uint8_t* mixedslots = refslots + (invk->refstackSlots * sizeof(void*));
 
-    uint32_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
+    size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
     uint8_t* maskslots = (uint8_t*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
@@ -1649,7 +1684,7 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
     
 void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk)
 {
-    uint8_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
+    size_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
@@ -1701,14 +1736,14 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
         curr++;
     }
 
-    uint32_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
+    size_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
     uint8_t* refslots = cstack + invk->scalarstackBytes;
     uint8_t* mixedslots = refslots + (invk->refstackSlots * sizeof(void*));
 
-    uint32_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
+    size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
     uint8_t* maskslots = (uint8_t*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 

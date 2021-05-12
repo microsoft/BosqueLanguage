@@ -8,9 +8,22 @@
 GCStackEntry GCStack::frames[8192];
 uint32_t GCStack::stackp = 0;
 
-void GCOperator::collect()
+uint8_t* NewSpaceAllocator::allocateBumpSlow(size_t rsize)
 {
-    this->alloc->collect();
+    //Note this is technically UB!!!!
+    MEM_STATS_OP(this->totalalloc += (this->m_currPos - this->m_block));
+
+    Allocator::GlobalAllocator.collect();
+
+    uint8_t* res = this->m_currPos;
+    this->m_currPos += rsize;
+
+    return res;
+}
+
+void ensureSpace_slow()
+{
+    Allocator::GlobalAllocator.collect();
 }
 
 Allocator Allocator::GlobalAllocator;

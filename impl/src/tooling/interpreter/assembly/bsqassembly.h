@@ -57,7 +57,7 @@ public:
     : name(name), iname(iname), ikey(ikey), srcFile(srcFile), sinfo(sinfo), recursive(recursive), params(params), resultType(resultType), scalarstackBytes(scalarstackBytes), refstackSlots(refstackSlots), mixedstackBytes(mixedstackBytes), mixedMask(mixedMask), maskSlots(maskSlots)
     {;}
 
-    ~BSQInvokeDecl() {;}
+    virtual ~BSQInvokeDecl() {;}
 
     virtual bool isPrimitive() const = 0;
 };
@@ -72,7 +72,7 @@ public:
     : BSQInvokeDecl(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, maskSlots), body(body), argmaskSize(argmaskSize)
     {;}
 
-    ~BSQInvokeBodyDecl()
+    virtual ~BSQInvokeBodyDecl()
     {
         std::for_each(this->body.begin(), this->body.end(), [](InterpOp* op) {
             delete(op);
@@ -107,7 +107,7 @@ public:
     : BSQInvokeDecl(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, 0), implkey(implkey), implkeyname(implkeyname), binds(binds), pcodes(pcodes)
     {;}
 
-    ~BSQInvokePrimitiveDecl() {;}
+    virtual ~BSQInvokePrimitiveDecl() {;}
 
     virtual bool isPrimitive() const override
     {
