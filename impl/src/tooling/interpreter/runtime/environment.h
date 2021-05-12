@@ -43,7 +43,6 @@ public:
     static BSQRationalType* g_typeRational;
 
     //String flavors
-    static BSQStringKReprTypeAbstract g_typeStringKReprAbstract;
     static BSQStringKReprType<8>* g_typeStringKRepr8;
     static BSQStringKReprType<16>* g_typeStringKRepr16;
     static BSQStringKReprType<32>* g_typeStringKRepr32;

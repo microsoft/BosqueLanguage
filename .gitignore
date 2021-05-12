@@ -3,7 +3,5 @@ impl/node_modules/
 
 **/.DS_Store
 
-**/icpp
-**/icpp.exe
+**/output/*
 **/*.pdb
-**/*.obj

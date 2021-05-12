@@ -275,7 +275,7 @@ public:
         return BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
     }
 
-    void initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos) const;
+    static void initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos);
 
     virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const override;
     virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;

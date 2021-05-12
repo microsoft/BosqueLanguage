@@ -130,7 +130,7 @@ std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPt
     return res;
 }
 
-void BSQStringKReprTypeAbstract::initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos) const
+void BSQStringKReprTypeAbstract::initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos)
 {
     iter->cbuff = data;
 
@@ -170,7 +170,7 @@ void* BSQStringKReprTypeAbstract::slice(void* data, uint64_t nstart, uint64_t ne
 void BSQStringSliceReprType::initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const
 {
     auto slicerepr = (BSQStringSliceRepr*)data;
-    Environment::g_typeStringKReprAbstract.initializeIterPositionWSlice(iter, slicerepr->srepr, (int64_t)slicerepr->start, (int64_t)slicerepr->end, pos + (int64_t)slicerepr->start);
+    BSQStringKReprTypeAbstract::initializeIterPositionWSlice(iter, slicerepr->srepr, (int64_t)slicerepr->start, (int64_t)slicerepr->end, pos + (int64_t)slicerepr->start);
 }
 
 void* BSQStringSliceReprType::slice(void* data, uint64_t nstart, uint64_t nend) const

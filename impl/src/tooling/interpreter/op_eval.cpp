@@ -551,6 +551,12 @@ void Evaluator::evalLoadVirtualFieldOp(const LoadEntityFieldVirtualOp* op)
     this->processEntityVirtualLoadAndStore(sl, op->layouttype, op->fieldId, op->trgt, op->trgttype);
 }
 
+void Evaluator::evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op)
+{
+    auto sl = this->evalArgument(op->arg);
+    op->trgttype->storeValue(this->evalTargetVar(op->trgt), op->argtype->indexStorageLocationOffset(sl, op->slotoffset));
+}
+
 template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp<tag, isGuarded>* op)
 {

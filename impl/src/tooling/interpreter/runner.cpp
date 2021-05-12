@@ -48,3 +48,16 @@ void run(const std::string& main, const boost::json::value& args, uint64_t argsb
     Evaluator runner;
     runner.invokeMain(call, argslocs, res);
 }
+
+int main(int argc, char* argv)
+{
+    StorageLocationPtr res = nullptr;
+    Allocator::GlobalAllocator.pushRoot(&res);
+
+    std::string main = "NSMain::main";
+    run(main, {}, 0, "", res);
+
+    //TODO: print res
+
+    return 0;
+}

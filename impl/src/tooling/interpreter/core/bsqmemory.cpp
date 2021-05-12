@@ -21,7 +21,7 @@ uint8_t* NewSpaceAllocator::allocateBumpSlow(size_t rsize)
     return res;
 }
 
-void ensureSpace_slow()
+void NewSpaceAllocator::ensureSpace_slow()
 {
     Allocator::GlobalAllocator.collect();
 }
