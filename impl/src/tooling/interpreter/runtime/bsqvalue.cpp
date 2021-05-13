@@ -144,7 +144,7 @@ void BSQStringKReprTypeAbstract::initializeIterPosition(BSQStringIterator* iter,
     iter->cbuff = data;
 
     iter->minpos = 0;
-    iter->maxpos = BSQStringKReprTypeAbstract::getUTF8ByteCount(data);
+    iter->maxpos = (int16_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(data);
     iter->cpos = (int16_t)pos;
 }
 
@@ -292,7 +292,7 @@ void initializeStringIterPosition(BSQStringIterator* iter, int64_t pos)
         {
             iter->cbuff = nullptr;
             iter->minpos = 0;
-            iter->maxpos = BSQInlineString::utf8ByteCount(iter->str.u_inlineString);
+            iter->maxpos = (int16_t)BSQInlineString::utf8ByteCount(iter->str.u_inlineString);
             iter->cpos = (int16_t)pos;
         }
         else
@@ -395,14 +395,14 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
     BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, data);
 
     std::string res;
-    res.reserve(BSQStringType::utf8ByteCount(str));
+    res.reserve((size_t)BSQStringType::utf8ByteCount(str));
 
     BSQStringIterator iter;
     BSQStringType::initializeIteratorBegin(&iter, str);
     
     while(iteratorIsValid(&iter))
     {
-        res.push_back(iteratorGetUTF8Byte(&iter));
+        res.push_back((char)iteratorGetUTF8Byte(&iter));
         incrementStringIterator_utf8byte(&iter);
     }
 
@@ -422,7 +422,7 @@ bool entityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
 BSQStringKRepr<8>* BSQStringType::boxInlineString(BSQInlineString istr)
 {
     auto res = (BSQStringKRepr<8>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<8>), Environment::g_typeStringKRepr8);
-    res->size = BSQInlineString::utf8ByteCount(istr);
+    res->size = (uint16_t)BSQInlineString::utf8ByteCount(istr);
     std::copy(BSQInlineString::utf8Bytes(istr), BSQInlineString::utf8BytesEnd(istr), res->utf8bytes);
 
     return res;
@@ -564,16 +564,16 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
         {
             if(len1 + len2 < 16)
             {
-                BSQInlineString::utf8ByteCount_Initialize(res.u_inlineString, len1 + len2);
-                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString), BSQInlineString::utf8Bytes(str1.u_inlineString), len1);
-                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString) + len1, BSQInlineString::utf8Bytes(str2.u_inlineString), len2);
+                BSQInlineString::utf8ByteCount_Initialize(res.u_inlineString, (uint64_t)(len1 + len2));
+                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString), BSQInlineString::utf8Bytes(str1.u_inlineString), (size_t)len1);
+                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString) + len1, BSQInlineString::utf8Bytes(str2.u_inlineString), (size_t)len2);
             }
             else
             {
                 auto crepr = (BSQStringKRepr<32>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<32>), Environment::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
-                crepr->size = len1 + len2;
+                crepr->size = (uint16_t)(len1 + len2);
                 std::copy(BSQInlineString::utf8Bytes(str1.u_inlineString), BSQInlineString::utf8BytesEnd(str1.u_inlineString), curr);
                 std::copy(BSQInlineString::utf8Bytes(str1.u_inlineString), BSQInlineString::utf8BytesEnd(str1.u_inlineString), curr + len1);
 
@@ -587,7 +587,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
                 auto crepr = (BSQStringKRepr<16>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<32>), Environment::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
-                crepr->size = len1 + len2;
+                crepr->size = (uint16_t)(len1 + len2);
 
                 BSQStringIterator iter1;
                 BSQStringType::initializeIteratorBegin(&iter1, str1);
@@ -612,7 +612,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
             else
             {
                 auto crepr = (BSQStringConcatRepr*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringConcatRepr), Environment::g_typeStringConcatRepr);
-                crepr->size = len1 + len2;
+                crepr->size = (uint64_t)(len1 + len2);
                 crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringType::boxInlineString(str1.u_inlineString) : str1.u_data;
                 crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringType::boxInlineString(str2.u_inlineString) : str2.u_data;
                 
@@ -638,19 +638,19 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
     }
     else
     {
-        auto dist = iend.strpos - istart.strpos;
+        int64_t dist = iend.strpos - istart.strpos;
 
-        BSQString res;
+        BSQString res = {0};
         if(IS_INLINE_STRING(&rstr))
         {
-            res.u_inlineString = BSQInlineString::create(BSQInlineString::utf8Bytes(rstr.u_inlineString) + istart.strpos, dist);
+            res.u_inlineString = BSQInlineString::create(BSQInlineString::utf8Bytes(rstr.u_inlineString) + istart.strpos, (uint64_t)dist);
         }
         else
         {
             if(dist < 16)
             {
                 BSQInlineString::utf8ByteCount_Initialize(res.u_inlineString, (uint64_t)dist);
-                uint8_t* curr = BSQInlineString::utf8Bytes(rstr.u_inlineString);
+                uint8_t* curr = BSQInlineString::utf8Bytes(res.u_inlineString);
                 while(iteratorLess(&istart, &iend))
                 {
                     *curr = iteratorGetUTF8Byte(&istart);
@@ -658,8 +658,8 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
             }
             else if(dist <= 32)
             {
-                auto crepr = (BSQStringKRepr<32>*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<32>), Environment::g_typeStringKRepr32);
-                uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
+                res.u_data = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<32>), Environment::g_typeStringKRepr32);
+                uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(res.u_data);
                 while(iteratorLess(&istart, &iend))
                 {
                     *curr = iteratorGetUTF8Byte(&istart);
@@ -667,10 +667,8 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
             }
             else
             {
-                auto repr = rstr.u_data;
-                auto reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, repr);
-    
-                res.u_data = reprtype->slice(repr, istart.strpos, iend.strpos);
+                auto reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, rstr.u_data);
+                res.u_data = reprtype->slice(rstr.u_data, (uint64_t)istart.strpos, (uint64_t)iend.strpos);
             }
         }
 

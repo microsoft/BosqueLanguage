@@ -43,7 +43,7 @@ void iteratorGetElement(const BSQListIterator* iter, void* into, const BSQType* 
 void incrementListIterator(BSQListIterator* iter)
 {
     iter->lpos++;
-    iter->cpos += iter->esize;
+    iter->cpos += (int16_t)iter->esize;
     
     if(iter->cpos == iter->maxpos)
     {
@@ -97,8 +97,8 @@ void* BSQListEmptyType::slice_impl(void* data, uint64_t nstart, uint64_t nend) c
 void BSQListFlatKTypeAbstract::initializeIterPositionWSlice(BSQListIterator* iter, void* data, int64_t pos, int64_t maxpos) const
 {
     iter->cbuff = data;
-    iter->cpos = pos * this->esize;
-    iter->maxpos = maxpos * this->esize;
+    iter->cpos = (int16_t)pos * (int16_t)this->esize;
+    iter->maxpos = (int16_t)maxpos * (int16_t)this->esize;
 }
 
 uint64_t BSQListFlatKTypeAbstract::getLength(void* data) const
@@ -109,8 +109,8 @@ uint64_t BSQListFlatKTypeAbstract::getLength(void* data) const
 void BSQListFlatKTypeAbstract::initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const
 {
     iter->cbuff = data;
-    iter->cpos = pos * this->esize;
-    iter->maxpos = BSQListFlatKTypeAbstract::getStorageBytesCount(data);
+    iter->cpos = (int16_t)pos * (int16_t)this->esize;
+    iter->maxpos = (int16_t)BSQListFlatKTypeAbstract::getStorageBytesCount(data);
 }
 
 StorageLocationPtr BSQListFlatKTypeAbstract::getValueAtPosition(void* data, uint64_t pos) const
@@ -146,7 +146,7 @@ void BSQListSliceType::initializeIterPosition(BSQListIterator* iter, void* data,
 {
     auto sl = (BSQListSlice*)data;
     auto kltype = GET_TYPE_META_DATA_AS(BSQListFlatKTypeAbstract, sl->lrepr);
-    kltype->initializeIterPositionWSlice(iter, sl->lrepr, pos + sl->start, sl->end);
+    kltype->initializeIterPositionWSlice(iter, sl->lrepr, pos + (int64_t)sl->start, (int64_t)sl->end);
 }
 
 StorageLocationPtr BSQListSliceType::getValueAtPosition(void* data, uint64_t pos) const 
@@ -201,7 +201,7 @@ StorageLocationPtr BSQListConcatType::getValueAtPosition(void* data, uint64_t po
     auto cl = (BSQListConcat*)data;
 
     auto l1size = (int64_t)cl->size;
-    if(pos < l1size)
+    if((int64_t)pos < l1size)
     {
         auto l1type = GET_TYPE_META_DATA_AS(BSQListEntityType, cl->lrepr1);
         return l1type->getValueAtPosition(cl->lrepr1, pos);
@@ -300,7 +300,7 @@ void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
             res = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListFlatK<128>), Environment::g_listTypeMap[l1type->tid].list128);
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
 
-            ((BSQListFlatK<128>*)res)->ecount = len1 + len2;
+            ((BSQListFlatK<128>*)res)->ecount = (uint32_t)(len1 + len2);
 
             BSQListIterator iter1;
             initializeIteratorBegin(&iter1, l1);
