@@ -126,11 +126,12 @@
       ; Bool -> Bool
       ; Int -> BVX as BInt
       ; Nat -> BVX as BNat
-      ; BigInt -> 2*BVX | Int as BBigInt
-      ; BigNat -> 2*BVX | Int as BBigNat
+      ; BigInt -> Int
+      ; BigNat -> Int
       ; Float ->   Float | UFloat as BFloat
       ; Decimal -> Float | UFloat as BDecimal
       ; Rational -> Float | UFloat as BRational
+      ; StringPos -> Int
       ; String -> String | (Seq (_ BitVec 64)) as BString
     ) (
     ( (bsq_none@literal) )

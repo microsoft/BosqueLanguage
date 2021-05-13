@@ -73,10 +73,10 @@ class SMTTypeEmitter {
             return new SMTType("BNat");
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            return new SMTType("BBigInt");
+            return new SMTType("Int");
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            return new SMTType("BBigNat");
+            return new SMTType("Int");
         }
         else if (this.isType(tt, "NSCore::Float")) {
             return new SMTType("BFloat");
@@ -87,8 +87,26 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "NSCore::Rational")) {
             return new SMTType("BRational");
         }
+        else if (this.isType(tt, "NSCore::StringPos")) {
+            return new SMTType("Int");
+        }
         else if (this.isType(tt, "NSCore::String")) {
             return new SMTType("BString");
+        }
+        else if (this.isType(tt, "NSCore::ByteBuffer")) {
+            return new SMTType("(Seq (_ BitVec 8))");
+        }
+        else if(this.isType(tt, "NSCore::ISOTime")) {
+            return new SMTType("Int");
+        }
+        else if(this.isType(tt, "NSCore::LogicalTime")) {
+            return new SMTType("Int");
+        }
+        else if(this.isType(tt, "NSCore::UUID")) {
+            return new SMTType("String");
+        }
+        else if(this.isType(tt, "NSCore::CryptoHash")) {
+            return new SMTType("Int");
         }
         else if (this.isType(tt, "NSCore::Regex")) {
             return new SMTType("bsq_regex");

@@ -8,14 +8,72 @@ import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 import * as assert from "assert";
 
-class SMTTypeEmitter {
+const ICCP_WORD_SIZE = 8;
+
+type TranspilerOptions = {
+};
+
+enum ICCPTypeKind
+{
+    Invalid = "BSQTypeKind::Invalid",
+    Register = "BSQTypeKind::Register",
+    Struct = "BSQTypeKind::Struct",
+    String = "BSQTypeKind::String",
+    Ref = "BSQTypeKind::Ref",
+    InlineUnion = "BSQTypeKind::InlineUnion",
+    HeapUnion = "BSQTypeKind::HeapUnion"
+}
+
+type RefMask = string;
+
+class ICCPTypeSizeInfo {
+    readonly heapsize: number;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
+    readonly sldatasize: number; //number of bytes needed in storage location for this -- 4 bytes for refs, same as heap size for others
+    readonly slfullsize: number; //number of bytes + typeptr tag if needed in storage location for this -- inline union is bigger
+
+    readonly slmask: RefMask; //The mask to use to traverse this object (even if this isn't a mixed obj -- e.g. it may be embedded in a mixed obj and we need to use this)   
+
+    constructor(heapsize: number, sldatasize: number, slfullsize: number, slmask: RefMask) {
+        this.heapsize = heapsize;
+        this.sldatasize = sldatasize;
+        this.slfullsize = slfullsize;
+        this.slmask = slmask;
+    }
+}
+
+class ICCPTypeData {
+    readonly name: string;
+    readonly tkey: MIRResolvedTypeKey;
+    readonly tkind: ICCPTypeKind;
+    
+    readonly allocinfo: ICCPTypeSizeInfo; //memory size information
+    
+    readonly isLeafType: boolean; //if refmask == undefined && ptrcount == 0
+    readonly refmask: RefMask | undefined;
+    readonly ptrcount: number; //if this is a packed object the number of pointers at the front
+
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
+        this.name = name;
+        this.tkey = tkey;
+        this.tkind = tkind;
+        this.allocinfo = allocinfo;
+        this.isLeafType = isLeafType;
+        this.refmask = refmask;
+        this.ptrcount = ptrcount;
+    }
+}
+
+class ICCPTypeEmitter {
+    readonly topts: TranspilerOptions;
     readonly assembly: MIRAssembly;
 
     private mangledNameMap: Map<string, string> = new Map<string, string>();
+    
+    private typeDataMap: Map<MIRResolvedTypeKey, ICCPTypeData> = new Map<MIRResolvedTypeKey, ICCPTypeData>();
 
-    constructor(assembly: MIRAssembly, vopts: VerifierOptions, mangledNameMap?: Map<string, string>) {
+    constructor(assembly: MIRAssembly, topts: TranspilerOptions, mangledNameMap?: Map<string, string>) {
         this.assembly = assembly;
-        this.vopts = vopts;
+        this.topts = topts;
 
         this.mangledNameMap = mangledNameMap || new Map<string, string>();
     }
@@ -57,61 +115,92 @@ class SMTTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    getSMTTypeFor(tt: MIRType): SMTType {
+    getBSQTypeData(tt: MIRType): ICCPTypeData {
+        if(this.typeDataMap.has(tt.trkey)) {
+            return this.typeDataMap.get(tt.trkey) as ICCPTypeData;
+        }
+
+        let iidata: ICCPTypeData | undefined = undefined;
         if (this.isType(tt, "NSCore::None")) {
-            return new SMTType("bsq_none");
+            iidata = new ICCPTypeData(tt.trkey, "BSQNone", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Bool")) {
-            return new SMTType("Bool");
+            iidata = new ICCPTypeData(tt.trkey, "BSQBool", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Int")) {
-            return new SMTType("BInt");
+            iidata = new ICCPTypeData(tt.trkey, "BSQInt", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Nat")) {
-            return new SMTType("BNat");
+            iidata = new ICCPTypeData(tt.trkey, "BSQNat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            return new SMTType("BBigInt");
+            iidata = new ICCPTypeData(tt.trkey, "BSQBigInt", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            return new SMTType("BBigNat");
+            iidata = new ICCPTypeData(tt.trkey, "BSQBigNat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Float")) {
-            return new SMTType("BFloat");
+            iidata = new ICCPTypeData(tt.trkey, "BSQFloat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Decimal")) {
-            return new SMTType("BDecimal");
+            iidata = new ICCPTypeData(tt.trkey, "BSQDecimal", ICCPTypeKind.Register, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Rational")) {
-            return new SMTType("BRational");
+            iidata = new ICCPTypeData(tt.trkey, "BSQRational", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, "111"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::StringPos")) {
+            iidata = new ICCPTypeData(tt.trkey, "BSQStringIterator", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, "31121"), false, "31121", 0); 
         }
         else if (this.isType(tt, "NSCore::String")) {
-            return new SMTType("BString");
+            iidata = new ICCPTypeData(tt.trkey, "BSQString", ICCPTypeKind.String, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "31"), false, undefined, 0);
+        }
+        else if (this.isType(tt, "NSCore::ByteBuffer")) {
+            iidata = new ICCPTypeData(tt.trkey, "BSQByteBuffer", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(34*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), false, undefined, 1);
+        }
+        else if(this.isType(tt, "NSCore::ISOTime")) {
+            iidata = new ICCPTypeData(tt.trkey, "BSQISOTime", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if(this.isType(tt, "NSCore::LogicalTime")) {
+            iidata = new ICCPTypeData(tt.trkey, "BSQLogicalTime", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if(this.isType(tt, "NSCore::UUID")) {
+            iidata = new ICCPTypeData(tt.trkey, "BSQUUID", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
+        }
+        else if(this.isType(tt, "NSCore::CryptoHash")) {
+            iidata = new ICCPTypeData(tt.trkey, "BSQCryptoHash", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(64*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Regex")) {
-            return new SMTType("bsq_regex");
-        }
-        else if (this.isType(tt, "NSCore::ISequence")) {
-            return new SMTType("ISequence");
+            iidata = new ICCPTypeData(tt.trkey, "BSQRegex", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
         }
         else if(this.isUniqueTupleType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
+            const iccpentries = (tt.options[0] as MIRTupleType).entries.map((entry) => this.getBSQTypeData(entry.type));
+            let heapsize = xxxx; iccpentries.map((ice) => ice.allocinfo.heapsize);
+
+            if((tt.options[0] as MIRTupleType).isvalue) {
+                const tsinfo = new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11");
+                iidata = new ICCPTypeData(tt.trkey, this.mangle(tt.trkey), ICCPTypeKind.Struct, tsinfo, isleaf, refmask, ptrcount);
+            }
+            else {
+                xxxx;
+            }
+            return ;
         }
         else if(this.isUniqueRecordType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
+            return this.mangle(tt.trkey);
         }
         else if(this.isUniqueEntityType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
+            return this.mangle(tt.trkey);
         }
         else if (this.isUniqueEphemeralType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
-        }
-        else if(this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType"))) {
-            return new SMTType("BKey");
+            return this.mangle(tt.trkey);
         }
         else {
+            xxxx; //compute 
             return new SMTType("BTerm");
         }
+
+        this.typeDataMap.set(tt.trkey, iidata as ICCPTypeData);
+        return this.typeDataMap.get(tt.trkey) as ICCPTypeData;
     }
 
     getSMTTypeTag(tt: MIRType): string {
@@ -538,5 +627,8 @@ class SMTTypeEmitter {
 }
 
 export {
-    SMTTypeEmitter
+    ICCP_WORD_SIZE,
+    TranspilerOptions,
+    RefMask, ICCPTypeKind, ICCPTypeSizeInfo, ICCPTypeData,
+    ICCPTypeEmitter
 };

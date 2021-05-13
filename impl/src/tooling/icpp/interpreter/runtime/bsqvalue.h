@@ -40,7 +40,12 @@ public:
 
 ////
 //Bool
-typedef uint8_t BSQBool;
+
+//
+//TODO: this is a lot of memory for a bool -- may want to provide special case for this in the future
+//
+
+typedef uint64_t BSQBool;
 #define BSQTRUE 1
 #define BSQFALSE 0
 
@@ -398,7 +403,7 @@ private:
     static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
 
 public:
-    BSQStringType() : BSQEntityType({ BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), "3" }, entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String") {;}
+    BSQStringType() : BSQEntityType({ BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), "31" }, entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String") {;}
     virtual ~BSQStringType() {;}
 
     static void initializeIteratorMin(BSQStringIterator* iter, BSQString str);

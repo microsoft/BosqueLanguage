@@ -1672,7 +1672,7 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
     uint8_t* mixedslots = refslots + (invk->refstackSlots * sizeof(void*));
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
-    uint8_t* maskslots = (uint8_t*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     if(optmask != nullptr)
@@ -1682,9 +1682,9 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
 
     GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, maskslots, &invk->body);
 #else
-    this->pushFrame((StorageLocationPtr*)argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame((StorageLocationPtr*)argsbase, cstack, maskslots, &invk->body);
 #endif
 }
     
@@ -1750,14 +1750,14 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
     uint8_t* mixedslots = refslots + (invk->refstackSlots * sizeof(void*));
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
-    uint8_t* maskslots = (uint8_t*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, maskslots, &invk->body);
 #else
-    this->pushFrame(argsbase, maskslots, cstack, &invk->body);
+    this->pushFrame(argsbase, cstack, maskslots, &invk->body);
 #endif
 
     this->evaluateBody(resultsl);

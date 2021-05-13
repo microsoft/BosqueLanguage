@@ -14,6 +14,7 @@
         "src/ast/*.ts",
         "src/type_checker/*.ts",
         "src/compiler/*.ts",
+        "src/tooling/iccp/transpiler/*.ts",
         "src/tooling/verifier/*.ts",
         "src/runtimes/*.ts",
         "src/test/*.ts"
