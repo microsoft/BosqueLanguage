@@ -8,7 +8,7 @@ const fsx = require("fs-extra");
 const path = require("path");
 const proc = require('child_process');
 
-const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/interpreter"));
+const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/icpp/interpreter/"));
 const cppfiles = [rootsrc, path.join(rootsrc, "assembly"), path.join(rootsrc, "core"), path.join(rootsrc, "runtime")].map((pp) => pp + "/*.cpp");
 
 const outbase = path.normalize(path.join(__dirname, "output"));
