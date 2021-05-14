@@ -716,19 +716,19 @@ bool entityUUIDLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
     return BSQUUIDType::lessThan((BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1), (BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2));
 }
 
-std::string entityCryptoHashDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return SLPTR_LOAD_CONTENTS_AS(BSQCryptoHash, data).str() + ":Hash";
+    return SLPTR_LOAD_CONTENTS_AS(BSQContentHash, data).str() + ":Hash";
 }
 
-bool entityCryptoHashEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+bool entityContentHashEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    return BSQCryptoHashType::equal((BSQCryptoHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1), (BSQCryptoHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2));
+    return BSQContentHashType::equal((BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1), (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2));
 }
 
-bool entityCryptoHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+bool entityContentHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    return BSQCryptoHashType::lessThan((BSQCryptoHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1), (BSQCryptoHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2));
+    return BSQContentHashType::lessThan((BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1), (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2));
 }
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)

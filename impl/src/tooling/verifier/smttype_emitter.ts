@@ -73,10 +73,10 @@ class SMTTypeEmitter {
             return new SMTType("BNat");
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            return new SMTType("Int");
+            return new SMTType("BBigInt");
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            return new SMTType("Int");
+            return new SMTType("BBigNat");
         }
         else if (this.isType(tt, "NSCore::Float")) {
             return new SMTType("BFloat");
@@ -105,7 +105,7 @@ class SMTTypeEmitter {
         else if(this.isType(tt, "NSCore::UUID")) {
             return new SMTType("String");
         }
-        else if(this.isType(tt, "NSCore::CryptoHash")) {
+        else if(this.isType(tt, "NSCore::ContentHash")) {
             return new SMTType("Int");
         }
         else if (this.isType(tt, "NSCore::Regex")) {
@@ -162,8 +162,26 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "NSCore::Rational")) {
             return "TypeTag_Rational";
         }
+        else if (this.isType(tt, "NSCore::StringPos")) {
+            return "TypeTag_StringPos";
+        }
         else if (this.isType(tt, "NSCore::String")) {
             return "TypeTag_String";
+        }
+        else if (this.isType(tt, "NSCore::ByteBuffer")) {
+            return "TypeTag_ByteBuffer";
+        }
+        else if(this.isType(tt, "NSCore::ISOTime")) {
+            return "TypeTag_ISOTime";
+        }
+        else if(this.isType(tt, "NSCore::LogicalTime")) {
+            return "TypeTag_LogicalTime";
+        }
+        else if(this.isType(tt, "NSCore::UUID")) {
+            return "TypeTag_UUID";
+        }
+        else if(this.isType(tt, "NSCore::ContentHash")) {
+            return "TypeTag_ContentHash";
         }
         else if (this.isType(tt, "NSCore::Regex")) {
             return "TypeTag_Regex";

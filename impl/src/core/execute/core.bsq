@@ -321,7 +321,7 @@ __internal grounded entity UUID provides Some, KeyType, PODType, APIType {
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
-__internal grounded entity CryptoHash provides Some, KeyType, PODType, APIType {
+__internal grounded entity ContentHash provides Some, KeyType, PODType, APIType {
 }
 
 //<summary>Primitive regex value.</summary>

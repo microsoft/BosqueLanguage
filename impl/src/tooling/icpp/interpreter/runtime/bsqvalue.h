@@ -510,21 +510,21 @@ public:
 };
 
 ////
-//CryptoHash
-typedef boost::multiprecision::checked_uint512_t BSQCryptoHash;
+//ContentHash
+typedef boost::multiprecision::checked_uint512_t BSQContentHash;
 
-std::string entityCryptoHashDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-bool entityCryptoHashEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
-bool entityCryptoHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityContentHashEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool entityContentHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQCryptoHashType : public BSQEntityType
+class BSQContentHashType : public BSQEntityType
 {
 public:
-    BSQCryptoHashType() : BSQEntityType(BSQ_TYPE_ID_CRYPTOHASH, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQCryptoHash)), sizeof(void*), sizeof(void*), "2" }, {}, entityCryptoHashEqual_impl, entityCryptoHashLessThan_impl, entityCryptoHashDisplay_impl, "NSCore::CryptoHash", {}, {}, {}) {;}
-    virtual ~BSQCryptoHashType() {;}
+    BSQContentHashType() : BSQEntityType(BSQ_TYPE_ID_CONTENTHASH, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQContentHash)), sizeof(void*), sizeof(void*), "2" }, {}, entityContentHashEqual_impl, entityContentHashLessThan_impl, entityContentHashDisplay_impl, "NSCore::ContentHash", {}, {}, {}) {;}
+    virtual ~BSQContentHashType() {;}
 
-    inline static bool equal(BSQCryptoHash* v1, BSQCryptoHash* v2) { return *v1 == *v2; }
-    inline static bool lessThan(BSQCryptoHash* v1, BSQCryptoHash* v2) { return *v1 < *v2; }
+    inline static bool equal(BSQContentHash* v1, BSQContentHash* v2) { return *v1 == *v2; }
+    inline static bool lessThan(BSQContentHash* v1, BSQContentHash* v2) { return *v1 < *v2; }
 };
 
 ////

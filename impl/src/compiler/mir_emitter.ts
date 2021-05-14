@@ -1233,13 +1233,14 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialRationalType());
         emitter.registerResolvedTypeReference(assembly.getSpecialFloatType());
         emitter.registerResolvedTypeReference(assembly.getSpecialDecimalType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialStringPosType());
         emitter.registerResolvedTypeReference(assembly.getSpecialStringType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferFormatType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferEncodingType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferCompressionType());
         emitter.registerResolvedTypeReference(assembly.getSpecialByteBufferType());
         emitter.registerResolvedTypeReference(assembly.getSpecialUUIDType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialCryptoHashType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexMatchType());
 

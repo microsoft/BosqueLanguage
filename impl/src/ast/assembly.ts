@@ -1766,13 +1766,14 @@ class Assembly {
     getSpecialRationalType(): ResolvedType { return this.internSpecialObjectType(["Rational"]); }
     getSpecialFloatType(): ResolvedType { return this.internSpecialObjectType(["Float"]); }
     getSpecialDecimalType(): ResolvedType { return this.internSpecialObjectType(["Decimal"]); }
+    getSpecialStringPosType(): ResolvedType { return this.internSpecialObjectType(["StringPos"]); }
     getSpecialStringType(): ResolvedType { return this.internSpecialObjectType(["String"]); }
     getSpecialBufferFormatType(): ResolvedType { return this.internSpecialObjectType(["BufferFormat"]); }
     getSpecialBufferEncodingType(): ResolvedType { return this.internSpecialObjectType(["BufferEncoding"]); }
     getSpecialBufferCompressionType(): ResolvedType { return this.internSpecialObjectType(["BufferCompression"]); }
     getSpecialByteBufferType(): ResolvedType { return this.internSpecialObjectType(["ByteBuffer"]); }
     getSpecialUUIDType(): ResolvedType { return this.internSpecialObjectType(["UUID"]); }
-    getSpecialCryptoHashType(): ResolvedType { return this.internSpecialObjectType(["CryptoHash"]); }
+    getSpecialContentHashType(): ResolvedType { return this.internSpecialObjectType(["ContentHash"]); }
     getSpecialRegexType(): ResolvedType { return this.internSpecialObjectType(["Regex"]); }
     getSpecialRegexMatchType(): ResolvedType { return this.internSpecialObjectType(["RegexMatch"]); }
 

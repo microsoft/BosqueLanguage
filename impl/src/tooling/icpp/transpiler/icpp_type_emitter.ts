@@ -166,8 +166,8 @@ class ICCPTypeEmitter {
         else if(this.isType(tt, "NSCore::UUID")) {
             iidata = new ICCPTypeData(tt.trkey, "BSQUUID", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
         }
-        else if(this.isType(tt, "NSCore::CryptoHash")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQCryptoHash", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(64*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
+        else if(this.isType(tt, "NSCore::ContentHash")) {
+            iidata = new ICCPTypeData(tt.trkey, "BSQContentHash", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(64*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Regex")) {
             iidata = new ICCPTypeData(tt.trkey, "BSQRegex", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
