@@ -202,7 +202,9 @@ class SMTTypeEmitter {
         assert(!(this.isType(tt, "NSCore::None") || this.isType(tt, "NSCore::Bool") 
             || this.isType(tt, "NSCore::Int") || this.isType(tt, "NSCore::Nat") || this.isType(tt, "NSCore::BigInt") || this.isType(tt, "NSCore::BigNat") 
             || this.isType(tt, "NSCore::Float") || this.isType(tt, "NSCore::Decimal") || this.isType(tt, "NSCore::Rational")
-            || this.isType(tt, "NSCore::String") || this.isType(tt, "NSCore::Regex")), "Special types should be constructed in special ways");
+            || this.isType(tt, "NSCore::StringPos") || this.isType(tt, "NSCore::String") || this.isType(tt, "NSCore::ByteBuffer")
+            || this.isType(tt, "NSCore::ISOTime") || this.isType(tt, "NSCore::LogicalTime") || this.isType(tt, "NSCore::UUID") || this.isType(tt, "NSCore::ContentHash")
+            || this.isType(tt, "NSCore::Regex")), "Special types should be constructed in special ways");
 
 
         const kfix = this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType")) ? "bsqkey_" : "bsqobject_"
@@ -224,6 +226,7 @@ class SMTTypeEmitter {
     private coerceFromAtomicToKey(exp: SMTExp, from: MIRType): SMTExp  {
         assert(this.assembly.subtypeOf(from, this.getMIRType("NSCore::KeyType")));
 
+        xxxx;
         if (from.trkey === "NSCore::None") {
             return new SMTConst("BKey@none");
         }

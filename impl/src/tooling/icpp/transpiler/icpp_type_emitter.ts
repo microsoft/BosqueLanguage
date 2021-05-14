@@ -174,16 +174,69 @@ class ICCPTypeEmitter {
         }
         else if(this.isUniqueTupleType(tt)) {
             const iccpentries = (tt.options[0] as MIRTupleType).entries.map((entry) => this.getBSQTypeData(entry.type));
-            let heapsize = xxxx; iccpentries.map((ice) => ice.allocinfo.heapsize);
+
+            let typekind = ICCPTypeKind.Invalid;
+
+            let heapsize = 0;
+            let sldatasize = 0;
+            let slfullsize = 0;
+            let slmask = "";     
+        
+            let isleaf = true;
+            let refmask: string | undefined = "";
+            let ptrcount = 0;
 
             if((tt.options[0] as MIRTupleType).isvalue) {
-                const tsinfo = new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11");
-                iidata = new ICCPTypeData(tt.trkey, this.mangle(tt.trkey), ICCPTypeKind.Struct, tsinfo, isleaf, refmask, ptrcount);
+                typekind = ICCPTypeKind.Struct;
+
+                iccpentries.forEach((entry, pos) => {
+                    heapsize += entry.allocinfo.heapsize;
+                    sldatasize += entry.allocinfo.sldatasize;
+                    slfullsize += entry.allocinfo.slfullsize;
+                    slmask += entry.allocinfo.slmask;
+
+                    isleaf = isleaf && entry.isLeafType;
+                    refmask += entry.allocinfo.slmask;
+                    if(ptrcount !== -1) {
+                        if(ptrcount === pos && (entry.tkind === ICCPTypeKind.Ref || entry.tkind === ICCPTypeKind.HeapUnion)) {
+                            ptrcount++;
+                        }
+                        else {
+                            ptrcount = -1;
+                        }
+                    }
+                });
             }
             else {
-                xxxx;
+                typekind = ICCPTypeKind.Ref;
+                
+                iccpentries.forEach((entry, pos) => {
+                    heapsize += entry.allocinfo.heapsize;
+
+                    isleaf = isleaf && entry.isLeafType;
+                    refmask += entry.allocinfo.slmask;
+                    if(ptrcount !== -1) {
+                        if(ptrcount === pos && (entry.tkind === ICCPTypeKind.Ref || entry.tkind === ICCPTypeKind.HeapUnion)) {
+                            ptrcount++;
+                        }
+                        else {
+                            ptrcount = -1;
+                        }
+                    }
+                });
+
+                sldatasize = ICCP_WORD_SIZE;
+                slfullsize = ICCP_WORD_SIZE;
+                slmask += "2";
             }
-            return ;
+
+            const tsinfo = new ICCPTypeSizeInfo(heapsize, sldatasize, slfullsize, slmask);
+
+            if(isleaf) {
+                refmask = undefined;
+            }
+            const rmask = refmask.length !== 0 ? refmask.join("") : undefined;
+            return iidata = new ICCPTypeData(tt.trkey, this.mangle(tt.trkey), typekind, tsinfo, isleaf, rmask, ptrcount);
         }
         else if(this.isUniqueRecordType(tt)) {
             return this.mangle(tt.trkey);
