@@ -49,7 +49,7 @@ void run(const std::string& main, const boost::json::value& args, uint64_t argsb
     runner.invokeMain(call, argslocs, res);
 }
 
-int main(int argc, char* argv)
+int main(int argc, char** argv)
 {
     StorageLocationPtr res = nullptr;
     Allocator::GlobalAllocator.pushRoot(&res);

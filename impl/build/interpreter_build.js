@@ -41,5 +41,7 @@ const command = `${compiler} ${ccflags}${includes} ${outfile} ${cppfiles.join(" 
 fsx.ensureDirSync(outbase);
 fsx.emptyDirSync(outbase);
 
+console.log(command);
+
 const outstr = proc.execSync(command);
 console.log(`${outstr}`);

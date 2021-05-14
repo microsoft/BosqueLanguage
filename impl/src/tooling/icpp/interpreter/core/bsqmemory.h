@@ -269,7 +269,7 @@ private:
 
         MEM_STATS_OP(this->promotedbytes += osize + sizeof(MetaData *));
 
-        GC_MEM_COPY(nobj, GET_TYPE_META_DATA(obj), osize + sizeof(BSQType*));
+        GC_MEM_COPY(nobj, GET_TYPE_META_DATA_ADDR(obj), osize + sizeof(BSQType*));
         if (!ometa->isLeafType)
         {
             this->worklist.push(nobj);
