@@ -1866,6 +1866,9 @@ class SMTBodyEmitter {
         let erropt = false;
         let rtype = this.typegen.getMIRType("NSCore::None");
 
+        xxxx;
+
+
         switch (op) {
             //op unary +
             case "NSCore::+=prefix=(NSCore::Int)":

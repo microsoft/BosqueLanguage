@@ -9,6 +9,8 @@ import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 import { ICCPType, ICCPTypeEntity, ICCPTypeEphemeralList, ICCPTypeHeapUnion, ICCPTypeInlineUnion, ICCPTypeKind, ICCPTypePrimitive, ICCPTypeRecord, ICCPTypeSizeInfo, ICCPTypeTuple, RefMask, TranspilerOptions } from "./iccp_assembly";
 
 import * as assert from "assert";
+import { Argument, ICCPGuard, ICCPOp, ICCPOpEmitter, ICCPStatementGuard, TargetVar } from "./iccp_exp";
+import { SourceInfo } from "../../../ast/parser";
 
 const ICCP_WORD_SIZE = 8;
 
@@ -388,187 +390,165 @@ class ICCPTypeEmitter {
         return this.typeDataMap.get(tt.trkey) as ICCPType;
     }
 
-    private coerceFromAtomicToKey(exp: SMTExp, from: MIRType): SMTExp  {
-        assert(this.assembly.subtypeOf(from, this.getMIRType("NSCore::KeyType")));
-
-        if (from.trkey === "NSCore::None") {
-            return new SMTConst("BKey@none");
-        }
-        else {
-            let objval: SMTExp | undefined = undefined;
-            let typetag = "[NOT SET]";
-
-            if (this.isType(from, "NSCore::Bool")) {
-                objval = new SMTCallSimple("bsqkey_bool@box", [exp]);
-                typetag = "TypeTag_Bool";
-            }
-            else if (this.isType(from, "NSCore::Int")) {
-                objval = new SMTCallSimple("bsqkey_int@box", [exp]);
-                typetag = "TypeTag_Int";
-            }
-            else if (this.isType(from, "NSCore::Nat")) {
-                objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
-                typetag = "TypeTag_Nat";
-            }
-            else if (this.isType(from, "NSCore::BigInt")) {
-                objval = new SMTCallSimple("bsqkey_bigint@box", [exp]);
-                typetag = "TypeTag_BigInt";
-            }
-            else if (this.isType(from, "NSCore::BigNat")) {
-                objval = new SMTCallSimple("bsqkey_bignat@box", [exp]);
-                typetag = "TypeTag_BigNat";
-            }
-            else if (this.isType(from, "NSCore::String")) {
-                objval = new SMTCallSimple("bsqkey_string@box", [exp]);
-                typetag = "TypeTag_String";
-            }
-            else if (this.isUniqueTupleType(from)) {
-                objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                typetag = this.getSMTTypeTag(from);
-            }
-            else if (this.isUniqueRecordType(from)) {
-                objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                typetag = this.getSMTTypeTag(from);
+    private coerceFromAtomicToInline(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+        const iccptype = this.getICCPTypeData(from);
+        if(iccptype.tkind === ICCPTypeKind.Register) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                assert(this.isUniqueEntityType(from));
-
-                objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                typetag = this.getSMTTypeTag(from);
+                return ICCPOpEmitter.genBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
-
-            return new SMTCallSimple("BKey@box", [new SMTConst(typetag), objval as SMTExp]);
         }
-    }
-
-    private coerceFromAtomicToTerm(exp: SMTExp, from: MIRType): SMTExp {
-        if (from.trkey === "NSCore::None") {
-            return new SMTConst(`BTerm@none`);
-        }
-        else {
-            if(this.assembly.subtypeOf(from, this.getMIRType("NSCore::KeyType"))) {
-                return new SMTCallSimple("BTerm@keybox", [this.coerceFromAtomicToKey(exp, from)]);
+        else if(iccptype.tkind === ICCPTypeKind.Struct || iccptype.tkind === ICCPTypeKind.String) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                let objval: SMTExp | undefined = undefined;
-                let typetag = "[NOT SET]";
+                return ICCPOpEmitter.genBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+        else {
+            assert(iccptype.tkind === ICCPTypeKind.Ref);
 
-                if (this.isType(from, "NSCore::Float")) {
-                    objval = new SMTCallSimple("bsq_float@box", [exp]);
-                    typetag = "TypeTag_Float";
-                }
-                else if (this.isType(from, "NSCore::Decimal")) {
-                    objval = new SMTCallSimple("bsq_decimal@box", [exp]);
-                    typetag = "TypeTag_Decimal";
-                }
-                else if (this.isType(from, "NSCore::Rational")) {
-                    objval = new SMTCallSimple("bsq_rational@box", [exp]);
-                    typetag = "TypeTag_Rational";
-                }
-                else if (this.isType(from, "NSCore::Regex")) {
-                    objval = new SMTCallSimple("bsq_regex@box", [exp]);
-                    typetag = "TypeTag_Regex";
-                }
-                else if (this.isUniqueTupleType(from)) {
-                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                    typetag = this.getSMTTypeTag(from);
-                }
-                else if (this.isUniqueRecordType(from)) {
-                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                    typetag = this.getSMTTypeTag(from);
-                }
-                else {
-                    assert(this.isUniqueEntityType(from));
-
-                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                    typetag = this.getSMTTypeTag(from);
-                }
-
-                return new SMTCallSimple("BTerm@termbox", [new SMTConst(typetag), objval as SMTExp]);
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
     }
 
-    private coerceKeyIntoAtomic(exp: SMTExp, into: MIRType): SMTExp {
-        if (this.isType(into, "NSCore::None")) {
-            return new SMTConst("bsq_none@literal");
-        }
-        else {
-            const oexp = new SMTCallSimple("BKey_value", [exp]);
-
-            if (this.isType(into, "NSCore::Bool")) {
-                return new SMTCallSimple("bsqkey_bool_value", [oexp]);
-            }
-            else if (this.isType(into, "NSCore::Int")) {
-                return new SMTCallSimple("bsqkey_int_value", [oexp]);
-            }
-            else if (this.isType(into, "NSCore::Nat")) {
-                return new SMTCallSimple("bsqkey_nat_value", [oexp]);
-            }
-            else if (this.isType(into, "NSCore::BigInt")) {
-                return new SMTCallSimple("bsqkey_bigint_value", [oexp]);
-            }
-            else if (this.isType(into, "NSCore::BigNat")) {
-                return new SMTCallSimple("bsqkey_bignat_value", [oexp]);
-            }
-            else if (this.isType(into, "NSCore::String")) {
-                return new SMTCallSimple("bsqkey_string_value", [oexp]);
-            }
-            else if (this.isUniqueTupleType(into)) {
-                return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
-            }
-            else if (this.isUniqueRecordType(into)) {
-                return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+    private coerceFromAtomicToHeap(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+        const iccptype = this.getICCPTypeData(from);
+        if(iccptype.tkind === ICCPTypeKind.Register) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                assert(this.isUniqueEntityType(into));
+                return ICCPOpEmitter.genBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+        else if(iccptype.tkind === ICCPTypeKind.Struct || iccptype.tkind === ICCPTypeKind.String) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+        else {
+            assert(iccptype.tkind === ICCPTypeKind.Ref);
 
-                return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
     }
 
-    private coerceTermIntoAtomic(exp: SMTExp, into: MIRType): SMTExp {
-        if (this.isType(into, "NSCore::None")) {
-            return new SMTConst("bsq_none@literal");
-        }
-        else {
-            if(this.assembly.subtypeOf(into, this.getMIRType("NSCore::KeyType"))) {
-                return this.coerceKeyIntoAtomic(new SMTCallSimple("BTerm_keyvalue", [exp]), into)
+    private coerceFromInlineToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+        const iccptype = this.getICCPTypeData(into);
+        if(iccptype.tkind === ICCPTypeKind.Register) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                const oexp = new SMTCallSimple("BTerm_termvalue", [exp]);
+                return ICCPOpEmitter.genExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+        else if(iccptype.tkind === ICCPTypeKind.Struct || iccptype.tkind === ICCPTypeKind.String) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+        else {
+            assert(iccptype.tkind === ICCPTypeKind.Ref);
 
-                if (this.isType(into, "NSCore::Float")) {
-                    return new SMTCallSimple("bsqobject_float_value", [oexp]);
-                }
-                else if (this.isType(into, "NSCore::Decimal")) {
-                    return new SMTCallSimple("bsqobject_decimal_value", [oexp]);
-                }
-                else if (this.isType(into, "NSCore::Rational")) {
-                    return new SMTCallSimple("bsqobject_rational_value", [oexp]);
-                }
-                else if (this.isType(into, "NSCore::Regex")) {
-                    return new SMTCallSimple("bsqobject_regex_value", [oexp]);
-                }
-                else if (this.isUniqueTupleType(into)) {
-                    return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
-                }
-                else if (this.isUniqueRecordType(into)) {
-                    return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
-                }
-                else {
-                    assert(this.isUniqueEntityType(into));
-
-                    return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
-                }
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
     }
 
-    coerce(exp: SMTExp, from: MIRType, into: MIRType): SMTExp {
-        const smtfrom = this.getSMTTypeFor(from);
-        const smtinto = this.getSMTTypeFor(into);
+    private coerceFromHeapToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+        const iccptype = this.getICCPTypeData(into);
+        if(iccptype.tkind === ICCPTypeKind.Register) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+        else if(iccptype.tkind === ICCPTypeKind.Struct || iccptype.tkind === ICCPTypeKind.String) {
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+        else {
+            assert(iccptype.tkind === ICCPTypeKind.Ref);
+
+            if(sguard !== undefined) {
+                return ICCPOpEmitter.genGuardedExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
+            else {
+                return ICCPOpEmitter.genExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+    }
+
+    private coerceSameRepr(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+        const iccpinto = this.getICCPTypeData(into);
+
+        if(iccpinto.tkind !== ICCPTypeKind.InlineUnion) {
+            if(iccpinto.tkind === ICCPTypeKind.Register) {
+            return xxxx;
+            }
+            else if(iccpinto.tkind === ICCPTypeKind.Struct || iccpinto.tkind === ICCPTypeKind.String) {
+                return xxxx;
+            }
+            else {
+                ICCPOpEmitter.genDir
+            }
+        }
+        else {
+            const iccpfrom = this.getICCPTypeData(from);
+            if(iccpinto.allocinfo.sldatasize === iccpfrom.allocinfo.sldatasize) {
+                xxxx;
+                return ICCPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize);
+            }
+            else if (iccpinto.allocinfo.sldatasize < iccpfrom.allocinfo.sldatasize) {
+                xxxx;
+                return ICCPOpEmitter.genNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+            else {
+                xxxx;
+                return ICCPOpEmitter.genWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+            }
+        }
+
+    }
+
+    coerce(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+        const iccpfrom = this.getICCPTypeData(from);
+        const iccpinto = this.getICCPTypeData(into);
+
+        if(iccpfrom.tkind === iccpinto.tkind) {
+
+        }
 
         if (smtfrom.name === smtinto.name) {
             return exp;

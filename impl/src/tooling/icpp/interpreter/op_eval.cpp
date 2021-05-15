@@ -371,6 +371,42 @@ void Evaluator::evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* 
 }
 
 template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalDirectAssignRegisterOp(const DirectAssignOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto srcl = this->evalArgument(op->arg);
+        auto isl = this->evalTargetVar(op->trgt);
+
+        SLPTR_COPY_CONTENTS(isl, srcl, op->size);
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void Evaluator::evalDirectAssignStructuralOp(const DirectAssignOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto srcl = this->evalArgument(op->arg);
+        auto isl = this->evalTargetVar(op->trgt);
+
+        SLPTR_COPY_CONTENTS(isl, srcl, op->size);
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
+void evalDirectAssignReferenceOp(const DirectAssignOp<tag, isGuarded>* op)
+{
+    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    {
+        auto srcl = this->evalArgument(op->arg);
+        auto isl = this->evalTargetVar(op->trgt);
+
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(srcl));
+    }
+}
+
+template <OpCodeTag tag, bool isGuarded>
 void Evaluator::evalWidenInlineOp(const BoxOp<tag, isGuarded>* op)
 {
     if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
@@ -1013,6 +1049,18 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalExtractInlineBoxFromHeapOp(static_cast<const ExtractOp<OpCodeTag::ExtractInlineBoxFromHeapOp, false>*>(op));
     }
+    case OpCodeTag::DirectAssignRegisterOp:
+    {
+        this->evalDirectAssignRegisterOp(static_cast<const DirectAssignOp<OpCodeTag::DirectAssignRegisterOp, false>*>(op));
+    }
+    case OpCodeTag::DirectAssignValueOp:
+    {
+        this->evalDirectAssignStructuralOp(static_cast<const DirectAssignOp<OpCodeTag::DirectAssignValueOp, false>*>(op));
+    }
+    case OpCodeTag::DirectAssignRefOp:
+    {
+        this->evalDirectAssignReferenceOp(static_cast<const DirectAssignOp<OpCodeTag::DirectAssignRefOp, false>*>(op));
+    }
     case OpCodeTag::WidenInlineOp:
     {
         this->evalWidenInlineOp(static_cast<const BoxOp<OpCodeTag::WidenInlineOp, false>*>(op));
@@ -1076,6 +1124,18 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::GuardedExtractInlineBoxFromHeapOp:
     {
         this->evalExtractInlineBoxFromHeapOp(static_cast<const ExtractOp<OpCodeTag::GuardedExtractInlineBoxFromHeapOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedDirectAssignRegisterOp:
+    {
+        this->evalDirectAssignRegisterOp(static_cast<const DirectAssignOp<OpCodeTag::GuardedDirectAssignRegisterOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedDirectAssignValueOp:
+    {
+        this->evalDirectAssignStructuralOp(static_cast<const DirectAssignOp<OpCodeTag::GuardedDirectAssignValueOp, true>*>(op));
+    }
+    case OpCodeTag::GuardedDirectAssignRefOp:
+    {
+        this->evalDirectAssignReferenceOp(static_cast<const DirectAssignOp<OpCodeTag::GuardedDirectAssignRefOp, true>*>(op));
     }
     case OpCodeTag::GuardedWidenInlineOp:
     {

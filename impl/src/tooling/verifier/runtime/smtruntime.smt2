@@ -158,6 +158,9 @@
       (bsqkey_bigint@box (bsqkey_bigint_value BBigInt))
       (bsqkey_bignat@box (bsqkey_bignat_value BBigNat))
       (bsqkey_string@box (bsqkey_string_value BString))
+      (bsqkey_logicaltime@box (bsqkey_logicaltime_value Int))
+      (bsqkey_uuid@box (bsqkey_uuid_value String))
+      (bsqkey_contenthash@box (bsqkey_contenthash_value Int))
       ;;KEY_TUPLE_TYPE_BOXING;;
       ;;KEY_RECORD_TYPE_BOXING;;
       ;;KEY_TYPE_BOXING;;
@@ -196,6 +199,18 @@
   (str.< (bsqkey_string_value k1) (bsqkey_string_value k2))
 )
 
+(define-fun bsqkey_logicaltime@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
+  (< (bsqkey_logicaltime_value k1) (bsqkey_logicaltime_value k2))
+)
+
+(define-fun bsqkey_uuid@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
+  (str.< (bsqkey_uuid_value k1) (bsqkey_uuid_value k2))
+)
+
+(define-fun bsqkey_contenthash@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
+  (< (bsqkey_contenthash_value k1) (bsqkey_contenthash_value k2))
+)
+
 ;;
 ;; Any Concept datatypes
 ;;
@@ -217,6 +232,9 @@
       (bsqobject_float@box (bsqobject_float_value BFloat))
       (bsqobject_decimal@box (bsqobject_decimal_value BDecimal))
       (bsqobject_rational@box (bsqobject_rational_value BRational))
+      (bsqobject_stringpos@box (bsqobject_stringpos_value Int))
+      (bsqobject_bytebuffer@box (bsqobject_bytebuffer_value (Seq (_ BitVec 8))))
+      (bsqobject_isotime@box (bsqobject_isotime_value Int))
       (bsqobject_regex@box (bsqobject_regex_value bsq_regex))
       ;;TUPLE_TYPE_BOXING;;
       ;;RECORD_TYPE_BOXING;;
@@ -283,6 +301,10 @@
 (declare-fun BDecimal@UFCons_API ((Seq BNat)) BDecimal)
 (declare-fun BRational@UFCons_API ((Seq BNat)) BRational)
 (declare-fun BString@UFCons_API ((Seq BNat)) BString)
+(declare-fun BISOTime@UFCons_API ((Seq BNat)) Int)
+(declare-fun BLogicalTime@UFCons_API ((Seq BNat)) Int)
+(declare-fun BUUID@UFCons_API ((Seq BNat)) String)
+(declare-fun BContentHash@UFCons_API ((Seq BNat)) Int)
 
 (declare-fun ListSize@UFCons_API ((Seq BNat)) BNat)
 

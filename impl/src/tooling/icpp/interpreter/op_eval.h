@@ -290,6 +290,15 @@ private:
     void evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>
+    void evalDirectAssignRegisterOp(const DirectAssignOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalDirectAssignStructuralOp(const DirectAssignOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
+    void evalDirectAssignReferenceOp(const DirectAssignOp<tag, isGuarded>* op);
+
+    template <OpCodeTag tag, bool isGuarded>
     void evalWidenInlineOp(const BoxOp<tag, isGuarded>* op);
 
     template <OpCodeTag tag, bool isGuarded>

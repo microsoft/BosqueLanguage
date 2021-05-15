@@ -54,8 +54,13 @@ enum class OpCodeTag
     ExtractUniqueStructOrStringFromHeapOp,
     ExtractUniqueRefFromHeapOp,
     ExtractInlineBoxFromHeapOp,
+
+    DirectAssignRegisterOp,
+    DirectAssignValueOp,
+    DirectAssignRefOp,
     WidenInlineOp,
     NarrowInlineOp,
+
     GuardedBoxUniqueRegisterToInlineOp,
     GuardedBoxUniqueStructOrStringToInlineOp,
     GuardedBoxUniqueRefToInlineOp,
@@ -70,6 +75,10 @@ enum class OpCodeTag
     GuardedExtractUniqueStructOrStringFromHeapOp,
     GuardedExtractUniqueRefFromHeapOp,
     GuardedExtractInlineBoxFromHeapOp,
+
+    GuardedDirectAssignRegisterOp,
+    GuardedDirectAssignValueOp,
+    GuardedDirectAssignRefOp,
     GuardedWidenInlineOp,
     GuardedNarrowInlineOp,
 
@@ -295,6 +304,21 @@ public:
 
     LoadUnintVariableValueOp(SourceInfo sinfo, TargetVar trgt, BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
     virtual ~LoadUnintVariableValueOp() {;}
+};
+
+
+template <OpCodeTag tag, bool isGuarded>
+class DirectAssignOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* intotype;
+    const Argument arg;
+    const uint32_t size;
+    const BSQStatementGuard sguard;
+
+    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, uint32_t size, const BSQStatementGuard& sguard) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), size(size), sguard(sguard) {;}
+    virtual ~DirectAssignOp() {;}
 };
 
 template <OpCodeTag tag, bool isGuarded>
