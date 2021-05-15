@@ -3,88 +3,34 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+
+import { ICCPType, ICCPTypeEntity, ICCPTypeEphemeralList, ICCPTypeHeapUnion, ICCPTypeInlineUnion, ICCPTypeKind, ICCPTypePrimitive, ICCPTypeRecord, ICCPTypeSizeInfo, ICCPTypeTuple, RefMask, TranspilerOptions } from "./iccp_assembly";
 
 import * as assert from "assert";
 
 const ICCP_WORD_SIZE = 8;
 
-type TranspilerOptions = {
-};
-
-enum ICCPTypeKind
-{
-    Invalid = "BSQTypeKind::Invalid",
-    Register = "BSQTypeKind::Register",
-    Struct = "BSQTypeKind::Struct",
-    String = "BSQTypeKind::String",
-    Ref = "BSQTypeKind::Ref",
-    InlineUnion = "BSQTypeKind::InlineUnion",
-    HeapUnion = "BSQTypeKind::HeapUnion"
-}
-
-type RefMask = string;
-
-class ICCPTypeSizeInfo {
-    readonly heapsize: number;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
-    readonly sldatasize: number; //number of bytes needed in storage location for this -- 4 bytes for refs, same as heap size for others
-    readonly slfullsize: number; //number of bytes + typeptr tag if needed in storage location for this -- inline union is bigger
-
-    readonly slmask: RefMask; //The mask to use to traverse this object (even if this isn't a mixed obj -- e.g. it may be embedded in a mixed obj and we need to use this)   
-
-    constructor(heapsize: number, sldatasize: number, slfullsize: number, slmask: RefMask) {
-        this.heapsize = heapsize;
-        this.sldatasize = sldatasize;
-        this.slfullsize = slfullsize;
-        this.slmask = slmask;
-    }
-}
-
-class ICCPTypeData {
-    readonly name: string;
-    readonly tkey: MIRResolvedTypeKey;
-    readonly tkind: ICCPTypeKind;
-    
-    readonly allocinfo: ICCPTypeSizeInfo; //memory size information
-    
-    readonly isLeafType: boolean; //if refmask == undefined && ptrcount == 0
-    readonly refmask: RefMask | undefined;
-    readonly ptrcount: number; //if this is a packed object the number of pointers at the front
-
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
-        this.name = name;
-        this.tkey = tkey;
-        this.tkind = tkind;
-        this.allocinfo = allocinfo;
-        this.isLeafType = isLeafType;
-        this.refmask = refmask;
-        this.ptrcount = ptrcount;
-    }
-}
+const UNIVERSAL_CONCEPTS = [
+    "NSCore::Any",
+    "NSCore::Some",
+    "NSCore::KeyType",
+    "NSCore::PODType",
+    "NSCore::APIValue",
+    "NSCore::APIType",
+    "NSCore::Object"
+];
 
 class ICCPTypeEmitter {
     readonly topts: TranspilerOptions;
     readonly assembly: MIRAssembly;
-
-    private mangledNameMap: Map<string, string> = new Map<string, string>();
     
-    private typeDataMap: Map<MIRResolvedTypeKey, ICCPTypeData> = new Map<MIRResolvedTypeKey, ICCPTypeData>();
+    private typeDataMap: Map<MIRResolvedTypeKey, ICCPType> = new Map<MIRResolvedTypeKey, ICCPType>();
 
     constructor(assembly: MIRAssembly, topts: TranspilerOptions, mangledNameMap?: Map<string, string>) {
         this.assembly = assembly;
         this.topts = topts;
-
-        this.mangledNameMap = mangledNameMap || new Map<string, string>();
-    }
-
-    mangle(name: string): string {
-        if (!this.mangledNameMap.has(name)) {
-            const cleanname = name.replace(/\W/g, "_").toLowerCase() + "I" + this.mangledNameMap.size + "I";
-            this.mangledNameMap.set(name, cleanname);
-        }
-
-        return this.mangledNameMap.get(name) as string;
     }
 
     getMIRType(tkey: MIRResolvedTypeKey): MIRType {
@@ -115,145 +61,313 @@ class ICCPTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    getBSQTypeData(tt: MIRType): ICCPTypeData {
-        if(this.typeDataMap.has(tt.trkey)) {
-            return this.typeDataMap.get(tt.trkey) as ICCPTypeData;
-        }
+    isTypeLeafEntry(iccptype: ICCPType): boolean {
+        return iccptype.isLeafType && (iccptype.tkind === ICCPTypeKind.Register || iccptype.tkind === ICCPTypeKind.Struct || iccptype.tkind === ICCPTypeKind.InlineUnion);
+    }
 
-        let iidata: ICCPTypeData | undefined = undefined;
-        if (this.isType(tt, "NSCore::None")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQNone", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::Bool")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQBool", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::Int")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQInt", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::Nat")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQNat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::BigInt")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQBigInt", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::BigNat")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQBigNat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::Float")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQFloat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::Decimal")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQDecimal", ICCPTypeKind.Register, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQRational", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, "111"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::StringPos")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQStringIterator", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, "31121"), false, "31121", 0); 
-        }
-        else if (this.isType(tt, "NSCore::String")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQString", ICCPTypeKind.String, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "31"), false, undefined, 0);
-        }
-        else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQByteBuffer", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(34*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), false, undefined, 1);
-        }
-        else if(this.isType(tt, "NSCore::ISOTime")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQISOTime", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if(this.isType(tt, "NSCore::LogicalTime")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQLogicalTime", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
-        }
-        else if(this.isType(tt, "NSCore::UUID")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQUUID", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
-        }
-        else if(this.isType(tt, "NSCore::ContentHash")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQContentHash", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(64*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
-        }
-        else if (this.isType(tt, "NSCore::Regex")) {
-            iidata = new ICCPTypeData(tt.trkey, "BSQRegex", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
-        }
-        else if(this.isUniqueTupleType(tt)) {
-            const iccpentries = (tt.options[0] as MIRTupleType).entries.map((entry) => this.getBSQTypeData(entry.type));
+    private computeStructuralTypeLayoutInfoFromTypeList(tl: ICCPType[]): [ICCPTypeSizeInfo, boolean, number, RefMask | undefined, number[]] {
+        let sldatasize = 0;
+        let slmask = "";
 
-            let typekind = ICCPTypeKind.Invalid;
+        let isleaf = true;
+        let refmask: string | undefined = "";
+        let ptrcount = 0;
 
-            let heapsize = 0;
-            let sldatasize = 0;
-            let slfullsize = 0;
-            let slmask = "";     
-        
-            let isleaf = true;
-            let refmask: string | undefined = "";
-            let ptrcount = 0;
+        let toffsets: number[] = [];
+        let coffset = 0;
+        tl.forEach((entry, pos) => {
+            sldatasize += entry.allocinfo.slfullsize;
+            slmask += entry.allocinfo.slmask;
 
-            if((tt.options[0] as MIRTupleType).isvalue) {
-                typekind = ICCPTypeKind.Struct;
-
-                iccpentries.forEach((entry, pos) => {
-                    heapsize += entry.allocinfo.heapsize;
-                    sldatasize += entry.allocinfo.sldatasize;
-                    slfullsize += entry.allocinfo.slfullsize;
-                    slmask += entry.allocinfo.slmask;
-
-                    isleaf = isleaf && entry.isLeafType;
-                    refmask += entry.allocinfo.slmask;
-                    if(ptrcount !== -1) {
-                        if(ptrcount === pos && (entry.tkind === ICCPTypeKind.Ref || entry.tkind === ICCPTypeKind.HeapUnion)) {
-                            ptrcount++;
-                        }
-                        else {
-                            ptrcount = -1;
-                        }
-                    }
-                });
-            }
-            else {
-                typekind = ICCPTypeKind.Ref;
-                
-                iccpentries.forEach((entry, pos) => {
-                    heapsize += entry.allocinfo.heapsize;
-
-                    isleaf = isleaf && entry.isLeafType;
-                    refmask += entry.allocinfo.slmask;
-                    if(ptrcount !== -1) {
-                        if(ptrcount === pos && (entry.tkind === ICCPTypeKind.Ref || entry.tkind === ICCPTypeKind.HeapUnion)) {
-                            ptrcount++;
-                        }
-                        else {
-                            ptrcount = -1;
-                        }
-                    }
-                });
-
-                sldatasize = ICCP_WORD_SIZE;
-                slfullsize = ICCP_WORD_SIZE;
-                slmask += "2";
+            isleaf = isleaf && this.isTypeLeafEntry(entry);
+            refmask += entry.allocinfo.slmask;
+            if (ptrcount !== -1) {
+                if (ptrcount === pos && (entry.tkind === ICCPTypeKind.Ref || entry.tkind === ICCPTypeKind.HeapUnion)) {
+                    ptrcount++;
+                }
+                else {
+                    ptrcount = -1;
+                }
             }
 
-            const tsinfo = new ICCPTypeSizeInfo(heapsize, sldatasize, slfullsize, slmask);
+            toffsets.push(coffset);
+            coffset += entry.allocinfo.slfullsize;
+        });
 
-            if(isleaf) {
-                refmask = undefined;
-            }
-            const rmask = refmask.length !== 0 ? refmask.join("") : undefined;
-            return iidata = new ICCPTypeData(tt.trkey, this.mangle(tt.trkey), typekind, tsinfo, isleaf, rmask, ptrcount);
+        if (isleaf) {
+            assert(ptrcount === 0);
+            refmask = undefined;
         }
-        else if(this.isUniqueRecordType(tt)) {
-            return this.mangle(tt.trkey);
-        }
-        else if(this.isUniqueEntityType(tt)) {
-            return this.mangle(tt.trkey);
-        }
-        else if (this.isUniqueEphemeralType(tt)) {
-            return this.mangle(tt.trkey);
+        else if (ptrcount > 0) {
+            assert(!isleaf);
+            refmask = undefined;
         }
         else {
-            xxxx; //compute 
-            return new SMTType("BTerm");
+            assert(!isleaf);
+            ptrcount = 0;
         }
 
-        this.typeDataMap.set(tt.trkey, iidata as ICCPTypeData);
-        return this.typeDataMap.get(tt.trkey) as ICCPTypeData;
+        return [new ICCPTypeSizeInfo(sldatasize, sldatasize, sldatasize, slmask), isleaf, ptrcount, refmask, toffsets];
+    }
+
+    private computeInlineUnionTypeLayoutInfoFromTypeList(tl: ICCPType[]): [ICCPTypeSizeInfo, boolean] {
+        let sldatasize = 0;
+        let slmask = "4";
+
+        let isleaf = true;
+
+        tl.forEach((entry) => {
+            sldatasize += entry.allocinfo.slfullsize;
+            for(let i = 0; i < entry.allocinfo.slmask.length; ++i) {
+                slmask += "1";
+            }
+
+            isleaf = isleaf && this.isTypeLeafEntry(entry);
+        });
+
+        return [new ICCPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICCP_WORD_SIZE, slmask), isleaf];
+    }
+
+    private computeReferenceTypeLayoutInfoFromTypeList(tl: ICCPType[]): [ICCPTypeSizeInfo, boolean, number, RefMask | undefined, number[]] {
+        let heapsize = 0;
+
+        let isleaf = true;
+        let refmask: string | undefined = "";
+        let ptrcount = 0;
+
+        let toffsets: number[] = [];
+        let coffset = 0;
+        tl.forEach((entry, pos) => {
+            heapsize += entry.allocinfo.slfullsize;
+
+            isleaf = isleaf && this.isTypeLeafEntry(entry);
+            refmask += entry.allocinfo.slmask;
+            if (ptrcount !== -1) {
+                if (ptrcount === pos && (entry.tkind === ICCPTypeKind.Ref || entry.tkind === ICCPTypeKind.HeapUnion)) {
+                    ptrcount++;
+                }
+                else {
+                    ptrcount = -1;
+                }
+            }
+
+            toffsets.push(coffset);
+            coffset += entry.allocinfo.slfullsize;
+        });
+
+        if (isleaf) {
+            assert(ptrcount === 0);
+            refmask = undefined;
+        }
+        else if (ptrcount > 0) {
+            assert(!isleaf);
+            refmask = undefined;
+        }
+        else {
+            assert(!isleaf);
+            ptrcount = 0;
+        }
+
+        return [new ICCPTypeSizeInfo(heapsize, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), isleaf, ptrcount, refmask, toffsets];
+    }
+
+    private computeHeapUnionTypeLayoutInfoFromTypeList(tl: ICCPType[]): ICCPTypeSizeInfo {
+        let sldatasize = 0;
+
+        tl.forEach((entry) => {
+            sldatasize += entry.allocinfo.slfullsize;
+        });
+
+        return new ICCPTypeSizeInfo(sldatasize, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2");
+    }
+
+    private getICCPTypeForTuple(tt: MIRTupleType): ICCPType {
+        const isuniontuple = tt.entries.some((entry) => entry.isOptional);
+        const iccpentries = tt.entries.map((entry) => this.getICCPTypeData(entry.type));
+
+        if(tt.isvalue) {
+            if(isuniontuple) {
+                const [utdata, isleaf] = this.computeInlineUnionTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeInlineUnion(tt.trkey, tt.trkey, utdata, isleaf)
+            }
+            else {
+                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeTuple(tt.trkey, tt.trkey, ICCPTypeKind.Struct, udata, isleaf, rmask, ptrcount, tt.entries.length, tt.entries.map((entry) => entry.type.trkey), offsets);
+            }
+        }
+        else {
+            if(isuniontuple) {
+                const udata = this.computeHeapUnionTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeHeapUnion(tt.trkey, tt.trkey, udata);
+            }
+            else {
+                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeReferenceTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeTuple(tt.trkey, tt.trkey, ICCPTypeKind.Ref, udata, isleaf, rmask, ptrcount, tt.entries.length, tt.entries.map((entry) => entry.type.trkey), offsets);
+            }
+        }
+    }
+
+    private getICCPTypeForRecord(tt: MIRRecordType): ICCPType {
+        const isunionrecord = tt.entries.some((entry) => entry.isOptional);
+        const iccpentries = tt.entries.map((entry) => this.getICCPTypeData(entry.type));
+
+        if(tt.isvalue) {
+            if(isunionrecord) {
+                const [utdata, isleaf] = this.computeInlineUnionTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeInlineUnion(tt.trkey, tt.trkey, utdata, isleaf)
+            }
+            else {
+                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeRecord(tt.trkey, tt.trkey, ICCPTypeKind.Struct, udata, isleaf, rmask, ptrcount, tt.entries.map((entry) => entry.name), tt.entries.map((entry) => entry.type.trkey), offsets);
+            }
+        }
+        else {
+            if(isunionrecord) {
+                const udata = this.computeHeapUnionTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeHeapUnion(tt.trkey, tt.trkey, udata);
+            }
+            else {
+                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeReferenceTypeLayoutInfoFromTypeList(iccpentries);
+                return new ICCPTypeRecord(tt.trkey, tt.trkey, ICCPTypeKind.Ref, udata, isleaf, rmask, ptrcount, tt.entries.map((entry) => entry.name), tt.entries.map((entry) => entry.type.trkey), offsets);
+            }
+        }
+    }
+
+    private getICCPTypeForEntity(tt: MIREntityTypeDecl): ICCPType {
+        const iccpentries = tt.fields.map((f) => this.getICCPTypeData(this.getMIRType(f.declaredType)));
+
+        if (tt.attributes.includes("struct")) {
+            const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
+            return new ICCPTypeEntity(tt.tkey, tt.tkey, ICCPTypeKind.Struct, udata, isleaf, rmask, ptrcount, tt.fields.map((f) => f.fkey), tt.fields.map((f) => f.declaredType), offsets);
+        }
+        else {
+            const [udata, isleaf, ptrcount, rmask, offsets] = this.computeReferenceTypeLayoutInfoFromTypeList(iccpentries);
+            return new ICCPTypeEntity(tt.tkey, tt.tkey, ICCPTypeKind.Ref, udata, isleaf, rmask, ptrcount, tt.fields.map((f) => f.fkey), tt.fields.map((f) => f.declaredType), offsets);
+        }
+    }
+
+    getICCPTypeData(tt: MIRType): ICCPType {
+        if(this.typeDataMap.has(tt.trkey)) {
+            return this.typeDataMap.get(tt.trkey) as ICCPType;
+        }
+
+        let iidata: ICCPType | undefined = undefined;
+        if (this.isType(tt, "NSCore::None")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQNone", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::Bool")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQBool", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::Int")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQInt", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::Nat")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQNat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::BigInt")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQBigInt", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::BigNat")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQBigNat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::Float")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQFloat", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::Decimal")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQDecimal", ICCPTypeKind.Register, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::Rational")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQRational", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, "111"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::StringPos")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQStringIterator", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, "31121"), false, "31121", 0); 
+        }
+        else if (this.isType(tt, "NSCore::String")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQString", ICCPTypeKind.String, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "31"), false, undefined, 0);
+        }
+        else if (this.isType(tt, "NSCore::ByteBuffer")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQByteBuffer", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(34*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), false, undefined, 1);
+        }
+        else if(this.isType(tt, "NSCore::ISOTime")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQISOTime", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if(this.isType(tt, "NSCore::LogicalTime")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQLogicalTime", ICCPTypeKind.Register, new ICCPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+        }
+        else if(this.isType(tt, "NSCore::UUID")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQUUID", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
+        }
+        else if(this.isType(tt, "NSCore::ContentHash")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQContentHash", ICCPTypeKind.Ref, new ICCPTypeSizeInfo(64*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
+        }
+        else if (this.isType(tt, "NSCore::Regex")) {
+            iidata = new ICCPTypePrimitive(tt.trkey, "BSQRegex", ICCPTypeKind.Struct, new ICCPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
+        }
+        else if(this.isUniqueTupleType(tt)) {
+            iidata = this.getICCPTypeForTuple(tt.options[0] as MIRTupleType);
+        }
+        else if(this.isUniqueRecordType(tt)) {
+            iidata = this.getICCPTypeForRecord(tt.options[0] as MIRRecordType);
+        }
+        else if(this.isUniqueEntityType(tt)) {
+            iidata = this.getICCPTypeForEntity(this.assembly.entityDecls.get(tt.options[0].trkey) as MIREntityTypeDecl);
+        }
+        else if (this.isUniqueEphemeralType(tt)) {
+            const iccpentries = (tt.options[0] as MIREphemeralListType).entries.map((entry) => this.getICCPTypeData(entry));
+            const etypes =  (tt.options[0] as MIREphemeralListType).entries.map((entry) => entry.trkey);
+
+            const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
+            iidata = new ICCPTypeEphemeralList(tt.trkey, tt.trkey, ICCPTypeKind.Struct, udata, isleaf, rmask, ptrcount, etypes, offsets);
+        }
+        else {
+            //It is a true union
+            if (tt.options.length !== 1) {
+                const utypes = tt.options.map((opt) => this.getICCPTypeData(this.getMIRType(opt.trkey)));
+
+                if (utypes.some((iccptype) => iccptype.allocinfo.heapsize === -2)) {
+                    iidata = new ICCPTypeHeapUnion(tt.trkey, tt.trkey, new ICCPTypeSizeInfo(-2, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                }
+                else {
+                    if (utypes.every((ut) => ut.tkind === ICCPTypeKind.Ref || ut.tkind === ICCPTypeKind.HeapUnion)) {
+                        iidata = new ICCPTypeHeapUnion(tt.trkey, tt.trkey, ,);
+                    }
+                    else {
+                        iidata = new ICCPTypeInlineUnion(tt.trkey, tt.trkey,);
+                    }
+                }
+            }
+            else {
+                //if is a tuple or record with optional slots OR a concept
+                const opt = tt.options[0];
+
+                if(opt instanceof MIRTupleType) {
+                    iidata = this.getICCPTypeForTuple(opt);
+                }
+                else if(opt instanceof MIRRecordType) {
+                    iidata = this.getICCPTypeForRecord(opt);
+                }
+                else {
+                    assert(opt instanceof MIRConceptType);
+                    if(UNIVERSAL_CONCEPTS.includes(opt.trkey)) {
+                        iidata = new ICCPTypeHeapUnion(opt.trkey, opt.trkey, new ICCPTypeSizeInfo(-2, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                    }
+                    else {
+                        const isref = (opt as MIRConceptType).ckeys.some((cpt) => !(this.assembly.conceptDecls.get(cpt) as MIRConceptTypeDecl).attributes.includes("struct"));
+
+                        //if is ref or struct and then need to process over all 
+                        if(isref) {
+                            iidata new ICCPTypeHeapUnion(opt.trkey, opt.trkey, new ICCPTypeSizeInfo(-1, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                        }
+                        else {
+                            xxxx;
+                        }
+                    }
+                }   
+            }
+        }
+
+        this.typeDataMap.set(tt.trkey, iidata as ICCPType);
+        return this.typeDataMap.get(tt.trkey) as ICCPType;
     }
 
     getSMTTypeTag(tt: MIRType): string {
@@ -681,7 +795,5 @@ class ICCPTypeEmitter {
 
 export {
     ICCP_WORD_SIZE,
-    TranspilerOptions,
-    RefMask, ICCPTypeKind, ICCPTypeSizeInfo, ICCPTypeData,
     ICCPTypeEmitter
 };

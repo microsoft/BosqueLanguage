@@ -200,42 +200,42 @@ class BSQTupleType : public BSQType
 {
 public:
     const BSQTupleIndex maxIndex;
-    const std::vector<BSQType*> ttypes;
+    const std::vector<BSQTypeID> ttypes;
     const std::vector<size_t> idxoffsets;
 
     //Constructor for leaf type
     BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, 
-                BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor for key leaf type
     BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name, 
-                BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with ptrcount
     BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
-                BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with key ptrcount
     BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
-                BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor for general refmask
     BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
-                BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, vtable, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with key general refmask
     BSQTupleType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
-                BSQTupleIndex maxIndex, std::vector<BSQType*> ttypes, std::vector<size_t> idxoffsets)
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, vtable, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
     {;}
 
@@ -248,42 +248,42 @@ class BSQRecordType : public BSQType
 {
 public:
     const std::vector<BSQRecordPropertyID> properties;
-    const std::vector<BSQType*> rtypes;
+    const std::vector<BSQTypeID> rtypes;
     const std::vector<size_t> propertyoffsets;
 
     //Constructor for leaf type
     BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
-                std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
+                std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets)
     : BSQType(tid, tkind, allocinfo, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor for key leaf type
     BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
-                std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
+                std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets)
     : BSQType(tid, tkind, allocinfo, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor with ptrcount
     BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
-                 std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
+                 std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor with key ptrcount
     BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
-                std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
+                std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor for general refmask
     BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name,
-                std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
+                std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, vtable, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
     //Constructor with key general refmask
     BSQRecordType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
-                std::vector<BSQRecordPropertyID> properties, std::vector<BSQType*> rtypes, std::vector<size_t> propertyoffsets)
+                std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, vtable, fpKeyEqual, fpKeyLess, recordDisplay_impl, name), properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
     {;}
 
@@ -296,42 +296,42 @@ class BSQEntityType : public BSQType
 {
 public:
     const std::vector<BSQFieldID> fields;
-    const std::vector<BSQType*> ftypes;
+    const std::vector<BSQTypeID> ftypes;
     const std::vector<size_t> fieldoffsets;
 
     //Constructor for leaf type
     BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
-                std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
+                std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets)
     : BSQType(tid, tkind, allocinfo, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor for key leaf type
     BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
-                std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
+                std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets)
     : BSQType(tid, tkind, allocinfo, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor with ptrcount
     BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
-                 std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
+                 std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor with key ptrcount
     BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
-                std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
+                std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor for general refmask
     BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name,
-                std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
+                std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, vtable, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
     //Constructor with key general refmask
     BSQEntityType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name,
-                std::vector<BSQFieldID> fields, std::vector<BSQType*> ftypes, std::vector<size_t> fieldoffsets)
+                std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
@@ -348,21 +348,21 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 class BSQEphemeralListType : public BSQType
 {
 public:
-    const std::vector<BSQType*> etypes;
+    const std::vector<BSQTypeID> etypes;
     const std::vector<size_t> idxoffsets;
 
     //Constructor for leaf type
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor with ptrcount
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, ptrcount, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     //Constructor for general refmask
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, std::vector<BSQType*> etypes, std::vector<size_t> idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets)
     : BSQType(tid, tkind, allocinfo, refmask, {}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
