@@ -329,10 +329,17 @@ class ICCPTypeEmitter {
                 }
                 else {
                     if (utypes.every((ut) => ut.tkind === ICCPTypeKind.Ref || ut.tkind === ICCPTypeKind.HeapUnion)) {
-                        iidata = new ICCPTypeHeapUnion(tt.trkey, tt.trkey, ,);
+                        iidata = new ICCPTypeHeapUnion(tt.trkey, tt.trkey, new ICCPTypeSizeInfo(-1, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
                     }
                     else {
-                        iidata = new ICCPTypeInlineUnion(tt.trkey, tt.trkey,);
+                        const sldatasize = Math.max(...utypes.map((ut) => ut.allocinfo.slfullsize));
+                        
+                        let slmask = "4";
+                        for(let i = 0; i < sldatasize / ICCP_WORD_SIZE; ++i) {
+                            slmask += "1";
+                        }
+                    
+                        iidata = new ICCPTypeInlineUnion(tt.trkey, tt.trkey, new ICCPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICCP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
                     }
                 }
             }
@@ -356,11 +363,22 @@ class ICCPTypeEmitter {
 
                         //if is ref or struct and then need to process over all 
                         if(isref) {
-                            iidata new ICCPTypeHeapUnion(opt.trkey, opt.trkey, new ICCPTypeSizeInfo(-1, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                            iidata = new ICCPTypeHeapUnion(opt.trkey, opt.trkey, new ICCPTypeSizeInfo(-1, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
                         }
                         else {
-                            xxxx;
-                        }
+                            const utypes = [...this.assembly.entityDecls]
+                                .filter((edecl) => this.assembly.subtypeOf(this.getMIRType(edecl[0]), tt))
+                                .map((edecl) => this.getICCPTypeData(this.getMIRType(edecl[0])));
+                             
+                                const sldatasize = Math.max(...utypes.map((ut) => ut.allocinfo.slfullsize));
+                        
+                                let slmask = "4";
+                                for(let i = 0; i < sldatasize / ICCP_WORD_SIZE; ++i) {
+                                    slmask += "1";
+                                }
+                            
+                                iidata = new ICCPTypeInlineUnion(tt.trkey, tt.trkey, new ICCPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICCP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
+                            }
                     }
                 }   
             }
@@ -368,75 +386,6 @@ class ICCPTypeEmitter {
 
         this.typeDataMap.set(tt.trkey, iidata as ICCPType);
         return this.typeDataMap.get(tt.trkey) as ICCPType;
-    }
-
-    getSMTTypeTag(tt: MIRType): string {
-        if (this.isType(tt, "NSCore::None")) {
-            return "TypeTag_None";
-        }
-        else if (this.isType(tt, "NSCore::Bool")) {
-            return "TypeTag_Bool";
-        }
-        else if (this.isType(tt, "NSCore::Int")) {
-            return "TypeTag_Int";
-        }
-        else if (this.isType(tt, "NSCore::Nat")) {
-            return "TypeTag_Nat";
-        }
-        else if (this.isType(tt, "NSCore::BigInt")) {
-            return "TypeTag_BigInt";
-        }
-        else if (this.isType(tt, "NSCore::BigNat")) {
-            return "TypeTag_BigNat";
-        }
-        else if (this.isType(tt, "NSCore::Float")) {
-            return "TypeTag_Float";
-        }
-        else if (this.isType(tt, "NSCore::Decimal")) {
-            return "TypeTag_Decimal";
-        }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            return "TypeTag_Rational";
-        }
-        else if (this.isType(tt, "NSCore::String")) {
-            return "TypeTag_String";
-        }
-        else if (this.isType(tt, "NSCore::Regex")) {
-            return "TypeTag_Regex";
-        }
-        else if (this.isUniqueTupleType(tt)) {
-            return `TypeTag_${this.mangle(tt.trkey)}`;
-        }
-        else if (this.isUniqueRecordType(tt)) {
-            return `TypeTag_${this.mangle(tt.trkey)}`;
-        }
-        else {
-            assert(this.isUniqueEntityType(tt), "Should not be other options")
-            return `TypeTag_${this.mangle(tt.trkey)}`;
-        }
-    }
-
-    getSMTConstructorName(tt: MIRType): { cons: string, box: string, bfield: string } {
-        assert(!(this.isType(tt, "NSCore::None") || this.isType(tt, "NSCore::Bool") 
-            || this.isType(tt, "NSCore::Int") || this.isType(tt, "NSCore::Nat") || this.isType(tt, "NSCore::BigInt") || this.isType(tt, "NSCore::BigNat") 
-            || this.isType(tt, "NSCore::Float") || this.isType(tt, "NSCore::Decimal") || this.isType(tt, "NSCore::Rational")
-            || this.isType(tt, "NSCore::String") || this.isType(tt, "NSCore::Regex")), "Special types should be constructed in special ways");
-
-
-        const kfix = this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType")) ? "bsqkey_" : "bsqobject_"
-        if (this.isUniqueTupleType(tt)) {
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
-        }
-        else if (this.isUniqueRecordType(tt)) {
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
-        }
-        else if (this.isUniqueEntityType(tt)) {
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
-        }
-        else {
-            assert(this.isUniqueEphemeralType(tt), "should not be other options")
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
-        }
     }
 
     private coerceFromAtomicToKey(exp: SMTExp, from: MIRType): SMTExp  {
