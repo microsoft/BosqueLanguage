@@ -3,46 +3,30 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRPCode, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
-import { SMTTypeEmitter } from "./smttype_emitter";
-import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
-import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTType, VerifierOptions } from "./smt_exp";
-import { SourceInfo } from "../../ast/parser";
-import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRPCode, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { ICCPTypeEmitter } from "./icpptype_emitter";
+import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
+import {  } from "./icpp_exp";
+import { SourceInfo } from "../../../ast/parser";
+import { TranspilerOptions } from "./icpp_assembly";
 
 import * as assert from "assert";
-import { ListOpsManager } from "./smtcollection_emitter";
-import { BSQRegex } from "../../ast/bsqregex";
+import { BSQRegex } from "../../../ast/bsqregex";
 
-function NOT_IMPLEMENTED(msg: string): SMTExp {
+function NOT_IMPLEMENTED(msg: string) {
     throw new Error(`Not Implemented: ${msg}`);
 }
 
-class SMTBodyEmitter {
+class ICCPBodyEmitter {
     readonly assembly: MIRAssembly;
-    readonly typegen: SMTTypeEmitter;
-    readonly callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>;
-
-    readonly errorTrgtPos: { file: string, line: number, pos: number };
-    readonly allErrors: { file: string, line: number, pos: number, msg: string }[];
-    readonly vopts: VerifierOptions;
-
-    private tmpvarctr = 0;
+    readonly typegen: ICCPTypeEmitter;
+    
+    readonly vopts: TranspilerOptions;
 
     currentFile: string = "[No File]";
     currentRType: MIRType;
-    currentSCC = new Set<string>();
-
-    private pendingMask: SMTMaskConstruct[] = [];
-    requiredTypecheck: { inv: string, flowtype: MIRType, oftype: MIRType }[] = [];
 
     maskSizes: Set<number> = new Set<number>();
-
-    lopsManager: ListOpsManager;
-
-    //!!!
-    //See the methods generateLoadTupleIndexVirtual, generateLoadTupleIndexVirtual, etc for processing the entries in these arrays
-    //!!!
 
     requiredLoadVirtualTupleIndex: { inv: string, argflowtype: MIRType, idx: number, resulttype: MIRType, guard: MIRGuard | undefined }[] = [];
     requiredLoadVirtualRecordProperty: { inv: string, argflowtype: MIRType, pname: string, resulttype: MIRType, guard: MIRGuard | undefined }[] = [];
@@ -54,152 +38,10 @@ class SMTBodyEmitter {
 
     requiredUpdateVirtualTuple: { inv: string, argflowtype: MIRType, updates: [number, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualRecord: { inv: string, argflowtype: MIRType, updates: [string, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
-    requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, allsafe: boolean, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
+    requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
-    requiredVirtualFunctionInvokes: { inv: string, allsafe: boolean, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }[] = [];
+    requiredVirtualFunctionInvokes: { inv: string, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }[] = [];
     requiredVirtualOperatorInvokes: { inv: string, argflowtype: MIRType, opname: MIRVirtualMethodKey, args: MIRResolvedTypeKey[], resulttype: MIRType }[] = [];
-
-    requiredSubtypeTagChecks: {t: MIRType, oftype: MIRType}[] = [];
-    requiredIndexTagChecks: {idx: number, oftype: MIRType}[] = [];
-    requiredRecordTagChecks: {pname: string, oftype: MIRType}[] = [];
-
-    requiredUFConsts: SMTType[] = [];
-
-    private processSubtypeTagCheck(t: MIRType, oftype: MIRType) {
-        const stc = this.requiredSubtypeTagChecks.find((tc) => tc.t.trkey === t.trkey && tc.oftype.trkey === oftype.trkey);
-        if (stc === undefined) {
-            this.requiredSubtypeTagChecks.push({ t: t, oftype: oftype });
-        }
-    }
-
-    private processIndexTagCheck(idx: number, oftype: MIRType) {
-        const stc = this.requiredIndexTagChecks.find((tc) => tc.idx === idx && tc.oftype.trkey === oftype.trkey);
-        if (stc === undefined) {
-            this.requiredIndexTagChecks.push({ idx: idx, oftype: oftype });
-        }
-    }
-
-    private processPropertyTagCheck(pname: string, oftype: MIRType) {
-        const stc = this.requiredRecordTagChecks.find((tc) => tc.pname === pname && tc.oftype.trkey === oftype.trkey);
-        if (stc === undefined) {
-            this.requiredRecordTagChecks.push({ pname: pname, oftype: oftype });
-        }
-    }
-
-    private generateTypeCheckName(argflowtype: MIRType, oftype: MIRType): string {
-        return `$SubtypeCheck_${this.typegen.mangle(argflowtype.trkey)}_oftype_${this.typegen.mangle(oftype.trkey)}`;
-    }
-
-    private registerRequiredTypeCheck(argflowtype: MIRType, oftype: MIRType): string {
-        const inv = this.generateTypeCheckName(argflowtype, oftype);
-        if (this.requiredTypecheck.findIndex((rtc) => rtc.inv === inv) === -1) {
-            this.requiredTypecheck.push({ inv: inv, flowtype: argflowtype, oftype: oftype });
-        }
-
-        return inv;
-    }
-
-    generateUFConstantForType(tt: MIRType): string {
-        const ctype = this.typegen.getSMTTypeFor(tt);
-        const ufcname = `${ctype.name}@uicons_UF`;
-        
-        if(this.requiredUFConsts.find((cc) => cc.name === ctype.name) === undefined) {
-            this.requiredUFConsts.push(ctype);
-        }
-
-        return ufcname;
-    }
-
-    private generateBoolForGuard(guard: MIRGuard): SMTExp {
-        if(guard instanceof MIRMaskGuard) {
-            return new SMTCallSimple(`$Mask_${guard.gsize}@${guard.gindex}`, [new SMTVar(this.typegen.mangle(guard.gmask))]);
-        }
-        else {
-            return this.argToSMT((guard as MIRArgGuard).greg);
-        }
-    }
-
-    private generateAltForGuardStmt(arg: MIRArgument | undefined, oftype: MIRType): SMTExp {
-        return arg !== undefined ? this.argToSMT(arg) : new SMTConst(this.generateUFConstantForType(oftype));
-    }
-
-    private generateGuardStmtCond(sguard: MIRStatmentGuard | undefined, gexp: SMTExp, rtype: MIRResolvedTypeKey): SMTExp {
-        if(sguard === undefined) {
-            return gexp;
-        }
-        else {
-            const gcond = this.generateBoolForGuard(sguard.guard);
-            const galt = this.generateAltForGuardStmt(sguard.defaultvar, this.typegen.getMIRType(rtype));
-            if(sguard.usedefault === "defaultonfalse") {
-                return new SMTIf(gcond, gexp, galt);
-            }
-            else {
-                return new SMTIf(gcond, galt, gexp);
-            }
-        }
-    }
-
-    private generateGeneralCallValueProcessing(callerrtype: MIRType, calleertype: MIRType, gcall: SMTExp, trgt: MIRRegisterArgument, continuation: SMTExp): SMTLet {
-        const cres = this.generateTempName();
-        
-        const okpath = new SMTLet(this.varToSMTName(trgt).vname, this.typegen.generateResultGetSuccess(calleertype, new SMTVar(cres)), continuation);
-        const errpath = (callerrtype.trkey === calleertype.trkey) ? new SMTVar(cres) : this.typegen.generateResultTypeConstructorError(callerrtype, this.typegen.generateResultGetError(calleertype, new SMTVar(cres)));
-
-        const icond = new SMTIf(this.typegen.generateResultIsErrorTest(calleertype, new SMTVar(cres)), errpath, okpath);
-        return new SMTLet(cres, gcall, icond);
-    }
-
-    private generateLoadVirtualTupleInvName(argflowtype: MIRType, idx: number, resulttype: MIRType, guard: MIRGuard | undefined): string {
-        return `$TupleLoad_${this.typegen.mangle(argflowtype.trkey)}_${idx}_${this.typegen.mangle(resulttype.trkey)}${guard !== undefined ? "_WG" : ""}`;
-    }
-
-    private generateLoadVirtualPropertyInvName(argflowtype: MIRType, pname: string, resulttype: MIRType, guard: MIRGuard | undefined): string {
-        return `$RecordLoad_${this.typegen.mangle(argflowtype.trkey)}_${pname}_${this.typegen.mangle(resulttype.trkey)}${guard !== undefined ? "_WG" : ""}`;
-    }
-
-    private generateLoadVirtualFieldInvName(argflowtype: MIRType, fkey: MIRFieldKey, resulttype: MIRType): string {
-        return `$EntityLoad_${this.typegen.mangle(argflowtype.trkey)}_${this.typegen.mangle(fkey)}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateProjectVirtualTupleInvName(argflowtype: MIRType, indecies: number[], resulttype: MIRType): string {
-        const idxs = this.typegen.mangle(indecies.map((idx) => `${idx}`).join(","));
-        return `$TupleProject_${this.typegen.mangle(argflowtype.trkey)}_${idxs}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateProjectVirtualRecordInvName(argflowtype: MIRType, properties: string[], resulttype: MIRType): string {
-        const pnames = this.typegen.mangle(properties.join(","));
-        return `$RecordProject_${this.typegen.mangle(argflowtype.trkey)}_${pnames}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateProjectVirtualEntityInvName(argflowtype: MIRType, fields: MIRFieldKey[], resulttype: MIRType): string {
-        const fkeys = this.typegen.mangle(fields.join(","));
-        return `$EntityProject_${this.typegen.mangle(argflowtype.trkey)}_${fkeys}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateUpdateVirtualTupleInvName(argflowtype: MIRType, indecies: [number, MIRResolvedTypeKey][], resulttype: MIRType): string {
-        const idxs = this.typegen.mangle(indecies.map((idx) => `(${idx[0]} ${idx[1]})`).join(","));
-        return `$TupleUpdate_${this.typegen.mangle(argflowtype.trkey)}_${idxs}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateUpdateVirtualRecordInvName(argflowtype: MIRType, properties: [string, MIRResolvedTypeKey][], resulttype: MIRType): string {
-        const pnames = this.typegen.mangle(properties.map((pname) => `(${pname[0]} ${pname[1]})`).join(","));
-        return `$RecordUpdate_${this.typegen.mangle(argflowtype.trkey)}_${pnames}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateUpdateVirtualEntityInvName(argflowtype: MIRType, fields: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType): string {
-        const fnames = this.typegen.mangle(fields.map((fname) => `(${fname[0]} ${fname[1]})`).join(","));
-        return `$EntityUpdate_${this.typegen.mangle(argflowtype.trkey)}_${fnames}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateVirtualInvokeFunctionName(argflowtype: MIRType, fname: MIRVirtualMethodKey, optmask: boolean, resulttype: MIRType): string {
-        const rname = this.typegen.mangle(fname);
-        return `$VirtualInvoke_${this.typegen.mangle(argflowtype.trkey)}_${rname}${optmask ? "_WM_" : ""}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
-
-    private generateVirtualInvokeOperatorName(fname: MIRVirtualMethodKey, rcvrtypes: MIRResolvedTypeKey[], resulttype: MIRType): string {
-        const rnames = this.typegen.mangle(`${fname}::(${rcvrtypes.join(",")})`);
-        return `$VirtualOperator_${rnames}_${this.typegen.mangle(resulttype.trkey)}`;
-    }
 
     generateLoadTupleIndexVirtual(geninfo: { inv: string, argflowtype: MIRType, idx: number, resulttype: MIRType, guard: MIRGuard | undefined }): SMTFunction {
         const ttuples = [...this.assembly.tupleDecls]
@@ -680,7 +522,7 @@ class SMTBodyEmitter {
         }
     }
 
-    constructor(assembly: MIRAssembly, typegen: SMTTypeEmitter, vopts: VerifierOptions, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, errorTrgtPos: { file: string, line: number, pos: number }) {
+    constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: VerifierOptions, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, errorTrgtPos: { file: string, line: number, pos: number }) {
         this.assembly = assembly;
         this.typegen = typegen;
         this.callsafety = callsafety;
@@ -2498,5 +2340,5 @@ class SMTBodyEmitter {
 }
 
 export {
-     SMTBodyEmitter
+     ICCPBodyEmitter
 };

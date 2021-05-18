@@ -8,7 +8,7 @@ import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 type TranspilerOptions = {
 };
 
-enum ICCPTypeKind
+enum ICPPTypeKind
 {
     Invalid = "BSQTypeKind::Invalid",
     Register = "BSQTypeKind::Register",
@@ -21,7 +21,7 @@ enum ICCPTypeKind
 
 type RefMask = string;
 
-class ICCPTypeSizeInfo {
+class ICPPTypeSizeInfo {
     readonly heapsize: number;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
     readonly sldatasize: number; //number of bytes needed in storage location for this -- 4 bytes for refs, same as heap size for others
     readonly slfullsize: number; //number of bytes + typeptr tag if needed in storage location for this -- inline union is bigger
@@ -36,18 +36,18 @@ class ICCPTypeSizeInfo {
     }
 }
 
-class ICCPType {
+class ICPPType {
     readonly name: string;
     readonly tkey: MIRResolvedTypeKey;
-    readonly tkind: ICCPTypeKind;
+    readonly tkind: ICPPTypeKind;
     
-    readonly allocinfo: ICCPTypeSizeInfo; //memory size information
+    readonly allocinfo: ICPPTypeSizeInfo; //memory size information
     
     readonly isLeafType: boolean; //if refmask == undefined && ptrcount == 0
     readonly refmask: RefMask | undefined;
     readonly ptrcount: number; //if this is a packed object the number of pointers at the front
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
         this.name = name;
         this.tkey = tkey;
         this.tkind = tkind;
@@ -58,18 +58,18 @@ class ICCPType {
     }
 }
 
-class ICCPTypePrimitive extends ICCPType {
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
+class ICPPTypePrimitive extends ICPPType {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
         super(name, tkey, tkind, allocinfo, isLeafType, refmask, ptrcount);
     }
 }
 
-class ICCPTypeTuple extends ICCPType {
+class ICPPTypeTuple extends ICPPType {
     readonly maxIndex: number;
     readonly ttypes: MIRResolvedTypeKey[];
     readonly idxoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, maxIndex: number, ttypes: MIRResolvedTypeKey[], idxoffsets: number[]) {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, maxIndex: number, ttypes: MIRResolvedTypeKey[], idxoffsets: number[]) {
         super(name, tkey, tkind, allocinfo, isLeafType, refmask, ptrcount);
 
         this.maxIndex = maxIndex;
@@ -78,12 +78,12 @@ class ICCPTypeTuple extends ICCPType {
     }
 }
 
-class ICCPTypeRecord extends ICCPType {
+class ICPPTypeRecord extends ICPPType {
     readonly propertynames: string[];
     readonly ttypes: MIRResolvedTypeKey[];
     readonly propertyoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, propertynames: string[], ttypes: MIRResolvedTypeKey[], propertyoffsets: number[]) {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, propertynames: string[], ttypes: MIRResolvedTypeKey[], propertyoffsets: number[]) {
         super(name, tkey, tkind, allocinfo, isLeafType, refmask, ptrcount);
 
         this.propertynames = propertynames;
@@ -92,12 +92,12 @@ class ICCPTypeRecord extends ICCPType {
     }
 }
 
-class ICCPTypeEntity extends ICCPType {
+class ICPPTypeEntity extends ICPPType {
     readonly fieldnames: MIRFieldKey[];
     readonly ttypes: MIRResolvedTypeKey[];
     readonly fieldoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, fieldnames: MIRFieldKey[], ttypes: MIRResolvedTypeKey[], fieldoffsets: number[]) {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, fieldnames: MIRFieldKey[], ttypes: MIRResolvedTypeKey[], fieldoffsets: number[]) {
         super(name, tkey, tkind, allocinfo, isLeafType, refmask, ptrcount);
 
         this.fieldnames = fieldnames;
@@ -106,11 +106,11 @@ class ICCPTypeEntity extends ICCPType {
     }
 }
 
-class ICCPTypeEphemeralList extends ICCPType {
+class ICPPTypeEphemeralList extends ICPPType {
     readonly ttypes: MIRResolvedTypeKey[];
     readonly idxoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, ttypes: MIRResolvedTypeKey[], idxoffsets: number[]) {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number, ttypes: MIRResolvedTypeKey[], idxoffsets: number[]) {
         super(name, tkey, tkind, allocinfo, isLeafType, refmask, ptrcount);
 
         this.ttypes = ttypes;
@@ -118,27 +118,27 @@ class ICCPTypeEphemeralList extends ICCPType {
     }
 }
 
-class ICCPTypeAbstract extends ICCPType {
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICCPTypeKind, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean) {
+class ICPPTypeAbstract extends ICPPType {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean) {
         super(name, tkey, tkind, allocinfo, isLeafType, undefined, 0);
     }
 }
 
-class ICCPTypeInlineUnion extends ICCPTypeAbstract {
-    constructor(name: string, tkey: MIRResolvedTypeKey, allocinfo: ICCPTypeSizeInfo, isLeafType: boolean) {
-        super(name, tkey, ICCPTypeKind.InlineUnion, allocinfo, isLeafType);
+class ICPPTypeInlineUnion extends ICPPTypeAbstract {
+    constructor(name: string, tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean) {
+        super(name, tkey, ICPPTypeKind.InlineUnion, allocinfo, isLeafType);
     }
 }
 
-class ICCPTypeHeapUnion extends ICCPTypeAbstract {
-    constructor(name: string, tkey: MIRResolvedTypeKey, allocinfo: ICCPTypeSizeInfo) {
-        super(name, tkey, ICCPTypeKind.HeapUnion, allocinfo, false);
+class ICPPTypeHeapUnion extends ICPPTypeAbstract {
+    constructor(name: string, tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo) {
+        super(name, tkey, ICPPTypeKind.HeapUnion, allocinfo, false);
     }
 }
 
 export {
     TranspilerOptions,
-    ICCPTypeKind, ICCPTypeSizeInfo, RefMask,
-    ICCPType, ICCPTypePrimitive, ICCPTypeTuple, ICCPTypeRecord, ICCPTypeEntity, ICCPTypeEphemeralList,
-    ICCPTypeAbstract, ICCPTypeInlineUnion, ICCPTypeHeapUnion
+    ICPPTypeKind, ICPPTypeSizeInfo, RefMask,
+    ICPPType, ICPPTypePrimitive, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList,
+    ICPPTypeAbstract, ICPPTypeInlineUnion, ICPPTypeHeapUnion
 };
