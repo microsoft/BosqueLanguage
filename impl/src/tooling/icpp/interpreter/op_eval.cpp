@@ -631,7 +631,7 @@ void Evaluator::evalConstructorTupleOp(const ConstructorTupleOp* op)
 
     for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
     {
-        op->oftype->ttypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
+        Environment::g_typemap[op->oftype->ttypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -651,7 +651,7 @@ void Evaluator::evalConstructorRecordOp(const ConstructorRecordOp* op)
 
     for(size_t i = 0; i < op->oftype->propertyoffsets.size(); ++i)
     {
-        op->oftype->rtypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->propertyoffsets[i]), this->evalArgument(op->args[i]));
+        Environment::g_typemap[op->oftype->rtypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->propertyoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -661,7 +661,7 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
 
     for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
     {
-        op->oftype->etypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
+        Environment::g_typemap[op->oftype->etypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -949,7 +949,7 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, Storage
 
     for(size_t i = 0; i < op->oftype->fieldoffsets.size(); ++i)
     {
-        op->oftype->ftypes[i]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->fieldoffsets[i]), this->evalArgument(op->args[i]));
+        Environment::g_typemap[op->oftype->ftypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->fieldoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 

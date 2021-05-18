@@ -4,12 +4,12 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
-import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 import { ICCPType, ICCPTypeEntity, ICCPTypeEphemeralList, ICCPTypeHeapUnion, ICCPTypeInlineUnion, ICCPTypeKind, ICCPTypePrimitive, ICCPTypeRecord, ICCPTypeSizeInfo, ICCPTypeTuple, RefMask, TranspilerOptions } from "./iccp_assembly";
 
 import * as assert from "assert";
-import { Argument, ICCPGuard, ICCPOp, ICCPOpEmitter, ICCPStatementGuard, TargetVar } from "./iccp_exp";
+import { Argument, ICCPOp, ICCPOpEmitter, ICCPStatementGuard, TargetVar } from "./iccp_exp";
 import { SourceInfo } from "../../../ast/parser";
 
 const ICCP_WORD_SIZE = 8;
@@ -515,28 +515,55 @@ class ICCPTypeEmitter {
 
         if(iccpinto.tkind !== ICCPTypeKind.InlineUnion) {
             if(iccpinto.tkind === ICCPTypeKind.Register) {
-            return xxxx;
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize);
+                }
             }
             else if(iccpinto.tkind === ICCPTypeKind.Struct || iccpinto.tkind === ICCPTypeKind.String) {
-                return xxxx;
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize);
+                }
             }
             else {
-                ICCPOpEmitter.genDir
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedDirectAssignRefOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genDirectAssignRefOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize);
+                }
             }
         }
         else {
             const iccpfrom = this.getICCPTypeData(from);
             if(iccpinto.allocinfo.sldatasize === iccpfrom.allocinfo.sldatasize) {
-                xxxx;
-                return ICCPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize);
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, iccpinto.allocinfo.slfullsize);
+                }
             }
             else if (iccpinto.allocinfo.sldatasize < iccpfrom.allocinfo.sldatasize) {
-                xxxx;
-                return ICCPOpEmitter.genNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                }
             }
             else {
-                xxxx;
-                return ICCPOpEmitter.genWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                }
             }
         }
 
@@ -547,177 +574,44 @@ class ICCPTypeEmitter {
         const iccpinto = this.getICCPTypeData(into);
 
         if(iccpfrom.tkind === iccpinto.tkind) {
-
+            return this.coerceSameRepr(sinfo, arg, from, trgt, into, sguard);
         }
-
-        if (smtfrom.name === smtinto.name) {
-            return exp;
-        }
-        else if (smtinto.name === "BKey") {
-            if(smtfrom.name === "BTerm") {
-                return new SMTCallSimple("BTerm_keyvalue", [exp]);
+        else if(iccpfrom.tkind !== ICCPTypeKind.InlineUnion && iccpfrom.tkind !== ICCPTypeKind.HeapUnion) {
+            if(iccpinto.tkind === ICCPTypeKind.InlineUnion) {
+                return this.coerceFromAtomicToInline(sinfo, arg, from, trgt, into, sguard);
             }
             else {
-                return this.coerceFromAtomicToKey(exp, from);
+                assert(iccpinto.tkind === ICCPTypeKind.HeapUnion);
+                return this.coerceFromAtomicToHeap(sinfo, arg, from, trgt, into, sguard);
             }
         }
-        else if (smtinto.name === "BTerm") {
-            if(smtfrom.name === "BKey") {
-                return new SMTCallSimple("BTerm@keybox", [exp]);
+        else if(iccpfrom.tkind === ICCPTypeKind.InlineUnion) {
+            if(iccpinto.tkind === ICCPTypeKind.HeapUnion) {
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                }
             }
             else {
-                return this.coerceFromAtomicToTerm(exp, from);
+                return this.coerceFromInlineToAtomic(sinfo, arg, from, trgt, into, sguard);
             }
         }
         else {
-            if (smtfrom.name === "BKey") {
-                return this.coerceKeyIntoAtomic(exp, into);
+            assert(iccpfrom.tkind === ICCPTypeKind.HeapUnion);
+            
+            if(iccpinto.tkind === ICCPTypeKind.InlineUnion) {
+                if(sguard !== undefined) {
+                    return ICCPOpEmitter.genGuardedExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                }
+                else {
+                    return ICCPOpEmitter.genExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                }
             }
             else {
-                assert(smtfrom.name === "BTerm");
-
-                return this.coerceTermIntoAtomic(exp, into);
+                return this.coerceFromHeapToAtomic(sinfo, arg, from, trgt, into, sguard);
             }
-        }
-    }
-
-    coerceToKey(exp: SMTExp, from: MIRType): SMTExp {
-        const smtfrom = this.getSMTTypeFor(from);
-
-        if (smtfrom.name === "BKey") {
-            return exp;
-        }
-        else {
-            if(smtfrom.name === "BTerm") {
-                return new SMTCallSimple("BTerm_keyvalue", [exp]);
-            }
-            else {
-                return this.coerceFromAtomicToKey(exp, from);
-            }
-        }
-    }
-
-    generateTupleIndexGetFunction(tt: MIRTupleType, idx: number): string {
-        return `${this.mangle(tt.trkey)}@_${idx}`;
-    } 
-
-    generateRecordPropertyGetFunction(tt: MIRRecordType, pname: string): string {
-        return `${this.mangle(tt.trkey)}@_${pname}`;
-    }
-
-    generateEntityFieldGetFunction(tt: MIREntityTypeDecl, field: MIRFieldKey): string {
-        return `${this.mangle(tt.tkey)}@_${this.mangle(field)}`;
-    }
-
-    generateEphemeralListGetFunction(tt: MIREphemeralListType, idx: number): string {
-        return `${this.mangle(tt.trkey)}@_${idx}`;
-    }
-
-    generateResultType(ttype: MIRType): SMTType {
-        return new SMTType(`$Result_${this.getSMTTypeFor(ttype).name}`);
-    }
-
-    generateResultTypeConstructorSuccess(ttype: MIRType, val: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@success`, [val]);
-    }
-
-    generateResultTypeConstructorError(ttype: MIRType, err: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@error`, [err]);
-    }
-
-    generateErrorResultAssert(rtype: MIRType): SMTExp {
-        return this.generateResultTypeConstructorError(rtype, new SMTConst("ErrorID_AssumeCheck"));
-    }
-
-    generateResultIsSuccessTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).name}@success)`, [exp]);
-    }
-
-    generateResultIsErrorTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).name}@error)`, [exp]);
-    }
-
-    generateResultGetSuccess(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@success_value`, [exp]);
-    }
-
-    generateResultGetError(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@error_value`, [exp]);
-    }
-    
-    generateAccessWithSetGuardResultType(ttype: MIRType): SMTType {
-        return new SMTType(`$GuardResult_${this.getSMTTypeFor(ttype).name}`);
-    }
-
-    generateAccessWithSetGuardResultTypeConstructorLoad(ttype: MIRType, value: SMTExp, flag: boolean): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).name}@cons`, [value, new SMTConst(flag ? "true" : "false")]);
-    }
-
-    generateAccessWithSetGuardResultGetValue(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).name}@result`, [exp]);
-    }
-
-    generateAccessWithSetGuardResultGetFlag(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).name}@flag`, [exp]);
-    }
-
-    private havocTypeInfoGen(tt: MIRType): [string, boolean] {
-        if (this.isType(tt, "NSCore::None")) {
-            return ["BNone@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::Bool")) {
-            return ["BBool@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::Int")) {
-            return ["BInt@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::Nat")) {
-            return ["BNat@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::BigInt")) {
-            return ["BBigInt@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::BigNat")) {
-            return ["BBigNat@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::Float")) {
-            return ["BFloat@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::Decimal")) {
-            return ["BDecimal@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            return ["BRational@UFCons_API", false];
-        }
-        else {
-            return [`_@@cons_${this.getSMTTypeFor(tt).name}_entrypoint`, true];
-        }
-    }
-
-    isPrimitiveHavocConstructorType(tt: MIRType): boolean {
-        return (this.isType(tt, "NSCore::None") || this.isType(tt, "NSCore::Bool") 
-        || this.isType(tt, "NSCore::Int") || this.isType(tt, "NSCore::Nat") || this.isType(tt, "NSCore::BigNat") || this.isType(tt, "NSCore::BigInt")
-        || this.isType(tt, "NSCore::Float") || this.isType(tt, "NSCore::Decimal") || this.isType(tt, "NSCore::Rational"));
-    }
-
-    isKnownSafeHavocConstructorType(tt: MIRType): boolean {
-        return !this.havocTypeInfoGen(tt)[1];
-    }
-
-    generateHavocConstructorName(tt: MIRType): string {
-        return this.havocTypeInfoGen(tt)[0];
-    }
-
-    generateHavocConstructorPathExtend(path: SMTExp, step: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.++", [path, new SMTCallSimple("seq.unit", [step])]);
-    }
-
-    generateHavocConstructorCall(tt: MIRType, path: SMTExp, step: SMTExp): SMTExp {
-        if(this.isKnownSafeHavocConstructorType(tt)) {
-            return this.generateResultTypeConstructorSuccess(tt, new SMTCallSimple(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]));
-        }
-        else {
-            return new SMTCallGeneral(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]);
         }
     }
 }
