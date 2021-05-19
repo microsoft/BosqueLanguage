@@ -587,12 +587,209 @@ void Evaluator::evalLoadVirtualFieldOp(const LoadEntityFieldVirtualOp* op)
     this->processEntityVirtualLoadAndStore(sl, op->layouttype, op->fieldId, op->trgt, op->trgttype);
 }
 
-ProjectTupleOp,
-    ProjectRecordOp,
-    ProjectEntityOp,
-    UpdateTupleOp,
-    UpdateRecordOp,
-    UpdateEntityOp,
+void Evaluator::evalProjectTupleOp(const ProjectTupleOp* op)
+{
+    void* sl = nullptr;
+    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    {
+        sl = this->evalArgument(op->arg);
+    }
+    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    {
+        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+    }
+    else
+    {
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+    }
+
+    auto trgtl = this->evalTargetVar(op->trgt);
+    for(size_t i = 0; i < op->idxs.size(); ++i)
+    {
+        auto dst = SLPTR_INDEX_INLINE(trgtl,  op->trgttype->idxoffsets[i]);
+        auto src = SLPTR_INDEX_INLINE(sl, std::get<1>(op->idxs[i]));
+
+        std::get<2>(op->idxs[i])->storeValue(dst, src);
+    }
+}
+
+void Evaluator::evalProjectRecordOp(const ProjectRecordOp* op)
+{
+    void* sl = nullptr;
+    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    {
+        sl = this->evalArgument(op->arg);
+    }
+    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    {
+        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+    }
+    else
+    {
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+    }
+
+    auto trgtl = this->evalTargetVar(op->trgt);
+    for(size_t i = 0; i < op->props.size(); ++i)
+    {
+        auto dst = SLPTR_INDEX_INLINE(trgtl, op->trgttype->idxoffsets[i]);
+        auto src = SLPTR_INDEX_INLINE(sl, std::get<1>(op->props[i]));
+
+        std::get<2>(op->props[i])->storeValue(dst, src);
+    }
+}
+
+void Evaluator::evalProjectEntityOp(const ProjectEntityOp* op)
+{
+    void* sl = nullptr;
+    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    {
+        sl = this->evalArgument(op->arg);
+    }
+    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    {
+        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+    }
+    else
+    {
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+    }
+
+    auto trgtl = this->evalTargetVar(op->trgt);
+    for(size_t i = 0; i < op->fields.size(); ++i)
+    {
+        auto dst = SLPTR_INDEX_INLINE(trgtl, op->trgttype->idxoffsets[i]);
+        auto src = SLPTR_INDEX_INLINE(sl, std::get<1>(op->fields[i]));
+
+        std::get<2>(op->fields[i])->storeValue(dst, src);
+    }
+}
+
+void Evaluator::evalUpdateTupleOp(const UpdateTupleOp* op)
+{
+    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
+    
+    void* sl = nullptr;
+    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    {
+        sl = this->evalArgument(op->arg);
+    }
+    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    {
+        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+    }
+    else
+    {
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+    }
+
+    void* trgtl = nullptr;
+    if(op->trgttype->tkind == BSQTypeKind::Struct)
+    {
+        trgtl = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+    }
+    else
+    {
+        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype->allocinfo.heapsize, op->trgttype);
+        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+    }
+
+    for(size_t i = 0; i < op->updates.size(); ++i)
+    {
+        auto dst = SLPTR_INDEX_INLINE(trgtl, std::get<1>(op->updates[i]));
+        std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
+    }
+}
+
+void Evaluator::evalUpdateRecordOp(const UpdateRecordOp* op)
+{
+    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
+    
+    void* sl = nullptr;
+    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    {
+        sl = this->evalArgument(op->arg);
+    }
+    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    {
+        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+    }
+    else
+    {
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+    }
+
+    void* trgtl = nullptr;
+    if(op->trgttype->tkind == BSQTypeKind::Struct)
+    {
+        trgtl = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+    }
+    else
+    {
+        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype->allocinfo.heapsize, op->trgttype);
+        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+    }
+
+    for(size_t i = 0; i < op->updates.size(); ++i)
+    {
+        auto dst = SLPTR_INDEX_INLINE(trgtl, std::get<1>(op->updates[i]));
+        std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
+    }
+}
+
+void Evaluator::evalUpdateEntityOp(const UpdateEntityOp* op)
+{
+    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
+    
+    void* sl = nullptr;
+    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    {
+        sl = this->evalArgument(op->arg);
+    }
+    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    {
+        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+    }
+    else
+    {
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+    }
+
+    void* trgtl = nullptr;
+    if(op->trgttype->tkind == BSQTypeKind::Struct)
+    {
+        trgtl = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+    }
+    else
+    {
+        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype->allocinfo.heapsize, op->trgttype);
+        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+    }
+
+    for(size_t i = 0; i < op->updates.size(); ++i)
+    {
+        auto dst = SLPTR_INDEX_INLINE(trgtl, std::get<1>(op->updates[i]));
+        std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
+    }
+}
 
 void Evaluator::evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op)
 {
@@ -1204,14 +1401,30 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalLoadVirtualFieldOp(static_cast<const LoadEntityFieldVirtualOp*>(op));
     }
-
-ProjectTupleOp,
-    ProjectRecordOp,
-    ProjectEntityOp,
-    UpdateTupleOp,
-    UpdateRecordOp,
-    UpdateEntityOp,
-
+    case OpCodeTag::ProjectTupleOp:
+    {
+        this->evalProjectTupleOp(static_cast<const ProjectTupleOp*>(op));
+    }
+    case OpCodeTag::ProjectRecordOp:
+    {
+        this->evalProjectRecordOp(static_cast<const ProjectRecordOp*>(op));
+    }
+    case OpCodeTag::ProjectEntityOp:
+    {
+        this->evalProjectEntityOp(static_cast<const ProjectEntityOp*>(op));
+    }
+    case OpCodeTag::UpdateTupleOp:
+    {
+        this->evalUpdateTupleOp(static_cast<const UpdateTupleOp*>(op));
+    }
+    case OpCodeTag::UpdateRecordOp:
+    {
+        this->evalUpdateRecordOp(static_cast<const UpdateRecordOp*>(op));
+    }
+    case OpCodeTag::UpdateEntityOp:
+    {
+        this->evalUpdateEntityOp(static_cast<const UpdateEntityOp*>(op));
+    }
     case OpCodeTag::LoadFromEpehmeralListOp:
     {
         this->evalLoadFromEpehmeralListOp(static_cast<const LoadFromEpehmeralListOp*>(op));

@@ -38,6 +38,8 @@ class ICPPBodyEmitter {
 
     requiredUpdateVirtualTuple: { inv: string, argflowtype: MIRType, updates: [number, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualRecord: { inv: string, argflowtype: MIRType, updates: [string, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
+
+    requiredUpdateEntityWithInvariant: { inv: string, oftype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
     requiredVirtualFunctionInvokes: { inv: string, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }[] = [];
@@ -66,6 +68,11 @@ class ICPPBodyEmitter {
     private generateUpdateVirtualRecordInvName(argflowtype: MIRType, properties: [string, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const pnames = properties.map((pname) => `(${pname[0]} ${pname[1]})`).join(",");
         return `$RecordUpdate_${argflowtype.trkey}.{${pnames}}->${resulttype.trkey}`;
+    }
+
+    private generateUpdateEntityWithInvariantName(oftype: MIRType, fields: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType): string {
+        const fnames = fields.map((fname) => `(${fname[0]} ${fname[1]})`).join(",");
+        return `$EntityUpdateDirectWithInvariantCheck_${oftype.trkey}.{${fnames}}->${resulttype.trkey}`;
     }
 
     private generateUpdateVirtualEntityInvName(argflowtype: MIRType, fields: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType): string {
@@ -241,6 +248,10 @@ class ICPPBodyEmitter {
             })
         ];
         return SMTFunction.create(geninfo.inv, fargs, rtype, new SMTCond(ops, orelse));
+    }
+
+    generateUpdateEntityFieldDirectWithInvariantCheck(geninfo: { inv: string, oftype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
+        xxxx;
     }
 
     generateUpdateEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, allsafe: boolean, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
@@ -784,12 +795,17 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt), op.epht, vid, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
+            if(/*no coerce needed*/) {
+                return ICPPOpEmitter.genProjectTupleOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt), op.epht, this.argToICPPLocation(op.arg), op.arglayouttype, op.argflowtype, idxs);
+            }
+            else {
             const pargs = op.indecies.map((idx, i) => {
                 const idxr = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(argflowtype.options[0] as MIRTupleType, idx), [argpp]);
                 return this.typegen.coerce(idxr, (argflowtype.options[0] as MIRTupleType).entries[idx].type, (resulttype.options[0] as MIREphemeralListType).entries[i]);
             });
 
             return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.getSMTConstructorName(resulttype).cons, pargs), continuation);
+            }
         }
     }
 
@@ -832,6 +848,9 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt), op.epht, vid, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
+            if(/*no coerce needed*/) {
+
+            }
             const pargs = op.fields.map((fkey, i) => {
                 const idxr = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(this.assembly.entityDecls.get(argflowtype.trkey) as MIREntityTypeDecl, fkey), [argpp]);
                 return this.typegen.coerce(idxr, this.typegen.getMIRType((this.assembly.fieldDecls.get(fkey) as MIRFieldDecl).declaredType), (resulttype.options[0] as MIREphemeralListType).entries[i]);
@@ -934,6 +953,15 @@ class ICPPBodyEmitter {
             }
         }
         else {
+
+            if(hasinvarnant) {
+            if (this.requiredUpdateVirtualEntity.findIndex((vv) => vv.inv === icall) === -1) {
+                const geninfo = { inv: icall, argflowtype: this.typegen.getMIRType(op.argflowtype), allsafe: allsafe, updates: op.updates.map((upd) => [upd[0], upd[2]] as [MIRFieldKey, MIRResolvedTypeKey]), resulttype: resulttype };
+                this.requiredUpdateVirtualEntity.push(geninfo);
+            }
+        }
+        else {
+
             const ttype = argflowtype.options[0] as MIREntityType;
             const ttdecl = this.assembly.entityDecls.get(ttype.trkey) as MIREntityTypeDecl;
             const consfunc = ttdecl.consfunc;
@@ -958,6 +986,7 @@ class ICPPBodyEmitter {
             else {
                 return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, ccall, op.trgt, continuation);
             }
+        }
         }
     }
 

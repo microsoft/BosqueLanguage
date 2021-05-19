@@ -2954,6 +2954,11 @@ class TypeChecker {
         this.raiseErrorIf(op.sinfo, op.indecies.some((idx) => idx.index < 0), "Index cannot be negative");
         this.raiseErrorIf(op.sinfo, op.indecies.some((idx) => this.getInfoForHasIndex(op.sinfo, texp.flowtype, idx.index) !== "yes"), "Index may not be defined for all tuples");
 
+        //
+        //TODO: I don't think I check the consistency of the tuple type, the infer type, and the reqtype bits...
+        //      Should also look at other project (and related ops).
+        //
+
         let itype: ResolvedType[] | undefined = undefined;
         if (infertype !== undefined) {
             if (op.isEphemeralListResult) {

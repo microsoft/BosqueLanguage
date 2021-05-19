@@ -537,18 +537,81 @@ public:
     const Argument arg;
     const BSQType* layouttype;
     const BSQTupleType* flowtype;
-    const std::vector<BSQTupleIndex> idxs;
+    const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs;
 
-    ProjectTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQTupleType* flowtype, std::vector<BSQTupleIndex> idxs) : InterpOp(sinfo, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
+    ProjectTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQTupleType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs) : InterpOp(sinfo, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
     virtual ~ProjectTupleOp() {;}
 };
 
-class ProjectRecordOp,
-class ProjectEntityOp,
+class ProjectRecordOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQEphemeralListType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQRecordType* flowtype;
+    const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props;
+
+    ProjectRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQRecordType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props) : InterpOp(sinfo, OpCodeTag::ProjectRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), props(props) {;}
+    virtual ~ProjectRecordOp() {;}
+};
+
+class ProjectEntityOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQEphemeralListType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQEntityType* flowtype;
+    const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields;
+
+    ProjectEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQEntityType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields) : InterpOp(sinfo, OpCodeTag::ProjectEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), fields(fields) {;}
+    virtual ~ProjectEntityOp() {;}
+};
     
-class UpdateTupleOp,
-class UpdateRecordOp,
-class UpdateEntityOp,
+class UpdateTupleOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQTupleType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQTupleType* flowtype;
+    const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates;
+
+    UpdateTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQTupleType* trgttype, Argument arg, const BSQType* layouttype, const BSQTupleType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    virtual ~UpdateTupleOp() {;}
+};
+
+class UpdateRecordOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQRecordType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQRecordType* flowtype;
+    const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates;
+
+    UpdateRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQRecordType* trgttype, Argument arg, const BSQType* layouttype, const BSQRecordType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    virtual ~UpdateRecordOp() {;}
+};
+
+class UpdateEntityOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQEntityType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQEntityType* flowtype;
+    const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates;
+
+    UpdateEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* trgttype, Argument arg, const BSQType* layouttype, const BSQEntityType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    virtual ~UpdateEntityOp() {;}
+};
 
 class LoadFromEpehmeralListOp : public InterpOp
 {

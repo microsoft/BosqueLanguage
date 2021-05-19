@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 enum ArgumentTag
 {
@@ -472,12 +472,29 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.LoadEntityFieldVirtualOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, fieldId: fieldId};
     }
 
-    ProjectTupleOp,
-    ProjectRecordOp,
-    ProjectEntityOp,
-    UpdateTupleOp,
-    UpdateRecordOp,
-    UpdateEntityOp,
+    static genProjectTupleOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, idxs: [number, number, MIRResolvedTypeKey][]): ICPPOp {
+        return {tag: OpCodeTag.ProjectTupleOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, idxs: idxs};
+    }
+
+    static genProjectRecordOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, props: [number, number, MIRResolvedTypeKey][]): ICPPOp {
+        return {tag: OpCodeTag.ProjectRecordOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, props: props};
+    }
+
+    static genProjectEntityOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, fields: [MIRFieldKey, number, MIRResolvedTypeKey][]): ICPPOp {
+        return {tag: OpCodeTag.ProjectEntityOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, fields: fields};
+    }
+
+    static genUpdateTupleOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, updates: [number, number, MIRResolvedTypeKey, Argument][]): ICPPOp {
+        return {tag: OpCodeTag.UpdateTupleOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, updates: updates};
+    }
+
+    static genUpdateRecordOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, updates: [string, number, MIRResolvedTypeKey, Argument][]): ICPPOp {
+        return {tag: OpCodeTag.UpdateRecordOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, updates: updates};
+    }
+
+    static genUpdateEntityOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, updates: [MIRFieldKey, number, MIRResolvedTypeKey, Argument][]): ICPPOp {
+        return {tag: OpCodeTag.UpdateEntityOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, updates: updates};
+    }
 
     static genLoadFromEpehmeralListOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, index: number): ICPPOp {
         return {tag: OpCodeTag.LoadFromEpehmeralListOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, index: index};
