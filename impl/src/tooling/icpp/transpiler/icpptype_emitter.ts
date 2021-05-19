@@ -4,12 +4,12 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
-import { MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 
 import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeHeapUnion, ICPPTypeInlineUnion, ICPPTypeKind, ICPPTypePrimitive, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions } from "./icpp_assembly";
 
 import * as assert from "assert";
-import { Argument, ICCPOp, ICCPOpEmitter, ICCPStatementGuard, TargetVar } from "./icpp_exp";
+import { Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
 
 const ICPP_WORD_SIZE = 8;
@@ -29,6 +29,11 @@ class ICPPTypeEmitter {
     readonly assembly: MIRAssembly;
     
     private typeDataMap: Map<MIRResolvedTypeKey, ICPPType> = new Map<MIRResolvedTypeKey, ICPPType>();
+
+    private propertyNameToIDMap: Map<string, number> = new Map<string, number>();
+    private fieldNameToIDMap: Map<MIRFieldKey, number> = new Map<MIRFieldKey, number>();
+    private invokeNameToIDMap: Map<MIRInvokeKey, number> = new Map<MIRInvokeKey, number>();
+    private vinvokeNameToIDMap: Map<MIRVirtualMethodKey, number> = new Map<MIRVirtualMethodKey, number>();
 
     constructor(assembly: MIRAssembly, topts: TranspilerOptions, mangledNameMap?: Map<string, string>) {
         this.assembly = assembly;
@@ -65,6 +70,34 @@ class ICPPTypeEmitter {
 
     isTypeLeafEntry(icpptype: ICPPType): boolean {
         return icpptype.isLeafType && (icpptype.tkind === ICPPTypeKind.Register || icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.InlineUnion);
+    }
+
+    registerPropertyName(name: string): number {
+        if(!this.propertyNameToIDMap.has(name)) {
+            this.propertyNameToIDMap.set(name, this.propertyNameToIDMap.size + 1);
+        }
+        return this.propertyNameToIDMap.get(name) as number;
+    }
+
+    registerFieldName(name: MIRFieldKey): number {
+        if(!this.fieldNameToIDMap.has(name)) {
+            this.fieldNameToIDMap.set(name, this.fieldNameToIDMap.size + 1);
+        }
+        return this.fieldNameToIDMap.get(name) as number;
+    }
+
+    registerInvokeName(name: MIRInvokeKey): number {
+        if(!this.invokeNameToIDMap.has(name)) {
+            this.invokeNameToIDMap.set(name, this.invokeNameToIDMap.size + 1);
+        }
+        return this.invokeNameToIDMap.get(name) as number;
+    }
+
+    registerVirtualInvokeName(name: string): number {
+        if(!this.vinvokeNameToIDMap.has(name)) {
+            this.vinvokeNameToIDMap.set(name, this.vinvokeNameToIDMap.size + 1);
+        }
+        return this.vinvokeNameToIDMap.get(name) as number;
     }
 
     private computeStructuralTypeLayoutInfoFromTypeList(tl: ICPPType[]): [ICPPTypeSizeInfo, boolean, number, RefMask | undefined, number[]] {
@@ -255,55 +288,55 @@ class ICPPTypeEmitter {
 
         let iidata: ICPPType | undefined = undefined;
         if (this.isType(tt, "NSCore::None")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQNone", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQNone", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Bool")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBool", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBool", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Int")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQInt", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQInt", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Nat")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQNat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQNat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBigInt", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBigInt", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBigNat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBigNat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Float")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQFloat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQFloat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Decimal")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQDecimal", ICPPTypeKind.Register, new ICPPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQDecimal", ICPPTypeKind.Register, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Rational")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQRational", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, 3*ICCP_WORD_SIZE, "111"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQRational", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, "111"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::StringPos")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQStringIterator", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, 5*ICCP_WORD_SIZE, "31121"), false, "31121", 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQStringIterator", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, "31121"), false, "31121", 0); 
         }
         else if (this.isType(tt, "NSCore::String")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQString", ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "31"), false, undefined, 0);
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQString", ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31"), false, undefined, 0);
         }
         else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQByteBuffer", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(34*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), false, undefined, 1);
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQByteBuffer", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(34*ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"), false, undefined, 1);
         }
         else if(this.isType(tt, "NSCore::ISOTime")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQISOTime", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQISOTime", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if(this.isType(tt, "NSCore::LogicalTime")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQLogicalTime", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQLogicalTime", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
         }
         else if(this.isType(tt, "NSCore::UUID")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQUUID", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(2*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQUUID", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"), true, undefined, 0); 
         }
         else if(this.isType(tt, "NSCore::ContentHash")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQContentHash", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(64*ICCP_WORD_SIZE, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQContentHash", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(64*ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"), true, undefined, 0); 
         }
         else if (this.isType(tt, "NSCore::Regex")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQRegex", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, 2*ICCP_WORD_SIZE, "11"), true, undefined, 0); 
+            iidata = new ICPPTypePrimitive(tt.trkey, "BSQRegex", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"), true, undefined, 0); 
         }
         else if(this.isUniqueTupleType(tt)) {
             iidata = this.getICPPTypeForTuple(tt.options[0] as MIRTupleType);
@@ -327,21 +360,21 @@ class ICPPTypeEmitter {
                 const utypes = tt.options.map((opt) => this.getICPPTypeData(this.getMIRType(opt.trkey)));
 
                 if (utypes.some((icpptype) => icpptype.allocinfo.heapsize === -2)) {
-                    iidata = new ICPPTypeHeapUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(-2, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                    iidata = new ICPPTypeHeapUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(-2, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
                 }
                 else {
                     if (utypes.every((ut) => ut.tkind === ICPPTypeKind.Ref || ut.tkind === ICPPTypeKind.HeapUnion)) {
-                        iidata = new ICPPTypeHeapUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(-1, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                        iidata = new ICPPTypeHeapUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(-1, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
                     }
                     else {
                         const sldatasize = Math.max(...utypes.map((ut) => ut.allocinfo.slfullsize));
                         
                         let slmask = "4";
-                        for(let i = 0; i < sldatasize / ICCP_WORD_SIZE; ++i) {
+                        for(let i = 0; i < sldatasize / ICPP_WORD_SIZE; ++i) {
                             slmask += "1";
                         }
                     
-                        iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICCP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
+                        iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICPP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
                     }
                 }
             }
@@ -358,14 +391,14 @@ class ICPPTypeEmitter {
                 else {
                     assert(opt instanceof MIRConceptType);
                     if(UNIVERSAL_CONCEPTS.includes(opt.trkey)) {
-                        iidata = new ICPPTypeHeapUnion(opt.trkey, opt.trkey, new ICPPTypeSizeInfo(-2, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                        iidata = new ICPPTypeHeapUnion(opt.trkey, opt.trkey, new ICPPTypeSizeInfo(-2, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
                     }
                     else {
                         const isref = (opt as MIRConceptType).ckeys.some((cpt) => !(this.assembly.conceptDecls.get(cpt) as MIRConceptTypeDecl).attributes.includes("struct"));
 
                         //if is ref or struct and then need to process over all 
                         if(isref) {
-                            iidata = new ICPPTypeHeapUnion(opt.trkey, opt.trkey, new ICPPTypeSizeInfo(-1, ICCP_WORD_SIZE, ICCP_WORD_SIZE, "2"));
+                            iidata = new ICPPTypeHeapUnion(opt.trkey, opt.trkey, new ICPPTypeSizeInfo(-1, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
                         }
                         else {
                             const utypes = [...this.assembly.entityDecls]
@@ -375,11 +408,11 @@ class ICPPTypeEmitter {
                                 const sldatasize = Math.max(...utypes.map((ut) => ut.allocinfo.slfullsize));
                         
                                 let slmask = "4";
-                                for(let i = 0; i < sldatasize / ICCP_WORD_SIZE; ++i) {
+                                for(let i = 0; i < sldatasize / ICPP_WORD_SIZE; ++i) {
                                     slmask += "1";
                                 }
                             
-                                iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICCP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
+                                iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICPP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
                             }
                     }
                 }   
@@ -390,152 +423,152 @@ class ICPPTypeEmitter {
         return this.typeDataMap.get(tt.trkey) as ICPPType;
     }
 
-    private coerceFromAtomicToInline(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+    private coerceFromAtomicToInline(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
         const icpptype = this.getICPPTypeData(from);
         if(icpptype.tkind === ICPPTypeKind.Register) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else {
             assert(icpptype.tkind === ICPPTypeKind.Ref);
 
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
     }
 
-    private coerceFromAtomicToHeap(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+    private coerceFromAtomicToHeap(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
         const icpptype = this.getICPPTypeData(from);
         if(icpptype.tkind === ICPPTypeKind.Register) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else {
             assert(icpptype.tkind === ICPPTypeKind.Ref);
 
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
     }
 
-    private coerceFromInlineToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+    private coerceFromInlineToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
         const icpptype = this.getICPPTypeData(into);
         if(icpptype.tkind === ICPPTypeKind.Register) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else {
             assert(icpptype.tkind === ICPPTypeKind.Ref);
 
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
     }
 
-    private coerceFromHeapToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+    private coerceFromHeapToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
         const icpptype = this.getICPPTypeData(into);
         if(icpptype.tkind === ICPPTypeKind.Register) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
         else {
             assert(icpptype.tkind === ICPPTypeKind.Ref);
 
             if(sguard !== undefined) {
-                return ICCPOpEmitter.genGuardedExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genGuardedExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return ICCPOpEmitter.genExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
             }
         }
     }
 
-    private coerceSameRepr(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+    private coerceSameRepr(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
         const icppinto = this.getICPPTypeData(into);
 
         if(icppinto.tkind !== ICPPTypeKind.InlineUnion) {
             if(icppinto.tkind === ICPPTypeKind.Register) {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
+                    return ICPPOpEmitter.genGuardedDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
+                    return ICPPOpEmitter.genDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
                 }
             }
             else if(icppinto.tkind === ICPPTypeKind.Struct || icppinto.tkind === ICPPTypeKind.String) {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
+                    return ICPPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
+                    return ICPPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
                 }
             }
             else {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedDirectAssignRefOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
+                    return ICPPOpEmitter.genGuardedDirectAssignRefOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genDirectAssignRefOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
+                    return ICPPOpEmitter.genDirectAssignRefOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
                 }
             }
         }
@@ -543,33 +576,33 @@ class ICPPTypeEmitter {
             const iccpfrom = this.getICPPTypeData(from);
             if(icppinto.allocinfo.sldatasize === iccpfrom.allocinfo.sldatasize) {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
+                    return ICPPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
+                    return ICPPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
                 }
             }
             else if (icppinto.allocinfo.sldatasize < iccpfrom.allocinfo.sldatasize) {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                    return ICPPOpEmitter.genGuardedNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                    return ICPPOpEmitter.genNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
                 }
             }
             else {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                    return ICPPOpEmitter.genGuardedWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                    return ICPPOpEmitter.genWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
                 }
             }
         }
 
     }
 
-    coerce(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICCPStatementGuard): ICCPOp {
+    coerce(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
         const icppfrom = this.getICPPTypeData(from);
         const icppinto = this.getICPPTypeData(into);
 
@@ -588,10 +621,10 @@ class ICPPTypeEmitter {
         else if(icppfrom.tkind === ICPPTypeKind.InlineUnion) {
             if(icppinto.tkind === ICPPTypeKind.HeapUnion) {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                    return ICPPOpEmitter.genGuardedBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                    return ICPPOpEmitter.genBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
                 }
             }
             else {
@@ -603,10 +636,10 @@ class ICPPTypeEmitter {
             
             if(icppinto.tkind === ICPPTypeKind.InlineUnion) {
                 if(sguard !== undefined) {
-                    return ICCPOpEmitter.genGuardedExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                    return ICPPOpEmitter.genGuardedExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
                 }
                 else {
-                    return ICCPOpEmitter.genExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                    return ICPPOpEmitter.genExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
                 }
             }
             else {
