@@ -331,6 +331,14 @@ private:
     void evalLoadDirectFieldOp(const LoadEntityFieldDirectOp* op);
     void evalLoadVirtualFieldOp(const LoadEntityFieldVirtualOp* op);
 
+    void evalProjectTupleOp(const ProjectTupleOp* op);
+    void evalProjectRecordOp(const ProjectRecordOp* op);
+    void evalProjectEntityOp(const ProjectEntityOp* op);
+
+    void evalUpdateTupleOp(const UpdateTupleOp* op);
+    void evalUpdateRecordOp(const UpdateRecordOp* op);
+    void evalUpdateEntityOp(const UpdateEntityOp* op);
+
     void evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op);
 
     template <OpCodeTag tag, bool isGuarded>

@@ -89,6 +89,12 @@ enum OpCodeTag
     LoadRecordPropertySetGuardVirtualOp,
     LoadEntityFieldDirectOp,
     LoadEntityFieldVirtualOp,
+    ProjectTupleOp,
+    ProjectRecordOp,
+    ProjectEntityOp,
+    UpdateTupleOp,
+    UpdateRecordOp,
+    UpdateEntityOp,
     LoadFromEpehmeralListOp,
     InvokeFixedFunctionOp,
     GuardedInvokeFixedFunctionOp,
@@ -465,6 +471,13 @@ class ICPPOpEmitter
     static genLoadEntityFieldVirtualOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, fieldId: number): ICPPOp {
         return {tag: OpCodeTag.LoadEntityFieldVirtualOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, fieldId: fieldId};
     }
+
+    ProjectTupleOp,
+    ProjectRecordOp,
+    ProjectEntityOp,
+    UpdateTupleOp,
+    UpdateRecordOp,
+    UpdateEntityOp,
 
     static genLoadFromEpehmeralListOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, index: number): ICPPOp {
         return {tag: OpCodeTag.LoadFromEpehmeralListOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, index: index};

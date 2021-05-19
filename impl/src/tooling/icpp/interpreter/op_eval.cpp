@@ -587,6 +587,13 @@ void Evaluator::evalLoadVirtualFieldOp(const LoadEntityFieldVirtualOp* op)
     this->processEntityVirtualLoadAndStore(sl, op->layouttype, op->fieldId, op->trgt, op->trgttype);
 }
 
+ProjectTupleOp,
+    ProjectRecordOp,
+    ProjectEntityOp,
+    UpdateTupleOp,
+    UpdateRecordOp,
+    UpdateEntityOp,
+
 void Evaluator::evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op)
 {
     auto sl = this->evalArgument(op->arg);
@@ -1197,6 +1204,14 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalLoadVirtualFieldOp(static_cast<const LoadEntityFieldVirtualOp*>(op));
     }
+
+ProjectTupleOp,
+    ProjectRecordOp,
+    ProjectEntityOp,
+    UpdateTupleOp,
+    UpdateRecordOp,
+    UpdateEntityOp,
+
     case OpCodeTag::LoadFromEpehmeralListOp:
     {
         this->evalLoadFromEpehmeralListOp(static_cast<const LoadFromEpehmeralListOp*>(op));

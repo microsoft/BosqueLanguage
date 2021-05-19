@@ -95,6 +95,12 @@ enum class OpCodeTag
     LoadRecordPropertySetGuardVirtualOp,
     LoadEntityFieldDirectOp,
     LoadEntityFieldVirtualOp,
+    ProjectTupleOp,
+    ProjectRecordOp,
+    ProjectEntityOp,
+    UpdateTupleOp,
+    UpdateRecordOp,
+    UpdateEntityOp,
     LoadFromEpehmeralListOp,
     InvokeFixedFunctionOp,
     GuardedInvokeFixedFunctionOp,
@@ -522,6 +528,27 @@ public:
     LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldVirtualOp() {;}
 };
+
+class ProjectTupleOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQEphemeralListType* trgttype;
+    const Argument arg;
+    const BSQType* layouttype;
+    const BSQTupleType* flowtype;
+    const std::vector<BSQTupleIndex> idxs;
+
+    ProjectTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQTupleType* flowtype, std::vector<BSQTupleIndex> idxs) : InterpOp(sinfo, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
+    virtual ~ProjectTupleOp() {;}
+};
+
+class ProjectRecordOp,
+class ProjectEntityOp,
+    
+class UpdateTupleOp,
+class UpdateRecordOp,
+class UpdateEntityOp,
 
 class LoadFromEpehmeralListOp : public InterpOp
 {
