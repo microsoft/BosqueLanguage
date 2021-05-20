@@ -3,9 +3,15 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { Argument, ICPPOp } from "./icpp_exp";
 
 type TranspilerOptions = {
+};
+
+type SourceInfo = {
+    line: number;
+    column: number;
 };
 
 enum ICPPTypeKind
@@ -136,9 +142,98 @@ class ICPPTypeHeapUnion extends ICPPTypeAbstract {
     }
 }
 
+
+class ICPPFunctionParameter 
+{
+    readonly name: string;
+    readonly ptype: ICPPType;
+
+    constructor(name: string, ptype: ICPPType) {
+        this.name = name;
+        this.ptype = ptype;
+    }
+}
+
+class ICPPInvokeDecl {
+    readonly name: string;
+    readonly iname: string;
+    readonly ikey: MIRInvokeKey;
+
+    readonly srcFile: string;
+    readonly sinfo: SourceInfo;
+    
+    readonly recursive: boolean;
+
+    readonly params: ICPPFunctionParameter[];
+    readonly resultType: ICPPType;
+
+    readonly scalarstackBytes: number;
+    readonly refstackSlots: number;
+    readonly mixedstackBytes: number;
+    readonly mixedMask: RefMask;
+
+    readonly maskSlots: number;
+
+    constructor(name: string, iname: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarstackBytes: number refstackSlots: number, mixedstackBytes: number, mixedMask: RefMask, maskSlots: number) {
+        this.name = name;
+        this.iname = iname;
+        this.ikey = ikey;
+        this.srcFile = srcFile;
+        this.sinfo = sinfo;
+        this.recursive = recursive;
+        this.params = params;
+        this.resultType = resultType;
+
+        this.scalarstackBytes = scalarstackBytes;
+        this.refstackSlots = refstackSlots;
+        this.mixedstackBytes = mixedstackBytes;
+        this.mixedMask = mixedMask;
+
+        this.maskSlots = maskSlots;
+    }
+}
+
+class ICPPInvokeBodyDecl extends ICPPInvokeDecl 
+{
+    readonly body: ICPPOp[];
+    readonly argmaskSize: number;
+
+    constructor(name: string, iname: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarstackBytes: number refstackSlots: number, mixedstackBytes: number, mixedMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+        super(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, maskSlots);
+        this.body = body;
+        this.argmaskSize = argmaskSize;
+    }
+}
+
+class ICPPPCode
+{
+    readonly code: MIRInvokeKey;
+    readonly cargs: Argument[];
+
+    constructor(code: MIRInvokeKey, cargs: Argument[]) {
+        this.code = code;
+        this.cargs = cargs;
+    }
+}
+
+class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl 
+{
+    readonly implkeyname: string;
+    readonly binds: Map<string, ICPPType>;
+    readonly pcodes: Map<string, ICPPPCode>;
+
+    constructor(name: string, iname: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarstackBytes: number refstackSlots: number, mixedstackBytes: number, mixedMask: RefMask, maskSlots: number, implkeyname: string, binds: Map<string, ICPPType>, pcodes: Map<string, ICPPPCode>) {
+        super(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, maskSlots);
+        this.implkeyname = implkeyname;
+        this.binds = binds;
+        this.pcodes = pcodes;
+    }
+}
+
 export {
-    TranspilerOptions,
+    TranspilerOptions, SourceInfo,
     ICPPTypeKind, ICPPTypeSizeInfo, RefMask,
     ICPPType, ICPPTypePrimitive, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList,
-    ICPPTypeAbstract, ICPPTypeInlineUnion, ICPPTypeHeapUnion
+    ICPPTypeAbstract, ICPPTypeInlineUnion, ICPPTypeHeapUnion,
+    ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl
 };

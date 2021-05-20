@@ -257,7 +257,7 @@ void BSQListEntityType::initializeIteratorGivenPosition(BSQListIterator* iter, v
     iter->lpos = 0;
     iter->cbuff = nullptr;
 
-     initializeListIterPosition(iter, pos);
+    initializeListIterPosition(iter, pos);
 }
 
 void BSQListEntityType::initializeIteratorBegin(BSQListIterator* iter, void* data)

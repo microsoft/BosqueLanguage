@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { SourceInfo } from "./icpp_assembly";
 
 enum ArgumentTag
 {
@@ -23,7 +24,6 @@ enum ArgumentTag
     ConstDataString,
     ConstRegex,
     Local,
-    Scratch,
     Argument,
     GlobalConst,
     UninterpFill
@@ -225,11 +225,6 @@ type Argument = {
 
 type TargetVar = {
     offset: number;
-};
-
-type SourceInfo = {
-    line: number;
-    column: number;
 };
 
 type ICPPGuard = {
@@ -695,7 +690,7 @@ class ICPPOpEmitter
 
 export {
     ArgumentTag, OpCodeTag, 
-    Argument, TargetVar, SourceInfo,
+    Argument, TargetVar,
     ICPPGuard, ICPPStatementGuard,
     ICPPOp,
     ICPPOpEmitter
