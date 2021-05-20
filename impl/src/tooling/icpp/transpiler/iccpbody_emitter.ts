@@ -8,7 +8,7 @@ import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { MIRAbort, MIRAllTrue, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, ICPPGuard, ICPPStatementGuard, ICPPOp, ICPPOpEmitter, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-import { ICPPTypeEntity, ICPPTypeRecord, ICPPTypeTuple, TranspilerOptions } from "./icpp_assembly";
+import { ICPPType, ICPPTypeEntity, ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions } from "./icpp_assembly";
 
 import * as assert from "assert";
 import { BSQRegex } from "../../../ast/bsqregex";
@@ -26,7 +26,11 @@ class ICPPBodyEmitter {
     currentFile: string = "[No File]";
     currentRType: MIRType;
 
-    maskSizes: Set<number> = new Set<number>();
+    private localsMap: Map<string, number> = new Map<string, number>();
+    private localsMask: RefMask = "";
+
+    private scratchPosition: number = 0;
+    private scratchMask: RefMask = "";
   
     requiredLoadVirtualTupleIndex: { inv: string, argflowtype: MIRType, idx: number, resulttype: MIRType, guard: MIRGuard | undefined }[] = [];
     requiredLoadVirtualRecordProperty: { inv: string, argflowtype: MIRType, pname: string, resulttype: MIRType, guard: MIRGuard | undefined }[] = [];
@@ -44,6 +48,14 @@ class ICPPBodyEmitter {
 
     requiredVirtualFunctionInvokes: { inv: string, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }[] = [];
     requiredVirtualOperatorInvokes: { inv: string, argflowtype: MIRType, opname: MIRVirtualMethodKey, args: MIRResolvedTypeKey[], resulttype: MIRType }[] = [];
+
+    private generateScratchVarInfo(oftype: ICPPType): [TargetVar, Argument] {
+        const soffset = this.scratchPosition;
+        this.scratchPosition += oftype.allocinfo.slfullsize;
+        this.scratchMask += oftype.allocinfo.slmask;
+
+        return [{offset: soffset}, {kind: ArgumentTag.Scratch, location: soffset}];
+    }
 
     private generateProjectVirtualTupleInvName(argflowtype: MIRType, indecies: number[], resulttype: MIRType): string {
         const idxs = indecies.map((idx) => `${idx}`).join(",");
@@ -780,7 +792,7 @@ class ICPPBodyEmitter {
         }
     }
 
-    processTupleProjectToEphemeral(op: MIRTupleProjectToEphemeral): ICPPOp {
+    processTupleProjectToEphemeral(op: MIRTupleProjectToEphemeral): [ICPPOp] {
         const argflowtype = this.typegen.getMIRType(op.argflowtype);
         const resulttype = this.typegen.getMIRType(op.epht);
 
@@ -792,19 +804,53 @@ class ICPPBodyEmitter {
             }
             
             const vid = this.typegen.registerVirtualInvokeName(icall);
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt), op.epht, vid, [this.argToICPPLocation(op.arg)], -1);
+            return [ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt), op.epht, vid, [this.argToICPPLocation(op.arg)], -1)];
         }
         else {
-            if(/*no coerce needed*/) {
-                return ICPPOpEmitter.genProjectTupleOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt), op.epht, this.argToICPPLocation(op.arg), op.arglayouttype, op.argflowtype, idxs);
+            let sametypes = true;
+            for(let i = 0; i < op.indecies.length; ++i) {
+                const idx = op.indecies[i];
+                sametypes = sametypes && ((argflowtype.options[0] as MIRTupleType).entries[idx].type.trkey === (resulttype.options[0] as MIREphemeralListType).entries[i].trkey);
+            }
+
+            if(sametypes) {
+                const tuptype = this.typegen.getICPPTypeData(this.typegen.getMIRType((argflowtype.options[0] as MIRTupleType).trkey)) as ICPPTypeTuple;
+                
+                let idxs: [number, number, MIRResolvedTypeKey][] = [];
+                op.indecies.forEach((idx) => {
+                    const tupleidxtype = (argflowtype.options[0] as MIRTupleType).entries[idx].type;
+                    idxs.push([idx, tuptype.idxoffsets[idx], tupleidxtype.trkey]);
+                });
+
+                return [ICPPOpEmitter.genProjectTupleOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt), op.epht, this.argToICPPLocation(op.arg), op.arglayouttype, op.argflowtype, op.indecies)];
             }
             else {
-            const pargs = op.indecies.map((idx, i) => {
-                const idxr = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(argflowtype.options[0] as MIRTupleType, idx), [argpp]);
-                return this.typegen.coerce(idxr, (argflowtype.options[0] as MIRTupleType).entries[idx].type, (resulttype.options[0] as MIREphemeralListType).entries[i]);
-            });
+                const tuptype = this.typegen.getICPPTypeData(this.typegen.getMIRType((argflowtype.options[0] as MIRTupleType).trkey)) as ICPPTypeTuple;
 
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.getSMTConstructorName(resulttype).cons, pargs), continuation);
+                let ops: ICPPOp[] = [];
+                let pargs: Argument[] = [];
+                op.indecies.forEach((idx, i) => {
+                    const tupleidxtype = (argflowtype.options[0] as MIRTupleType).entries[idx].type;
+                    const elidxtype = (resulttype.options[0] as MIREphemeralListType).entries[i];
+
+                    const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(tupleidxtype));
+                    ops.push(ICPPOpEmitter.genLoadTupleIndexDirectOp(op.sinfo, ltrgt, tupleidxtype.trkey, this.argToICPPLocation(op.arg), op.arglayouttype, tuptype.idxoffsets[idx], idx));
+
+                    if(tupleidxtype.trkey === elidxtype.trkey) {
+                        pargs.push(larg);
+                    }
+                    else {
+                        const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(elidxtype));
+                        xxxx;
+                    }
+                });
+
+                const pargs = op.indecies.map((idx, i) => {
+                    const idxr = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(argflowtype.options[0] as MIRTupleType, idx), [argpp]);
+                    return this.typegen.coerce(idxr, (argflowtype.options[0] as MIRTupleType).entries[idx].type, (resulttype.options[0] as MIREphemeralListType).entries[i]);
+                });
+
+                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.getSMTConstructorName(resulttype).cons, pargs), continuation);
             }
         }
     }

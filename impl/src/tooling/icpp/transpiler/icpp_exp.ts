@@ -23,6 +23,7 @@ enum ArgumentTag
     ConstDataString,
     ConstRegex,
     Local,
+    Scratch,
     Argument,
     GlobalConst,
     UninterpFill
