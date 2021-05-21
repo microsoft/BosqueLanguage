@@ -12,20 +12,17 @@ class Allocator;
 
 struct GCStackEntry
 {
-    void** refframep;
-    uint32_t refslots;
-
-    void** mixedframep;
+    void** framep;
     RefMask mask;
 };
 
 class GCStack
 {
 public:
-    static GCStackEntry frames[8192];
+    static GCStackEntry frames[2048];
     static uint32_t stackp;
 
-    inline static void pushFrame(void** reffp, uint32_t refslots, void** structfp, RefMask mask)
+    inline static void pushFrame(void** framep, RefMask mask)
     {
         if (GCStack::stackp >= 8192)
         {
@@ -33,7 +30,7 @@ public:
             exit(1);
         }
 
-        GCStack::frames[GCStack::stackp++] = { reffp, refslots, structfp, mask };
+        GCStack::frames[GCStack::stackp++] = { framep, mask };
     }
 
     inline static void popFrame()

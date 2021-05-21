@@ -7,6 +7,19 @@
 #include "../core/bsqmemory.h"
 #include "../runtime/environment.h"
 
+
+template <>
+GCProcessOperatorFP BSQType::getProcessFP<true>() const
+{
+    return this->fpProcessObjRoot;
+}
+
+template <>
+inline GCProcessOperatorFP BSQType::getProcessFP<false>() const
+{
+    return this->fpProcessObjHeap;
+}
+
 void gcDecOperator_packedImpl(const BSQType* btype, void** data)
 {
     Allocator::gcDecrementSlots(data, btype->ptrcount);

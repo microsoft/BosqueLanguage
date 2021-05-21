@@ -51,6 +51,8 @@ public:
 class BSQType
 {
 public:
+    static BSQType** g_typetable;
+
     const BSQTypeID tid;
     const BSQTypeKind tkind;
     
@@ -79,18 +81,6 @@ public:
     GCProcessOperatorFP getProcessFP() const
     {
         return nullptr;
-    }
-
-    template <>
-    GCProcessOperatorFP getProcessFP<true>() const
-    {
-        return this->fpProcessObjRoot;
-    }
-
-    template <>
-    inline GCProcessOperatorFP getProcessFP<false>() const
-    {
-        return this->fpProcessObjHeap;
     }
 
 private:

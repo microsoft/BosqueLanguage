@@ -5,7 +5,7 @@
 
 #include "bsqmemory.h"
 
-GCStackEntry GCStack::frames[8192];
+GCStackEntry GCStack::frames[2048];
 uint32_t GCStack::stackp = 0;
 
 uint8_t* NewSpaceAllocator::allocateBumpSlow(size_t rsize)

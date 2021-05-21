@@ -6,6 +6,7 @@
 #pragma once
 
 #include <assert.h>
+#include <setjmp.h>
 
 #include <cstdlib>
 #include <cstdint>
@@ -26,22 +27,31 @@
 #include <numeric>
 #include <execution>
 
+#include <mimalloc.h>
+
+////////////////////////////////
+//Various sizes
+#define BSQ_MAX_STACK 2048
+
+////////////////////////////////
+//Asserts
+
 #define BSQ_INTERNAL_ASSERT(C) if(!(C)) { assert(false); }
 
 #ifdef BSQ_DEBUG_BUILD
-#define HANDLE_BSQ_ABORT(MSG, F, L) { printf("\"%s\" in %s on line %i\n", MSG, F, (int)L); fflush(stdout); exit(1); }
+#define HANDLE_BSQ_ABORT(MSG, F, L, C) { printf("\"%s\" in %s on line %i\n", MSG, F, (int)L); fflush(stdout); longjmp(Environment::g_entrybuff, C); }
 #else
-#define HANDLE_BSQ_ABORT() { printf("ABORT\n"); exit(1); }
+#define HANDLE_BSQ_ABORT() { printf("ABORT\n"); longjmp(Environment::g_entrybuff, 5); }
 #endif
 
 #ifdef BSQ_DEBUG_BUILD
-#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L);
+#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L, 2);
 #else
 #define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT();
 #endif
 
 #ifdef BSQ_DEBUG_BUILD
-#define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L)
+#define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L, 3)
 #else
 #define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT()
 #endif
@@ -70,65 +80,54 @@
 #define BSQ_MIN_NURSERY_SIZE 1048576
 #define BSQ_MAX_NURSERY_SIZE 16777216
 
-//Create and release bump space or stack allocations
+//Stack allocations
 #ifdef __APPLE__
-#define BSQ_BUMP_SPACE_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
 #else
-#define BSQ_BUMP_SPACE_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
 #endif
 
-#define BSQ_BUMP_SPACE_RELEASE(SIZE, M) free(M)
+//Header word layout
+//high [RC - 40 bits] [MARK - 1 bit] [YOUNG - 1 bit] [TYPEID - 22 bits]
 
-//Allocate and release free list values + stack allocate
-#ifdef __APPLE__
-#define BSQ_FREE_LIST_ALLOC(SIZE) aligned_alloc(SIZE, BSQ_MEM_ALIGNMENT)
-#else
-#define BSQ_FREE_LIST_ALLOC(SIZE) _aligned_malloc(SIZE, BSQ_MEM_ALIGNMENT)
-#endif
+#define GC_MARK_BIT 0x800000
+#define GC_YOUNG_BIT 0x400000
+#define GC_MARK_MASK 0xFFFFFFFFFF7FFFFF
+#define GC_RC_MASK 0xFFFFFFFFFF000000
+#define GC_TYPE_ID_MASK 0x3FFFFF
+#define GC_REACHABLE_MASK (GC_RC_MASK | GC_MARK_BIT)
+#define GC_CLEAR_MARK_MASK (GC_RC_MASK | GC_TYPE_ID_MASK)
 
-#define BSQ_FREE_LIST_RELEASE(SIZE, M) free(M)
+typedef uint64_t GC_META_DATA_WORD;
+#define GC_EXTRACT_RC(W) (W >> 24)
+#define GC_MASK_RC(W) (W & GC_RC_MASK)
+#define GC_EXTRACT_MARK(W) (W & GC_MARK_BIT)
+#define GC_MASK_MARK(W) (W & GC_MARK_MASK)
+#define GC_EXTRACT_TYPEID(W) (W & 0x7FFFFF)
+
+#define GC_GET_META_DATA_ADDR(M) ((GC_META_DATA_WORD*)((uint8_t*)M - sizeof(GC_META_DATA_WORD)))
+#define GC_LOAD_META_DATA_WORD(ADDR) (*(ADDR))
+#define GC_SET_META_DATA_WORD(ADDR, W) (*(ADDR) = W)
+
+#define GC_TEST_IS_UNREACHABLE(W) (W & GC_REACHABLE_MASK)
+#define GC_TEST_IS_YOUG(W) (W & GC_YOUNG_BIT)
+#define GC_CLEAR_MARK_BIT(W) (W & GC_CLEAR_MARK_MASK)
+#define GC_SET_MARK_BIT(ADDR) GC_SET_META_DATA_WORD(ADDR, (GC_LOAD_META_DATA_WORD(ADDR) | GC_MARK_BIT))
+
+#define GC_RC_ETERNAL_INIT ((GC_META_DATA_WORD)0x1000000)
+#define GC_RC_ONE ((GC_META_DATA_WORD)0x1000000)
+#define GC_INC_RC(W) (W + GC_RC_ONE)
+#define GC_DEC_RC(W) (W - GC_RC_ONE)
+
+#define GC_INIT_YOUNG(ADDR, TID) GC_SET_META_DATA(ADDR, GC_YOUG_BIT | TID)
+#define GC_INIT_OLD(ADDR, W) GC_SET_META_DATA(ADDR, GC_RC_ONE | GC_EXTRACT_TYPEID(W))
 
 //Access type info + special forwarding pointer mark
-#define TYPE_INFO_FORWARD_SENTINAL nullptr
-#define GET_TYPE_META_DATA_ADDR(M) ((BSQType**)((void*)((uint8_t*)M - sizeof(BSQType*))))
-#define GET_TYPE_META_DATA(M) (*(GET_TYPE_META_DATA_ADDR(M)))
+#define GET_TYPE_META_DATA(M) (BSQTYPE::g_typetable[GC_EXTRACT_TYPEID(GC_LOAD_META_DATA_WORD(M))])
 #define GET_TYPE_META_DATA_AS(T, M) ((const T*)GET_TYPE_META_DATA(M))
-#define SET_TYPE_META_DATA_FORWARD_SENTINAL(M) *(GET_TYPE_META_DATA_ADDR(M)) = TYPE_INFO_FORWARD_SENTINAL
-
-#define GET_FORWARD_PTR(M) *((void**)M)
-#define SET_FORWARD_PTR(M, P) *((void**)M) = (void *)P
-
-//Ref Counting Metadata and operations
-typedef uint64_t RCMeta;
-
-#define GC_RC_CLEAR ((uint64_t)0)
-#define GC_RC_ETERNAL_INIT ((uint64_t)1)
-#define GC_RC_MARK_FROM_ROOT ((uint64_t)(((uint64_t)1) << 60))
-
-#define GC_COUNT_GET_MASK 0xFFFFFFFFFFFF
-#define GC_MARK_GET_MASK 0xFFFF000000000000
-
-#define GET_RC_HEADER(M) ((RCMeta*)((uint8_t*)M) - (sizeof(RCMeta) + sizeof(BSQType*)))
-#define GET_RC_COUNT(M) (*GET_RC_HEADER(M) & GC_COUNT_GET_MASK)
-#define GET_RC_MARK(M) (*GET_RC_HEADER(M) & GC_MARK_GET_MASK)
-
-#define INC_RC_HEADER(M) ((*GET_RC_HEADER(M))++)
-#define DEC_AND_CHECK_RC_HEADER(M) ((*GET_RC_HEADER(M))-- == GC_RC_CLEAR) 
-#define MARK_HEADER_SET(M) (*GET_RC_HEADER(M) = (GET_RC_COUNT(M) | GC_RC_MARK_FROM_ROOT))
-#define MARK_HEADER_CLEAR(M) (*GET_RC_HEADER(M) = GC_RC_CLEAR)
-
-//Check if an object is unreachable
-#define IS_UNREACHABLE(M) (*GET_RC_HEADER(M) == GC_RC_CLEAR)
 
 //Misc operations
-#define IS_BUMP_ALLOCATION(M, BSTART, BEND) ((BSTART <= (uintptr_t)M) & ((uintptr_t)M < BEND))
-
-#define GET_SLAB_BASE(M) ((void*)((uint8_t *)M - sizeof(BSQType*)))
-#define GET_FREE_LIST_BASE(M) ((void*)((uint8_t *)M - (sizeof(RCMeta) + sizeof(BSQType*))))
-
-#define COMPUTE_FREE_LIST_BYTES(M) (GET_TYPE_META_DATA(M)->allocinfo.heapsize + sizeof(RCMeta) + sizeof(BSQType*))
+#define COMPUTE_REAL_BYTES(M) (GET_TYPE_META_DATA(M)->allocinfo.heapsize + sizeof(GC_META_DATA_WORD))
 
 #ifdef __APPLE__
 #define GC_MEM_COPY(DST, SRC, BYTES) memcpy(DST, SRC, BYTES)
@@ -153,20 +152,15 @@ typedef void* StorageLocationPtr;
 #define SLPTR_LOAD_UNION_INLINE_TYPE(L) (*((const BSQType**)L))
 #define SLPTR_LOAD_UNION_INLINE_DATAPTR(L) ((void*)(((uint8_t*)L) + sizeof(BSQType*)))
 
-#define SLPTR_LOAD_UNION_HEAP_TYPE(L) GET_TYPE_META_DATA(*((void**)L))
-#define SLPTR_LOAD_UNION_HEAP_DATAPTR(L) (*((void**)L))
+#define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
 
-#define SLPTR_INDEX_INLINE(SL, I) ((void*)(((uint8_t*)SL) + I))
-#define SLPTR_INDEX_HEAP(SL, I) SLPTR_INDEX_INLINE(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SL), I)
-
-#define SLPTR_STORE_UNION_INLINE_TYPE(L, T) (*((const BSQType**)L) = T)
-
-#define SLPTR_COPY_CONTENTS(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
+#define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
 
 typedef bool (*KeyEqualFP)(StorageLocationPtr, StorageLocationPtr);
 typedef bool (*KeyLessFP)(StorageLocationPtr, StorageLocationPtr);
 
 #define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
+#define IS_INLINE_BIGNUM(N) false
 
 ////////////////////////////////
 //Type and GC interaction decls
@@ -176,7 +170,8 @@ class BSQType;
 #define PTR_FIELD_MASK_SCALAR '1'
 #define PTR_FIELD_MASK_PTR '2'
 #define PTR_FIELD_MASK_STRING '3'
-#define PTR_FIELD_MASK_UNION '4'
+#define PTR_FIELD_MASK_BIGNUM '4'
+#define PTR_FIELD_MASK_UNION '5'
 #define PTR_FIELD_MASK_END (char)0
 
 typedef const char* RefMask;
