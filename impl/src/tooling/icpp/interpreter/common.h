@@ -99,31 +99,34 @@
 #define GC_CLEAR_MARK_MASK (GC_RC_MASK | GC_TYPE_ID_MASK)
 
 typedef uint64_t GC_META_DATA_WORD;
-#define GC_EXTRACT_RC(W) (W >> 24)
 #define GC_MASK_RC(W) (W & GC_RC_MASK)
 #define GC_EXTRACT_MARK(W) (W & GC_MARK_BIT)
 #define GC_MASK_MARK(W) (W & GC_MARK_MASK)
 #define GC_EXTRACT_TYPEID(W) (W & 0x7FFFFF)
 
 #define GC_GET_META_DATA_ADDR(M) ((GC_META_DATA_WORD*)((uint8_t*)M - sizeof(GC_META_DATA_WORD)))
-#define GC_LOAD_META_DATA_WORD(ADDR) (*(ADDR))
-#define GC_SET_META_DATA_WORD(ADDR, W) (*(ADDR) = W)
+#define GC_LOAD_META_DATA_WORD(ADDR) (*((GC_META_DATA_WORD*)ADDR))
+#define GC_SET_META_DATA_WORD(ADDR, W) (*((GC_META_DATA_WORD*)ADDR) = W)
 
 #define GC_TEST_IS_UNREACHABLE(W) (W & GC_REACHABLE_MASK)
-#define GC_TEST_IS_YOUG(W) (W & GC_YOUNG_BIT)
+#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_MASK) == 0)
+#define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
 #define GC_CLEAR_MARK_BIT(W) (W & GC_CLEAR_MARK_MASK)
-#define GC_SET_MARK_BIT(ADDR) GC_SET_META_DATA_WORD(ADDR, (GC_LOAD_META_DATA_WORD(ADDR) | GC_MARK_BIT))
+#define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
 
 #define GC_RC_ETERNAL_INIT ((GC_META_DATA_WORD)0x1000000)
 #define GC_RC_ONE ((GC_META_DATA_WORD)0x1000000)
 #define GC_INC_RC(W) (W + GC_RC_ONE)
 #define GC_DEC_RC(W) (W - GC_RC_ONE)
 
-#define GC_INIT_YOUNG(ADDR, TID) GC_SET_META_DATA(ADDR, GC_YOUG_BIT | TID)
-#define GC_INIT_OLD(ADDR, W) GC_SET_META_DATA(ADDR, GC_RC_ONE | GC_EXTRACT_TYPEID(W))
+#define GC_INIT_YOUNG(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUG_BIT | TID)
+#define GC_INIT_OLD_ROOT(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_MARK_BIT | GC_EXTRACT_TYPEID(W))
+#define GC_INIT_OLD_HEAP(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_RC_ONE | GC_EXTRACT_TYPEID(W))
 
 //Access type info + special forwarding pointer mark
-#define GET_TYPE_META_DATA(M) (BSQTYPE::g_typetable[GC_EXTRACT_TYPEID(GC_LOAD_META_DATA_WORD(M))])
+#define GET_TYPE_META_DATA_FROM_WORD(W) (*(BSQType::g_typetable + GC_EXTRACT_TYPEID(W)))
+#define GET_TYPE_META_DATA_FROM_ADDR(ADDR) GET_TYPE_META_DATA_FROM_WORD(GC_LOAD_META_DATA_WORD(ADDR))
+#define GET_TYPE_META_DATA(M) GET_TYPE_META_DATA_FROM_ADDR(GC_GET_META_DATA_ADDR(M))
 #define GET_TYPE_META_DATA_AS(T, M) ((const T*)GET_TYPE_META_DATA(M))
 
 //Misc operations
@@ -154,6 +157,7 @@ typedef void* StorageLocationPtr;
 
 #define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
 
+#define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
 #define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
 
 typedef bool (*KeyEqualFP)(StorageLocationPtr, StorageLocationPtr);
@@ -166,6 +170,22 @@ typedef bool (*KeyLessFP)(StorageLocationPtr, StorageLocationPtr);
 //Type and GC interaction decls
 
 class BSQType;
+
+enum class BSQTypeKind : uint32_t
+{
+    Invalid = 0x0,
+    Register,
+    Struct,
+    String,
+    BigNum,
+    Ref,
+    InlineUnion,
+    HeapUnion
+};
+
+typedef uint8_t* StructuralValueRepr; //A structural value -- really the first element in the byte layout 
+typedef BSQType** InlineValueRepr; //A inline union -- really the first element (which is the type tag)
+typedef void* ReferenceValueRepr; //A pointer to the heap allocation (Ref or HeapUnion)
 
 #define PTR_FIELD_MASK_SCALAR '1'
 #define PTR_FIELD_MASK_PTR '2'

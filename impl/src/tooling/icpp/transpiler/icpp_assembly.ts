@@ -20,6 +20,7 @@ enum ICPPTypeKind
     Register = "BSQTypeKind::Register",
     Struct = "BSQTypeKind::Struct",
     String = "BSQTypeKind::String",
+    BigNum = "BSQTypeKind::BigNum",
     Ref = "BSQTypeKind::Ref",
     InlineUnion = "BSQTypeKind::InlineUnion",
     HeapUnion = "BSQTypeKind::HeapUnion"
@@ -46,6 +47,7 @@ class ICPPType {
     readonly name: string;
     readonly tkey: MIRResolvedTypeKey;
     readonly tkind: ICPPTypeKind;
+    readonly reprkind: string;
     
     readonly allocinfo: ICPPTypeSizeInfo; //memory size information
     
@@ -53,10 +55,11 @@ class ICPPType {
     readonly refmask: RefMask | undefined;
     readonly ptrcount: number; //if this is a packed object the number of pointers at the front
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
+    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, reprkind: string, allocinfo: ICPPTypeSizeInfo, isLeafType: boolean, refmask: RefMask | undefined, ptrcount: number) {
         this.name = name;
         this.tkey = tkey;
         this.tkind = tkind;
+        this.reprkind = reprkind;
         this.allocinfo = allocinfo;
         this.isLeafType = isLeafType;
         this.refmask = refmask;

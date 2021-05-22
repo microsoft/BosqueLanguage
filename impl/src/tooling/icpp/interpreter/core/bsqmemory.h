@@ -8,8 +8,6 @@
 #include "../common.h"
 #include "../assembly/bsqtype.h"
 
-class Allocator;
-
 struct GCStackEntry
 {
     void** framep;
@@ -236,17 +234,11 @@ public:
     static Allocator GlobalAllocator;
 
 private:
-    NewSpaceAllocator nsalloc;
-    OldSpaceAllocator osalloc;
-
+    std::deque<void*> allocs;
     std::deque<void**> tempRoots;
-
     std::vector<void*> maybeZeroCounts;
 
-    uintptr_t bstart;
-    uintptr_t bend;
     std::queue<void*> worklist;
-
     std::queue<void*> releaselist;
 
 #ifdef ENABLE_MEM_STATS
@@ -255,74 +247,40 @@ private:
     size_t maxheap;
 #endif
 
-    ////////
-    //Operations GC mark and move
-    template <bool isRoot>
-    void* moveBumpObjectToRCSpace(void* obj)
-    {
-        const BSQType* ometa = GET_TYPE_META_DATA(obj);
-        size_t osize = ometa->allocinfo.heapsize;
-        void* nobj = this->osalloc.allocateSizeFixed(osize);
-
-        MEM_STATS_OP(this->promotedbytes += osize + sizeof(MetaData *));
-
-        GC_MEM_COPY(nobj, GET_TYPE_META_DATA_ADDR(obj), osize + sizeof(BSQType*));
-        if (!ometa->isLeafType)
-        {
-            this->worklist.push(nobj);
-        }
-
-        void* robj = (void*)((uint8_t*)nobj + sizeof(BSQType*));
-        if constexpr (isRoot)
-        {
-            MARK_HEADER_SET(robj);
-            this->maybeZeroCounts.push_back(robj);
-        }
-        else
-        {
-            INC_RC_HEADER(robj);
-        }
-
-        SET_TYPE_META_DATA_FORWARD_SENTINAL(obj);
-        SET_FORWARD_PTR(obj, robj);
-
-        return robj;
-    }
-
 public:
     template <bool isRoot>
     inline static void gcProcessSlot(void** slot)
     {
-        void*v = *slot;
+        void* v = *slot;
         if (v != nullptr)
         {
-            if (IS_BUMP_ALLOCATION(v, Allocator::GlobalAllocator.bstart, Allocator::GlobalAllocator.bend))
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
+            GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
+            if (GC_TEST_IS_YOUNG(w))
             {
-                *slot = Allocator::GlobalAllocator.moveBumpObjectToRCSpace<isRoot>(v);
+                const BSQType* ometa = GET_TYPE_META_DATA_FROM_WORD(w);
+                MEM_STATS_OP(this->promotedbytes += ometa->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
+
+                if (!ometa->isLeafType)
+                {
+                    this->worklist.push(obj);
+                }
             }
-            else
+            else 
             {
                 if constexpr (isRoot)
                 {
-                    MARK_HEADER_SET(v);
-                }
-                else
-                {
-                    INC_RC_HEADER(v);
+                    if (GC_TEST_IS_ZERO_RC(w))
+                    {
+                        GC_SET_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
+                    }
                 }
             }
-        }
-    }
 
-    template <bool isRoot>
-    inline static void gcProcessSlots(void** slots, size_t limit)
-    {
-        void** cslot = slots;
-        void* end = slots + limit;
-
-        while (cslot != end)
-        {
-            Allocator::gcProcessSlot<isRoot>(cslot++);
+            if constexpr (!isRoot)
+            {
+                GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+            }
         }
     }
 
@@ -330,6 +288,15 @@ public:
     inline static void gcProcessSlotWithString(void** slot)
     {
         if (!IS_INLINE_STRING(slot))
+        {
+            Allocator::gcProcessSlot<isRoot>(slot);
+        }
+    }
+
+    template <bool isRoot>
+    inline static void gcProcessSlotWithBigNum(void** slot)
+    {
+        if (!IS_INLINE_BIGNUM(slot))
         {
             Allocator::gcProcessSlot<isRoot>(slot);
         }
@@ -362,6 +329,9 @@ public:
                 case PTR_FIELD_MASK_STRING:
                     Allocator::gcProcessSlotWithString<isRoot>(cslot++);
                     break;
+                case PTR_FIELD_MASK_BIGNUM:
+                    Allocator::gcProcessSlotWithBigNum<isRoot>(cslot++);
+                    break;
                 default:
                     Allocator::gcProcessSlotsWithUnion<isRoot>(cslot++);
                     break;
@@ -375,27 +345,28 @@ public:
     {
         if (obj != nullptr)
         {
-            if (DEC_AND_CHECK_RC_HEADER(obj))
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
+            GC_META_DATA_WORD w = GC_DEC_RC(GC_LOAD_META_DATA_WORD(addr));
+            GC_SET_META_DATA_WORD(addr, w);
+
+            if (GC_TEST_IS_UNREACHABLE(w))
             {
                 Allocator::GlobalAllocator.releaselist.push(obj);
             }
         }
     }
 
-    inline static void gcDecrementSlots(void** slots, size_t limit)
-    {
-        void **cslot = slots;
-        void *end = slots + limit;
-
-        while (cslot != end)
-        {
-            Allocator::gcDecrement(*cslot++);
-        }
-    }
-
     inline static void gcDecrementString(void** slot)
     {
         if (!IS_INLINE_STRING(slot))
+        {
+            Allocator::gcDecrement(*slot);
+        }
+    }
+
+    inline static void gcDecrementBigNum(void** slot)
+    {
+        if (!IS_INLINE_BIGNUM(slot))
         {
             Allocator::gcDecrement(*slot);
         }
@@ -426,69 +397,11 @@ public:
                 case PTR_FIELD_MASK_STRING:
                     Allocator::gcDecrementString(cslot++);
                     break;
+                case PTR_FIELD_MASK_BIGNUM:
+                    Allocator::gcDecrementBigNum(cslot++);
+                    break;
                 default:
                     Allocator::gcDecrementSlotsWithUnion(cslot++);
-                    break;
-            }
-        }
-    }
-
-    ////////
-    //Operations GC mark clear
-    inline static void gcClearMark(void *obj)
-    {
-        if (obj != nullptr)
-        {
-            MARK_HEADER_CLEAR(obj);
-        }
-    }
-
-    inline static void gcClearMarkSlots(void** slots, size_t limit)
-    {
-        void **cslot = slots;
-        void *end = slots + limit;
-
-        while (cslot != end)
-        {
-            Allocator::gcClearMark(*cslot++);
-        }
-    }
-
-    inline static void gcClearMarkString(void** slot)
-    {
-        if (!IS_INLINE_STRING(slot))
-        {
-            Allocator::gcClearMark(*slot);
-        }
-    }
-
-    inline static void gcClearMarkSlotsWithUnion(void** slots)
-    {
-        const BSQType *umeta = ((const BSQType*)(*slots++));
-        umeta->fpClearObj(umeta, slots);
-    }
-
-    inline static void gcClearMarkSlotsWithMask(void** slots, const char* mask)
-    {
-        void** cslot = slots;
-        const char* cmaskop = mask;
-
-        while (*cmaskop)
-        {
-            char op = *cmaskop++;
-            switch(op)
-            {
-                case PTR_FIELD_MASK_SCALAR:
-                    cslot++;
-                    break;
-                case PTR_FIELD_MASK_PTR:
-                    Allocator::gcClearMark(*cslot++);
-                    break;
-                case PTR_FIELD_MASK_STRING:
-                    Allocator::gcClearMarkString(cslot++);
-                    break;
-                default:
-                    Allocator::gcClearMarkSlotsWithUnion(cslot++);
                     break;
             }
         }
@@ -501,17 +414,7 @@ private:
     {
         for (size_t i = 0; i < GCStack::stackp; ++i)
         {
-            void** slots = GCStack::frames[i].refframep;
-            uint32_t slotct = GCStack::frames[i].refslots;
-            for (size_t j = 0; j < slotct; ++j)
-            {
-                Allocator::gcProcessSlot<true>(slots + j);
-            }
-
-            if (GCStack::frames[i].mixedframep != nullptr)
-            {
-                Allocator::gcProcessSlotsWithMask<true>(GCStack::frames[i].mixedframep, GCStack::frames[i].mask);
-            }
+            Allocator::gcProcessSlotsWithMask<true>(GCStack::frames[i].framep, GCStack::frames[i].mask);
         }
 
         for (auto iter = Allocator::GlobalAllocator.tempRoots.begin(); iter != Allocator::GlobalAllocator.tempRoots.end(); ++iter)
@@ -528,38 +431,33 @@ private:
             this->worklist.pop();
 
             const BSQType* umeta = GET_TYPE_META_DATA(obj);
-
             assert(!umeta->isLeafType);
 
-            if(umeta->ptrcount != 0)
-            {
-                Allocator::gcProcessSlots<false>((void**)obj, umeta->ptrcount);
-            }
-            else if(umeta->refmask != nullptr)
-            {
-                Allocator::gcProcessSlotsWithMask<false>((void**)obj, umeta->refmask);
-            }
-            else
-            {
-                umeta->getProcessFP<false>()(umeta, (void**)obj);
-            }
+            Allocator::gcProcessSlotsWithMask<false>((void**)obj, umeta->refmask);
         }
     }
 
-    void checkMaybeZeroCountList()
+    void sweep()
+    {
+        xxxx;
+    }
+
+    void checkMaybeZeroCountList(std::vector<void*>::iterator zclend)
     {
         auto biter = this->maybeZeroCounts.begin();
-        auto eiter = this->maybeZeroCounts.end();
-        for (auto iter = biter; iter < eiter; iter++)
+        for (auto iter = biter; iter < zclend; iter++)
         {
-            if (IS_UNREACHABLE(*iter))
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*iter);
+            GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
+
+            if (GC_TEST_IS_UNREACHABLE(w))
             {
                 this->releaselist.push(*iter);
                 *iter = nullptr;
             }
             else
             {
-                if (GET_RC_COUNT(*iter) != 0)
+                if (GC_TEST_IS_ZERO_RC(w))
                 {
                     *iter = nullptr;
                 }
@@ -691,12 +589,13 @@ public:
         this->processRoots();
         this->processHeap();
 
-        //Look at all the possible unreachable roots in the old space and collect (recursively) them as needed
-        this->checkMaybeZeroCountList();
-        this->processRelease();
+        //Sweep young roots and look possible unreachable old roots in the old with collect them as needed -- new zero counts are rotated in
+        auto zclend = this->maybeZeroCounts.end();
+        this->sweep();
+        this->checkMaybeZeroCountList(zclend);
 
-        //Reset the mark colors on the roots
-        this->clearAllMarkRoots();
+        //Process release recursively (should be mimalloc heartbeat later)
+        this->processRelease();
 
         //Adjust the new space size if needed and reset/free the newspace allocators
         this->nsalloc.postGCProcess(this->osalloc.currentAllocatedBytes());

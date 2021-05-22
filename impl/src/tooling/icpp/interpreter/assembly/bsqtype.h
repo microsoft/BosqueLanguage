@@ -7,17 +7,6 @@
 
 #include "../common.h"
 
-enum class BSQTypeKind : uint32_t
-{
-    Invalid = 0x0,
-    Register,
-    Struct,
-    String,
-    Ref,
-    InlineUnion,
-    HeapUnion
-};
-
 ////
 //Standard memory function pointer definitions
 void gcDecOperator_packedImpl(const BSQType* btype, void** data);
@@ -51,7 +40,7 @@ public:
 class BSQType
 {
 public:
-    static BSQType** g_typetable;
+    static const BSQType** g_typetable;
 
     const BSQTypeID tid;
     const BSQTypeKind tkind;
@@ -76,12 +65,6 @@ public:
     DisplayFP fpDisplay;
 
     const std::string name;
-
-    template <bool isRoot>
-    GCProcessOperatorFP getProcessFP() const
-    {
-        return nullptr;
-    }
 
 private:
     //Constructor that everyone delegates to
@@ -180,6 +163,102 @@ public:
         }
     }
 };
+
+////////////////////////////////
+//Storage Operators
+
+template <bool isRoot>
+GCProcessOperatorFP getProcessFP(const BSQType* tt)
+{
+    static_assert(false);
+}
+
+template <>
+GCProcessOperatorFP getProcessFP<true>(const BSQType* tt)
+{
+    return tt->fpProcessObjRoot;
+}
+
+template <>
+inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
+{
+    return tt->fpProcessObjHeap;
+}
+
+template <BSQTypeKind tk>
+void bsqClear(const BSQType* oftype, StorageLocationPtr trgt)
+{
+    static_assert(false);
+}
+
+template <BSQTypeKind tk, typename T>
+T bsqLoad(StorageLocationPtr src)
+{
+    static_assert(false);
+}
+
+template <BSQTypeKind tk, typename T>
+void bsqStore(const BSQType* oftype, StorageLocationPtr trgt, T src)
+{
+    static_assert(false);
+}
+
+////
+//See the overrides for each of the register types, string, and bignum in value.h
+
+template <>
+void bsqClear<BSQTypeKind::Struct>(const BSQType* oftype, StorageLocationPtr trgt)
+{
+    BSQ_MEM_ZERO(trgt, oftype->allocinfo.sldatasize);
+}
+
+template <>
+StructuralValueRepr bsqLoad<BSQTypeKind::Struct, StructuralValueRepr>(StorageLocationPtr src)
+{
+    (StructuralValueRepr)src;
+}
+
+template <>
+void bsqStore<BSQTypeKind::Struct, StructuralValueRepr>(const BSQType* oftype, StorageLocationPtr trgt, StructuralValueRepr src)
+{
+    BSQ_MEM_COPY(trgt, src, oftype->allocinfo.sldatasize);
+}
+
+template <>
+void bsqClear<BSQTypeKind::Ref>(const BSQType* oftype, StorageLocationPtr trgt)
+{
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+}
+
+template <>
+ReferenceValueRepr bsqLoad<BSQTypeKind::Ref, ReferenceValueRepr>(StorageLocationPtr src)
+{
+    SLPTR_LOAD_CONTENTS_AS(ReferenceValueRepr, src);
+}
+
+template <>
+void bsqStore<BSQTypeKind::Ref, ReferenceValueRepr>(const BSQType* oftype, StorageLocationPtr trgt, ReferenceValueRepr src)
+{
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, src);
+}
+
+template <>
+void bsqClear<BSQTypeKind::InlineUnion>(const BSQType* oftype, StorageLocationPtr trgt)
+{
+    BSQ_MEM_ZERO(trgt, oftype->allocinfo.slfullsize);
+}
+
+template <>
+InlineValueRepr bsqLoad<BSQTypeKind::InlineUnion, InlineValueRepr>(StorageLocationPtr src)
+{
+    (InlineValueRepr)src;
+}
+
+template <>
+void bsqStore<BSQTypeKind::InlineUnion, InlineValueRepr>(const BSQType* oftype, StorageLocationPtr trgt, InlineValueRepr src)
+{
+    BSQ_MEM_COPY(trgt, src, oftype->allocinfo.slfullsize);
+}
 
 ////
 //Concrete types
