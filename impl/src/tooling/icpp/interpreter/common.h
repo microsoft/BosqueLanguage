@@ -15,18 +15,6 @@
 #include <string>
 #include <regex>
 
-#include <vector>
-#include <stack>
-#include <queue>
-#include <deque>
-#include <set>
-#include <map>
-
-#include <initializer_list>
-#include <algorithm>
-#include <numeric>
-#include <execution>
-
 #include <mimalloc.h>
 
 ////////////////////////////////
@@ -75,6 +63,8 @@
 #define BSQ_MIN_NURSERY_SIZE 1048576
 #define BSQ_MAX_NURSERY_SIZE 16777216
 
+#define BSQ_MAX_BIG_ALLOC_COUNT 500
+
 //Allocation routines
 #ifdef __APPLE__
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
@@ -88,6 +78,9 @@
 #define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_malloc_small(SIZE)
 #define BSQ_FREE_LIST_ALLOC(SIZE) mi_malloc(SIZE)
 #define BSQ_FREE_LIST_RELEASE(SIZE, M) mi_free(M)
+
+#define GC_REF_LIST_BLOCK_SIZE_SMALL 32
+#define GC_REF_LIST_BLOCK_SIZE_DEFAULT 128
 
 //Header word layout
 //high [RC - 40 bits] [MARK - 1 bit] [YOUNG - 1 bit] [TYPEID - 22 bits]
@@ -121,9 +114,11 @@ typedef uint64_t GC_META_DATA_WORD;
 #define GC_INC_RC(W) (W + GC_RC_ONE)
 #define GC_DEC_RC(W) (W - GC_RC_ONE)
 
-#define GC_INIT_YOUNG(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUG_BIT | TID)
+#define GC_INIT_YOUNG(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | TID)
 #define GC_INIT_OLD_ROOT(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_MARK_BIT | GC_EXTRACT_TYPEID(W))
 #define GC_INIT_OLD_HEAP(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_RC_ONE | GC_EXTRACT_TYPEID(W))
+
+#define GC_INIT_ETERNAL(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_RC_ETERNAL_INIT | TID)
 
 //Access type info + special forwarding pointer mark
 #define GET_TYPE_META_DATA_FROM_WORD(W) (*(BSQType::g_typetable + GC_EXTRACT_TYPEID(W)))
@@ -132,7 +127,7 @@ typedef uint64_t GC_META_DATA_WORD;
 #define GET_TYPE_META_DATA_AS(T, M) ((const T*)GET_TYPE_META_DATA(M))
 
 #define GC_SET_TYPE_META_DATA_FORWARD_SENTINAL(ADDR) *(ADDR) = 0
-#define GC_IS_TYPE_META_DATA_FORWARD_SENTINAL(ADDR) (*(ADDR) == 0)
+#define GC_IS_TYPE_META_DATA_FORWARD_SENTINAL(W) ((W) == 0)
 #define GC_GET_FORWARD_PTR(M) *((void**)M)
 #define GC_SET_FORWARD_PTR(M, P) *((void**)M) = (void*)P
 

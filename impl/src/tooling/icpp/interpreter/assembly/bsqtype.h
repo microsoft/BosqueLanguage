@@ -29,8 +29,8 @@ class BSQTypeSizeInfo
 {
 public:
     const uint64_t heapsize;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
-    const uint64_t sldatasize; //number of bytes needed in storage location for this -- 4 bytes for refs, same as heap size for others
-    const uint64_t slfullsize; //number of bytes + typeptr tag if needed in storage location for this -- inline union is bigger
+    const uint64_t inlinedatasize; //number of bytes needed in storage location for this (includes type tag for inline union -- is the size of a pointer for ref and heap union -- and word size for BSQBool)
+    const uint64_t assigndatasize; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
 
     const RefMask slmask; //The mask to use to traverse this object (even if this isn't a mixed obj -- e.g. it may be embedded in a mixed obj and we need to use this)   
 };

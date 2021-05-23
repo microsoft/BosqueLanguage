@@ -37,6 +37,154 @@ public:
     }
 };
 
+template <size_t bsize>
+class GCRefListIterator
+{
+public:
+    void** crl;
+    size_t cpos;
+
+    GCRefListIterator() : crl(nullptr), cpos(0) {;}
+    ~GCRefListIterator() {;}
+
+    inline void* get() const
+    {
+        return this->crl[this->cpos];
+    }
+
+    inline void copyFrom(const GCRefListIterator& other)
+    {
+        this->crl[this->cpos] = other.get();
+    }
+};
+
+template <size_t bsize>
+class GCRefList
+{
+private:
+    void** headrl;
+    void** tailrl;
+    size_t spos;
+    size_t epos;
+
+public:
+    GCRefList() : headrl(nullptr), tailrl(nullptr), spos(1), epos(1) 
+    {
+        this->headrl = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        this->tailrl = this->headrl;
+    }
+
+    ~GCRefList()
+    {
+        while(this->headrl != nullptr)
+        {
+            auto tmp = this->headrl;
+            this->headrl = (void**)this->headrl[0];
+
+            mi_free(tmp);
+        }
+    }
+
+    void assignFrom(GCRefList& other)
+    {
+        assert(this != &other);
+
+        while(this->headrl != nullptr)
+        {
+            auto tmp = this->headrl;
+            this->headrl = (void**)this->headrl[0];
+
+            mi_free(tmp);
+        }
+
+        this->headrl = other.headrl;
+        this->tailrl = other.tailrl;
+        this->spos = other.spos;
+        this->epos = other.epos;
+
+        other.headrl = this->headrl = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        other.tailrl = other.headrl;
+        other.spos = 1;
+        other.epos = 1;
+    }
+
+    bool reset()
+    {
+        while(this->headrl != nullptr)
+        {
+            auto tmp = this->headrl;
+            this->headrl = (void**)this->headrl[0];
+
+            mi_free(tmp);
+        }
+
+        this->headrl = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        this->tailrl = this->headrl;
+        this->spos = 1;
+        this->epos = 1;
+    }
+
+    bool empty() const
+    {
+        return (this->headrl == this->tailrl && this->spos == this->epos);
+    }
+
+    void enqueSlow(void* v);
+
+    inline void enque(void* v)
+    {
+        if(this->epos < bsize)
+        {
+            this->tailrl[this->epos++] = v;
+        }
+        else
+        {
+            this->enqueSlow(v);
+        }
+    }
+
+    void* dequeSlow();
+
+    inline void* deque()
+    {
+        assert(!this->empty());
+
+        if(this->spos < bsize)
+        {
+            return this->tailrl[this->spos++];
+        }
+        else
+        {
+            this->dequeSlow(v);
+        }
+    }
+
+    void iterBegin(GCRefListIterator<bsize>& iter) const
+    {
+        iter.crl = this->headrl;
+        iter.cpos = this->spos;
+    }
+
+    inline bool iterHasMore(const GCRefListIterator<bsize>& iter) const
+    {
+        return (iter.crl != this->tailrl) | (iter.cpos != this->epos);
+    }
+
+    void iterAdvanceSlow(GCRefListIterator<bsize>& iter) const;
+
+    inline void iterAdvance(GCRefListIterator<bsize>& iter) const
+    {
+       if(iter.cpos < bsize)
+        {
+            return iter.cpos++;
+        }
+        else
+        {
+            this->iterAdvanceSlow(iter);
+        }
+    }
+};
+
 //A class that implements our bump pointer nursery space
 class NewSpaceAllocator
 {
@@ -48,10 +196,12 @@ private:
     size_t m_allocsize;
     uint8_t *m_block;
 
-    std::deque<void*> m_bigallocs;
+    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> m_bigallocs;
+    size_t m_bigallocsCount;
 
 #ifdef ENABLE_MEM_STATS
-    size_t totalalloc;
+    size_t totalbumpalloc;
+    size_t totalbigalloc;
 #endif
 
     void setAllocBlock(size_t asize)
@@ -66,7 +216,7 @@ private:
 
     void resizeAllocatorAsNeeded(size_t rcalloc)
     {
-        bool shouldgrow = this->m_allocsize < BSQ_MAX_NURSERY_SIZE && this->m_allocsize < rcalloc / 2;
+        bool shouldgrow = this->m_allocsize < BSQ_MAX_NURSERY_SIZE && this->m_allocsize < rcalloc / 3;
         bool shouldshrink = BSQ_MIN_NURSERY_SIZE < this->m_allocsize && rcalloc < this->m_allocsize;
 
         if (!(shouldgrow || shouldshrink))
@@ -88,9 +238,10 @@ private:
     }
 
 public:
-    NewSpaceAllocator() : m_block(nullptr), m_bigallocs()
+    NewSpaceAllocator() : m_block(nullptr), m_bigallocs(), m_bigallocsCount(0)
     {
-        MEM_STATS_OP(this->totalalloc = 0);
+        MEM_STATS_OP(this->totalbumpalloc = 0);
+        MEM_STATS_OP(this->totalbigalloc = 0);
 
         this->setAllocBlock(BSQ_MIN_NURSERY_SIZE);
     }
@@ -106,20 +257,33 @@ public:
 
         this->m_currPos = this->m_block;
         this->m_endPos = this->m_block + this->m_allocsize;
+
+        this->m_bigallocs.reset();
+        this->m_bigallocsCount = 0;
     }
 
-    size_t currentAllocatedBytes(bool includebig) const
+    size_t currentBigAllocCount() const
+    {
+        return this->m_bigallocsCount;
+    }
+
+    size_t currentAllocatedBigBytes() const
     {
         size_t bigalloc = 0;
-        if(includebig)
-        {
-            for(auto iter = this->m_bigallocs.cbegin(); iter != this->m_bigallocs.cend(); ++iter)
-            {
-                bigalloc += (GET_TYPE_META_DATA(*iter))->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-            }
-        }
 
-        return bigalloc + (size_t)(this->m_currPos - this->m_block);
+        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_DEFAULT> iter;
+        this->m_bigallocs.iterBegin(iter);
+        while(this->m_bigallocs.iterHasMore(iter))
+        {
+            bigalloc += (GET_TYPE_META_DATA(iter.get()))->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+        }
+        
+        return bigalloc;
+    }
+
+    size_t currentAllocatedSlabBytes() const
+    {
+        return (size_t)(this->m_currPos - this->m_block);
     }
 
     //Return do a GC and return uint8_t* of given rsize from the bumplist implementation
@@ -156,7 +320,7 @@ public:
 
     inline uint8_t* allocateSafe(size_t asize)
     {
-        size_t rsize = asize + sizeof(BSQType*);
+        size_t rsize = asize + sizeof(GC_META_DATA_WORD);
         assert(this->m_currPos + rsize <= this->m_endPos);
 
         uint8_t *res = this->m_currPos;
@@ -174,15 +338,16 @@ public:
 private:
     NewSpaceAllocator nsalloc;
 
-    std::deque<void**> tempRoots;
-    std::deque<void*> maybeZeroCounts;
+    GCRefList<GC_REF_LIST_BLOCK_SIZE_SMALL> tempRoots;
+    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> maybeZeroCounts;
+    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> newMaybeZeroCounts;
 
-    std::queue<void*> worklist;
-    std::queue<void*> releaselist;
+    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> worklist;
+    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> releaselist;
 
-#ifdef ENABLE_MEM_STATS
     size_t liveoldspace;
 
+#ifdef ENABLE_MEM_STATS
     size_t gccount;
     size_t promotedbytes;
     size_t maxheap;
@@ -193,7 +358,7 @@ private:
     {
         void* nobj = BSQ_FREE_LIST_ALLOC_SMALL(osize);
 
-        MEM_STATS_OP(this->liveoldspace += osize);
+        this->liveoldspace += osize;
         MEM_STATS_OP(this->promotedbytes += osize);
 
         GC_MEM_COPY(nobj, addr, osize);
@@ -202,18 +367,19 @@ private:
             this->worklist.push(nobj);
         }
 
-        void* robj = (void*)((uint8_t*)nobj + sizeof(GC_META_DATA_WORD));
         if constexpr (isRoot)
         {
-            GC_SET_META_DATA_WORD(nobj, GC_SET_MARK_BIT(w));
-            this->maybeZeroCounts.push_back(robj);
+            GC_INIT_OLD_ROOT(nobj, w);
+            this->newMaybeZeroCounts.push_back(robj);
         }
         else
         {
-            GC_SET_META_DATA_WORD(nobj, GC_INC_RC(w));
+            GC_INIT_OLD_HEAP(nobj, w);
         }
 
         GC_SET_TYPE_META_DATA_FORWARD_SENTINAL(addr);
+
+        void* robj = (void*)((uint8_t*)nobj + sizeof(GC_META_DATA_WORD));
         GC_SET_FORWARD_PTR(obj, robj);
 
         return robj;
@@ -222,21 +388,21 @@ private:
     template <bool isRoot>
     void moveLargeAllocObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
     {
-        MEM_STATS_OP(this->liveoldspace += osize);
+        this->liveoldspace += osize;
 
         if (!ometa->isLeafType)
         {
             this->worklist.push(obj);
         }
 
-        GC_SET_META_DATA_WORD(obj, GC_SET_MARK_BIT(w));
         if constexpr (isRoot)
         {
-            this->maybeZeroCounts.push_back(obj);
+            GC_INIT_OLD_ROOT(obj, w);
+            this->newMaybeZeroCounts.push_back(obj);
         }
         else
         {
-            GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+            GC_INIT_OLD_HEAP(nobj, w);
         }
     }
 
@@ -244,11 +410,11 @@ public:
     template <bool isRoot>
     inline static void gcProcessSlot(void** slot)
     {
-        void*v = *slot;
+        void* v = *slot;
         if (v != nullptr)
         {
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
-            GC_META_DATA_WORD w = GC_DEC_RC(GC_LOAD_META_DATA_WORD(addr));
+            GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
             if (GC_TEST_IS_YOUNG(w))
             {
                 const BSQType* ometa = GET_TYPE_META_DATA_FROM_WORD(w);
@@ -265,6 +431,13 @@ public:
             }
             else
             {
+                if(GC_IS_TYPE_META_DATA_FORWARD_SENTINAL(w))
+                {
+                    *slot = GC_GET_FORWARD_PTR(v);
+                    addr = GC_GET_META_DATA_ADDR(*slot);
+                    w = GC_LOAD_META_DATA_WORD(addr);
+                }
+            
                 if constexpr (isRoot)
                 {
                     GC_SET_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
@@ -344,7 +517,7 @@ public:
 
             if (GC_TEST_IS_UNREACHABLE(w))
             {
-                Allocator::GlobalAllocator.releaselist.push(obj);
+                Allocator::GlobalAllocator.releaselist.enque(obj);
             }
         }
     }
@@ -371,10 +544,10 @@ public:
         umeta->fpDecObj(umeta, slots);
     }
 
-    inline static void gcDecSlotsWithMask(void** slots, const char* mask)
+    inline static void gcDecSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
-        const char* cmaskop = mask;
+        RefMask cmaskop = mask;
 
         while (*cmaskop)
         {
@@ -406,18 +579,9 @@ public:
     {
         if (obj != nullptr)
         {
-            MARK_HEADER_CLEAR(obj);
-        }
-    }
-
-    inline static void gcClearMarkSlots(void** slots, size_t limit)
-    {
-        void **cslot = slots;
-        void *end = slots + limit;
-
-        while (cslot != end)
-        {
-            Allocator::gcClearMark(*cslot++);
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
+            GC_META_DATA_WORD w = GC_CLEAR_MARK_BIT(GC_LOAD_META_DATA_WORD(addr));
+            GC_SET_META_DATA_WORD(addr, w);
         }
     }
 
@@ -429,16 +593,24 @@ public:
         }
     }
 
+    inline static void gcClearMarkBigNum(void** slot)
+    {
+        if (!IS_INLINE_BIGNUM(slot))
+        {
+            Allocator::gcClearMark(*slot);
+        }
+    }
+
     inline static void gcClearMarkSlotsWithUnion(void** slots)
     {
         const BSQType *umeta = ((const BSQType*)(*slots++));
         umeta->fpClearObj(umeta, slots);
     }
 
-    inline static void gcClearMarkSlotsWithMask(void** slots, const char* mask)
+    inline static void gcClearMarkSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
-        const char* cmaskop = mask;
+        RefMask cmaskop = mask;
 
         while (*cmaskop)
         {
@@ -453,6 +625,9 @@ public:
                     break;
                 case PTR_FIELD_MASK_STRING:
                     Allocator::gcClearMarkString(cslot++);
+                    break;
+                case PTR_FIELD_MASK_BIGNUM:
+                    Allocator::gcClearMarkBigNum(cslot++);
                     break;
                 default:
                     Allocator::gcClearMarkSlotsWithUnion(cslot++);
@@ -471,9 +646,11 @@ private:
             Allocator::gcProcessSlotsWithMask<true>(GCStack::frames[i].framep, GCStack::frames[i].mask);
         }
 
-        for (auto iter = Allocator::GlobalAllocator.tempRoots.begin(); iter != Allocator::GlobalAllocator.tempRoots.end(); ++iter)
+        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_SMALL> iter;
+        Allocator::GlobalAllocator.tempRoots.iterBegin(iter);
+        while(Allocator::GlobalAllocator.tempRoots.iterHasMore(iter))
         {
-            Allocator::gcProcessSlot<true>(*iter);
+            Allocator::gcProcessSlot<true>((void**)iter.get());
         }
     }
 
@@ -481,8 +658,7 @@ private:
     {
         while (!this->worklist.empty())
         {
-            void* obj = this->worklist.front();
-            this->worklist.pop();
+            void* obj = this->worklist.deque();
 
             const BSQType* umeta = GET_TYPE_META_DATA(obj);
             assert(!umeta->isLeafType);
@@ -491,45 +667,47 @@ private:
         }
     }
 
-    void sweep()
+    void checkMaybeZeroCountList()
     {
-        xxxx;
-    }
-
-    void checkMaybeZeroCountList(std::vector<void*>::iterator zclend)
-    {
-        auto biter = this->maybeZeroCounts.begin();
-        for (auto iter = biter; iter < zclend; iter++)
+        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_DEFAULT> iter;
+        this->maybeZeroCounts.iterBegin(iter);
+        while(this->maybeZeroCounts.iterHasMore(iter))
         {
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*iter);
+            auto obj = iter.get();
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
             GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
 
             if (GC_TEST_IS_UNREACHABLE(w))
             {
-                this->releaselist.push(*iter);
-                *iter = nullptr;
+                this->releaselist.enque(obj);
             }
             else
             {
-                if (GC_TEST_IS_ZERO_RC(w))
+                if(GC_TEST_IS_ZERO_RC(w))
                 {
-                    *iter = nullptr;
+                    this->newMaybeZeroCounts.enque(obj);
                 }
             }
         }
 
-        if (!this->releaselist.empty())
-        {
-            this->maybeZeroCounts.erase(biter, std::remove(biter, eiter, nullptr));
-        }
+        this->maybeZeroCounts.assignFrom(this->newMaybeZeroCounts);
     }
 
     void processRelease()
     {
+        size_t freelimit = (3 * (this->nsalloc.currentAllocatedSlabBytes() + this->nsalloc.currentAllocatedBigBytes()) / 2);
+        size_t biglimit = (3 * this->nsalloc.currentBigAllocCount()) / 2;
+
+        size_t freecount = 0;
+        size_t bigcount = 0;
         while (!this->releaselist.empty())
         {
-            void* obj = this->releaselist.front();
-            this->releaselist.pop();
+            if((freelimit <= freecount) | (biglimit <= bigcount))
+            {
+                break;
+            } 
+
+            void* obj = this->releaselist.deque();
 
             const BSQType* umeta = GET_TYPE_META_DATA(obj);
             if (!umeta->isLeafType)
@@ -537,7 +715,18 @@ private:
                 umeta->fpDecObj(umeta, (void**)obj);
             }
 
-            this->osalloc.release(obj);
+            size_t asize = umeta->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+            if(asize <= BSQ_ALLOC_MAX_BLOCK_SIZE)
+            {
+                freecount += asize;
+            }
+            else
+            {
+                bigcount++;
+            }
+
+            this->liveoldspace -= asize;
+            BSQ_FREE_LIST_RELEASE(asize, GC_GET_META_DATA_ADDR(obj));
         }
     }
 
@@ -545,30 +734,20 @@ private:
     {
         for (size_t i = 0; i < GCStack::stackp; ++i)
         {
-            void **slots = GCStack::frames[i].refframep;
-            uint32_t slotct = GCStack::frames[i].refslots;
-            for (size_t j = 0; j < slotct; ++j)
-            {
-                Allocator::gcClearMark(slots + j);
-            }
-
-            if (GCStack::frames[i].mixedframep != nullptr)
-            {
-                Allocator::gcClearMarkSlotsWithMask(GCStack::frames[i].mixedframep, GCStack::frames[i].mask);
-            }
+            Allocator::gcClearMarkSlotsWithMask(GCStack::frames[i].framep, GCStack::frames[i].mask);
         }
 
-        for (auto iter = Allocator::GlobalAllocator.tempRoots.begin(); iter != Allocator::GlobalAllocator.tempRoots.end(); ++iter)
+        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_SMALL> iter;
+        Allocator::GlobalAllocator.tempRoots.iterBegin(iter);
+        while(Allocator::GlobalAllocator.tempRoots.iterHasMore(iter))
         {
-            Allocator::gcClearMark(**iter);
+            Allocator::gcClearMark(*((void**)iter.get()));
         }
     }
 
 public:
-    Allocator() : nsalloc(), osalloc(), maybeZeroCounts(), bstart(0), bend(0), worklist(), releaselist()
+    Allocator() : nsalloc(), tempRoots(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0)
     {
-        this->maybeZeroCounts.reserve(256);
-
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->promotedbytes = 0);
         MEM_STATS_OP(this->maxheap = 0);
@@ -581,81 +760,86 @@ public:
 
     inline uint8_t* allocateDynamic(const BSQType* mdata)
     {
-        size_t asize = BSQ_ALIGN_SIZE(mdata->allocinfo.heapsize);
+        size_t asize = mdata->allocinfo.heapsize;
         uint8_t* alloc = this->nsalloc.allocateDynamicSize(asize);
 
-        *((const BSQType**)alloc) = mdata;
-        uint8_t* res = (alloc + sizeof(BSQType*));
+        GC_INIT_YOUNG(alloc, mdata->tid);
+        uint8_t* res = (alloc + sizeof(GC_META_DATA_WORD));
 
         return res;
     }
 
     inline void ensureSpace(size_t required)
     {
-        this->nsalloc.ensureSpace(BSQ_ALIGN_SIZE(required) + sizeof(BSQType*));
+        this->nsalloc.ensureSpace(required);
     }
 
-    inline uint8_t* allocateSafe(size_t allocsize, const BSQType* mdata)
+    inline void ensureSpace(const BSQType* mdata)
     {
-        size_t asize = BSQ_ALIGN_SIZE(allocsize);
-        uint8_t* alloc = this->nsalloc.allocateSafe(asize);
+        this->nsalloc.ensureSpace(mdata->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
+    }
 
-        *((const BSQType**)alloc) = mdata;
-        uint8_t* res = (alloc + sizeof(BSQType*));
+    inline uint8_t* allocateSafe(const BSQType* mdata)
+    {
+        uint8_t* alloc = this->nsalloc.allocateSafe(mdata->allocinfo.heapsize);
+
+        GC_INIT_YOUNG(alloc, mdata->tid);
+        uint8_t* res = (alloc + sizeof(GC_META_DATA_WORD));
 
         return res;
     }
 
-    uint8_t* allocateEternal(size_t allocsize, const BSQType* mdata)
+    uint8_t* allocateEternal(const BSQType* mdata)
     {
-        size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
-        assert((tsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
-
+        size_t tsize = mdata->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
         MEM_STATS_OP(this->totalalloc += tsize);
+        MEM_STATS_OP(this->livealloc += tsize);
 
         uint8_t* rr = (uint8_t*)BSQ_FREE_LIST_ALLOC(tsize);
-        *((RCMeta*)rr) = GC_RC_ETERNAL_INIT;
+        GC_INIT_ETERNAL(rr, mdata->tid);
 
-        this->livealloc += tsize;
-
-        return (rr + sizeof(RCMeta));
+        return (rr + sizeof(GC_META_DATA_WORD));
     }
 
     template<typename T>
     void pushRoot(T** mem)
     {
-        this->tempRoots.push_back((void**)((void*)mem));
+        this->tempRoots.enque((void**)((void*)mem));
     }
 
     void popRoot()
     {
-        this->tempRoots.pop_back();
+        this->tempRoots.deque();
     }
 
     template<size_t ct>
     void popRoots()
     {
-        this->tempRoots.erase(this->tempRoots.end() - ct, this->tempRoots.end());
+        for(size_t i = 0; i < ct; ++i)
+        {
+            this->tempRoots.deque();
+        }
     }
 
     void collect()
     {
         MEM_STATS_OP(this->gccount++);
-        MEM_STATS_OP(this->maxheap = std::max(this->maxheap, this->nsalloc.currentAllocatedBytes() + this->osalloc.currentAllocatedBytes()));
+        MEM_STATS_OP(this->maxheap = std::max(this->maxheap, this->nsalloc.currentAllocatedSlabBytes() + this->nsalloc.currentAllocatedBigBytes() + this->liveoldspace));
 
         //mark and move all live objects out of new space
         this->processRoots();
         this->processHeap();
 
         //Sweep young roots and look possible unreachable old roots in the old with collect them as needed -- new zero counts are rotated in
-        auto zclend = this->maybeZeroCounts.end();
-        this->sweep();
-        this->checkMaybeZeroCountList(zclend);
+        this->checkMaybeZeroCountList();
 
-        //Process release recursively (should be mimalloc heartbeat later)
+        //Process release recursively
         this->processRelease();
 
+        //Clear any marks
+        this->clearAllMarkRoots();
+
         //Adjust the new space size if needed and reset/free the newspace allocators
-        this->nsalloc.postGCProcess(this->osalloc.currentAllocatedBytes());
+        this->nsalloc.postGCProcess(this->liveoldspace);
     }
 };

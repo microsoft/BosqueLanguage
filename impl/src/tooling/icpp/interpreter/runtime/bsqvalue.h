@@ -45,7 +45,7 @@ public:
 //TODO: this is a lot of memory for a bool -- may want to provide special case for this in the future
 //
 
-typedef uint64_t BSQBool;
+typedef uint8_t BSQBool;
 #define BSQTRUE 1
 #define BSQFALSE 0
 
