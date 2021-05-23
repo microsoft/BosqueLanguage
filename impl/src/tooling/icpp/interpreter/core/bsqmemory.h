@@ -48,6 +48,8 @@ private:
     size_t m_allocsize;
     uint8_t *m_block;
 
+    std::deque<void*> m_bigallocs;
+
 #ifdef ENABLE_MEM_STATS
     size_t totalalloc;
 #endif
@@ -86,7 +88,7 @@ private:
     }
 
 public:
-    NewSpaceAllocator() : m_block(nullptr)
+    NewSpaceAllocator() : m_block(nullptr), m_bigallocs()
     {
         MEM_STATS_OP(this->totalalloc = 0);
 
@@ -95,11 +97,8 @@ public:
 
     ~NewSpaceAllocator()
     {
-        BSQ_BUMP_SPACE_RELEASE(this->m_allocsize, this->m_block);
+        BSQ_BUMP_SPACE_RELEASE(this->m_block);
     }
-
-    inline uintptr_t getBumpStartAddr() const { return (uintptr_t)this->m_block; }
-    inline uintptr_t getBumpEndAddr() const { return (uintptr_t)this->m_currPos; }
 
     void postGCProcess(size_t rcmem)
     {
@@ -109,32 +108,39 @@ public:
         this->m_endPos = this->m_block + this->m_allocsize;
     }
 
-    size_t currentAllocatedBytes() const
+    size_t currentAllocatedBytes(bool includebig) const
     {
-        return (size_t)(this->m_currPos - this->m_block);
+        size_t bigalloc = 0;
+        if(includebig)
+        {
+            for(auto iter = this->m_bigallocs.cbegin(); iter != this->m_bigallocs.cend(); ++iter)
+            {
+                bigalloc += (GET_TYPE_META_DATA(*iter))->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+            }
+        }
+
+        return bigalloc + (size_t)(this->m_currPos - this->m_block);
     }
 
     //Return do a GC and return uint8_t* of given rsize from the bumplist implementation
-    uint8_t* allocateBumpSlow(size_t rsize);
+    uint8_t* allocateDynamicSizeSlow(size_t rsize);
 
     //Return uint8_t* of given asize + sizeof(MetaData*)
     inline uint8_t* allocateDynamicSize(size_t asize)
     {
-        size_t rsize = asize + sizeof(BSQType*);
-        assert((rsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
-        assert(rsize < BSQ_ALLOC_MAX_BLOCK_SIZE);
-
-        uint8_t *res = this->m_currPos;
-        this->m_currPos += rsize;
+        size_t rsize = asize + sizeof(GC_META_DATA_WORD);
 
         //Note this is technically UB!!!!
-        if (this->m_currPos <= this->m_endPos)
+        if((rsize <= BSQ_ALLOC_MAX_BLOCK_SIZE) & (this->m_currPos <= this->m_endPos))
         {
+            uint8_t *res = this->m_currPos;
+            this->m_currPos += rsize;
+
             return res;
         }
         else
         {
-            return this->allocateBumpSlow(rsize);
+            return this->allocateDynamicSizeSlow(rsize);
         }
     }
 
@@ -151,7 +157,6 @@ public:
     inline uint8_t* allocateSafe(size_t asize)
     {
         size_t rsize = asize + sizeof(BSQType*);
-        assert((rsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
         assert(this->m_currPos + rsize <= this->m_endPos);
 
         uint8_t *res = this->m_currPos;
@@ -161,125 +166,113 @@ public:
     }
 };
 
-//A class that implements our old reference counting space
-class OldSpaceAllocator
-{
-private:
-    //
-    //We may want to tie into a nicer free list impl here
-    //
-
-    size_t livealloc;
-
-#ifdef ENABLE_MEM_STATS
-    size_t totalalloc;
-#endif
-
-public:
-    OldSpaceAllocator() : livealloc(0)
-    {
-        MEM_STATS_OP(this->totalalloc = 0);
-    }
-
-    ~OldSpaceAllocator()
-    {
-        ;
-    }
-
-    inline size_t currentAllocatedBytes() const
-    {
-        return this->livealloc;
-    }
-
-    inline uint8_t* allocateSizeFixed(size_t size)
-    {
-        size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
-        assert((tsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
-
-        MEM_STATS_OP(this->totalalloc += tsize);
-
-        uint8_t* rr = (uint8_t*)BSQ_FREE_LIST_ALLOC(tsize);
-        *((RCMeta*)rr) = GC_RC_CLEAR;
-
-        this->livealloc += tsize;
-
-        return (rr + sizeof(RCMeta));
-    }
-
-    inline uint8_t* allocateEternal(size_t size)
-    {
-        size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
-        assert((tsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
-
-        MEM_STATS_OP(this->totalalloc += tsize);
-
-        uint8_t* rr = (uint8_t*)BSQ_FREE_LIST_ALLOC(tsize);
-        *((RCMeta*)rr) = GC_RC_ETERNAL_INIT;
-
-        this->livealloc += tsize;
-
-        return (rr + sizeof(RCMeta));
-    }
-
-    inline void release(void* m)
-    {
-        size_t bytes = COMPUTE_FREE_LIST_BYTES(m);
-        this->livealloc -= bytes;
-    }
-};
-
 class Allocator
 {
 public:
     static Allocator GlobalAllocator;
 
 private:
-    std::deque<void*> allocs;
+    NewSpaceAllocator nsalloc;
+
     std::deque<void**> tempRoots;
-    std::vector<void*> maybeZeroCounts;
+    std::deque<void*> maybeZeroCounts;
 
     std::queue<void*> worklist;
     std::queue<void*> releaselist;
 
 #ifdef ENABLE_MEM_STATS
+    size_t liveoldspace;
+
     size_t gccount;
     size_t promotedbytes;
     size_t maxheap;
 #endif
 
+    template <bool isRoot>
+    void* moveBumpObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
+    {
+        void* nobj = BSQ_FREE_LIST_ALLOC_SMALL(osize);
+
+        MEM_STATS_OP(this->liveoldspace += osize);
+        MEM_STATS_OP(this->promotedbytes += osize);
+
+        GC_MEM_COPY(nobj, addr, osize);
+        if (!ometa->isLeafType)
+        {
+            this->worklist.push(nobj);
+        }
+
+        void* robj = (void*)((uint8_t*)nobj + sizeof(GC_META_DATA_WORD));
+        if constexpr (isRoot)
+        {
+            GC_SET_META_DATA_WORD(nobj, GC_SET_MARK_BIT(w));
+            this->maybeZeroCounts.push_back(robj);
+        }
+        else
+        {
+            GC_SET_META_DATA_WORD(nobj, GC_INC_RC(w));
+        }
+
+        GC_SET_TYPE_META_DATA_FORWARD_SENTINAL(addr);
+        GC_SET_FORWARD_PTR(obj, robj);
+
+        return robj;
+    }
+
+    template <bool isRoot>
+    void moveLargeAllocObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
+    {
+        MEM_STATS_OP(this->liveoldspace += osize);
+
+        if (!ometa->isLeafType)
+        {
+            this->worklist.push(obj);
+        }
+
+        GC_SET_META_DATA_WORD(obj, GC_SET_MARK_BIT(w));
+        if constexpr (isRoot)
+        {
+            this->maybeZeroCounts.push_back(obj);
+        }
+        else
+        {
+            GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+        }
+    }
+
 public:
     template <bool isRoot>
     inline static void gcProcessSlot(void** slot)
     {
-        void* v = *slot;
+        void*v = *slot;
         if (v != nullptr)
         {
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
-            GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
+            GC_META_DATA_WORD w = GC_DEC_RC(GC_LOAD_META_DATA_WORD(addr));
             if (GC_TEST_IS_YOUNG(w))
             {
                 const BSQType* ometa = GET_TYPE_META_DATA_FROM_WORD(w);
-                MEM_STATS_OP(this->promotedbytes += ometa->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
+                size_t osize = ometa->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
 
-                if (!ometa->isLeafType)
+                if(osize <= BSQ_ALLOC_MAX_BLOCK_SIZE)
                 {
-                    this->worklist.push(obj);
+                    *slot = Allocator::GlobalAllocator.moveBumpObjectToRCSpace<isRoot>(v, addr, w, ometa, osize);
+                }
+                else
+                {
+                    Allocator::GlobalAllocator.moveLargeAllocObjectToRCSpace<isRoot>(v, addr, w, ometa, osize);
                 }
             }
-            else 
+            else
             {
                 if constexpr (isRoot)
                 {
-                    if (GC_TEST_IS_ZERO_RC(w))
-                    {
-                        GC_SET_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
-                    }
+                    GC_SET_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
                 }
-            }
-
-            if constexpr (!isRoot)
-            {
-                GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+                else
+                {
+                    GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+                }
             }
         }
     }
@@ -402,6 +395,67 @@ public:
                     break;
                 default:
                     Allocator::gcDecrementSlotsWithUnion(cslot++);
+                    break;
+            }
+        }
+    }
+
+    ////////
+    //Operations GC mark clear
+    inline static void gcClearMark(void *obj)
+    {
+        if (obj != nullptr)
+        {
+            MARK_HEADER_CLEAR(obj);
+        }
+    }
+
+    inline static void gcClearMarkSlots(void** slots, size_t limit)
+    {
+        void **cslot = slots;
+        void *end = slots + limit;
+
+        while (cslot != end)
+        {
+            Allocator::gcClearMark(*cslot++);
+        }
+    }
+
+    inline static void gcClearMarkString(void** slot)
+    {
+        if (!IS_INLINE_STRING(slot))
+        {
+            Allocator::gcClearMark(*slot);
+        }
+    }
+
+    inline static void gcClearMarkSlotsWithUnion(void** slots)
+    {
+        const BSQType *umeta = ((const BSQType*)(*slots++));
+        umeta->fpClearObj(umeta, slots);
+    }
+
+    inline static void gcClearMarkSlotsWithMask(void** slots, const char* mask)
+    {
+        void** cslot = slots;
+        const char* cmaskop = mask;
+
+        while (*cmaskop)
+        {
+            char op = *cmaskop++;
+            switch(op)
+            {
+                case PTR_FIELD_MASK_SCALAR:
+                    cslot++;
+                    break;
+                case PTR_FIELD_MASK_PTR:
+                    Allocator::gcClearMark(*cslot++);
+                    break;
+                case PTR_FIELD_MASK_STRING:
+                    Allocator::gcClearMarkString(cslot++);
+                    break;
+                default:
+                    Allocator::gcClearMarkSlotsWithUnion(cslot++);
                     break;
             }
         }
@@ -554,13 +608,17 @@ public:
 
     uint8_t* allocateEternal(size_t allocsize, const BSQType* mdata)
     {
-        size_t asize = BSQ_ALIGN_SIZE(allocsize);
-        uint8_t* alloc = this->osalloc.allocateEternal(asize);
+        size_t tsize = sizeof(RCMeta) + sizeof(BSQType*) + size;
+        assert((tsize & BSQ_MEM_ALIGNMENT_MASK) == 0x0);
 
-        *((const BSQType**)alloc) = mdata;
-        uint8_t* res = (alloc + sizeof(BSQType*));
+        MEM_STATS_OP(this->totalalloc += tsize);
 
-        return res;
+        uint8_t* rr = (uint8_t*)BSQ_FREE_LIST_ALLOC(tsize);
+        *((RCMeta*)rr) = GC_RC_ETERNAL_INIT;
+
+        this->livealloc += tsize;
+
+        return (rr + sizeof(RCMeta));
     }
 
     template<typename T>

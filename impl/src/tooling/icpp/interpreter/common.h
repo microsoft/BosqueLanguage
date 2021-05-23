@@ -68,24 +68,26 @@
 #define MEM_STATS_ARG(X)
 #endif
 
-//Compute addresses aligned at the given size
-#define BSQ_MEM_ALIGNMENT 8
-#define BSQ_MEM_ALIGNMENT_MASK 0x7
-#define BSQ_ALIGN_SIZE(ASIZE) (((ASIZE) + BSQ_MEM_ALIGNMENT_MASK) & 0xFFFFFFFFFFFFFFF8)
-
 //Program should not contain any allocations larger than this in a single block
-#define BSQ_ALLOC_MAX_BLOCK_SIZE 2048
+#define BSQ_ALLOC_MAX_BLOCK_SIZE MI_SMALL_SIZE_MAX
 
 //Min and max bump allocator size
 #define BSQ_MIN_NURSERY_SIZE 1048576
 #define BSQ_MAX_NURSERY_SIZE 16777216
 
-//Stack allocations
+//Allocation routines
 #ifdef __APPLE__
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
 #else
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
 #endif
+
+#define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_malloc(SIZE)
+#define BSQ_BUMP_SPACE_RELEASE(M) mi_free(M)
+
+#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_malloc_small(SIZE)
+#define BSQ_FREE_LIST_ALLOC(SIZE) mi_malloc(SIZE)
+#define BSQ_FREE_LIST_RELEASE(SIZE, M) mi_free(M)
 
 //Header word layout
 //high [RC - 40 bits] [MARK - 1 bit] [YOUNG - 1 bit] [TYPEID - 22 bits]
@@ -128,6 +130,11 @@ typedef uint64_t GC_META_DATA_WORD;
 #define GET_TYPE_META_DATA_FROM_ADDR(ADDR) GET_TYPE_META_DATA_FROM_WORD(GC_LOAD_META_DATA_WORD(ADDR))
 #define GET_TYPE_META_DATA(M) GET_TYPE_META_DATA_FROM_ADDR(GC_GET_META_DATA_ADDR(M))
 #define GET_TYPE_META_DATA_AS(T, M) ((const T*)GET_TYPE_META_DATA(M))
+
+#define GC_SET_TYPE_META_DATA_FORWARD_SENTINAL(ADDR) *(ADDR) = 0
+#define GC_IS_TYPE_META_DATA_FORWARD_SENTINAL(ADDR) (*(ADDR) == 0)
+#define GC_GET_FORWARD_PTR(M) *((void**)M)
+#define GC_SET_FORWARD_PTR(M, P) *((void**)M) = (void*)P
 
 //Misc operations
 #define COMPUTE_REAL_BYTES(M) (GET_TYPE_META_DATA(M)->allocinfo.heapsize + sizeof(GC_META_DATA_WORD))

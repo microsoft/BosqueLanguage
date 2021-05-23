@@ -8,17 +8,27 @@
 GCStackEntry GCStack::frames[2048];
 uint32_t GCStack::stackp = 0;
 
-uint8_t* NewSpaceAllocator::allocateBumpSlow(size_t rsize)
+uint8_t* NewSpaceAllocator::allocateDynamicSizeSlow(size_t rsize)
 {
-    //Note this is technically UB!!!!
-    MEM_STATS_OP(this->totalalloc += (this->m_currPos - this->m_block));
+    if((rsize <= BSQ_ALLOC_MAX_BLOCK_SIZE))
+    {
+        //Note this is technically UB!!!!
+        MEM_STATS_OP(this->totalalloc += (this->m_currPos - this->m_block));
 
-    Allocator::GlobalAllocator.collect();
+        Allocator::GlobalAllocator.collect();
 
-    uint8_t* res = this->m_currPos;
-    this->m_currPos += rsize;
+        uint8_t* res = this->m_currPos;
+        this->m_currPos += rsize;
 
-    return res;
+        return res;
+    }
+    else
+    {
+        void* res = BSQ_FREE_LIST_ALLOC(rsize);
+        this->m_bigallocs.push_back(res);
+
+        return (uint8_t*)res;
+    }
 }
 
 void NewSpaceAllocator::ensureSpace_slow()
