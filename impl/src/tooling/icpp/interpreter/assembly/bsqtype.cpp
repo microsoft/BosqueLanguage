@@ -71,7 +71,7 @@ void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data)
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    const BSQTupleType* ttype = (const BSQTupleType*)btype;
+    const BSQTupleAbstractType* ttype = (const BSQTupleAbstractType*)btype;
     bool isstruct = ttype->tkind == BSQTypeKind::Struct;
     std::string res = isstruct ? "#[" : "@[";
     for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
@@ -81,8 +81,8 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        auto itype = ttype->ttypes[i];
-        auto idata = isstruct ? SLPTR_INDEX_INLINE(data, ttype->idxoffsets[i]) : SLPTR_INDEX_HEAP(data, ttype->idxoffsets[i]);
+        auto itype = Environment::g_typemap[ttype->ttypes[i]];
+        auto idata = ttype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }
     res += "]";
@@ -92,7 +92,7 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    const BSQRecordType* ttype = (const BSQRecordType*)btype;
+    const BSQRecordAbstractType* ttype = (const BSQRecordAbstractType*)btype;
     bool isstruct = ttype->tkind == BSQTypeKind::Struct;
     std::string res = isstruct ? "#{" : "@{";
     for(size_t i = 0; i < ttype->properties.size(); ++i)
@@ -104,8 +104,8 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
         res += Environment::g_propertymap[ttype->properties[i]] + ":";
 
-        auto itype = ttype->rtypes[i];
-        auto idata = isstruct ? SLPTR_INDEX_INLINE(data, ttype->propertyoffsets[i]) : SLPTR_INDEX_HEAP(data, ttype->propertyoffsets[i]);
+        auto itype = Environment::g_typemap[ttype->rtypes[i]];
+        auto idata = ttype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }
     res += "}";
@@ -115,7 +115,7 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    const BSQEntityType* ttype = (const BSQEntityType*)btype;
+    const BSQEntityAbstractType* ttype = (const BSQEntityAbstractType*)btype;
     bool isstruct = ttype->tkind == BSQTypeKind::Struct;
     std::string res = ttype->name + (isstruct ? "#{" : "@{");
     for(size_t i = 0; i < ttype->fields.size(); ++i)
@@ -127,8 +127,8 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
         res += Environment::g_fieldmap[ttype->fields[i]] + ":";
 
-        auto itype = ttype->ftypes[i];
-        auto idata = isstruct ? SLPTR_INDEX_INLINE(data, ttype->fieldoffsets[i]) : SLPTR_INDEX_HEAP(data, ttype->fieldoffsets[i]);
+        auto itype = Environment::g_typemap[ttype->ftypes[i]];
+        auto idata = ttype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }
     res += "}";
@@ -147,8 +147,8 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        auto itype = ttype->etypes[i];
-        auto idata = SLPTR_INDEX_INLINE(data, ttype->idxoffsets[i]);
+        auto itype = Environment::g_typemap[ttype->etypes[i]];
+        auto idata = SLPTR_INDEX_DATAPTR(data, ttype->idxoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }
     res += "|)";
@@ -164,6 +164,13 @@ std::string inlineUnionDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 
 std::string heapUnionDisplay_impl(const BSQType* btype, void** data)
 {
-    auto rtype = SLPTR_LOAD_UNION_HEAP_TYPE(data);
-    return rtype->fpDisplay(rtype, SLPTR_LOAD_UNION_HEAP_DATAPTR(data));
+    auto rtype = SLPTR_LOAD_HEAP_TYPE(data);
+    if(rtype->isStructStorage())
+    {
+        return rtype->fpDisplay(rtype, SLPTR_LOAD_HEAP_DATAPTR(data));
+    }
+    else
+    {
+        return rtype->fpDisplay(rtype, data);
+    }
 }

@@ -31,19 +31,15 @@ std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data
 bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQNoneType : public BSQEntityType
+class BSQNoneType : public BSQEntityAbstractType
 {
 public:
-    BSQNoneType() : BSQEntityType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQNone)), BSQ_ALIGN_SIZE(sizeof(BSQNone)), BSQ_ALIGN_SIZE(sizeof(BSQNone)), "1" }, {}, entityNoneEqual_impl, entityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
+    BSQNoneType() : BSQEntityAbstractType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQNone), "1" }, {}, entityNoneEqual_impl, entityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
     virtual ~BSQNoneType() {;}
 };
 
 ////
 //Bool
-
-//
-//TODO: this is a lot of memory for a bool -- may want to provide special case for this in the future
-//
 
 typedef uint8_t BSQBool;
 #define BSQTRUE 1
@@ -53,10 +49,10 @@ std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data
 bool entityBoolEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBoolType : public BSQEntityType
+class BSQBoolType : public BSQEntityAbstractType
 {
 public:
-    BSQBoolType() : BSQEntityType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQBool)), BSQ_ALIGN_SIZE(sizeof(BSQBool)), BSQ_ALIGN_SIZE(sizeof(BSQBool)), "1" }, {}, entityBoolEqual_impl, entityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
+    BSQBoolType() : BSQEntityAbstractType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQBool), "1" }, {}, entityBoolEqual_impl, entityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
     virtual ~BSQBoolType() {;}
 
     inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
@@ -71,10 +67,10 @@ std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 bool entityNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQNatType : public BSQEntityType
+class BSQNatType : public BSQEntityAbstractType
 {
 public:
-    BSQNatType() : BSQEntityType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQNat)), BSQ_ALIGN_SIZE(sizeof(BSQNat)), BSQ_ALIGN_SIZE(sizeof(BSQNat)), "1" }, {}, entityNatEqual_impl, entityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
+    BSQNatType() : BSQEntityAbstractType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, { sizeof(BSQNat), sizeof(BSQNat), sizeof(BSQNat), "1" }, {}, entityNatEqual_impl, entityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
     virtual ~BSQNatType() {;}
 
     inline static bool equal(BSQNat v1, BSQNat v2) { return v1 == v2; }
@@ -89,10 +85,10 @@ std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 bool entityIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQIntType : public BSQEntityType
+class BSQIntType : public BSQEntityAbstractType
 {
 public:
-    BSQIntType() : BSQEntityType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQInt)), BSQ_ALIGN_SIZE(sizeof(BSQInt)), BSQ_ALIGN_SIZE(sizeof(BSQInt)), "1" }, {}, entityIntEqual_impl, entityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
+    BSQIntType() : BSQEntityAbstractType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, { sizeof(BSQInt), sizeof(BSQInt), sizeof(BSQInt), "1" }, {}, entityIntEqual_impl, entityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
     virtual ~BSQIntType() {;}
 
     inline static bool equal(BSQInt v1, BSQInt v2) { return v1 == v2; }
@@ -107,7 +103,7 @@ std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr da
 bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBigNatType : public BSQEntityType
+class BSQBigNatType : public BSQEntityAbstractType
 {
 public:
     BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), "1" }, {}, entityBigNatEqual_impl, entityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
