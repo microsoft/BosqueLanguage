@@ -35,15 +35,15 @@ public:
     static std::map<BSQFieldID, std::string> g_fieldmap;
 
     //Well known types
-    static BSQNoneType* g_typeNone;
-    static BSQBoolType* g_typeBool;
-    static BSQNatType* g_typeNat;
-    static BSQIntType* g_typeInt;
-    static BSQBigNatType* g_typeBigNat;
-    static BSQBigIntType* g_typeBigInt;
-    static BSQFloatType* g_typeFloat;
-    static BSQDecimalType* g_typeDecimal;
-    static BSQRationalType* g_typeRational;
+    static const BSQNoneType* g_typeNone;
+    static const BSQBoolType* g_typeBool;
+    static const BSQNatType* g_typeNat;
+    static const BSQIntType* g_typeInt;
+    static const BSQBigNatType* g_typeBigNat;
+    static const BSQBigIntType* g_typeBigInt;
+    static const BSQFloatType* g_typeFloat;
+    static const BSQDecimalType* g_typeDecimal;
+    static const BSQRationalType* g_typeRational;
 
     //String flavors
     static BSQStringKReprType<8>* g_typeStringKRepr8;
@@ -75,6 +75,6 @@ public:
     static BSQString* g_constStrings; 
     static BSQRegex* g_constRegexs;
 
-    static std::vector<std::set<BSQTypeID>> g_subtypes;
+    static std::vector<std::vector<BSQTypeID>> g_subtypes;
     static std::vector<BSQInvokeDecl*> g_invokes;
 };

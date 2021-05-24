@@ -165,7 +165,7 @@ std::string inlineUnionDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 std::string heapUnionDisplay_impl(const BSQType* btype, void** data)
 {
     auto rtype = SLPTR_LOAD_HEAP_TYPE(data);
-    if(rtype->isStructStorage())
+    if(rtype->tkind == BSQTypeKind::Ref)
     {
         return rtype->fpDisplay(rtype, SLPTR_LOAD_HEAP_DATAPTR(data));
     }

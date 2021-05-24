@@ -20,7 +20,7 @@ public:
     static GCStackEntry frames[2048];
     static uint32_t stackp;
 
-    inline static void pushFrame(void** framep, RefMask mask)
+    inline static void pushNoStaticFrame(void** framep, RefMask mask)
     {
         if (GCStack::stackp >= 8192)
         {
@@ -641,7 +641,7 @@ private:
     //GC algorithm
     static void processRoots()
     {
-        for (size_t i = 0; i < GCStack::stackp; ++i)
+        for(size_t i = 0; i < GCStack::stackp; ++i)
         {
             Allocator::gcProcessSlotsWithMask<true>(GCStack::frames[i].framep, GCStack::frames[i].mask);
         }

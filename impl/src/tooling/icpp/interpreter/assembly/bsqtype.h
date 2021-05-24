@@ -8,6 +8,7 @@
 #include "../common.h"
 
 #include <vector>
+#include <map>
 
 ////
 //Standard memory function pointer definitions
@@ -126,10 +127,27 @@ public:
 
     virtual ~BSQType() {;}
 
-    virtual bool isStructStorage() const;
     virtual void clearValue(StorageLocationPtr trgt) const;
     virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const;
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const;
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const;
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const;
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const;
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const;
+
+    void vcallExtractFromInlineUnion(StorageLocationPtr src, uint8_t* into) const
+    {
+        auto tt = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+        tt->storeValue((StorageLocationPtr)into, src);
+    }
+
+    void vcallExtractFromHeapUnion(StorageLocationPtr src, uint8_t* into) const
+    {
+        auto tt = SLPTR_LOAD_HEAP_TYPE(src);
+        SLPTR_STORE_UNION_INLINE_TYPE(tt, (StorageLocationPtr)into);
+        tt->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR((StorageLocationPtr)into), src);
+    }
 };
 
 ////////////////////////////////
@@ -221,11 +239,6 @@ public:
 
     virtual ~BSQTupleRefType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        return false;
-    }
-
     virtual void clearValue(StorageLocationPtr trgt) const
     {
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
@@ -239,6 +252,28 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
     {
         return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
     }
 };
 
@@ -271,11 +306,6 @@ public:
 
     virtual ~BSQTupleStructType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        return true;
-    }
-
     virtual void clearValue(StorageLocationPtr trgt) const
     {
         BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
@@ -289,6 +319,29 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
     {
         return SLPTR_INDEX_DATAPTR(src, offset);
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        BSQ_MEM_COPY(trgt, udata, this->allocinfo.assigndatasize);
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        BSQ_MEM_COPY(trgt, SLPTR_LOAD_HEAP_DATAPTR(src), this->allocinfo.assigndatasize);
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        BSQ_MEM_COPY(SLPTR_LOAD_HEAP_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
     }
 };
 
@@ -357,11 +410,6 @@ public:
 
     virtual ~BSQRecordRefType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        return false;
-    }
-
     virtual void clearValue(StorageLocationPtr trgt) const
     {
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
@@ -375,6 +423,28 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
     {
         return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
     }
 };
 
@@ -407,11 +477,6 @@ public:
 
     virtual ~BSQRecordStructType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        return true;
-    }
-
     virtual void clearValue(StorageLocationPtr trgt) const
     {
         BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
@@ -425,6 +490,29 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
     {
         return SLPTR_INDEX_DATAPTR(src, offset);
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        BSQ_MEM_COPY(trgt, udata, this->allocinfo.assigndatasize);
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        BSQ_MEM_COPY(trgt, SLPTR_LOAD_HEAP_DATAPTR(src), this->allocinfo.assigndatasize);
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        BSQ_MEM_COPY(SLPTR_LOAD_HEAP_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
     }
 };
 
@@ -499,11 +587,6 @@ public:
 
     virtual ~BSQEntityRefType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        return false;
-    }
-
     virtual void clearValue(StorageLocationPtr trgt) const
     {
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
@@ -517,6 +600,28 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
     {
         return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
     }
 };
 
@@ -549,11 +654,6 @@ public:
 
     virtual ~BSQEntityStructType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        return true;
-    }
-
     virtual void clearValue(StorageLocationPtr trgt) const
     {
         BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
@@ -567,6 +667,29 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
     {
         return SLPTR_INDEX_DATAPTR(src, offset);
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        BSQ_MEM_COPY(trgt, udata, this->allocinfo.assigndatasize);
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        BSQ_MEM_COPY(trgt, SLPTR_LOAD_HEAP_DATAPTR(src), this->allocinfo.assigndatasize);
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        BSQ_MEM_COPY(SLPTR_LOAD_HEAP_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
     }
 };
 
@@ -590,11 +713,6 @@ public:
 
     virtual ~BSQEphemeralListType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        return true;
-    }
-
     virtual void clearValue(StorageLocationPtr trgt) const
     {
         BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
@@ -609,6 +727,26 @@ public:
     {
         return SLPTR_INDEX_DATAPTR(src, offset);
     }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+       assert(false);
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        assert(false);
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        assert(false);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        assert(false);
+    }
 };
 
 ////
@@ -617,9 +755,9 @@ public:
 class BSQAbstractType : public BSQType
 {
 public:
-    const std::set<BSQTypeID> subtypes;
+    const std::vector<BSQTypeID> subtypes;
 
-    BSQAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, DisplayFP fpDisplay, std::string name, std::set<BSQTypeID> subtypes)
+    BSQAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, DisplayFP fpDisplay, std::string name, std::vector<BSQTypeID> subtypes)
     : BSQType(tid, tkind, allocinfo, fpDisplay, name), subtypes(subtypes)
     {;}
 
@@ -646,6 +784,26 @@ public:
         assert(false);
         return nullptr;
     }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+       assert(false);
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        assert(false);
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        assert(false);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        assert(false);
+    }
 };
 
 std::string inlineUnionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -653,7 +811,7 @@ std::string inlineUnionDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 class BSQInlineUnionType : public BSQAbstractType
 {
 public:
-    BSQInlineUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::set<BSQTypeID> subtypes)
+    BSQInlineUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQTypeID> subtypes)
     : BSQAbstractType(tid, tkind, allocinfo, inlineUnionDisplay_impl, name, subtypes)
     {;}
 
@@ -665,7 +823,7 @@ std::string heapUnionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 class BSQHeapUnionType : public BSQAbstractType
 {
 public:
-    BSQHeapUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::set<BSQTypeID> subtypes)
+    BSQHeapUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQTypeID> subtypes)
     : BSQAbstractType(tid, tkind, allocinfo, heapUnionDisplay_impl, name, subtypes)
     {;}
 

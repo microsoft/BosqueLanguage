@@ -34,8 +34,49 @@ bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 class BSQNoneType : public BSQEntityAbstractType
 {
 public:
-    BSQNoneType() : BSQEntityAbstractType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQNone), "1" }, {}, entityNoneEqual_impl, entityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) {;}
+    BSQNoneType() : BSQEntityAbstractType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQNone), "1" }, {}, entityNoneEqual_impl, entityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) 
+    {
+        static_assert(sizeof(BSQNone) == 8);
+    }
+
     virtual ~BSQNoneType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQNone, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), BSQNoneValue);
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, BSQNoneHeapValue);
+    }
 };
 
 ////
@@ -52,11 +93,53 @@ bool entityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 class BSQBoolType : public BSQEntityAbstractType
 {
 public:
-    BSQBoolType() : BSQEntityAbstractType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQBool), "1" }, {}, entityBoolEqual_impl, entityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {}) {;}
+    BSQBoolType() : BSQEntityAbstractType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQBool), "1" }, {}, entityBoolEqual_impl, entityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {})
+    {
+        static_assert(sizeof(BSQBool) == 1);
+    }
+
     virtual ~BSQBoolType() {;}
 
     inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
     inline static bool lessThan(BSQBool v1, BSQBool v2) { return (!v1) & v2; }
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
+    }
 };
 
 ////
@@ -70,11 +153,53 @@ bool entityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQNatType : public BSQEntityAbstractType
 {
 public:
-    BSQNatType() : BSQEntityAbstractType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, { sizeof(BSQNat), sizeof(BSQNat), sizeof(BSQNat), "1" }, {}, entityNatEqual_impl, entityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {}) {;}
+    BSQNatType() : BSQEntityAbstractType(BSQ_TYPE_ID_NAT, BSQTypeKind::Register, { sizeof(BSQNat), sizeof(BSQNat), sizeof(BSQNat), "1" }, {}, entityNatEqual_impl, entityNatLessThan_impl, entityNatDisplay_impl, "NSCore::Nat", {}, {}, {})
+    {
+        static_assert(sizeof(BSQNat) == 8);
+    }
+
     virtual ~BSQNatType() {;}
 
     inline static bool equal(BSQNat v1, BSQNat v2) { return v1 == v2; }
     inline static bool lessThan(BSQNat v1, BSQNat v2) { return v1 < v2; }
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQNat, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQNat, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQNat, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQNat, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQNat, src));
+    }
 };
 
 ////
@@ -88,11 +213,53 @@ bool entityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 class BSQIntType : public BSQEntityAbstractType
 {
 public:
-    BSQIntType() : BSQEntityAbstractType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, { sizeof(BSQInt), sizeof(BSQInt), sizeof(BSQInt), "1" }, {}, entityIntEqual_impl, entityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {}) {;}
+    BSQIntType() : BSQEntityAbstractType(BSQ_TYPE_ID_INT, BSQTypeKind::Register, { sizeof(BSQInt), sizeof(BSQInt), sizeof(BSQInt), "1" }, {}, entityIntEqual_impl, entityIntLessThan_impl, entityIntDisplay_impl, "NSCore::Int", {}, {}, {})
+    {
+        static_assert(sizeof(BSQInt) == 8);
+    }
+
     virtual ~BSQIntType() {;}
 
     inline static bool equal(BSQInt v1, BSQInt v2) { return v1 == v2; }
     inline static bool lessThan(BSQInt v1, BSQInt v2) { return v1 < v2; }
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQInt, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQInt, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQInt, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQInt, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQInt, src));
+    }
 };
 
 ////
@@ -106,11 +273,53 @@ bool entityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
 class BSQBigNatType : public BSQEntityAbstractType
 {
 public:
-    BSQBigNatType() : BSQEntityType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), BSQ_ALIGN_SIZE(sizeof(BSQBigNat)), "1" }, {}, entityBigNatEqual_impl, entityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) {;}
+    BSQBigNatType() : BSQEntityAbstractType(BSQ_TYPE_ID_BIGNAT, BSQTypeKind::BigNum, { sizeof(BSQBigNat), sizeof(BSQBigNat), sizeof(BSQBigNat), "411" }, {}, entityBigNatEqual_impl, entityBigNatLessThan_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {}, {}, {}) 
+    {
+        static_assert(sizeof(BSQBigNat) == 24);
+    }
+
     virtual ~BSQBigNatType() {;}
 
     inline static bool equal(BSQBigNat v1, BSQBigNat v2) { return v1 == v2; }
     inline static bool lessThan(BSQBigNat v1, BSQBigNat v2) { return v1 < v2; }
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigNat, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigNat, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigNat, src));
+    }
 };
 
 ////
@@ -121,40 +330,170 @@ std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr da
 bool entityBigIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityBigIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBigIntType : public BSQEntityType
+class BSQBigIntType : public BSQEntityAbstractType
 {
 public:
-    BSQBigIntType() : BSQEntityType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), BSQ_ALIGN_SIZE(sizeof(BSQBigInt)), "1" }, {}, entityBigIntEqual_impl, entityBigIntLessThan_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    BSQBigIntType() : BSQEntityAbstractType(BSQ_TYPE_ID_BIGINT, BSQTypeKind::BigNum, { sizeof(BSQBigInt), sizeof(BSQBigInt), sizeof(BSQBigInt), "411" }, {}, entityBigIntEqual_impl, entityBigIntLessThan_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {}, {}, {}) 
+    {
+        static_assert(sizeof(BSQBigNat) == 24);
+    }
+
     virtual ~BSQBigIntType() {;}
 
     inline static bool equal(BSQBigInt v1, BSQBigInt v2) { return v1 == v2; }
     inline static bool lessThan(BSQBigInt v1, BSQBigInt v2) { return v1 < v2; }
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigInt, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigInt, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigInt, src));
+    }
 };
 
 ////
 //Float
-typedef boost::multiprecision::cpp_bin_float_double BSQFloat;
+typedef double BSQFloat;
 
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQFloatType : public BSQEntityType
+class BSQFloatType : public BSQEntityAbstractType
 {
 public:
-    BSQFloatType() : BSQEntityType(BSQ_TYPE_ID_FLOAT, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQFloat)), BSQ_ALIGN_SIZE(sizeof(BSQFloat)), BSQ_ALIGN_SIZE(sizeof(BSQFloat)), "1" }, {}, entityFloatDisplay_impl, "NSCore::Float", {}, {}, {}) {;}
+    BSQFloatType() : BSQEntityAbstractType(BSQ_TYPE_ID_FLOAT, BSQTypeKind::Register, { sizeof(BSQFloat), sizeof(BSQFloat), sizeof(BSQFloat), "1" }, {}, entityFloatDisplay_impl, "NSCore::Float", {}, {}, {}) 
+    {
+        static_assert(sizeof(BSQFloat) == 8);
+    }
+
     virtual ~BSQFloatType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, 0.0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQFloat, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQFloat, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQFloat, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQFloat, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQFloat, src));
+    }
 };
 
 ////
 //Decimal
-typedef boost::multiprecision::cpp_dec_float_100 BSQDecimal;
+typedef boost::multiprecision::cpp_dec_float_50 BSQDecimal;
+
+//
+//TODO: this is not a nice "large number of significant integral and fractional digits and no round-off error" like I want plus it is huge -- we need to get a better library later
+//
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQDecimalType : public BSQEntityType
+class BSQDecimalType : public BSQEntityAbstractType
 {
 public:
-    BSQDecimalType() : BSQEntityType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), BSQ_ALIGN_SIZE(sizeof(BSQDecimal)), "11" }, {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {}) {;}
+    BSQDecimalType() : BSQEntityAbstractType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, { sizeof(BSQDecimal), sizeof(BSQDecimal), sizeof(BSQDecimal), "1111111" }, {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {})
+    {
+        static_assert(sizeof(BSQDecimal) == 56);
+    }
+
     virtual ~BSQDecimalType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, 0.0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, SLPTR_LOAD_CONTENTS_AS(BSQDecimal, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, SLPTR_LOAD_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, SLPTR_LOAD_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, src));
+    }
 };
 
 ////
@@ -167,11 +506,53 @@ struct BSQRational
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQRationalType : public BSQEntityType
+class BSQRationalType : public BSQEntityAbstractType
 {
 public:
-    BSQRationalType() : BSQEntityType(BSQ_TYPE_ID_RATIONAL, BSQTypeKind::Struct, {BSQ_ALIGN_SIZE(sizeof(BSQRational)), BSQ_ALIGN_SIZE(sizeof(BSQRational)), BSQ_ALIGN_SIZE(sizeof(BSQRational)), "111" }, {}, entityRationalDisplay_impl, "NSCore::BigInt", {}, {}, {}) {;}
+    BSQRationalType() : BSQEntityAbstractType(BSQ_TYPE_ID_RATIONAL, BSQTypeKind::Register, {sizeof(BSQRational), sizeof(BSQRational), sizeof(BSQRational), "1111" }, {}, entityRationalDisplay_impl, "NSCore::BigInt", {}, {}, {}) 
+    {
+        static_assert(sizeof(BSQRational) == 32);
+    }
+
     virtual ~BSQRationalType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, {0});
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRational, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRational, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRational, SLPTR_LOAD_HEAP_DATAPTR(src)));
+    }
+
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQRational, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQRational, src));
+    }
+
+    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
+        SLPTR_STORE_CONTENTS_AS(BSQRational, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQRational, src));
+    }
 };
 
 ////

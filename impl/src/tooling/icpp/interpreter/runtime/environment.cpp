@@ -9,15 +9,15 @@ std::map<BSQTypeID, BSQType*> g_typemap;
 std::map<BSQRecordPropertyID, std::string> Environment::g_propertymap;
 std::map<BSQFieldID, std::string> Environment::g_fieldmap;
 
-BSQNoneType* Environment::g_typeNone = new BSQNoneType();
-BSQBoolType* Environment::g_typeBool = new BSQBoolType();
-BSQNatType* Environment::g_typeNat = new BSQNatType();
-BSQIntType* Environment::g_typeInt = new BSQIntType();
-BSQBigNatType* Environment::g_typeBigNat = new BSQBigNatType();
-BSQBigIntType* Environment::g_typeBigInt = new BSQBigIntType();
-BSQFloatType* Environment::g_typeFloat = new BSQFloatType();
-BSQDecimalType* Environment::g_typeDecimal = new BSQDecimalType();
-BSQRationalType* Environment::g_typeRational = new BSQRationalType();
+const BSQNoneType* Environment::g_typeNone = new BSQNoneType();
+const BSQBoolType* Environment::g_typeBool = new BSQBoolType();
+const BSQNatType* Environment::g_typeNat = new BSQNatType();
+const BSQIntType* Environment::g_typeInt = new BSQIntType();
+const BSQBigNatType* Environment::g_typeBigNat = new BSQBigNatType();
+const BSQBigIntType* Environment::g_typeBigInt = new BSQBigIntType();
+const BSQFloatType* Environment::g_typeFloat = new BSQFloatType();
+const BSQDecimalType* Environment::g_typeDecimal = new BSQDecimalType();
+const BSQRationalType* Environment::g_typeRational = new BSQRationalType();
 
 BSQStringKReprType<8>* Environment::g_typeStringKRepr8 = new BSQStringKReprType<8>();
 BSQStringKReprType<16>* Environment::g_typeStringKRepr16 = new BSQStringKReprType<16>();
@@ -47,6 +47,6 @@ BSQDecimal* Environment::g_constDecimals = nullptr;
 BSQString* Environment::g_constStrings = nullptr; 
 BSQRegex* Environment::g_constRegexs = nullptr;
 
-std::vector<std::set<BSQTypeID>> Environment::g_subtypes;
+std::vector<std::vector<BSQTypeID>> Environment::g_subtypes;
 std::vector<BSQInvokeDecl*> Environment::g_invokes;
 
