@@ -9,11 +9,6 @@
 
 const BSQType** BSQType::g_typetable = nullptr;
 
-void gcDecOperator_packedImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcDecrementSlots(data, btype->ptrcount);
-}
-
 void gcDecOperator_maskImpl(const BSQType* btype, void** data)
 {
     Allocator::gcDecSlotsWithMask(data, btype->refmask);
@@ -24,9 +19,9 @@ void gcDecOperator_stringImpl(const BSQType* btype, void** data)
     Allocator::gcDecrementString(data);
 }
 
-void gcClearOperator_packedImpl(const BSQType* btype, void** data)
+void gcDecOperator_bignumImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcClearMarkSlots(data, btype->ptrcount);
+    Allocator::gcDecrementBigNum(data);
 }
 
 void gcClearOperator_maskImpl(const BSQType* btype, void** data)
@@ -39,9 +34,9 @@ void gcClearOperator_stringImpl(const BSQType* btype, void** data)
     Allocator::gcClearMarkString(data);
 }
 
-void gcProcessRootOperator_packedImpl(const BSQType* btype, void** data)
+void gcClearOperator_bignumImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcProcessSlots<true>(data, btype->ptrcount);
+    Allocator::gcClearMarkBigNum(data);
 }
 
 void gcProcessRootOperator_maskImpl(const BSQType* btype, void** data)
@@ -54,9 +49,9 @@ void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data)
     Allocator::gcProcessSlotWithString<true>(data);
 }
 
-void gcProcessHeapOperator_packedImpl(const BSQType* btype, void** data)
+void gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcProcessSlots<false>(data, btype->ptrcount);
+    Allocator::gcProcessSlotWithBigNum<true>(data);
 }
 
 void gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data)
@@ -67,6 +62,11 @@ void gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data)
 void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data)
 {
     Allocator::gcProcessSlotWithString<false>(data);
+}
+
+void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data)
+{
+    Allocator::gcProcessSlotWithBigNum<false>(data);
 }
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)

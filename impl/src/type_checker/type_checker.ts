@@ -2937,6 +2937,11 @@ class TypeChecker {
     private checkAccessFromIndex(env: TypeEnvironment, op: PostfixAccessFromIndex, arg: MIRRegisterArgument, trgt: MIRRegisterArgument): TypeEnvironment {
         const texp = env.getExpressionResult().valtype;
 
+        //
+        //TODO: For virtual ops we don't want to allow mixing value and ref tuples -- see also the other tuple and record operations
+        //      For entities we need to check that all concepts are defined as struct if the entity is (if any, outside of our special ones, are ref then the entity must be ref also)
+        //
+
         this.raiseErrorIf(op.sinfo, !texp.flowtype.isTupleTargetType(), "Base of index expression must be of Tuple type");
         this.raiseErrorIf(op.sinfo, op.index < 0, "Index cannot be negative");
         this.raiseErrorIf(op.sinfo, this.getInfoForHasIndex(op.sinfo, texp.flowtype, op.index) !== "yes", "Index may not be defined for tuple");

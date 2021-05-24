@@ -155,7 +155,12 @@ typedef void* StorageLocationPtr;
 #define SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(L, V) *((void**)L) = V
 
 #define SLPTR_LOAD_UNION_INLINE_TYPE(L) (*((const BSQType**)L))
+#define SLPTR_LOAD_UNION_INLINE_TYPE_AS(T, L) (*((const BSQType**)L))
 #define SLPTR_LOAD_UNION_INLINE_DATAPTR(L) ((void*)(((uint8_t*)L) + sizeof(BSQType*)))
+
+#define SLPTR_LOAD_HEAP_TYPE(L) GET_TYPE_META_DATA(*((void**)L))
+#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)GET_TYPE_META_DATA(*((void**)L)))
+#define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
 
 #define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
 
@@ -184,10 +189,6 @@ enum class BSQTypeKind : uint32_t
     InlineUnion,
     HeapUnion
 };
-
-typedef uint8_t* StructuralValueRepr; //A structural value -- really the first element in the byte layout 
-typedef BSQType** InlineValueRepr; //A inline union -- really the first element (which is the type tag)
-typedef void* ReferenceValueRepr; //A pointer to the heap allocation (Ref or HeapUnion)
 
 #define PTR_FIELD_MASK_SCALAR '1'
 #define PTR_FIELD_MASK_PTR '2'

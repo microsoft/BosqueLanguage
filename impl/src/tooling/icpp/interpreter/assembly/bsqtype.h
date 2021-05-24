@@ -9,21 +9,21 @@
 
 ////
 //Standard memory function pointer definitions
-void gcDecOperator_packedImpl(const BSQType* btype, void** data);
 void gcDecOperator_maskImpl(const BSQType* btype, void** data);
 void gcDecOperator_stringImpl(const BSQType* btype, void** data);
+void gcDecOperator_bignumImpl(const BSQType* btype, void** data);
 
-void gcClearOperator_packedImpl(const BSQType* btype, void** data);
 void gcClearOperator_maskImpl(const BSQType* btype, void** data);
 void gcClearOperator_stringImpl(const BSQType* btype, void** data);
+void gcClearOperator_bignumImpl(const BSQType* btype, void** data);
 
-void gcProcessRootOperator_packedImpl(const BSQType* btype, void** data);
 void gcProcessRootOperator_maskImpl(const BSQType* btype, void** data);
 void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data);
 
-void gcProcessHeapOperator_packedImpl(const BSQType* btype, void** data);
 void gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data);
 void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data);
 
 class BSQTypeSizeInfo
 {
@@ -33,6 +33,12 @@ public:
     const uint64_t assigndatasize; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
 
     const RefMask slmask; //The mask to use to traverse this object (even if this isn't a mixed obj -- e.g. it may be embedded in a mixed obj and we need to use this)   
+};
+
+struct BSQTypeVTableEntry
+{
+    BSQVirtualInvokeID vkey;
+    BSQInvokeID ikey;
 };
 
 ////
@@ -48,8 +54,6 @@ public:
     const BSQTypeSizeInfo allocinfo; //memory size information
     
     RefMask refmask;
-    const uint64_t ptrcount; //if this is a packed object the number of pointers at the front
-
     GCDecOperatorFP fpDecObj;
     GCClearMarkOperatorFP fpClearObj;
     GCProcessOperatorFP fpProcessObjRoot;
@@ -57,7 +61,8 @@ public:
 
     const bool isLeafType; //if refmask == nullptr && ptrcount == 0
 
-    const std::map<BSQVirtualInvokeID, BSQInvokeID> vtable; //TODO: This is slow indirection but nice and simple
+    const BSQTypeVTableEntry* vtable; //TODO: This is slow indirection but nice and simple
+    const size_t vtableCount;
 
     KeyEqualFP fpKeyEqual;
     KeyLessFP fpKeyLess;
@@ -69,99 +74,66 @@ public:
 private:
     //Constructor that everyone delegates to
     BSQType(
-        BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, uint64_t ptrcount,
+        BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask,
         GCDecOperatorFP fpDecObj, GCClearMarkOperatorFP fpClearObj, GCProcessOperatorFP fpProcessObjRoot, GCProcessOperatorFP fpProcessObjHeap,
-        bool isLeafType, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable,
+        bool isLeafType, BSQTypeVTableEntry* vtable, size_t vtableCount,
         KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay,
         std::string name
     ) 
-    : tid(tid), tkind(tkind), allocinfo(allocinfo), refmask(refmask), ptrcount(ptrcount), 
+    : tid(tid), tkind(tkind), allocinfo(allocinfo), refmask(refmask), 
     fpDecObj(fpDecObj), fpClearObj(fpClearObj), fpProcessObjRoot(fpProcessObjRoot), fpProcessObjHeap(fpProcessObjHeap),
-    isLeafType(isLeafType), vtable(vtable),
+    isLeafType(isLeafType), vtable(vtable), vtableCount(vtableCount),
     fpKeyEqual(fpKeyEqual), fpKeyLess(fpKeyLess), fpDisplay(fpDisplay),
     name(name)
     {;}
 
 public:
     //Constructor for leaf type
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name)
-    : BSQType(tid, tkind, allocinfo, nullptr, 0, nullptr, nullptr, nullptr, nullptr, true, vtable, nullptr, nullptr, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, BSQTypeVTableEntry* vtable, size_t vtableCount, DisplayFP fpDisplay, std::string name)
+    : BSQType(tid, tkind, allocinfo, nullptr, nullptr, nullptr, nullptr, nullptr, true, vtable, vtableCount, nullptr, nullptr, fpDisplay, name)
     {;}
 
     //Constructor for key leaf type
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
-    : BSQType(tid, tkind, allocinfo, nullptr, 0, nullptr, nullptr, nullptr, nullptr, true, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
-    {;}
-
-    //Constructor with ptrcount
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocinfo, nullptr, ptrcount, gcDecOperator_packedImpl, gcClearOperator_packedImpl, gcProcessRootOperator_packedImpl, gcProcessHeapOperator_packedImpl, false, vtable, nullptr, nullptr, fpDisplay, name)
-    {;}
-
-    //Constructor with key ptrcount
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocinfo, nullptr, ptrcount, gcDecOperator_packedImpl, gcClearOperator_packedImpl, gcProcessRootOperator_packedImpl, gcProcessHeapOperator_packedImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, BSQTypeVTableEntry* vtable, size_t vtableCount, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name)
+    : BSQType(tid, tkind, allocinfo, nullptr, nullptr, nullptr, nullptr, nullptr, true, vtable, vtableCount, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor for general refmask
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocinfo, refmask, 0, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, nullptr, nullptr, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, BSQTypeVTableEntry* vtable, size_t vtableCount, DisplayFP fpDisplay, std::string name) 
+    : BSQType(tid, tkind, allocinfo, refmask, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, vtableCount, nullptr, nullptr, fpDisplay, name)
     {;}
 
     //Constructor with key general refmask
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(tid, tkind, allocinfo, refmask, 0, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, BSQTypeVTableEntry* vtable, size_t vtableCount, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
+    : BSQType(tid, tkind, allocinfo, refmask, gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl, false, vtable, vtableCount, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor for string type
     BSQType(BSQTypeSizeInfo allocinfo, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
-    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, allocinfo, nullptr, 0, gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl, false, {}, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, allocinfo, nullptr, gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl, false, nullptr, 0, fpKeyEqual, fpKeyLess, fpDisplay, name)
+    {;}
+
+    //Constructor for bignum type
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, DisplayFP fpDisplay, std::string name) 
+    : BSQType(tid, BSQTypeKind::BigNum, allocinfo, nullptr, gcDecOperator_bignumImpl, gcClearOperator_bignumImpl, gcProcessRootOperator_bignumImpl, gcProcessHeapOperator_bignumImpl, false, nullptr, 0, fpKeyEqual, fpKeyLess, fpDisplay, name)
     {;}
 
     //Constructor abstract type
     BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, DisplayFP fpDisplay, std::string name)
-    : BSQType(tid, tkind, allocinfo, nullptr, 0, nullptr, nullptr, nullptr, nullptr, false, {}, nullptr, nullptr, fpDisplay, name)
+    : BSQType(tid, tkind, allocinfo, nullptr, nullptr, nullptr, nullptr, nullptr, false, nullptr, 0, nullptr, nullptr, fpDisplay, name)
     {;}
 
-    virtual ~BSQType() {;}
-
-    inline void clearValue(StorageLocationPtr trgt) const
+    virtual ~BSQType() 
     {
-#ifdef BSQ_DEBUG_BUILD
-        if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
+        if(this->vtable != nullptr)
         {
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
-        }
-        else 
-        {
-            GC_MEM_ZERO(trgt, this->allocinfo.slfullsize);
-        }
-#endif
-    }
-
-    inline void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
-        {
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
-        }
-        else 
-        {
-            SLPTR_COPY_CONTENTS(trgt, src, this->allocinfo.slfullsize);
+            delete[] this->vtable;
         }
     }
 
-    inline StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
-    {
-        if((this->tkind == BSQTypeKind::Ref) | (this->tkind == BSQTypeKind::HeapUnion)) 
-        {
-            return SLPTR_INDEX_HEAP(src, offset);
-        }
-        else 
-        {
-            return SLPTR_INDEX_INLINE(src, offset + (this->tkind == BSQTypeKind::InlineUnion ? sizeof(BSQType*) : 0));
-        }
-    }
+    virtual void clearValue(StorageLocationPtr trgt) const;
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const;
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const;
 };
 
 ////////////////////////////////
@@ -185,87 +157,91 @@ inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
     return tt->fpProcessObjHeap;
 }
 
-template <BSQTypeKind tk>
-void bsqClear(const BSQType* oftype, StorageLocationPtr trgt)
-{
-    static_assert(false);
-}
-
-template <BSQTypeKind tk, typename T>
-T bsqLoad(StorageLocationPtr src)
-{
-    static_assert(false);
-}
-
-template <BSQTypeKind tk, typename T>
-void bsqStore(const BSQType* oftype, StorageLocationPtr trgt, T src)
-{
-    static_assert(false);
-}
-
-////
-//See the overrides for each of the register types, string, and bignum in value.h
-
-template <>
-void bsqClear<BSQTypeKind::Struct>(const BSQType* oftype, StorageLocationPtr trgt)
-{
-    BSQ_MEM_ZERO(trgt, oftype->allocinfo.sldatasize);
-}
-
-template <>
-StructuralValueRepr bsqLoad<BSQTypeKind::Struct, StructuralValueRepr>(StorageLocationPtr src)
-{
-    (StructuralValueRepr)src;
-}
-
-template <>
-void bsqStore<BSQTypeKind::Struct, StructuralValueRepr>(const BSQType* oftype, StorageLocationPtr trgt, StructuralValueRepr src)
-{
-    BSQ_MEM_COPY(trgt, src, oftype->allocinfo.sldatasize);
-}
-
-template <>
-void bsqClear<BSQTypeKind::Ref>(const BSQType* oftype, StorageLocationPtr trgt)
-{
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
-}
-
-template <>
-ReferenceValueRepr bsqLoad<BSQTypeKind::Ref, ReferenceValueRepr>(StorageLocationPtr src)
-{
-    SLPTR_LOAD_CONTENTS_AS(ReferenceValueRepr, src);
-}
-
-template <>
-void bsqStore<BSQTypeKind::Ref, ReferenceValueRepr>(const BSQType* oftype, StorageLocationPtr trgt, ReferenceValueRepr src)
-{
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, src);
-}
-
-template <>
-void bsqClear<BSQTypeKind::InlineUnion>(const BSQType* oftype, StorageLocationPtr trgt)
-{
-    BSQ_MEM_ZERO(trgt, oftype->allocinfo.slfullsize);
-}
-
-template <>
-InlineValueRepr bsqLoad<BSQTypeKind::InlineUnion, InlineValueRepr>(StorageLocationPtr src)
-{
-    (InlineValueRepr)src;
-}
-
-template <>
-void bsqStore<BSQTypeKind::InlineUnion, InlineValueRepr>(const BSQType* oftype, StorageLocationPtr trgt, InlineValueRepr src)
-{
-    BSQ_MEM_COPY(trgt, src, oftype->allocinfo.slfullsize);
-}
-
 ////
 //Concrete types
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQTupleType : public BSQType
+class BSQTupleAbstractType : public BSQType
+{
+public:
+    const BSQTupleIndex maxIndex;
+    const std::vector<BSQTypeID> ttypes;
+    const std::vector<size_t> idxoffsets;
+
+    //Constructor for leaf type
+    BSQTupleAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, BSQTypeVTableEntry* vtable, size_t vtableCount, std::string name, 
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, vtableCount, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    {;}
+
+    //Constructor for key leaf type
+    BSQTupleAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, BSQTypeVTableEntry* vtable, size_t vtableCount, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name, 
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQType(tid, tkind, allocinfo, vtable, vtableCount, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    {;}
+
+    //Constructor for general refmask
+    BSQTupleAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask,BSQTypeVTableEntry* vtable, size_t vtableCount, std::string name,
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, vtableCount, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    {;}
+
+    //Constructor with key general refmask
+    BSQTupleAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, BSQTypeVTableEntry* vtable, size_t vtableCount, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQType(tid, tkind, allocinfo, refmask, vtable, vtableCount, fpKeyEqual, fpKeyLess, tupleDisplay_impl, name), maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    {;}
+
+    virtual ~BSQTupleAbstractType() {;}
+};
+
+class BSQTupleRefType : public BSQTupleAbstractType
+{
+public:
+    //Constructor for leaf type
+    BSQTupleRefType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, BSQTypeVTableEntry* vtable, size_t vtableCount, std::string name, 
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQTupleAbstractType(tid, tkind, allocinfo, vtable, vtableCount, name, maxIndex, ttypes, idxoffsets)
+    {;}
+
+    //Constructor for key leaf type
+    BSQTupleRefType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, BSQTypeVTableEntry* vtable, size_t vtableCount, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name, 
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQTupleAbstractType(tid, tkind, allocinfo, vtable, vtableCount, fpKeyEqual, fpKeyLess, name, maxIndex, ttypes, idxoffsets)
+    {;}
+
+    //Constructor for general refmask
+    BSQTupleRefType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, BSQTypeVTableEntry* vtable, size_t vtableCount, std::string name,
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQTupleAbstractType(tid, tkind, allocinfo, refmask, vtable, vtableCount, name, maxIndex, ttypes, idxoffsets)
+    {;}
+
+    //Constructor with key general refmask
+    BSQTupleRefType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, RefMask refmask, BSQTypeVTableEntry* vtable, size_t vtableCount, KeyEqualFP fpKeyEqual, KeyLessFP fpKeyLess, std::string name,
+                BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets)
+    : BSQTupleAbstractType(tid, tkind, allocinfo, refmask, vtable, vtableCount, fpKeyEqual, fpKeyLess, name, maxIndex, ttypes, idxoffsets)
+    {;}
+
+    virtual ~BSQTupleRefType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    {
+        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset));
+    }
+};
+
+class BSQTupleStructType : public BSQType
 {
 public:
     const BSQTupleIndex maxIndex;
