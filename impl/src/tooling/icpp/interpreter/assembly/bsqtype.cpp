@@ -11,7 +11,7 @@ const BSQType** BSQType::g_typetable = nullptr;
 
 void gcDecOperator_maskImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcDecSlotsWithMask(data, btype->refmask);
+    Allocator::gcDecSlotsWithMask(data, btype->allocinfo.inlinedmask);
 }
 
 void gcDecOperator_stringImpl(const BSQType* btype, void** data)
@@ -26,7 +26,7 @@ void gcDecOperator_bignumImpl(const BSQType* btype, void** data)
 
 void gcClearOperator_maskImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcClearMarkSlotsWithMask(data, btype->refmask);
+    Allocator::gcClearMarkSlotsWithMask(data, btype->allocinfo.inlinedmask);
 }
 
 void gcClearOperator_stringImpl(const BSQType* btype, void** data)
@@ -41,7 +41,7 @@ void gcClearOperator_bignumImpl(const BSQType* btype, void** data)
 
 void gcProcessRootOperator_maskImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcProcessSlotsWithMask<true>(data, btype->refmask);
+    Allocator::gcProcessSlotsWithMask<true>(data, btype->allocinfo.inlinedmask);
 }
 
 void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data)
@@ -56,7 +56,7 @@ void gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data)
 
 void gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcProcessSlotsWithMask<false>(data, btype->refmask);
+    Allocator::gcProcessSlotsWithMask<false>(data, btype->allocinfo.inlinedmask);
 }
 
 void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data)
@@ -156,21 +156,8 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     return res;
 }
 
-std::string inlineUnionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(data);
     return rtype->fpDisplay(rtype, SLPTR_LOAD_UNION_INLINE_DATAPTR(data));
-}
-
-std::string heapUnionDisplay_impl(const BSQType* btype, void** data)
-{
-    auto rtype = SLPTR_LOAD_HEAP_TYPE(data);
-    if(rtype->tkind == BSQTypeKind::Ref)
-    {
-        return rtype->fpDisplay(rtype, SLPTR_LOAD_HEAP_DATAPTR(data));
-    }
-    else
-    {
-        return rtype->fpDisplay(rtype, data);
-    }
 }

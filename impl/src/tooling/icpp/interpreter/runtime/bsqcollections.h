@@ -9,7 +9,7 @@
 #include "../assembly/bsqtype.h"
 #include "../core/bsqmemory.h"
 
-struct BSQListIterator
+struct BSQListReprIterator
 {
     void* lroot;
     uint64_t esize;
@@ -19,91 +19,66 @@ struct BSQListIterator
     int16_t maxpos;
 };
 
-void registerIteratorGCRoots(BSQListIterator* iter);
+void registerIteratorGCRoots(BSQListReprIterator* iter);
 void releaseIteratorGCRoots();
 
-bool iteratorIsValid(const BSQListIterator* iter);
-void initializeListIterPosition(BSQListIterator* iter, int64_t pos);
+bool iteratorIsValid(const BSQListReprIterator* iter);
+void initializeListIterPosition(BSQListReprIterator* iter, int64_t pos);
 
-void iteratorGetElement(const BSQListIterator* iter, void* into, const BSQType* etype);
-void incrementListIterator(BSQListIterator* iter);
+void iteratorGetElement(const BSQListReprIterator* iter, void* into, const BSQType* etype);
+void incrementListIterator(BSQListReprIterator* iter);
 
-std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQListEntityType : public BSQEntityType
+class BSQListReprType : public BSQEntityAbstractType
 {
 public:
     const uint64_t esize;
     const BSQType* etype;
 
     //Constructor for leaf type
-    BSQListEntityType(BSQTypeID tid, BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype)
-    : BSQEntityType(tid, BSQTypeKind::Ref, allocinfo, {}, entityListDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.slfullsize), etype(etype)
-    {;}
-
-    //Constructor with ptrcount
-    BSQListEntityType(BSQTypeID tid, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, const BSQType* etype)
-    : BSQEntityType(tid, BSQTypeKind::Ref, allocinfo, ptrcount, {}, entityListDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.slfullsize), etype(etype)
+    BSQListReprType(BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype)
+    : BSQEntityAbstractType(BSQ_TYPE_ID_LISTREPR, BSQTypeKind::Ref, allocinfo, {}, entityListReprDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.inlinedatasize), etype(etype)
     {;}
 
     //Constructor for general refmask
-    BSQListEntityType(BSQTypeID tid, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, const BSQType* etype)
-    : BSQEntityType(tid, BSQTypeKind::Ref, allocinfo, refmask, {}, entityListDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.slfullsize), etype(etype)
+    BSQListReprType(BSQTypeSizeInfo allocinfo, RefMask rmask, std::string name, const BSQType* etype)
+    : BSQEntityAbstractType(BSQ_TYPE_ID_LISTREPR, BSQTypeKind::Ref, allocinfo, rmask, {}, entityListReprDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.inlinedatasize), etype(etype)
     {;}
    
-    virtual ~BSQListEntityType() {;}
+    virtual ~BSQListReprType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        assert(false);
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        assert(false);
+    }
 
     virtual uint64_t getLength(void* data) const = 0;
-    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const = 0;
+    virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const = 0;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const = 0;
 
     virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const = 0;
-
-    static void initializeIteratorGivenPosition(BSQListIterator* iter, void* data, int64_t pos);
-    static void initializeIteratorBegin(BSQListIterator* iter, void* data);
-
-    inline static bool empty(void* data)
-    {
-        return GET_TYPE_META_DATA_AS(BSQListEntityType, data)->getLength(data) == 0;
-    }
-
-    static void* concat2(StorageLocationPtr s1, StorageLocationPtr s2);
-    static void* slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos);
-};
-
-struct BSQEmptyList
-{
-    //It is an empty list
-};
-
-class BSQListEmptyType : public BSQListEntityType
-{
-public:
-    BSQEmptyList* lempty;
-
-    //Constructor for leaf type
-    BSQListEmptyType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {sizeof(BSQEmptyList), sizeof(void*), sizeof(void*), "2"}, name, etype), lempty(nullptr) {;}
-
-    virtual ~BSQListEmptyType() {;}
-
-    BSQEmptyList* generateEmptyList() const
-    {
-        if(this->lempty == nullptr)
-        {
-            Allocator::GlobalAllocator.allocateEternal(this->allocinfo.heapsize, this);
-        }
-
-        return this->lempty;
-    }
-
-    virtual uint64_t getLength(void* data) const override
-    {
-        return 0;
-    }
-
-    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
 template <uint16_t k>
@@ -114,17 +89,14 @@ struct BSQListFlatK
     uint8_t data[k];
 };
 
-class BSQListFlatKTypeAbstract : public BSQListEntityType
+class BSQListFlatKTypeAbstract : public BSQListReprType
 {
 public:
     //Constructor for leaf type
-    BSQListFlatKTypeAbstract(BSQTypeID tid, BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype): BSQListEntityType(tid, allocinfo, name, etype) {;}
-
-    //Constructor with ptrcount
-    BSQListFlatKTypeAbstract(BSQTypeID tid, BSQTypeSizeInfo allocinfo, uint64_t ptrcount, std::string name, const BSQType* etype): BSQListEntityType(tid, allocinfo, ptrcount, name, etype) {;}
+    BSQListFlatKTypeAbstract(BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype): BSQListReprType(allocinfo, name, etype) {;}
 
     //Constructor for general refmask
-    BSQListFlatKTypeAbstract(BSQTypeID tid, BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, const BSQType* etype): BSQListEntityType(tid, allocinfo, refmask, etype) {;}
+    BSQListFlatKTypeAbstract(BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, const BSQType* etype): BSQListReprType(allocinfo, refmask, name, etype) {;}
    
     virtual ~BSQListFlatKTypeAbstract() {;}
 
@@ -158,10 +130,10 @@ public:
         GC_MEM_COPY(iter, slptr, this->esize);
     }
 
-    void initializeIterPositionWSlice(BSQListIterator* iter, void* data, int64_t pos, int64_t maxpos) const;
+    void initializeIterPositionWSlice(BSQListReprIterator* iter, void* data, int64_t pos, int64_t maxpos) const;
 
     virtual uint64_t getLength(void* data) const override;
-    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
     virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };
@@ -171,13 +143,10 @@ class BSQListFlatKType : public BSQListFlatKTypeAbstract
 {
 public:
     //Constructor for leaf type
-    BSQListFlatKType(BSQTypeID tid, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, name, etype) {;}
-
-    //Constructor with ptrcount
-    BSQListFlatKType(BSQTypeID tid, uint64_t pcount, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, pcount, name, etype) {;}
+    BSQListFlatKType(std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract({ sizeof(BSQListFlatK<k>), sizeof(void*), sizeof(void*), "x" }, name, etype) {;}
 
     //Constructor for general refmask
-    BSQListFlatKType(BSQTypeID tid, RefMask refmask, std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract(tid, { BSQ_ALIGN_SIZE(sizeof(BSQListFlatK<k>)), sizeof(void*), sizeof(void*), kmask }, refmask, etype) {;}
+    BSQListFlatKType(std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract({ sizeof(BSQListFlatK<k>), sizeof(void*), sizeof(void*), kmask }, "2", name, etype) {;}
    
     virtual ~BSQListFlatKType() {;}
 };
@@ -189,14 +158,14 @@ struct BSQListSlice
     uint64_t end;
 };
 
-class BSQListSliceType : public BSQListEntityType
+class BSQListSliceType : public BSQListReprType
 {
 public:
-    BSQListSliceType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {BSQ_ALIGN_SIZE(sizeof(BSQListSlice)), sizeof(void*), sizeof(void*), "2"}, 1, name, etype) {;}
+    BSQListSliceType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListReprType(tid, {sizeof(BSQListSlice), sizeof(void*), sizeof(void*), "211"}, "2", name, etype) {;}
     virtual ~BSQListSliceType() {;}
 
     virtual uint64_t getLength(void* data) const override;
-    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
     virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };
@@ -208,14 +177,46 @@ struct BSQListConcat
     uint64_t size;
 };
 
-class BSQListConcatType : public BSQListEntityType
+class BSQListConcatType : public BSQListReprType
 {
 public:
-    BSQListConcatType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListEntityType(tid, {BSQ_ALIGN_SIZE(sizeof(BSQListConcat)), sizeof(void*), sizeof(void*), "2"}, 2, name, etype) {;}
+    BSQListConcatType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListReprType(tid, {sizeof(BSQListConcat), sizeof(void*), sizeof(void*), "221"}, "2", name, etype) {;}
     virtual ~BSQListConcatType() {;}
 
     virtual uint64_t getLength(void* data) const override;
-    virtual void initializeIterPosition(BSQListIterator* iter, void* data, int64_t pos) const override;
+    virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override;
     virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
     virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
 };
+
+struct BSQList
+{
+    void* repr;
+    uint64_t size;
+};
+
+class BSQListType : public BSQEntityAbstractType
+{
+public:
+    //Constructor for leaf type
+    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype)
+    : BSQEntityAbstractType(tid, {sizeof(BSQList), sizeof(BSQList), sizeof(BSQList), "221"}, "2", name, etype) {;}
+
+    //Constructor for general refmask
+    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype)
+    : BSQEntityAbstractType(tid, {sizeof(BSQListConcat), sizeof(BSQList), sizeof(BSQList), "221"}, "2", name, etype) {;}
+
+    virtual ~BSQListType() {;}
+
+    inline uint64_t getLength(BSQList data) const
+    {
+        return data.size;
+    }
+
+    static void initializeIteratorGivenPosition(BSQListReprIterator* iter, void* data, int64_t pos);
+    static void initializeIteratorBegin(BSQListReprIterator* iter, void* data);
+
+    static void* concat2(StorageLocationPtr s1, StorageLocationPtr s2);
+    static void* slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos);
+};
+

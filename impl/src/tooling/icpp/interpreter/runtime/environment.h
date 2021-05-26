@@ -13,14 +13,13 @@
 
 struct ListTypeConstructorInfo
 {
-    BSQListEmptyType* empty;
-    BSQListFlatKType<64>* list64;
-    BSQListFlatKType<96>* list96;
-    BSQListFlatKType<128>* list128;
-    BSQListFlatKType<160>* list160;
-    BSQListFlatKType<192>* list192;
-    BSQListFlatKType<224>* list224;
-    BSQListFlatKType<256>* list256;
+    BSQListFlatKType<4>* list4;
+    BSQListFlatKType<8>* list8;
+    BSQListFlatKType<12>* list12;
+    BSQListFlatKType<16>* list16;
+    BSQListFlatKType<24>* list24;
+    BSQListFlatKType<32>* list32;
+    BSQListFlatKType<40>* list40;
     BSQListSliceType* slice;
     BSQListConcatType* concat;
 };

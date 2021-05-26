@@ -10,10 +10,6 @@
 #include "../core/bsqmemory.h"
 
 #include <boost/multiprecision/cpp_int.hpp>
-#include <boost/multiprecision/cpp_bin_float.hpp>
-#include <boost/multiprecision/cpp_dec_float.hpp>
-#include <boost/math/special_functions/fpclassify.hpp>
-
 #include <boost/uuid/uuid.hpp>
 
 ////
@@ -24,9 +20,6 @@
 typedef uint64_t BSQNone;
 #define BSQNoneValue 0
 
-typedef void* BSQNoneHeap;
-#define BSQNoneHeapValue nullptr
-
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -34,48 +27,38 @@ bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 class BSQNoneType : public BSQEntityAbstractType
 {
 public:
-    BSQNoneType() : BSQEntityAbstractType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQNone), "1" }, {}, entityNoneEqual_impl, entityNoneLessThan_impl, entityNoneDisplay_impl, "NSCore::None", {}, {}, {}) 
+    BSQNoneType(): BSQEntityAbstractType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQNone), nullptr, "1" }, LEAF_GC_FUNCTOR_SET, {}, {entityNoneEqual_impl, entityNoneLessThan_impl}, entityNoneDisplay_impl, "NSCore::None", {}, {}, {})
     {
         static_assert(sizeof(BSQNone) == 8);
     }
 
     virtual ~BSQNoneType() {;}
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, 0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQNone, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), BSQNoneValue);
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, BSQNoneHeapValue);
     }
 };
 
@@ -103,42 +86,31 @@ public:
     inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
     inline static bool lessThan(BSQBool v1, BSQBool v2) { return (!v1) & v2; }
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, 0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQBool, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQBool, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
     }
 };
 
@@ -163,42 +135,31 @@ public:
     inline static bool equal(BSQNat v1, BSQNat v2) { return v1 == v2; }
     inline static bool lessThan(BSQNat v1, BSQNat v2) { return v1 < v2; }
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, 0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQNat, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQNat, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQNat, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQNat, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQNat, src));
     }
 };
 
@@ -223,48 +184,41 @@ public:
     inline static bool equal(BSQInt v1, BSQInt v2) { return v1 == v2; }
     inline static bool lessThan(BSQInt v1, BSQInt v2) { return v1 < v2; }
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, 0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQInt, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQInt, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQInt, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQInt, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQInt, src));
     }
 };
 
 ////
 //BigNat
 typedef boost::multiprecision::cpp_int BSQBigNat;
+
+//
+//TODO: maybe change impl to inline + https://github.com/chakra-core/ChakraCore/blob/1eae003b7a981b4b691928daef27b5254a49f5eb/lib/Runtime/Library/JavascriptBigInt.h
+//
 
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -283,48 +237,41 @@ public:
     inline static bool equal(BSQBigNat v1, BSQBigNat v2) { return v1 == v2; }
     inline static bool lessThan(BSQBigNat v1, BSQBigNat v2) { return v1 < v2; }
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, 0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQBigNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigNat, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQBigNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQBigNat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigNat, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQBigNat, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigNat, src));
     }
 };
 
 ////
 //BigInt
 typedef boost::multiprecision::cpp_int BSQBigInt;
+
+//
+//TODO: maybe change impl to inline + https://github.com/chakra-core/ChakraCore/blob/1eae003b7a981b4b691928daef27b5254a49f5eb/lib/Runtime/Library/JavascriptBigInt.h
+//
 
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityBigIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -343,42 +290,31 @@ public:
     inline static bool equal(BSQBigInt v1, BSQBigInt v2) { return v1 == v2; }
     inline static bool lessThan(BSQBigInt v1, BSQBigInt v2) { return v1 < v2; }
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQInt, trgt, 0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQBigInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigInt, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQBigInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQBigInt, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigInt, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQBigInt, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBigInt, src));
     }
 };
 
@@ -398,51 +334,41 @@ public:
 
     virtual ~BSQFloatType() {;}
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, 0.0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQFloat, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQFloat, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQFloat, trgt, SLPTR_LOAD_CONTENTS_AS(BSQFloat, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQFloat, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQFloat, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQFloat, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQFloat, src));
     }
 };
 
 ////
 //Decimal
-typedef boost::multiprecision::cpp_dec_float_50 BSQDecimal;
+typedef double BSQDecimal;
 
 //
 //TODO: this is not a nice "large number of significant integral and fractional digits and no round-off error" like I want plus it is huge -- we need to get a better library later
+//https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Decimal.cs
 //
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -450,49 +376,38 @@ std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr d
 class BSQDecimalType : public BSQEntityAbstractType
 {
 public:
-    BSQDecimalType() : BSQEntityAbstractType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, { sizeof(BSQDecimal), sizeof(BSQDecimal), sizeof(BSQDecimal), "1111111" }, {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {})
+    BSQDecimalType() : BSQEntityAbstractType(BSQ_TYPE_ID_DECIMAL, BSQTypeKind::Register, { sizeof(BSQDecimal), sizeof(BSQDecimal), sizeof(BSQDecimal), "1" }, {}, entityDecimalDisplay_impl, "NSCore::Decimal", {}, {}, {})
     {
-        static_assert(sizeof(BSQDecimal) == 56);
+        static_assert(sizeof(BSQDecimal) == 8);
     }
 
     virtual ~BSQDecimalType() {;}
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, 0.0);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, SLPTR_LOAD_CONTENTS_AS(BSQDecimal, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, SLPTR_LOAD_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQDecimal, trgt, SLPTR_LOAD_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQDecimal, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, src));
     }
 };
 
@@ -516,42 +431,31 @@ public:
 
     virtual ~BSQRationalType() {;}
 
-    virtual void clearValue(StorageLocationPtr trgt) const
+    virtual void clearValue(StorageLocationPtr trgt) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, {0});
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRational, src));
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRational, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    virtual void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQRational, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRational, SLPTR_LOAD_HEAP_DATAPTR(src)));
-    }
-
-    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQRational, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQRational, src));
-    }
-
-    virtual void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, Allocator::GlobalAllocator.allocateDynamic(this));
-        SLPTR_STORE_CONTENTS_AS(BSQRational, SLPTR_LOAD_HEAP_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQRational, src));
     }
 };
 
@@ -606,17 +510,17 @@ constexpr BSQInlineString g_emptyInlineString = {0};
 
 std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQStringReprType : public BSQEntityType
+class BSQStringReprType : public BSQEntityAbstractType
 {
 public:
     static uint64_t getKReprSizeFor(uint64_t v);
 
-    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, uint64_t gcptrcount, std::string name) 
-    : BSQEntityType(tid, BSQTypeKind::Ref, { allocsize, allocsize, allocsize, "2" }, gcptrcount, {}, entityStringReprDisplay_impl, name, {}, {}, {}) 
+    BSQStringReprType(uint64_t allocsize, RefMask mask, std::string name) 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_STRINGREPR, BSQTypeKind::Ref, { allocsize, sizeof(void*), sizeof(void*), mask }, "2", {}, entityStringReprDisplay_impl, name, {}, {}, {}) 
     {;}
 
-    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, std::string name) 
-    : BSQEntityType(tid, BSQTypeKind::Ref, { allocsize, allocsize, allocsize, "2" }, {}, entityStringReprDisplay_impl, name, {}, {}, {}) 
+    BSQStringReprType(uint64_t allocsize, std::string name) 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_STRINGREPR, BSQTypeKind::Ref, { allocsize, sizeof(void*), sizeof(void*), nullptr }, "2", {}, entityStringReprDisplay_impl, name, {}, {}, {}) 
     {;}
 
     virtual ~BSQStringReprType() {;}
@@ -624,32 +528,51 @@ public:
     virtual uint64_t utf8ByteCount(void* repr) const = 0;
     virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const = 0;
     virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const = 0;
-};
 
-template <uint64_t k>
-struct BSQStringKRepr
-{
-    uint16_t size;
-    uint8_t utf8bytes[k];
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        assert(false);
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        assert(false);
+    }
 };
 
 class BSQStringKReprTypeAbstract : public BSQStringReprType
 {
 public:
     BSQStringKReprTypeAbstract(uint64_t allocsize, std::string name) 
-    : BSQStringReprType(BSQ_TYPE_ID_STRINGREPR, allocsize, name) 
+    : BSQStringReprType(allocsize, name) 
     {;}
 
     virtual ~BSQStringKReprTypeAbstract() {;}
 
     static uint64_t getUTF8ByteCount(void* repr)
     {
-        return *((uint16_t*)repr);
+        return *((uint8_t*)repr);
     }
 
     static uint8_t* getUTF8Bytes(void* repr)
     {
-        return ((uint8_t*)repr) + sizeof(uint16_t);
+        return ((uint8_t*)repr) + 1;
     }
 
     virtual uint64_t utf8ByteCount(void* repr) const override
@@ -668,7 +591,7 @@ class BSQStringKReprType : public BSQStringKReprTypeAbstract
 {
 public:
     BSQStringKReprType() 
-    : BSQStringKReprTypeAbstract(BSQ_ALIGN_SIZE(sizeof(BSQStringKRepr<k>)), "[Internal::StringKRepr]") 
+    : BSQStringKReprTypeAbstract(k, "[Internal::StringKRepr]") 
     {;}
 
     virtual ~BSQStringKReprType() {;}
@@ -685,7 +608,7 @@ class BSQStringSliceReprType : public BSQStringReprType
 {
 public:
     BSQStringSliceReprType() 
-    : BSQStringReprType(BSQ_ALIGN_SIZE(sizeof(BSQStringSliceRepr)), 1, "[Internal::StringSliceRepr]") 
+    : BSQStringReprType(sizeof(BSQStringSliceRepr), "211", "[Internal::StringSliceRepr]") 
     {;}
 
     virtual ~BSQStringSliceReprType() {;}
@@ -711,7 +634,7 @@ class BSQStringConcatReprType : public BSQStringReprType
 {
 public:
     BSQStringConcatReprType() 
-    : BSQStringReprType(BSQ_ALIGN_SIZE(sizeof(BSQStringConcatRepr)), 2, "[Internal::StringConcatRepr]") 
+    : BSQStringReprType(sizeof(BSQStringConcatRepr), "221", "[Internal::StringConcatRepr]") 
     {;}
 
     virtual ~BSQStringConcatReprType() {;}
@@ -757,14 +680,43 @@ uint32_t iteratorGetCodePoint(BSQStringIterator* iter);
 void incrementStringIterator_codePoint(BSQStringIterator* iter);
 void decrementStringIterator_codePoint(BSQStringIterator* iter);
 
-class BSQStringIteratorType : public BSQEntityType
+class BSQStringIteratorType : public BSQEntityAbstractType
 {
 public:
     BSQStringIteratorType() 
-    : BSQEntityType(BSQ_TYPE_ID_STRINGITERATOR, BSQTypeKind::Struct, { BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), BSQ_ALIGN_SIZE(sizeof(BSQStringIterator)), "3121" }, "3", {}, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos", {}, {}, {})
-    {;}
+    : BSQEntityAbstractType(BSQ_TYPE_ID_STRINGITERATOR, BSQTypeKind::Struct, { sizeof(BSQStringIterator), sizeof(BSQStringIterator), sizeof(BSQStringIterator), "3121" }, "3121", {}, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos", {}, {}, {})
+    {
+        static_assert(sizeof(BSQStringIterator) == 40);
+    }
 
     virtual ~BSQStringIteratorType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQStringIterator, trgt, {0});
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQStringIterator, trgt, SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQStringIterator, trgt, SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQStringIterator, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, src));
+    }
 
     void registerIteratorGCRoots(BSQStringIterator* iter);
     void releaseIteratorGCRoots(BSQStringIterator* iter);
@@ -774,14 +726,46 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
 bool entityStringEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQStringType : public BSQEntityType
+class BSQStringType : public BSQEntityAbstractType
 {
 private:
-    static BSQStringKRepr<8>* boxInlineString(BSQInlineString istr);
+    static uint8_t* boxInlineString(BSQInlineString istr);
 
 public:
-    BSQStringType() : BSQEntityType({ BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), BSQ_ALIGN_SIZE(sizeof(BSQString)), "31" }, entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String") {;}
+    BSQStringType() 
+    : BSQEntityAbstractType({ sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31" }, entityStringEqual_impl, entityStringLessThan_impl, entityStringDisplay_impl, "NSCore::String") 
+    {
+        static_assert(sizeof(BSQString) == 16);
+    }
+
     virtual ~BSQStringType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, {0});
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));
+    }
 
     static void initializeIteratorMin(BSQStringIterator* iter, BSQString str);
     static void initializeIteratorMax(BSQStringIterator* iter, BSQString str);
@@ -830,11 +814,40 @@ struct BSQByteBuffer
 
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQByteBufferType : public BSQEntityType
+class BSQByteBufferType : public BSQEntityAbstractType
 {
 public:
-    BSQByteBufferType() : BSQEntityType(BSQ_TYPE_ID_BYTEBUFFER, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQByteBuffer)), sizeof(void*), sizeof(void*), "2" }, 1, {}, entityByteBufferDisplay_impl, "NSCore::ByteBuffer", {}, {}, {}) {;}
+    BSQByteBufferType() 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_BYTEBUFFER, BSQTypeKind::Ref, { sizeof(BSQByteBuffer), sizeof(void*), sizeof(void*), "2" }, "2", {}, entityByteBufferDisplay_impl, "NSCore::ByteBuffer", {}, {}, {}) {;}
+
     virtual ~BSQByteBufferType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
 };
 
 ////
@@ -843,11 +856,40 @@ typedef uint64_t BSQISOTime;
 
 std::string entityISOTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQISOTimeType : public BSQEntityType
+class BSQISOTimeType : public BSQEntityAbstractType
 {
 public:
-    BSQISOTimeType() : BSQEntityType(BSQ_TYPE_ID_ISOTIME, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQISOTime)), BSQ_ALIGN_SIZE(sizeof(BSQISOTime)), BSQ_ALIGN_SIZE(sizeof(BSQISOTime)), "1" }, {}, entityISOTimeDisplay_impl, "NSCore::ISOTime", {}, {}, {}) {;}
+    BSQISOTimeType() 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_ISOTIME, BSQTypeKind::Register, { sizeof(BSQISOTime), sizeof(BSQISOTime), sizeof(BSQISOTime), "1" }, {}, entityISOTimeDisplay_impl, "NSCore::ISOTime", {}, {}, {}) {;}
+    
     virtual ~BSQISOTimeType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQISOTime, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQISOTime, trgt, SLPTR_LOAD_CONTENTS_AS(BSQISOTime, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQISOTime, trgt, SLPTR_LOAD_CONTENTS_AS(BSQISOTime, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQISOTime, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQISOTime, src));
+    }
 };
 
 ////
@@ -858,11 +900,40 @@ std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationP
 bool entityLogicalTimeEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityLogicalTimeLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQLogicalTimeType : public BSQEntityType
+class BSQLogicalTimeType : public BSQEntityAbstractType
 {
 public:
-    BSQLogicalTimeType() : BSQEntityType(BSQ_TYPE_ID_LOGICALTIME, BSQTypeKind::Register, { BSQ_ALIGN_SIZE(sizeof(BSQLogicalTime)), BSQ_ALIGN_SIZE(sizeof(BSQLogicalTime)), BSQ_ALIGN_SIZE(sizeof(BSQLogicalTime)), "1"}, {}, entityLogicalTimeEqual_impl, entityLogicalTimeLessThan_impl, entityLogicalTimeDisplay_impl, "NSCore::LogicalTime", {}, {}, {}) {;}
+    BSQLogicalTimeType() 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_LOGICALTIME, BSQTypeKind::Register, { sizeof(BSQLogicalTime), sizeof(BSQLogicalTime), sizeof(BSQLogicalTime), "1"}, {}, entityLogicalTimeEqual_impl, entityLogicalTimeLessThan_impl, entityLogicalTimeDisplay_impl, "NSCore::LogicalTime", {}, {}, {}) {;}
+
     virtual ~BSQLogicalTimeType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, trgt, 0);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, trgt, SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, trgt, SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, src));
+    }
 
     inline static bool equal(BSQLogicalTime v1, BSQLogicalTime v2) { return v1 == v2; }
     inline static bool lessThan(BSQLogicalTime v1, BSQLogicalTime v2) { return v1 < v2; }
@@ -876,11 +947,40 @@ std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data
 bool entityUUIDEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityUUIDLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQUUIDType : public BSQEntityType
+class BSQUUIDType : public BSQEntityAbstractType
 {
 public:
-    BSQUUIDType() : BSQEntityType(BSQ_TYPE_ID_UUID, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQUUID)), sizeof(void*), sizeof(void*), "2" }, {}, entityUUIDEqual_impl, entityUUIDLessThan_impl, entityUUIDDisplay_impl, "NSCore::UUID", {}, {}, {}) {;}
+    BSQUUIDType() 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_UUID, BSQTypeKind::Ref, { sizeof(BSQUUID), sizeof(void*), sizeof(void*), "2" }, {}, entityUUIDEqual_impl, entityUUIDLessThan_impl, entityUUIDDisplay_impl, "NSCore::UUID", {}, {}, {}) {;}
+    
     virtual ~BSQUUIDType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
 
     inline static bool equal(BSQUUID* v1, BSQUUID* v2) { return *v1 == *v2; }
     inline static bool lessThan(BSQUUID* v1, BSQUUID* v2) { return *v1 < *v2; }
@@ -894,14 +994,43 @@ std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationP
 bool entityContentHashEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityContentHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQContentHashType : public BSQEntityType
+class BSQContentHashType : public BSQEntityAbstractType
 {
 public:
-    BSQContentHashType() : BSQEntityType(BSQ_TYPE_ID_CONTENTHASH, BSQTypeKind::Ref, { BSQ_ALIGN_SIZE(sizeof(BSQContentHash)), sizeof(void*), sizeof(void*), "2" }, {}, entityContentHashEqual_impl, entityContentHashLessThan_impl, entityContentHashDisplay_impl, "NSCore::ContentHash", {}, {}, {}) {;}
+    BSQContentHashType() 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_CONTENTHASH, BSQTypeKind::Ref, { sizeof(BSQContentHash), sizeof(void*), sizeof(void*), "2" }, {}, entityContentHashEqual_impl, entityContentHashLessThan_impl, entityContentHashDisplay_impl, "NSCore::ContentHash", {}, {}, {}) {;}
+
     virtual ~BSQContentHashType() {;}
 
     inline static bool equal(BSQContentHash* v1, BSQContentHash* v2) { return *v1 == *v2; }
     inline static bool lessThan(BSQContentHash* v1, BSQContentHash* v2) { return *v1 < *v2; }
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
 };
 
 ////
@@ -915,9 +1044,41 @@ struct BSQRegex
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQRegexType : public BSQEntityType
+class BSQRegexType : public BSQEntityAbstractType
 {
 public:
-    BSQRegexType() : BSQEntityType(BSQ_TYPE_ID_REGEX, BSQTypeKind::Struct, { BSQ_ALIGN_SIZE(sizeof(BSQRegex)), BSQ_ALIGN_SIZE(sizeof(BSQRegex)), BSQ_ALIGN_SIZE(sizeof(BSQRegex)), "11" }, {}, entityRegexDisplay_impl, "NSCore::Regex", {}, {}, {}) {;}
+    BSQRegexType() 
+    : BSQEntityAbstractType(BSQ_TYPE_ID_REGEX, BSQTypeKind::Struct, { sizeof(BSQRegex), sizeof(BSQRegex), sizeof(BSQRegex), "11" }, {}, entityRegexDisplay_impl, "NSCore::Regex", {}, {}, {}) 
+    {
+        static_assert(sizeof(BSQRegex) == 16);
+    }
+
     virtual ~BSQRegexType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQRegex, trgt, {0});
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQRegex, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRegex, src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQRegex, trgt, SLPTR_LOAD_CONTENTS_AS(BSQRegex, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQRegex, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQRegex, src));
+    }
 };

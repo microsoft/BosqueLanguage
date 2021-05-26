@@ -20,7 +20,7 @@ public:
     static GCStackEntry frames[2048];
     static uint32_t stackp;
 
-    inline static void pushNoStaticFrame(void** framep, RefMask mask)
+    inline static void pushFrame(void** framep, RefMask mask)
     {
         if (GCStack::stackp >= 8192)
         {
@@ -541,7 +541,7 @@ public:
     inline static void gcDecrementSlotsWithUnion(void** slots)
     {
         const BSQType* umeta = ((const BSQType*)(*slots++));
-        umeta->fpDecObj(umeta, slots);
+        umeta->gcops.fpDecObj(umeta, slots);
     }
 
     inline static void gcDecSlotsWithMask(void** slots, RefMask mask)
@@ -604,7 +604,7 @@ public:
     inline static void gcClearMarkSlotsWithUnion(void** slots)
     {
         const BSQType *umeta = ((const BSQType*)(*slots++));
-        umeta->fpClearObj(umeta, slots);
+        umeta->gcops.fpClearObj(umeta, slots);
     }
 
     inline static void gcClearMarkSlotsWithMask(void** slots, RefMask mask)
@@ -661,9 +661,9 @@ private:
             void* obj = this->worklist.deque();
 
             const BSQType* umeta = GET_TYPE_META_DATA(obj);
-            assert(!umeta->isLeafType);
+            assert(umeta->allocinfo.heapmask != nullptr);
 
-            Allocator::gcProcessSlotsWithMask<false>((void**)obj, umeta->refmask);
+            Allocator::gcProcessSlotsWithMask<false>((void**)obj, umeta->allocinfo.heapmask);
         }
     }
 
@@ -710,9 +710,9 @@ private:
             void* obj = this->releaselist.deque();
 
             const BSQType* umeta = GET_TYPE_META_DATA(obj);
-            if (!umeta->isLeafType)
+            if (umeta->allocinfo.heapmask != nullptr)
             {
-                umeta->fpDecObj(umeta, (void**)obj);
+                umeta->gcops.fpDecObj(umeta, (void**)obj);
             }
 
             size_t asize = umeta->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);

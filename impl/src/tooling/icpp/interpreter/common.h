@@ -160,7 +160,7 @@ typedef void* StorageLocationPtr;
 
 #define SLPTR_STORE_UNION_INLINE_TYPE(T, L) *((const BSQType**)L) = T
 
-#define SLPTR_LOAD_HEAP_TYPE(L) ((*((void**)L) == nullptr) ? ((const BSQType*)Environment::g_typeNone) : GET_TYPE_META_DATA(*((void**)L)))
+#define SLPTR_LOAD_HEAP_TYPE(L) ((*((void**)L) == nullptr) GET_TYPE_META_DATA(*((void**)L))
 #define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)GET_TYPE_META_DATA(*((void**)L)))
 #define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
 
@@ -188,9 +188,10 @@ enum class BSQTypeKind : uint32_t
     String,
     BigNum,
     Ref,
-    InlineUnion,
-    HeapUnion
+    Union
 };
+
+#define MAX_STRUCT_SIZE 40
 
 #define PTR_FIELD_MASK_SCALAR '1'
 #define PTR_FIELD_MASK_PTR '2'
@@ -233,9 +234,8 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_CONTENTHASH 15
 #define BSQ_TYPE_ID_REGEX 16
 
-#define BSQ_TYPE_ID_LIST 20
-
 #define BSQ_TYPE_ID_STRINGREPR 30
+#define BSQ_TYPE_ID_LISTREPR 30
 
 #define BSQ_TYPE_ID_BUILTIN_MAX 50
 
