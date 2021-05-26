@@ -8,71 +8,101 @@
 #include "../runtime/environment.h"
 
 const BSQType** BSQType::g_typetable = nullptr;
+std::map<BSQRecordPropertyID, std::string> BSQType::g_propertymap;
+std::map<BSQFieldID, std::string> BSQType::g_fieldmap;
 
-void gcDecOperator_maskImpl(const BSQType* btype, void** data)
+void** gcDecOperator_registerImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcDecSlotsWithMask(data, btype->allocinfo.inlinedmask);
+    return data + (btype->allocinfo.inlinedatasize / sizeof(void*));
 }
 
-void gcDecOperator_stringImpl(const BSQType* btype, void** data)
+void** gcDecOperator_maskImpl(const BSQType* btype, void** data)
+{
+    return Allocator::gcDecSlotsWithMask(data, btype->allocinfo.inlinedmask);
+}
+
+void** gcDecOperator_stringImpl(const BSQType* btype, void** data)
 {
     Allocator::gcDecrementString(data);
+    return data + 1;
 }
 
-void gcDecOperator_bignumImpl(const BSQType* btype, void** data)
+void** gcDecOperator_bignumImpl(const BSQType* btype, void** data)
 {
     Allocator::gcDecrementBigNum(data);
+    return data + 1;
 }
 
-void gcClearOperator_maskImpl(const BSQType* btype, void** data)
+void** gcClearOperator_registerImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcClearMarkSlotsWithMask(data, btype->allocinfo.inlinedmask);
+    return data + (btype->allocinfo.inlinedatasize / sizeof(void*));
 }
 
-void gcClearOperator_stringImpl(const BSQType* btype, void** data)
+void** gcClearOperator_maskImpl(const BSQType* btype, void** data)
+{
+    return Allocator::gcClearMarkSlotsWithMask(data, btype->allocinfo.inlinedmask);
+}
+
+void** gcClearOperator_stringImpl(const BSQType* btype, void** data)
 {
     Allocator::gcClearMarkString(data);
+    return data + 1;
 }
 
-void gcClearOperator_bignumImpl(const BSQType* btype, void** data)
+void** gcClearOperator_bignumImpl(const BSQType* btype, void** data)
 {
     Allocator::gcClearMarkBigNum(data);
+    return data + 1;
 }
 
-void gcProcessRootOperator_maskImpl(const BSQType* btype, void** data)
+void** gcProcessRootOperator_registerImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcProcessSlotsWithMask<true>(data, btype->allocinfo.inlinedmask);
+    return data + (btype->allocinfo.inlinedatasize / sizeof(void*));
 }
 
-void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data)
+void** gcProcessRootOperator_maskImpl(const BSQType* btype, void** data)
+{
+    return Allocator::gcProcessSlotsWithMask<true>(data, btype->allocinfo.inlinedmask);
+}
+
+void** gcProcessRootOperator_stringImpl(const BSQType* btype, void** data)
 {
     Allocator::gcProcessSlotWithString<true>(data);
+    return data + 1;
 }
 
-void gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data)
+void** gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data)
 {
     Allocator::gcProcessSlotWithBigNum<true>(data);
+    return data + 1;
 }
 
-void gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data)
+void** gcProcessHeapOperator_registerImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcProcessSlotsWithMask<false>(data, btype->allocinfo.inlinedmask);
+    return data + (btype->allocinfo.inlinedatasize / sizeof(void*));
 }
 
-void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data)
+void** gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data)
+{
+    return Allocator::gcProcessSlotsWithMask<false>(data, btype->allocinfo.inlinedmask);
+}
+
+void** gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data)
 {
     Allocator::gcProcessSlotWithString<false>(data);
+    return data + 1;
 }
 
-void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data)
+void** gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data)
 {
     Allocator::gcProcessSlotWithBigNum<false>(data);
+    return data + 1;
 }
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    const BSQTupleAbstractType* ttype = (const BSQTupleAbstractType*)btype;
-    bool isstruct = ttype->tkind == BSQTypeKind::Struct;
+    const BSQTupleInfo* ttype = dynamic_cast<const BSQTupleInfo*>(btype);
+    bool isstruct = btype->tkind == BSQTypeKind::Struct;
     std::string res = isstruct ? "#[" : "@[";
     for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
     {
@@ -81,8 +111,8 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        auto itype = Environment::g_typemap[ttype->ttypes[i]];
-        auto idata = ttype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
+        auto itype = BSQType::g_typetable[ttype->ttypes[i]];
+        auto idata = btype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }
     res += "]";
@@ -93,7 +123,7 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     const BSQRecordAbstractType* ttype = (const BSQRecordAbstractType*)btype;
-    bool isstruct = ttype->tkind == BSQTypeKind::Struct;
+    bool isstruct = btype->tkind == BSQTypeKind::Struct;
     std::string res = isstruct ? "#{" : "@{";
     for(size_t i = 0; i < ttype->properties.size(); ++i)
     {
@@ -102,10 +132,10 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += Environment::g_propertymap[ttype->properties[i]] + ":";
+        res += BSQType::g_propertymap[ttype->properties[i]] + ":";
 
-        auto itype = Environment::g_typemap[ttype->rtypes[i]];
-        auto idata = ttype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
+        auto itype = BSQType::g_typetable[ttype->rtypes[i]];
+        auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }
     res += "}";

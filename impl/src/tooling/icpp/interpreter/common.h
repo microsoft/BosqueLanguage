@@ -202,9 +202,9 @@ enum class BSQTypeKind : uint32_t
 
 typedef const char* RefMask;
 
-typedef void (*GCDecOperatorFP)(const BSQType*, void**);
-typedef void (*GCClearMarkOperatorFP)(const BSQType*, void**);
-typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
+typedef void** (*GCDecOperatorFP)(const BSQType*, void**);
+typedef void** (*GCClearMarkOperatorFP)(const BSQType*, void**);
+typedef void** (*GCProcessOperatorFP)(const BSQType*, void**);
 
 typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr);
 

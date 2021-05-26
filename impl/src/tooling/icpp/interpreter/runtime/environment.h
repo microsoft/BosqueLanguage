@@ -29,10 +29,6 @@ class Environment
 public:
     static jmp_buf g_entrybuff;
 
-    static std::map<BSQTypeID, BSQType*> g_typemap;
-    static std::map<BSQRecordPropertyID, std::string> g_propertymap;
-    static std::map<BSQFieldID, std::string> g_fieldmap;
-
     //Well known types
     static const BSQNoneType* g_typeNone;
     static const BSQBoolType* g_typeBool;

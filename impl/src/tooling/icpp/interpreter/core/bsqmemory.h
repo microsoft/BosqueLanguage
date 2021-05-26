@@ -453,7 +453,7 @@ public:
     template <bool isRoot>
     inline static void gcProcessSlotWithString(void** slot)
     {
-        if (!IS_INLINE_STRING(slot))
+        if (!IS_INLINE_STRING(*slot))
         {
             Allocator::gcProcessSlot<isRoot>(slot);
         }
@@ -462,25 +462,25 @@ public:
     template <bool isRoot>
     inline static void gcProcessSlotWithBigNum(void** slot)
     {
-        if (!IS_INLINE_BIGNUM(slot))
+        if (!IS_INLINE_BIGNUM(*slot))
         {
             Allocator::gcProcessSlot<isRoot>(slot);
         }
     }
 
     template <bool isRoot>
-    inline static void gcProcessSlotsWithUnion(void** slots)
+    inline static void** gcProcessSlotsWithUnion(void** slots)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots++));
-        umeta->getProcessFP<isRoot>()(umeta, slots);
+        const BSQType* umeta = ((const BSQType*)(*slots));
+        return umeta->getProcessFP<isRoot>()(umeta, slots + 1);
     }
 
     template <bool isRoot>
-    inline static void gcProcessSlotsWithMask(void** slots, RefMask mask)
+    inline static void** gcProcessSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
-        RefMask cmaskop = mask;
 
+        RefMask cmaskop = mask;
         while (*cmaskop)
         {
             char op = *cmaskop++;
@@ -499,56 +499,58 @@ public:
                     Allocator::gcProcessSlotWithBigNum<isRoot>(cslot++);
                     break;
                 default:
-                    Allocator::gcProcessSlotsWithUnion<isRoot>(cslot++);
+                    cslot = Allocator::gcProcessSlotsWithUnion<isRoot>(cslot);
                     break;
             }
         }
+
+        return cslot;
     }
 
     ////////
     //Operations GC decrement
-    inline static void gcDecrement(void* obj)
+    inline static void gcDecrement(void* v)
     {
-        if (obj != nullptr)
+        if (v != nullptr)
         {
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
             GC_META_DATA_WORD w = GC_DEC_RC(GC_LOAD_META_DATA_WORD(addr));
             GC_SET_META_DATA_WORD(addr, w);
 
             if (GC_TEST_IS_UNREACHABLE(w))
             {
-                Allocator::GlobalAllocator.releaselist.enque(obj);
+                Allocator::GlobalAllocator.releaselist.enque(v);
             }
         }
     }
 
-    inline static void gcDecrementString(void** slot)
+    inline static void gcDecrementString(void* v)
     {
-        if (!IS_INLINE_STRING(slot))
+        if (!IS_INLINE_STRING(v))
         {
-            Allocator::gcDecrement(*slot);
+            Allocator::gcDecrement(v);
         }
     }
 
-    inline static void gcDecrementBigNum(void** slot)
+    inline static void gcDecrementBigNum(void* v)
     {
-        if (!IS_INLINE_BIGNUM(slot))
+        if (!IS_INLINE_BIGNUM(v))
         {
-            Allocator::gcDecrement(*slot);
+            Allocator::gcDecrement(v);
         }
     }
 
-    inline static void gcDecrementSlotsWithUnion(void** slots)
+    inline static void** gcDecrementSlotsWithUnion(void** slots)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots++));
-        umeta->gcops.fpDecObj(umeta, slots);
+        const BSQType* umeta = ((const BSQType*)(*slots));
+        return umeta->gcops.fpDecObj(umeta, slots + 1);
     }
 
-    inline static void gcDecSlotsWithMask(void** slots, RefMask mask)
+    inline static void** gcDecSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
-        RefMask cmaskop = mask;
 
+        RefMask cmaskop = mask;
         while (*cmaskop)
         {
             char op = *cmaskop++;
@@ -561,57 +563,59 @@ public:
                     Allocator::gcDecrement(*cslot++);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::gcDecrementString(cslot++);
+                    Allocator::gcDecrementString(*cslot++);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcDecrementBigNum(cslot++);
+                    Allocator::gcDecrementBigNum(*cslot++);
                     break;
                 default:
-                    Allocator::gcDecrementSlotsWithUnion(cslot++);
+                    cslot = Allocator::gcDecrementSlotsWithUnion(cslot);
                     break;
             }
         }
+
+        return cslot;
     }
 
     ////////
     //Operations GC mark clear
-    inline static void gcClearMark(void *obj)
+    inline static void gcClearMark(void* v)
     {
-        if (obj != nullptr)
+        if (v != nullptr)
         {
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
             GC_META_DATA_WORD w = GC_CLEAR_MARK_BIT(GC_LOAD_META_DATA_WORD(addr));
             GC_SET_META_DATA_WORD(addr, w);
         }
     }
 
-    inline static void gcClearMarkString(void** slot)
+    inline static void gcClearMarkString(void* v)
     {
-        if (!IS_INLINE_STRING(slot))
+        if (!IS_INLINE_STRING(v))
         {
-            Allocator::gcClearMark(*slot);
+            Allocator::gcClearMark(v);
         }
     }
 
-    inline static void gcClearMarkBigNum(void** slot)
+    inline static void gcClearMarkBigNum(void* v)
     {
-        if (!IS_INLINE_BIGNUM(slot))
+        if (!IS_INLINE_BIGNUM(v))
         {
-            Allocator::gcClearMark(*slot);
+            Allocator::gcClearMark(v);
         }
     }
 
-    inline static void gcClearMarkSlotsWithUnion(void** slots)
+    inline static void** gcClearMarkSlotsWithUnion(void** slots)
     {
-        const BSQType *umeta = ((const BSQType*)(*slots++));
-        umeta->gcops.fpClearObj(umeta, slots);
+        const BSQType *umeta = ((const BSQType*)(*slots));
+        return umeta->gcops.fpClearObj(umeta, slots + 1);
     }
 
-    inline static void gcClearMarkSlotsWithMask(void** slots, RefMask mask)
+    inline static void** gcClearMarkSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
-        RefMask cmaskop = mask;
 
+        RefMask cmaskop = mask;
         while (*cmaskop)
         {
             char op = *cmaskop++;
@@ -624,16 +628,18 @@ public:
                     Allocator::gcClearMark(*cslot++);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::gcClearMarkString(cslot++);
+                    Allocator::gcClearMarkString(*cslot++);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcClearMarkBigNum(cslot++);
+                    Allocator::gcClearMarkBigNum(*cslot++);
                     break;
                 default:
-                    Allocator::gcClearMarkSlotsWithUnion(cslot++);
+                    cslot = Allocator::gcClearMarkSlotsWithUnion(cslot);
                     break;
             }
         }
+
+        return cslot;
     }
 
 private:

@@ -24,59 +24,32 @@ std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data
 bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQNoneType : public BSQEntityAbstractType
+class BSQNoneType : public BSQRegisterType<BSQNone>
 {
 public:
-    BSQNoneType(): BSQEntityAbstractType(BSQ_TYPE_ID_NONE, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQNone), nullptr, "1" }, LEAF_GC_FUNCTOR_SET, {}, {entityNoneEqual_impl, entityNoneLessThan_impl}, entityNoneDisplay_impl, "NSCore::None", {}, {}, {})
+    BSQNoneType(): BSQRegisterType(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", {entityNoneEqual_impl, entityNoneLessThan_impl}, entityNoneDisplay_impl, "NSCore::None")
     {
         static_assert(sizeof(BSQNone) == 8);
     }
 
     virtual ~BSQNoneType() {;}
-
-    virtual void clearValue(StorageLocationPtr trgt) const override
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, 0);
-    }
-
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
-    }
-
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
-    {
-        assert(false);
-        return nullptr;
-    }
-
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQNone, trgt, BSQNoneValue);
-    }
-
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        SLPTR_STORE_CONTENTS_AS(BSQNone, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), BSQNoneValue);
-    }
 };
 
 ////
 //Bool
 
 typedef uint8_t BSQBool;
-#define BSQTRUE 1
-#define BSQFALSE 0
+#define BSQTRUE ((BSQBool)1)
+#define BSQFALSE ((BSQBool)0)
 
 std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityBoolEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBoolType : public BSQEntityAbstractType
+class BSQBoolType : public BSQRegisterType<BSQBool>
 {
 public:
-    BSQBoolType() : BSQEntityAbstractType(BSQ_TYPE_ID_BOOL, BSQTypeKind::Register, { sizeof(BSQNone), sizeof(BSQNone), sizeof(BSQBool), "1" }, {}, entityBoolEqual_impl, entityBoolLessThan_impl, entityBoolDisplay_impl, "NSCore::Bool", {}, {}, {})
+    BSQBoolType(): BSQRegisterType(BSQ_TYPE_ID_BOOL, sizeof(BSQBool),"1", {entityBoolEqual_impl, entityBoolLessThan_impl}, entityBoolDisplay_impl, "NSCore::Bool")
     {
         static_assert(sizeof(BSQBool) == 1);
     }
@@ -85,33 +58,6 @@ public:
 
     inline static bool equal(BSQBool v1, BSQBool v2) { return v1 == v2; }
     inline static bool lessThan(BSQBool v1, BSQBool v2) { return (!v1) & v2; }
-
-    virtual void clearValue(StorageLocationPtr trgt) const override
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, 0);
-    }
-
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
-    }
-
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
-    {
-        assert(false);
-        return nullptr;
-    }
-
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQBool, trgt, SLPTR_LOAD_CONTENTS_AS(BSQBool, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
-    }
-
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQBool, src));
-    }
 };
 
 ////
