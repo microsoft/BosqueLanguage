@@ -94,10 +94,84 @@ public:
     virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
     virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
 
-    void vcallExtractFromUnion(StorageLocationPtr src, uint8_t* into) const
+    static void vcallExtractFromUnion(StorageLocationPtr src, uint8_t* into)
     {
         auto tt = SLPTR_LOAD_UNION_INLINE_TYPE(src);
         tt->storeValue((StorageLocationPtr)into, src);
+    }
+};
+
+class BSQStructType : public BSQType
+{
+public:
+    BSQStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeKind::Struct, { datasize, datasize, datasize, imask, imask }, imask == nullptr ? LEAF_GC_FUNCTOR_SET : STD_GC_FUNCTOR_SET, vtable, keyops, fpDisplay, name)
+    {;}
+
+    virtual ~BSQStructType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        return SLPTR_INDEX_DATAPTR(src, offset);
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        BSQ_MEM_COPY(trgt, udata, this->allocinfo.assigndatasize);
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
+    }
+};
+
+class BSQSRefType : public BSQType
+{
+public:
+    BSQRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeKind::Ref, { heapsize, sizeof(void*), sizeof(void*), imask, imask }, imask == nullptr ? LEAF_GC_FUNCTOR_SET : STD_GC_FUNCTOR_SET, vtable, keyops, fpDisplay, name)
+    {;}
+
+    virtual ~BSQRefType() {;}
+
+    virtual void clearValue(StorageLocationPtr trgt) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    {
+        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+
+    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
+    }
+
+    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
     }
 };
 
