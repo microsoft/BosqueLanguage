@@ -60,11 +60,7 @@ struct KeyFunctorSet
     KeyLessFP fpKeyLess;
 };
 
-struct BSQTypeVTableEntry
-{
-    BSQVirtualInvokeID vkey;
-    BSQInvokeID ikey;
-};
+constexpr KeyFunctorSet EMPTY_KEY_FUNCTOR_SET{ nullptr, nullptr };
 
 ////
 //BSQType abstract base class
@@ -220,6 +216,44 @@ public:
     }
 };
 
+template <typename T>
+class BSQBigNumType : public BSQType
+{
+public:
+    BSQBigNumType(BSQTypeID tid, uint64_t datasize, RefMask imask, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name): 
+        BSQBigNumType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, keyops, fpDisplay, name)
+    {;}
+
+    virtual ~BSQBigNumType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, sizeof(T));
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, SLPTR_LOAD_CONTENTS_AS(T, src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, SLPTR_LOAD_CONTENTS_AS(T, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(T, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(T, src));
+    }
+};
+
 ////////////////////////////////
 //Storage Operators
 
@@ -263,7 +297,6 @@ public:
 class BSQTupleRefType : public BSQRefType, public BSQTupleInfo
 {
 public:
-    //Constructor for leaf type
     BSQTupleRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
         BSQRefType(tid, heapsize, heapmask, vtable, keyops, tupleDisplay_impl, name),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
@@ -275,7 +308,6 @@ public:
 class BSQTupleStructType : public BSQStructType, public BSQTupleInfo
 {
 public:
-    //Constructor for leaf type
     BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
         BSQStructType(tid, datasize, imask, vtable, keyops, tupleDisplay_impl, name),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
@@ -303,9 +335,9 @@ public:
 class BSQRecordRefType : public BSQRefType, public BSQRecordInfo
 {
 public:
-    //Constructor for leaf type
-    BSQRecordRefType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
-        BSQRecordAbstractType(tid, tkind, allocinfo, gcops, vtable, keyops, name, properties, rtypes, propertyoffsets)
+    BSQRecordRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
+        BSQRefType(tid, heapsize, heapmask, vtable, keyops, recordDisplay_impl, name),
+        BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
     virtual ~BSQRecordRefType() {;}
@@ -314,9 +346,9 @@ public:
 class BSQRecordStructType : public BSQStructType, public BSQRecordInfo
 {
 public:
-    //Constructor for leaf type
-    BSQRecordStructType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
-        BSQRecordAbstractType(tid, tkind, allocinfo, gcops, vtable, keyops, name, properties, rtypes, propertyoffsets)
+    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
+        BSQStructType(tid, datasize, imask, vtable, keyops, recordDisplay_impl, name),
+        BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
     virtual ~BSQRecordStructType() {;}
@@ -324,139 +356,57 @@ public:
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQEntityAbstractType : public BSQType
+class BSQEntityInfo
 {
 public:
     const std::vector<BSQFieldID> fields;
     const std::vector<BSQTypeID> ftypes;
     const std::vector<size_t> fieldoffsets;
 
-    //Constructor for leaf type
-    BSQEntityAbstractType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
-        BSQType(tid, tkind, allocinfo, gcops, vtable, keyops, fpDisplay, name), fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    BSQEntityInfo(std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
+        fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
     {;}
 
-    virtual ~BSQEntityAbstractType() {;}
+    virtual ~BSQEntityInfo() {;}
 };
 
 
-class BSQEntityRefType : public BSQEntityAbstractType
+class BSQEntityRefType : public BSQRefType, public BSQEntityInfo
 {
 public:
-    //Constructor for leaf type
-    BSQEntityRefType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
-        BSQEntityAbstractType(tid, tkind, allocinfo, gcops, vtable, keyops, fpDisplay, name, fields, ftypes, fieldoffsets)
+    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
+        BSQRefType(tid, heapsize, heapmask, vtable, keyops, entityDisplay_impl, name),
+        BSQEntityInfo(fields, ftypes, fieldoffsets)
     {;}
 
     virtual ~BSQEntityRefType() {;}
-
-    virtual void clearValue(StorageLocationPtr trgt) const override
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
-    }
-
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
-    }
-
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
-    {
-        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
-    }
-
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
-    }
-
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
-    }
 };
 
-class BSQEntityStructType : public BSQEntityAbstractType
+class BSQEntityStructType : public BSQStructType, public BSQEntityInfo
 {
 public:
-    //Constructor for leaf type
-    BSQEntityStructType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets): 
-        BSQEntityAbstractType(tid, tkind, allocinfo, gcops, vtable, keyops, fpDisplay, name, fields, ftypes, fieldoffsets)
+    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets): 
+        BSQStructType(tid, datasize, imask, vtable, keyops, entityDisplay_impl, name),
+        BSQEntityInfo(fields, ftypes, fieldoffsets)
     {;}
 
     virtual ~BSQEntityStructType() {;}
-
-    virtual void clearValue(StorageLocationPtr trgt) const override
-    {
-        BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
-    }
-
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
-    }
-
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
-    {
-        return SLPTR_INDEX_DATAPTR(src, offset);
-    }
-
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
-        BSQ_MEM_COPY(trgt, udata, this->allocinfo.assigndatasize);
-    }
-
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
-    }
 };
 
 std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQEphemeralListType : public BSQType
+class BSQEphemeralListType : public BSQStructType
 {
 public:
     const std::vector<BSQTypeID> etypes;
     const std::vector<size_t> idxoffsets;
 
-    //Constructor for leaf type
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets): 
-        BSQType(tid, tkind, allocinfo, gcops, {}, {0}, entityDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, uint64_t datasize, RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets): 
+        BSQStructType(tid, datasize, imask, {}, EMPTY_KEY_FUNCTOR_SET, ephemeralDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     virtual ~BSQEphemeralListType() {;}
-
-    virtual void clearValue(StorageLocationPtr trgt) const override
-    {
-        BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
-    }
-
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
-    }
-
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
-    {
-        return SLPTR_INDEX_DATAPTR(src, offset);
-    }
-
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-       assert(false);
-    }
-
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        assert(false);
-    }
 };
-
 
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
@@ -471,34 +421,28 @@ public:
 
     ~BSQUnionType() {;}
 
-    virtual bool isStructStorage() const
-    {
-        assert(false);
-        return true;
-    }
-
-    virtual void clearValue(StorageLocationPtr trgt) const override
+    void clearValue(StorageLocationPtr trgt) const override final
     {
         assert(false);
     }
 
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         assert(false);
     }
 
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
     {
         assert(false);
         return nullptr;
     }
 
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
        assert(false);
     }
 
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
+    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         assert(false);
     }

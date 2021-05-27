@@ -111,6 +111,8 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
+        xxxx;
+
         auto itype = BSQType::g_typetable[ttype->ttypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
         res += itype->fpDisplay(itype, idata);
@@ -122,7 +124,7 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    const BSQRecordAbstractType* ttype = (const BSQRecordAbstractType*)btype;
+    const BSQRecordInfo* ttype = dynamic_cast<const BSQRecordInfo*>(btype);
     bool isstruct = btype->tkind == BSQTypeKind::Struct;
     std::string res = isstruct ? "#{" : "@{";
     for(size_t i = 0; i < ttype->properties.size(); ++i)
@@ -133,6 +135,8 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
         }
 
         res += BSQType::g_propertymap[ttype->properties[i]] + ":";
+
+        xxxx;
 
         auto itype = BSQType::g_typetable[ttype->rtypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
@@ -145,9 +149,9 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    const BSQEntityAbstractType* ttype = (const BSQEntityAbstractType*)btype;
-    bool isstruct = ttype->tkind == BSQTypeKind::Struct;
-    std::string res = ttype->name + (isstruct ? "#{" : "@{");
+    const BSQEntityInfo* ttype = dynamic_cast<const BSQEntityInfo*>(btype);
+    bool isstruct = btype->tkind == BSQTypeKind::Struct;
+    std::string res = btype->name + (isstruct ? "#{" : "@{");
     for(size_t i = 0; i < ttype->fields.size(); ++i)
     {
         if(i != 0)
@@ -155,10 +159,12 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += Environment::g_fieldmap[ttype->fields[i]] + ":";
+        res += BSQType::g_fieldmap[ttype->fields[i]] + ":";
 
-        auto itype = Environment::g_typemap[ttype->ftypes[i]];
-        auto idata = ttype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);
+        xxxx;
+
+        auto itype = BSQType::g_typetable[ttype->ftypes[i]];
+        auto idata = btype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }
     res += "}";
@@ -168,7 +174,7 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
 std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    const BSQEphemeralListType* ttype = (const BSQEphemeralListType*)btype;
+    const BSQEphemeralListType* ttype = dynamic_cast<const BSQEphemeralListType*>(btype);
     std::string res = "@(|";
     for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
     {
@@ -177,7 +183,9 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        auto itype = Environment::g_typemap[ttype->etypes[i]];
+        xxxx;
+
+        auto itype = BSQType::g_typetable[ttype->etypes[i]];
         auto idata = SLPTR_INDEX_DATAPTR(data, ttype->idxoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }

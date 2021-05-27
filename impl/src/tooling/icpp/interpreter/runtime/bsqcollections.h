@@ -30,49 +30,17 @@ void incrementListIterator(BSQListReprIterator* iter);
 
 std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQListReprType : public BSQEntityAbstractType
+class BSQListReprType : public BSQRefType
 {
 public:
     const uint64_t esize;
     const BSQType* etype;
 
-    //Constructor for leaf type
-    BSQListReprType(BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype)
-    : BSQEntityAbstractType(BSQ_TYPE_ID_LISTREPR, BSQTypeKind::Ref, allocinfo, {}, entityListReprDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.inlinedatasize), etype(etype)
+    BSQListReprType(uint64_t allocsize, RefMask heapmask, std::string name, const BSQType* etype):
+        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityListReprDisplay_impl, name), esize(etype->allocinfo.inlinedatasize), etype(etype)
     {;}
 
-    //Constructor for general refmask
-    BSQListReprType(BSQTypeSizeInfo allocinfo, RefMask rmask, std::string name, const BSQType* etype)
-    : BSQEntityAbstractType(BSQ_TYPE_ID_LISTREPR, BSQTypeKind::Ref, allocinfo, rmask, {}, entityListReprDisplay_impl, name, {}, {}, {}), esize(etype->allocinfo.inlinedatasize), etype(etype)
-    {;}
-   
     virtual ~BSQListReprType() {;}
-
-    virtual void clearValue(StorageLocationPtr trgt) const override
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
-    }
-
-    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
-    }
-
-    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override
-    {
-        assert(false);
-        return nullptr;
-    }
-
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        assert(false);
-    }
-
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override
-    {
-        assert(false);
-    }
 
     virtual uint64_t getLength(void* data) const = 0;
     virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const = 0;
@@ -92,12 +60,8 @@ struct BSQListFlatK
 class BSQListFlatKTypeAbstract : public BSQListReprType
 {
 public:
-    //Constructor for leaf type
-    BSQListFlatKTypeAbstract(BSQTypeSizeInfo allocinfo, std::string name, const BSQType* etype): BSQListReprType(allocinfo, name, etype) {;}
+    BSQListFlatKTypeAbstract(uint64_t allocsize, RefMask heapmask, std::string name, const BSQType* etype): BSQListReprType(allocsize, heapmask, name, etype) {;}
 
-    //Constructor for general refmask
-    BSQListFlatKTypeAbstract(BSQTypeSizeInfo allocinfo, RefMask refmask, std::string name, const BSQType* etype): BSQListReprType(allocinfo, refmask, name, etype) {;}
-   
     virtual ~BSQListFlatKTypeAbstract() {;}
 
     inline static uint64_t getStorageBytesCount(void* data)
@@ -132,22 +96,18 @@ public:
 
     void initializeIterPositionWSlice(BSQListReprIterator* iter, void* data, int64_t pos, int64_t maxpos) const;
 
-    virtual uint64_t getLength(void* data) const override;
-    virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override;
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
+    uint64_t getLength(void* data) const override final;
+    void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override final;
+    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override final;
+    void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override final;
 };
 
 template<uint16_t k>
 class BSQListFlatKType : public BSQListFlatKTypeAbstract
 {
 public:
-    //Constructor for leaf type
-    BSQListFlatKType(std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract({ sizeof(BSQListFlatK<k>), sizeof(void*), sizeof(void*), "x" }, name, etype) {;}
+    BSQListFlatKType(std::string name, const BSQType* etype, RefMask heapmask): BSQListFlatKTypeAbstract(sizeof(BSQListFlatK<k>), heapmask, name, etype) {;}
 
-    //Constructor for general refmask
-    BSQListFlatKType(std::string name, const BSQType* etype, RefMask kmask): BSQListFlatKTypeAbstract({ sizeof(BSQListFlatK<k>), sizeof(void*), sizeof(void*), kmask }, "2", name, etype) {;}
-   
     virtual ~BSQListFlatKType() {;}
 };
 
@@ -161,13 +121,13 @@ struct BSQListSlice
 class BSQListSliceType : public BSQListReprType
 {
 public:
-    BSQListSliceType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListReprType(tid, {sizeof(BSQListSlice), sizeof(void*), sizeof(void*), "211"}, "2", name, etype) {;}
+    BSQListSliceType(std::string name, const BSQType* etype): BSQListReprType(sizeof(BSQListSlice), "2", name, etype) {;}
     virtual ~BSQListSliceType() {;}
 
-    virtual uint64_t getLength(void* data) const override;
-    virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override;
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
+    uint64_t getLength(void* data) const override final;
+    void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override final;
+    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override final;
+    void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override final;
 };
 
 struct BSQListConcat
@@ -180,13 +140,13 @@ struct BSQListConcat
 class BSQListConcatType : public BSQListReprType
 {
 public:
-    BSQListConcatType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListReprType(tid, {sizeof(BSQListConcat), sizeof(void*), sizeof(void*), "221"}, "2", name, etype) {;}
+    BSQListConcatType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListReprType(sizeof(BSQListConcat), "22", name, etype) {;}
     virtual ~BSQListConcatType() {;}
 
-    virtual uint64_t getLength(void* data) const override;
-    virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override;
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override;
-    virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override;
+    uint64_t getLength(void* data) const override final;
+    void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override final;
+    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override final;
+    void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override final;
 };
 
 struct BSQList
@@ -195,20 +155,24 @@ struct BSQList
     uint64_t size;
 };
 
-class BSQListType : public BSQEntityAbstractType
+std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQListType : public BSQStructType
 {
 public:
-    //Constructor for leaf type
-    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype)
-    : BSQEntityAbstractType(tid, {sizeof(BSQList), sizeof(BSQList), sizeof(BSQList), "221"}, "2", name, etype) {;}
-
-    //Constructor for general refmask
-    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype)
-    : BSQEntityAbstractType(tid, {sizeof(BSQListConcat), sizeof(BSQList), sizeof(BSQList), "221"}, "2", name, etype) {;}
+    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_FUNCTOR_SET, entityListDisplay_impl, name) 
+    {
+        static_assert(sizeof(BSQList) == 16);
+    }
 
     virtual ~BSQListType() {;}
 
-    inline uint64_t getLength(BSQList data) const
+    inline static bool empty(BSQList data)
+    {
+        return data.size == 0;
+    }
+
+    inline static uint64_t getLength(BSQList data)
     {
         return data.size;
     }

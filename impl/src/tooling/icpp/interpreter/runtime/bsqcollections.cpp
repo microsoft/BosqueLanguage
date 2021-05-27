@@ -54,7 +54,7 @@ void incrementListIterator(BSQListReprIterator* iter)
 std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     BSQListReprIterator iter;
-    BSQListReprType::initializeIteratorBegin(&iter, data);
+    BSQListType::initializeIteratorBegin(&iter, data);
 
     auto etype = ((BSQListReprType*)btype)->etype;
     void* estack = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
@@ -63,7 +63,9 @@ std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr 
     std::string ll = ((BSQListReprType*)btype)->name + "@{";
 
     registerIteratorGCRoots(&iter);
-    GCStack::pushFrame(&estack, etype->allocinfo.slmask);
+    GCStack::pushFrame(&estack, etype->allocinfo.inlinedmask);
+
+    xxxx;
 
     while(iteratorIsValid(&iter))
     {
@@ -234,7 +236,13 @@ void* BSQListConcatType::slice_impl(void* data, uint64_t nstart, uint64_t nend) 
     return res;
 }
 
-void BSQListEntityType::initializeIteratorGivenPosition(BSQListReprIterator* iter, void* data, int64_t pos)
+
+std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    xxxx;
+}
+
+void BSQListType::initializeIteratorGivenPosition(BSQListReprIterator* iter, void* data, int64_t pos)
 {
     iter->lroot = data;
     iter->lpos = 0;
@@ -243,12 +251,12 @@ void BSQListEntityType::initializeIteratorGivenPosition(BSQListReprIterator* ite
     initializeListIterPosition(iter, pos);
 }
 
-void BSQListEntityType::initializeIteratorBegin(BSQListIterator* iter, void* data)
+void BSQListType::initializeIteratorBegin(BSQListReprIterator* iter, void* data)
 {
-    BSQListEntityType::initializeIteratorGivenPosition(iter, data, 0);
+    BSQListType::initializeIteratorGivenPosition(iter, data, 0);
 }
 
-void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
+void* BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 {
     //
     //TODO: want to rebalance here later
@@ -256,21 +264,21 @@ void* BSQListEntityType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 
     Allocator::GlobalAllocator.ensureSpace(sizeof(BSQListConcat) + sizeof(BSQListFlatK<128>));
 
-    void* l1 = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(s1);
-    const BSQListEntityType* l1type = GET_TYPE_META_DATA_AS(BSQListEntityType, l1);
+    BSQList* l1 = (BSQList*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(s1);
+    const BSQListType* l1type = GET_TYPE_META_DATA_AS(BSQListType, l1);
 
-    void* l2 = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(s2);
-    const BSQListEntityType* l2type = GET_TYPE_META_DATA_AS(BSQListEntityType, l2);
+    BSQList* l2 = (BSQList*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(s2);
+    const BSQListType* l2type = GET_TYPE_META_DATA_AS(BSQListType, l2);
 
-    if(BSQListEntityType::empty(l1) & BSQListEntityType::empty(l2))
+    if(BSQListType::empty(*l1) & BSQListType::empty(*l2))
     {
         return Environment::g_listTypeMap[l1type->tid].empty->generateEmptyList();
     }
-    else if(BSQListEntityType::empty(l1))
+    else if(BSQListType::empty(*l1))
     {
         return l2;
     }
-    else if(BSQListEntityType::empty(l2))
+    else if(BSQListType::empty(*l2))
     {
         return l1;
     }
