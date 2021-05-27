@@ -43,7 +43,7 @@ void iteratorGetElement(const BSQListReprIterator* iter, void* into, const BSQTy
 void incrementListIterator(BSQListReprIterator* iter)
 {
     iter->lpos++;
-    iter->cpos += (int16_t)iter->esize;
+    iter->cpos += iter->esize;
     
     if(iter->cpos == iter->maxpos)
     {
@@ -53,37 +53,14 @@ void incrementListIterator(BSQListReprIterator* iter)
 
 std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    BSQListReprIterator iter;
-    BSQListType::initializeIteratorBegin(&iter, data);
-
-    auto etype = ((BSQListReprType*)btype)->etype;
-    void* estack = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
-    etype->clearValue(estack);
-
-    std::string ll = ((BSQListReprType*)btype)->name + "@{";
-
-    registerIteratorGCRoots(&iter);
-    GCStack::pushFrame(&estack, etype->allocinfo.inlinedmask);
-
-    xxxx;
-
-    while(iteratorIsValid(&iter))
-    {
-        iteratorGetElement(&iter, estack, etype);
-        ll += etype->fpDisplay(etype, estack);
-    }
-
-    GCStack::popFrame();
-    releaseIteratorGCRoots();
-
-    return ll;
+    return "[ListRepr]";
 }
 
 void BSQListFlatKTypeAbstract::initializeIterPositionWSlice(BSQListReprIterator* iter, void* data, int64_t pos, int64_t maxpos) const
 {
     iter->cbuff = data;
-    iter->cpos = (int16_t)pos * (int16_t)this->esize;
-    iter->maxpos = (int16_t)maxpos * (int16_t)this->esize;
+    iter->cpos = (int16_t)pos * iter->esize;
+    iter->maxpos = (int16_t)maxpos * iter->esize;
 }
 
 uint64_t BSQListFlatKTypeAbstract::getLength(void* data) const
@@ -94,13 +71,13 @@ uint64_t BSQListFlatKTypeAbstract::getLength(void* data) const
 void BSQListFlatKTypeAbstract::initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const
 {
     iter->cbuff = data;
-    iter->cpos = (int16_t)pos * (int16_t)this->esize;
+    iter->cpos = (int16_t)pos * iter->esize;
     iter->maxpos = (int16_t)BSQListFlatKTypeAbstract::getStorageBytesCount(data);
 }
 
-StorageLocationPtr BSQListFlatKTypeAbstract::getValueAtPosition(void* data, uint64_t pos) const
+StorageLocationPtr BSQListFlatKTypeAbstract::getValueAtPosition(void* data, uint64_t pos, uint16_t esize) const
 {
-    return BSQListFlatKTypeAbstract::getDataBytes(data) + (pos * this->esize);
+    return BSQListFlatKTypeAbstract::getDataBytes(data) + (pos * esize);
 }
 
 void* BSQListFlatKTypeAbstract::slice_impl(void* data, uint64_t nstart, uint64_t nend) const
@@ -134,11 +111,11 @@ void BSQListSliceType::initializeIterPosition(BSQListReprIterator* iter, void* d
     kltype->initializeIterPositionWSlice(iter, sl->lrepr, pos + (int64_t)sl->start, (int64_t)sl->end);
 }
 
-StorageLocationPtr BSQListSliceType::getValueAtPosition(void* data, uint64_t pos) const 
+StorageLocationPtr BSQListSliceType::getValueAtPosition(void* data, uint64_t pos, uint16_t esize) const 
 {
     auto sl = (BSQListSlice*)data;
     auto kltype = GET_TYPE_META_DATA_AS(BSQListFlatKTypeAbstract, sl->lrepr);
-    return kltype->getValueAtPosition(sl->lrepr, pos + sl->start);
+    return kltype->getValueAtPosition(sl->lrepr, pos + sl->start, esize);
 }
 
 void* BSQListSliceType::slice_impl(void* data, uint64_t nstart, uint64_t nend) const
@@ -181,7 +158,7 @@ void BSQListConcatType::initializeIterPosition(BSQListReprIterator* iter, void* 
     }
 }
 
-StorageLocationPtr BSQListConcatType::getValueAtPosition(void* data, uint64_t pos) const 
+StorageLocationPtr BSQListConcatType::getValueAtPosition(void* data, uint64_t pos, uint16_t esize) const 
 {
     auto cl = (BSQListConcat*)data;
 
@@ -189,12 +166,12 @@ StorageLocationPtr BSQListConcatType::getValueAtPosition(void* data, uint64_t po
     if((int64_t)pos < l1size)
     {
         auto l1type = GET_TYPE_META_DATA_AS(BSQListReprType, cl->lrepr1);
-        return l1type->getValueAtPosition(cl->lrepr1, pos);
+        return l1type->getValueAtPosition(cl->lrepr1, pos, esize);
     }
     else
     {
         auto l2type = GET_TYPE_META_DATA_AS(BSQListReprType, cl->lrepr2);
-        return l2type->getValueAtPosition(cl->lrepr2, pos - l1size);
+        return l2type->getValueAtPosition(cl->lrepr2, pos - l1size, esize);
     }
 }
 
@@ -239,135 +216,178 @@ void* BSQListConcatType::slice_impl(void* data, uint64_t nstart, uint64_t nend) 
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    xxxx;
+    BSQList l = SLPTR_LOAD_CONTENTS_AS(BSQList, data);
+
+    if(l.size == 0)
+    {
+        return btype->name + "@{}";
+    }
+    else
+    {
+
+        BSQListReprIterator iter;
+        dynamic_cast<const BSQListType*>(btype)->initializeIteratorBegin(&iter, data);
+
+        auto etype = dynamic_cast<const BSQListType*>(btype)->etype;
+        void* estack = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
+        etype->clearValue(estack);
+
+        std::string ll = btype->name + "@{";
+
+        registerIteratorGCRoots(&iter);
+        GCStack::pushFrame(&estack, etype->allocinfo.inlinedmask);
+
+        while(iteratorIsValid(&iter))
+        {
+            iteratorGetElement(&iter, estack, etype);
+            ll += etype->fpDisplay(etype, estack);
+        }
+
+        GCStack::popFrame();
+        releaseIteratorGCRoots();
+
+        ll += "}";
+        return ll;
+    }
 }
 
-void BSQListType::initializeIteratorGivenPosition(BSQListReprIterator* iter, void* data, int64_t pos)
+void BSQListType::initializeIteratorGivenPosition(BSQListReprIterator* iter, StorageLocationPtr sl, int64_t pos) const
 {
-    iter->lroot = data;
-    iter->lpos = 0;
+    BSQList l = SLPTR_LOAD_CONTENTS_AS(BSQList, sl);
+
     iter->cbuff = nullptr;
+    iter->cpos = 0;
+    iter->maxpos = 0;
 
-    initializeListIterPosition(iter, pos);
+    iter->lroot = l.repr;
+    iter->lpos = 0;
+
+    iter->etype = this->etype;
+    iter->esize = this->esize; 
+
+    if(l.size != 0)
+    {
+        initializeListIterPosition(iter, pos);
+    }
 }
 
-void BSQListType::initializeIteratorBegin(BSQListReprIterator* iter, void* data)
+void BSQListType::initializeIteratorBegin(BSQListReprIterator* iter, StorageLocationPtr sl) const
 {
-    BSQListType::initializeIteratorGivenPosition(iter, data, 0);
+    BSQListType::initializeIteratorGivenPosition(iter, sl, 0);
 }
 
-void* BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
+StorageLocationPtr BSQListType::getValueAtPosition(StorageLocationPtr sl, uint64_t pos) const
+{
+    BSQList l = SLPTR_LOAD_CONTENTS_AS(BSQList, sl);
+    assert(pos < l.size);
+
+    auto ltype = GET_TYPE_META_DATA_AS(BSQListReprType, l.repr);
+    return ltype->getValueAtPosition(l.repr, pos, this->esize);
+}
+
+BSQList BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2) const
 {
     //
     //TODO: want to rebalance here later
     //
 
-    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQListConcat) + sizeof(BSQListFlatK<128>));
+    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQListFlatK<16>));
 
-    BSQList* l1 = (BSQList*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(s1);
-    const BSQListType* l1type = GET_TYPE_META_DATA_AS(BSQListType, l1);
+    BSQList l1 = SLPTR_LOAD_CONTENTS_AS(BSQList, s1);
+    BSQList l2 = SLPTR_LOAD_CONTENTS_AS(BSQList, s2);
 
-    BSQList* l2 = (BSQList*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(s2);
-    const BSQListType* l2type = GET_TYPE_META_DATA_AS(BSQListType, l2);
-
-    if(BSQListType::empty(*l1) & BSQListType::empty(*l2))
+    if(BSQListType::empty(l1) & BSQListType::empty(l2))
     {
-        return Environment::g_listTypeMap[l1type->tid].empty->generateEmptyList();
+        return bsqemptylist;
     }
-    else if(BSQListType::empty(*l1))
+    else if(BSQListType::empty(l1))
     {
         return l2;
     }
-    else if(BSQListType::empty(*l2))
+    else if(BSQListType::empty(l2))
     {
         return l1;
     }
     else
     {
-        auto len1 = l1type->getLength(l1);
-        auto size1 = len1 * l1type->esize;
-        auto len2 = l2type->getLength(l2);
-        auto size2 = len2 * l2type->esize;;
-
         void* res = nullptr;
-        if(size1 + size2 <= 128)
+        if(l1.size + l2.size <= 16)
         {
-            res = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListFlatK<128>), Environment::g_listTypeMap[l1type->tid].list128);
+            res = Allocator::GlobalAllocator.allocateSafe(Environment::g_listTypeMap[this->tid].list16);
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
 
-            ((BSQListFlatK<128>*)res)->ecount = (uint32_t)(len1 + len2);
+            ((BSQListFlatK<128>*)res)->ecount = (uint32_t)(l1.size + l2.size);
 
-            BSQListIterator iter1;
-            initializeIteratorBegin(&iter1, l1);
+            BSQListReprIterator iter1;
+            initializeIteratorBegin(&iter1, s1);
             while(iteratorIsValid(&iter1))
             {
-                iteratorGetElement(&iter1, curr, l1type->etype);
-                curr += l1type->esize;
+                iteratorGetElement(&iter1, curr, this->etype);
+                curr += this->esize;
                 incrementListIterator(&iter1);
             }
 
-            BSQListIterator iter2;
-            initializeIteratorBegin(&iter2, l2);
+            BSQListReprIterator iter2;
+            initializeIteratorBegin(&iter2, s2);
             while(iteratorIsValid(&iter2))
             {
-                iteratorGetElement(&iter2, curr, l2type->etype);
-                curr += l2type->esize;
+                iteratorGetElement(&iter2, curr, this->etype);
+                curr += this->esize;
                 incrementListIterator(&iter2);
             }
         }
         else
         {
-            auto crepr = (BSQListConcat*)Allocator::GlobalAllocator.allocateSafe(sizeof(BSQListConcat), Environment::g_listTypeMap[l1type->tid].concat);
-            crepr->size = len1 + len2;
-            crepr->lrepr1 = l1;
-            crepr->lrepr2 = l2;
+            res = (BSQListConcat*)Allocator::GlobalAllocator.allocateSafe(Environment::g_listTypeMap[this->tid].concat);
+            ((BSQListConcat*)res)->size = l1.size + l2.size;
+            ((BSQListConcat*)res)->lrepr1 = l1.repr;
+            ((BSQListConcat*)res)->lrepr2 = l2.repr;
         }
 
-        return res;
+        return BSQList{res, l1.size + l2.size};
     }
 }
 
-void* BSQListEntityType::slice(StorageLocationPtr l, uint64_t startpos, uint64_t endpos)
+BSQList BSQListType::slice(StorageLocationPtr l, uint64_t startpos, uint64_t endpos) const
 {
     //
     //TODO: want to rebalance here later
     //
-    
-    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQStringKRepr<128>));
-
-    void* ll = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(l);
-    const BSQListEntityType* ltype = GET_TYPE_META_DATA_AS(BSQListEntityType, ll);
 
     if(startpos >= endpos)
     {
-        return Environment::g_listTypeMap[ltype->tid].empty->generateEmptyList();
+        return bsqemptylist;
     }
     else
     {
-        auto dist = endpos - startpos;
+        Allocator::GlobalAllocator.ensureSpace(sizeof(BSQListFlatK<16>));
 
+        BSQList ll = SLPTR_LOAD_CONTENTS_AS(BSQList, l);
         void* res;
-        if(dist <= 128 && (ltype->getLength(ll) * ltype->esize) >= 512)
+
+        auto dist = endpos - startpos;
+        if(dist <= 16)
         {
-            res = Allocator::GlobalAllocator.allocateSafe(sizeof(BSQStringKRepr<128>), Environment::g_listTypeMap[ltype->tid].list128);
+            res = Allocator::GlobalAllocator.allocateSafe(Environment::g_listTypeMap[this->tid].list16);
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
 
-            BSQListIterator iter;
-            BSQListEntityType::initializeIteratorGivenPosition(&iter, ll, (int64_t)startpos);
+            BSQListReprIterator iter;
+            this->initializeIteratorGivenPosition(&iter, l, (int64_t)startpos);
 
             for(uint64_t i = 0; i < dist; ++i)
             {
-                iteratorGetElement(&iter, curr, ltype->etype);
+                iteratorGetElement(&iter, curr, this->etype);
 
-                curr += ltype->esize;
+                curr += this->esize;
                 incrementListIterator(&iter);
             }
         }
         else
         {
-            res = ltype->slice(ll, startpos, endpos);
+            auto ltype = GET_TYPE_META_DATA_AS(BSQListReprType, ll.repr);
+            res = ltype->slice_impl(ll.repr, startpos, endpos);
         }
 
-        return res;
+        return BSQList{res, dist};
     }
 }

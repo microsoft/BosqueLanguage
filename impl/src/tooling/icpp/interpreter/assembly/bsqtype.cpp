@@ -111,8 +111,6 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        xxxx;
-
         auto itype = BSQType::g_typetable[ttype->ttypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
         res += itype->fpDisplay(itype, idata);
@@ -135,8 +133,6 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
         }
 
         res += BSQType::g_propertymap[ttype->properties[i]] + ":";
-
-        xxxx;
 
         auto itype = BSQType::g_typetable[ttype->rtypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
@@ -161,8 +157,6 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
         res += BSQType::g_fieldmap[ttype->fields[i]] + ":";
 
-        xxxx;
-
         auto itype = BSQType::g_typetable[ttype->ftypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);
         res += itype->fpDisplay(itype, idata);
@@ -182,8 +176,6 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
         {
             res += ", ";
         }
-
-        xxxx;
 
         auto itype = BSQType::g_typetable[ttype->etypes[i]];
         auto idata = SLPTR_INDEX_DATAPTR(data, ttype->idxoffsets[i]);

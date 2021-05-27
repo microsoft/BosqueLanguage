@@ -13,6 +13,7 @@
 
 struct ListTypeConstructorInfo
 {
+    BSQListType list;
     BSQListFlatKType<4>* list4;
     BSQListFlatKType<8>* list8;
     BSQListFlatKType<12>* list12;

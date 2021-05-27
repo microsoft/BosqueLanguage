@@ -11,12 +11,15 @@
 
 struct BSQListReprIterator
 {
-    void* lroot;
-    uint64_t esize;
-    int64_t lpos;
     void* cbuff;
     int16_t cpos;
     int16_t maxpos;
+
+    void* lroot;
+    int64_t lpos;
+
+    const BSQType* etype;
+    int16_t esize;
 };
 
 void registerIteratorGCRoots(BSQListReprIterator* iter);
@@ -33,18 +36,15 @@ std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr 
 class BSQListReprType : public BSQRefType
 {
 public:
-    const uint64_t esize;
-    const BSQType* etype;
-
-    BSQListReprType(uint64_t allocsize, RefMask heapmask, std::string name, const BSQType* etype):
-        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityListReprDisplay_impl, name), esize(etype->allocinfo.inlinedatasize), etype(etype)
+    BSQListReprType(uint64_t allocsize, RefMask heapmask, std::string name):
+        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityListReprDisplay_impl, name)
     {;}
 
     virtual ~BSQListReprType() {;}
 
     virtual uint64_t getLength(void* data) const = 0;
     virtual void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const = 0;
-    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const = 0;
+    virtual StorageLocationPtr getValueAtPosition(void* data, uint64_t pos, uint16_t esize) const = 0;
 
     virtual void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const = 0;
 };
@@ -60,7 +60,7 @@ struct BSQListFlatK
 class BSQListFlatKTypeAbstract : public BSQListReprType
 {
 public:
-    BSQListFlatKTypeAbstract(uint64_t allocsize, RefMask heapmask, std::string name, const BSQType* etype): BSQListReprType(allocsize, heapmask, name, etype) {;}
+    BSQListFlatKTypeAbstract(uint64_t allocsize, RefMask heapmask, std::string name): BSQListReprType(allocsize, heapmask, name) {;}
 
     virtual ~BSQListFlatKTypeAbstract() {;}
 
@@ -84,21 +84,21 @@ public:
         return this->getDataBytes(l);
     }
 
-    inline void advanceWriteIter(uint8_t** iter) const
+    inline void advanceWriteIter(uint8_t** iter, const BSQType* etype) const
     {
-        *iter = *iter + this->esize;
+        *iter = *iter + etype->allocinfo.inlinedatasize;
     }
 
-    inline void storeDataToPostion(uint8_t* iter, StorageLocationPtr slptr) const
+    inline void storeDataToPostion(uint8_t* iter, const BSQType* etype, StorageLocationPtr slptr) const
     {
-        GC_MEM_COPY(iter, slptr, this->esize);
+        etype->storeValue(iter, slptr);
     }
 
     void initializeIterPositionWSlice(BSQListReprIterator* iter, void* data, int64_t pos, int64_t maxpos) const;
 
     uint64_t getLength(void* data) const override final;
     void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override final;
-    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override final;
+    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos, uint16_t esize) const override final;
     void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override final;
 };
 
@@ -106,7 +106,7 @@ template<uint16_t k>
 class BSQListFlatKType : public BSQListFlatKTypeAbstract
 {
 public:
-    BSQListFlatKType(std::string name, const BSQType* etype, RefMask heapmask): BSQListFlatKTypeAbstract(sizeof(BSQListFlatK<k>), heapmask, name, etype) {;}
+    BSQListFlatKType(std::string name, RefMask heapmask): BSQListFlatKTypeAbstract(sizeof(BSQListFlatK<k>), heapmask, name) {;}
 
     virtual ~BSQListFlatKType() {;}
 };
@@ -121,12 +121,12 @@ struct BSQListSlice
 class BSQListSliceType : public BSQListReprType
 {
 public:
-    BSQListSliceType(std::string name, const BSQType* etype): BSQListReprType(sizeof(BSQListSlice), "2", name, etype) {;}
+    BSQListSliceType(std::string name): BSQListReprType(sizeof(BSQListSlice), "2", name) {;}
     virtual ~BSQListSliceType() {;}
 
     uint64_t getLength(void* data) const override final;
     void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override final;
-    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override final;
+    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos, uint16_t esize) const override final;
     void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override final;
 };
 
@@ -140,12 +140,12 @@ struct BSQListConcat
 class BSQListConcatType : public BSQListReprType
 {
 public:
-    BSQListConcatType(BSQTypeID tid, std::string name, const BSQType* etype): BSQListReprType(sizeof(BSQListConcat), "22", name, etype) {;}
+    BSQListConcatType(BSQTypeID tid, std::string name): BSQListReprType(sizeof(BSQListConcat), "22", name) {;}
     virtual ~BSQListConcatType() {;}
 
     uint64_t getLength(void* data) const override final;
     void initializeIterPosition(BSQListReprIterator* iter, void* data, int64_t pos) const override final;
-    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos) const override final;
+    StorageLocationPtr getValueAtPosition(void* data, uint64_t pos, uint16_t esize) const override final;
     void* slice_impl(void* data, uint64_t nstart, uint64_t nend) const override final;
 };
 
@@ -155,12 +155,17 @@ struct BSQList
     uint64_t size;
 };
 
+constexpr BSQList bsqemptylist = BSQList{nullptr, 0};
+
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQListType : public BSQStructType
 {
 public:
-    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_FUNCTOR_SET, entityListDisplay_impl, name) 
+    const uint64_t esize;
+    const BSQType* etype;
+
+    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_FUNCTOR_SET, entityListDisplay_impl, name), esize(etype->allocinfo.inlinedatasize), etype(etype)
     {
         static_assert(sizeof(BSQList) == 16);
     }
@@ -177,10 +182,12 @@ public:
         return data.size;
     }
 
-    static void initializeIteratorGivenPosition(BSQListReprIterator* iter, void* data, int64_t pos);
-    static void initializeIteratorBegin(BSQListReprIterator* iter, void* data);
+    void initializeIteratorGivenPosition(BSQListReprIterator* iter, StorageLocationPtr sl, int64_t pos) const;
+    void initializeIteratorBegin(BSQListReprIterator* iter, StorageLocationPtr sl) const;
 
-    static void* concat2(StorageLocationPtr s1, StorageLocationPtr s2);
-    static void* slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos);
+    StorageLocationPtr getValueAtPosition(StorageLocationPtr sl, uint64_t pos) const;
+
+    BSQList concat2(StorageLocationPtr s1, StorageLocationPtr s2) const;
+    BSQList slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos) const;
 };
 
