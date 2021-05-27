@@ -11,24 +11,9 @@
 enum class ArgumentTag
 {
     InvalidOp = 0x0,
-    ConstNone,
-    ConstTrue,
-    ConstFalse,
-    ConstNat,
-    ConstInt,
-    ConstBigNat,
-    ConstBigInt,
-    ConstRational,
-    ConstFloat,
-    ConstDecimal,
-    ConstString,
-    ConstStringOf,
-    ConstDataString,
-    ConstRegex,
+    Const,
     Local,
-    Argument,
-    GlobalConst,
-    UninterpFill
+    Argument
 };
 
 enum class OpCodeTag
@@ -40,47 +25,9 @@ enum class OpCodeTag
     DebugOp,
     LoadUnintVariableValueOp,
 
-    BoxUniqueRegisterToInlineOp,
-    BoxUniqueStructOrStringToInlineOp,
-    BoxUniqueRefToInlineOp,
-    BoxUniqueRegisterToHeapOp,
-    BoxUniqueStructOrStringToHeapOp,
-    BoxUniqueRefToHeapOp,
-    BoxInlineBoxToHeapOp,
-    ExtractUniqueRegisterFromInlineOp,
-    ExtractUniqueStructOrStringFromInlineOp,
-    ExtractUniqueRefFromInlineOp,
-    ExtractUniqueRegisterFromHeapOp,
-    ExtractUniqueStructOrStringFromHeapOp,
-    ExtractUniqueRefFromHeapOp,
-    ExtractInlineBoxFromHeapOp,
-
-    DirectAssignRegisterOp,
-    DirectAssignValueOp,
-    DirectAssignRefOp,
-    WidenInlineOp,
-    NarrowInlineOp,
-
-    GuardedBoxUniqueRegisterToInlineOp,
-    GuardedBoxUniqueStructOrStringToInlineOp,
-    GuardedBoxUniqueRefToInlineOp,
-    GuardedBoxUniqueRegisterToHeapOp,
-    GuardedBoxUniqueStructOrStringToHeapOp,
-    GuardedBoxUniqueRefToHeapOp,
-    GuardedBoxInlineBoxToHeapOp,
-    GuardedExtractUniqueRegisterFromInlineOp,
-    GuardedExtractUniqueStructOrStringFromInlineOp,
-    GuardedExtractUniqueRefFromInlineOp,
-    GuardedExtractUniqueRegisterFromHeapOp,
-    GuardedExtractUniqueStructOrStringFromHeapOp,
-    GuardedExtractUniqueRefFromHeapOp,
-    GuardedExtractInlineBoxFromHeapOp,
-
-    GuardedDirectAssignRegisterOp,
-    GuardedDirectAssignValueOp,
-    GuardedDirectAssignRefOp,
-    GuardedWidenInlineOp,
-    GuardedNarrowInlineOp,
+    DirectAssignOp,
+    BoxOp,
+    ExtractOp,
 
     LoadConstOp,
     TupleHasIndexOp,
@@ -243,16 +190,17 @@ struct SourceInfo
 struct BSQGuard
 {
     uint32_t gmaskoffset; 
-    int32_t gindex; //-1 if this is var guard
+    int32_t gindex;
 
-    uint32_t gvaroffset; //if gindex is -1
+    int32_t gvaroffset; //-1 if this is a mask offset otherwise this is the local var offset
 };
 
 struct BSQStatementGuard
 {
     BSQGuard guard;
+    Argument defaultvar; //may be uninterp fill
     bool usedefaulton;
-    Argument defaultvar; //may be uninterp fill kind
+    bool enabled; //true if this statment guard is active and should be used
 };
 
 class InterpOp
@@ -294,10 +242,11 @@ public:
 class DebugOp : public InterpOp
 {
 public:
-    //Is invalid if this is a break
+    //Arg is invalid and type is nullptr if this is a break
     const Argument arg;
+    const BSQType* argtype;
 
-    DebugOp(SourceInfo sinfo, Argument arg) : InterpOp(sinfo, OpCodeTag::DebugOp), arg(arg) {;}
+    DebugOp(SourceInfo sinfo, Argument arg, const BSQType* argtype) : InterpOp(sinfo, OpCodeTag::DebugOp), arg(arg), argtype(argtype) {;}
     virtual ~DebugOp() {;}
 };
 
@@ -312,22 +261,18 @@ public:
     virtual ~LoadUnintVariableValueOp() {;}
 };
 
-
-template <OpCodeTag tag, bool isGuarded>
 class DirectAssignOp : public InterpOp
 {
 public:
     const TargetVar trgt;
     const BSQType* intotype;
     const Argument arg;
-    const uint32_t size;
     const BSQStatementGuard sguard;
 
-    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, uint32_t size, const BSQStatementGuard& sguard) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), size(size), sguard(sguard) {;}
+    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, uint32_t size, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), size(size), sguard(sguard) {;}
     virtual ~DirectAssignOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class BoxOp : public InterpOp
 {
 public:
@@ -337,11 +282,10 @@ public:
     const BSQType* fromtype;
     const BSQStatementGuard sguard;
 
-    BoxOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    BoxOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~BoxOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class ExtractOp : public InterpOp
 {
 public:
@@ -351,7 +295,7 @@ public:
     const BSQType* fromtype;
     const BSQStatementGuard sguard;
 
-    ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, tag), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~ExtractOp() {;}
 };
 

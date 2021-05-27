@@ -35,7 +35,7 @@ void** gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data);
 struct BSQTypeSizeInfo
 {
     const uint64_t heapsize;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
-    const uint64_t inlinedatasize; //number of bytes needed in storage location for this (includes type tag for inline union -- is the size of a pointer for ref and heap union -- and word size for BSQBool)
+    const uint64_t inlinedatasize; //number of bytes needed in storage location for this (includes type tag for inline union -- is the size of a pointer for ref -- and word size for BSQBool)
     const uint64_t assigndatasize; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
 
     const RefMask heapmask; //The mask to used to traverse this object during gc (if it is heap allocated) -- null if this is a leaf object -- partial if tailing scalars
@@ -423,12 +423,12 @@ public:
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
-        assert(false);
+        GC_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
     }
 
     void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
-        assert(false);
+        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
     }
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final

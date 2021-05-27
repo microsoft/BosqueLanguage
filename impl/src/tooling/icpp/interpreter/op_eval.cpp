@@ -83,42 +83,7 @@ bool __builtin_mul_overflow(BSQInt x, BSQInt y, BSQInt* res)
 }
 #endif
 
-StorageLocationPtr Evaluator::evalConstArgument(Argument arg)
-{
-    switch (arg.kind)
-    {
-    case ArgumentTag::ConstNone:
-        return &Environment::g_constNone;
-    case ArgumentTag::ConstTrue:
-        return &Environment::g_constTrue;
-    case ArgumentTag::ConstFalse:
-        return &Environment::g_constFalse;
-    case ArgumentTag::ConstNat:
-        return Environment::g_constNats + arg.location;
-    case ArgumentTag::ConstInt:
-        return Environment::g_constInts + arg.location;
-    case ArgumentTag::ConstBigNat:
-        return Environment::g_constBigNats + arg.location;
-    case ArgumentTag::ConstBigInt:
-        return Environment::g_constBigInts + arg.location;
-    case ArgumentTag::ConstRational:
-        return Environment::g_constRationals + arg.location;
-    case ArgumentTag::ConstFloat:
-        return Environment::g_constFloats + arg.location;
-    case ArgumentTag::ConstDecimal:
-        return Environment::g_constDecimals + arg.location;
-    case ArgumentTag::ConstString:
-        return Environment::g_constStrings + arg.location;
-    case ArgumentTag::ConstRegex:
-        return Environment::g_constRegexs + arg.location;
-    default: {
-        assert(false);
-        //TODO: add a cache (that GC knows about) to hold memoized results
-        //TODO: otherwise take slow path that looksup function and applies it 
-        return nullptr;
-        }
-    }
-}
+EvaluatorFrame Evaluator::g_callstack[2048];
 
 void Evaluator::evalDeadFlowOp()
 {
@@ -133,14 +98,13 @@ void Evaluator::evalAbortOp(const AbortOp *op)
 
 void Evaluator::evalAssertCheckOp(const AssertOp *op)
 {
-    auto val = this->evalArgument(op->arg);
-    if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, val))
+    if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg)))
     {
         BSQ_LANGUAGE_ABORT(op->msg->c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
     }
 }
 
-void Evaluator::evalDebugOp(const DebugOp *op)
+void Evaluator::evalDebugOp(const DebugOp* op)
 {
     if(op->arg.kind == ArgumentTag::InvalidOp)
     {
@@ -149,9 +113,7 @@ void Evaluator::evalDebugOp(const DebugOp *op)
     }
     else
     {
-        auto val = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
-        auto ttype = GET_TYPE_META_DATA(val);
-        auto dval = ttype->fpDisplay(ttype, val);
+        auto dval = op->argtype->fpDisplay(op->argtype, this->evalArgument(op->arg));
 
         printf("%s\n", dval.c_str());
         fflush(stdout);
@@ -163,275 +125,49 @@ void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
     op->oftype->clearValue(this->evalTargetVar(op->trgt));
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op)
+template <>
+void Evaluator::evalDirectAssignOp<true>(const DirectAssignOp* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    if(this->tryProcessGuardStmt(op->trgt, op->intotype, op->sguard))
     {
-        auto isl = this->evalTargetVar(op->trgt);
-        SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
+        op->intotype->storeValue(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueStructOrStringToInlineOp(const BoxOp<tag, isGuarded>* op)
+template <>
+void Evaluator::evalDirectAssignOp<false>(const DirectAssignOp* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    op->intotype->storeValue(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
+}
+
+template <>
+void Evaluator::evalBoxOp<true>(const BoxOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, op->intotype, op->sguard))
     {
-        auto isl = this->evalTargetVar(op->trgt);
-        SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
+        op->intotype->injectIntoUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueRefToInlineOp(const BoxOp<tag, isGuarded>* op)
+template <>
+void Evaluator::evalBoxOp<false>(const BoxOp* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
+    op->intotype->injectIntoUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
+}
+
+template <>
+void Evaluator::evalExtractOp<true>(const ExtractOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, op->intotype, op->sguard))
     {
-        auto isl = this->evalTargetVar(op->trgt);
-        SLPTR_STORE_UNION_INLINE_TYPE(isl, op->fromtype);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg)));
+        op->intotype->extractFromUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op)
+template <>
+void Evaluator::evalExtractOp<false>(const ExtractOp* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto isl = this->evalTargetVar(op->trgt);
-        if(op->fromtype->tid == BSQ_TYPE_ID_NONE)
-        {
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, BSQNoneHeapValue);
-        }
-        else
-        {
-            auto balloc = Allocator::GlobalAllocator.allocateDynamic(op->fromtype);
-            SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
-        }
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueStructOrStringToHeapOp(const BoxOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto isl = this->evalTargetVar(op->trgt);
-        auto balloc = Allocator::GlobalAllocator.allocateDynamic(op->fromtype);
-        SLPTR_COPY_CONTENTS(balloc, this->evalArgument(op->arg), op->fromtype->allocinfo.sldatasize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxUniqueRefToHeapOp(const BoxOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto isl = this->evalTargetVar(op->trgt);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg)));
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(srcl);
-
-        auto isl = this->evalTargetVar(op->trgt);
-        if(rtype->tid == BSQ_TYPE_ID_NONE)
-        {
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, BSQNoneHeapValue);
-        }
-        else
-        {
-            if(rtype->tkind == BSQTypeKind::Ref)
-            {
-                SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl)));
-            }
-            else
-            {
-                auto balloc = Allocator::GlobalAllocator.allocateDynamic(rtype);
-                SLPTR_COPY_CONTENTS(balloc, SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
-                SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, balloc);
-            }
-        }
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueRegisterFromInlineOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto sldata = SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl);
-        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueStructOrStringFromInlineOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto sldata = SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl);
-        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueRefFromInlineOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto sldata = SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sldata));
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto sldata = SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl);
-
-        if(sldata == BSQNoneHeapValue)
-        {
-            SLPTR_STORE_CONTENTS_AS(BSQNone, sldata, BSQNoneValue);
-        }
-        else
-        {
-            SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
-        }
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueStructOrStringFromHeapOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto sldata = SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl);
-        SLPTR_COPY_CONTENTS(this->evalTargetVar(op->trgt), sldata, op->intotype->allocinfo.sldatasize);
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractUniqueRefFromHeapOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(srcl));
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto sldata = SLPTR_LOAD_UNION_HEAP_DATAPTR(srcl);
-
-        auto isl = this->evalTargetVar(op->trgt);
-        if(sldata == BSQNoneHeapValue)
-        {
-            SLPTR_STORE_UNION_INLINE_TYPE(isl, Environment::g_typeNone);
-            SLPTR_STORE_CONTENTS_AS(BSQNone, SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), BSQNoneValue);
-        }
-        else
-        {
-            auto rtype = SLPTR_LOAD_UNION_HEAP_TYPE(srcl);
-            SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-
-            if(rtype->tkind == BSQTypeKind::Ref)
-            {
-                SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata);
-            }
-            else
-            {
-                SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), sldata, rtype->allocinfo.sldatasize);
-            }
-        }
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalDirectAssignRegisterOp(const DirectAssignOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto isl = this->evalTargetVar(op->trgt);
-
-        SLPTR_COPY_CONTENTS(isl, srcl, op->size);
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalDirectAssignStructuralOp(const DirectAssignOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto isl = this->evalTargetVar(op->trgt);
-
-        SLPTR_COPY_CONTENTS(isl, srcl, op->size);
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void evalDirectAssignReferenceOp(const DirectAssignOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto isl = this->evalTargetVar(op->trgt);
-
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(isl, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(srcl));
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalWidenInlineOp(const BoxOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(srcl);
-
-        auto isl = this->evalTargetVar(op->trgt);
-        SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
-    }
-}
-
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalNarrowInlineOp(const ExtractOp<tag, isGuarded>* op)
-{
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->intotype, op->sguard))
-    {
-        auto srcl = this->evalArgument(op->arg);
-        auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(srcl);
-
-        auto isl = this->evalTargetVar(op->trgt);
-        SLPTR_STORE_UNION_INLINE_TYPE(isl, rtype);
-        SLPTR_COPY_CONTENTS(SLPTR_LOAD_UNION_INLINE_DATAPTR(isl), SLPTR_LOAD_UNION_INLINE_DATAPTR(srcl), rtype->allocinfo.sldatasize);
-    }
+    op->intotype->extractFromUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
 }
 
 void Evaluator::evalLoadConstOp(const LoadConstOp* op)
@@ -444,11 +180,12 @@ void Evaluator::processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQ
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
-void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype)
 {
-    auto ttype = this->loadBSQTypeFromAbstractLocationOfType<BSQTupleType>(src, srctype);
-    auto voffset = ttype->idxoffsets[idx];
-    this->processTupleDirectLoadAndStore(src, srctype, voffset, dst, dsttype);
+    auto ttype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+    auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
+    auto voffset = tinfo->idxoffsets[idx];
+    this->processTupleDirectLoadAndStore(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), ttype, voffset, dst, dsttype);
 }
 
 void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype)
@@ -456,16 +193,21 @@ void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BS
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
-void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype)
 {
-    auto rtype = this->loadBSQTypeFromAbstractLocationOfType<BSQRecordType>(src, srctype);
-    auto proppos = std::find(rtype->properties.cbegin(), rtype->properties.cend(), propId);
-    assert(proppos != rtype->properties.cend());
+    //
+    //TODO: this is where it might be nice to do some mono/polymorphic inline caching
+    //
 
-    auto propidx = (size_t)std::distance(rtype->properties.cbegin(), proppos);
-    auto voffset = rtype->propertyoffsets[propidx];
+    auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+    auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
+    auto proppos = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), propId);
+    assert(proppos != rinfo->properties.cend());
 
-    this->processRecordDirectLoadAndStore(src, srctype, voffset, dst, dsttype);
+    auto propidx = (size_t)std::distance(rinfo->properties.cbegin(), proppos);
+    auto voffset = rinfo->propertyoffsets[propidx];
+
+    this->processRecordDirectLoadAndStore(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), rtype, voffset, dst, dsttype);
 }
     
 void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype)
@@ -473,21 +215,27 @@ void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BS
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
-void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype)
 {
-    auto etype = this->loadBSQTypeFromAbstractLocationOfType<BSQEntityType>(src, srctype);
-    auto fldpos = std::find(etype->fields.cbegin(), etype->fields.cend(), fldId);
-    assert(fldpos != etype->fields.cend());
+    //
+    //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
+    //
 
-    auto fldidx = (size_t)std::distance(etype->fields.cbegin(), fldpos);
-    auto voffset = etype->fieldoffsets[fldidx];
+    auto etype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+    auto einfo = dynamic_cast<const BSQEntityInfo*>(etype);
 
-    this->processEntityDirectLoadAndStore(src, srctype, voffset, dst, dsttype);
+    auto fldpos = std::find(einfo->fields.cbegin(), einfo->fields.cend(), fldId);
+    assert(fldpos != einfo->fields.cend());
+
+    auto fldidx = (size_t)std::distance(einfo->fields.cbegin(), fldpos);
+    auto voffset = einfo->fieldoffsets[fldidx];
+
+    this->processEntityDirectLoadAndStore(src, etype, voffset, dst, dsttype);
 }
 
 void Evaluator::processGuardVarStore(const BSQGuard& gv, BSQBool f)
 {
-    if(gv.gindex == -1)
+    if(gv.gvaroffset == -1)
     {
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalGuardVar(gv.gvaroffset), f);
     }
@@ -1187,7 +935,6 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalAssertCheckOp(static_cast<const AssertOp*>(op));
     }
-#ifdef BSQ_DEBUG_BUILD 
     case OpCodeTag::DebugOp:
     {
         this->evalDebugOp(static_cast<const DebugOp*>(op));
@@ -1196,7 +943,47 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     {
         this->evalLoadUnintVariableValueOp(static_cast<const LoadUnintVariableValueOp*>(op));
     }
-#endif
+    case OpCodeTag::DirectAssignOp:
+    {
+        auto daop = static_cast<const DirectAssignOp*>(op);
+        if(daop->sguard.enabled)
+        {
+            this->evalDirectAssignOp<true>(daop);
+        }
+        else
+        {
+            this->evalDirectAssignOp<false>(daop);
+        }
+    }
+    case OpCodeTag::BoxOp:
+    {
+        auto bop = static_cast<const BoxOp*>(op);
+        if(bop->sguard.enabled)
+        {
+            this->evalBoxOp<true>(bop);
+        }
+        else
+        {
+            this->evalBoxOp<false>(bop);
+        }
+    }
+    case OpCodeTag::ExtractOp:
+    {
+        auto exop = static_cast<const ExtractOp*>(op);
+        if(exop->sguard.enabled)
+        {
+            this->evalExtractOp<true>(exop);
+        }
+        else
+        {
+            this->evalExtractOp<false>(exop);
+        }
+    }
+
+
+
+
+
     case OpCodeTag::BoxUniqueRegisterToInlineOp:
     {
         this->evalBoxUniqueRegisterToInlineOp(static_cast<const BoxOp<OpCodeTag::BoxUniqueRegisterToInlineOp, false>*>(op));

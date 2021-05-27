@@ -20,51 +20,51 @@ public:
 
     StorageLocationPtr* argsbase;
     uint8_t* localsbase;
+    BSQBool* argmask;
     BSQBool* masksbase;
 
     const std::vector<InterpOp*>* ops;
     std::vector<InterpOp*>::const_iterator cpos;
-
-#ifdef BSQ_DEBUG_BUILD
-    EvaluatorFrame() : dbg_file(nullptr), dbg_function(nullptr), dbg_prevline(-1), dbg_line(-1), argsbase(nullptr), localsbase(nullptr), masksbase(nullptr), ops(nullptr), cpos() {;}
-    
-    EvaluatorFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) : dbg_file(dbg_file), dbg_function(dbg_function), dbg_prevline(-1), dbg_line(-1), argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin())
-    {
-        this->dbg_line = (*this->cpos)->sinfo.line;
-    }
-#else
-    EvaluatorFrame() : argsbase(nullptr), localsbase(nullptr), masksbase(nullptr), ops(nullptr), cpos() {;}
-    
-    EvaluatorFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) : argsbase(argsbase), localsbase(localsbase), masksbase(masksbase), ops(ops), cpos(ops->cbegin()) {;}
-#endif
-
-    EvaluatorFrame(const EvaluatorFrame&) = default;
-    EvaluatorFrame& operator=(const EvaluatorFrame&) = default;
-    EvaluatorFrame(EvaluatorFrame&&) = default;
-    EvaluatorFrame& operator=(EvaluatorFrame&&) = default;
 };
 
 class Evaluator
 {
 private:
     EvaluatorFrame* cframe;
-    std::deque<EvaluatorFrame> callstack;
+    int32_t cpos;
+    static EvaluatorFrame g_callstack[2048];
 
 #ifdef BSQ_DEBUG_BUILD
-    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
-        this->callstack.emplace_back(dbg_file, dbg_function, argsbase, localsbase, masksbase, ops);
+        auto cf = Evaluator::g_callstack + this->cpos++;
+        cf->dbg_file = dbg_file;
+        cf->dbg_function = dbg_function;
+        cf->dbg_prevline = 0;
+        cf->argsbase = argsbase;
+        cf->localsbase = localsbase;
+        cf->argmask = argmask;
+        cf->masksbase = masksbase;
+        cf->ops = ops;
+        cf->cpos = cf->ops->cbegin();
+        cf->dbg_line = (*cf->cpos)->sinfo.line;
     }
 #else
-    inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
-        this->callstack.emplace_back(argsbase, localsbase, masksbase, ops);
+        auto cf = Evaluator::g_callstack + cpos++;
+        cf->argsbase = argsbase;
+        cf->localsbase = localsbase;
+        cf->argmask = argmask;
+        cf->masksbase = masksbase;
+        cf->ops = ops;
+        cf->cpos = cf->ops->cbegin();
     }
 #endif
 
     inline void popFrame()
     {
-        this->callstack.pop_back();
+        this->cpos--;
     }
 
 #ifdef BSQ_DEBUG_BUILD
@@ -108,7 +108,10 @@ private:
         return *this->cframe->cpos;
     }
 
-    StorageLocationPtr evalConstArgument(Argument arg);
+    inline StorageLocationPtr evalConstArgument(Argument arg)
+    {
+        return (StorageLocationPtr)Environment::g_constantbuffer + arg.location;
+    }
 
     inline StorageLocationPtr evalArgument(Argument arg)
     {
@@ -131,19 +134,23 @@ private:
         return this->cframe->localsbase + trgt.offset;
     }
 
-    inline BSQBool* evalMaskLocation(uint32_t gmaskoffset)
+    inline BSQBool* evalMaskLocation(int32_t gmaskoffset)
     {
-        return this->cframe->masksbase + gmaskoffset;
+        if(gmaskoffset < 0)
+        {
+            return this->cframe->argmask + (-gmaskoffset);
+        }
+        else
+        {
+            return this->cframe->masksbase + gmaskoffset;
+        }
     }
 
-    inline StorageLocationPtr evalGuardVar(uint32_t gvaroffset)
+    inline StorageLocationPtr evalGuardVar(int32_t gvaroffset)
     {
+        assert(gvaroffset >= 0);
+
         return this->cframe->localsbase + gvaroffset;
-    }
-
-    inline static bool isEnabledGuardStmt(const BSQStatementGuard& sguard)
-    {
-        return sguard.defaultvar.kind != ArgumentTag::InvalidOp;
     }
 
     inline BSQBool evalGuardStmt(const BSQGuard& guard)
@@ -160,84 +167,22 @@ private:
 
     inline void evalStoreAltValueForGuardStmt(TargetVar trgt, Argument arg, const BSQType* oftype)
     {
-        if(arg.kind != ArgumentTag::UninterpFill)
-        {
-            oftype->storeValue(this->evalTargetVar(trgt), this->evalArgument(arg));
-        }
-        else
-        {
-            oftype->clearValue(this->evalTargetVar(trgt));
-        }
+        //If this is a clear then the arg should evaluate to the empty constant location
+        oftype->storeValue(this->evalTargetVar(trgt), this->evalArgument(arg));
     }
 
-    template <bool isEnabled>
+    
     inline bool tryProcessGuardStmt(TargetVar trgt, const BSQType* trgttype, const BSQStatementGuard& sguard)
     {
-        if(!isEnabled)
-        {
-            return true;
-        }
-        else
-        {
-            if(!Evaluator::isEnabledGuardStmt(sguard))
-            {
-                return true;
-            }
-            else
-            {
-                auto gval = this->evalGuardStmt(sguard.guard);
-                auto dodefault = !!(sguard.usedefaulton ? gval : !gval);
+        auto gval = this->evalGuardStmt(sguard.guard);
+        auto dodefault = !!(sguard.usedefaulton ? gval : !gval);
 
-                if(dodefault)
-                {
-                    this->evalStoreAltValueForGuardStmt(trgt, sguard.defaultvar, trgttype);
-                }
-
-                return dodefault;
-            }
-        }
-    }
-
-    inline const BSQType* loadBSQTypeFromAbstractLocationGeneral(StorageLocationPtr sl, const BSQType* layouttype)
-    {
-        auto layout = layouttype->tkind;
-        if(layout == BSQTypeKind::InlineUnion)
+        if(dodefault)
         {
-            return SLPTR_LOAD_UNION_INLINE_TYPE(sl);
+            this->evalStoreAltValueForGuardStmt(trgt, sguard.defaultvar, trgttype);
         }
-        else
-        {
-            assert(layout == BSQTypeKind::HeapUnion);
-            if(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl) == BSQNoneHeapValue)
-            {
-                return Environment::g_typeNone;
-            }
-            else
-            {
-                return SLPTR_LOAD_UNION_HEAP_TYPE(sl);
-            }
-        }
-    }
 
-    template <typename T>
-    inline const T* loadBSQTypeFromAbstractLocationOfType(StorageLocationPtr sl, const BSQType* layouttype)
-    {
-        return static_cast<const T*>(this->loadBSQTypeFromAbstractLocationGeneral(sl, layouttype));
-    }
-
-    inline StorageLocationPtr loadDataPtrFromAbstractLocation(StorageLocationPtr sl, const BSQType* layouttype)
-    {
-        auto layout = layouttype->tkind;
-        if(layout == BSQTypeKind::InlineUnion)
-        {
-            return SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
-
-        }
-        else
-        {
-            assert(layout == BSQTypeKind::HeapUnion);
-            return SLPTR_LOAD_UNION_HEAP_DATAPTR(sl);
-        }
+        return dodefault;
     }
 
     void evalDeadFlowOp();
@@ -247,71 +192,23 @@ private:
 
     void evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueRegisterToInlineOp(const BoxOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalDirectAssignOp(const DirectAssignOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueStructOrStringToInlineOp(const BoxOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalBoxOp(const BoxOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueRefToInlineOp(const BoxOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueRegisterToHeapOp(const BoxOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueStructOrStringToHeapOp(const BoxOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalBoxUniqueRefToHeapOp(const BoxOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalBoxInlineBoxToHeapOp(const BoxOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueRegisterFromInlineOp(const ExtractOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueStructOrStringFromInlineOp(const ExtractOp<tag, isGuarded>* op);
-    
-    template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueRefFromInlineOp(const ExtractOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueRegisterFromHeapOp(const ExtractOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueStructOrStringFromHeapOp(const ExtractOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalExtractUniqueRefFromHeapOp(const ExtractOp<tag,isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalExtractInlineBoxFromHeapOp(const ExtractOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalDirectAssignRegisterOp(const DirectAssignOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalDirectAssignStructuralOp(const DirectAssignOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalDirectAssignReferenceOp(const DirectAssignOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalWidenInlineOp(const BoxOp<tag, isGuarded>* op);
-
-    template <OpCodeTag tag, bool isGuarded>
-    void evalNarrowInlineOp(const ExtractOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalExtractOp(const ExtractOp* op);
 
     void evalLoadConstOp(const LoadConstOp* op);
 
     void processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype);
+    void processTupleVirtualLoadAndStore(StorageLocationPtr src, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype);
     void processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype);
+    void processRecordVirtualLoadAndStore(StorageLocationPtr src, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype);
     void processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype);
+    void processEntityVirtualLoadAndStore(StorageLocationPtr src, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype);
 
     void processGuardVarStore(const BSQGuard& gv, BSQBool f);
 

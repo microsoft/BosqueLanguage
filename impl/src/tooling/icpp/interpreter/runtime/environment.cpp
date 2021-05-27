@@ -29,19 +29,7 @@ BSQStringType* Environment::g_typeString = new BSQStringType();
 
 std::map<BSQTypeID, ListTypeConstructorInfo> Environment::g_listTypeMap;
 
-BSQNone Environment::g_constNone = 0;
-BSQBool Environment::g_constTrue = (BSQBool)true;
-BSQBool Environment::g_constFalse = (BSQBool)false;
-BSQNat* Environment::g_constNats = nullptr;
-BSQInt* Environment::g_constInts = nullptr;
-
-BSQBigNat* Environment::g_constBigNats = nullptr;
-BSQBigInt* Environment::g_constBigInts = nullptr;
-BSQRational* Environment::g_constRationals = nullptr;
-BSQFloat* Environment::g_constFloats = nullptr;
-BSQDecimal* Environment::g_constDecimals = nullptr;
-BSQString* Environment::g_constStrings = nullptr; 
-BSQRegex* Environment::g_constRegexs = nullptr;
+uint8_t* Environment::g_constantbuffer = nullptr;
 
 std::vector<std::vector<BSQTypeID>> Environment::g_subtypes;
 std::vector<BSQInvokeDecl*> Environment::g_invokes;

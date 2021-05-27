@@ -347,6 +347,8 @@ private:
 
     size_t liveoldspace;
 
+    xxx; //add globals buffer + mask -- then add make enternal, we can call this after const eval and then detach buffer from GC
+
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
     size_t promotedbytes;
