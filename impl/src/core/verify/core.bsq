@@ -7,7 +7,7 @@
 namespace NSCore;
 
 //<summary>Special type which all values are instances of.</summary>
-concept Any {
+mixed concept Any {
     method is<T>(): Bool # special_method
     method as<T>(): T # special_method
 
@@ -30,25 +30,25 @@ concept Any {
 }
 
 //<summary>Special type for representing all non-none values.</summary>
-concept Some provides Any {
+mixed concept Some provides Any {
 }
 
 //<summary>Special type for indicating a value can be used as a key in a collection.</summary>
-concept KeyType provides Any {
+mixed concept KeyType provides Any {
     function equal<T grounded KeyType>(a: T, b: T): Bool # special_method
     function less<T grounded KeyType>(a: T, b: T): Bool # special_method
 }
 
 //<summary>Type for indicating that a datatype is Plain-Old-Data.</summary>
-concept PODType provides APIType {
+mixed concept PODType provides APIType {
 }
 
 //<summary>Type to unify Buffers and APITypes at top level for checking</summary>
-concept APIValue provides Any {
+mixed concept APIValue provides Any {
 }
 
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
-concept APIType provides APIValue {
+mixed concept APIType provides APIValue {
 }
 
 //<summary>Type for representing the none-value.</summary>
@@ -393,10 +393,10 @@ struct concept Result<T, E=Any> provides Some {
 }
 
 //<summary>All actual entities/concepts implicitly provide this concept.</summary>
-concept Object provides Some {
+mixed concept Object provides Some {
 }
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>
-concept Expandoable<T> provides Object {
+mixed concept Expandoable<T> provides Object {
     method expand<U>(): List<U> # special_method
 }

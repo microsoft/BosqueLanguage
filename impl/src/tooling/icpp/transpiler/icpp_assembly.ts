@@ -18,16 +18,6 @@ type SourceInfo = {
 
 const ICPP_WORD_SIZE = 8;
 
-const UNIVERSAL_CONCEPTS = [
-    "NSCore::Any",
-    "NSCore::Some",
-    "NSCore::KeyType",
-    "NSCore::PODType",
-    "NSCore::APIValue",
-    "NSCore::APIType",
-    "NSCore::Object"
-];
-
 const UNIVERSAL_SIZE = 48;
 const UNIVERSAL_MASK = "511111";
 

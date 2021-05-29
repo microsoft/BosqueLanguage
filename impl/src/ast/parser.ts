@@ -172,6 +172,7 @@ const AttributeStrings = [
     "derived",
     "lazy",
     "memoized",
+    "mixed",
     "interned",
     "inline",
     "prefix",

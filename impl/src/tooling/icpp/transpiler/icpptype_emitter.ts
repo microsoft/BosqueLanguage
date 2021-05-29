@@ -3,13 +3,15 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 
-import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion, UNIVERSAL_CONCEPTS, UNIVERSAL_SIZE, UNIVERSAL_MASK } from "./icpp_assembly";
+import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion } from "./icpp_assembly";
 
 import { ArgumentTag, Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar, NONE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
+
+import * as assert from "assert";
 
 class ICPPTypeEmitter {
     readonly topts: TranspilerOptions;
@@ -247,12 +249,6 @@ class ICPPTypeEmitter {
         else if (this.isType(tt, "NSCore::Regex")) {
             iidata = new ICPPTypeRegister(tt.trkey, "BSQRegex", 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"); 
         }
-        else  if (UNIVERSAL_CONCEPTS.includes(tt.trkey)) {
-            iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, UNIVERSAL_SIZE, UNIVERSAL_MASK);
-        }
-        else if (this.isUniqueEphemeralType(tt)) {
-            iidata = this.getICPPTypeForEphemeralList(tt.options[0] as MIREphemeralListType);
-        }
         else if (tt.options.length === 1) {
             const topt = tt.options[0];
             if (topt instanceof MIRTupleType) {
@@ -261,22 +257,17 @@ class ICPPTypeEmitter {
             else if (topt instanceof MIRRecordType) {
                 iidata = this.getICPPTypeForRecord(topt);
             }
+            else if(topt instanceof MIREphemeralListType) {
+                iidata = this.getICPPTypeForEphemeralList(topt);
+            }
+            else if(topt instanceof MIREntityType) {
+                iidata = this.getICPPTypeForEntity(this.assembly.entityDecls.get(topt.trkey) as MIREntityTypeDecl);
+            }
             else {
-                if(topt instanceof MIREntityType) {
-                    iidata = this.getICPPTypeForEntity(this.assembly.entityDecls.get(topt.trkey) as MIREntityTypeDecl);
-                }
-                else {
-                    const copt = topt as MIRConceptType;
-                    if(copt.ckeys.some((cpt) => UNIVERSAL_CONCEPTS.includes(cpt))) {
-                        iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, UNIVERSAL_SIZE, UNIVERSAL_MASK);
-                    }
-                    else {
-                        const allsubt = [...this.assembly.entityDecls].filter((edcl) => this.assembly.subtypeOf(this.getMIRType(edcl[1].tkey), tt));
-                        const iccpopts = allsubt.map((edcel) => this.getICPPTypeData(this.getMIRType(edcel[1].tkey)));
+                const allsubt = [...this.assembly.entityDecls].filter((edcl) => this.assembly.subtypeOf(this.getMIRType(edcl[1].tkey), tt));
+                const iccpopts = allsubt.map((edcel) => this.getICPPTypeData(this.getMIRType(edcel[1].tkey)));
 
-                        iidata = this.computeICCPTypeForUnion(tt, iccpopts);
-                    }
-                }
+                iidata = this.computeICCPTypeForUnion(tt, iccpopts);
             }
         }
         else {
@@ -289,7 +280,7 @@ class ICPPTypeEmitter {
         return this.typeDataMap.get(tt.trkey) as ICPPType;
     }
 
-    private coerceFromAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
+    private coerceIntoUnion(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
         if(this.isType(from, "NSCore::None")) {
             return ICPPOpEmitter.genNoneInitUnionOp(sinfo, trgt, into.trkey);
         }
@@ -305,12 +296,19 @@ class ICPPTypeEmitter {
         }
     }
 
-    private coerceIntoAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
+    private coerceFromUnion(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
         if(this.isType(into, "NSCore::None")) {
             return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, { kind: ArgumentTag.Const, location: NONE_VALUE_POSITION }, sguard);
         }
         else {
-            return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            const icppfrom = this.getICPPTypeData(from);
+
+            if(icppfrom.tkind === ICPPTypeKind.UnionRef) {
+                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, arg, sguard);
+            }
+            else {
+                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            }
         }
     }
 
@@ -322,28 +320,22 @@ class ICPPTypeEmitter {
         const icppfrom = this.getICPPTypeData(from);
         const icppinto = this.getICPPTypeData(into);
 
-        xxx;
         if(icppinto.tkind === icppfrom.tkind) {
             return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
         }
         else if(icppinto.tkind === ICPPTypeKind.UnionInline) {
-            return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            return this.coerceIntoUnion(sinfo, arg, from, trgt, into, sguard);
+        }
+        else if(icppfrom.tkind === ICPPTypeKind.UnionInline) {
+            return this.coerceFromUnion(sinfo, arg, from, trgt, into, sguard);
         }
         else if(icppinto.tkind === ICPPTypeKind.UnionRef) {
-            if(icppfrom.tkind === ICPPTypeKind.UnionInline) {
-                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
-            }
+            return this.coerceIntoUnion(sinfo, arg, from, trgt, into, sguard);
         }
         else {
-            if(icppfrom.tkind === ICPPTypeKind.UnionInline) {
-                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
-            }
+            assert(icppfrom.tkind === ICPPTypeKind.UnionRef);
+
+            return this.coerceFromUnion(sinfo, arg, from, trgt, into, sguard);
         }
     }
 }

@@ -8,7 +8,7 @@ import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { MIRAbort, MIRAllTrue, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, ICPPGuard, ICPPStatementGuard, ICPPOp, ICPPOpEmitter, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions } from "./icpp_assembly";
+import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions } from "./icpp_assembly";
 
 import * as assert from "assert";
 import { BSQRegex } from "../../../ast/bsqregex";
@@ -26,6 +26,7 @@ class ICPPBodyEmitter {
     currentFile: string = "[No File]";
     currentRType: MIRType;
 
+    private argsMap: Map<string, number> = new Map<string, number>();
     private stackMap: Map<string, number> = new Map<string, number>();
     private stacksize: number = 0;
     private stacklayout: {offset: number, occupied: boolean, storage: ICPPType}[] = [];
@@ -51,6 +52,38 @@ class ICPPBodyEmitter {
     requiredVirtualFunctionInvokes: { inv: string, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }[] = [];
     requiredVirtualOperatorInvokes: { inv: string, argflowtype: MIRType, opname: MIRVirtualMethodKey, args: MIRResolvedTypeKey[], resulttype: MIRType }[] = [];
 
+    private getStackInfoForArgVar(vname: string): Argument {
+        if(this.argsMap.has(vname)) {
+            return { kind: ArgumentTag.Argument, location: this.stackMap.get(vname) as number};
+        }
+        else {
+            return { kind: ArgumentTag.Local, location: this.stackMap.get(vname) as number };
+        }
+    }
+
+    private getStackInfoForTargetVar(vname: string, oftype: ICPPType): TargetVar {
+        let openidx = this.stacklayout.findIndex((opt) => !opt.occupied && opt.storage.tkey === oftype.tkey);
+        if(openidx === -1) {
+            this.stacklayout.push({offset: this.stacksize, occupied: true, storage: oftype});
+            this.stacksize = this.stacksize + oftype.allocinfo.inlinedatasize;
+
+            openidx = this.stacksize - 1;
+        }
+
+        const spos = this.stacklayout[openidx];
+        this.stackMap.set(vname, spos.offset);
+        spos.occupied = true;
+
+        return {offset: spos.offset};
+    }
+
+    private releaseStackSlotForVar(vname: string) {
+        const offset = this.stackMap.get(vname) as number;
+
+        const spos = this.stacklayout.find((opt) => opt.offset === offset) as {offset: number, occupied: boolean, storage: ICPPType};
+        spos.occupied = false;
+    }
+
     private generateScratchVarInfo(oftype: ICPPType): [TargetVar, Argument] {
         let openidx = this.stacklayout.findIndex((opt) => !opt.occupied && opt.storage.tkey === oftype.tkey);
         if(openidx === -1) {
@@ -60,8 +93,9 @@ class ICPPBodyEmitter {
             openidx = this.stacksize - 1;
         }
 
-        const spos =  this.stacklayout[openidx];
+        const spos = this.stacklayout[openidx];
         spos.occupied = true;
+
         return [{offset: spos.offset}, {kind: ArgumentTag.Local, location: spos.offset}];
     }
 
