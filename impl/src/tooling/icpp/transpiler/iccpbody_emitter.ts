@@ -55,7 +55,7 @@ class ICPPBodyEmitter {
         let openidx = this.stacklayout.findIndex((opt) => !opt.occupied && opt.storage.tkey === oftype.tkey);
         if(openidx === -1) {
             this.stacklayout.push({offset: this.stacksize, occupied: true, storage: oftype});
-            this.stacksize = this.stacksize + oftype.allocinfo.slfullsize;
+            this.stacksize = this.stacksize + oftype.allocinfo.inlinedatasize;
 
             openidx = this.stacksize - 1;
         }

@@ -191,6 +191,7 @@ private:
     void evalDebugOp(const DebugOp* op);
 
     void evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op);
+    void evalNoneInitUnionOp(const NoneInitUnionOp* op);
 
     template <bool isGuarded>
     void evalDirectAssignOp(const DirectAssignOp* op);
@@ -204,11 +205,11 @@ private:
     void evalLoadConstOp(const LoadConstOp* op);
 
     void processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processTupleVirtualLoadAndStore(StorageLocationPtr src, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype);
+    void processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype);
     void processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processRecordVirtualLoadAndStore(StorageLocationPtr src, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype);
+    void processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype);
     void processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype);
-    void processEntityVirtualLoadAndStore(StorageLocationPtr src, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype);
+    void processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype);
 
     void processGuardVarStore(const BSQGuard& gv, BSQBool f);
 

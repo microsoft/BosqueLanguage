@@ -10,6 +10,30 @@
 #include <vector>
 #include <map>
 
+////////////////////////////////
+//Storage location ops
+
+#define SLPTR_LOAD_CONTENTS_AS(T, L) (*((T*)L))
+#define SLPTR_STORE_CONTENTS_AS(T, L, V) *((T*)L) = V
+
+#define SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(L) (*((void**)L))
+#define SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(L, V) *((void**)L) = V
+
+#define SLPTR_LOAD_UNION_INLINE_TYPE(L) (*((const BSQType**)L))
+#define SLPTR_LOAD_UNION_INLINE_TYPE_AS(T, L) (*((const BSQType**)L))
+#define SLPTR_LOAD_UNION_INLINE_DATAPTR(L) ((void*)(((uint8_t*)L) + sizeof(const BSQType*)))
+
+#define SLPTR_STORE_UNION_INLINE_TYPE(T, L) *((const BSQType**)L) = T
+
+#define SLPTR_LOAD_HEAP_TYPE(L) ((*((void**)L) == nullptr) ? BSQType::g_typeNone : GET_TYPE_META_DATA(*((void**)L)))
+#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)GET_TYPE_META_DATA(*((void**)L)))
+#define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
+
+#define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
+
+#define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
+#define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
+
 ////
 //Standard memory function pointer definitions
 void** gcDecOperator_registerImpl(const BSQType* btype, void** data);
@@ -70,6 +94,29 @@ public:
     static const BSQType** g_typetable;
     static std::map<BSQRecordPropertyID, std::string> g_propertymap;
     static std::map<BSQFieldID, std::string> g_fieldmap;
+
+    //Well known types
+    static const BSQType* g_typeNone;
+    static const BSQType* g_typeBool;
+    static const BSQType* g_typeNat;
+    static const BSQType* g_typeInt;
+    static const BSQType* g_typeBigNat;
+    static const BSQType* g_typeBigInt;
+    static const BSQType* g_typeFloat;
+    static const BSQType* g_typeDecimal;
+    static const BSQType* g_typeRational;
+
+    static const BSQType* g_typeStringKRepr8;
+    static const BSQType* g_typeStringKRepr16;
+    static const BSQType* g_typeStringKRepr32;
+    static const BSQType* g_typeStringKRepr64;
+    static const BSQType* g_typeStringKRepr128;
+    static const BSQType* g_typeStringKRepr256;
+
+    static const BSQType* g_typeStringConcatRepr;
+    static const BSQType* g_typeStringSliceRepr;
+
+    static const BSQType* g_typeString;
 
     const BSQTypeID tid;
     const BSQTypeKind tkind;
@@ -415,11 +462,28 @@ class BSQUnionType : public BSQType
 public:
     const std::vector<BSQTypeID> subtypes;
 
-    BSQUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, DisplayFP fpDisplay, std::string name, std::vector<BSQTypeID> subtypes): 
+     BSQUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQTypeID> subtypes): 
         BSQType(tid, tkind, allocinfo, {0}, {}, {0}, unionDisplay_impl, name), subtypes(subtypes)
     {;}
 
     ~BSQUnionType() {;}
+
+    virtual bool isInline() const;
+};
+
+class BSQUnionInlineType : public BSQUnionType
+{
+public:
+    BSQUnionInlineType(BSQTypeID tid, uint64_t datasize, RefMask imask, DisplayFP fpDisplay, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQUnionType(tid, BSQTypeKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, name, subtypes)
+    {;}
+
+    ~BSQUnionInlineType() {;}
+
+    bool isInline() const final
+    {
+        return true;
+    }
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
@@ -445,6 +509,48 @@ public:
     void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         assert(false);
+    }
+};
+
+class BSQUnionRefType : public BSQUnionType
+{
+public:
+    BSQUnionRefType(BSQTypeID tid, RefMask imask, DisplayFP fpDisplay, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQUnionType(tid, BSQTypeKind::UnionRef, { sizeof(void*), sizeof(void*), sizeof(void*), nullptr, "2" }, name, subtypes)
+    {;}
+
+    ~BSQUnionRefType() {;}
+
+    bool isInline() const final
+    {
+        return false;
+    }
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+
+    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
+    }
+
+    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
     }
 };
 

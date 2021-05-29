@@ -24,6 +24,7 @@ enum class OpCodeTag
     AssertOp,
     DebugOp,
     LoadUnintVariableValueOp,
+    NoneInitUnionOp,
 
     DirectAssignOp,
     BoxOp,
@@ -261,6 +262,16 @@ public:
     virtual ~LoadUnintVariableValueOp() {;}
 };
 
+class NoneInitUnionOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQUnionType* oftype;
+
+    NoneInitUnionOp(SourceInfo sinfo, TargetVar trgt, BSQUnionType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
+    virtual ~NoneInitUnionOp() {;}
+};
+
 class DirectAssignOp : public InterpOp
 {
 public:
@@ -269,7 +280,7 @@ public:
     const Argument arg;
     const BSQStatementGuard sguard;
 
-    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, uint32_t size, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), size(size), sguard(sguard) {;}
+    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, uint32_t size, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
     virtual ~DirectAssignOp() {;}
 };
 
@@ -315,10 +326,10 @@ class TupleHasIndexOp : public InterpOp
 public:
     const TargetVar trgt;
     const Argument arg;
-    const BSQType* layouttype;
+    const BSQUnionType* layouttype;
     const BSQTupleIndex idx;
 
-    TupleHasIndexOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
+    TupleHasIndexOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
     virtual ~TupleHasIndexOp() {;}
 };
 
@@ -327,10 +338,10 @@ class RecordHasPropertyOp : public InterpOp
 public:
     const TargetVar trgt;
     const Argument arg;
-    const BSQType* layouttype;
+    const BSQUnionType* layouttype;
     const BSQRecordPropertyID propId;
 
-    RecordHasPropertyOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::RecordHasPropertyOp), trgt(trgt), arg(arg), layouttype(layouttype), propId(propId) {;}
+    RecordHasPropertyOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::RecordHasPropertyOp), trgt(trgt), arg(arg), layouttype(layouttype), propId(propId) {;}
     virtual ~RecordHasPropertyOp() {;}
 };
 

@@ -125,6 +125,20 @@ void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
     op->oftype->clearValue(this->evalTargetVar(op->trgt));
 }
 
+void Evaluator::evalNoneInitUnionOp(const NoneInitUnionOp* op)
+{
+    auto tl = this->evalTargetVar(op->trgt);
+    if(op->oftype->isInline())
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(BSQType::g_typeNone, tl);
+        SLPTR_STORE_CONTENTS_AS(BSQNone, SLPTR_LOAD_UNION_INLINE_DATAPTR(tl), BSQNoneValue);
+    }
+    else
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tl, BSQNoneHeapValue);
+    }
+}
+
 template <>
 void Evaluator::evalDirectAssignOp<true>(const DirectAssignOp* op)
 {
@@ -180,9 +194,13 @@ void Evaluator::processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQ
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
-void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype)
 {
-    auto ttype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+    //
+    //TODO: this is where it might be nice to do some mono/polymorphic inline caching
+    //
+
+    const BSQType* ttype = srctype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(src) : SLPTR_LOAD_HEAP_TYPE(src);
     auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
     auto voffset = tinfo->idxoffsets[idx];
     this->processTupleDirectLoadAndStore(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), ttype, voffset, dst, dsttype);
@@ -193,13 +211,13 @@ void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BS
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
-void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype)
 {
     //
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching
     //
 
-    auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+    const BSQType* rtype = srctype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(src) : SLPTR_LOAD_HEAP_TYPE(src);
     auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
     auto proppos = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), propId);
     assert(proppos != rinfo->properties.cend());
@@ -215,13 +233,13 @@ void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BS
     dsttype->storeValue(this->evalTargetVar(dst), srctype->indexStorageLocationOffset(src, slotoffset));
 }
 
-void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype)
+void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype)
 {
     //
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
     //
 
-    auto etype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+    const BSQType* etype = srctype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(src) : SLPTR_LOAD_HEAP_TYPE(src);
     auto einfo = dynamic_cast<const BSQEntityInfo*>(etype);
 
     auto fldpos = std::find(einfo->fields.cbegin(), einfo->fields.cend(), fldId);
@@ -249,19 +267,26 @@ void Evaluator::processGuardVarStore(const BSQGuard& gv, BSQBool f)
 void Evaluator::evalTupleHasIndexOp(const TupleHasIndexOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    auto ttype = this->loadBSQTypeFromAbstractLocationOfType<BSQTupleType>(sl, op->layouttype);
+    const BSQType* ttype = op->layouttype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(sl) : SLPTR_LOAD_HEAP_TYPE(sl);
+    auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
     
-    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)(op->idx < ttype->maxIndex));
+    BSQBool hasidx = op->idx < tinfo->maxIndex;
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), hasidx);
 }
 
 void Evaluator::evalRecordHasPropertyOp(const RecordHasPropertyOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    auto rtype = this->loadBSQTypeFromAbstractLocationOfType<BSQRecordType>(sl, op->layouttype);
-    BSQBool hasprop = std::find(rtype->properties.cbegin(), rtype->properties.cend(), op->propId) != rtype->properties.cend();
+    const BSQType* rtype = op->layouttype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(sl) : SLPTR_LOAD_HEAP_TYPE(sl);
+    auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
 
+    BSQBool hasprop = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), op->propId) != rinfo->properties.cend();
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), hasprop);
 }
+
+
+
+
 
 void Evaluator::evalLoadTupleIndexDirectOp(const LoadTupleIndexDirectOp* op)
 {

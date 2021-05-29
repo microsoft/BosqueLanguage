@@ -3,26 +3,13 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 
-import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeHeapUnion, ICPPTypeInlineUnion, ICPPTypeKind, ICPPTypePrimitive, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions } from "./icpp_assembly";
+import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion, UNIVERSAL_CONCEPTS, UNIVERSAL_SIZE, UNIVERSAL_MASK } from "./icpp_assembly";
 
-import * as assert from "assert";
-import { Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar } from "./icpp_exp";
+import { ArgumentTag, Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar, NONE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-
-const ICPP_WORD_SIZE = 8;
-
-const UNIVERSAL_CONCEPTS = [
-    "NSCore::Any",
-    "NSCore::Some",
-    "NSCore::KeyType",
-    "NSCore::PODType",
-    "NSCore::APIValue",
-    "NSCore::APIType",
-    "NSCore::Object"
-];
 
 class ICPPTypeEmitter {
     readonly topts: TranspilerOptions;
@@ -68,10 +55,6 @@ class ICPPTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    isTypeLeafEntry(icpptype: ICPPType): boolean {
-        return icpptype.isLeafType && (icpptype.tkind === ICPPTypeKind.Register || icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.InlineUnion);
-    }
-
     registerPropertyName(name: string): number {
         if(!this.propertyNameToIDMap.has(name)) {
             this.propertyNameToIDMap.set(name, this.propertyNameToIDMap.size + 1);
@@ -100,185 +83,111 @@ class ICPPTypeEmitter {
         return this.vinvokeNameToIDMap.get(name) as number;
     }
 
-    private computeStructuralTypeLayoutInfoFromTypeList(tl: ICPPType[]): [ICPPTypeSizeInfo, boolean, number, RefMask | undefined, number[]] {
-        let sldatasize = 0;
-        let slmask = "";
-
-        let isleaf = true;
-        let refmask: string | undefined = "";
-        let ptrcount = 0;
-
-        let toffsets: number[] = [];
-        let coffset = 0;
-        tl.forEach((entry, pos) => {
-            sldatasize += entry.allocinfo.slfullsize;
-            slmask += entry.allocinfo.slmask;
-
-            isleaf = isleaf && this.isTypeLeafEntry(entry);
-            refmask += entry.allocinfo.slmask;
-            if (ptrcount !== -1) {
-                if (ptrcount === pos && (entry.tkind === ICPPTypeKind.Ref || entry.tkind === ICPPTypeKind.HeapUnion)) {
-                    ptrcount++;
-                }
-                else {
-                    ptrcount = -1;
-                }
-            }
-
-            toffsets.push(coffset);
-            coffset += entry.allocinfo.slfullsize;
-        });
-
-        if (isleaf) {
-            assert(ptrcount === 0);
-            refmask = undefined;
-        }
-        else if (ptrcount > 0) {
-            assert(!isleaf);
-            refmask = undefined;
+    private computeICCPTypeForUnion(utype: MIRType, tl: ICPPType[]): ICPPType {
+        if(tl.every((t) => (t.tkey === "NSCore::None") || t.tkind === ICPPTypeKind.Ref || t.tkind === ICPPTypeKind.UnionRef)) {
+            return new ICPPTypeRefUnion(utype.trkey, utype.trkey);
         }
         else {
-            assert(!isleaf);
-            ptrcount = 0;
-        }
-
-        return [new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize, slmask), isleaf, ptrcount, refmask, toffsets];
-    }
-
-    private computeInlineUnionTypeLayoutInfoFromTypeList(tl: ICPPType[]): [ICPPTypeSizeInfo, boolean] {
-        let sldatasize = 0;
-        let slmask = "4";
-
-        let isleaf = true;
-
-        tl.forEach((entry) => {
-            sldatasize += entry.allocinfo.slfullsize;
-            for(let i = 0; i < entry.allocinfo.slmask.length; ++i) {
-                slmask += "1";
+            let size = Math.max(...tl.map((t) => t.tkind === ICPPTypeKind.UnionInline ? t.allocinfo.inlinedatasize : (ICPP_WORD_SIZE + t.allocinfo.inlinedatasize)));
+            let mask: RefMask = "5";
+            for(let i = 0; i < (size - ICPP_WORD_SIZE) / ICPP_WORD_SIZE; ++i) {
+                mask = mask + "1";
             }
 
-            isleaf = isleaf && this.isTypeLeafEntry(entry);
-        });
-
-        return [new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICPP_WORD_SIZE, slmask), isleaf];
-    }
-
-    private computeReferenceTypeLayoutInfoFromTypeList(tl: ICPPType[]): [ICPPTypeSizeInfo, boolean, number, RefMask | undefined, number[]] {
-        let heapsize = 0;
-
-        let isleaf = true;
-        let refmask: string | undefined = "";
-        let ptrcount = 0;
-
-        let toffsets: number[] = [];
-        let coffset = 0;
-        tl.forEach((entry, pos) => {
-            heapsize += entry.allocinfo.slfullsize;
-
-            isleaf = isleaf && this.isTypeLeafEntry(entry);
-            refmask += entry.allocinfo.slmask;
-            if (ptrcount !== -1) {
-                if (ptrcount === pos && (entry.tkind === ICPPTypeKind.Ref || entry.tkind === ICPPTypeKind.HeapUnion)) {
-                    ptrcount++;
-                }
-                else {
-                    ptrcount = -1;
-                }
-            }
-
-            toffsets.push(coffset);
-            coffset += entry.allocinfo.slfullsize;
-        });
-
-        if (isleaf) {
-            assert(ptrcount === 0);
-            refmask = undefined;
+            return new ICPPTypeInlineUnion(utype.trkey, utype.trkey, size, mask);
         }
-        else if (ptrcount > 0) {
-            assert(!isleaf);
-            refmask = undefined;
-        }
-        else {
-            assert(!isleaf);
-            ptrcount = 0;
-        }
-
-        return [new ICPPTypeSizeInfo(heapsize, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"), isleaf, ptrcount, refmask, toffsets];
-    }
-
-    private computeHeapUnionTypeLayoutInfoFromTypeList(tl: ICPPType[]): ICPPTypeSizeInfo {
-        let sldatasize = 0;
-
-        tl.forEach((entry) => {
-            sldatasize += entry.allocinfo.slfullsize;
-        });
-
-        return new ICPPTypeSizeInfo(sldatasize, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2");
     }
 
     private getICPPTypeForTuple(tt: MIRTupleType): ICPPType {
-        const isuniontuple = tt.entries.some((entry) => entry.isOptional);
-        const iccpentries = tt.entries.map((entry) => this.getICPPTypeData(entry.type));
+        let idxtypes: MIRResolvedTypeKey[] = [];
+        let idxoffsets: number[] = [];
+        let size = 0;
+        let mask: RefMask = "";
 
-        if(tt.isvalue) {
-            if(isuniontuple) {
-                const [utdata, isleaf] = this.computeInlineUnionTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeInlineUnion(tt.trkey, tt.trkey, utdata, isleaf)
-            }
-            else {
-                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeTuple(tt.trkey, tt.trkey, ICPPTypeKind.Struct, udata, isleaf, rmask, ptrcount, tt.entries.length, tt.entries.map((entry) => entry.type.trkey), offsets);
-            }
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeData(entry.type));
+        for(let i = 0; i < icppentries.length; ++i) {
+            idxtypes.push(icppentries[i].tkey);
+            idxoffsets.push(size);
+            size = size + icppentries[i].allocinfo.inlinedatasize;
+            mask = mask + icppentries[i].allocinfo.inlinedmask;
+        }
+
+        if(this.isUniqueTupleType(this.getMIRType(tt.trkey))) {
+            return tt.isvalue 
+                ? ICPPTypeTuple.createByValueTuple(tt.trkey, tt.trkey, size, mask, idxtypes, idxoffsets)
+                : ICPPTypeTuple.createByRefTuple(tt.trkey, tt.trkey, size, mask, idxtypes, idxoffsets)
         }
         else {
-            if(isuniontuple) {
-                const udata = this.computeHeapUnionTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeHeapUnion(tt.trkey, tt.trkey, udata);
-            }
-            else {
-                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeReferenceTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeTuple(tt.trkey, tt.trkey, ICPPTypeKind.Ref, udata, isleaf, rmask, ptrcount, tt.entries.length, tt.entries.map((entry) => entry.type.trkey), offsets);
-            }
+            return tt.isvalue 
+                ? new ICPPTypeInlineUnion(tt.trkey, tt.trkey, ICPP_WORD_SIZE + size, "5" + mask)
+                : new ICPPTypeRefUnion(tt.trkey, tt.trkey);
         }
     }
 
     private getICPPTypeForRecord(tt: MIRRecordType): ICPPType {
-        const isunionrecord = tt.entries.some((entry) => entry.isOptional);
-        const iccpentries = tt.entries.map((entry) => this.getICPPTypeData(entry.type));
+        let propertynames: string[] = [];
+        let propertytypes: MIRResolvedTypeKey[] = [];
+        let propertyoffsets: number[] = [];
+        let size = 0;
+        let mask: RefMask = "";
 
-        if(tt.isvalue) {
-            if(isunionrecord) {
-                const [utdata, isleaf] = this.computeInlineUnionTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeInlineUnion(tt.trkey, tt.trkey, utdata, isleaf)
-            }
-            else {
-                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeRecord(tt.trkey, tt.trkey, ICPPTypeKind.Struct, udata, isleaf, rmask, ptrcount, tt.entries.map((entry) => entry.name), tt.entries.map((entry) => entry.type.trkey), offsets);
-            }
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeData(entry.type));
+        for(let i = 0; i < icppentries.length; ++i) {
+            propertynames.push(tt.entries[i].name);
+            propertytypes.push(icppentries[i].tkey);
+            propertyoffsets.push(size);
+            size = size + icppentries[i].allocinfo.inlinedatasize;
+            mask = mask + icppentries[i].allocinfo.inlinedmask;
+        }
+
+        if(this.isUniqueTupleType(this.getMIRType(tt.trkey))) {
+            return tt.isvalue 
+                ? ICPPTypeRecord.createByValueRecord(tt.trkey, tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets)
+                : ICPPTypeRecord.createByRefRecord(tt.trkey, tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets)
         }
         else {
-            if(isunionrecord) {
-                const udata = this.computeHeapUnionTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeHeapUnion(tt.trkey, tt.trkey, udata);
-            }
-            else {
-                const [udata, isleaf, ptrcount, rmask, offsets] = this.computeReferenceTypeLayoutInfoFromTypeList(iccpentries);
-                return new ICPPTypeRecord(tt.trkey, tt.trkey, ICPPTypeKind.Ref, udata, isleaf, rmask, ptrcount, tt.entries.map((entry) => entry.name), tt.entries.map((entry) => entry.type.trkey), offsets);
-            }
+            return tt.isvalue 
+                ? new ICPPTypeInlineUnion(tt.trkey, tt.trkey, ICPP_WORD_SIZE + size, "5" + mask)
+                : new ICPPTypeRefUnion(tt.trkey, tt.trkey);
         }
     }
 
-    private getICPPTypeForEntity(tt: MIREntityTypeDecl): ICPPType {
-        const iccpentries = tt.fields.map((f) => this.getICPPTypeData(this.getMIRType(f.declaredType)));
+    private getICPPTypeForEntity(tt: MIREntityTypeDecl): ICPPTypeEntity {
+        let fieldnames: MIRFieldKey[] = [];
+        let fieldtypes: MIRResolvedTypeKey[] = [];
+        let fieldoffsets: number[] = [];
+        let size = 0;
+        let mask: RefMask = "";
 
-        if (tt.attributes.includes("struct")) {
-            const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
-            return new ICPPTypeEntity(tt.tkey, tt.tkey, ICPPTypeKind.Struct, udata, isleaf, rmask, ptrcount, tt.fields.map((f) => f.fkey), tt.fields.map((f) => f.declaredType), offsets);
+        const icppentries = tt.fields.map((f) => this.getICPPTypeData(this.getMIRType(f.declaredType)));
+        for(let i = 0; i < icppentries.length; ++i) {
+            fieldnames.push(tt.fields[i].name);
+            fieldtypes.push(icppentries[i].tkey);
+            fieldoffsets.push(size);
+            size = size + icppentries[i].allocinfo.inlinedatasize;
+            mask = mask + icppentries[i].allocinfo.inlinedmask;
         }
-        else {
-            const [udata, isleaf, ptrcount, rmask, offsets] = this.computeReferenceTypeLayoutInfoFromTypeList(iccpentries);
-            return new ICPPTypeEntity(tt.tkey, tt.tkey, ICPPTypeKind.Ref, udata, isleaf, rmask, ptrcount, tt.fields.map((f) => f.fkey), tt.fields.map((f) => f.declaredType), offsets);
+
+        return tt.attributes.includes("struct") 
+            ? ICPPTypeEntity.createByValueEntity(tt.tkey, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
+            : ICPPTypeEntity.createByRefEntity(tt.tkey, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
+    }
+
+    private getICPPTypeForEphemeralList(tt: MIREphemeralListType): ICPPTypeEphemeralList {
+        let idxtypes: MIRResolvedTypeKey[] = [];
+        let idxoffsets: number[] = [];
+        let size = 0;
+        let mask: RefMask = "";
+
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeData(this.getMIRType(entry.trkey)));
+        for(let i = 0; i < icppentries.length; ++i) {
+            idxtypes.push(icppentries[i].tkey);
+            idxoffsets.push(size);
+            size = size + icppentries[i].allocinfo.inlinedatasize;
+            mask = mask + icppentries[i].allocinfo.inlinedmask;
         }
+
+        return new ICPPTypeEphemeralList(tt.trkey, tt.trkey, size, mask, idxtypes, idxoffsets);
     }
 
     getICPPTypeData(tt: MIRType): ICPPType {
@@ -288,362 +197,152 @@ class ICPPTypeEmitter {
 
         let iidata: ICPPType | undefined = undefined;
         if (this.isType(tt, "NSCore::None")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQNone", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQNone", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Bool")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBool", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQBool", ICPP_WORD_SIZE, 1, "1"); 
         }
         else if (this.isType(tt, "NSCore::Int")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQInt", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQInt", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Nat")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQNat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQNat", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBigInt", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPType(tt.trkey, "BSQBigInt", ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQBigNat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPType(tt.trkey, "BSQBigNat", ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
         }
         else if (this.isType(tt, "NSCore::Float")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQFloat", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQFloat", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Decimal")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQDecimal", ICPPTypeKind.Register, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQDecimal", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Rational")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQRational", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, "111"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQRational", 4*ICPP_WORD_SIZE, 4*ICPP_WORD_SIZE, "1111"); 
         }
         else if (this.isType(tt, "NSCore::StringPos")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQStringIterator", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, "31121"), false, "31121", 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQStringIterator", 5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, "31121"); 
         }
         else if (this.isType(tt, "NSCore::String")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQString", ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31"), false, undefined, 0);
+            iidata = new ICPPType(tt.trkey, "BSQString", ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31", "31"), true);
         }
         else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQByteBuffer", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(34*ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"), false, undefined, 1);
+            iidata = new ICPPType(tt.trkey, "BSQByteBuffer", ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(34*ICPP_WORD_SIZE, "2"), true)
         }
         else if(this.isType(tt, "NSCore::ISOTime")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQISOTime", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQISOTime", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if(this.isType(tt, "NSCore::LogicalTime")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQLogicalTime", ICPPTypeKind.Register, new ICPPTypeSizeInfo(ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQLogicalTime", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if(this.isType(tt, "NSCore::UUID")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQUUID", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"), true, undefined, 0); 
+            iidata = new ICPPType(tt.trkey, "BSQUUID", ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(2*ICPP_WORD_SIZE, undefined), true); 
         }
         else if(this.isType(tt, "NSCore::ContentHash")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQContentHash", ICPPTypeKind.Ref, new ICPPTypeSizeInfo(64*ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"), true, undefined, 0); 
+            iidata = new ICPPType(tt.trkey, "BSQContentHash", ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(64*ICPP_WORD_SIZE, undefined), true); 
         }
         else if (this.isType(tt, "NSCore::Regex")) {
-            iidata = new ICPPTypePrimitive(tt.trkey, "BSQRegex", ICPPTypeKind.Struct, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"), true, undefined, 0); 
+            iidata = new ICPPTypeRegister(tt.trkey, "BSQRegex", 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"); 
         }
-        else if(this.isUniqueTupleType(tt)) {
-            iidata = this.getICPPTypeForTuple(tt.options[0] as MIRTupleType);
-        }
-        else if(this.isUniqueRecordType(tt)) {
-            iidata = this.getICPPTypeForRecord(tt.options[0] as MIRRecordType);
-        }
-        else if(this.isUniqueEntityType(tt)) {
-            iidata = this.getICPPTypeForEntity(this.assembly.entityDecls.get(tt.options[0].trkey) as MIREntityTypeDecl);
+        else  if (UNIVERSAL_CONCEPTS.includes(tt.trkey)) {
+            iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, UNIVERSAL_SIZE, UNIVERSAL_MASK);
         }
         else if (this.isUniqueEphemeralType(tt)) {
-            const iccpentries = (tt.options[0] as MIREphemeralListType).entries.map((entry) => this.getICPPTypeData(entry));
-            const etypes =  (tt.options[0] as MIREphemeralListType).entries.map((entry) => entry.trkey);
-
-            const [udata, isleaf, ptrcount, rmask, offsets] = this.computeStructuralTypeLayoutInfoFromTypeList(iccpentries);
-            iidata = new ICPPTypeEphemeralList(tt.trkey, tt.trkey, ICPPTypeKind.Struct, udata, isleaf, rmask, ptrcount, etypes, offsets);
+            iidata = this.getICPPTypeForEphemeralList(tt.options[0] as MIREphemeralListType);
         }
-        else {
-            //It is a true union
-            if (tt.options.length !== 1) {
-                const utypes = tt.options.map((opt) => this.getICPPTypeData(this.getMIRType(opt.trkey)));
-
-                if (utypes.some((icpptype) => icpptype.allocinfo.heapsize === -2)) {
-                    iidata = new ICPPTypeHeapUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(-2, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
-                }
-                else {
-                    if (utypes.every((ut) => ut.tkind === ICPPTypeKind.Ref || ut.tkind === ICPPTypeKind.HeapUnion)) {
-                        iidata = new ICPPTypeHeapUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(-1, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
-                    }
-                    else {
-                        const sldatasize = Math.max(...utypes.map((ut) => ut.allocinfo.slfullsize));
-                        
-                        let slmask = "4";
-                        for(let i = 0; i < sldatasize / ICPP_WORD_SIZE; ++i) {
-                            slmask += "1";
-                        }
-                    
-                        iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICPP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
-                    }
-                }
+        else if (tt.options.length === 1) {
+            const topt = tt.options[0];
+            if (topt instanceof MIRTupleType) {
+                iidata = this.getICPPTypeForTuple(topt);
+            }
+            else if (topt instanceof MIRRecordType) {
+                iidata = this.getICPPTypeForRecord(topt);
             }
             else {
-                //if is a tuple or record with optional slots OR a concept
-                const opt = tt.options[0];
-
-                if(opt instanceof MIRTupleType) {
-                    iidata = this.getICPPTypeForTuple(opt);
-                }
-                else if(opt instanceof MIRRecordType) {
-                    iidata = this.getICPPTypeForRecord(opt);
+                if(topt instanceof MIREntityType) {
+                    iidata = this.getICPPTypeForEntity(this.assembly.entityDecls.get(topt.trkey) as MIREntityTypeDecl);
                 }
                 else {
-                    assert(opt instanceof MIRConceptType);
-                    if(UNIVERSAL_CONCEPTS.includes(opt.trkey)) {
-                        iidata = new ICPPTypeHeapUnion(opt.trkey, opt.trkey, new ICPPTypeSizeInfo(-2, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
+                    const copt = topt as MIRConceptType;
+                    if(copt.ckeys.some((cpt) => UNIVERSAL_CONCEPTS.includes(cpt))) {
+                        iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, UNIVERSAL_SIZE, UNIVERSAL_MASK);
                     }
                     else {
-                        const isref = (opt as MIRConceptType).ckeys.some((cpt) => !(this.assembly.conceptDecls.get(cpt) as MIRConceptTypeDecl).attributes.includes("struct"));
+                        const allsubt = [...this.assembly.entityDecls].filter((edcl) => this.assembly.subtypeOf(this.getMIRType(edcl[1].tkey), tt));
+                        const iccpopts = allsubt.map((edcel) => this.getICPPTypeData(this.getMIRType(edcel[1].tkey)));
 
-                        //if is ref or struct and then need to process over all 
-                        if(isref) {
-                            iidata = new ICPPTypeHeapUnion(opt.trkey, opt.trkey, new ICPPTypeSizeInfo(-1, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2"));
-                        }
-                        else {
-                            const utypes = [...this.assembly.entityDecls]
-                                .filter((edecl) => this.assembly.subtypeOf(this.getMIRType(edecl[0]), tt))
-                                .map((edecl) => this.getICPPTypeData(this.getMIRType(edecl[0])));
-                             
-                                const sldatasize = Math.max(...utypes.map((ut) => ut.allocinfo.slfullsize));
-                        
-                                let slmask = "4";
-                                for(let i = 0; i < sldatasize / ICPP_WORD_SIZE; ++i) {
-                                    slmask += "1";
-                                }
-                            
-                                iidata = new ICPPTypeInlineUnion(tt.trkey, tt.trkey, new ICPPTypeSizeInfo(sldatasize, sldatasize, sldatasize + ICPP_WORD_SIZE, slmask), utypes.every((ut) => this.isTypeLeafEntry(ut)));
-                            }
+                        iidata = this.computeICCPTypeForUnion(tt, iccpopts);
                     }
-                }   
+                }
             }
+        }
+        else {
+            const iccpopts = tt.options.map((opt) => this.getICPPTypeData(this.getMIRType(opt.trkey)));
+
+            iidata = this.computeICCPTypeForUnion(tt, iccpopts);
         }
 
         this.typeDataMap.set(tt.trkey, iidata as ICPPType);
         return this.typeDataMap.get(tt.trkey) as ICPPType;
     }
 
-    private coerceFromAtomicToInline(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
-        const icpptype = this.getICPPTypeData(from);
-        if(icpptype.tkind === ICPPTypeKind.Register) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genBoxUniqueRegisterToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
-        else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genBoxUniqueStructOrStringToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
+    private coerceFromAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
+        if(this.isType(from, "NSCore::None")) {
+            return ICPPOpEmitter.genNoneInitUnionOp(sinfo, trgt, into.trkey);
         }
         else {
-            assert(icpptype.tkind === ICPPTypeKind.Ref);
+            const icppinto = this.getICPPTypeData(into);
 
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+            if(icppinto.tkind === ICPPTypeKind.UnionRef) {
+                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, arg, sguard);
             }
             else {
-                return ICPPOpEmitter.genBoxUniqueRefToInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
+                return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
         }
     }
 
-    private coerceFromAtomicToHeap(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
-        const icpptype = this.getICPPTypeData(from);
-        if(icpptype.tkind === ICPPTypeKind.Register) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genBoxUniqueRegisterToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
-        else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genBoxUniqueStructOrStringToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
+    private coerceIntoAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
+        if(this.isType(into, "NSCore::None")) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, { kind: ArgumentTag.Const, location: NONE_VALUE_POSITION }, sguard);
         }
         else {
-            assert(icpptype.tkind === ICPPTypeKind.Ref);
-
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genBoxUniqueRefToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
+            return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
         }
     }
 
-    private coerceFromInlineToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
-        const icpptype = this.getICPPTypeData(into);
-        if(icpptype.tkind === ICPPTypeKind.Register) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genExtractUniqueRegisterFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
-        else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genExtractUniqueStructOrStringFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
-        else {
-            assert(icpptype.tkind === ICPPTypeKind.Ref);
-
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genExtractUniqueRefFromInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
+    private coerceEquivReprs(sinfo: SourceInfo, arg: Argument, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
+        return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, arg, sguard);
     }
 
-    private coerceFromHeapToAtomic(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
-        const icpptype = this.getICPPTypeData(into);
-        if(icpptype.tkind === ICPPTypeKind.Register) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genExtractUniqueRegisterFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
-        else if(icpptype.tkind === ICPPTypeKind.Struct || icpptype.tkind === ICPPTypeKind.String) {
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genExtractUniqueStructOrStringFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
-        else {
-            assert(icpptype.tkind === ICPPTypeKind.Ref);
-
-            if(sguard !== undefined) {
-                return ICPPOpEmitter.genGuardedExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-            }
-            else {
-                return ICPPOpEmitter.genExtractUniqueRefFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-            }
-        }
-    }
-
-    private coerceSameRepr(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
-        const icppinto = this.getICPPTypeData(into);
-
-        if(icppinto.tkind !== ICPPTypeKind.InlineUnion) {
-            if(icppinto.tkind === ICPPTypeKind.Register) {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genDirectAssignRegisterOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
-                }
-            }
-            else if(icppinto.tkind === ICPPTypeKind.Struct || icppinto.tkind === ICPPTypeKind.String) {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
-                }
-            }
-            else {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedDirectAssignRefOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genDirectAssignRefOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
-                }
-            }
-        }
-        else {
-            const iccpfrom = this.getICPPTypeData(from);
-            if(icppinto.allocinfo.sldatasize === iccpfrom.allocinfo.sldatasize) {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genDirectAssignValueOp(sinfo, trgt, into.trkey, arg, icppinto.allocinfo.slfullsize);
-                }
-            }
-            else if (icppinto.allocinfo.sldatasize < iccpfrom.allocinfo.sldatasize) {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genNarrowInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
-                }
-            }
-            else {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genWidenInlineOp(sinfo, trgt, into.trkey, arg, from.trkey);
-                }
-            }
-        }
-
-    }
-
-    coerce(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard?: ICPPStatementGuard): ICPPOp {
+    coerce(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
         const icppfrom = this.getICPPTypeData(from);
         const icppinto = this.getICPPTypeData(into);
 
-        if(icppfrom.tkind === icppinto.tkind) {
-            return this.coerceSameRepr(sinfo, arg, from, trgt, into, sguard);
+        xxx;
+        if(icppinto.tkind === icppfrom.tkind) {
+            return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
         }
-        else if(icppfrom.tkind !== ICPPTypeKind.InlineUnion && icppfrom.tkind !== ICPPTypeKind.HeapUnion) {
-            if(icppinto.tkind === ICPPTypeKind.InlineUnion) {
-                return this.coerceFromAtomicToInline(sinfo, arg, from, trgt, into, sguard);
+        else if(icppinto.tkind === ICPPTypeKind.UnionInline) {
+            return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+        }
+        else if(icppinto.tkind === ICPPTypeKind.UnionRef) {
+            if(icppfrom.tkind === ICPPTypeKind.UnionInline) {
+                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                assert(icppinto.tkind === ICPPTypeKind.HeapUnion);
-                return this.coerceFromAtomicToHeap(sinfo, arg, from, trgt, into, sguard);
-            }
-        }
-        else if(icppfrom.tkind === ICPPTypeKind.InlineUnion) {
-            if(icppinto.tkind === ICPPTypeKind.HeapUnion) {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genBoxInlineBoxToHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-                }
-            }
-            else {
-                return this.coerceFromInlineToAtomic(sinfo, arg, from, trgt, into, sguard);
+                return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
             }
         }
         else {
-            assert(icppfrom.tkind === ICPPTypeKind.HeapUnion);
-            
-            if(icppinto.tkind === ICPPTypeKind.InlineUnion) {
-                if(sguard !== undefined) {
-                    return ICPPOpEmitter.genGuardedExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
-                }
-                else {
-                    return ICPPOpEmitter.genExtractInlineBoxFromHeapOp(sinfo, trgt, into.trkey, arg, from.trkey);
-                }
+            if(icppfrom.tkind === ICPPTypeKind.UnionInline) {
+                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
             }
             else {
-                return this.coerceFromHeapToAtomic(sinfo, arg, from, trgt, into, sguard);
+                return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
             }
         }
     }

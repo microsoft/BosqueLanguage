@@ -19,6 +19,7 @@
 //None
 typedef uint64_t BSQNone;
 #define BSQNoneValue 0
+#define BSQNoneHeapValue nullptr
 
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
@@ -408,7 +409,7 @@ class BSQStringIteratorType : public BSQStructType
 {
 public:
     BSQStringIteratorType(): 
-        BSQStructType(BSQ_TYPE_ID_STRINGITERATOR, sizeof(BSQStringIterator), "3121", {}, EMPTY_KEY_FUNCTOR_SET, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos")
+        BSQStructType(BSQ_TYPE_ID_STRINGITERATOR, sizeof(BSQStringIterator), "31121", {}, EMPTY_KEY_FUNCTOR_SET, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos")
     {
         static_assert(sizeof(BSQStringIterator) == 40);
     }

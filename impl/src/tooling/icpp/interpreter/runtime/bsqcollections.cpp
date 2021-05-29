@@ -89,7 +89,7 @@ void* BSQListFlatKTypeAbstract::slice_impl(void* data, uint64_t nstart, uint64_t
 
     Allocator::GlobalAllocator.pushRoot(&data);
   
-    auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_listTypeMap[this->tid].slice);
+    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQListType::g_listTypeMap[this->tid].slice);
     ((BSQListSlice*)res)->lrepr = data;
     ((BSQListSlice*)res)->start = nstart;
     ((BSQListSlice*)res)->end = nend;
@@ -251,6 +251,9 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
     }
 }
 
+
+std::map<BSQTypeID, ListTypeConstructorInfo> BSQListType::g_listTypeMap;
+
 void BSQListType::initializeIteratorGivenPosition(BSQListReprIterator* iter, StorageLocationPtr sl, int64_t pos) const
 {
     BSQList l = SLPTR_LOAD_CONTENTS_AS(BSQList, sl);
@@ -313,7 +316,7 @@ BSQList BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2) const
         void* res = nullptr;
         if(l1.size + l2.size <= 16)
         {
-            res = Allocator::GlobalAllocator.allocateSafe(Environment::g_listTypeMap[this->tid].list16);
+            res = Allocator::GlobalAllocator.allocateSafe(BSQListType::g_listTypeMap[this->tid].list16);
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
 
             ((BSQListFlatK<128>*)res)->ecount = (uint32_t)(l1.size + l2.size);
@@ -338,7 +341,7 @@ BSQList BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2) const
         }
         else
         {
-            res = (BSQListConcat*)Allocator::GlobalAllocator.allocateSafe(Environment::g_listTypeMap[this->tid].concat);
+            res = (BSQListConcat*)Allocator::GlobalAllocator.allocateSafe(BSQListType::g_listTypeMap[this->tid].concat);
             ((BSQListConcat*)res)->size = l1.size + l2.size;
             ((BSQListConcat*)res)->lrepr1 = l1.repr;
             ((BSQListConcat*)res)->lrepr2 = l2.repr;
@@ -368,7 +371,7 @@ BSQList BSQListType::slice(StorageLocationPtr l, uint64_t startpos, uint64_t end
         auto dist = endpos - startpos;
         if(dist <= 16)
         {
-            res = Allocator::GlobalAllocator.allocateSafe(Environment::g_listTypeMap[this->tid].list16);
+            res = Allocator::GlobalAllocator.allocateSafe(BSQListType::g_listTypeMap[this->tid].list16);
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
 
             BSQListReprIterator iter;

@@ -11,50 +11,10 @@
 
 #include "../assembly/bsqassembly.h"
 
-struct ListTypeConstructorInfo
-{
-    BSQListType list;
-    BSQListFlatKType<4>* list4;
-    BSQListFlatKType<8>* list8;
-    BSQListFlatKType<12>* list12;
-    BSQListFlatKType<16>* list16;
-    BSQListFlatKType<24>* list24;
-    BSQListFlatKType<32>* list32;
-    BSQListFlatKType<40>* list40;
-    BSQListSliceType* slice;
-    BSQListConcatType* concat;
-};
-
 class Environment
 {
 public:
     static jmp_buf g_entrybuff;
-
-    //Well known types
-    static const BSQNoneType* g_typeNone;
-    static const BSQBoolType* g_typeBool;
-    static const BSQNatType* g_typeNat;
-    static const BSQIntType* g_typeInt;
-    static const BSQBigNatType* g_typeBigNat;
-    static const BSQBigIntType* g_typeBigInt;
-    static const BSQFloatType* g_typeFloat;
-    static const BSQDecimalType* g_typeDecimal;
-    static const BSQRationalType* g_typeRational;
-
-    //String flavors
-    static BSQStringKReprType<8>* g_typeStringKRepr8;
-    static BSQStringKReprType<16>* g_typeStringKRepr16;
-    static BSQStringKReprType<32>* g_typeStringKRepr32;
-    static BSQStringKReprType<64>* g_typeStringKRepr64;
-    static BSQStringKReprType<128>* g_typeStringKRepr128;
-    static BSQStringKReprType<256>* g_typeStringKRepr256;
-
-    static BSQStringConcatReprType* g_typeStringConcatRepr;
-    static BSQStringSliceReprType* g_typeStringSliceRepr;
-
-    static BSQStringType* g_typeString;
-
-    static std::map<BSQTypeID, ListTypeConstructorInfo> g_listTypeMap;
 
     //Constant storage locations
     static uint8_t* g_constantbuffer; 

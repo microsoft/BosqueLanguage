@@ -4,30 +4,19 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
-import { SourceInfo } from "./icpp_assembly";
+import { ICPP_WORD_SIZE, SourceInfo } from "./icpp_assembly";
 
 enum ArgumentTag
 {
     InvalidOp = 0x0,
-    ConstNone,
-    ConstTrue,
-    ConstFalse,
-    ConstNat,
-    ConstInt,
-    ConstBigNat,
-    ConstBigInt,
-    ConstRational,
-    ConstFloat,
-    ConstDecimal,
-    ConstString,
-    ConstStringOf,
-    ConstDataString,
-    ConstRegex,
+    Const,
     Local,
-    Argument,
-    GlobalConst,
-    UninterpFill
+    Argument
 }
+
+const NONE_VALUE_POSITION = 0;
+const TRUE_VALUE_POSITION = NONE_VALUE_POSITION + ICPP_WORD_SIZE;
+const FALSE_VALUE_POSITION = TRUE_VALUE_POSITION + ICPP_WORD_SIZE;
 
 enum OpCodeTag
 {
@@ -37,45 +26,11 @@ enum OpCodeTag
     AssertOp,
     DebugOp,
     LoadUnintVariableValueOp,
+    NoneInitUnionOp,
 
-    BoxUniqueRegisterToInlineOp,
-    BoxUniqueStructOrStringToInlineOp,
-    BoxUniqueRefToInlineOp,
-    BoxUniqueRegisterToHeapOp,
-    BoxUniqueStructOrStringToHeapOp,
-    BoxUniqueRefToHeapOp,
-    BoxInlineBoxToHeapOp,
-    ExtractUniqueRegisterFromInlineOp,
-    ExtractUniqueStructOrStringFromInlineOp,
-    ExtractUniqueRefFromInlineOp,
-    ExtractUniqueRegisterFromHeapOp,
-    ExtractUniqueStructOrStringFromHeapOp,
-    ExtractUniqueRefFromHeapOp,
-    ExtractInlineBoxFromHeapOp,
-    DirectAssignRegisterOp,
-    DirectAssignValueOp,
-    DirectAssignRefOp,
-    WidenInlineOp,
-    NarrowInlineOp,
-    GuardedBoxUniqueRegisterToInlineOp,
-    GuardedBoxUniqueStructOrStringToInlineOp,
-    GuardedBoxUniqueRefToInlineOp,
-    GuardedBoxUniqueRegisterToHeapOp,
-    GuardedBoxUniqueStructOrStringToHeapOp,
-    GuardedBoxUniqueRefToHeapOp,
-    GuardedBoxInlineBoxToHeapOp,
-    GuardedExtractUniqueRegisterFromInlineOp,
-    GuardedExtractUniqueStructOrStringFromInlineOp,
-    GuardedExtractUniqueRefFromInlineOp,
-    GuardedExtractUniqueRegisterFromHeapOp,
-    GuardedExtractUniqueStructOrStringFromHeapOp,
-    GuardedExtractUniqueRefFromHeapOp,
-    GuardedExtractInlineBoxFromHeapOp,
-    GuardedDirectAssignRegisterOp,
-    GuardedDirectAssignValueOp,
-    GuardedDirectAssignRefOp,
-    GuardedWidenInlineOp,
-    GuardedNarrowInlineOp,
+    DirectAssignOp,
+    BoxOp,
+    ExtractOp,
 
     LoadConstOp,
     TupleHasIndexOp,
@@ -90,6 +45,10 @@ enum OpCodeTag
     LoadRecordPropertySetGuardVirtualOp,
     LoadEntityFieldDirectOp,
     LoadEntityFieldVirtualOp,
+
+
+
+
     ProjectTupleOp,
     ProjectRecordOp,
     ProjectEntityOp,
@@ -238,6 +197,7 @@ type ICPPStatementGuard = {
     guard: ICPPGuard;
     usedefaulton: boolean;
     defaultvar: Argument;
+    enabled: boolean;
 };
 
 type ICPPOp = object;
@@ -264,156 +224,20 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.LoadUnintVariableValueOp, sinfo: sinfo, trgt: trgt, oftype: oftype};
     }
 
-    static genBoxUniqueRegisterToInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.BoxUniqueRegisterToInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
+    static genNoneInitUnionOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.NoneInitUnionOp, sinfo: sinfo, trgt: trgt, oftype: oftype};
     }
 
-    static genBoxUniqueStructOrStringToInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.BoxUniqueStructOrStringToInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-    
-    static genBoxUniqueRefToInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.BoxUniqueRefToInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
+    static genDirectAssignOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.DirectAssignOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, sguard: sguard};
     }
 
-    static genBoxUniqueRegisterToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxUniqueRegisterToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
+    static genBoxOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.BoxOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
     }
 
-    static genBoxUniqueStructOrStringToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.BoxUniqueStructOrStringToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genBoxUniqueRefToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.BoxUniqueRefToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genBoxInlineBoxToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.BoxInlineBoxToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genExtractUniqueRegisterFromInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ExtractUniqueRegisterFromInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genExtractUniqueStructOrStringFromInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ExtractUniqueStructOrStringFromInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genExtractUniqueRefFromInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ExtractUniqueRefFromInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genExtractUniqueRegisterFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ExtractUniqueRegisterFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-    
-    static genExtractUniqueStructOrStringFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ExtractUniqueStructOrStringFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genExtractUniqueRefFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ExtractUniqueRefFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genExtractInlineBoxFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ExtractInlineBoxFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genDirectAssignRegisterOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, size: number): ICPPOp {
-        return {tag: OpCodeTag.DirectAssignRegisterOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, size: size};
-    }
-
-    static genDirectAssignValueOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, size: number): ICPPOp {
-        return {tag: OpCodeTag.DirectAssignValueOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, size: size};
-    }
-
-    static genDirectAssignRefOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, size: number): ICPPOp {
-        return {tag: OpCodeTag.DirectAssignRefOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, size: size};
-    }
-
-    static genWidenInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.WidenInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-
-    static genNarrowInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.NarrowInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype};
-    }
-    
-    static genGuardedBoxUniqueRegisterToInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxUniqueRegisterToInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedBoxUniqueStructOrStringToInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxUniqueStructOrStringToInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedBoxUniqueRefToInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxUniqueRefToInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedBoxUniqueRegisterToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxUniqueRegisterToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedBoxUniqueStructOrStringToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxUniqueStructOrStringToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedBoxUniqueRefToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxUniqueRefToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedBoxInlineBoxToHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedBoxInlineBoxToHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-    
-    static genGuardedExtractUniqueRegisterFromInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedExtractUniqueRegisterFromInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-    
-    static genGuardedExtractUniqueStructOrStringFromInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedExtractUniqueStructOrStringFromInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedExtractUniqueRefFromInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedExtractUniqueRefFromInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedExtractUniqueRegisterFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedExtractUniqueRegisterFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedExtractUniqueStructOrStringFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedExtractUniqueStructOrStringFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-    
-    static genGuardedExtractUniqueRefFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedExtractUniqueRefFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedExtractInlineBoxFromHeapOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedExtractInlineBoxFromHeapOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedDirectAssignRegisterOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, size: number, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedDirectAssignRegisterOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, size: size, sguard: sguard};
-    }
-
-    static genGuardedDirectAssignValueOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, size: number, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedDirectAssignValueOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, size: size, sguard: sguard};
-    }
-
-    static genGuardedDirectAssignRefOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, size: number, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedDirectAssignRefOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, size: size, sguard: sguard};
-    }
-
-    static genGuardedWidenInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedWidenInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
-    }
-
-    static genGuardedNarrowInlineOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedNarrowInlineOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
+    static genExtractOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, fromtype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.ExtractOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
     }
 
     static genLoadConstOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, oftype: MIRResolvedTypeKey): ICPPOp {
@@ -690,6 +514,7 @@ class ICPPOpEmitter
 
 export {
     ArgumentTag, OpCodeTag, 
+    NONE_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
     Argument, TargetVar,
     ICPPGuard, ICPPStatementGuard,
     ICPPOp,

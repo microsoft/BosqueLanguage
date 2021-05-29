@@ -148,27 +148,6 @@ typedef uint64_t GC_META_DATA_WORD;
 //Generic pointer to a storage location that holds a value
 typedef void* StorageLocationPtr;
 
-#define SLPTR_LOAD_CONTENTS_AS(T, L) (*((T*)L))
-#define SLPTR_STORE_CONTENTS_AS(T, L, V) *((T*)L) = V
-
-#define SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(L) (*((void**)L))
-#define SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(L, V) *((void**)L) = V
-
-#define SLPTR_LOAD_UNION_INLINE_TYPE(L) (*((const BSQType**)L))
-#define SLPTR_LOAD_UNION_INLINE_TYPE_AS(T, L) (*((const BSQType**)L))
-#define SLPTR_LOAD_UNION_INLINE_DATAPTR(L) ((void*)(((uint8_t*)L) + sizeof(const BSQType*)))
-
-#define SLPTR_STORE_UNION_INLINE_TYPE(T, L) *((const BSQType**)L) = T
-
-#define SLPTR_LOAD_HEAP_TYPE(L) ((*((void**)L) == nullptr) GET_TYPE_META_DATA(*((void**)L))
-#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)GET_TYPE_META_DATA(*((void**)L)))
-#define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
-
-#define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
-
-#define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
-#define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
-
 typedef bool (*KeyEqualFP)(StorageLocationPtr, StorageLocationPtr);
 typedef bool (*KeyLessFP)(StorageLocationPtr, StorageLocationPtr);
 
@@ -188,7 +167,8 @@ enum class BSQTypeKind : uint32_t
     String,
     BigNum,
     Ref,
-    Union
+    UnionInline,
+    UnionRef
 };
 
 #define MAX_STRUCT_SIZE 40

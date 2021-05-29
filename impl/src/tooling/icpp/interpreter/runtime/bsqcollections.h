@@ -157,11 +157,28 @@ struct BSQList
 
 constexpr BSQList bsqemptylist = BSQList{nullptr, 0};
 
+class BSQListType;
+struct ListTypeConstructorInfo
+{
+    BSQListType* list;
+    BSQListFlatKType<4>* list4;
+    BSQListFlatKType<8>* list8;
+    BSQListFlatKType<12>* list12;
+    BSQListFlatKType<16>* list16;
+    BSQListFlatKType<24>* list24;
+    BSQListFlatKType<32>* list32;
+    BSQListFlatKType<40>* list40;
+    BSQListSliceType* slice;
+    BSQListConcatType* concat;
+};
+
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQListType : public BSQStructType
 {
 public:
+    static std::map<BSQTypeID, ListTypeConstructorInfo> g_listTypeMap;
+
     const uint64_t esize;
     const BSQType* etype;
 

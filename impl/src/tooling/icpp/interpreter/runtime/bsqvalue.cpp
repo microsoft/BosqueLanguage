@@ -8,6 +8,29 @@
 
 #include "boost/uuid/uuid_io.hpp"
 
+
+const BSQType* BSQType::g_typeNone = new BSQNoneType();
+const BSQType* BSQType::g_typeBool = new BSQBoolType();
+const BSQType* BSQType::g_typeNat = new BSQNatType();
+const BSQType* BSQType::g_typeInt = new BSQIntType();
+const BSQType* BSQType::g_typeBigNat = new BSQBigNatType();
+const BSQType* BSQType::g_typeBigInt = new BSQBigIntType();
+const BSQType* BSQType::g_typeFloat = new BSQFloatType();
+const BSQType* BSQType::g_typeDecimal = new BSQDecimalType();
+const BSQType* BSQType::g_typeRational = new BSQRationalType();
+
+const BSQType* BSQType::g_typeStringKRepr8 = new BSQStringKReprType<8>();
+const BSQType* BSQType::g_typeStringKRepr16 = new BSQStringKReprType<16>();
+const BSQType* BSQType::g_typeStringKRepr32 = new BSQStringKReprType<32>(); 
+const BSQType* BSQType::g_typeStringKRepr64 = new BSQStringKReprType<64>();
+const BSQType* BSQType::g_typeStringKRepr128 = new BSQStringKReprType<128>();
+const BSQType* BSQType::g_typeStringKRepr256 = new BSQStringKReprType<256>();
+
+const BSQType* BSQType::g_typeStringConcatRepr = new BSQStringConcatReprType();
+const BSQType* BSQType::g_typeStringSliceRepr = new BSQStringSliceReprType();
+
+const BSQType* BSQType::g_typeString = new BSQStringType();
+
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return "none";
@@ -157,7 +180,7 @@ void* BSQStringKReprTypeAbstract::slice(void* data, uint64_t nstart, uint64_t ne
 
     Allocator::GlobalAllocator.pushRoot(&data);
 
-    auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
+    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
 
     ((BSQStringSliceRepr*)res)->srepr = data;
     ((BSQStringSliceRepr*)res)->start = nstart;
@@ -182,7 +205,7 @@ void* BSQStringSliceReprType::slice(void* data, uint64_t nstart, uint64_t nend) 
 
     Allocator::GlobalAllocator.pushRoot(&data);
 
-    auto res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringSliceRepr);
+    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
 
     ((BSQStringSliceRepr*)res)->srepr = ((BSQStringSliceRepr*)data)->srepr;
     ((BSQStringSliceRepr*)res)->start = ((BSQStringSliceRepr*)data)->start + nstart;
@@ -233,7 +256,7 @@ void* BSQStringConcatReprType::slice(void* data, uint64_t nstart, uint64_t nend)
     }
     else
     {
-        res = Allocator::GlobalAllocator.allocateDynamic(Environment::g_typeStringConcatRepr);
+        res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringConcatRepr);
         Allocator::GlobalAllocator.pushRoot(&res);
 
         ((BSQStringConcatRepr*)res)->srepr1 = s1type->slice(((BSQStringConcatRepr*)data)->srepr1, nstart, s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1));
@@ -421,7 +444,7 @@ bool entityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
 
 uint8_t* BSQStringType::boxInlineString(BSQInlineString istr)
 {
-    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(Environment::g_typeStringKRepr16);
+    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr16);
     *res = (uint8_t)BSQInlineString::utf8ByteCount(istr);
     BSQ_MEM_COPY(res + 1, BSQInlineString::utf8Bytes(istr), *res);
 
@@ -541,7 +564,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
     //TODO: want to rebalance here later
     //
 
-    Allocator::GlobalAllocator.ensureSpace(std::max(sizeof(BSQStringConcatRepr), (size_t)32));
+    Allocator::GlobalAllocator.ensureSpace(std::max(sizeof(BSQStringConcatRepr), (sizeof(BSQStringKReprType<32>))));
 
     BSQString str1 = SLPTR_LOAD_CONTENTS_AS(BSQString, s1);
     BSQString str2 = SLPTR_LOAD_CONTENTS_AS(BSQString, s2);
@@ -576,7 +599,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
             {
                 assert(len1 + len2 <= 30);
 
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(Environment::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
@@ -590,7 +613,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
         {
             if(len1 + len2 < 32)
             {
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(Environment::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
@@ -617,7 +640,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
             }
             else
             {
-                auto crepr = (BSQStringConcatRepr*)Allocator::GlobalAllocator.allocateSafe(Environment::g_typeStringConcatRepr);
+                auto crepr = (BSQStringConcatRepr*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringConcatRepr);
                 crepr->size = (uint64_t)(len1 + len2);
                 crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringType::boxInlineString(str1.u_inlineString) : str1.u_data;
                 crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringType::boxInlineString(str2.u_inlineString) : str2.u_data;
@@ -636,7 +659,7 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
     //TODO: want to rebalance here later
     //
 
-    Allocator::GlobalAllocator.ensureSpace(32);
+    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQStringKReprType<32>));
 
     auto istart = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, startpos);
     auto iend = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, endpos);
@@ -668,7 +691,7 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
             }
             else if(dist < 32)
             {
-                res.u_data = Allocator::GlobalAllocator.allocateSafe(Environment::g_typeStringKRepr32);
+                res.u_data = Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(res.u_data);
                 while(iteratorLess(&istart, &iend))
                 {
