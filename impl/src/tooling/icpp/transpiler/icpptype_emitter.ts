@@ -87,7 +87,7 @@ class ICPPTypeEmitter {
 
     private computeICCPTypeForUnion(utype: MIRType, tl: ICPPType[]): ICPPType {
         if(tl.every((t) => (t.tkey === "NSCore::None") || t.tkind === ICPPTypeKind.Ref || t.tkind === ICPPTypeKind.UnionRef)) {
-            return new ICPPTypeRefUnion(utype.trkey, utype.trkey);
+            return new ICPPTypeRefUnion(utype.trkey);
         }
         else {
             let size = Math.max(...tl.map((t) => t.tkind === ICPPTypeKind.UnionInline ? t.allocinfo.inlinedatasize : (ICPP_WORD_SIZE + t.allocinfo.inlinedatasize)));
@@ -96,7 +96,7 @@ class ICPPTypeEmitter {
                 mask = mask + "1";
             }
 
-            return new ICPPTypeInlineUnion(utype.trkey, utype.trkey, size, mask);
+            return new ICPPTypeInlineUnion(utype.trkey, size, mask);
         }
     }
 
@@ -116,13 +116,13 @@ class ICPPTypeEmitter {
 
         if(this.isUniqueTupleType(this.getMIRType(tt.trkey))) {
             return tt.isvalue 
-                ? ICPPTypeTuple.createByValueTuple(tt.trkey, tt.trkey, size, mask, idxtypes, idxoffsets)
-                : ICPPTypeTuple.createByRefTuple(tt.trkey, tt.trkey, size, mask, idxtypes, idxoffsets)
+                ? ICPPTypeTuple.createByValueTuple(tt.trkey, size, mask, idxtypes, idxoffsets)
+                : ICPPTypeTuple.createByRefTuple(tt.trkey, size, mask, idxtypes, idxoffsets)
         }
         else {
             return tt.isvalue 
-                ? new ICPPTypeInlineUnion(tt.trkey, tt.trkey, ICPP_WORD_SIZE + size, "5" + mask)
-                : new ICPPTypeRefUnion(tt.trkey, tt.trkey);
+                ? new ICPPTypeInlineUnion(tt.trkey, ICPP_WORD_SIZE + size, "5" + mask)
+                : new ICPPTypeRefUnion(tt.trkey);
         }
     }
 
@@ -144,13 +144,13 @@ class ICPPTypeEmitter {
 
         if(this.isUniqueTupleType(this.getMIRType(tt.trkey))) {
             return tt.isvalue 
-                ? ICPPTypeRecord.createByValueRecord(tt.trkey, tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets)
-                : ICPPTypeRecord.createByRefRecord(tt.trkey, tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets)
+                ? ICPPTypeRecord.createByValueRecord(tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets)
+                : ICPPTypeRecord.createByRefRecord(tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets)
         }
         else {
             return tt.isvalue 
-                ? new ICPPTypeInlineUnion(tt.trkey, tt.trkey, ICPP_WORD_SIZE + size, "5" + mask)
-                : new ICPPTypeRefUnion(tt.trkey, tt.trkey);
+                ? new ICPPTypeInlineUnion(tt.trkey, ICPP_WORD_SIZE + size, "5" + mask)
+                : new ICPPTypeRefUnion(tt.trkey);
         }
     }
 
@@ -171,8 +171,8 @@ class ICPPTypeEmitter {
         }
 
         return tt.attributes.includes("struct") 
-            ? ICPPTypeEntity.createByValueEntity(tt.tkey, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
-            : ICPPTypeEntity.createByRefEntity(tt.tkey, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
+            ? ICPPTypeEntity.createByValueEntity(tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
+            : ICPPTypeEntity.createByRefEntity(tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
     }
 
     private getICPPTypeForEphemeralList(tt: MIREphemeralListType): ICPPTypeEphemeralList {
@@ -189,7 +189,7 @@ class ICPPTypeEmitter {
             mask = mask + icppentries[i].allocinfo.inlinedmask;
         }
 
-        return new ICPPTypeEphemeralList(tt.trkey, tt.trkey, size, mask, idxtypes, idxoffsets);
+        return new ICPPTypeEphemeralList(tt.trkey, size, mask, idxtypes, idxoffsets);
     }
 
     getICPPTypeData(tt: MIRType): ICPPType {
@@ -199,55 +199,55 @@ class ICPPTypeEmitter {
 
         let iidata: ICPPType | undefined = undefined;
         if (this.isType(tt, "NSCore::None")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQNone", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Bool")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQBool", ICPP_WORD_SIZE, 1, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, 1, "1"); 
         }
         else if (this.isType(tt, "NSCore::Int")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQInt", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Nat")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQNat", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            iidata = new ICPPType(tt.trkey, "BSQBigInt", ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
+            iidata = new ICPPType(tt.trkey, ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            iidata = new ICPPType(tt.trkey, "BSQBigNat", ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
+            iidata = new ICPPType(tt.trkey, ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
         }
         else if (this.isType(tt, "NSCore::Float")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQFloat", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Decimal")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQDecimal", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::Rational")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQRational", 4*ICPP_WORD_SIZE, 4*ICPP_WORD_SIZE, "1111"); 
+            iidata = new ICPPTypeRegister(tt.trkey, 4*ICPP_WORD_SIZE, 4*ICPP_WORD_SIZE, "1111"); 
         }
         else if (this.isType(tt, "NSCore::StringPos")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQStringIterator", 5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, "31121"); 
+            iidata = new ICPPTypeRegister(tt.trkey, 5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, "31121"); 
         }
         else if (this.isType(tt, "NSCore::String")) {
-            iidata = new ICPPType(tt.trkey, "BSQString", ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31", "31"), true);
+            iidata = new ICPPType(tt.trkey, ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31", "31"), true);
         }
         else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            iidata = new ICPPType(tt.trkey, "BSQByteBuffer", ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(34*ICPP_WORD_SIZE, "2"), true)
+            iidata = new ICPPType(tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(34*ICPP_WORD_SIZE, "2"), true)
         }
         else if(this.isType(tt, "NSCore::ISOTime")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQISOTime", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if(this.isType(tt, "NSCore::LogicalTime")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQLogicalTime", ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
+            iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if(this.isType(tt, "NSCore::UUID")) {
-            iidata = new ICPPType(tt.trkey, "BSQUUID", ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(2*ICPP_WORD_SIZE, undefined), true); 
+            iidata = new ICPPType(tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(2*ICPP_WORD_SIZE, undefined), true); 
         }
         else if(this.isType(tt, "NSCore::ContentHash")) {
-            iidata = new ICPPType(tt.trkey, "BSQContentHash", ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(64*ICPP_WORD_SIZE, undefined), true); 
+            iidata = new ICPPType(tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(64*ICPP_WORD_SIZE, undefined), true); 
         }
         else if (this.isType(tt, "NSCore::Regex")) {
-            iidata = new ICPPTypeRegister(tt.trkey, "BSQRegex", 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"); 
+            iidata = new ICPPTypeRegister(tt.trkey, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"); 
         }
         else if (tt.options.length === 1) {
             const topt = tt.options[0];

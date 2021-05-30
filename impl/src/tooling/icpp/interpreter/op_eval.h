@@ -202,6 +202,9 @@ private:
     template <bool isGuarded>
     void evalExtractOp(const ExtractOp* op);
 
+    template <OpCodeTag tag, typename T>
+    void evalInitValOp(const InitValOp<tag, T>* op);
+
     void evalLoadConstOp(const LoadConstOp* op);
 
     void processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype);

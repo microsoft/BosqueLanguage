@@ -30,6 +30,14 @@ enum class OpCodeTag
     BoxOp,
     ExtractOp,
 
+    InitValOpInt,
+    InitValOpNat,
+    InitValOpBigInt,
+    InitValOpBigNat,
+    InitValOpRational,
+    InitValOpFloat,
+    InitValOpDecimal,
+
     LoadConstOp,
     TupleHasIndexOp,
     RecordHasPropertyOp,
@@ -310,6 +318,18 @@ public:
     virtual ~ExtractOp() {;}
 };
 
+template <OpCodeTag tag, typename T>
+class InitValOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const T value;
+    const BSQType* oftype;
+
+    InitValOp(SourceInfo sinfo, TargetVar trgt, T value, BSQType* oftype) : InterpOp(sinfo, tag), trgt(trgt), value(value), oftype(oftype) {;}
+    virtual ~InitValOp() {;}
+};
+
 class LoadConstOp : public InterpOp
 {
 public:
@@ -491,10 +511,10 @@ public:
     const BSQEphemeralListType* trgttype;
     const Argument arg;
     const BSQType* layouttype;
-    const BSQTupleType* flowtype;
+    const BSQType* flowtype;
     const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs;
 
-    ProjectTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQTupleType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs) : InterpOp(sinfo, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
+    ProjectTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs) : InterpOp(sinfo, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
     virtual ~ProjectTupleOp() {;}
 };
 
@@ -505,10 +525,10 @@ public:
     const BSQEphemeralListType* trgttype;
     const Argument arg;
     const BSQType* layouttype;
-    const BSQRecordType* flowtype;
+    const BSQType* flowtype;
     const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props;
 
-    ProjectRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQRecordType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props) : InterpOp(sinfo, OpCodeTag::ProjectRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), props(props) {;}
+    ProjectRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props) : InterpOp(sinfo, OpCodeTag::ProjectRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), props(props) {;}
     virtual ~ProjectRecordOp() {;}
 };
 
@@ -519,10 +539,10 @@ public:
     const BSQEphemeralListType* trgttype;
     const Argument arg;
     const BSQType* layouttype;
-    const BSQEntityType* flowtype;
+    const BSQType* flowtype;
     const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields;
 
-    ProjectEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQEntityType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields) : InterpOp(sinfo, OpCodeTag::ProjectEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), fields(fields) {;}
+    ProjectEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields) : InterpOp(sinfo, OpCodeTag::ProjectEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), fields(fields) {;}
     virtual ~ProjectEntityOp() {;}
 };
     
@@ -530,13 +550,13 @@ class UpdateTupleOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQTupleType* trgttype;
+    const BSQType* trgttype;
     const Argument arg;
     const BSQType* layouttype;
-    const BSQTupleType* flowtype;
+    const BSQType* flowtype;
     const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates;
 
-    UpdateTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQTupleType* trgttype, Argument arg, const BSQType* layouttype, const BSQTupleType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    UpdateTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
     virtual ~UpdateTupleOp() {;}
 };
 
@@ -544,13 +564,13 @@ class UpdateRecordOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQRecordType* trgttype;
+    const BSQType* trgttype;
     const Argument arg;
     const BSQType* layouttype;
-    const BSQRecordType* flowtype;
+    const BSQType* flowtype;
     const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates;
 
-    UpdateRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQRecordType* trgttype, Argument arg, const BSQType* layouttype, const BSQRecordType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    UpdateRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
     virtual ~UpdateRecordOp() {;}
 };
 
@@ -558,13 +578,13 @@ class UpdateEntityOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQEntityType* trgttype;
+    const BSQType* trgttype;
     const Argument arg;
     const BSQType* layouttype;
-    const BSQEntityType* flowtype;
+    const BSQType* flowtype;
     const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates;
 
-    UpdateEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* trgttype, Argument arg, const BSQType* layouttype, const BSQEntityType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    UpdateEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
     virtual ~UpdateEntityOp() {;}
 };
 
@@ -626,10 +646,10 @@ class ConstructorTupleOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQTupleType* oftype;
+    const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQTupleType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorTupleOp() {;}
 };
 
@@ -637,10 +657,10 @@ class ConstructorRecordOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQRecordType* oftype;
+    const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQRecordType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorRecordOp() {;}
 };
 
@@ -660,9 +680,9 @@ class ConstructorPrimaryCollectionEmptyOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQEntityType* oftype;
+    const BSQType* oftype;
     
-    ConstructorPrimaryCollectionEmptyOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionEmptyOp), trgt(trgt), oftype(oftype) {;}
+    ConstructorPrimaryCollectionEmptyOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionEmptyOp), trgt(trgt), oftype(oftype) {;}
     virtual ~ConstructorPrimaryCollectionEmptyOp() {;}
 };
 
@@ -671,10 +691,10 @@ class ConstructorPrimaryCollectionSingletonsOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQEntityType* oftype;
+    const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
 };
 
@@ -683,10 +703,10 @@ class ConstructorPrimaryCollectionCopiesOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQEntityType* oftype;
+    const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionCopiesOp() {;}
 };
 
@@ -695,10 +715,10 @@ class ConstructorPrimaryCollectionMixedOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQEntityType* oftype;
+    const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQEntityType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionMixedOp() {;}
 };
 
@@ -880,9 +900,9 @@ class ReturnAssignOfConsOp : public InterpOp
 {
 public:
     const std::vector<Argument> args;
-    const BSQEntityType* oftype;
+    const BSQType* oftype;
     
-    ReturnAssignOfConsOp(SourceInfo sinfo, const std::vector<Argument>& args, const BSQEntityType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
+    ReturnAssignOfConsOp(SourceInfo sinfo, const std::vector<Argument>& args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
     virtual ~ReturnAssignOfConsOp() {;}
 };
 

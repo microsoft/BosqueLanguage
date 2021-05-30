@@ -184,6 +184,12 @@ void Evaluator::evalExtractOp<false>(const ExtractOp* op)
     op->intotype->extractFromUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
 }
 
+template <OpCodeTag tag, typename T>
+void Evaluator::evalInitValOp(const InitValOp<tag, T>* op)
+{
+    SLPTR_STORE_CONTENTS_AS(T, this->evalTargetVar(op->trgt), op->value);
+}
+
 void Evaluator::evalLoadConstOp(const LoadConstOp* op)
 {
     op->oftype->storeValue(this->evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg));

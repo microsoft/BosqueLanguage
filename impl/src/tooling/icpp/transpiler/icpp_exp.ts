@@ -32,6 +32,14 @@ enum OpCodeTag
     BoxOp,
     ExtractOp,
 
+    InitValOpInt,
+    InitValOpNat,
+    InitValOpBigInt,
+    InitValOpBigNat,
+    InitValOpRational,
+    InitValOpFloat,
+    InitValOpDecimal,
+
     LoadConstOp,
     TupleHasIndexOp,
     RecordHasPropertyOp,
@@ -204,6 +212,34 @@ type ICPPOp = object;
 
 class ICPPOpEmitter
 {
+    static genConstArgument(offset: number): Argument {
+        return { kind: ArgumentTag.Const, location: offset };
+    }
+
+    static genLocalArgument(offset: number): Argument {
+        return { kind: ArgumentTag.Local, location: offset };
+    }
+
+    static genParameterArgument(offset: number): Argument {
+        return { kind: ArgumentTag.Argument, location: offset };
+    }
+
+    static genMaskGuard(gindex: number, goffset: number): ICPPGuard {
+        return { gmaskoffset: goffset, gindex: gindex, gvaroffset: -1 };
+    }
+
+    static genVarGuard(gvaroffset: number): ICPPGuard {
+        return { gmaskoffset: -1, gindex: -1, gvaroffset: gvaroffset };
+    }
+
+    static genNoStatmentGuard(): ICPPStatementGuard {
+        return { guard: { gmaskoffset: -1, gindex: -1, gvaroffset: -1 }, usedefaulton: true, defaultvar: { kind: ArgumentTag.InvalidOp, location: 0 }, enabled: false };
+    }
+
+    static genStatmentGuard(guard: ICPPGuard, usedefaultwhen: boolean, defaultvar: Argument): ICPPStatementGuard {
+        return { guard: guard, usedefaulton: usedefaultwhen, defaultvar: defaultvar, enabled: true };
+    }
+
     static genDeadFlowOp(sinfo: SourceInfo): ICPPOp {
         return {tag: OpCodeTag.DeadFlowOp, sinfo: sinfo};
     }
@@ -240,6 +276,10 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.ExtractOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
     }
 
+    static genInitValOp(tag: OpCodeTag, sinfo: SourceInfo, trgt: TargetVar, ival: string, oftype: MIRResolvedTypeKey): ICPPOp {
+        return {tag: tag, sinfo: sinfo, trgt: trgt, ival: ival, oftype: oftype};
+    }
+
     static genLoadConstOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, oftype: MIRResolvedTypeKey): ICPPOp {
         return {tag: OpCodeTag.LoadConstOp, sinfo: sinfo, trgt: trgt, arg: arg, oftype: oftype};
     }
@@ -268,7 +308,7 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.LoadTupleIndexSetGuardVirtualOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, idx: idx, guard: guard};
     }
 
-    static genLoadRecordPropertyDirectOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, propId: number): ICPPOp {
+    static genLoadRecordPropertyDirectOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, propId: string): ICPPOp {
         return {tag: OpCodeTag.LoadRecordPropertyDirectOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, propId: propId};
     }
 
@@ -276,19 +316,19 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.LoadRecordPropertyVirtualOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, propId: propId};
     }
 
-    static genLoadRecordPropertySetGuardDirectOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, propId: number, guard: ICPPGuard): ICPPOp {
+    static genLoadRecordPropertySetGuardDirectOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, propId: string, guard: ICPPGuard): ICPPOp {
         return {tag: OpCodeTag.LoadRecordPropertySetGuardDirectOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, propId: propId, guard: guard};
     }
 
-    static genLoadRecordPropertySetGuardVirtualOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, propId: number, guard: ICPPGuard): ICPPOp {
+    static genLoadRecordPropertySetGuardVirtualOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, propId: string, guard: ICPPGuard): ICPPOp {
         return {tag: OpCodeTag.LoadRecordPropertySetGuardVirtualOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, propId: propId, guard: guard};
     }
 
-    static genLoadEntityFieldDirectOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, fieldId: number): ICPPOp {
+    static genLoadEntityFieldDirectOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, fieldId: MIRFieldKey): ICPPOp {
         return {tag: OpCodeTag.LoadEntityFieldDirectOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, fieldId: fieldId};
     }
 
-    static genLoadEntityFieldVirtualOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, fieldId: number): ICPPOp {
+    static genLoadEntityFieldVirtualOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, fieldId: MIRFieldKey): ICPPOp {
         return {tag: OpCodeTag.LoadEntityFieldVirtualOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, fieldId: fieldId};
     }
 

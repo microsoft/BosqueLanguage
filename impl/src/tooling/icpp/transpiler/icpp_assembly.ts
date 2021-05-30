@@ -17,9 +17,7 @@ type SourceInfo = {
 };
 
 const ICPP_WORD_SIZE = 8;
-
-const UNIVERSAL_SIZE = 48;
-const UNIVERSAL_MASK = "511111";
+const UNIVERSAL_SIZE = 40;
 
 enum ICPPTypeKind
 {
@@ -44,7 +42,6 @@ class ICPPTypeSizeInfo {
     readonly inlinedmask: RefMask | undefined; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must traverse full object
 
     constructor(heapsize: number, inlinedatasize: number, assigndatasize: number, heapmask: RefMask | undefined, inlinedmask: RefMask | undefined) {
-        assert(inlinedatasize < UNIVERSAL_SIZE);
         this.heapsize = heapsize;
         this.inlinedatasize = inlinedatasize;
         this.assigndatasize = assigndatasize;
@@ -66,15 +63,13 @@ class ICPPTypeSizeInfo {
 }
 
 class ICPPType {
-    readonly name: string;
     readonly tkey: MIRResolvedTypeKey;
     readonly tkind: ICPPTypeKind;
     
     readonly allocinfo: ICPPTypeSizeInfo; //memory size information
     readonly isbuiltin: boolean;
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isbuiltin: boolean) {
-        this.name = name;
+    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, isbuiltin: boolean) {
         this.tkey = tkey;
         this.tkind = tkind;
         this.allocinfo = allocinfo;
@@ -83,8 +78,9 @@ class ICPPType {
 }
 
 class ICPPTypeRegister extends ICPPType {
-    constructor(name: string, tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask) {
-        super(name, tkey, ICPPTypeKind.Register, ICPPTypeSizeInfo.createByRegisterTypeInfo(inlinedatasize, assigndatasize, inlinedmask), true);
+    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask) {
+        super(tkey, ICPPTypeKind.Register, ICPPTypeSizeInfo.createByRegisterTypeInfo(inlinedatasize, assigndatasize, inlinedmask), true);
+        assert(inlinedatasize <= UNIVERSAL_SIZE);
     }
 }
 
@@ -93,20 +89,21 @@ class ICPPTypeTuple extends ICPPType {
     readonly ttypes: MIRResolvedTypeKey[];
     readonly idxoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]) {
-        super(name, tkey, tkind, allocinfo, false);
+    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]) {
+        super(tkey, tkind, allocinfo, false);
 
         this.maxIndex = idxtypes.length;
         this.ttypes = idxtypes;
         this.idxoffsets = idxoffsets;
     }
 
-    static createByValueTuple(name: string, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTypeTuple {
-        return new ICPPTypeTuple(name, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), idxtypes, idxoffsets);
+    static createByValueTuple(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTypeTuple {
+        assert(inlinedatasize <= UNIVERSAL_SIZE);
+        return new ICPPTypeTuple(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), idxtypes, idxoffsets);
     }
 
-    static createByRefTuple(name: string, tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTypeTuple {
-        return new ICPPTypeTuple(name, tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), idxtypes, idxoffsets);
+    static createByRefTuple(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTypeTuple {
+        return new ICPPTypeTuple(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), idxtypes, idxoffsets);
     }
 }
 
@@ -115,20 +112,21 @@ class ICPPTypeRecord extends ICPPType {
     readonly propertytypes: MIRResolvedTypeKey[];
     readonly propertyoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]) {
-        super(name, tkey, tkind, allocinfo, false);
+    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]) {
+        super(tkey, tkind, allocinfo, false);
 
         this.propertynames = propertynames;
         this.propertytypes = propertytypes;
         this.propertyoffsets = propertyoffsets;
     }
 
-    static createByValueRecord(name: string, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPTypeRecord {
-        return new ICPPTypeRecord(name, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), propertynames, propertytypes, propertyoffsets);
+    static createByValueRecord(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPTypeRecord {
+        assert(inlinedatasize <= UNIVERSAL_SIZE);
+        return new ICPPTypeRecord(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), propertynames, propertytypes, propertyoffsets);
     }
 
-    static createByRefRecord(name: string, tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPTypeRecord {
-        return new ICPPTypeRecord(name, tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets);
+    static createByRefRecord(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPTypeRecord {
+        return new ICPPTypeRecord(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets);
     }
 }
 
@@ -137,20 +135,21 @@ class ICPPTypeEntity extends ICPPType {
     readonly fieldtypes: MIRResolvedTypeKey[];
     readonly fieldoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]) {
-        super(name, tkey, tkind, allocinfo, false);
+    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]) {
+        super(tkey, tkind, allocinfo, false);
 
         this.fieldnames = fieldnames;
         this.fieldtypes = fieldtypes;
         this.fieldoffsets = fieldoffsets;
     }
 
-    static createByValueEntity(name: string, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPTypeEntity {
-        return new ICPPTypeEntity(name, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), fieldnames, fieldtypes, fieldoffsets);
+    static createByValueEntity(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPTypeEntity {
+        assert(inlinedatasize <= UNIVERSAL_SIZE);
+        return new ICPPTypeEntity(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), fieldnames, fieldtypes, fieldoffsets);
     }
 
-    static createByRefEntity(name: string, tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPTypeEntity {
-        return new ICPPTypeEntity(name, tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets);
+    static createByRefEntity(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPTypeEntity {
+        return new ICPPTypeEntity(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets);
     }
 }
 
@@ -158,8 +157,8 @@ class ICPPTypeEphemeralList extends ICPPType {
     readonly etypes: MIRResolvedTypeKey[];
     readonly eoffsets: number[];
 
-    constructor(name: string, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, etypes: MIRResolvedTypeKey[], eoffsets: number[]) {
-        super(name, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), false);
+    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, etypes: MIRResolvedTypeKey[], eoffsets: number[]) {
+        super(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), false);
 
         this.etypes = etypes;
         this.eoffsets = eoffsets;
@@ -167,14 +166,14 @@ class ICPPTypeEphemeralList extends ICPPType {
 }
 
 class ICPPTypeInlineUnion extends ICPPType {
-    constructor(name: string, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask) {
-        super(name, tkey, ICPPTypeKind.UnionInline, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), false);
+    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask) {
+        super(tkey, ICPPTypeKind.UnionInline, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), false);
     }
 }
 
 class ICPPTypeRefUnion extends ICPPType {
-    constructor(name: string, tkey: MIRResolvedTypeKey) {
-        super(name, tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"), false);
+    constructor(tkey: MIRResolvedTypeKey) {
+        super( tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"), false);
     }
 }
 
@@ -189,9 +188,7 @@ class ICPPFunctionParameter {
 }
 
 class ICPPInvokeDecl {
-    xxxx;
     readonly name: string;
-    readonly iname: string;
     readonly ikey: MIRInvokeKey;
 
     readonly srcFile: string;
@@ -202,16 +199,13 @@ class ICPPInvokeDecl {
     readonly params: ICPPFunctionParameter[];
     readonly resultType: ICPPType;
 
-    readonly scalarstackBytes: number;
-    readonly refstackSlots: number;
-    readonly mixedstackBytes: number;
-    readonly mixedMask: RefMask;
+    readonly stackBytes: number;
+    readonly stackMask: RefMask;
 
     readonly maskSlots: number;
 
-    constructor(name: string, iname: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarstackBytes: number refstackSlots: number, mixedstackBytes: number, mixedMask: RefMask, maskSlots: number) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, stackBytes: number, stackMask: RefMask, maskSlots: number) {
         this.name = name;
-        this.iname = iname;
         this.ikey = ikey;
         this.srcFile = srcFile;
         this.sinfo = sinfo;
@@ -219,10 +213,8 @@ class ICPPInvokeDecl {
         this.params = params;
         this.resultType = resultType;
 
-        this.scalarstackBytes = scalarstackBytes;
-        this.refstackSlots = refstackSlots;
-        this.mixedstackBytes = mixedstackBytes;
-        this.mixedMask = mixedMask;
+        this.stackBytes = stackBytes;
+        this.stackMask = stackMask;
 
         this.maskSlots = maskSlots;
     }
@@ -233,8 +225,8 @@ class ICPPInvokeBodyDecl extends ICPPInvokeDecl
     readonly body: ICPPOp[];
     readonly argmaskSize: number;
 
-    constructor(name: string, iname: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarstackBytes: number refstackSlots: number, mixedstackBytes: number, mixedMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
-        super(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, maskSlots);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, stackBytes: number, stackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+        super(name, ikey, srcFile, sinfo, recursive, params, resultType, stackBytes, stackMask, maskSlots);
         this.body = body;
         this.argmaskSize = argmaskSize;
     }
@@ -257,8 +249,8 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl
     readonly binds: Map<string, ICPPType>;
     readonly pcodes: Map<string, ICPPPCode>;
 
-    constructor(name: string, iname: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarstackBytes: number refstackSlots: number, mixedstackBytes: number, mixedMask: RefMask, maskSlots: number, implkeyname: string, binds: Map<string, ICPPType>, pcodes: Map<string, ICPPPCode>) {
-        super(name, iname, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, refstackSlots, mixedstackBytes, mixedMask, maskSlots);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, stackBytes: number, stackMask: RefMask, maskSlots: number, implkeyname: string, binds: Map<string, ICPPType>, pcodes: Map<string, ICPPPCode>) {
+        super(name, ikey, srcFile, sinfo, recursive, params, resultType, stackBytes, stackMask, maskSlots);
         this.implkeyname = implkeyname;
         this.binds = binds;
         this.pcodes = pcodes;
@@ -266,7 +258,7 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl
 }
 
 export {
-    TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_CONCEPTS, UNIVERSAL_SIZE, UNIVERSAL_MASK,
+    TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_SIZE,
     ICPPTypeKind, ICPPTypeSizeInfo, RefMask,
     ICPPType, ICPPTypeRegister, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeInlineUnion, ICPPTypeRefUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl

@@ -143,12 +143,6 @@ public:
 
     virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
     virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
-
-    static void vcallExtractFromUnion(StorageLocationPtr src, uint8_t* into)
-    {
-        auto tt = SLPTR_LOAD_UNION_INLINE_TYPE(src);
-        tt->storeValue((StorageLocationPtr)into, src);
-    }
 };
 
 class BSQStructType : public BSQType
