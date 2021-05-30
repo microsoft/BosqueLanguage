@@ -5,7 +5,7 @@
 
 type VerifierOptions = {
     ISize: number, //bits in the size 2-64
-    BigXMode: "BV" | "Int", //are bignums handled as Int or just large BV
+    BigXMode: "BV" | "Int" | "UF", //are bignums handled as Int or just large BV
     OverflowEnabled: boolean,
     FPOpt: "Real" | "UF",
     StringOpt: "ASCII" | "UNICODE",

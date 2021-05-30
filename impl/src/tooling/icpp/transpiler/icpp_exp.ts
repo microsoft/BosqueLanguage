@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { ICPP_WORD_SIZE, SourceInfo } from "./icpp_assembly";
 
 enum ArgumentTag
@@ -360,19 +360,19 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.LoadFromEpehmeralListOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, index: index};
     }
 
-    static genInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: number, args: Argument[], optmaskoffset: number): ICPPOp {
+    static genInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRInvokeKey, args: Argument[], optmaskoffset: number): ICPPOp {
         return {tag: OpCodeTag.InvokeFixedFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset};
     }
 
-    static genGuardedInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: number, args: Argument[], optmaskoffset: number, sguard: ICPPStatementGuard): ICPPOp {
+    static genGuardedInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRInvokeKey, args: Argument[], optmaskoffset: number, sguard: ICPPStatementGuard): ICPPOp {
         return {tag: OpCodeTag.GuardedInvokeFixedFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset, sguard: sguard};
     }
 
-    static genInvokeVirtualFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: number, args: Argument[], optmaskoffset: number): ICPPOp {
+    static genInvokeVirtualFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRVirtualMethodKey, args: Argument[], optmaskoffset: number): ICPPOp {
         return {tag: OpCodeTag.InvokeVirtualFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset};
     }
 
-    static genInvokeVirtualOperatorOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: number, args: Argument[]): ICPPOp {
+    static genInvokeVirtualOperatorOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRVirtualMethodKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.InvokeVirtualOperatorOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args};
     }
 

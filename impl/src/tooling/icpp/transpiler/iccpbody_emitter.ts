@@ -33,10 +33,14 @@ class ICPPBodyEmitter {
 
     private localLiteralMap: Map<string, number> = new Map<string, number>();
     private literalMap: Map<string, number> = new Map<string, number>();
+    private literalStrings: string[] = [];
     private constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
     private constsize: number = 0;
     private constlayout: {offset: number, storage: ICPPType}[] = [];
     
+    private ops: Map<string, ICPPOp[]> = new Map<string, ICPPOp[]>();
+    private cblock: ICPPOp[];
+
     requiredProjectVirtualTupleIndex: { inv: string, argflowtype: MIRType, indecies: number[], resulttype: MIRType }[] = [];
     requiredProjectVirtualRecordProperty: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }[] = [];
     requiredProjectVirtualEntityField: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }[] = [];
@@ -340,6 +344,10 @@ class ICPPBodyEmitter {
         return SMTFunction.create(geninfo.inv, fargs, rtype, new SMTCond(ops, orelse));
     }
 
+    private generateSimpleCall(trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRInvokeKey, args: Argument[]): ICPPOp {
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(new SourceInfo(-1, -1, -1, -1), trgt, trgttype, invokeId, args, 0);
+    }
+
     private generateSubtypeCheckEntity(arg: MIRArgument, layout: MIRType, flow: MIRType, ofentity: MIRType): SMTExp {
         if(flow.options.every((opt) => (opt instanceof MIRTupleType) || (opt instanceof MIRRecordType))) {
             return new SMTConst("false");
@@ -508,13 +516,22 @@ class ICPPBodyEmitter {
                 : this.genLoadLiteralToSLPTR(OpCodeTag.InitValOpDecimal, cval.value, `"${cval.value.slice(0, cval.value.length - 1)}"`, "NSCore::Decimal");
         }
         else if (cval instanceof MIRConstantString) {
-            assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
-            
-            return new SMTConst(cval.value);
+            if(!this.localLiteralMap.has(cval.value)) {
+                this.registerSpecialLiteralValue(cval.value, "NSCore::String");
+                this.literalStrings.push(cval.value);
+            }
+            return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantTypedNumber) {
             const sctype = this.typegen.getMIRType(cval.tnkey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [this.constantToSMT(cval.value)]);
+            const icpptype = this.typegen.getICPPTypeData(sctype);
+            const etype = this.assembly.entityDecls.get(cval.tnkey) as MIREntityTypeDecl;
+
+            const [trgt, arg] = this.generateScratchVarInfo(icpptype);
+            const aarg = this.constantToICPP(cval.value);
+            this.cblock.push(this.generateSimpleCall(trgt, cval.tnkey, etype.consfunc as MIRInvokeKey, [aarg]));
+            
+            return arg;
         }
         else if (cval instanceof MIRConstantStringOf) {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");

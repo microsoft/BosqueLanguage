@@ -438,8 +438,6 @@ class SMTAssembly {
         let integral_type_alias: string[] = [
             `(define-sort BInt () (_ BitVec ${this.vopts.ISize}))`,
             `(define-sort BNat () (_ BitVec ${this.vopts.ISize}))`,
-            (this.vopts.BigXMode === "Int" ? "(define-sort BBigInt () Int)" : `(define-sort BBigInt () (_ BitVec ${2 * this.vopts.ISize}))`),
-            (this.vopts.BigXMode === "Int" ? "(define-sort BBigNat () Int)" : `(define-sort BBigNat () (_ BitVec ${2 * this.vopts.ISize}))`)
         ];
         let integral_constants: string[] = [
             `(declare-const BInt@zero BInt) (assert (= BInt@zero (_ bv0 ${this.vopts.ISize})))`,
@@ -452,19 +450,36 @@ class SMTAssembly {
             `(declare-const BNat@min BNat) (assert (= BNat@min BNat@zero))`,
             `(declare-const BNat@max BNat) (assert (= BNat@max (_ bv${this.computeBVMaxUnSigned(BigInt(this.vopts.ISize))} ${this.vopts.ISize})))`
         ];
+
         if(this.vopts.BigXMode === "Int") {
+            integral_type_alias.push("(define-sort BBigInt () Int)");
+            integral_type_alias.push("(define-sort BBigNat () Int)");
+
             integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))`);
             integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))`);
 
             integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero 0))`);
             integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one 1))`);
         }
-        else {
+        else if (this.vopts.BigXMode === "BV") {
+            integral_type_alias.push(`(define-sort BBigInt () (_ BitVec ${2 * this.vopts.ISize}))`);
+            integral_type_alias.push(`(define-sort BBigNat () (_ BitVec ${2 * this.vopts.ISize}))`);
+
             integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero (_ bv0 ${2 * this.vopts.ISize})))`);
             integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one (_ bv1 ${2 * this.vopts.ISize})))`);
 
             integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero (_ bv0 ${2 * this.vopts.ISize})))`);
             integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one (_ bv1 ${2 * this.vopts.ISize})))`);
+        }
+        else {
+            integral_type_alias.push(`(define-sort BBigInt () UBigInt)`);
+            integral_type_alias.push(`(define-sort BBigNat () UBigNat)`);
+
+            integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero (BBigIntCons_UF "0")))`);
+            integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one (BBigIntCons_UF "1")))`);
+
+            integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero (BBigNatCons_UF "0")))`);
+            integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one (BBigNatCons_UF "1")))`);
         }
 
         let float_type_alias: string[] = [];

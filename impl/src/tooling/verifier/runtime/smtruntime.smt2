@@ -72,6 +72,16 @@
 ;;
 ;; Define uninterpreted functions for various kinds
 ;;
+(declare-fun BBigIntCons_UF (String) BBigInt)
+(declare-fun BBigIntUnary_UF (String BBigInt) BBigInt)
+(declare-fun BBigIntBinary_UF (String BBigInt BBigInt) BBigInt)
+(declare-fun BBigIntBinaryPred_UF (String BBigInt BBigInt) Bool)
+
+(declare-fun BBigNatCons_UF (String) BBigNat)
+(declare-fun BBigNatUnary_UF (String BBigNat) BBigNat)
+(declare-fun BBigNatBinary_UF (String BBigNat BBigNat) BBigNat)
+(declare-fun BBigNatBinaryPred_UF (String BBigNat BBigNat) Bool)
+
 (declare-fun BFloatCons_UF (String) BFloat)
 (declare-fun BFloatUnary_UF (String BFloat) BFloat)
 (declare-fun BFloatBinary_UF (String BFloat BFloat) BFloat)

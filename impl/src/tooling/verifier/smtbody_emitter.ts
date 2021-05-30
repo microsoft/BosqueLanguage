@@ -798,7 +798,7 @@ class SMTBodyEmitter {
             if (this.vopts.BigXMode === "Int") {
                 return new SMTConst(cval.value.slice(0, cval.value.length - 1));
             }
-            else {
+            else if (this.vopts.BigXMode === "BV") {
                 if (!cval.value.startsWith("-")) {
                     return new SMTConst(`(_ bv${cval.value.slice(0, cval.value.length - 1)} ${2 * this.vopts.ISize})`);
                 }
@@ -806,13 +806,19 @@ class SMTBodyEmitter {
                     return new SMTCallSimple("bvneg", [new SMTConst(`(_ bv${cval.value.slice(1, cval.value.length - 1)} ${2 * this.vopts.ISize})`)]);
                 }
             }
+            else {
+                return new SMTCallSimple("BBitIntCons_UF", [new SMTConst("\"" + cval.value + "\"")]);
+            }
         }
         else if (cval instanceof MIRConstantBigNat) {
             if (this.vopts.BigXMode === "Int") {
                 return new SMTConst(cval.value.slice(0, cval.value.length - 1));
             }
-            else {
+            else if (this.vopts.BigXMode === "BV") {
                 return new SMTConst(`(_ bv${cval.value.slice(0, cval.value.length - 1)} ${2 * this.vopts.ISize})`);
+            }
+            else {
+                return new SMTCallSimple("BBigNatCons_UF", [new SMTConst("\"" + cval.value + "\"")]);
             }
         }
         else if (cval instanceof MIRConstantRational) {
