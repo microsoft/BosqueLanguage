@@ -25,18 +25,11 @@ enum class OpCodeTag
     DebugOp,
     LoadUnintVariableValueOp,
     NoneInitUnionOp,
+    StoreConstantMaskValueOp,
 
     DirectAssignOp,
     BoxOp,
     ExtractOp,
-
-    InitValOpInt,
-    InitValOpNat,
-    InitValOpBigInt,
-    InitValOpBigNat,
-    InitValOpRational,
-    InitValOpFloat,
-    InitValOpDecimal,
 
     LoadConstOp,
     TupleHasIndexOp,
@@ -58,10 +51,14 @@ enum class OpCodeTag
     UpdateRecordOp,
     UpdateEntityOp,
     LoadFromEpehmeralListOp,
+    MultiLoadFromEpehmeralListOp,
+    SliceEphemeralListOp,
+
     InvokeFixedFunctionOp,
     GuardedInvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
+
     ConstructorTupleOp,
     ConstructorRecordOp,
     ConstructorEphemeralListOp,
@@ -280,6 +277,17 @@ public:
     virtual ~NoneInitUnionOp() {;}
 };
 
+class StoreConstantMaskValueOp : public InterpOp
+{
+public:
+    const uint32_t gmaskoffset; 
+    const int32_t gindex;
+    const BSQBool flag;
+
+    StoreConstantMaskValueOp(SourceInfo sinfo, uint32_t gmaskoffset, int32_t gindex, BSQBool flag) : InterpOp(sinfo, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
+    virtual ~StoreConstantMaskValueOp() {;}
+};
+
 class DirectAssignOp : public InterpOp
 {
 public:
@@ -316,18 +324,6 @@ public:
 
     ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~ExtractOp() {;}
-};
-
-template <OpCodeTag tag, typename T>
-class InitValOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const T value;
-    const BSQType* oftype;
-
-    InitValOp(SourceInfo sinfo, TargetVar trgt, T value, BSQType* oftype) : InterpOp(sinfo, tag), trgt(trgt), value(value), oftype(oftype) {;}
-    virtual ~InitValOp() {;}
 };
 
 class LoadConstOp : public InterpOp
@@ -385,10 +381,10 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* layouttype;
+    const BSQUnionType* layouttype;
     const BSQTupleIndex idx;
 
-    LoadTupleIndexVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx) {;}
+    LoadTupleIndexVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx) {;}
     virtual ~LoadTupleIndexVirtualOp() {;}
 };
 
@@ -413,11 +409,11 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* layouttype;
+    const BSQUnionType* layouttype;
     const BSQTupleIndex idx;
     const BSQGuard guard;
 
-    LoadTupleIndexSetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx), guard(guard) {;}
+    LoadTupleIndexSetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx), guard(guard) {;}
     virtual ~LoadTupleIndexSetGuardVirtualOp() {;}
 };
 
@@ -441,10 +437,10 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* layouttype;
+    const BSQUnionType* layouttype;
     const BSQRecordPropertyID propId;
 
-    LoadRecordPropertyVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId) {;}
+    LoadRecordPropertyVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId) {;}
     virtual ~LoadRecordPropertyVirtualOp() {;}
 };
 
@@ -469,11 +465,11 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* layouttype;
+    const BSQUnionType* layouttype;
     const BSQRecordPropertyID propId;
     const BSQGuard guard;
 
-    LoadRecordPropertySetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId), guard(guard) {;}
+    LoadRecordPropertySetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId), guard(guard) {;}
     virtual ~LoadRecordPropertySetGuardVirtualOp() {;}
 };
 
@@ -497,10 +493,10 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const Argument arg;
-    const BSQType* layouttype;
+    const BSQUnionType* layouttype;
     const BSQFieldID fieldId;
 
-    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
+    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQUnionType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldVirtualOp() {;}
 };
 
@@ -600,6 +596,34 @@ public:
 
     LoadFromEpehmeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQEphemeralListType* argtype, uint32_t slotoffset, uint32_t index) : InterpOp(sinfo, OpCodeTag::LoadFromEpehmeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), index(index) {;}
     virtual ~LoadFromEpehmeralListOp() {;}
+};
+
+class MultiLoadFromEpehmeralListOp : public InterpOp
+{
+public:
+    const std::vector<TargetVar> trgts;
+    const std::vector<const BSQType*> trgttypes;
+    const Argument arg;
+    const BSQEphemeralListType* argtype;
+    const std::vector<uint32_t> slotoffsets;
+    const std::vector<uint32_t> indexs;
+
+    MultiLoadFromEpehmeralListOp(SourceInfo sinfo, std::vector<TargetVar> trgts, std::vector<const BSQType*> trgttypes, Argument arg, BSQEphemeralListType* argtype, std::vector<uint32_t> slotoffsets, std::vector<uint32_t> indexs) : InterpOp(sinfo, OpCodeTag::MultiLoadFromEpehmeralListOp), trgts(trgts), trgttypes(trgttypes), arg(arg), argtype(argtype), slotoffsets(slotoffsets), indexs(indexs) {;}
+    virtual ~MultiLoadFromEpehmeralListOp() {;}
+};
+
+class SliceEphemeralListOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQEphemeralListType* trgttype;
+    const Argument arg;
+    const BSQEphemeralListType* argtype;
+    const uint32_t slotoffsetend;
+    const uint32_t indexend;
+
+    SliceEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, BSQEphemeralListType* argtype, uint32_t slotoffsetend, uint32_t indexend) : InterpOp(sinfo, OpCodeTag::SliceEphemeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffsetend(slotoffsetend), indexend(indexend) {;}
+    virtual ~SliceEphemeralListOp() {;}
 };
 
 template <OpCodeTag tag, bool isGuarded>

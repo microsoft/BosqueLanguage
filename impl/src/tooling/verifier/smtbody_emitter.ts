@@ -1231,7 +1231,7 @@ class SMTBodyEmitter {
     processTupleUpdate(op: MIRTupleUpdate, continuation: SMTExp): SMTExp {
         const arglayouttype = this.typegen.getMIRType(op.arglayouttype);
         const argflowtype = this.typegen.getMIRType(op.argflowtype);
-        const resulttype = this.typegen.getMIRType(op.arglayouttype);
+        const resulttype = this.typegen.getMIRType(op.argflowtype);
 
         if(op.isvirtual) {
             const icall = this.generateUpdateVirtualTupleInvName(this.typegen.getMIRType(op.argflowtype), op.updates.map((upd) => [upd[0], upd[2]]), resulttype);
@@ -1265,7 +1265,7 @@ class SMTBodyEmitter {
     processRecordUpdate(op: MIRRecordUpdate, continuation: SMTExp): SMTExp {
         const arglayouttype = this.typegen.getMIRType(op.arglayouttype);
         const argflowtype = this.typegen.getMIRType(op.argflowtype);
-        const resulttype = this.typegen.getMIRType(op.arglayouttype);
+        const resulttype = this.typegen.getMIRType(op.argflowtype);
 
         if(op.isvirtual) {
             const icall = this.generateUpdateVirtualRecordInvName(this.typegen.getMIRType(op.argflowtype), op.updates.map((upd) => [upd[0], upd[2]]), resulttype);
@@ -1299,7 +1299,7 @@ class SMTBodyEmitter {
     processEntityUpdate(op: MIREntityUpdate, continuation: SMTExp): SMTExp {
         const arglayouttype = this.typegen.getMIRType(op.arglayouttype);
         const argflowtype = this.typegen.getMIRType(op.argflowtype);
-        const resulttype = this.typegen.getMIRType(op.arglayouttype);
+        const resulttype = this.typegen.getMIRType(op.argflowtype);
 
         if (op.isvirtual) {
             const allsafe = this.isSafeVirtualConstructorInvoke(argflowtype);
@@ -1350,10 +1350,9 @@ class SMTBodyEmitter {
 
     processLoadFromEpehmeralList(op: MIRLoadFromEpehmeralList, continuation: SMTExp): SMTExp {
         const argtype = this.typegen.getMIRType(op.argtype);
-        const resulttype = this.typegen.getMIRType(op.resulttype);
 
         const idxr = new SMTCallSimple(this.typegen.generateEphemeralListGetFunction(argtype.options[0] as MIREphemeralListType, op.idx), [this.argToSMT(op.arg)]);
-        return new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.coerce(idxr, (argtype.options[0] as MIREphemeralListType).entries[op.idx], resulttype), continuation);
+        return new SMTLet(this.varToSMTName(op.trgt).vname, idxr, continuation);
     }
 
     processMultiLoadFromEpehmeralList(op: MIRMultiLoadFromEpehmeralList, continuation: SMTExp): SMTExp {
@@ -1361,9 +1360,7 @@ class SMTBodyEmitter {
 
         const assigns = op.trgts.map((asgn) => {
             const idxr = new SMTCallSimple(this.typegen.generateEphemeralListGetFunction(eltype, asgn.pos), [this.argToSMT(op.arg)]);
-            const cexp = this.typegen.coerce(idxr, eltype.entries[asgn.pos], this.typegen.getMIRType(asgn.oftype));
-
-            return { vname: this.varToSMTName(asgn.into).vname, value: cexp };
+            return { vname: this.varToSMTName(asgn.into).vname, value: idxr };
         });
 
         return new SMTLetMulti(assigns, continuation);

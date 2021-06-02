@@ -192,6 +192,7 @@ private:
 
     void evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op);
     void evalNoneInitUnionOp(const NoneInitUnionOp* op);
+    void evalStoreConstantMaskValueOp(const StoreConstantMaskValueOp* op);
 
     template <bool isGuarded>
     void evalDirectAssignOp(const DirectAssignOp* op);
@@ -201,9 +202,6 @@ private:
 
     template <bool isGuarded>
     void evalExtractOp(const ExtractOp* op);
-
-    template <OpCodeTag tag, typename T>
-    void evalInitValOp(const InitValOp<tag, T>* op);
 
     void evalLoadConstOp(const LoadConstOp* op);
 
@@ -241,6 +239,8 @@ private:
     void evalUpdateEntityOp(const UpdateEntityOp* op);
 
     void evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op);
+    void evalMultiLoadFromEpehmeralListOp(const MultiLoadFromEpehmeralListOp* op);
+    void evalSliceEphemeralListOp(const SliceEphemeralListOp* op);
 
     template <OpCodeTag tag, bool isGuarded>
     void evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp<tag, isGuarded>* op);

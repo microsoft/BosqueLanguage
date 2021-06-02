@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
-import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
+import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion } from "./icpp_assembly";
 
@@ -18,11 +18,6 @@ class ICPPTypeEmitter {
     readonly assembly: MIRAssembly;
     
     private typeDataMap: Map<MIRResolvedTypeKey, ICPPType> = new Map<MIRResolvedTypeKey, ICPPType>();
-
-    private propertyNameToIDMap: Map<string, number> = new Map<string, number>();
-    private fieldNameToIDMap: Map<MIRFieldKey, number> = new Map<MIRFieldKey, number>();
-    private invokeNameToIDMap: Map<MIRInvokeKey, number> = new Map<MIRInvokeKey, number>();
-    private vinvokeNameToIDMap: Map<MIRVirtualMethodKey, number> = new Map<MIRVirtualMethodKey, number>();
 
     constructor(assembly: MIRAssembly, topts: TranspilerOptions, mangledNameMap?: Map<string, string>) {
         this.assembly = assembly;
@@ -55,34 +50,6 @@ class ICPPTypeEmitter {
 
     isUniqueType(tt: MIRType): boolean {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
-    }
-
-    registerPropertyName(name: string): number {
-        if(!this.propertyNameToIDMap.has(name)) {
-            this.propertyNameToIDMap.set(name, this.propertyNameToIDMap.size + 1);
-        }
-        return this.propertyNameToIDMap.get(name) as number;
-    }
-
-    registerFieldName(name: MIRFieldKey): number {
-        if(!this.fieldNameToIDMap.has(name)) {
-            this.fieldNameToIDMap.set(name, this.fieldNameToIDMap.size + 1);
-        }
-        return this.fieldNameToIDMap.get(name) as number;
-    }
-
-    registerInvokeName(name: MIRInvokeKey): number {
-        if(!this.invokeNameToIDMap.has(name)) {
-            this.invokeNameToIDMap.set(name, this.invokeNameToIDMap.size + 1);
-        }
-        return this.invokeNameToIDMap.get(name) as number;
-    }
-
-    registerVirtualInvokeName(name: string): number {
-        if(!this.vinvokeNameToIDMap.has(name)) {
-            this.vinvokeNameToIDMap.set(name, this.vinvokeNameToIDMap.size + 1);
-        }
-        return this.vinvokeNameToIDMap.get(name) as number;
     }
 
     private computeICCPTypeForUnion(utype: MIRType, tl: ICPPType[]): ICPPType {

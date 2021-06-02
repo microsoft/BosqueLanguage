@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { ICPP_WORD_SIZE, SourceInfo } from "./icpp_assembly";
+import { ICPP_WORD_SIZE, SourceInfo, UNIVERSAL_SIZE } from "./icpp_assembly";
 
 enum ArgumentTag
 {
@@ -14,7 +14,8 @@ enum ArgumentTag
     Argument
 }
 
-const NONE_VALUE_POSITION = 0;
+const EMPTY_CONST_POSITION = 0;
+const NONE_VALUE_POSITION = + UNIVERSAL_SIZE;
 const TRUE_VALUE_POSITION = NONE_VALUE_POSITION + ICPP_WORD_SIZE;
 const FALSE_VALUE_POSITION = TRUE_VALUE_POSITION + ICPP_WORD_SIZE;
 
@@ -27,18 +28,11 @@ enum OpCodeTag
     DebugOp,
     LoadUnintVariableValueOp,
     NoneInitUnionOp,
+    StoreConstantMaskValueOp,
 
     DirectAssignOp,
     BoxOp,
     ExtractOp,
-
-    InitValOpInt,
-    InitValOpNat,
-    InitValOpBigInt,
-    InitValOpBigNat,
-    InitValOpRational,
-    InitValOpFloat,
-    InitValOpDecimal,
 
     LoadConstOp,
     TupleHasIndexOp,
@@ -54,9 +48,6 @@ enum OpCodeTag
     LoadEntityFieldDirectOp,
     LoadEntityFieldVirtualOp,
 
-
-
-
     ProjectTupleOp,
     ProjectRecordOp,
     ProjectEntityOp,
@@ -64,6 +55,11 @@ enum OpCodeTag
     UpdateRecordOp,
     UpdateEntityOp,
     LoadFromEpehmeralListOp,
+    MultiLoadFromEpehmeralListOp,
+    SliceEphemeralListOp,
+
+
+
     InvokeFixedFunctionOp,
     GuardedInvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
@@ -264,6 +260,10 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.NoneInitUnionOp, sinfo: sinfo, trgt: trgt, oftype: oftype};
     }
 
+    static genStoreConstantMaskValueOp(sinfo: SourceInfo, gmaskoffset: number, gindex: number, flag: boolean): ICPPOp {
+        return {tag: OpCodeTag.StoreConstantMaskValueOp, sinfo: sinfo, gmaskoffset: gmaskoffset, gindex: gindex, flag: flag};
+    }
+
     static genDirectAssignOp(sinfo: SourceInfo, trgt: TargetVar, intotype: MIRResolvedTypeKey, arg: Argument, sguard: ICPPStatementGuard): ICPPOp {
         return {tag: OpCodeTag.DirectAssignOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, sguard: sguard};
     }
@@ -276,10 +276,6 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.ExtractOp, sinfo: sinfo, trgt: trgt, intotype: intotype, arg: arg, fromtype: fromtype, sguard: sguard};
     }
 
-    static genInitValOp(tag: OpCodeTag, sinfo: SourceInfo, trgt: TargetVar, ival: string, oftype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: tag, sinfo: sinfo, trgt: trgt, ival: ival, oftype: oftype};
-    }
-
     static genLoadConstOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, oftype: MIRResolvedTypeKey): ICPPOp {
         return {tag: OpCodeTag.LoadConstOp, sinfo: sinfo, trgt: trgt, arg: arg, oftype: oftype};
     }
@@ -288,7 +284,7 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.TupleHasIndexOp, sinfo: sinfo, trgt: trgt, arg: arg, layouttype: layouttype, idx: idx};
     }
 
-    static genRecordHasPropertyOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, layouttype: MIRResolvedTypeKey, propId: number): ICPPOp {
+    static genRecordHasPropertyOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, layouttype: MIRResolvedTypeKey, propId: string): ICPPOp {
         return {tag: OpCodeTag.RecordHasPropertyOp, sinfo: sinfo, trgt: trgt, arg: arg, layouttype: layouttype, propId: propId};
     }
 
@@ -312,7 +308,7 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.LoadRecordPropertyDirectOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, propId: propId};
     }
 
-    static genLoadRecordPropertyVirtualOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, propId: number): ICPPOp {
+    static genLoadRecordPropertyVirtualOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, propId: string): ICPPOp {
         return {tag: OpCodeTag.LoadRecordPropertyVirtualOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, propId: propId};
     }
 
@@ -336,7 +332,7 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.ProjectTupleOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, idxs: idxs};
     }
 
-    static genProjectRecordOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, props: [number, number, MIRResolvedTypeKey][]): ICPPOp {
+    static genProjectRecordOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, flowtype: MIRResolvedTypeKey, props: [string, number, MIRResolvedTypeKey][]): ICPPOp {
         return {tag: OpCodeTag.ProjectRecordOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, flowtype: flowtype, props: props};
     }
 
@@ -359,6 +355,19 @@ class ICPPOpEmitter
     static genLoadFromEpehmeralListOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffset: number, index: number): ICPPOp {
         return {tag: OpCodeTag.LoadFromEpehmeralListOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffset: slotoffset, index: index};
     }
+
+    static genMultiLoadFromEpehmeralListOp(sinfo: SourceInfo, trgts: TargetVar[], trgttypes: MIRResolvedTypeKey[], arg: Argument, layouttype: MIRResolvedTypeKey, slotoffsets: number[], indexs: number[]): ICPPOp {
+        return {tag: OpCodeTag.MultiLoadFromEpehmeralListOp, sinfo: sinfo, trgts: trgts, trgttypes: trgttypes, arg: arg, layouttype: layouttype, slotoffsets: slotoffsets, indexs: indexs};
+    }
+
+    static genSliceEphemeralListOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, arg: Argument, layouttype: MIRResolvedTypeKey, slotoffsetend: number, indexend: number): ICPPOp {
+        return {tag: OpCodeTag.SliceEphemeralListOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffsetend: slotoffsetend, indexend: indexend};
+    }
+
+
+
+
+
 
     static genInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRInvokeKey, args: Argument[], optmaskoffset: number): ICPPOp {
         return {tag: OpCodeTag.InvokeFixedFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset};
@@ -554,7 +563,7 @@ class ICPPOpEmitter
 
 export {
     ArgumentTag, OpCodeTag, 
-    NONE_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
+    EMPTY_CONST_POSITION, NONE_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
     Argument, TargetVar,
     ICPPGuard, ICPPStatementGuard,
     ICPPOp,

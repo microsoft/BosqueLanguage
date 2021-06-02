@@ -139,6 +139,12 @@ void Evaluator::evalNoneInitUnionOp(const NoneInitUnionOp* op)
     }
 }
 
+void Evaluator::evalStoreConstantMaskValueOp(const StoreConstantMaskValueOp* op)
+{
+    auto mask = this->evalMaskLocation(op->gmaskoffset);
+    mask[op->gindex] = op->flag;
+}
+
 template <>
 void Evaluator::evalDirectAssignOp<true>(const DirectAssignOp* op)
 {
@@ -184,12 +190,6 @@ void Evaluator::evalExtractOp<false>(const ExtractOp* op)
     op->intotype->extractFromUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
 }
 
-template <OpCodeTag tag, typename T>
-void Evaluator::evalInitValOp(const InitValOp<tag, T>* op)
-{
-    SLPTR_STORE_CONTENTS_AS(T, this->evalTargetVar(op->trgt), op->value);
-}
-
 void Evaluator::evalLoadConstOp(const LoadConstOp* op)
 {
     op->oftype->storeValue(this->evalTargetVar(op->trgt), Evaluator::evalConstArgument(op->arg));
@@ -206,7 +206,7 @@ void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BS
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching
     //
 
-    const BSQType* ttype = srctype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(src) : SLPTR_LOAD_HEAP_TYPE(src);
+    const BSQType* ttype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(srctype, src);
     auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
     auto voffset = tinfo->idxoffsets[idx];
     this->processTupleDirectLoadAndStore(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), ttype, voffset, dst, dsttype);
@@ -223,7 +223,7 @@ void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const B
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching
     //
 
-    const BSQType* rtype = srctype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(src) : SLPTR_LOAD_HEAP_TYPE(src);
+    const BSQType* rtype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(srctype, src);
     auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
     auto proppos = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), propId);
     assert(proppos != rinfo->properties.cend());
@@ -245,7 +245,7 @@ void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const B
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
     //
 
-    const BSQType* etype = srctype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(src) : SLPTR_LOAD_HEAP_TYPE(src);
+    const BSQType* etype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(srctype, src);
     auto einfo = dynamic_cast<const BSQEntityInfo*>(etype);
 
     auto fldpos = std::find(einfo->fields.cbegin(), einfo->fields.cend(), fldId);
@@ -273,7 +273,7 @@ void Evaluator::processGuardVarStore(const BSQGuard& gv, BSQBool f)
 void Evaluator::evalTupleHasIndexOp(const TupleHasIndexOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    const BSQType* ttype = op->layouttype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(sl) : SLPTR_LOAD_HEAP_TYPE(sl);
+    const BSQType* ttype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
     auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
     
     BSQBool hasidx = op->idx < tinfo->maxIndex;
@@ -283,16 +283,12 @@ void Evaluator::evalTupleHasIndexOp(const TupleHasIndexOp* op)
 void Evaluator::evalRecordHasPropertyOp(const RecordHasPropertyOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    const BSQType* rtype = op->layouttype->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(sl) : SLPTR_LOAD_HEAP_TYPE(sl);
+    const BSQType* rtype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
     auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
 
     BSQBool hasprop = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), op->propId) != rinfo->properties.cend();
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), hasprop);
 }
-
-
-
-
 
 void Evaluator::evalLoadTupleIndexDirectOp(const LoadTupleIndexDirectOp* op)
 {
@@ -313,10 +309,15 @@ void Evaluator::evalLoadTupleIndexSetGuardDirectOp(const LoadTupleIndexSetGuardD
 
 void Evaluator::evalLoadTupleIndexSetGuardVirtualOp(const LoadTupleIndexSetGuardVirtualOp* op)
 {
+    //
+    //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
+    //
+
     auto sl = this->evalArgument(op->arg);
-    auto argtype = this->loadBSQTypeFromAbstractLocationOfType<BSQTupleType>(sl, op->layouttype);
+    const BSQType* ttype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
+    auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
     
-    BSQBool loadsafe = op->idx < argtype->maxIndex;
+    BSQBool loadsafe = op->idx < tinfo->maxIndex;
     if(loadsafe)
     {
         this->processTupleVirtualLoadAndStore(sl, op->layouttype, op->idx, op->trgt, op->trgttype);
@@ -344,10 +345,15 @@ void Evaluator::evalLoadRecordPropertySetGuardDirectOp(const LoadRecordPropertyS
 
 void Evaluator::evalLoadRecordPropertySetGuardVirtualOp(const LoadRecordPropertySetGuardVirtualOp* op)
 {
-    auto sl = this->evalArgument(op->arg);
-    auto argtype = this->loadBSQTypeFromAbstractLocationOfType<BSQRecordType>(sl, op->layouttype);
+    //
+    //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
+    //
 
-    BSQBool loadsafe = std::find(argtype->properties.cbegin(), argtype->properties.cend(), op->propId) != argtype->properties.cend();
+    auto sl = this->evalArgument(op->arg);
+    const BSQType* rtype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
+    auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
+
+    BSQBool loadsafe = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), op->propId) != rinfo->properties.cend();
     if(loadsafe)
     {
         this->processRecordVirtualLoadAndStore(sl, op->layouttype, op->propId, op->trgt, op->trgttype);
@@ -373,13 +379,13 @@ void Evaluator::evalProjectTupleOp(const ProjectTupleOp* op)
     {
         sl = this->evalArgument(op->arg);
     }
-    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
     {
         sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
 
         sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
     }
@@ -387,8 +393,8 @@ void Evaluator::evalProjectTupleOp(const ProjectTupleOp* op)
     auto trgtl = this->evalTargetVar(op->trgt);
     for(size_t i = 0; i < op->idxs.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_INLINE(trgtl,  op->trgttype->idxoffsets[i]);
-        auto src = SLPTR_INDEX_INLINE(sl, std::get<1>(op->idxs[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(trgtl, op->trgttype->idxoffsets[i]);
+        auto src = SLPTR_INDEX_DATAPTR(sl, std::get<1>(op->idxs[i]));
 
         std::get<2>(op->idxs[i])->storeValue(dst, src);
     }
@@ -401,13 +407,13 @@ void Evaluator::evalProjectRecordOp(const ProjectRecordOp* op)
     {
         sl = this->evalArgument(op->arg);
     }
-    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
     {
         sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
         
         sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
     }
@@ -415,8 +421,8 @@ void Evaluator::evalProjectRecordOp(const ProjectRecordOp* op)
     auto trgtl = this->evalTargetVar(op->trgt);
     for(size_t i = 0; i < op->props.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_INLINE(trgtl, op->trgttype->idxoffsets[i]);
-        auto src = SLPTR_INDEX_INLINE(sl, std::get<1>(op->props[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(trgtl, op->trgttype->idxoffsets[i]);
+        auto src = SLPTR_INDEX_DATAPTR(sl, std::get<1>(op->props[i]));
 
         std::get<2>(op->props[i])->storeValue(dst, src);
     }
@@ -429,13 +435,13 @@ void Evaluator::evalProjectEntityOp(const ProjectEntityOp* op)
     {
         sl = this->evalArgument(op->arg);
     }
-    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
     {
         sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
         
         sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
     }
@@ -443,8 +449,8 @@ void Evaluator::evalProjectEntityOp(const ProjectEntityOp* op)
     auto trgtl = this->evalTargetVar(op->trgt);
     for(size_t i = 0; i < op->fields.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_INLINE(trgtl, op->trgttype->idxoffsets[i]);
-        auto src = SLPTR_INDEX_INLINE(sl, std::get<1>(op->fields[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(trgtl, op->trgttype->idxoffsets[i]);
+        auto src = SLPTR_INDEX_DATAPTR(sl, std::get<1>(op->fields[i]));
 
         std::get<2>(op->fields[i])->storeValue(dst, src);
     }
@@ -459,13 +465,13 @@ void Evaluator::evalUpdateTupleOp(const UpdateTupleOp* op)
     {
         sl = this->evalArgument(op->arg);
     }
-    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
     {
         sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
         
         sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
     }
@@ -478,14 +484,14 @@ void Evaluator::evalUpdateTupleOp(const UpdateTupleOp* op)
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype->allocinfo.heapsize, op->trgttype);
+        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
         GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_INLINE(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
 }
@@ -499,13 +505,13 @@ void Evaluator::evalUpdateRecordOp(const UpdateRecordOp* op)
     {
         sl = this->evalArgument(op->arg);
     }
-    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
     {
         sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
         
         sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
     }
@@ -518,14 +524,14 @@ void Evaluator::evalUpdateRecordOp(const UpdateRecordOp* op)
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype->allocinfo.heapsize, op->trgttype);
+        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
         GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_INLINE(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
 }
@@ -539,13 +545,13 @@ void Evaluator::evalUpdateEntityOp(const UpdateEntityOp* op)
     {
         sl = this->evalArgument(op->arg);
     }
-    else if(op->layouttype->tkind == BSQTypeKind::InlineUnion)
+    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
     {
         sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::HeapUnion);
+        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
         
         sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
     }
@@ -558,14 +564,14 @@ void Evaluator::evalUpdateEntityOp(const UpdateEntityOp* op)
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype->allocinfo.heapsize, op->trgttype);
+        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
         GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_INLINE(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
 }
@@ -573,7 +579,24 @@ void Evaluator::evalUpdateEntityOp(const UpdateEntityOp* op)
 void Evaluator::evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    op->trgttype->storeValue(this->evalTargetVar(op->trgt), op->argtype->indexStorageLocationOffset(sl, op->slotoffset));
+    op->trgttype->storeValue(this->evalTargetVar(op->trgt), SLPTR_INDEX_DATAPTR(sl, op->slotoffset));
+}
+
+void Evaluator::evalMultiLoadFromEpehmeralListOp(const MultiLoadFromEpehmeralListOp* op)
+{
+    auto sl = this->evalArgument(op->arg);
+    for(size_t i = 0; i < op->trgts.size(); ++i)
+    {
+        op->trgttypes[i]->storeValue(this->evalTargetVar(op->trgts[i]), SLPTR_INDEX_DATAPTR(sl, op->slotoffsets[i]));
+    }
+}
+
+void Evaluator::evalSliceEphemeralListOp(const SliceEphemeralListOp* op)
+{
+    auto sl = this->evalArgument(op->arg);
+    auto tl = this->evalTargetVar(op->trgt);
+
+    BSQ_MEM_COPY(tl, sl, op->slotoffsetend);
 }
 
 template <OpCodeTag tag, bool isGuarded>

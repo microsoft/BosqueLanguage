@@ -25,11 +25,15 @@
 
 #define SLPTR_STORE_UNION_INLINE_TYPE(T, L) *((const BSQType**)L) = T
 
-#define SLPTR_LOAD_HEAP_TYPE(L) ((*((void**)L) == nullptr) ? BSQType::g_typeNone : GET_TYPE_META_DATA(*((void**)L)))
-#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)GET_TYPE_META_DATA(*((void**)L)))
+#define SLPTR_LOAD_HEAP_TYPE_ANY(L) ((*((void**)L) == nullptr) ? BSQType::g_typeNone : GET_TYPE_META_DATA(*((void**)L)))
+#define SLPTR_LOAD_HEAP_TYPE_SOME(L) GET_TYPE_META_DATA(*((void**)L))
+#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)SLPTR_LOAD_HEAP_TYPE_SOME(*((void**)L)))
+
 #define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
 
 #define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
+
+#define SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(SRCTYPE, SRC) (SRCTYPE->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(SRC) : SLPTR_LOAD_HEAP_TYPE_SOME(SRC))
 
 #define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
 #define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
@@ -491,8 +495,7 @@ public:
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
     {
-        assert(false);
-        return nullptr;
+       return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
     }
 
     void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
