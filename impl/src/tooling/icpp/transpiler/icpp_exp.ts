@@ -65,7 +65,10 @@ enum OpCodeTag
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
     ConstructorTupleOp,
+    ConstructorTupleFromEphemeralListOp,
     ConstructorRecordOp,
+    EphemeralListExtendOp,
+    ConstructorRecordFromEphemeralListOp,
     ConstructorEphemeralListOp,
     ConstructorPrimaryCollectionEmptyOp,
     ConstructorPrimaryCollectionSingletonsOp,
@@ -385,12 +388,36 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.InvokeVirtualOperatorOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args};
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
     static genConstructorTupleOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.ConstructorTupleOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
     }
 
+    static genConstructorTupleFromEphemeralListOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument, argtype: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.ConstructorTupleFromEphemeralListOp, sinfo: sinfo, trgt: trgt, oftype: oftype, arg: arg, argtype: argtype};
+    }
+
     static genConstructorRecordOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.ConstructorRecordOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
+    }
+
+    static genConstructorRecordFromEphemeralListOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument, argtype: MIRResolvedTypeKey, proppositions: number[]): ICPPOp {
+        return {tag: OpCodeTag.ConstructorRecordFromEphemeralListOp, sinfo: sinfo, trgt: trgt, oftype: oftype, arg: arg, argtype: argtype, proppositions: proppositions};
+    }
+
+    static genEphemeralListExtendOp(sinfo: SourceInfo, trgt: TargetVar, resultType: MIRResolvedTypeKey, arg: Argument, argtype: MIRResolvedTypeKey, ext: Argument[]): ICPPOp {
+        return {tag: OpCodeTag.EphemeralListExtendOp, sinfo: sinfo, trgt: trgt, resultType: resultType, arg: arg, argtype: argtype, ext: ext};
     }
 
     static genConstructorEphemeralListOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {

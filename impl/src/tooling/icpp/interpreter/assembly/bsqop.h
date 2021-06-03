@@ -60,7 +60,10 @@ enum class OpCodeTag
     InvokeVirtualOperatorOp,
 
     ConstructorTupleOp,
+    ConstructorTupleFromEphemeralListOp,
     ConstructorRecordOp,
+    ConstructorRecordFromEphemeralListOp,
+    EphemeralListExtendOp,
     ConstructorEphemeralListOp,
     ConstructorPrimaryCollectionEmptyOp,
     ConstructorPrimaryCollectionSingletonsOp,
@@ -637,7 +640,7 @@ public:
     const int32_t optmaskoffset;
     const BSQStatementGuard sguard;
 
-    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, const std::vector<Argument>& args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, tag), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
+    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, std::vector<Argument> args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, tag), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
     virtual ~InvokeFixedFunctionOp() {;}
 };
 
@@ -650,7 +653,7 @@ public:
     const int32_t optmaskoffset;
     const std::vector<Argument> args;
     
-    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const std::vector<Argument>& args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), optmaskoffset(optmaskoffset) {;}
+    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), optmaskoffset(optmaskoffset) {;}
     virtual ~InvokeVirtualFunctionOp() {;}
 };
 
@@ -662,7 +665,7 @@ public:
     const BSQVirtualInvokeID invokeId;
     const std::vector<Argument> args;
     
-    InvokeVirtualOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::InvokeVirtualOperatorOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args) {;}
+    InvokeVirtualOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::InvokeVirtualOperatorOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args) {;}
     virtual ~InvokeVirtualOperatorOp() {;}
 };
 
@@ -673,8 +676,20 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorTupleOp() {;}
+};
+
+class ConstructorTupleFromEphemeralListOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument arg;
+    const BSQEphemeralListType* argtype;
+    
+    ConstructorTupleFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype) : InterpOp(sinfo, OpCodeTag::ConstructorTupleFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype) {;}
+    virtual ~ConstructorTupleFromEphemeralListOp() {;}
 };
 
 class ConstructorRecordOp : public InterpOp
@@ -684,8 +699,34 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorRecordOp() {;}
+};
+
+class ConstructorRecordFromEphemeralListOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument arg;
+    const BSQEphemeralListType* argtype;
+    const std::vector<uint32_t> proppositions; //if empty then assume properties are in same order as elist
+    
+    ConstructorRecordFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype, std::vector<BSQRecordPropertyID> positions) : InterpOp(sinfo, OpCodeTag::ConstructorRecordFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype), positions(positions) {;}
+    virtual ~ConstructorRecordFromEphemeralListOp() {;}
+};
+
+class EphemeralListExtendOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQEphemeralListType* resultType;
+    const Argument arg;
+    const BSQEphemeralListType* argtype;
+    const std::vector<Argument> ext;
+
+    EphemeralListExtendOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* resultType, Argument arg, const BSQEphemeralListType* argtype, std::vector<Argument> ext) : InterpOp(sinfo, OpCodeTag::EphemeralListExtendOp), trgt(trgt), resultType(resultType), arg(arg), argtype(argtype), ext(ext) {;}
+    virtual ~EphemeralListExtendOp() {;}
 };
 
 class ConstructorEphemeralListOp : public InterpOp
@@ -695,10 +736,9 @@ public:
     const BSQEphemeralListType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorEphemeralListOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorEphemeralListOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorEphemeralListOp() {;}
 };
-
 
 class ConstructorPrimaryCollectionEmptyOp : public InterpOp
 {
@@ -718,7 +758,7 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
 };
 
@@ -730,7 +770,7 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionCopiesOp() {;}
 };
 
@@ -742,7 +782,7 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionMixedOp() {;}
 };
 
@@ -762,7 +802,7 @@ public:
     const TargetVar trgt;
     const std::vector<Argument> args;
     
-    AllTrueOp(SourceInfo sinfo, TargetVar trgt, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::AllTrueOp), trgt(trgt), args(args) {;}
+    AllTrueOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::AllTrueOp), trgt(trgt), args(args) {;}
     virtual ~AllTrueOp() {;}
 };
 
@@ -772,7 +812,7 @@ public:
     const TargetVar trgt;
     const std::vector<Argument> args;
     
-    SomeTrueOp(SourceInfo sinfo, TargetVar trgt, const std::vector<Argument>& args) : InterpOp(sinfo, OpCodeTag::SomeTrueOp), trgt(trgt), args(args) {;}
+    SomeTrueOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::SomeTrueOp), trgt(trgt), args(args) {;}
     virtual ~SomeTrueOp() {;}
 };
 
@@ -926,7 +966,7 @@ public:
     const std::vector<Argument> args;
     const BSQType* oftype;
     
-    ReturnAssignOfConsOp(SourceInfo sinfo, const std::vector<Argument>& args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
+    ReturnAssignOfConsOp(SourceInfo sinfo, std::vector<Argument> args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
     virtual ~ReturnAssignOfConsOp() {;}
 };
 

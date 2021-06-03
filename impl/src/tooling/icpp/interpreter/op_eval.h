@@ -249,7 +249,10 @@ private:
     void evalInvokeVirtualOperatorOp(const InvokeVirtualOperatorOp* op);
 
     void evalConstructorTupleOp(const ConstructorTupleOp* op);
+    void evalConstructorTupleFromEphemeralListOp(const ConstructorTupleFromEphemeralListOp* op);
     void evalConstructorRecordOp(const ConstructorRecordOp* op);
+    void evalConstructorRecordFromEphemeralListOp(const ConstructorRecordFromEphemeralListOp* op);
+    void evalEphemeralListExtendOp(const EphemeralListExtendOp* op);
     void evalConstructorEphemeralListOp(const ConstructorEphemeralListOp* op);
 
     void evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op);

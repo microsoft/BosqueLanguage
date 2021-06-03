@@ -635,10 +635,29 @@ void Evaluator::evalConstructorTupleOp(const ConstructorTupleOp* op)
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tcontents);
     }
 
-    for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
+    auto tupinfo = dynamic_cast<const BSQTupleInfo*>(op->oftype);
+    for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
     {
-        Environment::g_typemap[op->oftype->ttypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
+        BSQType::g_typetable[tupinfo->ttypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, tupinfo->idxoffsets[i]), this->evalArgument(op->args[i]));
     }
+}
+
+void Evaluator::evalConstructorTupleFromEphemeralListOp(const ConstructorTupleFromEphemeralListOp* op)
+{
+    StorageLocationPtr sl = this->evalTargetVar(op->trgt);
+    StorageLocationPtr tcontents = nullptr;
+    if(op->oftype->tkind == BSQTypeKind::Struct)
+    {
+        tcontents = sl;
+    }
+    else
+    {
+        tcontents = Allocator::GlobalAllocator.allocateDynamic(op->oftype);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tcontents);
+    }
+
+    StorageLocationPtr tsrc = this->evalArgument(op->arg);
+    BSQ_MEM_COPY(tcontents, tsrc, op->oftype->allocinfo.assigndatasize);
 }
 
 void Evaluator::evalConstructorRecordOp(const ConstructorRecordOp* op)
@@ -655,9 +674,53 @@ void Evaluator::evalConstructorRecordOp(const ConstructorRecordOp* op)
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tcontents);
     }
 
-    for(size_t i = 0; i < op->oftype->propertyoffsets.size(); ++i)
+    auto recinfo = dynamic_cast<const BSQRecordInfo*>(op->oftype);
+    for(size_t i = 0; i < recinfo->propertyoffsets.size(); ++i)
     {
-        Environment::g_typemap[op->oftype->rtypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->propertyoffsets[i]), this->evalArgument(op->args[i]));
+        BSQType::g_typetable[recinfo->rtypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, recinfo->propertyoffsets[i]), this->evalArgument(op->args[i]));
+    }
+}
+
+void Evaluator::evalConstructorRecordFromEphemeralListOp(const ConstructorRecordFromEphemeralListOp* op)
+{
+    StorageLocationPtr sl = this->evalTargetVar(op->trgt);
+    StorageLocationPtr tcontents = nullptr;
+    if(op->oftype->tkind == BSQTypeKind::Struct)
+    {
+        tcontents = sl;
+    }
+    else
+    {
+        tcontents = Allocator::GlobalAllocator.allocateDynamic(op->oftype);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tcontents);
+    }
+
+    StorageLocationPtr tsrc = this->evalArgument(op->arg);
+    if(op->proppositions.empty())
+    {
+        BSQ_MEM_COPY(tcontents, tsrc, op->oftype->allocinfo.assigndatasize);
+    }
+    else
+    {
+        auto recinfo = dynamic_cast<const BSQRecordInfo*>(op->oftype);
+        for(size_t i = 0; i < op->proppositions.size(); ++i)
+        {
+            auto proppos = op->proppositions[i];
+            BSQType::g_typetable[recinfo->rtypes[proppos]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, recinfo->propertyoffsets[proppos]), SLPTR_INDEX_DATAPTR(tsrc, op->argtype->idxoffsets[i]));
+        }
+    }
+}
+
+void Evaluator::evalEphemeralListExtendOp(const EphemeralListExtendOp* op)
+{
+    StorageLocationPtr tcontents = this->evalTargetVar(op->trgt);
+    StorageLocationPtr acontents = this->evalArgument(op->arg);
+    BSQ_MEM_COPY(tcontents, acontents, op->argtype->allocinfo.inlinedatasize);
+
+    auto idxbase = op->argtype->idxoffsets.size();
+    for(size_t i = 0; i < op->ext.size(); ++i)
+    {
+        BSQType::g_typetable[op->resultType->etypes[idxbase + i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, op->argtype->idxoffsets[idxbase + i]), this->evalArgument(op->ext[i]));
     }
 }
 
@@ -667,13 +730,13 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
 
     for(size_t i = 0; i < op->oftype->idxoffsets.size(); ++i)
     {
-        Environment::g_typemap[op->oftype->etypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
+        BSQType::g_typetable[op->oftype->etypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->idxoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
 void Evaluator::evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op)
 {
-    auto ltype = (BSQListEntityType*)op->oftype;
+    auto ltype = (BSQListType*)op->oftype;
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), Environment::g_listTypeMap[ltype->tid].empty->generateEmptyList());
 }
 
