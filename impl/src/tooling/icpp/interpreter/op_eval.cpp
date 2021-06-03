@@ -5,16 +5,14 @@
 
 #include "op_eval.h"
 
+#include <boost/safe_numerics/checked_default.hpp>
+
 //Big Macro for generating code for primitive checked binary operations
 #define PrimitiveBinaryOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATOR, ERROR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
-REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
-REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
+auto res = OPERATOR(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)), SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg))); \
+BSQ_LANGUAGE_ASSERT(!res.exception(), THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
 \
-REPRTYPE res; \
-bool safe = OPERATOR(larg, rarg, &res); \
-BSQ_LANGUAGE_ASSERT(safe, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
-\
-SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), static_cast<REPRTYPE>(res));
 
 //Big Macro for generating code for primitive checked rhsarg is non-zero binary operations
 #define PrimitiveBinaryOperatorMacroCheckedDiv(THIS, OP, TAG, REPRTYPE) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
@@ -26,19 +24,13 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg / rarg);
 
 //Big Macro for generating code for primitive un-checked infix binary operations
 #define PrimitiveBinaryOperatorMacroSafe(THIS, OP, TAG, REPRTYPE, OPERATOR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
-REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
-REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
-\
-SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)) OPERATOR SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)));
 
 //Big Macro for generating code for primitive infix equality operations
 #define PrimitiveBinaryComparatorMacroSafe(THIS, OP, TAG, REPRTYPE, OPERATOR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
-REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
-REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
-\
-SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
+SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)) OPERATOR SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)));
 
-//Big Macro for generating code for primitive infix equality operations
+//Float Macro for generating code for primitive infix equality operations
 #define PrimitiveBinaryComparatorMacroFP(THIS, OP, TAG, REPRTYPE, ISNAN, ISINFINITE, OPERATOR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
@@ -47,41 +39,6 @@ BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->c
 BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
 BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by 0"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
-
-//TODO: ugh actually check here
-#ifdef _WIN32
-bool __builtin_add_overflow(BSQNat x, BSQNat y, BSQNat* res)
-{
-    *res = x + y;
-    return true;
-}
-bool __builtin_sub_overflow(BSQNat x, BSQNat y, BSQNat* res)
-{
-    *res = x - y;
-    return true;
-}
-bool __builtin_mul_overflow(BSQNat x, BSQNat y, BSQNat* res)
-{
-    *res = x * y;
-    return true;
-}
-
-bool __builtin_add_overflow(BSQInt x, BSQInt y, BSQInt* res)
-{
-    *res = x + y;
-    return true;
-}
-bool __builtin_sub_overflow(BSQInt x, BSQInt y, BSQInt* res)
-{
-    *res = x - y;
-    return true;
-}
-bool __builtin_mul_overflow(BSQInt x, BSQInt y, BSQInt* res)
-{
-    *res = x * y;
-    return true;
-}
-#endif
 
 EvaluatorFrame Evaluator::g_callstack[2048];
 
@@ -804,133 +761,172 @@ void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), tpos != op->args.cend());
 }
 
+void Evaluator::evalBinKeyEqFastOp(const BinKeyEqFastOp* op)
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyEqual(this->evalArgument(op->argl), this->evalArgument(op->argr)));
+}
+
+void Evaluator::evalBinKeyEqStaticOp(const BinKeyEqStaticOp* op)
+{
+    auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+    auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyEqual(lldata, rrdata));
+}
+
 void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
 {
-    //Get types for the values -- either virtual or direct
-    //Make sure they are equal -- otherwise call virtual eq op
-    const BSQType* tl = nullptr;
-    StorageLocationPtr cl = nullptr; 
-    StorageLocationPtr sll = this->evalArgument(op->argl);
-    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argltype->tkind == BSQTypeKind::Ref)
-    {
-        tl = op->argltype;
-        cl = sll;
-    }
-    else
-    {
-        tl = this->loadBSQTypeFromAbstractLocationGeneral(sll, op->argllayout);
-        cl = this->loadDataPtrFromAbstractLocation(sll, op->argllayout);
-    }
+    auto lltype = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argl)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argl)); 
+    auto rrtype = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argr)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argr));
 
-    const BSQType* tr = nullptr;
-    StorageLocationPtr cr = nullptr; 
-    StorageLocationPtr slr = this->evalArgument(op->argr);
-    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argrtype->tkind == BSQTypeKind::Ref)
-    {
-        tr = op->argrtype;
-        cr = slr;
-    }
-    else
-    {
-        tr = this->loadBSQTypeFromAbstractLocationGeneral(slr, op->argrlayout);
-        cr = this->loadDataPtrFromAbstractLocation(slr, op->argrlayout);
-    }
-
-    if(tl->tid != tr->tid)
+    if(lltype->tid != rrtype->tid)
     {
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), BSQFALSE);
     }
     else
     {
-        bool eqcontents = tl->fpKeyEqual(cl, cr);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)eqcontents);
+        auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+        auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->keyops.fpKeyEqual(lldata, rrdata));
     }
+}
+
+void Evaluator::evalBinKeyLessFastOp(const BinKeyLessFastOp* op)
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyLess(this->evalArgument(op->argl), this->evalArgument(op->argr)));
+}
+
+void Evaluator::evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op)
+{
+    auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+    auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyLess(lldata, rrdata));
 }
 
 void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
 {
-    //Get types for the values -- either virtual or direct
-    //Make sure they are ordered -- otherwise call virtual < op
-    //Get types for the values -- either virtual or direct
-    //Make sure they are equal -- otherwise call virtual eq op
-    const BSQType* tl = nullptr;
-    StorageLocationPtr cl = nullptr; 
-    StorageLocationPtr sll = this->evalArgument(op->argl);
-    if(op->argltype->tkind == BSQTypeKind::Register || op->argltype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argltype->tkind == BSQTypeKind::Ref)
+    auto lltype = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argl)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argl)); 
+    auto rrtype = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argr)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argr));
+
+    if(lltype->tid != rrtype->tid)
     {
-        tl = op->argltype;
-        cl = sll;
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->tid < rrtype->tid);
     }
     else
     {
-        tl = this->loadBSQTypeFromAbstractLocationGeneral(sll, op->argllayout);
-        cl = this->loadDataPtrFromAbstractLocation(sll, op->argllayout);
-    }
-
-    const BSQType* tr = nullptr;
-    StorageLocationPtr cr = nullptr; 
-    StorageLocationPtr slr = this->evalArgument(op->argr);
-    if(op->argrtype->tkind == BSQTypeKind::Register || op->argrtype->tkind == BSQTypeKind::Struct || op->argltype->tkind == BSQTypeKind::String || op->argrtype->tkind == BSQTypeKind::Ref)
-    {
-        tr = op->argrtype;
-        cr = slr;
-    }
-    else
-    {
-        tr = this->loadBSQTypeFromAbstractLocationGeneral(slr, op->argrlayout);
-        cr = this->loadDataPtrFromAbstractLocation(slr, op->argrlayout);
-    }
-
-    if(tl->tid != tr->tid)
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)tl->tid < tr->tid);
-    }
-    else
-    {
-        bool lesscontents = tl->fpKeyLess(cl, cr);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), (BSQBool)lesscontents);
+        auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+        auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->keyops.fpKeyLess(lldata, rrdata));
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalIsNoneOp(const TypeIsNoneOp<tag, isGuarded>* op)
+inline BSQBool isNoneTest(const BSQType* tt, StorageLocationPtr chkl)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
-    {
-        BSQBool isnone = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == BSQ_TYPE_ID_NONE;
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isnone);
+    //otherwise this should be statically checkable
+    assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
+
+    if(tt->tkind == BSQTypeKind::UnionRef) {
+        return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(chkl) == BSQNoneHeapValue;
+    }
+    else {
+        return (SLPTR_LOAD_UNION_INLINE_TYPE(chkl)->tid == BSQ_TYPE_ID_NONE);
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalIsSomeOp(const TypeIsSomeOp<tag, isGuarded>* op)
+inline BSQBool checkIsNone(const BSQType* tt, StorageLocationPtr chkl)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
-    {
-        BSQBool issome = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid != BSQ_TYPE_ID_NONE;
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), issome);
+    //otherwise this should be statically checkable
+    assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
+
+    if(tt->tkind == BSQTypeKind::UnionRef) {
+        return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(chkl) == BSQNoneHeapValue;
+    }
+    else {
+        return (SLPTR_LOAD_UNION_INLINE_TYPE(chkl)->tid == BSQ_TYPE_ID_NONE);
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalTypeTagIsOp(const TypeTagIsOp<tag, isGuarded>* op)
+inline BSQTypeID getTypeIDForTypeOf(const BSQType* tt, StorageLocationPtr chkl)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
-    {
-        auto istype = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == op->oftype->tid;
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), istype);
+    //otherwise this should be statically checkable
+    assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
+
+    if(tt->tkind == BSQTypeKind::UnionRef) {
+        return SLPTR_LOAD_HEAP_TYPE_ANY(chkl)->tid;
+    }
+    else {
+        return SLPTR_LOAD_UNION_INLINE_TYPE(chkl)->tid;
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp<tag, isGuarded>* op)
+template <>
+void Evaluator::evalIsNoneOp<true>(const TypeIsNoneOp* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, Environment::g_typeBool, op->sguard))
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
     {
-        auto tt = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout);
-        BSQBool subtype = Environment::g_subtypes[op->oftype->tid].find(tt->tid) != Environment::g_subtypes[op->oftype->tid].cend();
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isNoneTest(op->arglayout, this->evalArgument(op->arg)));
+    }
+}
+
+template <>
+void Evaluator::evalIsNoneOp<false>(const TypeIsNoneOp* op)
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isNoneTest(op->arglayout, this->evalArgument(op->arg)));
+}
+
+
+template <>
+void Evaluator::evalIsSomeOp<true>(const TypeIsSomeOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), !isNoneTest(op->arglayout, this->evalArgument(op->arg)));
+    }
+}
+
+template <>
+void Evaluator::evalIsSomeOp<false>(const TypeIsSomeOp* op)
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), !isNoneTest(op->arglayout, this->evalArgument(op->arg)));
+}
+
+template <>
+void Evaluator::evalTypeTagIsOp<true>(const TypeTagIsOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), getTypeIDForTypeOf(op->arglayout, this->evalArgument(op->arg)) == op->oftype->tid);
+    }
+}
+
+template <>
+void Evaluator::evalTypeTagIsOp<false>(const TypeTagIsOp* op)
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), getTypeIDForTypeOf(op->arglayout, this->evalArgument(op->arg)) == op->oftype->tid);
+}
+
+template <>
+void Evaluator::evalTypeTagSubtypeOfOp<true>(const TypeTagSubtypeOfOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        auto rtid = getTypeIDForTypeOf(op->arglayout, this->evalArgument(op->arg));
+        auto subtype = std::find(op->oftype->subtypes.cbegin(), op->oftype->subtypes.cend(), rtid) != op->oftype->subtypes.cend();
+
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), subtype);
     }
+}
+
+template <>
+void Evaluator::evalTypeTagSubtypeOfOp<false>(const TypeTagSubtypeOfOp* op)
+{
+    auto rtid = getTypeIDForTypeOf(op->arglayout, this->evalArgument(op->arg));
+    auto subtype = std::find(op->oftype->subtypes.cbegin(), op->oftype->subtypes.cend(), rtid) != op->oftype->subtypes.cend();
+
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), subtype);
 }
 
 InterpOp* Evaluator::evalJumpOp(const JumpOp* op)
@@ -953,7 +949,7 @@ InterpOp* Evaluator::evalJumpCondOp(const JumpCondOp* op)
 
 InterpOp* Evaluator::evalJumpNoneOp(const JumpNoneOp* op)
 {
-    BSQBool isnone = this->loadBSQTypeFromAbstractLocationGeneral(this->evalArgument(op->arg), op->arglayout)->tid == BSQ_TYPE_ID_NONE;
+    BSQBool isnone = isNoneTest(op->arglayout, this->evalArgument(op->arg));
     
     if(isnone)
     {
@@ -965,21 +961,27 @@ InterpOp* Evaluator::evalJumpNoneOp(const JumpNoneOp* op)
     }
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op)
+template <>
+void Evaluator::evalRegisterAssignOp<true>(const RegisterAssignOp* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->oftype, op->sguard))
+    if(this->tryProcessGuardStmt(op->trgt, op->oftype, op->sguard))
     {
         op->oftype->storeValue(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
     }
 }
 
-void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op, StorageLocationPtr resultsl)
+template <>
+void Evaluator::evalRegisterAssignOp<false>(const RegisterAssignOp* op)
+{
+    op->oftype->storeValue(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
+}
+
+void Evaluator::evalReturnAssignOp(const ReturnAssignOp* op)
 {
     op->oftype->storeValue(resultsl, this->evalArgument(op->arg));
 }
 
-void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, StorageLocationPtr resultsl)
+void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
 {
     StorageLocationPtr tcontents = nullptr;
     if(op->oftype->tkind == BSQTypeKind::Struct)
@@ -992,9 +994,10 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, Storage
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, tcontents);
     }
 
-    for(size_t i = 0; i < op->oftype->fieldoffsets.size(); ++i)
+    const BSQEntityInfo* entityinfo = dynamic_cast<const BSQEntityInfo*>(op->oftype);
+    for(size_t i = 0; i < entityinfo->fieldoffsets.size(); ++i)
     {
-        Environment::g_typemap[op->oftype->ftypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, op->oftype->fieldoffsets[i]), this->evalArgument(op->args[i]));
+        BSQType::g_typetable[entityinfo->ftypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, entityinfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -1431,11 +1434,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
 #endif
     case OpCodeTag::AddNatOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddNatOp, BSQNat, __builtin_add_overflow, "Nat addition overflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddNatOp, BSQNat, boost::safe_numerics::checked::add<BSQNat>, "Nat addition overflow")
     }
     case OpCodeTag::AddIntOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddIntOp, BSQInt, __builtin_add_overflow, "Int addition overflow/underflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddIntOp, BSQInt, boost::safe_numerics::checked::add<BSQInt>, "Int addition overflow/underflow")
     }
     case OpCodeTag::AddBigNatOp:
     {

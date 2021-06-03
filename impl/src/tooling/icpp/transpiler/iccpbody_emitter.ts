@@ -349,85 +349,6 @@ class ICPPBodyEmitter {
         xxxx;
     }
 
-    private generateSubtypeCheckEntity(arg: MIRArgument, layout: MIRType, flow: MIRType, ofentity: MIRType): SMTExp {
-        if(flow.options.every((opt) => (opt instanceof MIRTupleType) || (opt instanceof MIRRecordType))) {
-            return new SMTConst("false");
-        }
-
-        if (this.typegen.isUniqueEntityType(flow)) {
-            return new SMTConst(flow.trkey === ofentity.trkey ? "true" : "false");
-        }
-        else {
-            const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-            return new SMTCallSimple("=", [accessTypeTag, new SMTConst(`TypeTag_${this.typegen.mangle(ofentity.trkey)}`)]);
-        }
-    }
-
-    private generateSubtypeCheckConcept(arg: MIRArgument, layout: MIRType, flow: MIRType, ofconcept: MIRType): SMTExp {
-        if (this.typegen.isUniqueEntityType(flow) || this.typegen.isUniqueTupleType(flow) || this.typegen.isUniqueRecordType(flow)) {
-            return new SMTConst(this.assembly.subtypeOf(flow, ofconcept) ? "true" : "false");
-        }
-        else {
-            const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-            
-            const occ = ofconcept.options[0] as MIRConceptType;
-            let tests: SMTExp[] = [];
-            for(let i = 0; i < occ.ckeys.length; ++i) {
-                this.processSubtypeTagCheck(flow, ofconcept);
-                tests.push(new SMTCallSimple("SubtypeOf@", [accessTypeTag, new SMTConst(`AbstractTypeTag_${this.typegen.mangle(occ.ckeys[i])}`)]));
-            }
-
-            if(tests.length === 1) {
-                return tests[0];
-            }
-            else {
-                return new SMTCallSimple("and", tests);
-            }
-        }
-    }
-
-    private generateSubtypeCheckTuple(arg: MIRArgument, layout: MIRType, flow: MIRType, oftuple: MIRType): SMTExp {
-        if(flow.options.every((opt) => (opt instanceof MIREntityType) || (opt instanceof MIRRecordType))) {
-            return new SMTConst("false");
-        }
-
-        if (this.typegen.isUniqueTupleType(flow)) {
-            return new SMTConst(this.assembly.subtypeOf(flow, oftuple) ? "true" : "false");
-        }
-        else {
-            const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-
-            if ((oftuple.options[0] as MIRTupleType).entries.every((entry) => !entry.isOptional)) {
-                return new SMTCallSimple("=", [accessTypeTag, new SMTConst(`TypeTag_${this.typegen.mangle(oftuple.trkey)}`)]);
-            }
-            else {
-                this.processSubtypeTagCheck(flow, oftuple);
-                return new SMTCallSimple("SubtypeOf@", [accessTypeTag, new SMTConst(`AbstractTypeTag_${this.typegen.mangle(oftuple.trkey)}`)]);
-            }
-        }
-    }
-
-    private generateSubtypeCheckRecord(arg: MIRArgument, layout: MIRType, flow: MIRType, ofrecord: MIRType): SMTExp {
-        if(flow.options.every((opt) => (opt instanceof MIREntityType) || (opt instanceof MIRTupleType))) {
-            return new SMTConst("false");
-        }
-
-        if (this.typegen.isUniqueRecordType(flow)) {
-            return new SMTConst(this.assembly.subtypeOf(flow, ofrecord) ? "true" : "false");
-        }
-        else {
-            const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-
-            if ((ofrecord.options[0] as MIRRecordType).entries.every((entry) => !entry.isOptional)) {
-                return new SMTCallSimple("=", [accessTypeTag, new SMTConst(`TypeTag_${this.typegen.mangle(ofrecord.trkey)}`)]);
-            }
-            else {
-                this.processSubtypeTagCheck(flow, ofrecord);
-                return new SMTCallSimple("SubtypeOf@", [accessTypeTag, new SMTConst(`AbstractTypeTag_${this.typegen.mangle(ofrecord.trkey)}`)]);
-            }
-        }
-    }
-
     constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: TranspilerOptions) {
         this.assembly = assembly;
         this.typegen = typegen;
@@ -565,7 +486,7 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, trgt, arg, argtype);
+            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
         }
     }
 
@@ -577,7 +498,7 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, trgt, arg, argtype);
+            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
         }
     }
     
@@ -1142,11 +1063,43 @@ class ICPPBodyEmitter {
     }
 
     processBinKeyEq(op: MIRBinKeyEq): ICPPOp {
-        xxxx;
+        const mirlhsflow = this.typegen.getMIRType(op.lhsflowtype);
+        const mirrhsflow = this.typegen.getMIRType(op.rhsflowtype);
+
+        const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
+        const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
+
+        if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
+            if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
+                return ICPPOpEmitter.genBinKeyEqFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs));
+            }
+            else {
+                return ICPPOpEmitter.genBinKeyEqStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+            }
+        }
+        else {
+            return ICPPOpEmitter.genBinKeyEqVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+        }
     }
 
     processBinKeyLess(op: MIRBinKeyLess): ICPPOp {
-        xxxx;
+        const mirlhsflow = this.typegen.getMIRType(op.lhsflowtype);
+        const mirrhsflow = this.typegen.getMIRType(op.rhsflowtype);
+
+        const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
+        const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
+
+        if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
+            if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
+                return ICPPOpEmitter.genBinKeyLessFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs));
+            }
+            else {
+                return ICPPOpEmitter.genBinKeyLessStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+            }
+        }
+        else {
+            return ICPPOpEmitter.genBinKeyLessVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+        }
     }
 
     processPrefixNotOp(op: MIRPrefixNotOp): ICPPOp {
@@ -1166,78 +1119,36 @@ class ICPPBodyEmitter {
         const flow = this.typegen.getMIRType(op.srcflowtype);
         const oftype = this.typegen.getMIRType(op.chktype);
 
-        //
-        //TODO: to complicated in the sub options? Maybe should look more like the interpreter version
-        //
-
-        let ttop: SMTExp = new SMTConst("false");
+        const sguard = this.generateStatmentGuardInfo(op.sguard);
         if(this.assembly.subtypeOf(flow, oftype)) {
-            //also handles the oftype is Any case
-            ttop = new SMTConst("true");
+            return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), sguard);
         }
         else if(this.typegen.isType(oftype, "NSCore::None")) {
-            ttop = this.generateNoneCheck(op.arg, layout);
+            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
         }
         else if (this.typegen.isType(oftype, "NSCore::Some")) {
-            ttop = this.generateSomeCheck(op.arg, layout);
+            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
         }
         else {
-            const tests = oftype.options.map((topt) => {
-                const mtype = this.typegen.getMIRType(topt.trkey);
-                assert(mtype !== undefined, "We should generate all the component types by default??");
-    
-                if(topt instanceof MIREntityType) {
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckEntity(op.arg, layout, flow, mtype), continuation);
-                }
-                else if (topt instanceof MIRConceptType) {
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckConcept(op.arg, layout, flow, mtype), continuation);
-                }
-                else if (topt instanceof MIRTupleType) {
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckTuple(op.arg, layout, flow, mtype), continuation);
-                }
-                else {
-                    assert(topt instanceof MIRRecordType, "All other cases should be handled previously (e.g. dynamic subtype of ephemeral or literal types is not good here)");
-
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckRecord(op.arg, layout, flow, mtype), continuation);
-                }
-            })
-            .filter((test) => !(test instanceof SMTConst) || test.cname !== "false");
-    
-            if(tests.length === 0) {
-                ttop = new SMTConst("false");
-            }
-            else if(tests.findIndex((test) => (test instanceof SMTConst) && test.cname === "true") !== -1) {
-                ttop = new SMTConst("true");
-            }
-            else if(tests.length === 1) {
-                ttop = tests[0];
+            if(this.typegen.isUniqueType(oftype)) {
+                return ICPPOpEmitter.genTypeTagIsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
             }
             else {
-                ttop = new SMTCallSimple("or", tests);
+                return ICPPOpEmitter.genTypeTagSubtypeOfOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
             }
         }
-
-        const gop = this.generateGuardStmtCond(op.sguard, ttop, "NSCore::Bool");
-        return new SMTLet(this.varToSMTName(op.trgt).vname, gop, continuation);
     }
 
     processRegisterAssign(op: MIRRegisterAssign): ICPPOp {
-        if(op.sguard === undefined) {
-            return new SMTLet(this.varToSMTName(op.trgt).vname, this.argToSMT(op.src), continuation);
-        }
-        else {
-            const cassign = this.generateGuardStmtCond(op.sguard, this.argToSMT(op.src), op.layouttype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, cassign, continuation);
-        }
+        return ICPPOpEmitter.genRegisterAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.layouttype), this.argToICPPLocation(op.src), op.layouttype, this.generateStatmentGuardInfo(op.sguard));
     }
 
     processReturnAssign(op: MIRReturnAssign): ICPPOp {
-        return new SMTLet(this.varToSMTName(op.name).vname, this.argToSMT(op.src), continuation);
+        return ICPPOpEmitter.genReturnAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.name, op.oftype), this.argToICPPLocation(op.src), op.oftype);
     }
 
     processReturnAssignOfCons(op: MIRReturnAssignOfCons): ICPPOp {
-        const conscall = new SMTCallSimple(this.typegen.getSMTConstructorName(this.typegen.getMIRType(op.oftype)).cons, op.args.map((arg) => this.argToSMT(arg)));
-        return new SMTLet(this.varToSMTName(op.name).vname, conscall, continuation);
+        return ICPPOpEmitter.genReturnAssignOfConsOp(op.sinfo,  this.trgtToICPPTargetLocation(op.name, op.oftype), op.args.map((arg) => this.argToICPPLocation(arg)), op.oftype);
     }
 
     processOp(op: MIROp): ICPPOp | undefined {
@@ -1255,10 +1166,10 @@ class ICPPBodyEmitter {
                 return this.processAbort(op as MIRAbort);
             }
             case MIROpTag.MIRAssertCheck: {
-                return this.processAssertCheck(op as MIRAssertCheck, continuation);
+                return this.processAssertCheck(op as MIRAssertCheck);
             }
             case MIROpTag.MIRLoadUnintVariableValue: {
-                return this.processLoadUnintVariableValue(op as MIRLoadUnintVariableValue, continuation);
+                return this.processLoadUnintVariableValue(op as MIRLoadUnintVariableValue);
             }
             case MIROpTag.MIRDeclareGuardFlagLocation: {
                 this.processDeclareGuardFlagLocation(op as MIRDeclareGuardFlagLocation);
@@ -1269,134 +1180,133 @@ class ICPPBodyEmitter {
                 return undefined;
             }
             case MIROpTag.MIRConvertValue: {
-                return this.processConvertValue(op as MIRConvertValue, continuation);
+                return this.processConvertValue(op as MIRConvertValue);
             }
             case MIROpTag.MIRLoadConst: {
-                return this.processLoadConst(op as MIRLoadConst, continuation);
+                return this.processLoadConst(op as MIRLoadConst);
             }
             case MIROpTag.MIRTupleHasIndex: {
-                return this.processTupleHasIndex(op as MIRTupleHasIndex, continuation);
+                return this.processTupleHasIndex(op as MIRTupleHasIndex);
             }
             case MIROpTag.MIRRecordHasProperty: {
-                return this.processRecordHasProperty(op as MIRRecordHasProperty, continuation);
+                return this.processRecordHasProperty(op as MIRRecordHasProperty);
             }
             case MIROpTag.MIRLoadTupleIndex: {
-                return this.processLoadTupleIndex(op as MIRLoadTupleIndex, continuation);
+                return this.processLoadTupleIndex(op as MIRLoadTupleIndex);
             }
             case MIROpTag.MIRLoadTupleIndexSetGuard: {
-                return this.processLoadTupleIndexSetGuard(op as MIRLoadTupleIndexSetGuard, continuation);
+                return this.processLoadTupleIndexSetGuard(op as MIRLoadTupleIndexSetGuard);
             }
             case MIROpTag.MIRLoadRecordProperty: {
-                return this.processLoadRecordProperty(op as MIRLoadRecordProperty, continuation);
+                return this.processLoadRecordProperty(op as MIRLoadRecordProperty);
             }
             case MIROpTag.MIRLoadRecordPropertySetGuard: {
-                return this.processLoadRecordPropertySetGuard(op as MIRLoadRecordPropertySetGuard, continuation);
+                return this.processLoadRecordPropertySetGuard(op as MIRLoadRecordPropertySetGuard);
             }
             case MIROpTag.MIRLoadField: {
-                return this.processLoadField(op as MIRLoadField, continuation);
+                return this.processLoadField(op as MIRLoadField);
             }
             case MIROpTag.MIRTupleProjectToEphemeral: {
-                return this.processTupleProjectToEphemeral(op as MIRTupleProjectToEphemeral, continuation);
+                return this.processTupleProjectToEphemeral(op as MIRTupleProjectToEphemeral);
             }
             case MIROpTag.MIRRecordProjectToEphemeral: {
-                return this.processRecordProjectToEphemeral(op as MIRRecordProjectToEphemeral, continuation);
+                return this.processRecordProjectToEphemeral(op as MIRRecordProjectToEphemeral);
             }
             case MIROpTag.MIREntityProjectToEphemeral: {
-                return this.processEntityProjectToEphemeral(op as MIREntityProjectToEphemeral, continuation);
+                return this.processEntityProjectToEphemeral(op as MIREntityProjectToEphemeral);
             }
             case MIROpTag.MIRTupleUpdate: {
-                return this.processTupleUpdate(op as MIRTupleUpdate, continuation);
+                return this.processTupleUpdate(op as MIRTupleUpdate);
             }
             case MIROpTag.MIRRecordUpdate: {
-                return this.processRecordUpdate(op as MIRRecordUpdate, continuation);
+                return this.processRecordUpdate(op as MIRRecordUpdate);
             }
             case MIROpTag.MIREntityUpdate: {
-                return this.processEntityUpdate(op as MIREntityUpdate, continuation);
+                return this.processEntityUpdate(op as MIREntityUpdate);
             }
             case MIROpTag.MIRLoadFromEpehmeralList: {
-                return this.processLoadFromEpehmeralList(op as MIRLoadFromEpehmeralList, continuation);
+                return this.processLoadFromEpehmeralList(op as MIRLoadFromEpehmeralList);
             }
             case MIROpTag.MIRMultiLoadFromEpehmeralList: {
-                return this.processMultiLoadFromEpehmeralList(op as MIRMultiLoadFromEpehmeralList, continuation);
+                return this.processMultiLoadFromEpehmeralList(op as MIRMultiLoadFromEpehmeralList);
             }
             case MIROpTag.MIRSliceEpehmeralList: {
-                return this.processSliceEpehmeralList(op as MIRSliceEpehmeralList, continuation);
+                return this.processSliceEpehmeralList(op as MIRSliceEpehmeralList);
             }
             case MIROpTag.MIRInvokeFixedFunction: {
-                return this.processInvokeFixedFunction(op as MIRInvokeFixedFunction, continuation);
+                return this.processInvokeFixedFunction(op as MIRInvokeFixedFunction);
             }
             case MIROpTag.MIRInvokeVirtualFunction: {
-                return this.processInvokeVirtualFunction(op as MIRInvokeVirtualFunction, continuation);
+                return this.processInvokeVirtualFunction(op as MIRInvokeVirtualFunction);
             }
             case MIROpTag.MIRInvokeVirtualOperator: {
-                return this.processInvokeVirtualOperator(op as MIRInvokeVirtualOperator, continuation);
+                return this.processInvokeVirtualOperator(op as MIRInvokeVirtualOperator);
             }
             case MIROpTag.MIRConstructorTuple: {
-                return this.processConstructorTuple(op as MIRConstructorTuple, continuation);
+                return this.processConstructorTuple(op as MIRConstructorTuple);
             }
             case MIROpTag.MIRConstructorTupleFromEphemeralList: {
-                return this.processConstructorTupleFromEphemeralList(op as MIRConstructorTupleFromEphemeralList, continuation);
+                return this.processConstructorTupleFromEphemeralList(op as MIRConstructorTupleFromEphemeralList);
             }
             case MIROpTag.MIRConstructorRecord: {
-                return this.processConstructorRecord(op as MIRConstructorRecord, continuation);
+                return this.processConstructorRecord(op as MIRConstructorRecord);
             }
             case MIROpTag.MIRConstructorRecordFromEphemeralList: {
-                return this.processConstructorRecordFromEphemeralList(op as MIRConstructorRecordFromEphemeralList, continuation);
+                return this.processConstructorRecordFromEphemeralList(op as MIRConstructorRecordFromEphemeralList);
             }
             case MIROpTag.MIRStructuredAppendTuple: {
-                return this.processStructuredAppendTuple(op as MIRStructuredAppendTuple, continuation);
+                return this.processStructuredAppendTuple(op as MIRStructuredAppendTuple);
             }
             case MIROpTag.MIRStructuredJoinRecord: {
-                return this.processStructuredJoinRecord(op as MIRStructuredJoinRecord, continuation);
+                return this.processStructuredJoinRecord(op as MIRStructuredJoinRecord);
             }
             case MIROpTag.MIRConstructorEphemeralList: {
-                return this.processConstructorEphemeralList(op as MIRConstructorEphemeralList, continuation);
+                return this.processConstructorEphemeralList(op as MIRConstructorEphemeralList);
             }
             case MIROpTag.MIREphemeralListExtend: {
-                return this.processEphemeralListExtend(op as MIREphemeralListExtend, continuation);
+                return this.processEphemeralListExtend(op as MIREphemeralListExtend);
             }
             case MIROpTag.MIRConstructorPrimaryCollectionEmpty: {
-                return this.processConstructorPrimaryCollectionEmpty(op as MIRConstructorPrimaryCollectionEmpty, continuation);
+                return this.processConstructorPrimaryCollectionEmpty(op as MIRConstructorPrimaryCollectionEmpty);
             }
             case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
-                return this.processConstructorPrimaryCollectionSingletons(op as MIRConstructorPrimaryCollectionSingletons, continuation);
+                return this.processConstructorPrimaryCollectionSingletons(op as MIRConstructorPrimaryCollectionSingletons);
             }
             case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
-                return this.processConstructorPrimaryCollectionCopies(op as MIRConstructorPrimaryCollectionCopies, continuation);
+                return this.processConstructorPrimaryCollectionCopies(op as MIRConstructorPrimaryCollectionCopies);
             }
             case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
-                return this.processConstructorPrimaryCollectionMixed(op as MIRConstructorPrimaryCollectionMixed, continuation);
+                return this.processConstructorPrimaryCollectionMixed(op as MIRConstructorPrimaryCollectionMixed);
             }
             case MIROpTag.MIRBinKeyEq: {
-                return this.processBinKeyEq(op as MIRBinKeyEq, continuation);
+                return this.processBinKeyEq(op as MIRBinKeyEq);
             }
             case MIROpTag.MIRBinKeyLess: {
-                return this.processBinKeyLess(op as MIRBinKeyLess, continuation);
+                return this.processBinKeyLess(op as MIRBinKeyLess);
             }
             case MIROpTag.MIRPrefixNotOp: {
-                return this.processPrefixNotOp(op as MIRPrefixNotOp, continuation);
+                return this.processPrefixNotOp(op as MIRPrefixNotOp);
             }
             case MIROpTag.MIRAllTrue: {
-                return this.processAllTrue(op as MIRAllTrue, continuation);
+                return this.processAllTrue(op as MIRAllTrue);
             }
             case MIROpTag.MIRSomeTrue: {
-                return this.processSomeTrue(op as MIRSomeTrue, continuation);
+                return this.processSomeTrue(op as MIRSomeTrue);
             }
             case MIROpTag.MIRIsTypeOf: {
-                return this.processIsTypeOf(op as MIRIsTypeOf, continuation);
+                return this.processIsTypeOf(op as MIRIsTypeOf);
             }
             case MIROpTag.MIRRegisterAssign: {
-                return this.processRegisterAssign(op as MIRRegisterAssign, continuation);
+                return this.processRegisterAssign(op as MIRRegisterAssign);
             }
             case MIROpTag.MIRReturnAssign: {
-                return this.processReturnAssign(op as MIRReturnAssign, continuation);
+                return this.processReturnAssign(op as MIRReturnAssign);
             }
             case MIROpTag.MIRReturnAssignOfCons: {
-                return this.processReturnAssignOfCons(op as MIRReturnAssignOfCons, continuation);
+                return this.processReturnAssignOfCons(op as MIRReturnAssignOfCons);
             }
-            case MIROpTag.MIRDeadFlow:
-            case MIROpTag.MIRPhi: {
-                assert(false, "Should be eliminated in cleanup");
+            default: {
+                assert(false, "Should be eliminated elsewhere");
                 return undefined;
             }
         }

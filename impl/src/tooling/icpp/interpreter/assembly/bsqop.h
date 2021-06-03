@@ -73,23 +73,23 @@ enum class OpCodeTag
     AllTrueOp,
     SomeTrueOp,
 
+    BinKeyEqFastOp,
+    BinKeyEqStaticOp,
     BinKeyEqVirtualOp,
+    BinKeyLessFastOp,
+    BinKeyLessStaticOp,
     BinKeyLessVirtualOp,
 
     TypeIsNoneOp,
     TypeIsSomeOp,
     TypeTagIsOp,
     TypeTagSubtypeOfOp,
-    GuardedTypeIsNoneOp,
-    GuardedTypeIsSomeOp,
-    GuardedTypeTagIsOp,
-    GuardedTypeTagSubtypeOfOp,
     
     JumpOp,
     JumpCondOp,
     JumpNoneOp,
+
     RegisterAssignOp,
-    GuardedRegisterAssignOp,
     ReturnAssignOp,
     ReturnAssignOfConsOp,
     VarLifetimeStartOp,
@@ -816,19 +816,70 @@ public:
     virtual ~SomeTrueOp() {;}
 };
 
+class BinKeyEqFastOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument argl;
+    const Argument argr;
+    
+    BinKeyEqFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr) : InterpOp(sinfo, OpCodeTag::BinKeyEqFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr) {;}
+    virtual ~BinKeyEqFastOp() {;}
+};
+    
+class BinKeyEqStaticOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument argl;
+    const BSQType* argllayout;
+    const Argument argr;
+    const BSQType* argrlayout;
+    
+    BinKeyEqStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
+    virtual ~BinKeyEqStaticOp() {;}
+};
+
 class BinKeyEqVirtualOp : public InterpOp
 {
 public:
     const TargetVar trgt;
     const Argument argl;
-    const BSQType* argltype;
     const BSQType* argllayout;
     const Argument argr;
-    const BSQType* argrtype;
     const BSQType* argrlayout;
     
-    BinKeyEqVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argltype, const BSQType* argllayout, Argument argr, const BSQType* argrtype, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), argl(argl), argltype(argltype), argllayout(argllayout), argr(argr), argrtype(argrtype), argrlayout(argrlayout) {;}
+    BinKeyEqVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
     virtual ~BinKeyEqVirtualOp() {;}
+};
+
+
+class BinKeyLessFastOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument argl;
+    const Argument argr;
+    
+    BinKeyLessFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr) : InterpOp(sinfo, OpCodeTag::BinKeyLessFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr) {;}
+    virtual ~BinKeyLessFastOp() {;}
+};
+    
+class BinKeyLessStaticOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument argl;
+    const BSQType* argllayout;
+    const Argument argr;
+    const BSQType* argrlayout;
+    
+    BinKeyLessStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
+    virtual ~BinKeyLessStaticOp() {;}
 };
 
 class BinKeyLessVirtualOp : public InterpOp
@@ -846,7 +897,6 @@ public:
     virtual ~BinKeyLessVirtualOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class TypeIsNoneOp : public InterpOp
 {
 public:
@@ -855,11 +905,10 @@ public:
     const BSQType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsNoneOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class TypeIsSomeOp : public InterpOp
 {
 public:
@@ -868,11 +917,10 @@ public:
     const BSQType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsSomeOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class TypeTagIsOp : public InterpOp
 {
 public:
@@ -886,17 +934,16 @@ public:
     virtual ~TypeTagIsOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class TypeTagSubtypeOfOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQType* oftype;
+    const BSQUnionType* oftype;
     const Argument arg;
     const BSQType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeTagSubtypeOfOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeTagSubtypeOfOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeTagSubtypeOfOp() {;}
 };
 
@@ -937,7 +984,6 @@ public:
     virtual ~JumpNoneOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class RegisterAssignOp : public InterpOp
 {
 public:
@@ -946,27 +992,29 @@ public:
     const BSQType* oftype;
     const BSQStatementGuard sguard;
     
-    RegisterAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype, BSQStatementGuard sguard) : InterpOp(sinfo, tag), trgt(trgt), arg(arg), oftype(oftype), sguard(sguard) {;}
+    RegisterAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::RegisterAssignOp), trgt(trgt), arg(arg), oftype(oftype), sguard(sguard) {;}
     virtual ~RegisterAssignOp() {;}
 };
 
 class ReturnAssignOp : public InterpOp
 {
 public:
+    const TargetVar trgt;
     const Argument arg;
     const BSQType* oftype;
     
-    ReturnAssignOp(SourceInfo sinfo, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOp), arg(arg), oftype(oftype) {;}
+    ReturnAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOp), trgt(trgt), arg(arg), oftype(oftype) {;}
     virtual ~ReturnAssignOp() {;}
 };
 
 class ReturnAssignOfConsOp : public InterpOp
 {
 public:
+    const TargetVar trgt;
     const std::vector<Argument> args;
     const BSQType* oftype;
     
-    ReturnAssignOfConsOp(SourceInfo sinfo, std::vector<Argument> args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), args(args), oftype(oftype) {;}
+    ReturnAssignOfConsOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), trgt(trgt), args(args), oftype(oftype) {;}
     virtual ~ReturnAssignOfConsOp() {;}
 };
 

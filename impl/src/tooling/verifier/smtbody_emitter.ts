@@ -1574,10 +1574,6 @@ class SMTBodyEmitter {
         const flow = this.typegen.getMIRType(op.srcflowtype);
         const oftype = this.typegen.getMIRType(op.chktype);
 
-        //
-        //TODO: to complicated in the sub options? Maybe should look more like the interpreter version
-        //
-
         let ttop: SMTExp = new SMTConst("false");
         if(this.assembly.subtypeOf(flow, oftype)) {
             //also handles the oftype is Any case

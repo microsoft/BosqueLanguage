@@ -264,30 +264,34 @@ private:
     void evalAllTrueOp(const AllTrueOp* op);
     void evalSomeTrueOp(const SomeTrueOp* op);
 
+    void evalBinKeyEqFastOp(const BinKeyEqFastOp* op);
+    void evalBinKeyEqStaticOp(const BinKeyEqStaticOp* op);
     void evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op);
+    void evalBinKeyLessFastOp(const BinKeyLessFastOp* op);
+    void evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op);
     void evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalIsNoneOp(const TypeIsNoneOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalIsNoneOp(const TypeIsNoneOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalIsSomeOp(const TypeIsSomeOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalIsSomeOp(const TypeIsSomeOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalTypeTagIsOp(const TypeTagIsOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalTypeTagIsOp(const TypeTagIsOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalTypeTagSubtypeOfOp(const TypeTagSubtypeOfOp* op);
 
     InterpOp* evalJumpOp(const JumpOp* op);
     InterpOp* evalJumpCondOp(const JumpCondOp* op);
     InterpOp* evalJumpNoneOp(const JumpNoneOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalRegisterAssignOp(const RegisterAssignOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalRegisterAssignOp(const RegisterAssignOp* op);
 
-    void evalReturnAssignOp(const ReturnAssignOp* op, StorageLocationPtr resultsl);
-    void evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op, StorageLocationPtr resultsl);
+    void evalReturnAssignOp(const ReturnAssignOp* op);
+    void evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op);
 
     void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
     void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);

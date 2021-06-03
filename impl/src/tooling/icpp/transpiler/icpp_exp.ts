@@ -58,12 +58,11 @@ enum OpCodeTag
     MultiLoadFromEpehmeralListOp,
     SliceEphemeralListOp,
 
-
-
     InvokeFixedFunctionOp,
     GuardedInvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
+
     ConstructorTupleOp,
     ConstructorTupleFromEphemeralListOp,
     ConstructorRecordOp,
@@ -78,23 +77,23 @@ enum OpCodeTag
     AllTrueOp,
     SomeTrueOp,
 
+    BinKeyEqFastOp,
+    BinKeyEqStaticOp,
     BinKeyEqVirtualOp,
+    BinKeyLessFastOp,
+    BinKeyLessStaticOp,
     BinKeyLessVirtualOp,
 
     TypeIsNoneOp,
     TypeIsSomeOp,
     TypeTagIsOp,
     TypeTagSubtypeOfOp,
-    GuardedTypeIsNoneOp,
-    GuardedTypeIsSomeOp,
-    GuardedTypeTagIsOp,
-    GuardedTypeTagSubtypeOfOp,
     
     JumpOp,
     JumpCondOp,
     JumpNoneOp,
+
     RegisterAssignOp,
-    GuardedRegisterAssignOp,
     ReturnAssignOp,
     ReturnAssignOfConsOp,
     VarLifetimeStartOp,
@@ -393,13 +392,6 @@ class ICPPOpEmitter
 
 
 
-
-
-
-
-
-
-
     static genConstructorTupleOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.ConstructorTupleOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
     }
@@ -452,19 +444,45 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.SomeTrueOp, sinfo: sinfo, trgt: trgt, args: args};
     }
 
-    /*
-    BinKeyEqVirtualOp,
-    BinKeyLessVirtualOp,
+    static genBinKeyEqFastOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argr: Argument): ICPPOp {
+        return {tag: OpCodeTag.BinKeyEqFastOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argr: argr };
+    }
 
-    TypeIsNoneOp,
-    TypeIsSomeOp,
-    TypeTagIsOp,
-    TypeTagSubtypeOfOp,
-    GuardedTypeIsNoneOp,
-    GuardedTypeIsSomeOp,
-    GuardedTypeTagIsOp,
-    GuardedTypeTagSubtypeOfOp,
-    */
+    static genBinKeyEqStaticOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyEqStaticOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
+    }
+
+    static genBinKeyEqVirtualOp(sinfo: SourceInfo, trgt: TargetVar, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyEqVirtualOp, sinfo: sinfo, trgt: trgt, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
+    }
+     
+    static genBinKeyLessFastOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argr: Argument): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessFastOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argr: argr };
+    }
+
+    static genBinKeyLessStaticOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessStaticOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
+    }
+
+    static genBinKeyLessVirtualOp(sinfo: SourceInfo, trgt: TargetVar, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessVirtualOp, sinfo: sinfo, trgt: trgt, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
+    }
+
+    static genTypeIsNoneOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.TypeIsNoneOp, sinfo: sinfo, trgt: trgt, arg: arg, arglayout: arglayout, sguard: sguard};
+    }
+
+    static genTypeIsSomeOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.TypeIsSomeOp, sinfo: sinfo, trgt: trgt, arg: arg, arglayout: arglayout, sguard: sguard};
+    }
+
+    static genTypeTagIsOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.TypeTagIsOp, sinfo: sinfo, trgt: trgt, oftype: oftype, arg: arg, arglayout: arglayout, sguard: sguard};
+    }
+
+    static genTypeTagSubtypeOfOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.TypeTagSubtypeOfOp, sinfo: sinfo, trgt: trgt, oftype: oftype, arg: arg, arglayout: arglayout, sguard: sguard};
+    }
     
     static genJumpOp(sinfo: SourceInfo, offset: number, label: string): ICPPOp {
         return { tag: OpCodeTag.JumpOp, sinfo: sinfo, offset: offset, label: label };
@@ -478,20 +496,16 @@ class ICPPOpEmitter
         return { tag: OpCodeTag.JumpNoneOp, sinfo: sinfo, arg: arg, arglayout: arglayout, noffset: noffset, soffset: soffset, nlabel: nlabel, slabel: slabel};
     }
     
-    static genRegisterAssignOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, oftype: MIRResolvedTypeKey): ICPPOp {
-        return { tag: OpCodeTag.RegisterAssignOp, sinfo: sinfo, trgt: trgt, arg: arg, oftype: oftype };
+    static genRegisterAssignOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, oftype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return { tag: OpCodeTag.RegisterAssignOp, sinfo: sinfo, trgt: trgt, arg: arg, oftype: oftype, sguard: sguard};
     }
     
-    static genGuardedRegisterAssignOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, oftype: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return { tag: OpCodeTag.GuardedRegisterAssignOp, sinfo: sinfo, trgt: trgt, arg: arg, oftype: oftype, sguard: sguard };
+    static genReturnAssignOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, oftype: MIRResolvedTypeKey): ICPPOp {
+        return { tag: OpCodeTag.ReturnAssignOp, sinfo: sinfo, trgt: trgt, arg: arg, oftype: oftype };
     }
     
-    static genReturnAssignOp(sinfo: SourceInfo, arg: Argument, oftype: MIRResolvedTypeKey): ICPPOp {
-        return { tag: OpCodeTag.ReturnAssignOp, sinfo: sinfo, arg: arg, oftype: oftype };
-    }
-    
-    static genReturnAssignOfConsOp(sinfo: SourceInfo, args: Argument[], oftype: MIRResolvedTypeKey): ICPPOp {
-        return { tag: OpCodeTag.ReturnAssignOfConsOp, sinfo: sinfo, args: args, oftype: oftype };
+    static genReturnAssignOfConsOp(sinfo: SourceInfo, trgt: TargetVar, args: Argument[], oftype: MIRResolvedTypeKey): ICPPOp {
+        return { tag: OpCodeTag.ReturnAssignOfConsOp, sinfo: sinfo, trgt: trgt, args: args, oftype: oftype };
     }
     
     static genVarLifetimeStartOp(sinfo: SourceInfo, homelocation: Argument, oftype: MIRResolvedTypeKey, name: string): ICPPOp {
