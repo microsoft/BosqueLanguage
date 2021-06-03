@@ -1125,13 +1125,12 @@ class ICPPBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty): ICPPOp {
-        const consexp = this.lopsManager.processLiteralK_0(this.typegen.getMIRType(op.tkey));
-        return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        return ICPPOpEmitter.genConstructorPrimaryCollectionEmptyOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey);
     }
 
-    processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons, continuation: SMTExp): SMTExp {
-        const consexp = this.lopsManager.processLiteralK_Pos(this.typegen.getMIRType(op.tkey), op.args.length, op.args.map((arg) => this.argToSMT(arg[1])));
-        return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+    processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons): ICPPOp {
+        const args = op.args.map((arg) => this.argToICPPLocation(arg[1]));
+        return ICPPOpEmitter.genConstructorPrimaryCollectionSingletonsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, args);
     }
 
     processConstructorPrimaryCollectionCopies(op: MIRConstructorPrimaryCollectionCopies): ICPPOp {
@@ -1143,14 +1142,7 @@ class ICPPBodyEmitter {
     }
 
     processBinKeyEq(op: MIRBinKeyEq): ICPPOp {
-        //
-        //TODO: if the layouts are equal then no need to coerce
-        //
-        const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.lhslayouttype));
-        const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.rhslayouttype));
-
-        const eqcmp = new SMTCallSimple("=", [lhs, rhs]);
-        return new SMTLet(this.varToSMTName(op.trgt).vname, eqcmp, continuation);
+        xxxx;
     }
 
     processBinKeyLess(op: MIRBinKeyLess): ICPPOp {
@@ -1158,15 +1150,15 @@ class ICPPBodyEmitter {
     }
 
     processPrefixNotOp(op: MIRPrefixNotOp): ICPPOp {
-        return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("not", [this.argToSMT(op.arg)]), continuation);
+        return ICPPOpEmitter.genPrefixNotOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg));
     }
 
     processAllTrue(op: MIRAllTrue): ICPPOp {
-        return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("and", op.args.map((arg) => this.argToSMT(arg))), continuation);
+        return ICPPOpEmitter.genAllTrueOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), op.args.map((arg) => this.argToICPPLocation(arg)));
     }
 
     processSomeTrue(op: MIRSomeTrue): ICPPOp {
-        return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("or", op.args.map((arg) => this.argToSMT(arg))), continuation);
+        return ICPPOpEmitter.genSomeTrueOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), op.args.map((arg) => this.argToICPPLocation(arg)));
     }
 
     processIsTypeOf(op: MIRIsTypeOf): ICPPOp {

@@ -170,6 +170,8 @@ struct ListTypeConstructorInfo
     BSQListFlatKType<40>* list40;
     BSQListSliceType* slice;
     BSQListConcatType* concat;
+
+    std::pair<size_t, BSQListFlatKTypeAbstract*> kcons[7];
 };
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);

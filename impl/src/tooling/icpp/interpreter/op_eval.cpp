@@ -736,57 +736,33 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
 
 void Evaluator::evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op)
 {
-    auto ltype = (BSQListType*)op->oftype;
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), Environment::g_listTypeMap[ltype->tid].empty->generateEmptyList());
+    ((BSQListType*)op->oftype)->storeValue(this->evalTargetVar(op->trgt), (StorageLocationPtr)&bsqemptylist);
 }
 
 void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op)
 {
-    auto ltype = (BSQListEntityType*)op->oftype;
-    auto lbytes = op->args.size() * ltype->esize;
-    const ListTypeConstructorInfo& glistalloc = Environment::g_listTypeMap[ltype->tid];
+    auto ltype = (BSQListType*)op->oftype;
+    size_t ct = op->args.size();
+    const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
 
-    if(lbytes <= 256)
+    if(ct <= 40)
     {
-        BSQListFlatKTypeAbstract* fltype = nullptr;
-        if(lbytes <= 64)
-        {
-            fltype = glistalloc.list64;
-        }
-        else if(lbytes <= 96)
-        {
-            fltype = glistalloc.list96;
-        }
-        else if(lbytes <= 128)
-        {
-            fltype = glistalloc.list128;
-        }
-        else if(lbytes <= 160)
-        {
-            fltype = glistalloc.list160;
-        }
-        else if(lbytes <= 192)
-        {
-            fltype = glistalloc.list192;
-        }
-        else if(lbytes <= 224)
-        {
-            fltype = glistalloc.list224;
-        }
-        else
-        {
-            fltype = glistalloc.list256;
-        }
+        auto fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQStringKReprTypeAbstract*>& pp) {
+            return ct <= pp.first;
+        });
 
-        void* res = Allocator::GlobalAllocator.allocateDynamic(fltype);
-        uint8_t* iter = fltype->initializeWriteIter(res);
+        const BSQListFlatKTypeAbstract* klist = fltype->second;
+        void* res = Allocator::GlobalAllocator.allocateDynamic(klist);
+
+        BSQList ll = {res, ct};
+        ltype->storeValue(this->evalTargetVar(op->trgt), (StorageLocationPtr)&ll);
+
+        uint8_t* iter = klist->initializeWriteIter(res);
         for(size_t i = 0; i < op->args.size(); ++i)
         {
-            fltype->storeDataToPostion(iter, this->evalArgument(op->args[i]));
-            fltype->advanceWriteIter(&iter);
+            klist->storeDataToPostion(iter, ltype->etype, this->evalArgument(op->args[i]));
+            klist->advanceWriteIter(&iter, ltype->etype);
         }
-        
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), res);
     }
     else
     {
