@@ -1312,68 +1312,7 @@ class ICPPBodyEmitter {
         }
     }
 
-    processGenerateResultWithZeroArgCheck(sinfo: SourceInfo, zero: SMTConst, not0arg: SMTExp, oftype: MIRType, val: SMTExp): SMTExp {
-        const chkzero = new SMTCallSimple("=", [zero, not0arg]);
-        return new SMTIf(chkzero, this.generateErrorCreate(sinfo, oftype, "Div by 0"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
-    }
-
-    processGenerateResultWithBounds(sinfo: SourceInfo, op: string, args: SMTExp[], oftype: MIRType): SMTExp {
-        //TODO: Bounds check -- also for signed need to do check for -Int::max (since range of negative values is one less than positive)
-        //https://stackoverflow.com/questions/40605207/how-to-zero-sign-extend-bitvectors-in-z3
-        //https://github.com/Z3Prover/z3/issues/574
-        //https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf
-        //(declare-const a (_ BitVec 1))
-        //(declare-const b (_ BitVec 2))
-        //(assert (= b ((_ zero_extend 1) a)))
-
-        //TODO: Suppose we try to refute the feasibility of an error on a small width bitvector say 5 and we get unsat
-        //      Hypothesis -- if the unsat core does not contain an arith overflow failure then the core also holds for any larger BV size
-        //      If so then we can A* up the bit-vector sizes
-
-        if(!this.vopts.OverflowEnabled) {
-            if(op === "-" && (oftype.trkey === "NSCore::Nat" || oftype.trkey === "NSCore::BigNat")) {
-                const vtmp = this.generateTempName();
-                const val = new SMTVar(vtmp);
-
-                const chkbounds = new SMTCallSimple("bvult", args);
-                const bop = new SMTIf(chkbounds, this.generateErrorCreate(sinfo, oftype, "Unsigned subtract underflow"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
-
-                if(oftype.trkey === "NSCore::Nat") {
-                    return new SMTLet(vtmp, new SMTCallSimple("bvsub", args), bop);
-                }
-                else {
-                    const subop = this.vopts.BigXMode === "Int" ? new SMTCallSimple(op, args) : new SMTCallSimple("bvsub", args);
-                    return new SMTLet(vtmp, subop, bop);
-                }
-            }
-            else {
-                if(this.vopts.BigXMode === "Int" && (oftype.trkey === "NSCore::BigInt" || oftype.trkey === "NSCore::BigNat")) {
-                    return new SMTCallSimple(op, args);
-                }
-                else {
-                    const opbvbasic = { "+": "bvadd", "-": "bvsub", "*": "bvmul" }[op as "+" | "-" | "*"];
-                    return new SMTCallSimple(opbvbasic, args);
-                }
-            }
-        }
-        else {
-            //TODO: See following links
-            //https://github.com/Z3Prover/z3/blob/master/src/api/api_bv.cpp
-            //https://github.com/Z3Prover/z3/issues/574
-            //https://github.com/Z3Prover/z3/blob/518296dbc10267d4a4b8589212feaeefca800022/src/ast/bv_decl_plugin.cpp
-
-            return NOT_IMPLEMENTED("Overflow Checked Arith");
-        }
-    }
-
-    processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: MIRRegisterArgument, op: MIRInvokeKey, args: SMTExp[], continuation: SMTExp): SMTExp {
-        let smte: SMTExp = new SMTConst("[INVALID]");
-        let erropt = false;
-        let rtype = this.typegen.getMIRType("NSCore::None");
-
-        xxxx;
-
-
+    processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, op: MIRInvokeKey, args: Argument[], argtypes: MIRResolvedTypeKey): ICPPOp {
         switch (op) {
             //op unary +
             case "NSCore::+=prefix=(NSCore::Int)":
@@ -1383,7 +1322,7 @@ class ICPPBodyEmitter {
             case "NSCore::+=prefix=(NSCore::Rational)":
             case "NSCore::+=prefix=(NSCore::Float)":
             case "NSCore::+=prefix=(NSCore::Decimal)": {
-                smte = args[0];
+                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, oftype, args[0], ICPPOpEmitter.genNoStatmentGuard());
                 break;
             }
             //op unary -

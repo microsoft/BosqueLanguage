@@ -99,6 +99,11 @@ enum OpCodeTag
     VarLifetimeStartOp,
     VarLifetimeEndOp,
 
+    NegateIntOp,
+    NegateBigIntOp,
+    NegateRationalOp,
+    NegateFloatOp,
+    NegateDecimalOp,
     AddNatOp,
     AddIntOp,
     AddBigNatOp,
@@ -146,7 +151,6 @@ enum OpCodeTag
     LtRationalOp,
     LtFloatOp,
     LtDecimalOp,
-    LtStringOp,
     GtNatOp,
     GtIntOp,
     GtBigNatOp,
@@ -154,7 +158,6 @@ enum OpCodeTag
     GtRationalOp,
     GtFloatOp,
     GtDecimalOp,
-    GtStringOp,
 
     LeNatOp,
     LeIntOp,
@@ -177,10 +180,6 @@ enum OpCodeTag
     GtStrPosOp,
     LeStrPosOp,
     GeStrPosOp,
-
-    EqStringOp,
-    NeqStringOp,
-    LessStringOp
 }
 
 type Argument = {
@@ -517,6 +516,12 @@ class ICPPOpEmitter
     }
     
 /*
+    NegateIntOp,
+    NegateBigIntOp,
+    NegateRationalOp,
+    NegateFloatOp,
+    NegateDecimalOp,
+
     AddNatOp,
     AddIntOp,
     AddBigNatOp,
@@ -564,7 +569,6 @@ class ICPPOpEmitter
     LtRationalOp,
     LtFloatOp,
     LtDecimalOp,
-    LtStringOp,
     GtNatOp,
     GtIntOp,
     GtBigNatOp,
@@ -572,7 +576,6 @@ class ICPPOpEmitter
     GtRationalOp,
     GtFloatOp,
     GtDecimalOp,
-    GtStringOp,
 
     LeNatOp,
     LeIntOp,
@@ -595,10 +598,6 @@ class ICPPOpEmitter
     GtStrPosOp,
     LeStrPosOp,
     GeStrPosOp,
-
-    EqStringOp,
-    NeqStringOp,
-    LessStringOp
     */
 }
 

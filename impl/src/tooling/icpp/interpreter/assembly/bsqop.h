@@ -95,6 +95,11 @@ enum class OpCodeTag
     VarLifetimeStartOp,
     VarLifetimeEndOp,
 
+    NegateIntOp,
+    NegateBigIntOp,
+    NegateRationalOp,
+    NegateFloatOp,
+    NegateDecimalOp,
     AddNatOp,
     AddIntOp,
     AddBigNatOp,
@@ -142,7 +147,6 @@ enum class OpCodeTag
     LtRationalOp,
     LtFloatOp,
     LtDecimalOp,
-    LtStringOp,
     GtNatOp,
     GtIntOp,
     GtBigNatOp,
@@ -150,7 +154,6 @@ enum class OpCodeTag
     GtRationalOp,
     GtFloatOp,
     GtDecimalOp,
-    GtStringOp,
 
     LeNatOp,
     LeIntOp,
@@ -172,11 +175,7 @@ enum class OpCodeTag
     LtStrPosOp,
     GtStrPosOp,
     LeStrPosOp,
-    GeStrPosOp,
-
-    EqStringOp,
-    NeqStringOp,
-    LessStringOp
+    GeStrPosOp
 };
 
 struct Argument
@@ -1036,6 +1035,18 @@ public:
     
     VarLifetimeEndOp(SourceInfo sinfo, const std::string* name) : InterpOp(sinfo, OpCodeTag::VarLifetimeEndOp), name(name) {;}
     virtual ~VarLifetimeEndOp() {;}
+};
+
+template <OpCodeTag tag>
+class PrimitiveNegateOperatorOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const Argument arg;
+    
+    PrimitiveNegateOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), arg(arg) {;}
+    virtual ~PrimitiveNegateOperatorOp() {;}
 };
 
 template <OpCodeTag tag>
