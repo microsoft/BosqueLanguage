@@ -39,14 +39,18 @@ class ICPPTypeSizeInfo {
     readonly assigndatasize: number; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
 
     readonly heapmask: RefMask | undefined; //The mask to used to traverse this object during gc (if it is heap allocated) -- null if this is a leaf object -- partial if tailing scalars
-    readonly inlinedmask: RefMask | undefined; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must traverse full object
+    readonly inlinedmask: RefMask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must traverse full object
 
-    constructor(heapsize: number, inlinedatasize: number, assigndatasize: number, heapmask: RefMask | undefined, inlinedmask: RefMask | undefined) {
+    constructor(heapsize: number, inlinedatasize: number, assigndatasize: number, heapmask: RefMask | undefined, inlinedmask: RefMask) {
         this.heapsize = heapsize;
         this.inlinedatasize = inlinedatasize;
         this.assigndatasize = assigndatasize;
         this.heapmask = heapmask;
         this.inlinedmask = inlinedmask;
+    }
+
+    isScalarOnlyInline(): boolean {
+        return /1*/.test(this.inlinedmask);
     }
 
     static createByRegisterTypeInfo(inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
@@ -199,12 +203,13 @@ class ICPPInvokeDecl {
     readonly params: ICPPFunctionParameter[];
     readonly resultType: ICPPType;
 
-    readonly stackBytes: number;
-    readonly stackMask: RefMask;
+    readonly scalarStackBytes: number;
+    readonly mixedStackBytes: number;
+    readonly mixedStackMask: RefMask;
 
     readonly maskSlots: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, stackBytes: number, stackMask: RefMask, maskSlots: number) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number) {
         this.name = name;
         this.ikey = ikey;
         this.srcFile = srcFile;
@@ -213,8 +218,9 @@ class ICPPInvokeDecl {
         this.params = params;
         this.resultType = resultType;
 
-        this.stackBytes = stackBytes;
-        this.stackMask = stackMask;
+        this.scalarStackBytes = scalarStackBytes;
+        this.mixedStackBytes = mixedStackBytes;
+        this.mixedStackMask = mixedStackMask;
 
         this.maskSlots = maskSlots;
     }
@@ -225,8 +231,8 @@ class ICPPInvokeBodyDecl extends ICPPInvokeDecl
     readonly body: ICPPOp[];
     readonly argmaskSize: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, stackBytes: number, stackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
-        super(name, ikey, srcFile, sinfo, recursive, params, resultType, stackBytes, stackMask, maskSlots);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+        super(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
         this.body = body;
         this.argmaskSize = argmaskSize;
     }
@@ -249,8 +255,8 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl
     readonly binds: Map<string, ICPPType>;
     readonly pcodes: Map<string, ICPPPCode>;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, stackBytes: number, stackMask: RefMask, maskSlots: number, implkeyname: string, binds: Map<string, ICPPType>, pcodes: Map<string, ICPPPCode>) {
-        super(name, ikey, srcFile, sinfo, recursive, params, resultType, stackBytes, stackMask, maskSlots);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, implkeyname: string, binds: Map<string, ICPPType>, pcodes: Map<string, ICPPPCode>) {
+        super(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
         this.implkeyname = implkeyname;
         this.binds = binds;
         this.pcodes = pcodes;

@@ -27,9 +27,12 @@ class ICPPBodyEmitter {
     currentRType: MIRType;
 
     private argsMap: Map<string, number> = new Map<string, number>();
-    private stackMap: Map<string, number> = new Map<string, number>();
-    private stacksize: number = 0;
-    private stacklayout: {offset: number, occupied: boolean, storage: ICPPType}[] = [];
+    private scalarStackMap: Map<string, number> = new Map<string, number>();
+    private scalarStackSize: number = 0;
+    private scalarStackLayout: {offset: number, name: string | undefined, storage: ICPPType}[] = [];
+    private mixedStackMap: Map<string, number> = new Map<string, number>();
+    private mixedStackSize: number = 0;
+    private mixedStackLayout: {offset: number, name: string | undefined, storage: ICPPType}[] = [];
 
     private literalMap: Map<string, number> = new Map<string, number>();
     private constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
@@ -40,7 +43,6 @@ class ICPPBodyEmitter {
     private masksize: number = 0;
     private masklayout: {offset: number, occupied: boolean, name: string, size: number}[] = [];
     
-
     private ops: Map<string, ICPPOp[]> = new Map<string, ICPPOp[]>();
     private cblock: ICPPOp[];
 
@@ -62,57 +64,95 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genParameterArgument(this.argsMap.get(vname) as number);
         }
         else {
-            return ICPPOpEmitter.genLocalArgument(this.stackMap.get(vname) as number);
+            if(this.scalarStackMap.has(vname)) {
+                return ICPPOpEmitter.genLocalArgument(this.scalarStackMap.get(vname) as number);
+            }
+            else {
+                return ICPPOpEmitter.genLocalArgument(this.mixedStackMap.get(vname) as number);
+            }
         }
     }
 
     private getStackInfoForTargetVar(vname: string, oftype: ICPPType): TargetVar {
-        let openidx = this.stacklayout.findIndex((opt) => !opt.occupied && opt.storage.tkey === oftype.tkey);
-        if(openidx === -1) {
-            this.stacklayout.push({offset: this.stacksize, occupied: true, storage: oftype});
-            this.stacksize = this.stacksize + oftype.allocinfo.inlinedatasize;
+        if(oftype.allocinfo.isScalarOnlyInline()) {
+            let openidx = this.scalarStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
+            if (openidx === -1) {
+                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
+                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            openidx = this.stacksize - 1;
+                openidx = this.scalarStackSize - 1;
+            }
+
+            const spos = this.scalarStackLayout[openidx];
+            this.scalarStackMap.set(vname, spos.offset);
+            spos.name = vname;
+
+            return { offset: spos.offset };
         }
+        else {
+            let openidx = this.mixedStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
+            if (openidx === -1) {
+                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
+                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
-        const spos = this.stacklayout[openidx];
-        this.stackMap.set(vname, spos.offset);
-        spos.occupied = true;
+                openidx = this.mixedStackSize - 1;
+            }
 
-        return {offset: spos.offset};
+            const spos = this.mixedStackLayout[openidx];
+            this.mixedStackMap.set(vname, spos.offset);
+            spos.name = vname;
+
+            return { offset: spos.offset };
+        }
     }
 
     private releaseStackSlotForVar(vname: string) {
-        const offset = this.stackMap.get(vname) as number;
+        const spos = this.scalarStackLayout.find((opt) => opt.name === vname);
+        if(spos !== undefined) {
+            spos.name = undefined;
+        }
 
-        const spos = this.stacklayout.find((opt) => opt.offset === offset) as {offset: number, occupied: boolean, storage: ICPPType};
-        spos.occupied = false;
+        const mpos = this.mixedStackLayout.find((opt) => opt.name === vname);
+        if(mpos !== undefined) {
+            mpos.name = undefined;
+        } 
     }
 
     private generateScratchVarInfo(oftype: ICPPType): [TargetVar, Argument] {
-        let openidx = this.stacklayout.findIndex((opt) => !opt.occupied && opt.storage.tkey === oftype.tkey);
-        if(openidx === -1) {
-            this.stacklayout.push({offset: this.stacksize, occupied: true, storage: oftype});
-            this.stacksize = this.stacksize + oftype.allocinfo.inlinedatasize;
+        if (oftype.allocinfo.isScalarOnlyInline()) {
+            let openidx = this.scalarStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
+            if (openidx === -1) {
+                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: undefined, storage: oftype });
+                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            openidx = this.stacksize - 1;
+                openidx = this.scalarStackSize - 1;
+            }
+
+            const spos = this.scalarStackLayout[openidx];
+            spos.name = `@scalar_scratch_${openidx}`;
+
+            return [{ offset: spos.offset }, ICPPOpEmitter.genLocalArgument(spos.offset)];
         }
+        else {
+            let openidx = this.mixedStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
+            if (openidx === -1) {
+                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: undefined, storage: oftype });
+                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
-        const spos = this.stacklayout[openidx];
-        spos.occupied = true;
+                openidx = this.mixedStackSize - 1;
+            }
 
-        return [{offset: spos.offset}, ICPPOpEmitter.genLocalArgument(spos.offset)];
-    }
+            const spos = this.mixedStackLayout[openidx];
+            spos.name = `@mixed_scratch_${openidx}`;
 
-    private releaseScratchVar(vv: TargetVar) {
-        const spos = this.stacklayout.find((opt) => opt.offset === vv.offset) as {offset: number, occupied: boolean, storage: ICPPType};
-        spos.occupied = false;
+            return [{ offset: spos.offset }, ICPPOpEmitter.genLocalArgument(spos.offset)];
+        }
     }
 
     private genMaskForStack(): RefMask {
         let mask: RefMask = "";
-        for(let i = 0; i < this.stacklayout.length; ++i) {
-            mask = mask + this.stacklayout[i].storage.allocinfo.inlinedmask;
+        for(let i = 0; i < this.mixedStackLayout.length; ++i) {
+            mask = mask + this.mixedStackLayout[i].storage.allocinfo.inlinedmask;
         }
         return mask;
     }
@@ -189,11 +229,10 @@ class ICPPBodyEmitter {
             }
         });
 
-        const [constrgt, consarg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(geninfo.resulttype));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, constrgt, geninfo.resulttype.trkey, pargs));
-        ops.push(ICPPOpEmitter.genReturnAssignOp(sinfo, consarg, geninfo.resulttype.trkey));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.stacksize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }, sinfo: SourceInfo, recordtype: MIRType): ICPPInvokeDecl {
@@ -225,11 +264,10 @@ class ICPPBodyEmitter {
             }
         });
 
-        const [constrgt, consarg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(geninfo.resulttype));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, constrgt, geninfo.resulttype.trkey, pargs));
-        ops.push(ICPPOpEmitter.genReturnAssignOp(sinfo, consarg, geninfo.resulttype.trkey));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.stacksize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }, sinfo: SourceInfo, entitytype: MIRType): ICPPInvokeDecl {
@@ -261,11 +299,10 @@ class ICPPBodyEmitter {
             }
         });
 
-        const [constrgt, consarg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(geninfo.resulttype));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, constrgt, geninfo.resulttype.trkey, pargs));
-        ops.push(ICPPOpEmitter.genReturnAssignOp(sinfo, consarg, geninfo.resulttype.trkey));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.stacksize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateUpdateEntityFieldDirectWithInvariantCheck(geninfo: { inv: string, oftype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
@@ -454,7 +491,7 @@ class ICPPBodyEmitter {
 
     generateGuardToInfo(gg: MIRGuard): ICPPGuard {
         if(gg instanceof MIRArgGuard) {
-            return ICPPOpEmitter.genVarGuard(this.stackMap.get(gg.greg.nameID) as number);
+            return ICPPOpEmitter.genVarGuard(this.scalarStackMap.get(gg.greg.nameID) as number);
         }
         else {
             const mg = gg as MIRMaskGuard;
@@ -1323,313 +1360,252 @@ class ICPPBodyEmitter {
             case "NSCore::+=prefix=(NSCore::Float)":
             case "NSCore::+=prefix=(NSCore::Decimal)": {
                 return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, oftype, args[0], ICPPOpEmitter.genNoStatmentGuard());
-                break;
             }
             //op unary -
             case "NSCore::-=prefix=(NSCore::Int)": {
-                smte = new SMTCallSimple("bvneg", args);
-                break;
+                return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateIntOp, trgt, oftype, args[0]);
             }
             case "NSCore::-=prefix=(NSCore::BigInt)": {
-                smte = new SMTCallSimple("-", args);
-                break;
+                return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateBigIntOp, trgt, oftype, args[0]);
             }
             case "NSCore::-=prefix=(NSCore::Rational)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalUnary_UF", [new SMTConst("\"op_unary_negate\""), ...args]) : new SMTCallSimple("-", args);
-                break;
+                return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateRationalOp, trgt, oftype, args[0]);
             }
             case "NSCore::-=prefix=(NSCore::Float)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BFloatUnary_UF", [new SMTConst("\"op_unary_negate\""), ...args]) : new SMTCallSimple("-", args);
-                break;
+                return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateFloatOp, trgt, oftype, args[0]);
             }
             case "NSCore::-=prefix=(NSCore::Decimal)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BDecimalUnary_UF", [new SMTConst("\"op_unary_negate\""), ...args]) : new SMTCallSimple("-", args);
-                break;
+                return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateDecimalOp, trgt, oftype, args[0]);
             }
             //op infix +
             case "NSCore::+=infix=(NSCore::Int, NSCore::Int)": {
-                rtype = this.typegen.getMIRType("NSCore::Int");
-                smte = this.processGenerateResultWithBounds(sinfo, "+", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::+=infix=(NSCore::Nat, NSCore::Nat)": {
-                rtype = this.typegen.getMIRType("NSCore::Nat");
-                smte = this.processGenerateResultWithBounds(sinfo, "+", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::+=infix=(NSCore::BigInt, NSCore::BigInt)": {
-                rtype = this.typegen.getMIRType("NSCore::BigInt");
-                smte = this.processGenerateResultWithBounds(sinfo, "+", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::+=infix=(NSCore::BigNat, NSCore::BigNat)": {
-                rtype = this.typegen.getMIRType("NSCore::BigNat");
-                smte = this.processGenerateResultWithBounds(sinfo, "+", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::+=infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinary_UF", [new SMTConst("\"op_binary_plus\""), ...args]) : new SMTCallSimple("+", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddRationalOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::+=infix=(NSCore::Float, NSCore::Float)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BFloatBinary_UF", [new SMTConst("\"op_binary_plus\""), ...args]) : new SMTCallSimple("+", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddFloatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::+=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BDecimalBinary_UF", [new SMTConst("\"op_binary_plus\""), ...args]) : new SMTCallSimple("+", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix -
             case "NSCore::-=infix=(NSCore::Int, NSCore::Int)": {
-                rtype = this.typegen.getMIRType("NSCore::Int");
-                smte = this.processGenerateResultWithBounds(sinfo, "-", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::-=infix=(NSCore::Nat, NSCore::Nat)": {
-                rtype = this.typegen.getMIRType("NSCore::Nat");
-                smte = this.processGenerateResultWithBounds(sinfo, "-", args, rtype);
-                erropt = true;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::-=infix=(NSCore::BigInt, NSCore::BigInt)": {
-                rtype = this.typegen.getMIRType("NSCore::BigInt");
-                smte = this.processGenerateResultWithBounds(sinfo, "-", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::-=infix=(NSCore::BigNat, NSCore::BigNat)": {
-                rtype = this.typegen.getMIRType("NSCore::BigNat");
-                smte = this.processGenerateResultWithBounds(sinfo, "-", args, rtype);
-                erropt = true;
-                break
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::-=infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinary_UF", [new SMTConst("\"op_binary_minus\""), ...args]) : new SMTCallSimple("-", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubRationalOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::-=infix=(NSCore::Float, NSCore::Float)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BFloatBinary_UF", [new SMTConst("\"op_binary_minus\""), ...args]) : new SMTCallSimple("-", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubFloatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::-=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BDecimalBinary_UF", [new SMTConst("\"op_binary_minus\""), ...args]) : new SMTCallSimple("-", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix *
             case "NSCore::*=infix=(NSCore::Int, NSCore::Int)": {
-                rtype = this.typegen.getMIRType("NSCore::Int");
-                smte = this.processGenerateResultWithBounds(sinfo, "*", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::*=infix=(NSCore::Nat, NSCore::Nat)": {
-                rtype = this.typegen.getMIRType("NSCore::Nat");
-                smte = this.processGenerateResultWithBounds(sinfo, "*", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::*=infix=(NSCore::BigInt, NSCore::BigInt)": {
-                rtype = this.typegen.getMIRType("NSCore::BigInt");
-                smte = this.processGenerateResultWithBounds(sinfo, "*", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::*=infix=(NSCore::BigNat, NSCore::BigNat)": {
-                rtype = this.typegen.getMIRType("NSCore::BigNat");
-                smte = this.processGenerateResultWithBounds(sinfo, "*", args, rtype);
-                erropt = this.vopts.OverflowEnabled;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::*=infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinary_UF", [new SMTConst("\"op_binary_mult\""), ...args]) : new SMTCallSimple("*", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultRationalOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::*=infix=(NSCore::Float, NSCore::Float)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BFloatBinary_UF", [new SMTConst("\"op_binary_mult\""), ...args]) : new SMTCallSimple("*", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultFloatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::*=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BDecimalBinary_UF", [new SMTConst("\"op_binary_mult\""), ...args]) : new SMTCallSimple("*", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix /
             case "NSCore::/=infix=(NSCore::Int, NSCore::Int)": {
-                rtype = this.typegen.getMIRType("NSCore::Int");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BInt@zero"), args[1], rtype, new SMTCallSimple("bvsrem", args));
-                erropt = true;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::/=infix=(NSCore::Nat, NSCore::Nat)": {
-                rtype = this.typegen.getMIRType("NSCore::Nat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("bvurem", args));
-                erropt = true;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::/=infix=(NSCore::BigInt, NSCore::BigInt)": {
-                rtype = this.typegen.getMIRType("NSCore::BigInt");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigInt@zero"), args[1], rtype, new SMTCallSimple(this.vopts.BigXMode === "BV" ? "bvsrem" : "/", args));
-                erropt = true;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::/=infix=(NSCore::BigNat, NSCore::BigNat)": {
-                rtype = this.typegen.getMIRType("NSCore::BigNat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigNat@zero"), args[1], rtype, new SMTCallSimple(this.vopts.BigXMode === "BV" ? "bvurem" : "/", args));
-                erropt = true;
-                break
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::/=infix=(NSCore::Rational, NSCore::Rational)": {
-                rtype = this.typegen.getMIRType("NSCore::Rational");
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinary_UF", [new SMTConst("\"op_binary_div\""), ...args]) : this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BRational@zero"), args[1], rtype, new SMTCallSimple("/", args));
-                erropt = true;
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivRationalOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::/=infix=(NSCore::Float, NSCore::Float)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BFloatBinary_UF", [new SMTConst("\"op_binary_div\""), ...args]) : new SMTCallSimple("/", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivFloatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::/=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BDecimalBinary_UF", [new SMTConst("\"op_binary_div\""), ...args]) : new SMTCallSimple("/", args);
-                break;
+                return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix ==
-            case "NSCore::===infix=(NSCore::Int, NSCore::Int)":
-            case "NSCore::===infix=(NSCore::Nat, NSCore::Nat)":
-            case "NSCore::===infix=(NSCore::BigInt, NSCore::BigInt)":
-            case "NSCore::===infix=(NSCore::BigNat, NSCore::BigNat)":
+            case "NSCore::===infix=(NSCore::Int, NSCore::Int)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqIntOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::===infix=(NSCore::Nat, NSCore::Nat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqNatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::===infix=(NSCore::BigInt, NSCore::BigInt)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigIntOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::===infix=(NSCore::BigNat, NSCore::BigNat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigNatOp, trgt, oftype, args[0], args[1]);
+            }
             case "NSCore::===infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = new SMTCallSimple("=", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqRationalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix !=
-            case "NSCore::!==infix=(NSCore::Int, NSCore::Int)":
-            case "NSCore::!==infix=(NSCore::Nat, NSCore::Nat)":
-            case "NSCore::!==infix=(NSCore::BigInt, NSCore::BigInt)":
-            case "NSCore::!==infix=(NSCore::BigNat, NSCore::BigNat)":
+            case "NSCore::!==infix=(NSCore::Int, NSCore::Int)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqIntOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::!==infix=(NSCore::Nat, NSCore::Nat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqNatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::!==infix=(NSCore::BigInt, NSCore::BigInt)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigIntOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::!==infix=(NSCore::BigNat, NSCore::BigNat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigNatOp, trgt, oftype, args[0], args[1]);
+            }
             case "NSCore::!==infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = new SMTCallSimple("not", [new SMTCallSimple("=", args)]);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqRationalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix <
             case "NSCore::<=infix=(NSCore::Int, NSCore::Int)": {
-                smte = new SMTCallSimple("bvslt", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<=infix=(NSCore::Nat, NSCore::Nat)": {
-                smte = new SMTCallSimple("bvult", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<=infix=(NSCore::BigInt, NSCore::BigInt)": {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvslt", args) : new SMTCallSimple("<", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<=infix=(NSCore::BigNat, NSCore::BigNat)": {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvult", args) : new SMTCallSimple("<", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<=infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinaryPred_UF", [new SMTConst("\"op_binary_lt\""), ...args]) : new SMTCallSimple("<", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<=infix=(NSCore::Float, NSCore::Float)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BFloatBinaryPred_UF", [new SMTConst("\"op_binary_lt\""), ...args]) : new SMTCallSimple("<", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BDecimalBinaryPred_UF", [new SMTConst("\"op_binary_lt\""), ...args]) : new SMTCallSimple("<", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >
             case "NSCore::>=infix=(NSCore::Int, NSCore::Int)": {
-                smte = new SMTCallSimple("bvsgt", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>=infix=(NSCore::Nat, NSCore::Nat)": {
-                smte = new SMTCallSimple("bvugt", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>=infix=(NSCore::BigInt, NSCore::BigInt)": {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvsgt", args) : new SMTCallSimple(">", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>=infix=(NSCore::BigNat, NSCore::BigNat)": {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvugt", args) : new SMTCallSimple(">", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>=infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinaryPred_UF", [new SMTConst("\"op_binary_gt\""), ...args]) : new SMTCallSimple(">", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtRationalOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>=infix=(NSCore::Float, NSCore::Float)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BFloatBinaryPred_UF", [new SMTConst("\"op_binary_gt\""), ...args]) : new SMTCallSimple(">", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtFloatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BDecimalBinaryPred_UF", [new SMTConst("\"op_binary_gt\""), ...args]) : new SMTCallSimple(">", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix <=
             case "NSCore::<==infix=(NSCore::Int, NSCore::Int)": {
-                smte = new SMTCallSimple("bvsle", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<==infix=(NSCore::Nat, NSCore::Nat)": {
-                smte = new SMTCallSimple("bvule", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<==infix=(NSCore::BigInt, NSCore::BigInt)":  {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvsle", args) : new SMTCallSimple("<=", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<==infix=(NSCore::BigNat, NSCore::BigNat)": {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvule", args) : new SMTCallSimple("<=", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::<==infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinaryPred_UF", [new SMTConst("\"op_binary_lte\""), ...args]) : new SMTCallSimple("<=", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::<==infix=(NSCore::Float, NSCore::Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::<==infix=(NSCore::Decimal, NSCore::Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >=
             case "NSCore::>==infix=(NSCore::Int, NSCore::Int)": {
-                smte = new SMTCallSimple("bvsge", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>==infix=(NSCore::Nat, NSCore::Nat)": {
-                smte = new SMTCallSimple("bvuge", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>==infix=(NSCore::BigInt, NSCore::BigInt)": {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvsge", args) : new SMTCallSimple(">=", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigIntOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>==infix=(NSCore::BigNat, NSCore::BigNat)": {
-                smte = (this.vopts.BigXMode === "BV") ? new SMTCallSimple("bvuge", args) : new SMTCallSimple(">=", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigNatOp, trgt, oftype, args[0], args[1]);
             }
             case "NSCore::>==infix=(NSCore::Rational, NSCore::Rational)":{
-                smte = (this.vopts.FPOpt === "UF") ? new SMTCallSimple("BRationalBinaryPred_UF", [new SMTConst("\"op_binary_gte\""), ...args]) : new SMTCallSimple(">=", args);
-                break;
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeRationalOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::>==infix=(NSCore::Float, NSCore::Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeFloatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::>==infix=(NSCore::Decimal, NSCore::Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeDecimalOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::===infix=(NSCore::StringPos, NSCore::StringPos)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqStrPosOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::!==infix=(NSCore::StringPos, NSCore::StringPos)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqStrPosOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::<=infix=(NSCore::StringPos, NSCore::StringPos)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtStrPosOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::>=infix=(NSCore::StringPos, NSCore::StringPos)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtStrPosOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::<==infix=(NSCore::StringPos, NSCore::StringPos)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeStrPosOp, trgt, oftype, args[0], args[1]);
+            }
+            case "NSCore::>==infix=(NSCore::StringPos, NSCore::StringPos)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeStrPosOp, trgt, oftype, args[0], args[1]);
             }
             default: {
-                assert(false);
+                return NOT_IMPLEMENTED(op);
             }
-        }
-
-        if (!erropt) {
-            return new SMTLet(this.varToSMTName(trgt).vname, smte, continuation);
-        }
-        else {
-            const cres = this.generateTempName();
-
-            const okpath = new SMTLet(this.varToSMTName(trgt).vname, this.typegen.generateResultGetSuccess(rtype, new SMTVar(cres)), continuation);
-            const errpath = (rtype.trkey === this.currentRType.trkey) ? new SMTVar(cres) : this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(rtype, new SMTVar(cres)));
-
-            const icond = new SMTIf(this.typegen.generateResultIsErrorTest(rtype, new SMTVar(cres)), errpath, okpath);
-            return new SMTLet(cres, smte, icond);
         }
     }
 

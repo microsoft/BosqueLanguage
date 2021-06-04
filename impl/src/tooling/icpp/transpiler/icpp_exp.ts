@@ -515,90 +515,17 @@ class ICPPOpEmitter
         return { tag: OpCodeTag.VarLifetimeEndOp, sinfo: sinfo, name: name };
     }
     
-/*
-    NegateIntOp,
-    NegateBigIntOp,
-    NegateRationalOp,
-    NegateFloatOp,
-    NegateDecimalOp,
+    static genNegateOp(sinfo: SourceInfo, tag: OpCodeTag, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument): ICPPOp {
+        return {tag: tag, sinfo: sinfo, trgt: trgt, oftype: oftype, arg: arg};
+    }
 
-    AddNatOp,
-    AddIntOp,
-    AddBigNatOp,
-    AddBigIntOp,
-    AddRationalOp,
-    AddFloatOp,
-    AddDecimalOp,
-    SubNatOp,
-    SubIntOp,
-    SubBigNatOp,
-    SubBigIntOp,
-    SubRationalOp,
-    SubFloatOp,
-    SubDecimalOp,
-    MultNatOp,
-    MultIntOp,
-    MultBigNatOp,
-    MultBigIntOp,
-    MultRationalOp,
-    MultFloatOp,
-    MultDecimalOp,
-    DivNatOp,
-    DivIntOp,
-    DivBigNatOp,
-    DivBigIntOp,
-    DivRationalOp,
-    DivFloatOp,
-    DivDecimalOp,
+    static genBinaryOp(sinfo: SourceInfo, tag: OpCodeTag, trgt: TargetVar, oftype: MIRResolvedTypeKey, larg: Argument, rarg: Argument): ICPPOp {
+        return {tag: tag, sinfo: sinfo, trgt: trgt, oftype: oftype, larg: larg, rarg: rarg};
+    }
 
-    EqNatOp,
-    EqIntOp,
-    EqBigNatOp,
-    EqBigIntOp,
-    EqRationalOp,
-    NeqNatOp,
-    NeqIntOp,
-    NeqBigNatOp,
-    NeqBigIntOp,
-    NeqRationalOp,
-
-    LtNatOp,
-    LtIntOp,
-    LtBigNatOp,
-    LtBigIntOp,
-    LtRationalOp,
-    LtFloatOp,
-    LtDecimalOp,
-    GtNatOp,
-    GtIntOp,
-    GtBigNatOp,
-    GtBigIntOp,
-    GtRationalOp,
-    GtFloatOp,
-    GtDecimalOp,
-
-    LeNatOp,
-    LeIntOp,
-    LeBigNatOp,
-    LeBigIntOp,
-    LeRationalOp,
-    LeFloatOp,
-    LeDecimalOp,
-    GeNatOp,
-    GeIntOp,
-    GeBigNatOp,
-    GeBigIntOp,
-    GeRationalOp,
-    GeFloatOp,
-    GeDecimalOp,
-
-    EqStrPosOp,
-    NeqStrPosOp,
-    LtStrPosOp,
-    GtStrPosOp,
-    LeStrPosOp,
-    GeStrPosOp,
-    */
+    static genCmpOp(sinfo: SourceInfo, tag: OpCodeTag, trgt: TargetVar, oftype: MIRResolvedTypeKey, larg: Argument, rarg: Argument): ICPPOp {
+        return {tag: tag, sinfo: sinfo, trgt: trgt, oftype: oftype, larg: larg, rarg: rarg};
+    }
 }
 
 export {

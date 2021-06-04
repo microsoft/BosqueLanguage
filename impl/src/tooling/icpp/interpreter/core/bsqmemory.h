@@ -10,6 +10,7 @@
 
 struct GCStackEntry
 {
+    void** frames;
     void** framep;
     RefMask mask;
 };
@@ -22,7 +23,7 @@ public:
 
     inline static void pushFrame(void** framep, RefMask mask)
     {
-        if (GCStack::stackp >= 8192)
+        if (GCStack::stackp >= 2048)
         {
             printf("Out-Of-Stack\n");
             exit(1);

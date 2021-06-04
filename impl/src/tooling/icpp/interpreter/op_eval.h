@@ -19,7 +19,8 @@ public:
 #endif
 
     StorageLocationPtr* argsbase;
-    uint8_t* localsbase;
+    uint8_t* scalarbase;
+    uint8_t* mixedbase;
     BSQBool* argmask;
     BSQBool* masksbase;
 
@@ -35,14 +36,15 @@ private:
     static EvaluatorFrame g_callstack[2048];
 
 #ifdef BSQ_DEBUG_BUILD
-    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         auto cf = Evaluator::g_callstack + this->cpos++;
         cf->dbg_file = dbg_file;
         cf->dbg_function = dbg_function;
         cf->dbg_prevline = 0;
         cf->argsbase = argsbase;
-        cf->localsbase = localsbase;
+        cf->scalarbase = scalarbase;
+        cf->mixedbase = mixedbase;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
@@ -50,11 +52,12 @@ private:
         cf->dbg_line = (*cf->cpos)->sinfo.line;
     }
 #else
-    inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* localsbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         auto cf = Evaluator::g_callstack + cpos++;
         cf->argsbase = argsbase;
-        cf->localsbase = localsbase;
+         cf->scalarbase = scalarbase;
+        cf->mixedbase = mixedbase;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
@@ -69,7 +72,7 @@ private:
 
 #ifdef BSQ_DEBUG_BUILD
     const std::string* getCurrentFile() { return cframe->dbg_file; }
-    const std::string* getCurrentfunction() { return cframe->dbg_function; }
+    const std::string* getCurrentFunction() { return cframe->dbg_function; }
     int64_t getPrevLine() { return cframe->dbg_prevline; }
     int64_t getCurrentLine() { return cframe->dbg_line; }
 #else
@@ -299,7 +302,7 @@ private:
     void evaluateOpCode(const InterpOp* op);
 
     void evaluateOpCodeBlocks();
-    void evaluateBody(StorageLocationPtr resultsl);
+    void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
 
@@ -307,8 +310,8 @@ private:
     void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk);
     void invokePostlude();
 
-    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args, StorageLocationPtr resultsl);
+    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
 public:
-    void invokeMain(const BSQInvokeBodyDecl* call, const std::vector<void*>& argslocs, StorageLocationPtr resultsl);
+    void invokeMain(const BSQInvokeBodyDecl* call, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 };
