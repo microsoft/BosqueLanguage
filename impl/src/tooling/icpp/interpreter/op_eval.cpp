@@ -1759,26 +1759,24 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, maskslots, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, mixedslots, optmask, maskslots, &invk->body);
 #else
-    this->pushFrame((StorageLocationPtr*)argsbase, cstack, maskslots, &invk->body);
+    this->pushFrame((StorageLocationPtr*)argsbase, cstack, mixedslots, optmask, maskslots, &invk->body);
 #endif
 }
     
 void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk)
 {
-    size_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
+   size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    uint8_t* mixedslots = cstack + invk->scalarstackBytes;
     GC_MEM_ZERO(cstack, cssize);
 
-    uint8_t* refslots = cstack + invk->scalarstackBytes;
-    uint8_t* mixedslots = refslots + (invk->refstackSlots * sizeof(void*));
-
-    GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
+    GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, nullptr, cstack, nullptr, nullptr);
+    this->pushFrame(&invk->srcFile, &invk->name, nullptr, cstack, mixedslots, nullptr, nullptr, nullptr);
 #else
-    this->pushFrame(nullptr, cstack, nullptr, nullptr);
+    this->pushFrame(nullptr, cstack, mixedslots, nullptr, nullptr, nullptr);
 #endif
 }
     
@@ -1808,7 +1806,6 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
 }
 
-
 void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
 {
     void* argsbase = BSQ_STACK_SPACE_ALLOC(invk->params.size() * sizeof(void*));
@@ -1819,23 +1816,21 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
         curr++;
     }
 
-    size_t cssize = invk->scalarstackBytes + (invk->refstackSlots * sizeof(void*)) + sizeof(invk->mixedstackBytes);
+    size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    uint8_t* mixedslots = cstack + invk->scalarstackBytes;
     GC_MEM_ZERO(cstack, cssize);
-
-    uint8_t* refslots = cstack + invk->scalarstackBytes;
-    uint8_t* mixedslots = refslots + (invk->refstackSlots * sizeof(void*));
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
     BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
-    GCStack::pushFrame((void**)refslots, invk->refstackSlots, (void**)mixedslots, invk->mixedMask);
+    GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, maskslots, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, mixedslots, nullptr, maskslots, &invk->body);
 #else
-    this->pushFrame(argsbase, cstack, maskslots, &invk->body);
+    this->pushFrame((StorageLocationPtr*)argsbase, cstack, mixedslots, nullptr, maskslots, &invk->body);
 #endif
 
-    this->evaluateBody(resultsl);
+    this->evaluateBody(resultsl, restype, resarg);
 }

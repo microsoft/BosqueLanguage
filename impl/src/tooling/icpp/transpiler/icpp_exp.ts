@@ -10,7 +10,8 @@ enum ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    Local,
+    LocalScalar,
+    LocalMixed,
     Argument
 }
 
@@ -188,6 +189,7 @@ type Argument = {
 };
 
 type TargetVar = {
+    kind: ArgumentTag;
     offset: number;
 };
 
@@ -213,8 +215,12 @@ class ICPPOpEmitter
         return { kind: ArgumentTag.Const, location: offset };
     }
 
-    static genLocalArgument(offset: number): Argument {
-        return { kind: ArgumentTag.Local, location: offset };
+    static genLocalScalarArgument(offset: number): Argument {
+        return { kind: ArgumentTag.LocalScalar, location: offset };
+    }
+
+    static genLocalMixedArgument(offset: number): Argument {
+        return { kind: ArgumentTag.LocalMixed, location: offset };
     }
 
     static genParameterArgument(offset: number): Argument {

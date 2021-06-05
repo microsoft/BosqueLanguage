@@ -118,9 +118,13 @@ private:
 
     inline StorageLocationPtr evalArgument(Argument arg)
     {
-        if(arg.kind == ArgumentTag::Local)
+        if(arg.kind == ArgumentTag::LocalScalar)
         {
-            return this->cframe->localsbase + arg.location;
+            return this->cframe->scalarbase + arg.location;
+        }
+        else if(arg.kind == ArgumentTag::LocalMixed)
+        {
+            return this->cframe->mixedbase + arg.location;
         }
         else if(arg.kind == ArgumentTag::Argument)
         {
@@ -134,7 +138,14 @@ private:
 
     inline StorageLocationPtr evalTargetVar(TargetVar trgt)
     {
-        return this->cframe->localsbase + trgt.offset;
+        if(trgt.kind == ArgumentTag::LocalScalar)
+        {
+            return this->cframe->scalarbase + trgt.offset;
+        }
+        else
+        {
+            return this->cframe->mixedbase + trgt.offset;
+        }
     }
 
     inline BSQBool* evalMaskLocation(int32_t gmaskoffset)
@@ -153,7 +164,7 @@ private:
     {
         assert(gvaroffset >= 0);
 
-        return this->cframe->localsbase + gvaroffset;
+        return this->cframe->scalarbase + gvaroffset;
     }
 
     inline BSQBool evalGuardStmt(const BSQGuard& guard)

@@ -29,10 +29,10 @@ class ICPPBodyEmitter {
     private argsMap: Map<string, number> = new Map<string, number>();
     private scalarStackMap: Map<string, number> = new Map<string, number>();
     private scalarStackSize: number = 0;
-    private scalarStackLayout: {offset: number, name: string | undefined, storage: ICPPType}[] = [];
+    private scalarStackLayout: {offset: number, name: string, storage: ICPPType}[] = [];
     private mixedStackMap: Map<string, number> = new Map<string, number>();
     private mixedStackSize: number = 0;
-    private mixedStackLayout: {offset: number, name: string | undefined, storage: ICPPType}[] = [];
+    private mixedStackLayout: {offset: number, name: string, storage: ICPPType}[] = [];
 
     private literalMap: Map<string, number> = new Map<string, number>();
     private constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
@@ -65,87 +65,53 @@ class ICPPBodyEmitter {
         }
         else {
             if(this.scalarStackMap.has(vname)) {
-                return ICPPOpEmitter.genLocalArgument(this.scalarStackMap.get(vname) as number);
+                return ICPPOpEmitter.genLocalScalarArgument(this.scalarStackMap.get(vname) as number);
             }
             else {
-                return ICPPOpEmitter.genLocalArgument(this.mixedStackMap.get(vname) as number);
+                return ICPPOpEmitter.genLocalMixedArgument(this.mixedStackMap.get(vname) as number);
             }
         }
     }
 
     private getStackInfoForTargetVar(vname: string, oftype: ICPPType): TargetVar {
+        //
+        //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
+        //
         if(oftype.allocinfo.isScalarOnlyInline()) {
-            let openidx = this.scalarStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
-            if (openidx === -1) {
-                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
-                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
+            const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
 
-                openidx = this.scalarStackSize - 1;
-            }
+            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
+            this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            const spos = this.scalarStackLayout[openidx];
-            this.scalarStackMap.set(vname, spos.offset);
-            spos.name = vname;
-
-            return { offset: spos.offset };
+            return trgt;
         }
         else {
-            let openidx = this.mixedStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
-            if (openidx === -1) {
-                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
-                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.scalarStackSize };
 
-                openidx = this.mixedStackSize - 1;
-            }
+            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
+            this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
-            const spos = this.mixedStackLayout[openidx];
-            this.mixedStackMap.set(vname, spos.offset);
-            spos.name = vname;
-
-            return { offset: spos.offset };
+            return trgt;
         }
-    }
-
-    private releaseStackSlotForVar(vname: string) {
-        const spos = this.scalarStackLayout.find((opt) => opt.name === vname);
-        if(spos !== undefined) {
-            spos.name = undefined;
-        }
-
-        const mpos = this.mixedStackLayout.find((opt) => opt.name === vname);
-        if(mpos !== undefined) {
-            mpos.name = undefined;
-        } 
     }
 
     private generateScratchVarInfo(oftype: ICPPType): [TargetVar, Argument] {
         if (oftype.allocinfo.isScalarOnlyInline()) {
-            let openidx = this.scalarStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
-            if (openidx === -1) {
-                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: undefined, storage: oftype });
-                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
+            const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
 
-                openidx = this.scalarStackSize - 1;
-            }
+            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: `@scalar_scratch_${this.scalarStackLayout.length}`, storage: oftype });
+            this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            const spos = this.scalarStackLayout[openidx];
-            spos.name = `@scalar_scratch_${openidx}`;
-
-            return [{ offset: spos.offset }, ICPPOpEmitter.genLocalArgument(spos.offset)];
+            return [trgt, ICPPOpEmitter.genLocalScalarArgument(trgt.offset)];
         }
         else {
-            let openidx = this.mixedStackLayout.findIndex((opt) => opt.name === undefined && opt.storage.tkey === oftype.tkey);
-            if (openidx === -1) {
-                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: undefined, storage: oftype });
-                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.scalarStackSize };
 
-                openidx = this.mixedStackSize - 1;
-            }
+            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: `@mixed_scratch_${this.mixedStackLayout.length}`, storage: oftype });
+            this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
-            const spos = this.mixedStackLayout[openidx];
-            spos.name = `@mixed_scratch_${openidx}`;
 
-            return [{ offset: spos.offset }, ICPPOpEmitter.genLocalArgument(spos.offset)];
+            return [trgt, ICPPOpEmitter.genLocalMixedArgument(trgt.offset)];
         }
     }
 
@@ -1609,66 +1575,32 @@ class ICPPBodyEmitter {
         }
     }
 
-    getReadyBlock(blocks: Map<string, MIRBasicBlock>, done: Map<string, SMTExp>): MIRBasicBlock | undefined {
-        return [...blocks].map((bb) => bb[1]).find((bb) => {
-            if(done.has(bb.label)) {
-                return false;
-            }
+    generateBlockExps(blocks: Map<string, MIRBasicBlock>) {
+        let icppblocks = new Map<string, ICPPOp[]>();
 
-            const jop = bb.ops[bb.ops.length - 1];
-            if(jop.tag === MIROpTag.MIRAbort) {
-               return true;
-            }
-            else if (jop.tag === MIROpTag.MIRJump) {
-               return done.has((jop as MIRJump).trgtblock);
-            }
-            else {
-                assert(jop.tag === MIROpTag.MIRJumpCond || jop.tag === MIROpTag.MIRJumpNone);
+        //Generate basic logic
+        blocks.forEach((bb) => {
+           let ii = bb.ops.findIndex((op) => !(op instanceof MIRPhi));
+            let done = false;
+            let icpp: ICPPOp[] = [];
+            while(!done) {
+                const op = bb.ops[ii];
+                if(op.tag === MIROpTag.MIRJump || op.tag === MIROpTag.MIRJumpCond || op.tag === MIROpTag.MIRJumpNone || op.tag === MIROpTag.MIRAbort) {
+                    break;
+                }
 
-                let tdone = (jop.tag === MIROpTag.MIRJumpCond) ? done.has((jop as MIRJumpCond).trueblock) : done.has((jop as MIRJumpNone).noneblock);
-                let fdone = (jop.tag === MIROpTag.MIRJumpCond) ? done.has((jop as MIRJumpCond).falseblock) : done.has((jop as MIRJumpNone).someblock);
-                
-                return tdone && fdone;
-            }
-        });
-    }
-
-    getNextBlockExp(blocks: Map<string, MIRBasicBlock>, smtexps: Map<string, SMTExp>, from: string, trgt: string): SMTExp {
-        if(trgt !== "returnassign") {
-            return smtexps.get(trgt) as SMTExp;
-        }
-        else {
-            const eblock = blocks.get("returnassign") as MIRBasicBlock;
-            let rexp: SMTExp = smtexps.get("exit") as SMTExp;
-
-            const nomrmalidx = eblock.ops.findIndex((op) => !(op instanceof MIRPhi));
-            for (let i = eblock.ops.length - 1; i >= nomrmalidx; --i) {
-                const texp = this.processOp(eblock.ops[i], rexp);
-                if(texp !== undefined) {
-                    rexp = texp;
+                const icppop = this.processOp(op);
+                if(icppop !== undefined) {
+                    icpp.push(icppop);
                 }
             }
 
-            if(nomrmalidx === 0) {
-                return rexp;
-            }
-            else {
-                const phis = eblock.ops.slice(0, nomrmalidx) as MIRPhi[];
-                
-                const assigns = phis.map((phi) => {
-                    return {
-                        vname: this.varToSMTName(phi.trgt).vname,
-                        value: this.varToSMTName(phi.src.get(from) as MIRRegisterArgument)
-                    }
-                });
+            icppblocks.set(bb.label, icpp);
+        });
 
-                return new SMTLetMulti(assigns, rexp);
-            }
-        }
-    }
+        //Fixup phi assigns
 
-    generateBlockExps(issafe: boolean, blocks: Map<string, MIRBasicBlock>): SMTExp {
-        let smtexps = new Map<string, SMTExp>();
+        //Fixup jump offsets and append blocks
 
         const eblock = blocks.get("exit") as MIRBasicBlock;
         let rexp: SMTExp = issafe ? new SMTVar("$$return") : this.typegen.generateResultTypeConstructorSuccess(this.currentRType, new SMTVar("$$return"));
@@ -1723,26 +1655,14 @@ class ICPPBodyEmitter {
         return smtexps.get("entry") as SMTExp;
     }
 
-    generateSMTInvoke(idecl: MIRInvokeDecl, cscc: Set<string>, gas: number | undefined, gasdown: number | undefined): SMTFunction | SMTFunctionUninterpreted | undefined {
+    generateSMTInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl {
         this.currentFile = idecl.srcFile;
         this.currentRType = this.typegen.getMIRType(idecl.resultType);
-        this.currentSCC = cscc;
 
-        //
-        //TODO: handle gas for recursive calls!!!
-        //
 
         const args = idecl.params.map((arg) => {
             return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
         });
-
-        const issafe = this.isSafeInvoke(idecl.key);
-        const restype = issafe ? this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.resultType)) : this.typegen.generateResultType(this.typegen.getMIRType(idecl.resultType));
-
-        //
-        //TODO: if cscc is not empty then we should handle it
-        //
-        assert(this.currentSCC.size === 0);
 
         if (idecl instanceof MIRInvokeBodyDecl) {
             const body = this.generateBlockExps(issafe, (idecl as MIRInvokeBodyDecl).body.body);
@@ -1758,161 +1678,6 @@ class ICPPBodyEmitter {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
 
             return this.generateBuiltinFunction(idecl as MIRInvokePrimitiveDecl);
-        }
-    }
-
-    generateBuiltinFunction(idecl: MIRInvokePrimitiveDecl): SMTFunction | SMTFunctionUninterpreted | undefined {
-        const args = idecl.params.map((arg) => {
-            return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
-        });
-
-        const issafe = this.isSafeInvoke(idecl.key);
-        const encltypekey = idecl.enclosingDecl !== undefined ? idecl.enclosingDecl : "NSCore::None";
-
-        const mirrestype = this.typegen.getMIRType(idecl.resultType);
-        const smtrestype = this.typegen.getSMTTypeFor(mirrestype);
-
-        const chkrestype = issafe ? smtrestype : this.typegen.generateResultType(mirrestype);
-
-        switch(idecl.implkey) {
-            case "default": {
-                return undefined;
-            }
-            case "validator_accepts": {
-                const bsqre = this.assembly.validatorRegexs.get(encltypekey) as BSQRegex;
-                const lre = bsqre.compileToSMTValidator(this.vopts.StringOpt === "ASCII");
-
-                let accept: SMTExp = new SMTConst("false");
-                if (this.vopts.StringOpt === "ASCII") {
-                    accept = new SMTCallSimple("str.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
-                }
-                else {
-                    accept = new SMTCallSimple("seq.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
-                }
-
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, accept);
-            }
-            case "string_empty": {
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("=", [new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")]));
-            }
-            case "string_append": {
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
-            }
-            case "list_fill": {
-                const [count, value] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(encltypekey), count, value);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_rangeofint": {
-                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processRangeOfIntOperation(mirrestype, low, high, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_rangeofnat": {
-                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processRangeOfNatOperation(mirrestype, low, high, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_safecheckpred": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_safecheckfn": {
-                const pcode = idecl.pcodes.get("f") as MIRPCode;
-                const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(encltypekey), pcrtype, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_computeisequence": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_hascheck": {
-                const [l, count, val] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processHasCheck(this.typegen.getMIRType(encltypekey), l, count, val); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_haspredcheck": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_size": {
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, this.lopsManager.generateListSizeCall(new SMTVar(args[0].vname), args[0].vtype));
-            }
-            case "list_empty": {
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("=", [new SMTConst("BNat@zero"), this.lopsManager.generateListSizeCall(new SMTVar(args[0].vname), args[0].vtype)]));
-            }
-            case "list_unsafe_get": {
-                const [l, n] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processGet(this.typegen.getMIRType(encltypekey), l, n);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_fill": {
-                const [n, v] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(encltypekey), n, v);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_concat2": {
-                const [l1, l2, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processConcat2(mirrestype, l1, l2, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_findindexof_keyhelper": {
-                const [l, count, val] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processIndexOf(this.typegen.getMIRType(encltypekey), l, count, val); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_findindexoflast_keyhelper": {
-                const [l, count, val] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processIndexOfLast(this.typegen.getMIRType(encltypekey), l, count, val); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_findindexof_predicatehelper": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_findindexoflast_predicatehelper": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_countif_helper": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processCountIf(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, isq, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_filter_helper": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, isq, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_slice": {
-                const [l1, start, end, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSlice(mirrestype, l1, start, end, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_map": {
-                const pcode = idecl.pcodes.get("f") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processMap(this.typegen.getMIRType(encltypekey), mirrestype, pcode.code, pcode, l, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            default: {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
-            }
         }
     }
 }

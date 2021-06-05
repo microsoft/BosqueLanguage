@@ -462,59 +462,37 @@ class SMTEmitter {
     }
 
     private initializeSMTAssembly(assembly: MIRAssembly, entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, maxgas: number) {
-        let doneset = new Set<MIRInvokeKey>();
-
         const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
         const cginfo = constructCallGraphInfo([entrypoint, ...cinits], assembly);
         const rcg = [...cginfo.topologicalOrder].reverse();
 
         for (let i = 0; i < rcg.length; ++i) {
             const cn = rcg[i];
-            if(doneset.has(cn.invoke)) {
-                continue;
-            }
-
+            
             const cscc = cginfo.recursive.find((scc) => scc.has(cn.invoke));
             const currentSCC = cscc || new Set<string>();
             let worklist = cscc !== undefined ? [...cscc].sort() : [cn.invoke];
 
-            let gasmax: number | undefined = cscc !== undefined ? maxgas : 1;
-            for (let gasctr = 1; gasctr <= gasmax; gasctr++) {
-                for (let mi = 0; mi < worklist.length; ++mi) {
-                    const ikey = worklist[mi];
+            for (let mi = 0; mi < worklist.length; ++mi) {
+                const ikey = worklist[mi];
 
-                    let gas: number | undefined = undefined;
-                    let gasdown: number | undefined = undefined;
-                    if (gasctr !== gasmax) {
-                        gas = gasctr;
-                        gasdown = gasctr - 1;
+                const idcl = (assembly.invokeDecls.get(ikey) || assembly.primitiveInvokeDecls.get(ikey)) as MIRInvokeDecl;
+                const finfo = this.bemitter.generateSMTInvoke(idcl, currentSCC);
+                this.processVirtualInvokes();
+                this.processVirtualEntityUpdates();
+
+                if (finfo !== undefined) {
+                    if (finfo instanceof SMTFunction) {
+                        this.assembly.functions.push(finfo);
                     }
                     else {
-                        gasdown = gasmax - 1;
-                    }
-
-                    const idcl = (assembly.invokeDecls.get(ikey) || assembly.primitiveInvokeDecls.get(ikey)) as MIRInvokeDecl;
-                    const finfo = this.bemitter.generateSMTInvoke(idcl, currentSCC, gas, gasdown);
-                    this.processVirtualInvokes();
-                    this.processVirtualEntityUpdates();
-
-                    if (finfo !== undefined) {
-                        if (finfo instanceof SMTFunction) {
-                            this.assembly.functions.push(finfo);
-                        }
-                        else {
-                            this.assembly.uninterpfunctions.push(finfo);
-                        }
-                    }
-
-                    const rtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(idcl.resultType));
-                    if(this.assembly.resultTypes.find((rtt) => rtt.ctype.name === rtype.name) === undefined) {
-                        this.assembly.resultTypes.push(({hasFlag: false, rtname: idcl.resultType, ctype: rtype}));
+                        this.assembly.uninterpfunctions.push(finfo);
                     }
                 }
 
-                if(cscc !== undefined) {
-                    cscc.forEach((v) => doneset.add(v));
+                const rtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(idcl.resultType));
+                if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === rtype.name) === undefined) {
+                    this.assembly.resultTypes.push(({ hasFlag: false, rtname: idcl.resultType, ctype: rtype }));
                 }
             }
         }

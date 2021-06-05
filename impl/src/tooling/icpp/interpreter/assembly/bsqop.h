@@ -12,7 +12,8 @@ enum class ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    Local,
+    LocalScalar,
+    LocalMixed,
     Argument
 };
 
@@ -186,6 +187,7 @@ struct Argument
 
 struct TargetVar
 {
+    ArgumentTag kind;
     uint32_t offset;
 };
 

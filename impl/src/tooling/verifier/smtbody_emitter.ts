@@ -2466,14 +2466,10 @@ class SMTBodyEmitter {
         return smtexps.get("entry") as SMTExp;
     }
 
-    generateSMTInvoke(idecl: MIRInvokeDecl, cscc: Set<string>, gas: number | undefined, gasdown: number | undefined): SMTFunction | SMTFunctionUninterpreted | undefined {
+    generateSMTInvoke(idecl: MIRInvokeDecl, cscc: Set<string>): SMTFunction | SMTFunctionUninterpreted | undefined {
         this.currentFile = idecl.srcFile;
         this.currentRType = this.typegen.getMIRType(idecl.resultType);
         this.currentSCC = cscc;
-
-        //
-        //TODO: handle gas for recursive calls!!!
-        //
 
         const args = idecl.params.map((arg) => {
             return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
@@ -2483,7 +2479,7 @@ class SMTBodyEmitter {
         const restype = issafe ? this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.resultType)) : this.typegen.generateResultType(this.typegen.getMIRType(idecl.resultType));
 
         //
-        //TODO: if cscc is not empty then we should handle it
+        //TODO: if cscc is not empty then we should handle it -- by generating a define-rec-fun group if we want to witness gen or an uninterpreted havoc if we want to prove
         //
         assert(this.currentSCC.size === 0);
 
