@@ -1691,7 +1691,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
 void Evaluator::evaluateOpCodeBlocks()
 {
     InterpOp* op = this->getCurrentOp();
-    while(true)
+    do
     {
         switch(op->tag)
         {
@@ -1713,7 +1713,7 @@ void Evaluator::evaluateOpCodeBlocks()
             op = this->advanceCurrentOp();
         }
         }
-    }
+    } while (this->hasMoreOps());
 }
     
 void Evaluator::evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)

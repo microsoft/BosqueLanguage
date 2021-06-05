@@ -3,15 +3,14 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRPCode, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRTupleTypeEntry, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
-import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
+import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeInlineUnion, ICPPTypeKind, ICPPTypeRecord, ICPPTypeRefUnion, ICPPTypeTuple, RefMask, TranspilerOptions, UNIVERSAL_SIZE } from "./icpp_assembly";
+import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList,  ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions, UNIVERSAL_SIZE } from "./icpp_assembly";
 
 import * as assert from "assert";
-import { BSQRegex } from "../../../ast/bsqregex";
 
 function NOT_IMPLEMENTED(msg: string): ICPPOp {
     throw new Error(`Not Implemented: ${msg}`);
@@ -42,9 +41,6 @@ class ICPPBodyEmitter {
     private maskMap: Map<string, number> = new Map<string, number>();
     private masksize: number = 0;
     private masklayout: {offset: number, occupied: boolean, name: string, size: number}[] = [];
-    
-    private ops: Map<string, ICPPOp[]> = new Map<string, ICPPOp[]>();
-    private cblock: ICPPOp[];
 
     requiredProjectVirtualTupleIndex: { inv: string, argflowtype: MIRType, indecies: number[], resulttype: MIRType }[] = [];
     requiredProjectVirtualRecordProperty: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }[] = [];
@@ -853,6 +849,10 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
+            //
+            //TODO: we probably want to have a special case here that just data constructs if no invariant (or provably satisifed)
+            //
+
             const icall = this.generateUpdateEntityWithInvariantName(this.typegen.getMIRType(op.argflowtype), op.updates.map((upd) => [upd[0], upd[2]]), resulttype);
             if (this.requiredUpdateVirtualEntity.findIndex((vv) => vv.inv === icall) === -1) {
                 const geninfo = { inv: icall, argflowtype: this.typegen.getMIRType(op.argflowtype), updates: op.updates.map((upd) => [upd[0], upd[2]] as [MIRFieldKey, MIRResolvedTypeKey]), resulttype: resulttype };
@@ -900,15 +900,16 @@ class ICPPBodyEmitter {
         }
     }
 
-    processInvokeFixedFunction(op: MIRInvokeFixedFunction, continuation: SMTExp): SMTExp {
+    processInvokeFixedFunction(op: MIRInvokeFixedFunction): ICPPOp {
         const invk = (this.assembly.invokeDecls.get(op.mkey) || this.assembly.primitiveInvokeDecls.get(op.mkey)) as MIRInvokeDecl;
         const rtype = this.typegen.getMIRType(invk.resultType);
 
         if(invk instanceof MIRInvokePrimitiveDecl && invk.implkey === "default") {
             assert(op.sguard === undefined && op.optmask === undefined);
 
-            const args = op.args.map((arg) => this.argToSMT(arg));
-            return this.processDefaultOperatorInvokePrimitiveType(op.sinfo, op.trgt, op.mkey, args, continuation);
+            const trgt = this.trgtToICPPTargetLocation(op.trgt, op.resultType);
+            const args = op.args.map((arg) => this.argToICPPLocation(arg));
+            return this.processDefaultOperatorInvokePrimitiveType(op.sinfo, trgt, op.resultType, op.mkey, args);
         }
         else {
             let mask: SMTMaskConstruct | undefined = undefined;
@@ -930,7 +931,7 @@ class ICPPBodyEmitter {
         }
     }
 
-    processInvokeVirtualFunction(op: MIRInvokeVirtualFunction, continuation: SMTExp): SMTExp {
+    processInvokeVirtualFunction(op: MIRInvokeVirtualFunction): ICPPOp {
         const rcvrlayouttype = this.typegen.getMIRType(op.rcvrlayouttype);
         const rcvrflowtype = this.typegen.getMIRType(op.rcvrflowtype);
         const resulttype = this.typegen.getMIRType(op.resultType);
@@ -960,15 +961,7 @@ class ICPPBodyEmitter {
         }
     }
 
-    processInvokeVirtualOperator(op: MIRInvokeVirtualOperator, continuation: SMTExp): SMTExp {
-        const resulttype = this.typegen.getMIRType(op.resultType);
-
-        //TODO: also need all operator safe here 
-        const iop = this.generateVirtualInvokeOperatorName(op.vresolve, op.args.map((arg) => arg.argflowtype), resulttype);
-        if(this.requiredVirtualOperatorInvokes.findIndex((vv) => vv.inv === iop) === -1) {
-            assert(true);
-        }
-
+    processInvokeVirtualOperator(op: MIRInvokeVirtualOperator): ICPPOp {
         return NOT_IMPLEMENTED("processInvokeVirtualOperator");
     }
 
@@ -1315,7 +1308,7 @@ class ICPPBodyEmitter {
         }
     }
 
-    processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, op: MIRInvokeKey, args: Argument[], argtypes: MIRResolvedTypeKey): ICPPOp {
+    processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, op: MIRInvokeKey, args: Argument[]): ICPPOp {
         switch (op) {
             //op unary +
             case "NSCore::+=prefix=(NSCore::Int)":
@@ -1575,84 +1568,81 @@ class ICPPBodyEmitter {
         }
     }
 
-    generateBlockExps(blocks: Map<string, MIRBasicBlock>) {
+    generateBlockExps(blocks: Map<string, MIRBasicBlock>, blockrevorder: string[]): ICPPOp[] {
         let icppblocks = new Map<string, ICPPOp[]>();
 
         //Generate basic logic
         blocks.forEach((bb) => {
-           let ii = bb.ops.findIndex((op) => !(op instanceof MIRPhi));
+            let ii = bb.ops.findIndex((op) => !(op instanceof MIRPhi));
             let done = false;
             let icpp: ICPPOp[] = [];
-            while(!done) {
+            while (!done) {
                 const op = bb.ops[ii];
-                if(op.tag === MIROpTag.MIRJump || op.tag === MIROpTag.MIRJumpCond || op.tag === MIROpTag.MIRJumpNone || op.tag === MIROpTag.MIRAbort) {
+                if (op.tag === MIROpTag.MIRJump || op.tag === MIROpTag.MIRJumpCond || op.tag === MIROpTag.MIRJumpNone || op.tag === MIROpTag.MIRAbort) {
                     break;
                 }
 
                 const icppop = this.processOp(op);
-                if(icppop !== undefined) {
+                if (icppop !== undefined) {
                     icpp.push(icppop);
                 }
+
+                ii++;
             }
 
             icppblocks.set(bb.label, icpp);
         });
 
         //Fixup phi assigns
+        blocks.forEach((bb) => {
+            const ii = bb.ops.findIndex((op) => !(op instanceof MIRPhi));
+            for(let i = 0; i < ii; ++i) {
+                const phi = bb.ops[i] as MIRPhi;
+                const icpptrgt = this.trgtToICPPTargetLocation(phi.trgt, phi.layouttype);
+
+                phi.src.forEach((arg, bfrom) => {
+                    let insblock = icppblocks.get(bfrom) as ICPPOp[];
+                    insblock.push(ICPPOpEmitter.genRegisterAssignOp(phi.sinfo, icpptrgt, this.argToICPPLocation(arg), phi.layouttype, ICPPOpEmitter.genNoStatmentGuard()));
+                });
+            }
+        });
 
         //Fixup jump offsets and append blocks
+        let ops: ICPPOp[] = [];
+        let blockdeltas: Map<string, number> = new Map<string, number>();
+        for(let j = 0; j < blockrevorder.length; ++j) {
+            const bb = blocks.get(blockrevorder[j]) as MIRBasicBlock;
+            const jop = bb.ops[bb.ops.length - 1];
 
-        const eblock = blocks.get("exit") as MIRBasicBlock;
-        let rexp: SMTExp = issafe ? new SMTVar("$$return") : this.typegen.generateResultTypeConstructorSuccess(this.currentRType, new SMTVar("$$return"));
-        for (let i = eblock.ops.length - 1; i >= 0; --i) {
-            const texp = this.processOp(eblock.ops[i], rexp);
-            if(texp !== undefined) {
-                rexp = texp;
-            }
-        }
-        smtexps.set("exit", rexp);
-        smtexps.set("returnassign", new SMTConst("[DUMMY RETURN ASSIGN]"));
-
-        let bb = this.getReadyBlock(blocks, smtexps);
-        while(bb !== undefined) {
-           const jop = bb.ops[bb.ops.length - 1];
-
-            let rexp: SMTExp = new SMTConst("[UNITIALIZED FLOW]");
-            if(jop.tag === MIROpTag.MIRAbort) {
-                ; //No continuation so just leave uninit
+            blockdeltas.set(bb.label, ops.length);
+            let insblock = icppblocks.get(blockrevorder[j]) as ICPPOp[];
+            if (jop.tag === MIROpTag.MIRAbort) {
+                insblock.push(this.processAbort(jop as MIRAbort));
             }
             else if (jop.tag === MIROpTag.MIRJump) {
-                rexp = this.getNextBlockExp(blocks, smtexps, bb.label, (jop as MIRJump).trgtblock);
+                const djump = jop as MIRJump;
+                const jdelta = ops.length - (blockdeltas.get(djump.trgtblock) as number);
+                insblock.push(ICPPOpEmitter.genJumpOp(djump.sinfo, jdelta, djump.trgtblock));
             }
             else if (jop.tag === MIROpTag.MIRJumpCond) {
-                const smtcond = this.argToSMT((jop as MIRJumpCond).arg);
-                const texp = this.getNextBlockExp(blocks, smtexps, bb.label, (jop as MIRJumpCond).trueblock);
-                const fexp = this.getNextBlockExp(blocks, smtexps, bb.label, (jop as MIRJumpCond).falseblock);
-                
-                rexp = new SMTIf(smtcond, texp, fexp);
+                const djump = jop as MIRJumpCond;
+                const jdeltatrue = ops.length - (blockdeltas.get(djump.trueblock) as number);
+                const jdeltafalse = ops.length - (blockdeltas.get(djump.falseblock) as number);
+                insblock.push(ICPPOpEmitter.genJumpCondOp(djump.sinfo, this.argToICPPLocation(djump.arg), jdeltatrue, jdeltafalse, djump.trueblock, djump.falseblock));
             }
             else {
                 assert(jop.tag === MIROpTag.MIRJumpNone);
 
-                const smtcond = this.generateNoneCheck((jop as MIRJumpNone).arg, this.typegen.getMIRType((jop as MIRJumpNone).arglayouttype));
-                const nexp = this.getNextBlockExp(blocks, smtexps, bb.label, (jop as MIRJumpNone).noneblock);
-                const sexp = this.getNextBlockExp(blocks, smtexps, bb.label, (jop as MIRJumpNone).someblock);
-                
-                rexp = new SMTIf(smtcond, nexp, sexp);
+                const djump = jop as MIRJumpNone;
+                const jdeltanone = ops.length - (blockdeltas.get(djump.noneblock) as number);
+                const jdeltasome = ops.length - (blockdeltas.get(djump.someblock) as number);
+                insblock.push(ICPPOpEmitter.genJumpNoneOp(djump.sinfo, this.argToICPPLocation(djump.arg), djump.arglayouttype, jdeltanone, jdeltasome, djump.noneblock, djump.someblock));
             }
 
-            for (let i = bb.ops.length - 1; i >= 0; --i) {
-                const texp = this.processOp(bb.ops[i], rexp);
-                if(texp !== undefined) {
-                    rexp = texp;
-                }
-            }
-
-            smtexps.set(bb.label, rexp);
-            bb = this.getReadyBlock(blocks, smtexps);
+            ops.push(...insblock);
         }
 
-        return smtexps.get("entry") as SMTExp;
+        return ops;
     }
 
     generateSMTInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl {

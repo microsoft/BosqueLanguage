@@ -26,6 +26,7 @@ public:
 
     const std::vector<InterpOp*>* ops;
     std::vector<InterpOp*>::const_iterator cpos;
+    std::vector<InterpOp*>::const_iterator epos;
 };
 
 class Evaluator
@@ -49,6 +50,7 @@ private:
         cf->masksbase = masksbase;
         cf->ops = ops;
         cf->cpos = cf->ops->cbegin();
+        cf->epos = cf->ops->cend();
         cf->dbg_line = (*cf->cpos)->sinfo.line;
     }
 #else
@@ -62,6 +64,7 @@ private:
         cf->masksbase = masksbase;
         cf->ops = ops;
         cf->cpos = cf->ops->cbegin();
+        cf->epos = cf->ops->cend();
     }
 #endif
 
@@ -85,6 +88,11 @@ private:
     inline InterpOp* getCurrentOp()
     {
         return *this->cframe->cpos;
+    }
+
+    inline bool hasMoreOps() const
+    {
+        return this->cframe->cpos != this->cframe->epos;
     }
 
     inline InterpOp* advanceCurrentOp(uint32_t offset)
