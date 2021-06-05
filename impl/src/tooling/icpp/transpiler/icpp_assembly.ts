@@ -251,13 +251,19 @@ class ICPPPCode
 
 class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl 
 {
+    readonly enclosingtype: string | undefined;
     readonly implkeyname: string;
+    readonly scalaroffsetMap: Map<string, [number, MIRResolvedTypeKey]>;
+    readonly mixedoffsetMap: Map<string, [number, MIRResolvedTypeKey]>;
     readonly binds: Map<string, ICPPType>;
     readonly pcodes: Map<string, ICPPPCode>;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, implkeyname: string, binds: Map<string, ICPPType>, pcodes: Map<string, ICPPPCode>) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, enclosingtype: string | undefined, implkeyname: string, scalaroffsetMap: Map<string, [number, MIRResolvedTypeKey]>, mixedoffsetMap: Map<string, [number, MIRResolvedTypeKey]>, binds: Map<string, ICPPType>, pcodes: Map<string, ICPPPCode>) {
         super(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
+        this.enclosingtype = enclosingtype;
         this.implkeyname = implkeyname;
+        this.scalaroffsetMap = scalaroffsetMap;
+        this.mixedoffsetMap = mixedoffsetMap;
         this.binds = binds;
         this.pcodes = pcodes;
     }

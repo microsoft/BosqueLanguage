@@ -1767,7 +1767,7 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
     
 void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk)
 {
-   size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
+    size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     uint8_t* mixedslots = cstack + invk->scalarstackBytes;
     GC_MEM_ZERO(cstack, cssize);

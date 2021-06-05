@@ -148,6 +148,9 @@ class MIRInvokePrimitiveDecl extends MIRInvokeDecl {
     readonly binds: Map<string, MIRResolvedTypeKey>;
     readonly pcodes: Map<string, MIRPCode>;
 
+    readonly scalarslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]; 
+    readonly mixedslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]; 
+
     constructor(enclosingDecl: MIRResolvedTypeKey | undefined, name: string, iname: string, key: MIRInvokeKey, attributes: string[], recursive: boolean, sinfo: SourceInfo, srcFile: string, binds: Map<string, MIRResolvedTypeKey>, params: MIRFunctionParameter[], resultType: MIRResolvedTypeKey, implkey: string, pcodes: Map<string, MIRPCode>) {
         super(enclosingDecl, name, iname, key, attributes, recursive, sinfo, srcFile, params, resultType, undefined, undefined);
 

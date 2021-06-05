@@ -8,9 +8,10 @@ import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList,  ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions, UNIVERSAL_SIZE } from "./icpp_assembly";
+import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPPCode, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList,  ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions, UNIVERSAL_SIZE } from "./icpp_assembly";
 
 import * as assert from "assert";
+import { topologicalOrder } from "../../../compiler/mir_info";
 
 function NOT_IMPLEMENTED(msg: string): ICPPOp {
     throw new Error(`Not Implemented: ${msg}`);
@@ -46,12 +47,16 @@ class ICPPBodyEmitter {
     requiredProjectVirtualRecordProperty: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }[] = [];
     requiredProjectVirtualEntityField: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }[] = [];
 
+    //
+    //TODO: need to implement (and integrate) the code that generates these functions
+    //
     requiredUpdateVirtualTuple: { inv: string, argflowtype: MIRType, updates: [number, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualRecord: { inv: string, argflowtype: MIRType, updates: [string, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
-
-    requiredUpdateEntityWithInvariant: { inv: string, oftype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
+    //
+    //TODO: need to implement (and integrate) the code that generates these functions
+    //
     requiredTupleAppend: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
     requiredRecordMerge: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
 
@@ -267,87 +272,6 @@ class ICPPBodyEmitter {
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
-    generateUpdateEntityFieldDirectWithInvariantCheck(geninfo: { inv: string, oftype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
-        xxxx;
-    }
-
-    generateUpdateEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, allsafe: boolean, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
-        const tentities = [...this.assembly.entityDecls]
-            .filter((tt) => {
-                const mtt = this.typegen.getMIRType(tt[1].tkey);
-                return this.typegen.isUniqueEntityType(mtt) && this.assembly.subtypeOf(mtt, geninfo.argflowtype);
-            })
-            .map((tt) => tt[1]);
-
-        const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
-        let ops = tentities.map((tt) => {
-            const mtt = this.typegen.getMIRType(tt.tkey);
-            const consfunc = (this.assembly.entityDecls.get(tt.tkey) as MIREntityTypeDecl).consfunc;
-            const consfields = (this.assembly.entityDecls.get(tt.tkey) as MIREntityTypeDecl).consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf) as MIRFieldDecl);
-
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
-
-            const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
-           
-            let cargs: SMTExp[] = [];
-            for (let i = 0; i < consfields.length; ++i) {
-                const upd = geninfo.updates.find((vv) => vv[0] === consfields[i].name);
-                if(upd === undefined) {
-                    cargs.push(new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(tt, consfields[i].name), [argpp]));
-                }
-                else {
-                    cargs.push(new SMTVar(`arg_${i}`));
-                }
-            }
-            
-            const ccall = new SMTCallGeneral(this.typegen.mangle(consfunc as MIRInvokeKey), cargs);
-
-            let action: SMTExp = new SMTConst("[NOT SET]"); 
-            if (this.isSafeConstructorInvoke(mtt) && geninfo.allsafe) {
-                action = this.typegen.coerce(ccall, mtt, geninfo.resulttype);
-            }
-            else {
-                if(this.isSafeConstructorInvoke(mtt)) {
-                    action = this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(ccall, mtt, geninfo.resulttype));
-                }
-                else {
-                    if(mtt.trkey === geninfo.resulttype.trkey) {
-                        action = ccall;
-                    }
-                    else {
-                        const tres = this.generateTempName();
-                        const cond = this.typegen.generateResultIsSuccessTest(mtt, new SMTVar(tres));
-                        const erropt = this.typegen.generateResultTypeConstructorError(geninfo.resulttype, this.typegen.generateResultGetError(mtt, new SMTVar(tres)));
-                        const okopt =  this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(this.typegen.generateResultGetSuccess(mtt, new SMTVar(tres)), mtt, geninfo.resulttype));
-
-                        action = new SMTLet(tres, ccall, new SMTIf(cond, okopt, erropt));
-                    } 
-                }
-            }
-
-            return { test: test, result: action };
-        });
-
-        const orelse = ops[ops.length - 1].result;
-        ops = ops.slice(0, ops.length - 1);
-
-        const fargs = [
-            { vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) },
-            ...geninfo.updates.map((upd, i) => {
-                return { vname: `arg_${i}`, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(upd[1])) };
-            })
-        ];
-        return SMTFunction.create(geninfo.inv, fargs, rtype, new SMTCond(ops, orelse));
-    }
-
-    generateTupleAppend(geninfo: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }, sinfo: SourceInfo): ICPPInvokeDecl {
-        xxxx;
-    }
-
-    generateRecordMerge(geninfo: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }, sinfo: SourceInfo): ICPPInvokeDecl {
-        xxxx;
-    }
-
     constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: TranspilerOptions) {
         this.assembly = assembly;
         this.typegen = typegen;
@@ -359,6 +283,23 @@ class ICPPBodyEmitter {
         this.registerSpecialLiteralValue("none", "NSCore::None");
         this.registerSpecialLiteralValue("true", "NSCore::Bool");
         this.registerSpecialLiteralValue("false", "NSCore::Bool");
+    }
+
+    initializeBodyGen(srcFile: string, rtype: MIRType, argsmap: Map<string, number>) {
+        this.currentFile = srcFile;
+        this.currentRType = rtype;
+
+        this.argsMap = argsmap;
+        this.scalarStackMap = new Map<string, number>();
+        this.scalarStackSize = 0;
+        this.scalarStackLayout = [];
+        this.mixedStackMap = new Map<string, number>();
+        this.mixedStackSize = 0;
+        this.mixedStackLayout = [];
+    
+        this.maskMap = new Map<string, number>();
+        this.masksize = 0;
+        this.masklayout = [];
     }
 
     private registerSpecialLiteralValue(vlit: string, vtype: MIRResolvedTypeKey) {
@@ -1645,30 +1586,76 @@ class ICPPBodyEmitter {
         return ops;
     }
 
-    generateSMTInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl {
-        this.currentFile = idecl.srcFile;
-        this.currentRType = this.typegen.getMIRType(idecl.resultType);
-
-
-        const args = idecl.params.map((arg) => {
-            return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
+    generateSMTInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl | undefined {
+        const params = idecl.params.map((arg) => {
+            return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
         });
 
-        if (idecl instanceof MIRInvokeBodyDecl) {
-            const body = this.generateBlockExps(issafe, (idecl as MIRInvokeBodyDecl).body.body);
+        let paramsmap: Map<string, number> = new Map<string, number>();
+        let poffset: number = 0;
+        for(let i = 0; i < idecl.params.length; ++i) {
+            const param = idecl.params[i];
+            const ptype = this.typegen.getICPPTypeData(this.typegen.getMIRType(param.type));
+            paramsmap.set(param.name, poffset);
+            poffset += ptype.allocinfo.inlinedatasize;
+        }
 
-            if (idecl.masksize === 0) {
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, restype, body);
-            }
-            else {
-                return SMTFunction.createWithMask(this.typegen.mangle(idecl.key), args, this.typegen.mangle("#maskparam#"), idecl.masksize, restype, body);
-            }
+        const rtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(idecl.resultType));
+
+        this.initializeBodyGen(idecl.srcFile, this.typegen.getMIRType(idecl.resultType), paramsmap);
+
+        if (idecl instanceof MIRInvokeBodyDecl) {
+            const revblocks = topologicalOrder((idecl as MIRInvokeBodyDecl).body.body).reverse().map((bb) => bb.label);
+            const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, revblocks);
+
+            return new ICPPInvokeBodyDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
         }
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
 
             return this.generateBuiltinFunction(idecl as MIRInvokePrimitiveDecl);
         }
+    }
+
+    generateBuiltinFunction(idecl: MIRInvokePrimitiveDecl): ICPPInvokeDecl | undefined {
+        const params = idecl.params.map((arg) => {
+            return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
+        });
+
+        const rtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(idecl.resultType));
+
+        let scalarsmap: Map<string, [number, MIRResolvedTypeKey]> = new Map<string, [number, MIRResolvedTypeKey]>();
+        let spoffset: number = 0;
+        for(let i = 0; i < idecl.scalarslotsinfo.length; ++i) {
+            const slot = idecl.scalarslotsinfo[i];
+            const stype = this.typegen.getICPPTypeData(this.typegen.getMIRType(slot.vtype));
+            scalarsmap.set(slot.vname, [spoffset, slot.vtype]);
+            spoffset += stype.allocinfo.inlinedatasize;
+        }
+
+        let mixedmap: Map<string, [number, MIRResolvedTypeKey]> = new Map<string, [number, MIRResolvedTypeKey]>();
+        let mpoffset: number = 0;
+        let mmask = "";
+        for(let i = 0; i < idecl.scalarslotsinfo.length; ++i) {
+            const slot = idecl.scalarslotsinfo[i];
+            const mtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(slot.vtype));
+            mixedmap.set(slot.vname, [mpoffset, slot.vtype]);
+            mpoffset += mtype.allocinfo.inlinedatasize;
+            mmask = mmask + mtype.allocinfo.inlinedmask;
+        }
+
+        let binds: Map<string, ICPPType> = new Map<string, ICPPType>();
+        idecl.binds.forEach((btype, bname) => {
+            binds.set(bname, this.typegen.getICPPTypeData(this.typegen.getMIRType(btype)));
+        });
+
+        let pcodes: Map<string, ICPPPCode> = new Map<string, ICPPPCode>();
+        idecl.pcodes.forEach((pc, pcname) => {
+            const icpppc = new ICPPPCode(pc.code, pc.cargs.map((carg) => xxxx));
+            pcodes.set(pcname, icpppc);
+        });
+
+        return new ICPPInvokePrimitiveDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, spoffset, mpoffset, mmask, 0, idecl.enclosingDecl, idecl.implkey, scalarsmap, mixedmap, binds, pcodes);
     }
 }
 
