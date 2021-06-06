@@ -26,6 +26,12 @@ const BuiltinEntityDeclNames = [
     "Float",
     "Decimal",
     "String",
+    "StringPos",
+    "ByteBuffer",
+    "ISOTime",
+    "LogicalTime",
+    "UUID",
+    "ContentHash",
     "Regex",
 
     "ISequence"

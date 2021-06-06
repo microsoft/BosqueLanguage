@@ -319,7 +319,7 @@ class Lexer {
 
     //TODO: we need to make sure that someone doesn't name a local variable "_"
     private static isIdentifierName(str: string) {
-        return /^([$]?([_a-zA-Z]|([_a-zA-Z][_a-zA-Z0-9]*[a-zA-Z])))$/.test(str);
+        return /^([$]?([_a-zA-Z]|([_a-zA-Z][_a-zA-Z0-9]*[a-zA-Z0-9])))$/.test(str);
     }
 
     private recordLexToken(epos: number, kind: string) {
@@ -1026,12 +1026,17 @@ class Parser {
             }
         }
 
-        let bbody = body as {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]};
         if (ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred) {
+            const bbody = body as {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]};
             return InvokeDecl.createPCodeInvokeDecl(sinfo, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, bbody.impl, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
         }
         else {
-            return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, bbody.impl, bbody.optscalarslots, bbody.optmixedslots);
+            if(body !== undefined) {
+                return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body.impl, body.optscalarslots, body.optmixedslots);
+            }
+            else {
+                return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, undefined, [], []);
+            }
         }
     }
 
@@ -3562,21 +3567,25 @@ class Parser {
             this.consumeToken();
             this.ensureToken(TokenStrings.Identifier);
 
-            const scalarslots = this.parseListOf("(", ")", ",", () => {
-                this.ensureToken(TokenStrings.Identifier);
-                const vname = this.consumeTokenAndGetValue();
-                const vtype = this.parseTypeSignature(true);
+            const scalarslots = this.testToken("(")
+                ? this.parseListOf("(", ")", ",", () => {
+                    this.ensureToken(TokenStrings.Identifier);
+                    const vname = this.consumeTokenAndGetValue();
+                    const vtype = this.parseTypeSignature(true);
 
-                return {vname: vname, vtype: vtype};
-            })[0];
+                    return { vname: vname, vtype: vtype };
+                })[0]
+                : [];
 
-            const mixedslots = this.parseListOf("(", ")", ",", () => {
-                this.ensureToken(TokenStrings.Identifier);
-                const vname = this.consumeTokenAndGetValue();
-                const vtype = this.parseTypeSignature(true);
+            const mixedslots = this.testToken("(")
+                ? this.parseListOf("(", ")", ",", () => {
+                    this.ensureToken(TokenStrings.Identifier);
+                    const vname = this.consumeTokenAndGetValue();
+                    const vtype = this.parseTypeSignature(true);
 
-                return {vname: vname, vtype: vtype};
-            })[0];
+                    return { vname: vname, vtype: vtype };
+                })[0]
+                : [];
 
             return { impl: new BodyImplementation(bodyid, file, this.consumeTokenAndGetValue()), optscalarslots: scalarslots, optmixedslots: mixedslots};
         }

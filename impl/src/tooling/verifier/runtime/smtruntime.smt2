@@ -69,6 +69,8 @@
 ;;BFLOATPOINT_TYPE_ALIAS;;
 ;;STRING_TYPE_ALIAS;;
 
+(define-sort BByteBuffer () (Seq (_ BitVec 8)))
+
 ;;
 ;; Define uninterpreted functions for various kinds
 ;;
@@ -243,7 +245,7 @@
       (bsqobject_decimal@box (bsqobject_decimal_value BDecimal))
       (bsqobject_rational@box (bsqobject_rational_value BRational))
       (bsqobject_stringpos@box (bsqobject_stringpos_value Int))
-      (bsqobject_bytebuffer@box (bsqobject_bytebuffer_value (Seq (_ BitVec 8))))
+      (bsqobject_bytebuffer@box (bsqobject_bytebuffer_value BByteBuffer))
       (bsqobject_isotime@box (bsqobject_isotime_value Int))
       (bsqobject_regex@box (bsqobject_regex_value bsq_regex))
       ;;TUPLE_TYPE_BOXING;;

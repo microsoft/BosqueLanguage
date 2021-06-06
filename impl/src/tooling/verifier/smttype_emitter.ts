@@ -94,7 +94,7 @@ class SMTTypeEmitter {
             return new SMTType("BString");
         }
         else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            return new SMTType("(Seq (_ BitVec 8))");
+            return new SMTType("BByteBuffer");
         }
         else if(this.isType(tt, "NSCore::ISOTime")) {
             return new SMTType("Int");
