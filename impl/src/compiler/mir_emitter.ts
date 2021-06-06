@@ -1328,8 +1328,9 @@ class MIREmitter {
 
                 if (functionalize) {
                     functionalizeInvokes(emitter, masm);
-                    ssaConvertInvokes(masm);
                 }
+                
+                ssaConvertInvokes(masm);
             }
         }
         catch (ex) {

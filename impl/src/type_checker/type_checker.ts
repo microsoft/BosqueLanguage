@@ -11,7 +11,7 @@ import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedSt
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
-import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIREphemeralListType, MIRSpecialTypeCategory } from "../compiler/mir_assembly";
+import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRSpecialTypeCategory } from "../compiler/mir_assembly";
 import { BSQRegex } from "../ast/bsqregex";
 
 import * as assert from "assert";
@@ -5888,12 +5888,11 @@ class TypeChecker {
         return rpnames;
     }
 
-    private emitPrologForReturn(sinfo: SourceInfo, refparams: string[], rrinfo: { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [string, MIRType][] }, wpost: boolean): MIRArgument[] {
+    private emitPrologForReturn(sinfo: SourceInfo, rrinfo: { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [string, MIRType][] }, wpost: boolean) {
         if(wpost) {
-            this.m_emitter.emitRegisterStore(sinfo, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$__post_arg__"), rrinfo.declresult, undefined);
+            this.m_emitter.emitRegisterStore(sinfo, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$return"), rrinfo.declresult, undefined);
         }
 
-        let rargs: MIRArgument[] = [new MIRRegisterArgument("$$__post_arg__")];
         if(rrinfo.refargs.length === 0) {
             this.m_emitter.emitRegisterStore(sinfo, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rrinfo.declresult, undefined);
         }
@@ -5905,17 +5904,6 @@ class TypeChecker {
                 this.m_emitter.emitConstructorValueList(sinfo, rrinfo.runtimeresult, args, rreg);
             }
             else {
-                if (wpost) {
-                    rargs = [];
-                    for (let i = 0; i < rrinfo.elrcount; ++i) {
-                        const tlreg = this.m_emitter.generateTmpRegister();
-                        const lt = (rrinfo.declresult.options[0] as MIREphemeralListType).entries[i];
-                        this.m_emitter.emitLoadFromEpehmeralList(sinfo, new MIRRegisterArgument("$__ir_ret__"), lt, i, rrinfo.declresult, tlreg);
-
-                        rargs.push(tlreg);
-                    }
-                }
-                
                 let args: MIRArgument[] = [new MIRRegisterArgument("$__ir_ret__")];
                 for(let i = 0; i < rrinfo.refargs.length; ++i) {
                     args.push(new MIRRegisterArgument(rrinfo.refargs[i][0]));
@@ -5926,8 +5914,6 @@ class TypeChecker {
 
             this.m_emitter.emitRegisterStore(sinfo, rreg, new MIRRegisterArgument("$$return"), rrinfo.runtimeresult, undefined);
         }
-
-        return rargs;
     }
 
     private checkBodyExpression(srcFile: string, env: TypeEnvironment, body: Expression, outparaminfo: { pname: string, ptype: ResolvedType }[]): MIRBody | undefined {
@@ -5947,7 +5933,7 @@ class TypeChecker {
         this.m_emitter.setActiveBlock("returnassign");
 
         const rrinfo = this.generateRefInfoForReturnEmit(evalue.getExpressionResult().valtype.flowtype, []);
-        this.emitPrologForReturn(body.sinfo, [], rrinfo, false);
+        this.emitPrologForReturn(body.sinfo, rrinfo, false);
         this.m_emitter.emitDirectJump(body.sinfo, "exit");
 
         return this.m_emitter.getBody(srcFile, body.sinfo);
@@ -6011,10 +5997,10 @@ class TypeChecker {
         this.m_emitter.setActiveBlock("returnassign");
 
         const rrinfo = this.generateRefInfoForReturnEmit(renv.inferResult as ResolvedType, outparaminfo.map((op) => [op.pname, op.ptype]));
-        const postvar = this.emitPrologForReturn(body.sinfo, outparaminfo.map((op) => op.pname), rrinfo, postject !== undefined);
+        this.emitPrologForReturn(body.sinfo, rrinfo, postject !== undefined);
 
         if (postject !== undefined) {
-            const postargs = [...postvar, ...postrnames.map((prn) => new MIRRegisterArgument(prn)), ...postject[1].map((pn) => new MIRRegisterArgument(pn))];
+            const postargs = [...postject[1].map((pn) => new MIRRegisterArgument(pn)), ...postrnames.map((prn) => new MIRRegisterArgument(prn))];
 
             for (let i = 0; i < postject[0].length; ++i) {
                 const postchk = postject[0][i];
@@ -6248,7 +6234,7 @@ class TypeChecker {
         this.m_emitter.setActiveBlock("returnassign");
 
         const rrinfo = this.generateRefInfoForReturnEmit(constype, []);
-        this.emitPrologForReturn(tdecl.sourceLocation, [], rrinfo, false);
+        this.emitPrologForReturn(tdecl.sourceLocation, rrinfo, false);
         this.m_emitter.emitDirectJump(tdecl.sourceLocation, "exit");
 
         let params: MIRFunctionParameter[] = [];
@@ -6556,15 +6542,7 @@ class TypeChecker {
         const resultType = this.generateExpandedReturnSig(invoke.sourceLocation, declaredResult, entrycallparams);
 
         let rprs: { name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType }[] = [];
-        if (resultType.options.every((opt) => !(opt instanceof ResolvedEphemeralListType))) {
-            rprs.push({ name: "$return", refKind: undefined, ptype: declaredResult });
-        }
-        else {
-            const epl = (declaredResult.options[0] as ResolvedEphemeralListType)
-            for (let i = 0; i < epl.types.length; ++i) {
-                rprs.push({ name: `$return_${i}`, refKind: undefined, ptype: epl.types[i] });
-            }
-        }
+        rprs.push({ name: "$return", refKind: undefined, ptype: declaredResult });
 
         let rreforig: { name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType }[] = [];
         invoke.params
