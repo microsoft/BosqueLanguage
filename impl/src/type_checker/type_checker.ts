@@ -3857,7 +3857,7 @@ class TypeChecker {
         const nbody = new PrefixNotOp(exp.sinfo, new PCodeDirectInvokeExpression(exp.sinfo, subpc, [...subpc.captured].sort((a, b) => a[0].localeCompare(b[0])).map((cc) => cc[0]), args, true))
         const bodyid = `${this.m_file}::${exp.sinfo.pos}`;
         const body = new BodyImplementation(bodyid, this.m_file, nbody);
-        const ninvoke = new InvokeDecl(exp.sinfo, this.m_file, [], subpc.code.recursive, [], undefined, subpc.code.params, subpc.code.optRestName, subpc.code.optRestType, this.m_assembly.getSpecialBoolType(), [], [], false, true, subpc.code.captureSet, body);
+        const ninvoke = new InvokeDecl(exp.sinfo, this.m_file, [], subpc.code.recursive, [], undefined, subpc.code.params, subpc.code.optRestName, subpc.code.optRestType, this.m_assembly.getSpecialBoolType(), [], [], false, true, subpc.code.captureSet, body, [], []);
         
         this.m_emitter.registerPCode(ninvoke, subpc.ftype, cbinds, [...subpc.captured].sort((a, b) => a[0].localeCompare(b[0])));
 
@@ -6624,7 +6624,16 @@ class TypeChecker {
                 let mbinds = new Map<string, MIRResolvedTypeKey>();
                 binds.forEach((v, k) => mbinds.set(k, this.m_emitter.registerResolvedTypeReference(v).trkey));
 
-                return new MIRInvokePrimitiveDecl(encdecl, fname, iname, ikey, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, mbinds, params, resultType.trkey, (invoke.body as BodyImplementation).body as string, mpc);
+                const scalarslots = invoke.optscalarslots.map((sslot) => {
+                    const rtype = this.resolveAndEnsureTypeOnly(invoke.sourceLocation, sslot.vtype, binds);
+                    return { vname: sslot.vname, vtype: this.m_emitter.registerResolvedTypeReference(rtype).trkey };
+                });
+                const mixedslots = invoke.optmixedslots.map((mslot) => {
+                    const rtype = this.resolveAndEnsureTypeOnly(invoke.sourceLocation, mslot.vtype, binds);
+                    return { vname: mslot.vname, vtype: this.m_emitter.registerResolvedTypeReference(rtype).trkey };
+                });
+
+                return new MIRInvokePrimitiveDecl(encdecl, fname, iname, ikey, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, mbinds, params, resultType.trkey, (invoke.body as BodyImplementation).body as string, mpc, scalarslots, mixedslots);
             }
             else {
                 //
@@ -6640,7 +6649,7 @@ class TypeChecker {
                 });
                 const opexp = new CallNamespaceFunctionOrOperatorExpression(invoke.sourceLocation, "NSCore", fname, new TemplateArguments([]), "no", new Arguments(vops), OOPTypeDecl.attributeSetContains("prefix", invoke.attributes) ? "prefix" : "infix");
                 const consexp = new CallStaticFunctionOrOperatorExpression(invoke.sourceLocation, invoke.resultType, "create", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, opexp)]), "std");
-                
+
                 const mirbody = this.checkBodyExpression(invoke.srcFile, env, consexp, []) as MIRBody;
                 return new MIRInvokeBodyDecl(encdecl, fname, iname, ikey, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, params, 0, resultType.trkey, undefined, undefined, mirbody);
             }

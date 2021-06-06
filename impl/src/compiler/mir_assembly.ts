@@ -117,7 +117,7 @@ abstract class MIRInvokeDecl {
             let pcodes = new Map<string, MIRPCode>();
             jobj.pcodes.forEach((pc: any) => pcodes.set(pc[0], pc[1]));
 
-            return new MIRInvokePrimitiveDecl(jobj.enclosingDecl, jobj.name, jobj.iname, jobj.key, jobj.attributes, jobj.recursive, jparsesinfo(jobj.sinfo), jobj.file, binds, jobj.params.map((p: any) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.implkey, pcodes);
+            return new MIRInvokePrimitiveDecl(jobj.enclosingDecl, jobj.name, jobj.iname, jobj.key, jobj.attributes, jobj.recursive, jparsesinfo(jobj.sinfo), jobj.file, binds, jobj.params.map((p: any) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.implkey, pcodes, jobj.scalarslotsinfo, jobj.mixedslotsinfo);
         }
     }
 }
@@ -151,16 +151,19 @@ class MIRInvokePrimitiveDecl extends MIRInvokeDecl {
     readonly scalarslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]; 
     readonly mixedslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]; 
 
-    constructor(enclosingDecl: MIRResolvedTypeKey | undefined, name: string, iname: string, key: MIRInvokeKey, attributes: string[], recursive: boolean, sinfo: SourceInfo, srcFile: string, binds: Map<string, MIRResolvedTypeKey>, params: MIRFunctionParameter[], resultType: MIRResolvedTypeKey, implkey: string, pcodes: Map<string, MIRPCode>) {
+    constructor(enclosingDecl: MIRResolvedTypeKey | undefined, name: string, iname: string, key: MIRInvokeKey, attributes: string[], recursive: boolean, sinfo: SourceInfo, srcFile: string, binds: Map<string, MIRResolvedTypeKey>, params: MIRFunctionParameter[], resultType: MIRResolvedTypeKey, implkey: string, pcodes: Map<string, MIRPCode>, scalarslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[], mixedslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]) {
         super(enclosingDecl, name, iname, key, attributes, recursive, sinfo, srcFile, params, resultType, undefined, undefined);
 
         this.implkey = implkey;
         this.binds = binds;
         this.pcodes = pcodes;
+
+        this.scalarslotsinfo = scalarslotsinfo;
+        this.mixedslotsinfo = mixedslotsinfo; 
     }
 
     jemit(): object {
-        return {enclosingDecl: this.enclosingDecl, name: this.name, iname: this.iname, key: this.key, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, params: this.params.map((p) => p.jemit()), resultType: this.resultType, implkey: this.implkey, binds: [...this.binds], pcodes: [... this.pcodes] };
+        return {enclosingDecl: this.enclosingDecl, name: this.name, iname: this.iname, key: this.key, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, params: this.params.map((p) => p.jemit()), resultType: this.resultType, implkey: this.implkey, binds: [...this.binds], pcodes: [... this.pcodes], scalarslotsinfo: this.scalarslotsinfo, mixedlotsinfo: this.mixedslotsinfo };
     }
 }
 

@@ -284,6 +284,8 @@ class Lexer {
         return undefined;
     }
 
+    private m_macrodefs: string[];
+
     private m_input: string;
     private m_internTable: Map<string, string>;
     private m_cline: number;
@@ -291,7 +293,8 @@ class Lexer {
     private m_cpos: number;
     private m_tokens: Token[];
 
-    constructor(input: string) {
+    constructor(input: string, macrodefs: string[]) {
+        this.m_macrodefs = macrodefs;
         this.m_input = input;
         this.m_internTable = new Map<string, string>();
         this.m_cline = 1;
@@ -316,7 +319,7 @@ class Lexer {
 
     //TODO: we need to make sure that someone doesn't name a local variable "_"
     private static isIdentifierName(str: string) {
-        return /^([$]?([_a-zA-Z][_a-zA-Z0-9]*))$/.test(str);
+        return /^([$]?([_a-zA-Z]|([_a-zA-Z][_a-zA-Z0-9]*[a-zA-Z])))$/.test(str);
     }
 
     private recordLexToken(epos: number, kind: string) {
@@ -349,7 +352,7 @@ class Lexer {
         return true;
     }
 
-    private static readonly _s_commentRe = /(\/\/.*)|(\/\*[\s\S]*?\*\/)/y;
+    private static readonly _s_commentRe = /(\/\/.*)|(\/\*(.|\s)*?\*\/)/uy;
     private tryLexComment(): boolean {
         Lexer._s_commentRe.lastIndex = this.m_cpos;
         const m = Lexer._s_commentRe.exec(this.m_input);
@@ -440,8 +443,8 @@ class Lexer {
         return false;
     }
 
-    private static readonly _s_stringRe = /"[^"\\\r\n]*(\\(.|\r?\n)[^"\\\r\n]*)*"/y;
-    private static readonly _s_typedStringRe = /'[^'\\\r\n]*(\\(.|\r?\n)[^'\\\r\n]*)*'/y;
+    private static readonly _s_stringRe = /"[^"\\\r\n]*(\\(.|\r?\n)[^"\\\r\n]*)*"/uy;
+    private static readonly _s_typedStringRe = /'[^'\\\r\n]*(\\(.|\r?\n)[^'\\\r\n]*)*'/uy;
     private tryLexString() {
         Lexer._s_stringRe.lastIndex = this.m_cpos;
         const ms = Lexer._s_stringRe.exec(this.m_input);
@@ -473,7 +476,7 @@ class Lexer {
     }
 
     private static readonly _s_symbolRe = /[\W]+/y;
-    private static readonly _s_operatorRe = /%\w%/y;
+    private static readonly _s_operatorRe = /_([^\w]+)_/y;
     private tryLexSymbol() {
         Lexer._s_symbolRe.lastIndex = this.m_cpos;
         const ms = Lexer._s_symbolRe.exec(this.m_input);
@@ -539,21 +542,80 @@ class Lexer {
         return AttributeStrings.indexOf(str) !== -1;
     }
 
+    private static readonly _s_macroRe = /(#if[ ]+([A-Z][_A-Z0-9]*)|#else|#endif)(\r?\n)/y;
+    tryLexMacroOp(): [string, string | undefined] | undefined {
+        Lexer._s_macroRe.lastIndex = this.m_cpos;
+        const m = Lexer._s_macroRe.exec(this.m_input);
+        if (m === null) {
+            return undefined;
+        }
+
+        const name = m[0].trim();
+        if(name === "#if") {
+            return ["#if", name.slice("#if".length).trim()];
+        }
+        else {
+            return [name, undefined]
+        }
+    }
+
     lex(): Token[] {
         if (this.m_tokens.length !== 0) {
             return this.m_tokens;
         }
 
+        let mode: "scan" | "normal" = "normal";
+        let macrostack: ("scan" | "normal")[] = []
+
         this.m_tokens = [];
         while (this.m_cpos < this.m_input.length) {
-            if (this.tryLexWS() || this.tryLexComment()) {
-                //continue
-            }
-            else if (this.tryLexNumber() || this.tryLexString() || this.tryLexRegex() || this.tryLexSymbol() || this.tryLexName()) {
-                //continue
+            if(mode === "scan") {
+                const macro = this.tryLexMacroOp();
+                if (macro !== undefined) {
+                    if (macro[0] === "#if") {
+                        macrostack.push("scan")
+                    }
+                    else if (macro[0] === "#else") {
+                        //stay in scan
+                    }
+                    else {
+                        mode = macrostack.pop() as "scan" | "normal";
+                    }
+                }
+                else {
+                    this.m_cpos = Math.max(this.m_input.length, this.m_input.indexOf("#", this.m_cpos + 1));
+                }
             }
             else {
-                this.recordLexToken(this.m_cpos + 1, TokenStrings.Error);
+                const macro = this.tryLexMacroOp();
+                if(macro !== undefined) {
+                    if(macro[0] === "#if") {
+                        macrostack.push("normal")
+                        if(this.m_macrodefs.includes(macro[1] as string)) {
+                            mode = "normal";
+                        }
+                        else {
+                            mode = "scan";
+                        }
+                    }
+                    else if(macro[0] === "#else") {
+                        mode = "scan";
+                    }
+                    else {
+                        mode = macrostack.pop() as "scan" | "normal";
+                    }
+                }
+                else {
+                    if (this.tryLexWS() || this.tryLexComment()) {
+                        //continue
+                    }
+                    else if (this.tryLexNumber() || this.tryLexString() || this.tryLexRegex() || this.tryLexSymbol() || this.tryLexName()) {
+                        //continue
+                    }
+                    else {
+                        this.recordLexToken(this.m_cpos + 1, TokenStrings.Error);
+                    }
+                }
             }
         }
 
@@ -938,7 +1000,7 @@ class Parser {
         const argNames = new Set<string>([...(restName ? [restName] : []), ...fparams.map((param) => param.name)]);
         let preconds: PreConditionDecl[] = [];
         let postconds: PostConditionDecl[] = [];
-        let body: BodyImplementation | undefined = undefined;
+        let body: {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]} | undefined = undefined;
         let captured = new Set<string>();
         if (noBody) {
             this.ensureAndConsumeToken(";");
@@ -964,11 +1026,12 @@ class Parser {
             }
         }
 
+        let bbody = body as {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]};
         if (ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred) {
-            return InvokeDecl.createPCodeInvokeDecl(sinfo, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, body as BodyImplementation, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
+            return InvokeDecl.createPCodeInvokeDecl(sinfo, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, bbody.impl, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
         }
         else {
-            return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body);
+            return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, bbody.impl, bbody.optscalarslots, bbody.optmixedslots);
         }
     }
 
@@ -3494,11 +3557,28 @@ class Parser {
         }
     }
 
-    private parseBody(bodyid: string, file: string): BodyImplementation {
+    private parseBody(bodyid: string, file: string): {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]} {
         if (this.testToken("#")) {
             this.consumeToken();
             this.ensureToken(TokenStrings.Identifier);
-            return new BodyImplementation(bodyid, file, this.consumeTokenAndGetValue());
+
+            const scalarslots = this.parseListOf("(", ")", ",", () => {
+                this.ensureToken(TokenStrings.Identifier);
+                const vname = this.consumeTokenAndGetValue();
+                const vtype = this.parseTypeSignature(true);
+
+                return {vname: vname, vtype: vtype};
+            })[0];
+
+            const mixedslots = this.parseListOf("(", ")", ",", () => {
+                this.ensureToken(TokenStrings.Identifier);
+                const vname = this.consumeTokenAndGetValue();
+                const vtype = this.parseTypeSignature(true);
+
+                return {vname: vname, vtype: vtype};
+            })[0];
+
+            return { impl: new BodyImplementation(bodyid, file, this.consumeTokenAndGetValue()), optscalarslots: scalarslots, optmixedslots: mixedslots};
         }
         else if(this.testToken("=")) {
             this.consumeToken();
@@ -3507,13 +3587,13 @@ class Parser {
                 this.raiseError(this.getCurrentSrcInfo().line, "Only valid option is 'default'");
             }
             this.ensureAndConsumeToken(";")
-            return new BodyImplementation(bodyid, file, "default");
+            return { impl: new BodyImplementation(bodyid, file, "default"), optscalarslots: [], optmixedslots: [] };
         }
         else if (this.testToken("{")) {
-            return new BodyImplementation(bodyid, file, this.parseBlockStatement());
+            return { impl: new BodyImplementation(bodyid, file, this.parseBlockStatement()), optscalarslots: [], optmixedslots: [] };
         }
         else {
-            return new BodyImplementation(bodyid, file, this.parseExpression());
+            return { impl: new BodyImplementation(bodyid, file, this.parseExpression()), optscalarslots: [], optmixedslots: [] };
         }
     }
 
@@ -3743,7 +3823,7 @@ class Parser {
             const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("NSCore", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
             const param = new FunctionParameter("arg", new NominalTypeSignature("NSCore", ["String"]), false, undefined, undefined, undefined);
             const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
-            const acceptsinvoke = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["validator_accepts", "__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody);
+            const acceptsinvoke = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["validator_accepts", "__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
             const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
             const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
             const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), [], [SpecialTypeCategory.ValidatorTypeDecl], currentDecl.ns, tyname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
@@ -4262,13 +4342,13 @@ class Parser {
                 ])
             ])
         );
-        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["inline"], "no", [], undefined, [cparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), cbody);
+        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["inline"], "no", [], undefined, [cparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), cbody, [], []);
         const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "create", createdecl);
 
         const vbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
             new PostfixOp(sinfo, new AccessVariableExpression(sinfo, "this"), [new PostfixAccessFromName(sinfo, false, undefined, "v")])
         );
-        const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["inline"], "no", [], undefined, [], undefined, undefined, idval, [], [], false, false, new Set<string>(), vbody);
+        const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["inline"], "no", [], undefined, [], undefined, undefined, idval, [], [], false, false, new Set<string>(), vbody, [], []);
         const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
 
         let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][]
@@ -4439,10 +4519,10 @@ class Parser {
     ////
     //Public methods
 
-    parseCompilationUnitPass1(file: string, contents: string): boolean {
+    parseCompilationUnitPass1(file: string, contents: string, macrodefs: string[]): boolean {
         this.setNamespaceAndFile("[No Namespace]", file);
 
-        const lexer = new Lexer(contents);
+        const lexer = new Lexer(contents, macrodefs);
         this.initialize(lexer.lex());
 
         //namespace NS; ...
@@ -4579,9 +4659,9 @@ class Parser {
         return parseok;
     }
 
-    parseCompilationUnitPass2(file: string, contents: string): boolean {
+    parseCompilationUnitPass2(file: string, contents: string, macrodefs: string[]): boolean {
         this.setNamespaceAndFile("[No Namespace]", file);
-        const lexer = new Lexer(contents);
+        const lexer = new Lexer(contents, macrodefs);
         this.initialize(lexer.lex());
 
         //namespace NS; ...

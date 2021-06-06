@@ -38,9 +38,9 @@ const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
 const smtlib_path = Path.join(bosque_dir, "bin/core/verify");
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
 
-function generateMASM(corefiles: {relativePath: string, contents: string}[], testsrc: string): [MIRAssembly | undefined, string[]] {
+function generateMASM(corefiles: {relativePath: string, contents: string}[], testsrc: string, macrodefs: string[]): [MIRAssembly | undefined, string[]] {
     const code: { relativePath: string, contents: string }[] = [...corefiles, { relativePath: "test.bsq", contents: testsrc }];
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", {namespace: "NSMain", names: ["main"]}, true, code);
+    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", macrodefs, {namespace: "NSMain", names: ["main"]}, true, code);
 
     return [masm, errors];
 }
@@ -158,9 +158,9 @@ const vopts = {
     SpecializeSmallModelGen: false
 } as VerifierOptions;
 
-function enqueueSMTTest(prover: "z3" | "cvc4", mode: "Refute" | "Reach", corefiles: {relativePath: string, contents: string}[], smtruntime: string, testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+function enqueueSMTTest(prover: "z3" | "cvc4", mode: "Refute" | "Reach", macrodefs: string[], corefiles: {relativePath: string, contents: string}[], smtruntime: string, testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
-    const massembly = generateMASM(corefiles, testsrc);
+    const massembly = generateMASM(corefiles, testsrc, macrodefs);
     if(massembly[0] === undefined) {
         cb("error", start, new Date(), "Failed to generate assembly -- " + JSON.stringify(massembly[1]));
         return;

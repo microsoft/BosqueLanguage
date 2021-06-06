@@ -41,7 +41,7 @@ else {
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
 
-function generateMASM(files: string[], entrypoint: string): MIRAssembly {
+function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean): MIRAssembly {
     let code: { relativePath: string, contents: string }[] = [];
     try {
         const coredir = Path.join(bosque_dir, "bin/core/verify");
@@ -74,7 +74,8 @@ function generateMASM(files: string[], entrypoint: string): MIRAssembly {
         entryfunc = entrypoint.slice(cpos + 2);
     }
 
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", {namespace: namespace, names: [entryfunc]}, true, code);
+    const macros = dosmallopts ? ["SMALL_MODEL_PATH"] : [];
+    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
@@ -203,6 +204,7 @@ Commander
     .option("-l --location [location]", "Location (file.bsq@line#pos) with error of interest")
     .option("-e --entrypoint [entrypoint]", "Entrypoint to symbolically test", "NSMain::main")
     .option("-m --mode [mode]", "Mode to run (errorlocs | refute | generate)", "refute")
+    .option("-s --small", "Enable small model optimizations in generate mode")
     .option("-o --output [file]", "Output the model to a given file")
     .option("-p --prover [prover]", "Prover to use (z3 | cvc4)", "z3");
 
@@ -234,7 +236,7 @@ if(Commander.mode !== "errorlocs" && Commander.mode !== "refute" && Commander.mo
 }
 
 process.stdout.write(`Processing Bosque sources in:\n${Commander.args.join("\n")}\n...Using entrypoint ${Commander.entrypoint}...\n`);
-const massembly = generateMASM(Commander.args, Commander.entrypoint);
+const massembly = generateMASM(Commander.args, Commander.entrypoint, Commander.small !== undefined);
 
 if(Commander.mode === "errorlocs" || Commander.location === undefined) {
     const sasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, {file: "[]", line: -1, pos: -1}, maxgas);

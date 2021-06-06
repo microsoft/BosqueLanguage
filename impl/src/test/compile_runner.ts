@@ -9,7 +9,7 @@ import { MIREmitter } from "../compiler/mir_emitter";
 
 function generateMASM(corefiles: {relativePath: string, contents: string}[], testsrc: string): [MIRAssembly | undefined, string[]] {
     const code: { relativePath: string, contents: string }[] = [...corefiles, { relativePath: "test.bsq", contents: testsrc }];
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", {namespace: "NSMain", names: ["main"]}, true, code);
+    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", [], {namespace: "NSMain", names: ["main"]}, true, code);
 
     return [masm, errors];
 }

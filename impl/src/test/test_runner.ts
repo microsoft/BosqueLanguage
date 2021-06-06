@@ -408,7 +408,7 @@ class TestRunner {
                 const handler = this.generateTestResultCallback(tt);
                 this.queued.push(tt.fullname);
                 try {
-                    enqueueSMTTest(Commander.prover as "z3" | "cvc4", mode, this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
+                    enqueueSMTTest(Commander.prover as "z3" | "cvc4", mode, [], this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
                 }
                 catch (ex) {
                     handler("error", new Date(), new Date(), `${ex}`);

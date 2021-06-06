@@ -132,7 +132,10 @@ class InvokeDecl {
     readonly captureSet: Set<string>;
     readonly body: BodyImplementation | undefined;
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], isPCodeFn: boolean, isPCodePred: boolean, captureSet: Set<string>, body: BodyImplementation | undefined) {
+    readonly optscalarslots: {vname: string, vtype: TypeSignature}[]; 
+    readonly optmixedslots: {vname: string, vtype: TypeSignature}[]; 
+
+    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], isPCodeFn: boolean, isPCodePred: boolean, captureSet: Set<string>, body: BodyImplementation | undefined, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
@@ -155,6 +158,9 @@ class InvokeDecl {
         this.isPCodePred = isPCodePred;
         this.captureSet = captureSet;
         this.body = body;
+
+        this.optscalarslots = optscalarslots;
+        this.optmixedslots = optmixedslots;
     }
 
     generateSig(): TypeSignature {
@@ -162,11 +168,11 @@ class InvokeDecl {
     }
 
     static createPCodeInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, captureSet: Set<string>, body: BodyImplementation, isPCodeFn: boolean, isPCodePred: boolean) {
-        return new InvokeDecl(sinfo, srcFile, attributes, recursive, [], undefined, params, optRestName, optRestType, resultInfo, [], [], isPCodeFn, isPCodePred, captureSet, body);
+        return new InvokeDecl(sinfo, srcFile, attributes, recursive, [], undefined, params, optRestName, optRestType, resultInfo, [], [], isPCodeFn, isPCodePred, captureSet, body, [], []);
     }
 
-    static createStandardInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], body: BodyImplementation | undefined) {
-        return new InvokeDecl(sinfo, srcFile, attributes, recursive, terms, termRestrictions, params, optRestName, optRestType, resultInfo, preconds, postconds, false, false, new Set<string>(), body);
+    static createStandardInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], body: BodyImplementation | undefined, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]) {
+        return new InvokeDecl(sinfo, srcFile, attributes, recursive, terms, termRestrictions, params, optRestName, optRestType, resultInfo, preconds, postconds, false, false, new Set<string>(), body, optscalarslots, optmixedslots);
     }
 }
 

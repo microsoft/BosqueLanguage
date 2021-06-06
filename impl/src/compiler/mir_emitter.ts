@@ -1180,18 +1180,18 @@ class MIREmitter {
         return key;
     }
 
-    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
+    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new Assembly();
         let p = new Parser(assembly);
         try {
             for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass1(srcFiles[i].relativePath, srcFiles[i].contents);
+                p.parseCompilationUnitPass1(srcFiles[i].relativePath, srcFiles[i].contents, macrodefs);
             }
 
             for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass2(srcFiles[i].relativePath, srcFiles[i].contents);
+                p.parseCompilationUnitPass2(srcFiles[i].relativePath, srcFiles[i].contents, macrodefs);
             }
         }
         catch (ex) {
