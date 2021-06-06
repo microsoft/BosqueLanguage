@@ -567,14 +567,21 @@ void Evaluator::evalSliceEphemeralListOp(const SliceEphemeralListOp* op)
     BSQ_MEM_COPY(tl, sl, op->slotoffsetend);
 }
 
-template <OpCodeTag tag, bool isGuarded>
-void Evaluator::evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp<tag, isGuarded>* op)
+template <>
+void Evaluator::evalInvokeFixedFunctionOp<true>(const InvokeFixedFunctionOp* op)
 {
-    if(this->tryProcessGuardStmt<isGuarded>(op->trgt, op->trgttype, op->sguard))
+    if(this->tryProcessGuardStmt(op->trgt, op->trgttype, op->sguard))
     {
         StorageLocationPtr resl = this->evalTargetVar(op->trgt);
         this->invoke(Environment::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
     }
+}
+
+template <>
+void Evaluator::evalInvokeFixedFunctionOp<false>(const InvokeFixedFunctionOp* op)
+{
+    StorageLocationPtr resl = this->evalTargetVar(op->trgt);
+    this->invoke(Environment::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
 }
 
 void Evaluator::evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op)
@@ -1184,11 +1191,15 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::InvokeFixedFunctionOp:
     {
-        this->evalInvokeFixedFunctionOp(static_cast<const InvokeFixedFunctionOp<OpCodeTag::InvokeFixedFunctionOp, false>*>(op));
-    }
-    case OpCodeTag::GuardedInvokeFixedFunctionOp:
-    {
-        this->evalInvokeFixedFunctionOp(static_cast<const InvokeFixedFunctionOp<OpCodeTag::GuardedInvokeFixedFunctionOp, true>*>(op));
+        auto opc = static_cast<const InvokeFixedFunctionOp*>(op);
+        if(opc->sguard.enabled)
+        {
+            this->evalInvokeFixedFunctionOp<true>(opc);
+        }
+        else
+        {
+            this->evalInvokeFixedFunctionOp<false>(opc);
+        }
     }
     case OpCodeTag::InvokeVirtualFunctionOp:
     {
@@ -1726,13 +1737,13 @@ void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& a
 {
     if(call->isPrimitive())
     {
-        this->invokePrimitivePrelude((const BSQInvokePrimitiveDecl*)call);
-        this->evaluatePrimitiveBody((const BSQInvokePrimitiveDecl*)call, args, resultsl, call->resultType, call->resultArg);
+        this->invokePrimitivePrelude((const BSQInvokePrimitiveDecl*)call, args);
+        this->evaluatePrimitiveBody((const BSQInvokePrimitiveDecl*)call, resultsl, call->resultType);
     }
     else
     {
         this->invokePrelude((const BSQInvokeBodyDecl*)call, args, optmask);
-        this->evaluateBody(resultsl, call->resultType, call->resultArg);
+        this->evaluateBody(resultsl, call->resultType, static_cast<const BSQInvokeBodyDecl*>(call)->resultArg);
     }
 
     this->invokePostlude();
@@ -1765,8 +1776,16 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
 #endif
 }
     
-void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk)
+void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args)
 {
+    void* argsbase = BSQ_STACK_SPACE_ALLOC(invk->params.size() * sizeof(void*));
+    void** curr = (void**)argsbase;
+    for(size_t i = 0; i < invk->params.size(); ++i)
+    {
+        *curr = this->evalArgument(args[i]);
+        curr++;
+    }
+
     size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     uint8_t* mixedslots = cstack + invk->scalarstackBytes;
@@ -1774,9 +1793,9 @@ void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk)
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, nullptr, cstack, mixedslots, nullptr, nullptr, nullptr);
+    this->pushFrame(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, mixedslots, nullptr, nullptr, nullptr);
 #else
-    this->pushFrame(nullptr, cstack, mixedslots, nullptr, nullptr, nullptr);
+    this->pushFrame((StorageLocationPtr*)argsbase, cstack, mixedslots, nullptr, nullptr, nullptr);
 #endif
 }
     
@@ -1786,7 +1805,7 @@ void Evaluator::invokePostlude()
     GCStack::popFrame();
 }
 
-void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
+void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype)
 {
     assert(false);
     switch (invk->implkey)

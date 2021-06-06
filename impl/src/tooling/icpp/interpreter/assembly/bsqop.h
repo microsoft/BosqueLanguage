@@ -56,7 +56,6 @@ enum class OpCodeTag
     SliceEphemeralListOp,
 
     InvokeFixedFunctionOp,
-    GuardedInvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
 
@@ -630,7 +629,6 @@ public:
     virtual ~SliceEphemeralListOp() {;}
 };
 
-template <OpCodeTag tag, bool isGuarded>
 class InvokeFixedFunctionOp : public InterpOp
 {
 public:
@@ -641,7 +639,7 @@ public:
     const int32_t optmaskoffset;
     const BSQStatementGuard sguard;
 
-    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, std::vector<Argument> args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, tag), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
+    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, std::vector<Argument> args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeFixedFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
     virtual ~InvokeFixedFunctionOp() {;}
 };
 
@@ -651,10 +649,11 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const BSQVirtualInvokeID invokeId;
+    const BSQType* rcvrlayouttype;
     const int32_t optmaskoffset;
     const std::vector<Argument> args;
     
-    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), optmaskoffset(optmaskoffset) {;}
+    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const BSQType* rcvrlayouttype, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), rcvrlayouttype(rcvrlayouttype), args(args), optmaskoffset(optmaskoffset) {;}
     virtual ~InvokeVirtualFunctionOp() {;}
 };
 

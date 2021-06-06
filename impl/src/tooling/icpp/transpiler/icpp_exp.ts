@@ -60,7 +60,6 @@ enum OpCodeTag
     SliceEphemeralListOp,
 
     InvokeFixedFunctionOp,
-    GuardedInvokeFixedFunctionOp,
     InvokeVirtualFunctionOp,
     InvokeVirtualOperatorOp,
 
@@ -371,31 +370,17 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.SliceEphemeralListOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, arg: arg, layouttype: layouttype, slotoffsetend: slotoffsetend, indexend: indexend};
     }
 
-
-
-
-
-
-    static genInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRInvokeKey, args: Argument[], optmaskoffset: number): ICPPOp {
-        return {tag: OpCodeTag.InvokeFixedFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset};
+    static genInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRInvokeKey, args: Argument[], optmaskoffset: number, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.InvokeFixedFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset, sguard: sguard};
     }
 
-    static genGuardedInvokeFixedFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRInvokeKey, args: Argument[], optmaskoffset: number, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.GuardedInvokeFixedFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset, sguard: sguard};
-    }
-
-    static genInvokeVirtualFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRVirtualMethodKey, args: Argument[], optmaskoffset: number): ICPPOp {
-        return {tag: OpCodeTag.InvokeVirtualFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args, optmaskoffset: optmaskoffset};
+    static genInvokeVirtualFunctionOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRVirtualMethodKey, rcvrlayouttype: MIRResolvedTypeKey, args: Argument[], optmaskoffset: number): ICPPOp {
+        return {tag: OpCodeTag.InvokeVirtualFunctionOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, rcvrlayouttype: rcvrlayouttype, args: args, optmaskoffset: optmaskoffset};
     }
 
     static genInvokeVirtualOperatorOp(sinfo: SourceInfo, trgt: TargetVar, trgttype: MIRResolvedTypeKey, invokeId: MIRVirtualMethodKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.InvokeVirtualOperatorOp, sinfo: sinfo, trgt: trgt, trgttype: trgttype, invokeId: invokeId, args: args};
     }
-
-
-
-
-
 
     static genConstructorTupleOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.ConstructorTupleOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};

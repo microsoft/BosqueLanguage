@@ -264,8 +264,8 @@ private:
     void evalMultiLoadFromEpehmeralListOp(const MultiLoadFromEpehmeralListOp* op);
     void evalSliceEphemeralListOp(const SliceEphemeralListOp* op);
 
-    template <OpCodeTag tag, bool isGuarded>
-    void evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp<tag, isGuarded>* op);
+    template <bool isGuarded>
+    void evalInvokeFixedFunctionOp(const InvokeFixedFunctionOp* op);
 
     void evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op);
     void evalInvokeVirtualOperatorOp(const InvokeVirtualOperatorOp* op);
@@ -326,10 +326,10 @@ private:
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
 
     void invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<Argument>& args, BSQBool* optmask);
-    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk);
+    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args);
     void invokePostlude();
 
-    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
+    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype);
 
 public:
     void invokeMain(const BSQInvokeBodyDecl* call, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);

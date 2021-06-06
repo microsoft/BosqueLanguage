@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, TargetVar } from "./icpp_exp";
@@ -560,7 +560,7 @@ class ICPPBodyEmitter {
                 this.requiredProjectVirtualTupleIndex.push(geninfo);
             }
             
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             let sametypes = true;
@@ -588,7 +588,7 @@ class ICPPBodyEmitter {
                     this.requiredProjectVirtualTupleIndex.push(geninfo);
                 }
 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, [this.argToICPPLocation(op.arg)], -1);
+                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
             }
         }
     }
@@ -604,7 +604,7 @@ class ICPPBodyEmitter {
                 this.requiredProjectVirtualRecordProperty.push(geninfo);
             }
             
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             let sametypes = true;
@@ -634,7 +634,7 @@ class ICPPBodyEmitter {
                     this.requiredProjectVirtualRecordProperty.push(geninfo);
                 }
                 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, [this.argToICPPLocation(op.arg)], -1);
+                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
             }
         }
     }
@@ -650,7 +650,7 @@ class ICPPBodyEmitter {
                 this.requiredProjectVirtualEntityField.push(geninfo);
             }
             
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             let sametypes = true;
@@ -680,7 +680,7 @@ class ICPPBodyEmitter {
                     this.requiredProjectVirtualEntityField.push(geninfo);
                 }
                 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, [this.argToICPPLocation(op.arg)], -1);
+                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.epht), op.epht, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
             }
         }
     }
@@ -696,7 +696,7 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualTuple.push(geninfo);
             }
             
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             let sametypes = true;
@@ -725,7 +725,7 @@ class ICPPBodyEmitter {
                     this.requiredUpdateVirtualTuple.push(geninfo);
                 }
                 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, [this.argToICPPLocation(op.arg)], -1);
+                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
             }
         }
     }
@@ -741,7 +741,7 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualRecord.push(geninfo);
             }
             
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             let sametypes = true;
@@ -772,7 +772,7 @@ class ICPPBodyEmitter {
                     this.requiredUpdateVirtualRecord.push(geninfo);
                 }
                 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, [this.argToICPPLocation(op.arg)], -1);
+                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
             }
         }
     }
@@ -787,7 +787,7 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualEntity.push(geninfo);
             }
 
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             //
@@ -800,7 +800,7 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualEntity.push(geninfo);
             }
 
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
     }
 
@@ -843,7 +843,6 @@ class ICPPBodyEmitter {
 
     processInvokeFixedFunction(op: MIRInvokeFixedFunction): ICPPOp {
         const invk = (this.assembly.invokeDecls.get(op.mkey) || this.assembly.primitiveInvokeDecls.get(op.mkey)) as MIRInvokeDecl;
-        const rtype = this.typegen.getMIRType(invk.resultType);
 
         if(invk instanceof MIRInvokePrimitiveDecl && invk.implkey === "default") {
             assert(op.sguard === undefined && op.optmask === undefined);
@@ -853,53 +852,18 @@ class ICPPBodyEmitter {
             return this.processDefaultOperatorInvokePrimitiveType(op.sinfo, trgt, op.resultType, op.mkey, args);
         }
         else {
-            let mask: SMTMaskConstruct | undefined = undefined;
-            if (op.optmask !== undefined) {
-                mask = new SMTMaskConstruct(op.optmask);
-                this.pendingMask.push(mask);
-            }
+            const maskidx = op.optmask !== undefined ? this.maskMap.get(op.optmask) as number : -1;
 
-            const args = op.args.map((arg) => this.argToSMT(arg));
-            const call = mask !== undefined ? new SMTCallGeneralWOptMask(this.typegen.mangle(op.mkey), args, mask) : new SMTCallGeneral(this.typegen.mangle(op.mkey), args);
-            const gcall = this.generateGuardStmtCond(op.sguard, call, invk.resultType);
+            const args = op.args.map((arg) => this.argToICPPLocation(arg));
+            const sguard = this.generateStatmentGuardInfo(op.sguard);
 
-            if (this.isSafeInvoke(op.mkey)) {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, gcall, continuation);
-            }
-            else {
-                return this.generateGeneralCallValueProcessing(this.currentRType, rtype, gcall, op.trgt, continuation);
-            }
+            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultType), op.resultType, invk.key, args, maskidx, sguard);
         }
     }
 
     processInvokeVirtualFunction(op: MIRInvokeVirtualFunction): ICPPOp {
-        const rcvrlayouttype = this.typegen.getMIRType(op.rcvrlayouttype);
-        const rcvrflowtype = this.typegen.getMIRType(op.rcvrflowtype);
-        const resulttype = this.typegen.getMIRType(op.resultType);
-
-        const allsafe = this.isSafeVirtualInvoke(op.vresolve, rcvrflowtype);
-        const icall = this.generateVirtualInvokeFunctionName(rcvrflowtype, op.vresolve, op.optmask !== undefined, resulttype);
-        if(this.requiredVirtualFunctionInvokes.findIndex((vv) => vv.inv === icall) === -1) {
-            const geninfo = { inv: icall, allsafe: allsafe, argflowtype: rcvrflowtype, vfname: op.vresolve, optmask: op.optmask, resulttype: resulttype };
-            this.requiredVirtualFunctionInvokes.push(geninfo);
-        }
-
-        let mask: SMTMaskConstruct | undefined = undefined;
-        if (op.optmask !== undefined) {
-            mask = new SMTMaskConstruct(op.optmask);
-            this.pendingMask.push(mask);
-        }
-            
-        const argpp = this.typegen.coerce(this.argToSMT(op.args[0]), rcvrlayouttype, rcvrflowtype);
-        const args = [argpp, ...op.args.slice(1).map((arg) => this.argToSMT(arg))];
-        const call = mask !== undefined ? new SMTCallGeneralWOptMask(icall, args, mask) : new SMTCallGeneral(icall, args);    
-
-        if(allsafe) {
-            return new SMTLet(this.varToSMTName(op.trgt).vname, call, continuation);
-        }
-        else {
-            return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, call, op.trgt, continuation);
-        }
+        const maskidx = op.optmask !== undefined ? this.maskMap.get(op.optmask) as number : -1;
+        return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultType), op.resultType, op.vresolve, op.rcvrlayouttype, op.args.map((arg) => this.argToICPPLocation(arg)), maskidx);
     }
 
     processInvokeVirtualOperator(op: MIRInvokeVirtualOperator): ICPPOp {
@@ -953,7 +917,7 @@ class ICPPBodyEmitter {
             this.requiredTupleAppend.push(geninfo);
         }
             
-        return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultTupleType), op.resultTupleType, icall, cargs, -1);
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultTupleType), op.resultTupleType, icall, cargs, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processStructuredJoinRecord(op: MIRStructuredJoinRecord): ICPPOp {
@@ -969,7 +933,7 @@ class ICPPBodyEmitter {
             this.requiredRecordMerge.push(geninfo);
         }
             
-        return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultRecordType), op.resultRecordType, icall, cargs, -1);
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultRecordType), op.resultRecordType, icall, cargs, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorEphemeralList(op: MIRConstructorEphemeralList): ICPPOp {
@@ -1586,18 +1550,15 @@ class ICPPBodyEmitter {
         return ops;
     }
 
-    generateSMTInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl | undefined {
+    generateICPPInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl | undefined {
         const params = idecl.params.map((arg) => {
             return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
         });
 
         let paramsmap: Map<string, number> = new Map<string, number>();
-        let poffset: number = 0;
         for(let i = 0; i < idecl.params.length; ++i) {
             const param = idecl.params[i];
-            const ptype = this.typegen.getICPPTypeData(this.typegen.getMIRType(param.type));
-            paramsmap.set(param.name, poffset);
-            poffset += ptype.allocinfo.inlinedatasize;
+            paramsmap.set(param.name, i);
         }
 
         const rtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(idecl.resultType));
@@ -1613,11 +1574,11 @@ class ICPPBodyEmitter {
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
 
-            return this.generateBuiltinFunction(idecl as MIRInvokePrimitiveDecl);
+            return this.generateICPPInvoke(idecl as MIRInvokePrimitiveDecl);
         }
     }
 
-    generateBuiltinFunction(idecl: MIRInvokePrimitiveDecl): ICPPInvokeDecl | undefined {
+    generateBuiltinICPPInvoke(idecl: MIRInvokePrimitiveDecl): ICPPInvokeDecl | undefined {
         const params = idecl.params.map((arg) => {
             return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
         });
@@ -1651,7 +1612,7 @@ class ICPPBodyEmitter {
 
         let pcodes: Map<string, ICPPPCode> = new Map<string, ICPPPCode>();
         idecl.pcodes.forEach((pc, pcname) => {
-            const icpppc = new ICPPPCode(pc.code, pc.cargs.map((carg) => xxxx));
+            const icpppc = new ICPPPCode(pc.code, pc.cargs.map((carg) => ICPPOpEmitter.genParameterArgument(this.argsMap.get(carg) as number)));
             pcodes.set(pcname, icpppc);
         });
 

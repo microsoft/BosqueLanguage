@@ -270,6 +270,10 @@ class BSQRegex {
         return "[TODO]";
     }
 
+    compileToCPPValidator(): string {
+        return this.re.compileToCPP();
+    }
+
     compileToSMT(ascii: boolean): string {
         return "[TODO]";
     }
@@ -392,9 +396,13 @@ class Literal extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        if (Literal.escapechars.includes(this.litval)) {
+            return "\\" + this.litval;
+        }
+        else {
+            return this.litval;
+        }
     }
-
     compileToSMT(ascii: boolean): string  {
         assert(ascii);
 
@@ -426,7 +434,7 @@ class CharRange extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        return `[${this.lb}-${this.ub}]`;
     }
 
     compileToSMT(ascii: boolean): string  {
@@ -505,7 +513,7 @@ class StarRepeat extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        return this.repeat.useParens() ? `(${this.repeat.compileToCPP()})*` : `${this.repeat.compileToCPP()}*`;
     }
 
     compileToSMT(ascii: boolean): string  {
@@ -535,7 +543,7 @@ class PlusRepeat extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        return this.repeat.useParens() ? `(${this.repeat.compileToCPP()})+` : `${this.repeat.compileToCPP()}+`;
     }
 
     compileToSMT(ascii: boolean): string  {
@@ -569,7 +577,7 @@ class RangeRepeat extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        return this.repeat.useParens() ? `(${this.repeat.compileToCPP()}){${this.min},${this.max}}` : `${this.repeat.compileToCPP()}{${this.min},${this.max}}`;
     }
 
     compileToSMT(ascii: boolean): string  {
@@ -599,7 +607,7 @@ class Optional extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        return this.opt.useParens() ? `(${this.opt.compileToCPP()})?` : `${this.opt.compileToCPP()}?`;
     }
 
     compileToSMT(ascii: boolean): string  {
@@ -633,7 +641,7 @@ class Alternation extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        return this.opts.map((opt) => opt.compileToCPP()).join("|");
     }
 
     compileToSMT(ascii: boolean): string  {
@@ -667,7 +675,7 @@ class Sequence extends RegexComponent {
     }
 
     compileToCPP(): string {
-        return "[TODO]";
+        return this.elems.map((elem) => elem.compileToCPP()).join("");
     }
 
     compileToSMT(ascii: boolean): string  {
