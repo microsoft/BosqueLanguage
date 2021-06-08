@@ -15,6 +15,8 @@
 ////
 //Primitive value representations
 
+std::string generateRandomChar(RandGenerator& rnd);
+
 ////
 //None
 typedef uint64_t BSQNone;
@@ -672,23 +674,56 @@ enum class SpecialCharKind
 
 class BSQRegexOpt
 {
+public:
+    BSQRegexOpt() {;}
+    virtual ~BSQRegexOpt() {;}
 
+    virtual std::string generate(RandGenerator& rnd) const = 0;
 };
 
 class BSQLiteralRe : public BSQRegexOpt
 {
+public:
+    const std::string litval;
+
+    BSQLiteralRe(std::string lv) : BSQRegexOpt(), litval(lv) {;}
+    virtual ~BSQLiteralRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQCharRangeRe : public BSQRegexOpt
 {
+public:
+    const uint64_t low;
+    const uint64_t high;
+
+    BSQCharRangeRe(uint64_t low, uint64_t high) : BSQRegexOpt(), low(low), high(high) {;}
+    virtual ~BSQCharRangeRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQCharClassRe : public BSQRegexOpt
 {
+public:
+    const SpecialCharKind kind;
+
+    BSQCharClassRe(SpecialCharKind kind) : BSQRegexOpt(), kind(kind) {;}
+    virtual ~BSQCharClassRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQStarRepeatRe : public BSQRegexOpt
 {
+public:
+    const BSQRegexOpt* opt;
+
+    BSQStarRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
+    virtual ~BSQStarRepeatRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQPlusRepeatRe : public BSQRegexOpt

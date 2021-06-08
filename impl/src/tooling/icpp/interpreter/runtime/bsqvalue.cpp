@@ -8,7 +8,6 @@
 
 #include "boost/uuid/uuid_io.hpp"
 
-
 const BSQType* BSQType::g_typeNone = new BSQNoneType();
 const BSQType* BSQType::g_typeBool = new BSQBoolType();
 const BSQType* BSQType::g_typeNat = new BSQNatType();
@@ -36,6 +35,44 @@ const BSQType* g_typeISOTime = new BSQISOTimeType();
 const BSQType* g_typeLogicalTime = new BSQLogicalTimeType();
 const BSQType* g_typeUUID = new BSQUUIDType();
 const BSQType* g_typeContentHash = new BSQContentHashType();
+
+std::string generateRandomChar(RandGenerator& rnd)
+{
+    char small_char[] = {' ', '!', '0', '1', '4', 'a', 'i', 'Q', 'Z', ':', '_', '(', ')',  };
+    uint8_t small_unic[] = {/*£*/ 194, 163, /*µ*/ 194, 181};
+    uint8_t emoji[] = {/*🌵*/ 240, 159, 140, 181};
+    auto ulimc = Environment::g_small_model_gen ? (sizeof(small_char) + (sizeof(small_unic) / 2) + 1) : 94;
+    std::uniform_int_distribution<uint8_t> chardist(0, ulimc);
+
+    std::string data;
+    if(!Environment::g_small_model_gen)
+    {
+        data.append({ (char)(32 + chardist(rnd)) });
+    }
+    else
+    {
+        auto choice = chardist(rnd);
+        if(choice < sizeof(small_char))
+        {
+            data.append({ (char)small_char[choice] });
+        }
+        else
+        {
+            if(choice < ulimc - (sizeof(emoji) / 4))
+            {
+                choice = choice - sizeof(small_char);
+                data.append({ (char)small_unic[choice], (char)small_unic[choice + 1] });
+            }
+            else
+            {
+                choice = choice - (sizeof(small_char) + (sizeof(small_unic) / 2)); 
+                data.append({ (char)emoji[choice], (char)emoji[choice + 1],  (char)emoji[choice + 2],  (char)emoji[choice + 3] });
+            }
+        }
+    }
+
+    return data;
+}
 
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
@@ -668,41 +705,11 @@ void entityStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, S
     auto lim = Environment::g_small_model_gen ? 10 : 256;
     std::uniform_int_distribution<size_t> distribution(0, lim);
 
-    char small_char[] = {' ', '!', '0', '1', '4', 'a', 'i', 'Q', 'Z', ':', '_', '(', ')',  };
-    uint8_t small_unic[] = {/*£*/ 194, 163, /*µ*/ 194, 181};
-    uint8_t emoji[] = {/*🌵*/ 240, 159, 140, 181};
-    auto ulimc = Environment::g_small_model_gen ? (sizeof(small_char) + (sizeof(small_unic) / 2) + 1) : 94;
-    std::uniform_int_distribution<uint8_t> chardist(0, ulimc);
-
     auto size = distribution(rnd);
     std::string data;
     for(size_t i = 0; i < size; ++i)
     {
-        if(!Environment::g_small_model_gen)
-        {
-            data.append({ (char)(32 + chardist(rnd)) });
-        }
-        else
-        {
-            auto choice = chardist(rnd);
-            if(choice < sizeof(small_char))
-            {
-                data.append({ (char)small_char[choice] });
-            }
-            else
-            {
-                if(choice < ulimc - (sizeof(emoji) / 4))
-                {
-                    choice = choice - sizeof(small_char);
-                    data.append({ (char)small_unic[choice], (char)small_unic[choice + 1] });
-                }
-                else
-                {
-                    choice = choice - (sizeof(small_char) + (sizeof(small_unic) / 2)); 
-                    data.append({ (char)emoji[choice], (char)emoji[choice + 1],  (char)emoji[choice + 2],  (char)emoji[choice + 3] });
-                }
-            }
-        }
+        data.append(generateRandomChar(rnd));
     }
 
     BSQString s = g_emptyString;
@@ -1114,4 +1121,44 @@ void entityContentHashGenerateRandom_impl(const BSQType* btype, RandGenerator& r
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::string("/") + *((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->strversion + std::string("/");
+}
+
+std::string BSQLiteralRe::generate(RandGenerator& rnd) const
+{
+    return this->litval;
+}
+
+std::string BSQCharRangeRe::generate(RandGenerator& rnd) const
+{
+    //
+    //TODO: unicode support and escape support
+    //
+    assert(32 <= low && high < 126);
+
+    std::uniform_int_distribution<uint8_t> distribution(low, high);
+    return std::string{(char)distribution(rnd)};
+}
+
+std::string BSQCharClassRe::generate(RandGenerator& rnd) const
+{
+    //
+    //TODO: unicode support and escape support
+    //
+    if(this->kind == SpecialCharKind::Wildcard)
+    {
+        return generateRandomChar(rnd);
+    }
+    else
+    {
+        char ws_char[] = {' ', '\n', '\r', '\t' };
+        std::uniform_int_distribution<uint8_t> chardist(0, sizeof(ws_char));
+
+        return std::string{ws_char[chardist(rnd)]};
+    }
+}
+
+std::string BSQStarRepeatRe::generate(RandGenerator& rnd) const
+{
+    auto ulimc = Environment::g_small_model_gen ? 3 : 10;
+    std::uniform_int_distribution<uint8_t> chardist(0, ulimc);
 }
