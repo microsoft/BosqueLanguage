@@ -37,7 +37,7 @@ class BSQListReprType : public BSQRefType
 {
 public:
     BSQListReprType(uint64_t allocsize, RefMask heapmask, std::string name):
-        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityListReprDisplay_impl, name)
+        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityListReprDisplay_impl, name, {nullptr, nullptr})
     {;}
 
     virtual ~BSQListReprType() {;}
@@ -63,6 +63,12 @@ public:
     BSQListFlatKTypeAbstract(uint64_t allocsize, RefMask heapmask, std::string name): BSQListReprType(allocsize, heapmask, name) {;}
 
     virtual ~BSQListFlatKTypeAbstract() {;}
+
+    inline static void initializeCountInfo(void* data, uint32_t ecount, uint32_t esize)
+    {
+        *((uint32_t*)data) = ecount * esize;
+        *((uint32_t*)((uint8_t*)data) + sizeof(uint32_t)) = ecount;
+    }
 
     inline static uint64_t getStorageBytesCount(void* data)
     {
@@ -176,6 +182,9 @@ struct ListTypeConstructorInfo
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
+bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQListType : public BSQStructType
 {
 public:
@@ -184,7 +193,7 @@ public:
     const uint64_t esize;
     const BSQType* etype;
 
-    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_FUNCTOR_SET, entityListDisplay_impl, name), esize(etype->allocinfo.inlinedatasize), etype(etype)
+    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_FUNCTOR_SET, entityListDisplay_impl, name, {entityListParse_impl, entityListGenerateRandom_impl}), esize(etype->allocinfo.inlinedatasize), etype(etype)
     {
         static_assert(sizeof(BSQList) == 16);
     }

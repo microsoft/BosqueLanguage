@@ -251,6 +251,88 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
     }
 }
 
+bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    auto ltype = dynamic_cast<const BSQListType*>(btype);
+    const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
+
+    auto vbuff = BSQ_STACK_SPACE_ALLOC(ltype->etype->allocinfo.inlinedatasize);
+    const boost::json::array& jlist = jv.as_array();
+
+    //
+    //TODO: we need to handle this
+    //
+    assert(jlist.size() <= 40);
+
+    auto ct = jlist.size();
+    if(ct == 0)
+    {
+        ltype->storeValue(sl, (StorageLocationPtr)&bsqemptylist);
+    }
+    else
+    {
+        const BSQListFlatKTypeAbstract* fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQStringKReprTypeAbstract*>& pp) {
+            return ct <= pp.first;
+        })->second;
+
+        auto tt = Allocator::GlobalAllocator.allocateDynamic(fltype);
+        fltype->initializeCountInfo(tt, ct, ltype->esize);
+        Allocator::GlobalAllocator.pushRoot(&tt);
+
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
+        for (size_t i = 0; i < jlist.size(); ++i)
+        {
+            ltype->etype->consops.fpJSONParse(ltype->etype, jlist.at(i), &vbuff);
+            ltype->etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
+        }
+
+        BSQList ll = {tt, jlist.size()};
+        ltype->storeValue(sl, &ll);
+
+        Allocator::GlobalAllocator.popRoot();
+
+        return true;
+    }
+}
+
+void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto ltype = dynamic_cast<const BSQListType*>(btype);
+    const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
+
+    auto vbuff = BSQ_STACK_SPACE_ALLOC(ltype->etype->allocinfo.inlinedatasize);
+    
+    auto lim = Environment::g_small_model_gen ? 3 : 40;
+    std::uniform_int_distribution<size_t> sizedist(0, lim);
+
+    auto ct = sizedist(rnd);
+    if(ct == 0)
+    {
+        ltype->storeValue(sl, (StorageLocationPtr)&bsqemptylist);
+    }
+    else
+    {
+        const BSQListFlatKTypeAbstract* fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQStringKReprTypeAbstract*>& pp) {
+            return ct <= pp.first;
+        })->second;
+
+        auto tt = Allocator::GlobalAllocator.allocateDynamic(fltype);
+        fltype->initializeCountInfo(tt, ct, ltype->esize);
+        Allocator::GlobalAllocator.pushRoot(&tt);
+
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
+        for (size_t i = 0; i < ct; ++i)
+        {
+            ltype->etype->consops.fpGenerateRandom(ltype->etype, rnd, &vbuff);
+            ltype->etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
+        }
+
+        BSQList ll = {tt, ct};
+        ltype->storeValue(sl, &ll);
+
+        Allocator::GlobalAllocator.popRoot();
+    }
+}
 
 std::map<BSQTypeID, ListTypeConstructorInfo> BSQListType::g_listTypeMap;
 
@@ -317,9 +399,8 @@ BSQList BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2) const
         if(l1.size + l2.size <= 16)
         {
             res = Allocator::GlobalAllocator.allocateSafe(BSQListType::g_listTypeMap[this->tid].list16);
+            BSQListType::g_listTypeMap[this->tid].list16->initializeCountInfo(res, l1.size + l2.size, this->esize);
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
-
-            ((BSQListFlatK<128>*)res)->ecount = (uint32_t)(l1.size + l2.size);
 
             BSQListReprIterator iter1;
             initializeIteratorBegin(&iter1, s1);
@@ -372,6 +453,8 @@ BSQList BSQListType::slice(StorageLocationPtr l, uint64_t startpos, uint64_t end
         if(dist <= 16)
         {
             res = Allocator::GlobalAllocator.allocateSafe(BSQListType::g_listTypeMap[this->tid].list16);
+            BSQListType::g_listTypeMap[this->tid].list16->initializeCountInfo(res, dist, this->esize);
+
             uint8_t* curr = BSQListFlatKTypeAbstract::getDataBytes(res);
 
             BSQListReprIterator iter;

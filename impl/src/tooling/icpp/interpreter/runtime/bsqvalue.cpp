@@ -18,12 +18,13 @@ const BSQType* BSQType::g_typeFloat = new BSQFloatType();
 const BSQType* BSQType::g_typeDecimal = new BSQDecimalType();
 const BSQType* BSQType::g_typeRational = new BSQRationalType();
 
-const BSQType* BSQType::g_typeStringKRepr8 = new BSQStringKReprType<8>();
 const BSQType* BSQType::g_typeStringKRepr16 = new BSQStringKReprType<16>();
 const BSQType* BSQType::g_typeStringKRepr32 = new BSQStringKReprType<32>(); 
 const BSQType* BSQType::g_typeStringKRepr64 = new BSQStringKReprType<64>();
+const BSQType* BSQType::g_typeStringKRepr96 = new BSQStringKReprType<96>();
 const BSQType* BSQType::g_typeStringKRepr128 = new BSQStringKReprType<128>();
 const BSQType* BSQType::g_typeStringKRepr256 = new BSQStringKReprType<256>();
+const std::pair<size_t, const BSQType*> BSQType::g_typeStringKCons[6] = {std::make_pair((size_t)16, BSQType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQType::g_typeStringKRepr128), std::make_pair((size_t)256, BSQType::g_typeStringKRepr256) };
 
 const BSQType* BSQType::g_typeStringConcatRepr = new BSQStringConcatReprType();
 const BSQType* BSQType::g_typeStringSliceRepr = new BSQStringSliceReprType();
@@ -685,7 +686,10 @@ bool entityStringJSONParse_impl(const BSQType* btype, const boost::json::value& 
         }
         else if(sstr.size() <= 256)
         {
-            s.u_data = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringKRepr256);
+            auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
+                return cc.first >= sstr.size();
+            });
+            s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
             BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
         }
         else
@@ -723,7 +727,10 @@ void entityStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, S
     }
     else
     {
-        s.u_data = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringKRepr256);
+        auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&data](const std::pair<size_t, const BSQType*>& cc) {
+            return cc.first >= data.size();
+        });
+        s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
         BSQ_MEM_COPY(s.u_data, data.c_str(), size);
     }
 
@@ -1118,11 +1125,6 @@ void entityContentHashGenerateRandom_impl(const BSQType* btype, RandGenerator& r
     assert(false);
 }
 
-std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    return std::string("/") + *((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->strversion + std::string("/");
-}
-
 std::string BSQLiteralRe::generate(RandGenerator& rnd) const
 {
     return this->litval;
@@ -1160,5 +1162,184 @@ std::string BSQCharClassRe::generate(RandGenerator& rnd) const
 std::string BSQStarRepeatRe::generate(RandGenerator& rnd) const
 {
     auto ulimc = Environment::g_small_model_gen ? 3 : 10;
-    std::uniform_int_distribution<uint8_t> chardist(0, ulimc);
+    std::uniform_int_distribution<size_t> ctdist(0, ulimc);
+
+    auto ct = ctdist(rnd);
+    std::string res;
+    for(size_t i = 0; i < ct; ++i)
+    {
+        res.append(this->opt->generate(rnd));
+    }
+
+    return res;
+}
+
+std::string BSQPlusRepeatRe::generate(RandGenerator& rnd) const
+{
+    auto ulimc = Environment::g_small_model_gen ? 3 : 10;
+    std::uniform_int_distribution<uint8_t> ctdist(1, ulimc);
+
+    auto ct = ctdist(rnd);
+    std::string res;
+    for(size_t i = 0; i < ct; ++i)
+    {
+        res.append(this->opt->generate(rnd));
+    }
+
+    return res;
+}
+
+std::string BSQRangeRepeatRe::generate(RandGenerator& rnd) const
+{
+    std::uniform_int_distribution<uint8_t> ctdist(this->low, this->high);
+
+    auto ct = ctdist(rnd);
+    std::string res;
+    for(size_t i = 0; i < ct; ++i)
+    {
+        res.append(this->opt->generate(rnd));
+    }
+
+    return res;
+}
+
+std::string BSQOptionalRe::generate(RandGenerator& rnd) const
+{
+    std::uniform_int_distribution<int> ctdist(0, 1);
+
+    auto ct = ctdist(rnd);
+    if(ct == 1)
+    {
+        return this->opt->generate(rnd);
+    }
+    else
+    {
+        return "";
+    }
+}
+
+std::string BSQAlternationRe::generate(RandGenerator& rnd) const
+{
+    std::uniform_int_distribution<size_t> idxdist(0, this->opts.size());
+    auto opt = this->opts[idxdist(rnd)];
+
+    return opt->generate(rnd);
+}
+
+std::string BSQSequenceRe::generate(RandGenerator& rnd) const
+{
+    std::string res;
+    for(size_t i = 0; i < this->opts.size(); ++i)
+    {
+        res.append(this->opts[i]->generate(rnd));
+    }
+
+    return res;
+}
+
+
+std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return std::string("/") + ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr + std::string("/");
+}
+
+std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return btype->name + std::string("/") + ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr + std::string("/");
+}
+
+std::string entityStringOfDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return btype->name + entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data);
+}
+
+bool entityStringOfJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        std::string sstr(jv.as_string().c_str(), jv.as_string().c_str() + jv.as_string().size());
+        const BSQRegex& vre = dynamic_cast<const BSQValidatorType*>(btype)->re;
+
+        if(!std::regex_match(sstr, vre.cppre))
+        {
+            return false;
+        }
+
+        BSQString s = g_emptyString;
+        if(sstr.size() == 0)
+        {
+            //already empty
+        }
+        else if(sstr.size() < 16) 
+        {
+            s.u_inlineString = BSQInlineString::create((const uint8_t*)sstr.c_str(), sstr.size());
+        }
+        else if(sstr.size() <= 256)
+        {
+            auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
+                return cc.first >= sstr.size();
+            });
+            s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
+            BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
+        }
+        else
+        {
+            //
+            //TODO: split the string into multiple parts
+            //
+            assert(false);
+        }
+        
+        return true;
+    }
+}
+
+void entityStringOfGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    std::string sstr = dynamic_cast<const BSQValidatorType*>(btype)->re.re->generate(rnd);
+
+    //
+    //TODO: we need to handle this case later
+    //
+    assert(sstr.size() < 256);
+
+    BSQString s = g_emptyString;
+    if(sstr.size() == 0)
+    {
+        //already empty
+    }
+    else if(sstr.size() < 16) 
+    {
+        s.u_inlineString = BSQInlineString::create((const uint8_t*)sstr.c_str(), sstr.size());
+    }
+    else
+    {
+        auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
+            return cc.first >= sstr.size();
+        });
+
+        s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
+        BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
+    }
+
+    dynamic_cast<const BSQStringType*>(BSQType::g_typeString)->storeValue(sl, &s);
+}
+
+std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return btype->name + entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data);
+}
+
+bool entityDataStringJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    assert(false);
+}
+
+void entityDataStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    assert(false);
 }

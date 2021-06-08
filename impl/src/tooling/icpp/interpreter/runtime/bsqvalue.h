@@ -644,25 +644,6 @@ public:
 ////
 //Regex
 
-struct BSQRegex
-{
-    std::string* strversion;
-    std::regex* regex;
-};
-
-std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-class BSQRegexType : public BSQRegisterType<BSQRegex>
-{
-public:
-    BSQRegexType(): BSQRegisterType(BSQ_TYPE_ID_REGEX, sizeof(BSQRegex), "11", EMPTY_KEY_FUNCTOR_SET, entityRegexDisplay_impl, "NSCore::Regex", {nullptr, nullptr}) 
-    {
-        static_assert(sizeof(BSQRegex) == 16);
-    }
-
-    virtual ~BSQRegexType() {;}
-};
-
 ////
 //Typed string helpers
 
@@ -728,33 +709,93 @@ public:
 
 class BSQPlusRepeatRe : public BSQRegexOpt
 {
+public:
+    const BSQRegexOpt* opt;
+
+    BSQPlusRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
+    virtual ~BSQPlusRepeatRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQRangeRepeatRe : public BSQRegexOpt
 {
+public:
+    const uint32_t low;
+    const uint32_t high;
+    const BSQRegexOpt* opt;
+
+    BSQRangeRepeatRe(uint32_t low, uint32_t high, const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt), low(low), high(high) {;}
+    virtual ~BSQRangeRepeatRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQOptionalRe : public BSQRegexOpt
 {
+public:
+    const BSQRegexOpt* opt;
+
+    BSQOptionalRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
+    virtual ~BSQOptionalRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQAlternationRe : public BSQRegexOpt
 {
+public:
+    const std::vector<const BSQRegexOpt*> opts;
+
+    BSQAlternationRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
+    virtual ~BSQAlternationRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
 class BSQSequenceRe : public BSQRegexOpt
 {
+public:
+    const std::vector<const BSQRegexOpt*> opts;
+
+    BSQSequenceRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
+    virtual ~BSQSequenceRe() {;}
+
+    virtual std::string generate(RandGenerator& rnd) const override final;
 };
 
-class BSQBSQRegex
+struct BSQRegex
 {
+    std::string restr;
+    std::regex cppre;
+    bool isAnchorStart;
+    bool isAnchorEnd;
+    BSQRegexOpt* re;
 
+    std::string generate(RandGenerator& rnd)
+    {
+        return this->re->generate(rnd);
+    }  
 };
 
-class BSQValidatorType : public BSQType
+std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQRegexType : public BSQRegisterType<void*>
 {
 public:
-    const xxxx;
+    BSQRegexType(): BSQRegisterType(BSQ_TYPE_ID_REGEX, sizeof(void*), "1", EMPTY_KEY_FUNCTOR_SET, entityRegexDisplay_impl, "NSCore::Regex", {nullptr, nullptr}) {;}
+    virtual ~BSQRegexType() {;}
+};
+
+std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQValidatorType : public BSQRegisterType<void*>
+{
+public:
+    const BSQRegex re;
+
+    BSQValidatorType(BSQTypeID tid, std::string name): BSQRegisterType(tid, sizeof(void*), "1", EMPTY_KEY_FUNCTOR_SET, entityValidatorDisplay_impl, name, {nullptr, nullptr}) {;}
+    virtual ~BSQValidatorType() {;}
 };
 
 std::string entityStringOfDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -765,10 +806,10 @@ void entityStringOfGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd,
 class BSQStringOfType : public BSQType
 {
 public:
-    const BSQType* validator;
+    const BSQValidatorType* validator;
 
-    BSQStringOfType(BSQTypeID tid, std::string name, xxxx)
-    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityStringOfDisplay_impl, name, {entityStringOfJSONParse_impl, entityStringOfGenerateRandom_impl})
+    BSQStringOfType(BSQTypeID tid, std::string name, const BSQValidatorType* validator)
+    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityStringOfDisplay_impl, name, {entityStringOfJSONParse_impl, entityStringOfGenerateRandom_impl}), validator(validator)
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -813,8 +854,8 @@ class BSQDataStringType : public BSQType
 public:
     const BSQInvokeID parsemethod;
 
-    BSQDataStringType(BSQTypeID tid, std::string name, xxxx)
-    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityDataStringDisplay_impl, name, {entityDataStringJSONParse_impl, entityDataStringGenerateRandom_impl})
+    BSQDataStringType(BSQTypeID tid, std::string name, BSQInvokeID parsemethod)
+    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityDataStringDisplay_impl, name, {entityDataStringJSONParse_impl, entityDataStringGenerateRandom_impl}), parsemethod(parsemethod)
     {
         static_assert(sizeof(BSQString) == 16);
     }

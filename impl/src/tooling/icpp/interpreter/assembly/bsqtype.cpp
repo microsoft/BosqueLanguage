@@ -152,7 +152,7 @@ bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, Sto
             auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
             etype->consops.fpJSONParse(etype, jtuple.at(i), &vbuff);
 
-            BSQType::g_typetable[tupinfo->ttypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(sl), tupinfo->idxoffsets[i]), &vbuff);
+            BSQType::g_typetable[tupinfo->ttypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), tupinfo->idxoffsets[i]), &vbuff);
         }
 
         Allocator::GlobalAllocator.popRoot();
@@ -187,7 +187,7 @@ void tupleGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageL
             auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
             etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
             
-            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(sl), tupinfo->idxoffsets[i]), &vbuff);
+            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), tupinfo->idxoffsets[i]), &vbuff);
         }
 
         Allocator::GlobalAllocator.popRoot();
@@ -251,7 +251,7 @@ bool recordJSONParse_impl(const BSQType* btype, const boost::json::value& jv, St
             assert(jrecord.contains(pname));
             etype->consops.fpJSONParse(etype, jrecord.at(pname), &vbuff);
 
-            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(sl), recinfo->propertyoffsets[i]), &vbuff);
+            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), recinfo->propertyoffsets[i]), &vbuff);
         }
 
         Allocator::GlobalAllocator.popRoot();
@@ -289,7 +289,7 @@ void recordGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, Storage
             auto pname = BSQType::g_propertymap[recinfo->properties[i]];
             etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
 
-            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(sl), recinfo->propertyoffsets[i]), &vbuff);
+            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), recinfo->propertyoffsets[i]), &vbuff);
         }
 
         Allocator::GlobalAllocator.popRoot();

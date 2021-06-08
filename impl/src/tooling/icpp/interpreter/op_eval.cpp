@@ -728,6 +728,7 @@ void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPr
 
         const BSQListFlatKTypeAbstract* klist = fltype->second;
         void* res = Allocator::GlobalAllocator.allocateDynamic(klist);
+        klist->initializeCountInfo(res, ct, ltype->esize);
 
         BSQList ll = {res, ct};
         ltype->storeValue(this->evalTargetVar(op->trgt), (StorageLocationPtr)&ll);

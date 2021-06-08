@@ -125,12 +125,13 @@ public:
     static const BSQType* g_typeDecimal;
     static const BSQType* g_typeRational;
 
-    static const BSQType* g_typeStringKRepr8;
     static const BSQType* g_typeStringKRepr16;
     static const BSQType* g_typeStringKRepr32;
     static const BSQType* g_typeStringKRepr64;
+    static const BSQType* g_typeStringKRepr96;
     static const BSQType* g_typeStringKRepr128;
     static const BSQType* g_typeStringKRepr256;
+    static const std::pair<size_t, const BSQType*> g_typeStringKCons[6];
 
     static const BSQType* g_typeStringConcatRepr;
     static const BSQType* g_typeStringSliceRepr;
