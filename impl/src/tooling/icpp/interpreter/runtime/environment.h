@@ -15,10 +15,9 @@ class Environment
 {
 public:
     static jmp_buf g_entrybuff;
+    static bool g_small_model_gen;
 
     //Constant storage locations
     static uint8_t* g_constantbuffer; 
-
-    static std::vector<std::vector<BSQTypeID>> g_subtypes;
     static std::vector<BSQInvokeDecl*> g_invokes;
 };

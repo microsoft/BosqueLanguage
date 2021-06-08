@@ -10,6 +10,9 @@
 #include <vector>
 #include <map>
 
+#include <random>
+#include <boost/json/value.hpp>
+
 ////////////////////////////////
 //Storage location ops
 
@@ -90,6 +93,18 @@ struct KeyFunctorSet
 
 constexpr KeyFunctorSet EMPTY_KEY_FUNCTOR_SET{ nullptr, nullptr };
 
+typedef  std::default_random_engine RandGenerator;
+typedef bool (*JSONParseFP)(const BSQType* btype, const boost::json::value&, StorageLocationPtr);
+typedef void (*GenerateRandom)(const BSQType* btype, RandGenerator&, StorageLocationPtr);
+
+struct ConsFunctorSet
+{
+    JSONParseFP fpJSONParse;
+    GenerateRandom fpGenerateRandom;
+};
+
+constexpr JSONParseFP NOT_API_TYPE = nullptr;
+
 ////
 //BSQType abstract base class
 class BSQType
@@ -122,6 +137,13 @@ public:
 
     static const BSQType* g_typeString;
 
+    static const BSQType* g_typeStringPos;
+    static const BSQType* g_typeByteBuffer;
+    static const BSQType* g_typeISOTime;
+    static const BSQType* g_typeLogicalTime;
+    static const BSQType* g_typeUUID;
+    static const BSQType* g_typeContentHash;
+
     const BSQTypeID tid;
     const BSQTypeKind tkind;
     
@@ -131,12 +153,14 @@ public:
     KeyFunctorSet keyops;
     const std::map<BSQVirtualInvokeID, BSQInvokeID> vtable; //TODO: This is slow indirection but nice and simple
 
+    ConsFunctorSet consops;
+
     DisplayFP fpDisplay;
     const std::string name;
 
     //Constructor that everyone delegates to
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name): 
-        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), vtable(vtable), keyops(keyops), fpDisplay(fpDisplay), name(name)
+    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), vtable(vtable), keyops(keyops), fpDisplay(fpDisplay), name(name), consops(consops)
     {;}
 
     virtual ~BSQType() {;}
@@ -152,8 +176,8 @@ public:
 class BSQStructType : public BSQType
 {
 public:
-    BSQStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name): 
-        BSQType(tid, BSQTypeKind::Struct, { datasize, datasize, datasize, nullptr, imask }, MASK_GC_FUNCTOR_SET, vtable, keyops, fpDisplay, name)
+    BSQStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
+        BSQType(tid, BSQTypeKind::Struct, { datasize, datasize, datasize, nullptr, imask }, MASK_GC_FUNCTOR_SET, vtable, keyops, fpDisplay, name, consops)
     {;}
 
     virtual ~BSQStructType() {;}
@@ -189,8 +213,8 @@ public:
 class BSQRefType : public BSQType
 {
 public:
-    BSQRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name):  
-        BSQType(tid, BSQTypeKind::Ref, { heapsize, sizeof(void*), sizeof(void*), heapmask, "2" }, heapmask == nullptr ? LEAF_GC_FUNCTOR_SET : MASK_GC_FUNCTOR_SET, vtable, keyops, fpDisplay, name)
+    BSQRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops):  
+        BSQType(tid, BSQTypeKind::Ref, { heapsize, sizeof(void*), sizeof(void*), heapmask, "2" }, heapmask == nullptr ? LEAF_GC_FUNCTOR_SET : MASK_GC_FUNCTOR_SET, vtable, keyops, fpDisplay, name, consops)
     {;}
 
     virtual ~BSQRefType() {;}
@@ -227,11 +251,16 @@ template <typename T>
 class BSQRegisterType : public BSQType
 {
 public:
-    BSQRegisterType(BSQTypeID tid, uint64_t datasize, RefMask imask, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name): 
-        BSQType(tid, BSQTypeKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, keyops, fpDisplay, name)
+    BSQRegisterType(BSQTypeID tid, uint64_t datasize, RefMask imask, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
+        BSQType(tid, BSQTypeKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, keyops, fpDisplay, name, consops)
     {;}
 
     virtual ~BSQRegisterType() {;}
+
+    void storeValueDirect(StorageLocationPtr trgt, T v) const
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, v);
+    }
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
@@ -265,11 +294,16 @@ template <typename T>
 class BSQBigNumType : public BSQType
 {
 public:
-    BSQBigNumType(BSQTypeID tid, uint64_t datasize, RefMask imask, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name): 
-        BSQBigNumType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, keyops, fpDisplay, name)
+    BSQBigNumType(BSQTypeID tid, uint64_t datasize, RefMask imask, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
+        BSQBigNumType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, keyops, fpDisplay, name, consops)
     {;}
 
     virtual ~BSQBigNumType() {;}
+
+    void storeValueDirect(StorageLocationPtr trgt, T v) const
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, v);
+    }
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
@@ -324,6 +358,8 @@ inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
 //Concrete types
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void tupleGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
 
 class BSQTupleInfo
 {
@@ -343,7 +379,7 @@ class BSQTupleRefType : public BSQRefType, public BSQTupleInfo
 {
 public:
     BSQTupleRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, keyops, tupleDisplay_impl, name),
+        BSQRefType(tid, heapsize, heapmask, vtable, keyops, tupleDisplay_impl, name, {tupleJSONParse_impl, tupleGenerateRandom_impl}),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -354,7 +390,7 @@ class BSQTupleStructType : public BSQStructType, public BSQTupleInfo
 {
 public:
     BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
-        BSQStructType(tid, datasize, imask, vtable, keyops, tupleDisplay_impl, name),
+        BSQStructType(tid, datasize, imask, vtable, keyops, tupleDisplay_impl, name, {tupleJSONParse_impl, tupleGenerateRandom_impl}),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -362,6 +398,8 @@ public:
 };
 
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool recordJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void recordGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
 
 class BSQRecordInfo
 {
@@ -381,7 +419,7 @@ class BSQRecordRefType : public BSQRefType, public BSQRecordInfo
 {
 public:
     BSQRecordRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, keyops, recordDisplay_impl, name),
+        BSQRefType(tid, heapsize, heapmask, vtable, keyops, recordDisplay_impl, name, {recordJSONParse_impl, recordGenerateRandom_impl}),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
@@ -392,7 +430,7 @@ class BSQRecordStructType : public BSQStructType, public BSQRecordInfo
 {
 public:
     BSQRecordStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
-        BSQStructType(tid, datasize, imask, vtable, keyops, recordDisplay_impl, name),
+        BSQStructType(tid, datasize, imask, vtable, keyops, recordDisplay_impl, name, {recordJSONParse_impl, recordGenerateRandom_impl}),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
@@ -419,8 +457,8 @@ public:
 class BSQEntityRefType : public BSQRefType, public BSQEntityInfo
 {
 public:
-    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, keyops, entityDisplay_impl, name),
+    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets, ConsFunctorSet consops):
+        BSQRefType(tid, heapsize, heapmask, vtable, keyops, entityDisplay_impl, name, consops),
         BSQEntityInfo(fields, ftypes, fieldoffsets)
     {;}
 
@@ -430,8 +468,8 @@ public:
 class BSQEntityStructType : public BSQStructType, public BSQEntityInfo
 {
 public:
-    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets): 
-        BSQStructType(tid, datasize, imask, vtable, keyops, entityDisplay_impl, name),
+    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets, ConsFunctorSet consops): 
+        BSQStructType(tid, datasize, imask, vtable, keyops, entityDisplay_impl, name, consops),
         BSQEntityInfo(fields, ftypes, fieldoffsets)
     {;}
 
@@ -439,6 +477,8 @@ public:
 };
 
 std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool ephemeralJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void ephemeralGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
 
 class BSQEphemeralListType : public BSQStructType
 {
@@ -447,13 +487,15 @@ public:
     const std::vector<size_t> idxoffsets;
 
     BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, uint64_t datasize, RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets): 
-        BSQStructType(tid, datasize, imask, {}, EMPTY_KEY_FUNCTOR_SET, ephemeralDisplay_impl, name), etypes(etypes), idxoffsets(idxoffsets)
+        BSQStructType(tid, datasize, imask, {}, EMPTY_KEY_FUNCTOR_SET, ephemeralDisplay_impl, name, {ephemeralJSONParse_impl, ephemeralGenerateRandom_impl}), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     virtual ~BSQEphemeralListType() {;}
 };
 
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool unionJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void unionGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
 
 class BSQUnionType : public BSQType
 {
@@ -461,7 +503,7 @@ public:
     const std::vector<BSQTypeID> subtypes;
 
      BSQUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, std::string name, std::vector<BSQTypeID> subtypes): 
-        BSQType(tid, tkind, allocinfo, {0}, {}, {0}, unionDisplay_impl, name), subtypes(subtypes)
+        BSQType(tid, tkind, allocinfo, {0}, {}, {0}, unionDisplay_impl, name, {unionJSONParse_impl, unionGenerateRandom_impl}), subtypes(subtypes)
     {;}
 
     ~BSQUnionType() {;}

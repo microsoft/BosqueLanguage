@@ -5,8 +5,9 @@
 
 #include "environment.h"
 
-uint8_t* Environment::g_constantbuffer = nullptr;
+jmp_buf Environment::g_entrybuff;
+bool Environment::g_small_model_gen = true;
 
-std::vector<std::vector<BSQTypeID>> Environment::g_subtypes;
+uint8_t* Environment::g_constantbuffer = nullptr;
 std::vector<BSQInvokeDecl*> Environment::g_invokes;
 

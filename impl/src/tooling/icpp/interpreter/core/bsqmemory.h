@@ -10,7 +10,6 @@
 
 struct GCStackEntry
 {
-    void** frames;
     void** framep;
     RefMask mask;
 };
@@ -798,16 +797,15 @@ public:
         return res;
     }
 
-    uint8_t* allocateEternal(const BSQType* mdata)
+    void makeEternal(void* v)
     {
-        size_t tsize = mdata->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-        MEM_STATS_OP(this->totalalloc += tsize);
-        MEM_STATS_OP(this->livealloc += tsize);
+        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
+        GC_META_DATA_WORD w = GC_DEC_RC(GC_LOAD_META_DATA_WORD(addr));
 
-        uint8_t* rr = (uint8_t*)BSQ_FREE_LIST_ALLOC(tsize);
-        GC_INIT_ETERNAL(rr, mdata->tid);
+        //this should only be called on objects after promotion
+        assert(!GC_TEST_IS_YOUNG(w));
 
-        return (rr + sizeof(GC_META_DATA_WORD));
+        GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
     }
 
     template<typename T>

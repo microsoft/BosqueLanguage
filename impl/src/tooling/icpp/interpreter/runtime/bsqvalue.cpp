@@ -30,6 +30,12 @@ const BSQType* BSQType::g_typeStringConcatRepr = new BSQStringConcatReprType();
 const BSQType* BSQType::g_typeStringSliceRepr = new BSQStringSliceReprType();
 
 const BSQType* BSQType::g_typeString = new BSQStringType();
+const BSQType* g_typeStringPos = new BSQStringIteratorType();
+const BSQType* g_typeByteBuffer = new BSQByteBufferType();
+const BSQType* g_typeISOTime = new BSQISOTimeType();
+const BSQType* g_typeLogicalTime = new BSQLogicalTimeType();
+const BSQType* g_typeUUID = new BSQUUIDType();
+const BSQType* g_typeContentHash = new BSQContentHashType();
 
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
@@ -44,6 +50,24 @@ bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     return false;
+}
+
+bool entityNoneJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_null())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQNoneType*>(BSQType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
+        return true;
+    }
+}
+
+void entityNoneGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    dynamic_cast<const BSQNoneType*>(BSQType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
 }
 
 std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -61,6 +85,25 @@ bool entityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
     return BSQBoolType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQBool, data1), SLPTR_LOAD_CONTENTS_AS(BSQBool, data2));
 }
 
+bool entityBoolJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_null())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQBoolType*>(BSQType::g_typeBool)->storeValueDirect(sl, jv.as_bool() ? BSQTRUE : BSQFALSE);
+        return true;
+    }
+}
+
+void entityBoolGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    std::uniform_int_distribution<int> distribution(0, 1);
+    dynamic_cast<const BSQBoolType*>(BSQType::g_typeBool)->storeValueDirect(sl, distribution(rnd) == 1 ? BSQTRUE : BSQFALSE);
+}
+
 std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQNat, data)) + "n";
@@ -74,6 +117,27 @@ bool entityNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 bool entityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     return BSQNatType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQNat, data1), SLPTR_LOAD_CONTENTS_AS(BSQNat, data2));
+}
+
+bool entityNatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_uint64())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, jv.as_uint64());
+        return true;
+    }
+}
+
+void entityNatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto lim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQNat>::max();
+    
+    std::uniform_int_distribution<BSQNat> distribution(0, lim);
+    dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, distribution(rnd));
 }
 
 std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -91,6 +155,28 @@ bool entityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
     return BSQIntType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQInt, data1), SLPTR_LOAD_CONTENTS_AS(BSQInt, data2));
 }
 
+bool entityIntJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_int64())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQIntType*>(BSQType::g_typeInt)->storeValueDirect(sl, jv.as_int64());
+        return true;
+    }
+}
+
+void entityIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto llim = Environment::g_small_model_gen ? -10 : std::numeric_limits<BSQInt>::min();
+    auto ulim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQInt>::max();
+    
+    std::uniform_int_distribution<BSQInt> distribution(llim, ulim);
+    dynamic_cast<const BSQIntType*>(BSQType::g_typeInt)->storeValueDirect(sl, distribution(rnd));
+}
+
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return SLPTR_LOAD_CONTENTS_AS(BSQBigNat, data).str() + "N";
@@ -104,6 +190,29 @@ bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 bool entityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     return BSQBigNatType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQBigNat, data1), SLPTR_LOAD_CONTENTS_AS(BSQBigNat, data2));
+}
+
+bool entityBigNatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = jv.as_string();
+        BSQBigNat bn(sstr.subview(1, sstr.size() - 2));
+        dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, bn);
+        return true;
+    }
+}
+
+void entityBigNatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto lim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQNat>::max();
+    
+    std::uniform_int_distribution<BSQNat> distribution(0, lim);
+    dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, distribution(rnd));
 }
 
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -121,9 +230,54 @@ bool entityBigIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
     return BSQBigIntType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQBigInt, data1), SLPTR_LOAD_CONTENTS_AS(BSQBigInt, data2));
 }
 
+bool entityBigIntJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = jv.as_string();
+        BSQBigInt bn(sstr.subview(1, sstr.size() - 2));
+        dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, bn);
+        return true;
+    }
+}
+
+void entityBigIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto llim = Environment::g_small_model_gen ? -10 : std::numeric_limits<BSQInt>::min();
+    auto ulim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQInt>::max();
+    
+    std::uniform_int_distribution<BSQInt> distribution(llim, ulim);
+    dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, distribution(rnd));
+}
+
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQFloat, data)) + "f";
+}
+
+bool entityFloatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = jv.as_string();
+        BSQFloat bfloat = std::stod(std::string(sstr.subview(1, sstr.size() - 2)));
+        dynamic_cast<const BSQFloatType*>(BSQType::g_typeFloat)->storeValueDirect(sl, bfloat);
+        return true;
+    }
+}
+
+void entityFloatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    std::uniform_real_distribution<BSQFloat> distribution;
+    dynamic_cast<const BSQFloatType*>(BSQType::g_typeFloat)->storeValueDirect(sl, distribution(rnd));
 }
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -131,10 +285,42 @@ std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr d
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, data)) + "d";
 }
 
+bool entityDecimalJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = jv.as_string();
+        BSQDecimal bdecimal = std::stod(std::string(sstr.subview(1, sstr.size() - 2)));
+        dynamic_cast<const BSQDecimalType*>(BSQType::g_typeDecimal)->storeValueDirect(sl, bdecimal);
+        return true;
+    }
+}
+
+void entityDecimalGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    std::uniform_real_distribution<BSQDecimal> distribution;
+    dynamic_cast<const BSQDecimalType*>(BSQType::g_typeDecimal)->storeValueDirect(sl, distribution(rnd));
+}
+
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto rval = SLPTR_LOAD_CONTENTS_AS(BSQRational, data);
     return rval.numerator.str() + "/" + std::to_string(rval.denominator) + "R";
+}
+
+bool entityRationalJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    assert(false);
+    return false;
+}
+
+void entityRationalGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    assert(false);
 }
 
 std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -442,6 +628,101 @@ bool entityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data
     return BSQStringType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
 }
 
+bool entityStringJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = jv.as_string();
+        BSQString s = g_emptyString;
+        if(sstr.size() == 0)
+        {
+            //already empty
+        }
+        else if(sstr.size() < 16) 
+        {
+            s.u_inlineString = BSQInlineString::create((const uint8_t*)sstr.c_str(), sstr.size());
+        }
+        else if(sstr.size() <= 256)
+        {
+            s.u_data = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringKRepr256);
+            BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
+        }
+        else
+        {
+            //
+            //TODO: split the string into multiple parts
+            //
+            assert(false);
+        }
+        
+        return true;
+    }
+}
+
+void entityStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto lim = Environment::g_small_model_gen ? 10 : 256;
+    std::uniform_int_distribution<size_t> distribution(0, lim);
+
+    char small_char[] = {' ', '!', '0', '1', '4', 'a', 'i', 'Q', 'Z', ':', '_', '(', ')',  };
+    uint8_t small_unic[] = {/*£*/ 194, 163, /*µ*/ 194, 181};
+    uint8_t emoji[] = {/*🌵*/ 240, 159, 140, 181};
+    auto ulimc = Environment::g_small_model_gen ? (sizeof(small_char) + (sizeof(small_unic) / 2) + 1) : 94;
+    std::uniform_int_distribution<uint8_t> chardist(0, ulimc);
+
+    auto size = distribution(rnd);
+    std::string data;
+    for(size_t i = 0; i < size; ++i)
+    {
+        if(!Environment::g_small_model_gen)
+        {
+            data.append({ (char)(32 + chardist(rnd)) });
+        }
+        else
+        {
+            auto choice = chardist(rnd);
+            if(choice < sizeof(small_char))
+            {
+                data.append({ (char)small_char[choice] });
+            }
+            else
+            {
+                if(choice < ulimc - (sizeof(emoji) / 4))
+                {
+                    choice = choice - sizeof(small_char);
+                    data.append({ (char)small_unic[choice], (char)small_unic[choice + 1] });
+                }
+                else
+                {
+                    choice = choice - (sizeof(small_char) + (sizeof(small_unic) / 2)); 
+                    data.append({ (char)emoji[choice], (char)emoji[choice + 1],  (char)emoji[choice + 2],  (char)emoji[choice + 3] });
+                }
+            }
+        }
+    }
+
+    BSQString s = g_emptyString;
+    if(size == 0)
+    {
+        //already empty
+    }
+    else if(size < 16) 
+    {
+        s.u_inlineString = BSQInlineString::create((const uint8_t*)data.c_str(), size);
+    }
+    else
+    {
+        s.u_data = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringKRepr256);
+        BSQ_MEM_COPY(s.u_data, data.c_str(), size);
+    }
+
+    dynamic_cast<const BSQStringType*>(BSQType::g_typeString)->storeValue(sl, &s);
+}
+
 uint8_t* BSQStringType::boxInlineString(BSQInlineString istr)
 {
     auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr16);
@@ -719,6 +1000,29 @@ std::string entityISOTimeDisplay_impl(const BSQType* btype, StorageLocationPtr d
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQISOTime, data)) + ":IsoTime";
 }
 
+bool entityISOTimeJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = jv.as_string();
+        BSQISOTime iso = std::stoul(sstr.subview(1, sstr.size() - 2).to_string());
+        dynamic_cast<const BSQISOTimeType*>(BSQType::g_typeISOTime)->storeValueDirect(sl, iso);
+        return true;
+    }
+}
+
+void entityISOTimeGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto lim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQISOTime>::max();
+    
+    std::uniform_int_distribution<BSQISOTime> distribution(0, lim);
+    dynamic_cast<const BSQISOTimeType*>(BSQType::g_typeISOTime)->storeValueDirect(sl, distribution(rnd));
+}
+
 std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, data)) + ":LogicalTime";
@@ -732,6 +1036,29 @@ bool entityLogicalTimeEqual_impl(StorageLocationPtr data1, StorageLocationPtr da
 bool entityLogicalTimeLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     return BSQLogicalTimeType::lessThan(SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, data1), SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, data2));
+}
+
+bool entityLogicalTimeJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = jv.as_string();
+        BSQLogicalTime lgt = std::stoul(sstr.subview(1, sstr.size() - 2).to_string());
+        dynamic_cast<const BSQLogicalTimeType*>(BSQType::g_typeLogicalTime)->storeValueDirect(sl, lgt);
+        return true;
+    }
+}
+
+void entityLogicalTimeGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    auto lim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQISOTime>::max();
+    
+    std::uniform_int_distribution<BSQLogicalTime> distribution(0, lim);
+    dynamic_cast<const BSQLogicalTimeType*>(BSQType::g_typeLogicalTime)->storeValueDirect(sl, distribution(rnd));
 }
 
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -749,6 +1076,16 @@ bool entityUUIDLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
     return BSQUUIDType::lessThan((BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1), (BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2));
 }
 
+bool entityUUIDJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    assert(false);
+}
+
+void entityUUIDGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    assert(false);
+}
+
 std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return SLPTR_LOAD_CONTENTS_AS(BSQContentHash, data).str() + ":Hash";
@@ -762,6 +1099,16 @@ bool entityContentHashEqual_impl(StorageLocationPtr data1, StorageLocationPtr da
 bool entityContentHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 {
     return BSQContentHashType::lessThan((BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1), (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2));
+}
+
+bool entityContentHashJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    assert(false);
+}
+
+void entityContentHashGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    assert(false);
 }
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)

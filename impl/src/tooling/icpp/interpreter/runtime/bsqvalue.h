@@ -25,10 +25,13 @@ std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data
 bool entityNoneEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityNoneLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityNoneJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityNoneGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQNoneType : public BSQRegisterType<BSQNone>
 {
 public:
-    BSQNoneType(): BSQRegisterType(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", {entityNoneEqual_impl, entityNoneLessThan_impl}, entityNoneDisplay_impl, "NSCore::None")
+    BSQNoneType(): BSQRegisterType(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", {entityNoneEqual_impl, entityNoneLessThan_impl}, entityNoneDisplay_impl, "NSCore::None", {entityNoneJSONParse_impl, entityNoneGenerateRandom_impl})
     {
         static_assert(sizeof(BSQNone) == 8);
     }
@@ -47,10 +50,13 @@ std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data
 bool entityBoolEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityBoolLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityBoolJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityBoolGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQBoolType : public BSQRegisterType<BSQBool>
 {
 public:
-    BSQBoolType(): BSQRegisterType(BSQ_TYPE_ID_BOOL, sizeof(BSQBool), "1", {entityBoolEqual_impl, entityBoolLessThan_impl}, entityBoolDisplay_impl, "NSCore::Bool")
+    BSQBoolType(): BSQRegisterType(BSQ_TYPE_ID_BOOL, sizeof(BSQBool), "1", {entityBoolEqual_impl, entityBoolLessThan_impl}, entityBoolDisplay_impl, "NSCore::Bool", {entityBoolJSONParse_impl, entityBoolGenerateRandom_impl})
     {
         static_assert(sizeof(BSQBool) == 1);
     }
@@ -69,10 +75,13 @@ std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 bool entityNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityNatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityNatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQNatType : public BSQRegisterType<BSQNat>
 {
 public:
-    BSQNatType(): BSQRegisterType(BSQ_TYPE_ID_NAT, sizeof(BSQNat), "1", {entityNatEqual_impl, entityNatLessThan_impl}, entityNatDisplay_impl, "NSCore::Nat")
+    BSQNatType(): BSQRegisterType(BSQ_TYPE_ID_NAT, sizeof(BSQNat), "1", {entityNatEqual_impl, entityNatLessThan_impl}, entityNatDisplay_impl, "NSCore::Nat", {entityNatJSONParse_impl, entityNatGenerateRandom_impl})
     {
         static_assert(sizeof(BSQNat) == 8);
     }
@@ -91,10 +100,13 @@ std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 bool entityIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityIntJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQIntType : public BSQRegisterType<BSQInt>
 {
 public:
-    BSQIntType(): BSQRegisterType(BSQ_TYPE_ID_INT, sizeof(BSQInt), "1", {entityIntEqual_impl, entityIntLessThan_impl}, entityIntDisplay_impl, "NSCore::Int")
+    BSQIntType(): BSQRegisterType(BSQ_TYPE_ID_INT, sizeof(BSQInt), "1", {entityIntEqual_impl, entityIntLessThan_impl}, entityIntDisplay_impl, "NSCore::Int", {entityIntJSONParse_impl, entityIntGenerateRandom_impl})
     {
         static_assert(sizeof(BSQInt) == 8);
     }
@@ -117,10 +129,13 @@ std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr da
 bool entityBigNatEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityBigNatLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBigNatType : public BSQBigNumType<BSQNat>
+bool entityBigNatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityBigNatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
+class BSQBigNatType : public BSQBigNumType<BSQBigNat>
 {
 public:
-    BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, sizeof(BSQBigNat), "411", {entityBigNatEqual_impl, entityBigNatLessThan_impl}, entityBigNatDisplay_impl, "NSCore::BigNat") 
+    BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, sizeof(BSQBigNat), "411", {entityBigNatEqual_impl, entityBigNatLessThan_impl}, entityBigNatDisplay_impl, "NSCore::BigNat", {entityBigNatJSONParse_impl, entityBigNatGenerateRandom_impl}) 
     {
         static_assert(sizeof(BSQBigNat) == 24);
     }
@@ -143,10 +158,13 @@ std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr da
 bool entityBigIntEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityBigIntLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityBigIntJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityBigIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQBigIntType : public BSQBigNumType<BSQBigInt>
 {
 public:
-    BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, sizeof(BSQBigInt), "411", {entityBigIntEqual_impl, entityBigIntLessThan_impl}, entityBigIntDisplay_impl, "NSCore::BigInt") 
+    BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, sizeof(BSQBigInt), "411", {entityBigIntEqual_impl, entityBigIntLessThan_impl}, entityBigIntDisplay_impl, "NSCore::BigInt", {entityBigIntJSONParse_impl, entityBigIntGenerateRandom_impl}) 
     {
         static_assert(sizeof(BSQBigNat) == 24);
     }
@@ -163,10 +181,13 @@ typedef double BSQFloat;
 
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
+bool entityFloatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityFloatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQFloatType: public BSQRegisterType<BSQFloat>
 {
 public:
-    BSQFloatType(): BSQRegisterType(BSQ_TYPE_ID_FLOAT, sizeof(BSQFloat), "1", EMPTY_KEY_FUNCTOR_SET, entityFloatDisplay_impl, "NSCore::Float") 
+    BSQFloatType(): BSQRegisterType(BSQ_TYPE_ID_FLOAT, sizeof(BSQFloat), "1", EMPTY_KEY_FUNCTOR_SET, entityFloatDisplay_impl, "NSCore::Float", {entityFloatJSONParse_impl, entityFloatGenerateRandom_impl}) 
     {
         static_assert(sizeof(BSQFloat) == 8);
     }
@@ -185,10 +206,13 @@ typedef double BSQDecimal;
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
+bool entityDecimalJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityDecimalGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQDecimalType : public BSQRegisterType<BSQDecimal>
 {
 public:
-    BSQDecimalType() : BSQRegisterType(BSQ_TYPE_ID_DECIMAL, sizeof(BSQDecimal), "1" , EMPTY_KEY_FUNCTOR_SET, entityDecimalDisplay_impl, "NSCore::Decimal")
+    BSQDecimalType() : BSQRegisterType(BSQ_TYPE_ID_DECIMAL, sizeof(BSQDecimal), "1" , EMPTY_KEY_FUNCTOR_SET, entityDecimalDisplay_impl, "NSCore::Decimal", {entityDecimalJSONParse_impl, entityDecimalGenerateRandom_impl})
     {
         static_assert(sizeof(BSQDecimal) == 8);
     }
@@ -206,10 +230,13 @@ struct BSQRational
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
+bool entityRationalJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityRationalGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQRationalType : public BSQRegisterType<BSQRational>
 {
 public:
-    BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, sizeof(BSQRational), "1111", EMPTY_KEY_FUNCTOR_SET, entityRationalDisplay_impl, "NSCore::Rational") 
+    BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, sizeof(BSQRational), "1111", EMPTY_KEY_FUNCTOR_SET, entityRationalDisplay_impl, "NSCore::Rational", {entityRationalJSONParse_impl, entityRationalGenerateRandom_impl}) 
     {
         static_assert(sizeof(BSQRational) == 32);
     }
@@ -274,7 +301,7 @@ public:
     static uint64_t getKReprSizeFor(uint64_t v);
 
     BSQStringReprType(uint64_t allocsize, RefMask heapmask, std::string name):
-        BSQRefType(BSQ_TYPE_ID_STRINGREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityStringReprDisplay_impl, name) 
+        BSQRefType(BSQ_TYPE_ID_STRINGREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityStringReprDisplay_impl, name, {nullptr, nullptr}) 
     {;}
 
     virtual ~BSQStringReprType() {;}
@@ -409,7 +436,7 @@ class BSQStringIteratorType : public BSQStructType
 {
 public:
     BSQStringIteratorType(): 
-        BSQStructType(BSQ_TYPE_ID_STRINGITERATOR, sizeof(BSQStringIterator), "31121", {}, EMPTY_KEY_FUNCTOR_SET, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos")
+        BSQStructType(BSQ_TYPE_ID_STRINGITERATOR, sizeof(BSQStringIterator), "31121", {}, EMPTY_KEY_FUNCTOR_SET, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos", {nullptr, nullptr})
     {
         static_assert(sizeof(BSQStringIterator) == 40);
     }
@@ -424,6 +451,9 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
 bool entityStringEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityStringLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityStringJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQStringType : public BSQType
 {
 private:
@@ -431,7 +461,7 @@ private:
 
 public:
     BSQStringType() 
-    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityStringDisplay_impl, "NSCore::String")
+    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityStringDisplay_impl, "NSCore::String", {entityStringJSONParse_impl, entityStringGenerateRandom_impl})
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -515,7 +545,7 @@ std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPt
 class BSQByteBufferType : public BSQRefType
 {
 public:
-    BSQByteBufferType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_FUNCTOR_SET, entityByteBufferDisplay_impl, "NSCore::ByteBuffer") {;}
+    BSQByteBufferType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_FUNCTOR_SET, entityByteBufferDisplay_impl, "NSCore::ByteBuffer", {nullptr, nullptr}) {;}
 
     virtual ~BSQByteBufferType() {;}
 };
@@ -526,10 +556,13 @@ typedef uint64_t BSQISOTime;
 
 std::string entityISOTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
+bool entityISOTimeJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityISOTimeGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQISOTimeType : public BSQRegisterType<BSQISOTime>
 {
 public:
-    BSQISOTimeType(): BSQRegisterType(BSQ_TYPE_ID_ISOTIME, sizeof(BSQISOTime), "1", EMPTY_KEY_FUNCTOR_SET, entityISOTimeDisplay_impl, "NSCore::ISOTime") 
+    BSQISOTimeType(): BSQRegisterType(BSQ_TYPE_ID_ISOTIME, sizeof(BSQISOTime), "1", EMPTY_KEY_FUNCTOR_SET, entityISOTimeDisplay_impl, "NSCore::ISOTime", {entityISOTimeJSONParse_impl, entityISOTimeGenerateRandom_impl}) 
     {
         static_assert(sizeof(BSQISOTime) == 8);
     }
@@ -545,10 +578,13 @@ std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationP
 bool entityLogicalTimeEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityLogicalTimeLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityLogicalTimeJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityLogicalTimeGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQLogicalTimeType : public BSQRegisterType<BSQLogicalTime>
 {
 public:
-    BSQLogicalTimeType(): BSQRegisterType(BSQ_TYPE_ID_LOGICALTIME, sizeof(BSQLogicalTime), "1", {entityLogicalTimeEqual_impl, entityLogicalTimeLessThan_impl}, entityLogicalTimeDisplay_impl, "NSCore::LogicalTime") 
+    BSQLogicalTimeType(): BSQRegisterType(BSQ_TYPE_ID_LOGICALTIME, sizeof(BSQLogicalTime), "1", {entityLogicalTimeEqual_impl, entityLogicalTimeLessThan_impl}, entityLogicalTimeDisplay_impl, "NSCore::LogicalTime", {entityLogicalTimeJSONParse_impl, entityLogicalTimeGenerateRandom_impl}) 
     {
         static_assert(sizeof(BSQLogicalTime) == 8);
     }
@@ -567,10 +603,13 @@ std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data
 bool entityUUIDEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityUUIDLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityUUIDJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityUUIDGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQUUIDType : public BSQRefType
 {
 public:
-    BSQUUIDType(): BSQRefType(BSQ_TYPE_ID_UUID, sizeof(BSQUUID), nullptr, {}, {entityUUIDEqual_impl, entityUUIDLessThan_impl}, entityUUIDDisplay_impl, "NSCore::UUID") {;}
+    BSQUUIDType(): BSQRefType(BSQ_TYPE_ID_UUID, sizeof(BSQUUID), nullptr, {}, {entityUUIDEqual_impl, entityUUIDLessThan_impl}, entityUUIDDisplay_impl, "NSCore::UUID", {entityUUIDJSONParse_impl, entityUUIDGenerateRandom_impl}) {;}
     
     virtual ~BSQUUIDType() {;}
 
@@ -586,10 +625,13 @@ std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationP
 bool entityContentHashEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 bool entityContentHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
 
+bool entityContentHashJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityContentHashGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
 class BSQContentHashType : public BSQRefType
 {
 public:
-    BSQContentHashType(): BSQRefType(BSQ_TYPE_ID_CONTENTHASH, sizeof(BSQContentHash), nullptr, {}, {entityContentHashEqual_impl, entityContentHashLessThan_impl}, entityContentHashDisplay_impl, "NSCore::ContentHash") {;}
+    BSQContentHashType(): BSQRefType(BSQ_TYPE_ID_CONTENTHASH, sizeof(BSQContentHash), nullptr, {}, {entityContentHashEqual_impl, entityContentHashLessThan_impl}, entityContentHashDisplay_impl, "NSCore::ContentHash", {entityContentHashJSONParse_impl, entityContentHashGenerateRandom_impl}) {;}
 
     virtual ~BSQContentHashType() {;}
 
@@ -611,10 +653,163 @@ std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 class BSQRegexType : public BSQRegisterType<BSQRegex>
 {
 public:
-    BSQRegexType(): BSQRegisterType(BSQ_TYPE_ID_REGEX, sizeof(BSQRegex), "11", EMPTY_KEY_FUNCTOR_SET, entityRegexDisplay_impl, "NSCore::Regex") 
+    BSQRegexType(): BSQRegisterType(BSQ_TYPE_ID_REGEX, sizeof(BSQRegex), "11", EMPTY_KEY_FUNCTOR_SET, entityRegexDisplay_impl, "NSCore::Regex", {nullptr, nullptr}) 
     {
         static_assert(sizeof(BSQRegex) == 16);
     }
 
     virtual ~BSQRegexType() {;}
+};
+
+////
+//Typed string helpers
+
+enum class SpecialCharKind 
+{
+    Wildcard,
+    WhiteSpace
+};
+
+class BSQRegexOpt
+{
+
+};
+
+class BSQLiteralRe : public BSQRegexOpt
+{
+};
+
+class BSQCharRangeRe : public BSQRegexOpt
+{
+};
+
+class BSQCharClassRe : public BSQRegexOpt
+{
+};
+
+class BSQStarRepeatRe : public BSQRegexOpt
+{
+};
+
+class BSQPlusRepeatRe : public BSQRegexOpt
+{
+};
+
+class BSQRangeRepeatRe : public BSQRegexOpt
+{
+};
+
+class BSQOptionalRe : public BSQRegexOpt
+{
+};
+
+class BSQAlternationRe : public BSQRegexOpt
+{
+};
+
+class BSQSequenceRe : public BSQRegexOpt
+{
+};
+
+class BSQBSQRegex
+{
+
+};
+
+class BSQValidatorType : public BSQType
+{
+public:
+    const xxxx;
+};
+
+std::string entityStringOfDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+bool entityStringOfJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityStringOfGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
+class BSQStringOfType : public BSQType
+{
+public:
+    const BSQType* validator;
+
+    BSQStringOfType(BSQTypeID tid, std::string name, xxxx)
+    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityStringOfDisplay_impl, name, {entityStringOfJSONParse_impl, entityStringOfGenerateRandom_impl})
+    {
+        static_assert(sizeof(BSQString) == 16);
+    }
+
+    virtual ~BSQStringOfType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, {0});
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));
+    }
+};
+
+std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+bool entityDataStringJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void entityDataStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
+class BSQDataStringType : public BSQType
+{
+public:
+    const BSQInvokeID parsemethod;
+
+    BSQDataStringType(BSQTypeID tid, std::string name, xxxx)
+    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, {entityStringEqual_impl, entityStringLessThan_impl}, entityDataStringDisplay_impl, name, {entityDataStringJSONParse_impl, entityDataStringGenerateRandom_impl})
+    {
+        static_assert(sizeof(BSQString) == 16);
+    }
+
+    virtual ~BSQDataStringType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, {0});
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+
+    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
+    }
+
+    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));
+    }
 };
