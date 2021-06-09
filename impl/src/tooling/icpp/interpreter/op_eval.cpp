@@ -61,14 +61,14 @@ void Evaluator::evalDeadFlowOp()
 
 void Evaluator::evalAbortOp(const AbortOp *op)
 {
-    BSQ_LANGUAGE_ABORT(op->msg->c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
+    BSQ_LANGUAGE_ABORT(op->msg.c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
 }
 
 void Evaluator::evalAssertCheckOp(const AssertOp *op)
 {
     if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg)))
     {
-        BSQ_LANGUAGE_ABORT(op->msg->c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
+        BSQ_LANGUAGE_ABORT(op->msg.c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
     }
 }
 
