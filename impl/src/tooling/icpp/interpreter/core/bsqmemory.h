@@ -17,12 +17,12 @@ struct GCStackEntry
 class GCStack
 {
 public:
-    static GCStackEntry frames[2048];
+    static GCStackEntry frames[BSQ_MAX_STACK];
     static uint32_t stackp;
 
     inline static void pushFrame(void** framep, RefMask mask)
     {
-        if (GCStack::stackp >= 2048)
+        if (GCStack::stackp >= BSQ_MAX_STACK)
         {
             printf("Out-Of-Stack\n");
             exit(1);
@@ -108,7 +108,7 @@ public:
         other.epos = 1;
     }
 
-    bool reset()
+    void reset()
     {
         while(this->headrl != nullptr)
         {
@@ -129,7 +129,13 @@ public:
         return (this->headrl == this->tailrl && this->spos == this->epos);
     }
 
-    void enqueSlow(void* v);
+    void enqueSlow(void* v)
+    {
+        void** tmp = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        this->tailrl[0] = tmp;
+        this->tailrl = tmp;
+        this->epos = 1;
+    }
 
     inline void enque(void* v)
     {
@@ -143,7 +149,16 @@ public:
         }
     }
 
-    void* dequeSlow();
+    void* dequeSlow()
+    {
+        void** tmp = this->headrl;
+    
+        this->headrl = (void**)this->headrl[0];
+        this->spos = 2;
+
+        mi_free(tmp);
+        return this->headrl[1];
+    }
 
     inline void* deque()
     {
@@ -155,7 +170,7 @@ public:
         }
         else
         {
-            this->dequeSlow(v);
+            return this->dequeSlow();
         }
     }
 
@@ -170,11 +185,15 @@ public:
         return (iter.crl != this->tailrl) | (iter.cpos != this->epos);
     }
 
-    void iterAdvanceSlow(GCRefListIterator<bsize>& iter) const;
+    void iterAdvanceSlow(GCRefListIterator<bsize>& iter) const
+    {
+        iter.crl = iter.crl[0];
+        iter.cpos = 1;
+    }
 
     inline void iterAdvance(GCRefListIterator<bsize>& iter) const
     {
-       if(iter.cpos < bsize)
+        if(iter.cpos < bsize)
         {
             return iter.cpos++;
         }
@@ -208,7 +227,6 @@ private:
     {
         this->m_allocsize = asize;
         this->m_block = (uint8_t*)BSQ_BUMP_SPACE_ALLOC(asize);
-        GC_MEM_ZERO(this->m_block, asize);
 
         this->m_currPos = this->m_block;
         this->m_endPos = this->m_block + asize;
@@ -347,7 +365,8 @@ private:
 
     size_t liveoldspace;
 
-    xxx; //add globals buffer + mask -- then add make enternal, we can call this after const eval and then detach buffer from GC
+    void* globals_mem;
+    RefMask globals_mask;
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
@@ -364,15 +383,15 @@ private:
         MEM_STATS_OP(this->promotedbytes += osize);
 
         GC_MEM_COPY(nobj, addr, osize);
-        if (!ometa->isLeafType)
+        if (!ometa->isLeaf())
         {
-            this->worklist.push(nobj);
+            this->worklist.enque(nobj);
         }
 
         if constexpr (isRoot)
         {
             GC_INIT_OLD_ROOT(nobj, w);
-            this->newMaybeZeroCounts.push_back(robj);
+            this->newMaybeZeroCounts.enque(nobj);
         }
         else
         {
@@ -392,19 +411,19 @@ private:
     {
         this->liveoldspace += osize;
 
-        if (!ometa->isLeafType)
+        if (!ometa->isLeaf())
         {
-            this->worklist.push(obj);
+            this->worklist.enque(obj);
         }
 
         if constexpr (isRoot)
         {
             GC_INIT_OLD_ROOT(obj, w);
-            this->newMaybeZeroCounts.push_back(obj);
+            this->newMaybeZeroCounts.enque(obj);
         }
         else
         {
-            GC_INIT_OLD_HEAP(nobj, w);
+            GC_INIT_OLD_HEAP(obj, w);
         }
     }
 
@@ -474,7 +493,7 @@ public:
     inline static void** gcProcessSlotsWithUnion(void** slots)
     {
         const BSQType* umeta = ((const BSQType*)(*slots));
-        return umeta->getProcessFP<isRoot>()(umeta, slots + 1);
+        return (getProcessFP<isRoot>(umeta))(umeta, slots + 1);
     }
 
     template <bool isRoot>
@@ -660,6 +679,11 @@ private:
         {
             Allocator::gcProcessSlot<true>((void**)iter.get());
         }
+
+        if(Allocator::GlobalAllocator.globals_mem != nullptr)
+        {
+            Allocator::gcProcessSlotsWithMask<true>((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
+        }
     }
 
     void processHeap()
@@ -751,10 +775,15 @@ private:
         {
             Allocator::gcClearMark(*((void**)iter.get()));
         }
+
+        if(Allocator::GlobalAllocator.globals_mem != nullptr)
+        {
+            Allocator::gcClearMarkSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
+        }
     }
 
 public:
-    Allocator() : nsalloc(), tempRoots(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0)
+    Allocator() : nsalloc(), tempRoots(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->promotedbytes = 0);
@@ -848,5 +877,17 @@ public:
 
         //Adjust the new space size if needed and reset/free the newspace allocators
         this->nsalloc.postGCProcess(this->liveoldspace);
+
+        if(this->globals_mem != nullptr)
+        {
+            //
+            //TODO: as an optimization we should mark all these roots as immortal and detach this so we don't repeatedly do (unneeded) GC work on it
+            //
+        }
+    }
+
+    void setGlobalsMemory(void* globals)
+    {
+        this->globals_mem = globals;
     }
 };

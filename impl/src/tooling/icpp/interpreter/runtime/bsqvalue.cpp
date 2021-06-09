@@ -30,12 +30,12 @@ const BSQType* BSQType::g_typeStringConcatRepr = new BSQStringConcatReprType();
 const BSQType* BSQType::g_typeStringSliceRepr = new BSQStringSliceReprType();
 
 const BSQType* BSQType::g_typeString = new BSQStringType();
-const BSQType* g_typeStringPos = new BSQStringIteratorType();
-const BSQType* g_typeByteBuffer = new BSQByteBufferType();
-const BSQType* g_typeISOTime = new BSQISOTimeType();
-const BSQType* g_typeLogicalTime = new BSQLogicalTimeType();
-const BSQType* g_typeUUID = new BSQUUIDType();
-const BSQType* g_typeContentHash = new BSQContentHashType();
+const BSQType* BSQType::g_typeStringPos = new BSQStringIteratorType();
+const BSQType* BSQType::g_typeByteBuffer = new BSQByteBufferType();
+const BSQType* BSQType::g_typeISOTime = new BSQISOTimeType();
+const BSQType* BSQType::g_typeLogicalTime = new BSQLogicalTimeType();
+const BSQType* BSQType::g_typeUUID = new BSQUUIDType();
+const BSQType* BSQType::g_typeContentHash = new BSQContentHashType();
 
 std::string generateRandomChar(RandGenerator& rnd)
 {
@@ -43,7 +43,7 @@ std::string generateRandomChar(RandGenerator& rnd)
     uint8_t small_unic[] = {/*£*/ 194, 163, /*µ*/ 194, 181};
     uint8_t emoji[] = {/*🌵*/ 240, 159, 140, 181};
     auto ulimc = Environment::g_small_model_gen ? (sizeof(small_char) + (sizeof(small_unic) / 2) + 1) : 94;
-    std::uniform_int_distribution<uint8_t> chardist(0, ulimc);
+    std::uniform_int_distribution<uint32_t> chardist(0, ulimc);
 
     std::string data;
     if(!Environment::g_small_model_gen)
@@ -1093,6 +1093,7 @@ bool entityUUIDLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
 bool entityUUIDJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
     assert(false);
+    return true;
 }
 
 void entityUUIDGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
@@ -1118,6 +1119,7 @@ bool entityContentHashLessThan_impl(StorageLocationPtr data1, StorageLocationPtr
 bool entityContentHashJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
     assert(false);
+    return true;
 }
 
 void entityContentHashGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
@@ -1137,7 +1139,7 @@ std::string BSQCharRangeRe::generate(RandGenerator& rnd) const
     //
     assert(32 <= low && high < 126);
 
-    std::uniform_int_distribution<uint8_t> distribution(low, high);
+    std::uniform_int_distribution<uint32_t> distribution(low, high);
     return std::string{(char)distribution(rnd)};
 }
 
@@ -1153,7 +1155,7 @@ std::string BSQCharClassRe::generate(RandGenerator& rnd) const
     else
     {
         char ws_char[] = {' ', '\n', '\r', '\t' };
-        std::uniform_int_distribution<uint8_t> chardist(0, sizeof(ws_char));
+        std::uniform_int_distribution<uint32_t> chardist(0, sizeof(ws_char));
 
         return std::string{ws_char[chardist(rnd)]};
     }
@@ -1177,7 +1179,7 @@ std::string BSQStarRepeatRe::generate(RandGenerator& rnd) const
 std::string BSQPlusRepeatRe::generate(RandGenerator& rnd) const
 {
     auto ulimc = Environment::g_small_model_gen ? 3 : 10;
-    std::uniform_int_distribution<uint8_t> ctdist(1, ulimc);
+    std::uniform_int_distribution<uint32_t> ctdist(1, ulimc);
 
     auto ct = ctdist(rnd);
     std::string res;
@@ -1191,7 +1193,7 @@ std::string BSQPlusRepeatRe::generate(RandGenerator& rnd) const
 
 std::string BSQRangeRepeatRe::generate(RandGenerator& rnd) const
 {
-    std::uniform_int_distribution<uint8_t> ctdist(this->low, this->high);
+    std::uniform_int_distribution<uint32_t> ctdist(this->low, this->high);
 
     auto ct = ctdist(rnd);
     std::string res;
@@ -1205,7 +1207,7 @@ std::string BSQRangeRepeatRe::generate(RandGenerator& rnd) const
 
 std::string BSQOptionalRe::generate(RandGenerator& rnd) const
 {
-    std::uniform_int_distribution<int> ctdist(0, 1);
+    std::uniform_int_distribution<uint32_t> ctdist(0, 1);
 
     auto ct = ctdist(rnd);
     if(ct == 1)
@@ -1337,6 +1339,7 @@ std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPt
 bool entityDataStringJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
     assert(false);
+    return true;
 }
 
 void entityDataStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)

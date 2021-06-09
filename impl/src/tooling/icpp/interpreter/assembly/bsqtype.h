@@ -82,7 +82,7 @@ struct GCFunctorSet
 };
 
 constexpr GCFunctorSet LEAF_GC_FUNCTOR_SET{ nullptr, nullptr, nullptr, nullptr };
-constexpr GCFunctorSet REGISTER_FUNCTOR_SET{ gcDecOperator_registerImpl, gcClearOperator_registerImpl, gcProcessRootOperator_registerImpl, gcProcessHeapOperator_registerImpl };
+constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcDecOperator_registerImpl, gcClearOperator_registerImpl, gcProcessRootOperator_registerImpl, gcProcessHeapOperator_registerImpl };
 constexpr GCFunctorSet MASK_GC_FUNCTOR_SET{ gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl };
 
 struct KeyFunctorSet
@@ -165,6 +165,11 @@ public:
     {;}
 
     virtual ~BSQType() {;}
+
+    inline bool isLeaf() const
+    {
+        return this->allocinfo.heapmask == nullptr;
+    }
 
     virtual void clearValue(StorageLocationPtr trgt) const = 0;
     virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
@@ -296,7 +301,7 @@ class BSQBigNumType : public BSQType
 {
 public:
     BSQBigNumType(BSQTypeID tid, uint64_t datasize, RefMask imask, KeyFunctorSet keyops, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
-        BSQBigNumType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, keyops, fpDisplay, name, consops)
+        BSQType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, keyops, fpDisplay, name, consops)
     {;}
 
     virtual ~BSQBigNumType() {;}
@@ -344,7 +349,7 @@ GCProcessOperatorFP getProcessFP(const BSQType* tt)
 }
 
 template <>
-GCProcessOperatorFP getProcessFP<true>(const BSQType* tt)
+inline GCProcessOperatorFP getProcessFP<true>(const BSQType* tt)
 {
     return tt->gcops.fpProcessObjRoot;
 }

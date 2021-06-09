@@ -5,36 +5,8 @@
 
 #include "bsqmemory.h"
 
-GCStackEntry GCStack::frames[2048];
+GCStackEntry GCStack::frames[BSQ_MAX_STACK];
 uint32_t GCStack::stackp = 0;
-
-template <size_t bsize>
-void GCRefList<bsize>::enqueSlow(void* v)
-{
-    void** tmp = (void**)mi_zalloc_small(bsize * sizeof(void*));
-    this->tailrl[0] = tmp;
-    this->tailrl = tmp;
-    this->epos = 1;
-}
-
-template <size_t bsize>
-void* GCRefList<bsize>::dequeSlow()
-{
-    void** tmp  this->headrl;
-    
-    this->headrl = this->headrl[0];
-    this->spos = 2;
-
-    mi_free(tmp);
-    return this->headrl[1];
-}
-
-template <size_t bsize>
-void GCRefList<bsize>::iterAdvanceSlow(GCRefListIterator<bsize>& iter) const
-{
-    iter.crl = iter.crl[0];
-    iter.cpos = 1;
-}
 
 uint8_t* NewSpaceAllocator::allocateDynamicSizeSlow(size_t rsize)
 {
@@ -66,6 +38,5 @@ void NewSpaceAllocator::ensureSpace_slow()
 {
     Allocator::GlobalAllocator.collect();
 }
-
 
 Allocator Allocator::GlobalAllocator;

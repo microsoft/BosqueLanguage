@@ -51,7 +51,7 @@ BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0
 BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by 0"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
-EvaluatorFrame Evaluator::g_callstack[2048];
+EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
 
 void Evaluator::evalDeadFlowOp()
 {
@@ -722,7 +722,7 @@ void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPr
 
     if(ct <= 40)
     {
-        auto fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQStringKReprTypeAbstract*>& pp) {
+        auto fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQListFlatKTypeAbstract*>& pp) {
             return ct <= pp.first;
         });
 

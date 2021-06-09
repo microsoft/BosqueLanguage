@@ -15,7 +15,32 @@
 #include <string>
 #include <regex>
 
-#include <mimalloc.h>
+//TODO: mimalloc
+//#include <mimalloc.h>
+
+#define MI_SMALL_SIZE_MAX 2048
+
+
+inline void* mi_zalloc(size_t bytes)
+{
+    void* res = malloc(bytes);
+    std::fill((uint8_t*)res, ((uint8_t*)res) + bytes, (uint8_t)0);
+
+    return res;
+}
+
+inline void* mi_zalloc_small(size_t bytes)
+{
+    void* res = malloc(bytes);
+    std::fill((uint8_t*)res, ((uint8_t*)res) + bytes, (uint8_t)0);
+
+    return res;
+}
+
+inline void mi_free(void* mem)
+{
+    free(mem);
+}
 
 ////////////////////////////////
 //Various sizes
@@ -56,7 +81,7 @@
 #define MEM_STATS_ARG(X)
 #endif
 
-//Program should not contain any allocations larger than this in a single block
+//Program should not contain any allocations larger than this in a single block 
 #define BSQ_ALLOC_MAX_BLOCK_SIZE MI_SMALL_SIZE_MAX
 
 //Min and max bump allocator size
@@ -72,11 +97,11 @@
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
 #endif
 
-#define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_malloc(SIZE)
+#define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_zalloc(SIZE)
 #define BSQ_BUMP_SPACE_RELEASE(M) mi_free(M)
 
-#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_malloc_small(SIZE)
-#define BSQ_FREE_LIST_ALLOC(SIZE) mi_malloc(SIZE)
+#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_zalloc_small(SIZE)
+#define BSQ_FREE_LIST_ALLOC(SIZE) mi_zalloc(SIZE)
 #define BSQ_FREE_LIST_RELEASE(SIZE, M) mi_free(M)
 
 #define GC_REF_LIST_BLOCK_SIZE_SMALL 32
@@ -132,12 +157,7 @@ typedef uint64_t GC_META_DATA_WORD;
 //Misc operations
 #define COMPUTE_REAL_BYTES(M) (GET_TYPE_META_DATA(M)->allocinfo.heapsize + sizeof(GC_META_DATA_WORD))
 
-#ifdef __APPLE__
-#define GC_MEM_COPY(DST, SRC, BYTES) memcpy(DST, SRC, BYTES)
-#else
-#define GC_MEM_COPY(DST, SRC, BYTES) memcpy_s(DST, BYTES, SRC, BYTES)
-#endif
-
+#define GC_MEM_COPY(DST, SRC, BYTES) std::copy((uint8_t*)SRC, ((uint8_t*)SRC) + BYTES, (uint8_t*)DST)
 #define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + BYTES, (uint8_t)0)
 
 ////////////////////////////////

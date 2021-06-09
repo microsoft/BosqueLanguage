@@ -253,6 +253,11 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
 
 bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
+    if(!jv.is_array())
+    {
+        return false;
+    }
+    
     auto ltype = dynamic_cast<const BSQListType*>(btype);
     const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
 
@@ -271,7 +276,7 @@ bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, St
     }
     else
     {
-        const BSQListFlatKTypeAbstract* fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQStringKReprTypeAbstract*>& pp) {
+        const BSQListFlatKTypeAbstract* fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQListFlatKTypeAbstract*>& pp) {
             return ct <= pp.first;
         })->second;
 
@@ -290,9 +295,9 @@ bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, St
         ltype->storeValue(sl, &ll);
 
         Allocator::GlobalAllocator.popRoot();
-
-        return true;
     }
+
+    return true;
 }
 
 void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
@@ -312,7 +317,7 @@ void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, Sto
     }
     else
     {
-        const BSQListFlatKTypeAbstract* fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQStringKReprTypeAbstract*>& pp) {
+        const BSQListFlatKTypeAbstract* fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQListFlatKTypeAbstract*>& pp) {
             return ct <= pp.first;
         })->second;
 

@@ -3,7 +3,6 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-const fs = require("fs");
 const fsx = require("fs-extra");
 const path = require("path");
 const proc = require('child_process');
@@ -43,5 +42,5 @@ fsx.emptyDirSync(outbase);
 
 console.log(command);
 
-const outstr = proc.execSync(command);
-console.log(`${outstr}`);
+//const outstr = proc.execSync(command);
+//console.log(`${outstr}`);

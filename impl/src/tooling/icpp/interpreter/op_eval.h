@@ -34,7 +34,7 @@ class Evaluator
 private:
     EvaluatorFrame* cframe;
     int32_t cpos;
-    static EvaluatorFrame g_callstack[2048];
+    static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
 
 #ifdef BSQ_DEBUG_BUILD
     inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
@@ -121,7 +121,7 @@ private:
 
     inline StorageLocationPtr evalConstArgument(Argument arg)
     {
-        return (StorageLocationPtr)Environment::g_constantbuffer + arg.location;
+        return (StorageLocationPtr)(Environment::g_constantbuffer + arg.location);
     }
 
     inline StorageLocationPtr evalArgument(Argument arg)
