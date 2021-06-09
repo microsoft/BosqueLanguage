@@ -183,18 +183,21 @@ struct Argument
     ArgumentTag kind;
     uint32_t location;
 };
+void jsonParse_Argument(boost::json::value& val, Argument& arg);
 
 struct TargetVar
 {
     ArgumentTag kind;
     uint32_t offset;
 };
+void jsonParse_TargetVar(boost::json::value& val, TargetVar& tvar);
 
 struct SourceInfo
 {
     uint32_t line;
     uint32_t column;
 };
+void jsonParse_SourceInfo(boost::json::value& val, SourceInfo& sinfo);
 
 struct BSQGuard
 {
@@ -203,6 +206,7 @@ struct BSQGuard
 
     int32_t gvaroffset; //-1 if this is a mask offset otherwise this is the local var offset
 };
+void jsonParse_BSQGuard(boost::json::value& val, BSQGuard& guard);
 
 struct BSQStatementGuard
 {
@@ -211,6 +215,7 @@ struct BSQStatementGuard
     bool usedefaulton;
     bool enabled; //true if this statment guard is active and should be used
 };
+void jsonParse_BSQStatementGuard(boost::json::value& val, BSQStatementGuard& sguard);
 
 class InterpOp
 {
