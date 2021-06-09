@@ -42,5 +42,5 @@ fsx.emptyDirSync(outbase);
 
 console.log(command);
 
-//const outstr = proc.execSync(command);
-//console.log(`${outstr}`);
+const outstr = proc.execSync(command).toString();
+console.log(`${outstr}`);

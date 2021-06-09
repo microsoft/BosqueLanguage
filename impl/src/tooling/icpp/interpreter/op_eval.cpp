@@ -110,7 +110,7 @@ void Evaluator::evalNoneInitUnionOp(const NoneInitUnionOp* op)
 void Evaluator::evalStoreConstantMaskValueOp(const StoreConstantMaskValueOp* op)
 {
     auto mask = this->evalMaskLocation(op->gmaskoffset);
-    mask[op->gindex] = op->flag;
+    mask[op->gindex] = op->flag ? BSQTRUE : BSQFALSE;
 }
 
 template <>

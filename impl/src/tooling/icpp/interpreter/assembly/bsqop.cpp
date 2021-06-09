@@ -194,7 +194,7 @@ LoadConstOp* LoadConstOp::jparse(boost::json::value v)
     return new LoadConstOp(j_sinfo(v), j_trgt(v), j_arg(v), j_oftype(v));
 }
 
-TupleHasIndexOp::TupleHasIndexOp* jparse(boost::json::value v)
+TupleHasIndexOp* TupleHasIndexOp::jparse(boost::json::value v)
 {
     return new TupleHasIndexOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonGetAsUInt<BSQTupleIndex>(v, "idx"));
 }
@@ -345,17 +345,17 @@ MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(boost::json::
     });
 
     std::vector<const BSQType*> trgttypes;
-    std::transform(v.as_object().at("trgttypes").as_array().cbegin(), v.as_object().at("trgttypes").as_array().cend(), std::back_inserter(trgts), [](boost::json::value tt) {
+    std::transform(v.as_object().at("trgttypes").as_array().cbegin(), v.as_object().at("trgttypes").as_array().cend(), std::back_inserter(trgttypes), [](boost::json::value tt) {
         return jsonParse_BSQType(tt);
     });
 
     std::vector<uint32_t> slotoffsets;
-    std::transform(v.as_object().at("slotoffsets").as_array().cbegin(), v.as_object().at("slotoffsets").as_array().cend(), std::back_inserter(trgts), [](boost::json::value so) {
+    std::transform(v.as_object().at("slotoffsets").as_array().cbegin(), v.as_object().at("slotoffsets").as_array().cend(), std::back_inserter(slotoffsets), [](boost::json::value so) {
         return (uint32_t)so.as_uint64();
     });
 
     std::vector<uint32_t> indexs;
-    std::transform(v.as_object().at("indexs").as_array().cbegin(), v.as_object().at("indexs").as_array().cend(), std::back_inserter(trgts), [](boost::json::value idx) {
+    std::transform(v.as_object().at("indexs").as_array().cbegin(), v.as_object().at("indexs").as_array().cend(), std::back_inserter(indexs), [](boost::json::value idx) {
         return (uint32_t)idx.as_uint64();
     });
 
@@ -609,19 +609,19 @@ VarLifetimeEndOp* VarLifetimeEndOp::jparse(boost::json::value v)
 template <OpCodeTag tag>
 PrimitiveNegateOperatorOp<tag>* PrimitiveNegateOperatorOp<tag>::jparse(boost::json::value v)
 {
-    return new PrimitiveNegateOperatorOp<tag>(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v));
+    return new PrimitiveNegateOperatorOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v));
 }
 
 template <OpCodeTag tag>
 PrimitiveBinaryOperatorOp<tag>* PrimitiveBinaryOperatorOp<tag>::jparse(boost::json::value v)
 {
-    return new PrimitiveBinaryOperatorOp<tag>(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
+    return new PrimitiveBinaryOperatorOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
 }
 
 template <OpCodeTag tag>
 PrimitiveBinaryCompareOp<tag>* PrimitiveBinaryCompareOp<tag>::jparse(boost::json::value v)
 {
-    return new PrimitiveBinaryCompareOp<tag>(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
+    return new PrimitiveBinaryCompareOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
 }
 
 

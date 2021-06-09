@@ -304,9 +304,9 @@ class StoreConstantMaskValueOp : public InterpOp
 public:
     const uint32_t gmaskoffset; 
     const int32_t gindex;
-    const BSQBool flag;
+    const bool flag;
 
-    StoreConstantMaskValueOp(SourceInfo sinfo, uint32_t gmaskoffset, int32_t gindex, BSQBool flag) : InterpOp(sinfo, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
+    StoreConstantMaskValueOp(SourceInfo sinfo, uint32_t gmaskoffset, int32_t gindex, bool flag) : InterpOp(sinfo, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
     virtual ~StoreConstantMaskValueOp() {;}
 
     static StoreConstantMaskValueOp* jparse(boost::json::value v);
