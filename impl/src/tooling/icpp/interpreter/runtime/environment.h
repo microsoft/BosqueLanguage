@@ -18,6 +18,13 @@ public:
     static bool g_small_model_gen;
 
     //Constant storage locations
-    static uint8_t* g_constantbuffer; 
+    static uint8_t* g_constantbuffer;
+
+    //map from invoke id to decl
     static std::vector<BSQInvokeDecl*> g_invokes;
+
+    //helpers for parsing -- map strings to decls
+    static std::map<std::string, const BSQType*> g_typenameToDeclMap;
+    static std::map<std::string, BSQRecordPropertyID> g_propertynameToIDMap;
+    static std::map<std::string, BSQFieldID> g_fieldnameToIDMap;
 };

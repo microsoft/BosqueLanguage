@@ -7,7 +7,7 @@
 #include "../core/bsqmemory.h"
 #include "../runtime/environment.h"
 
-boost::json::value jsonGet(boost::json::value& val, const char* prop)
+boost::json::value jsonGet(boost::json::value val, const char* prop)
 {
     assert(val.is_object());
     return val.as_object().at(prop);
@@ -38,7 +38,7 @@ T jsonGetAsUInt(boost::json::value val, const char* prop)
 
 std::string jsonGetAsString(boost::json::value val, const char* prop)
 {
-    return std::string(jsonGet(val, prop).as_string().cbegin(), jsonGet(val,prop).as_string().cend());
+    return std::string(jsonGet(val, prop).as_string().cbegin(), jsonGet(val, prop).as_string().cend());
 }
 
 Argument jsonParse_Argument(boost::json::value val)
@@ -51,19 +51,37 @@ TargetVar jsonParse_TargetVar(boost::json::value val)
     return TargetVar{ jsonGetAsInt<ArgumentTag>(val, "kind"), jsonGetAsUInt<uint32_t>(val, "offset") };
 }
 
-SourceInfo jsonParse_SourceInfo(boost::json::value& val)
+SourceInfo jsonParse_SourceInfo(boost::json::value val)
 {
     return SourceInfo{ jsonGetAsUInt<uint32_t>(val, "line"), jsonGetAsUInt<uint32_t>(val, "column") };
 }
 
-BSQGuard jsonParse_BSQGuard(boost::json::value& val)
+BSQGuard jsonParse_BSQGuard(boost::json::value val)
 {
     return BSQGuard{ jsonGetAsUInt<uint32_t>(val, "gmaskoffset"), jsonGetAsInt<int32_t>(val, "gindex"), jsonGetAsInt<int32_t>(val, "gvaroffset") };
 }
 
-BSQStatementGuard jsonParse_BSQStatementGuard(boost::json::value& val)
+BSQStatementGuard jsonParse_BSQStatementGuard(boost::json::value val)
 {
     return BSQStatementGuard{ jsonParse_BSQGuard(jsonGet(val, "guard")), jsonParse_Argument(jsonGet(val, "defaultvar")), jsonGetAsBool(val, "usedefaulton"), jsonGetAsBool(val, "enabled") };
+}
+
+const BSQType* jsonParse_BSQType(boost::json::value val)
+{
+     auto tname = std::string(val.as_string().cbegin(), val.as_string().cend());
+    return Environment::g_typenameToDeclMap[tname];
+}
+
+BSQRecordPropertyID jsonParse_BSQRecordPropertyID(boost::json::value val)
+{
+    auto tname = std::string(val.as_string().cbegin(), val.as_string().cend());
+    return Environment::g_propertynameToIDMap[tname];
+}
+
+BSQFieldID jsonParse_BSQFieldID(boost::json::value val)
+{
+    auto tname = std::string(val.as_string().cbegin(), val.as_string().cend());
+    return Environment::g_fieldnameToIDMap[tname];
 }
 
 SourceInfo j_sinfo(boost::json::value val)
@@ -73,987 +91,835 @@ SourceInfo j_sinfo(boost::json::value val)
 
 TargetVar j_trgt(boost::json::value val)
 {
-    return jsonParse_TargetVar(jsonGet())
+    return jsonParse_TargetVar(jsonGet(val, "trgt"));
 }
 
-ArgumentTag j_arg(boost::json::value val)
+Argument j_arg(boost::json::value val)
 {
-    assert(val.is_object());
-    return val.as_object().at(prop);
+    return jsonParse_Argument(jsonGet(val, "arg"));
+}
+
+const BSQType* j_oftype(boost::json::value val)
+{
+    return jsonParse_BSQType(jsonGet(val, "oftype"));
+}
+
+const BSQType* j_argtype(boost::json::value val)
+{
+    return jsonParse_BSQType(jsonGet(val, "argtype"));
+}
+
+const BSQType* j_layouttype(boost::json::value val)
+{
+    return jsonParse_BSQType(jsonGet(val, "layouttype"));
+}
+
+const BSQType* j_flowtype(boost::json::value val)
+{
+    return jsonParse_BSQType(jsonGet(val, "flowtype"));
+}
+
+const BSQType* j_intotype(boost::json::value val)
+{
+    return jsonParse_BSQType(jsonGet(val, "intotype"));
+}
+
+const BSQType* j_trgttype(boost::json::value val)
+{
+    return jsonParse_BSQType(jsonGet(val, "trgttype"));
+}
+
+BSQGuard j_guard(boost::json::value v)
+{
+    return jsonParse_BSQGuard(jsonGet(v, "guard"));
+}
+
+BSQStatementGuard j_sguard(boost::json::value v)
+{
+    return jsonParse_BSQStatementGuard(jsonGet(v, "sguard"));
 }
 
 DeadFlowOp* DeadFlowOp::jparse(boost::json::value v)
 {
-    return new DeadFlowOp();
+    return new DeadFlowOp(j_sinfo(v));
 }
-static AbortOp* jparse(boost::json::value v);
 
-    static AbortOp* jparse(boost::json::value v);
-
-class AssertOp : public InterpOp
+AbortOp* AbortOp::jparse(boost::json::value v)
 {
-public:
-    const Argument arg;
-    const std::string msg;
+    return new AbortOp(j_sinfo(v), jsonGetAsString(v, "msg"));
+}
 
-    AssertOp(SourceInfo sinfo, Argument arg, const std::string msg) : InterpOp(sinfo, OpCodeTag::AssertOp), arg(arg), msg(msg) {;}
-    virtual ~AssertOp() {;}
-
-    static AssertOp* jparse(boost::json::value v);
-};
-
-class DebugOp : public InterpOp
+AssertOp* AssertOp::jparse(boost::json::value v)
 {
-public:
-    //Arg is invalid and type is nullptr if this is a break
-    const Argument arg;
-    const BSQType* argtype;
+    return new AssertOp(j_sinfo(v), j_arg(v), jsonGetAsString(v, "msg"));
+}
 
-    DebugOp(SourceInfo sinfo, Argument arg, const BSQType* argtype) : InterpOp(sinfo, OpCodeTag::DebugOp), arg(arg), argtype(argtype) {;}
-    virtual ~DebugOp() {;}
-
-    static DebugOp* jparse(boost::json::value v);
-};
-
-//This op does not need to be emitted if we are in a release build
-class LoadUnintVariableValueOp : public InterpOp
+DebugOp* DebugOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
+    return new DebugOp(j_sinfo(v), j_arg(v), j_argtype(v));
+}
 
-    LoadUnintVariableValueOp(SourceInfo sinfo, TargetVar trgt, BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
-    virtual ~LoadUnintVariableValueOp() {;}
-
-    static LoadUnintVariableValueOp* jparse(boost::json::value v);
-};
-
-class NoneInitUnionOp : public InterpOp
+LoadUnintVariableValueOp* LoadUnintVariableValueOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQUnionType* oftype;
+    return new LoadUnintVariableValueOp(j_sinfo(v), j_trgt(v), j_oftype(v));
+}
 
-    NoneInitUnionOp(SourceInfo sinfo, TargetVar trgt, BSQUnionType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
-    virtual ~NoneInitUnionOp() {;}
-
-    static NoneInitUnionOp* jparse(boost::json::value v);
-};
-
-class StoreConstantMaskValueOp : public InterpOp
+NoneInitUnionOp* NoneInitUnionOp::jparse(boost::json::value v)
 {
-public:
-    const uint32_t gmaskoffset; 
-    const int32_t gindex;
-    const BSQBool flag;
+    return new NoneInitUnionOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)));
+}
 
-    StoreConstantMaskValueOp(SourceInfo sinfo, uint32_t gmaskoffset, int32_t gindex, BSQBool flag) : InterpOp(sinfo, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
-    virtual ~StoreConstantMaskValueOp() {;}
-
-    static StoreConstantMaskValueOp* jparse(boost::json::value v);
-};
-
-class DirectAssignOp : public InterpOp
+StoreConstantMaskValueOp* StoreConstantMaskValueOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* intotype;
-    const Argument arg;
-    const BSQStatementGuard sguard;
+    return new StoreConstantMaskValueOp(j_sinfo(v), jsonGetAsUInt<uint32_t>(v, "gmaskoffset"), jsonGetAsInt<int32_t>(v, "gindex"), jsonGetAsBool(v, "flag"));
+}
 
-    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, uint32_t size, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
-    virtual ~DirectAssignOp() {;}
-
-    static DirectAssignOp* jparse(boost::json::value v);
-};
-
-class BoxOp : public InterpOp
+DirectAssignOp* DirectAssignOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* intotype;
-    const Argument arg;
-    const BSQType* fromtype;
-    const BSQStatementGuard sguard;
+    return new DirectAssignOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonGetAsUInt<uint32_t>(v, "size"), j_sguard(v));
+}
 
-    BoxOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
-    virtual ~BoxOp() {;}
-
-    static BoxOp* jparse(boost::json::value v);
-};
-
-class ExtractOp : public InterpOp
+BoxOp* BoxOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* intotype;
-    const Argument arg;
-    const BSQType* fromtype;
-    const BSQStatementGuard sguard;
+    return new BoxOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "fromtype")), j_sguard(v));
+}
 
-    ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
-    virtual ~ExtractOp() {;}
-
-    static ExtractOp* jparse(boost::json::value v);
-};
-
-class LoadConstOp : public InterpOp
+ExtractOp* ExtractOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    const BSQType* oftype;
+    return new ExtractOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "fromtype")), j_sguard(v));
+}
 
-    LoadConstOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadConstOp), trgt(trgt), arg(arg), oftype(oftype) {;}
-    virtual ~LoadConstOp() {;}
-
-    static LoadConstOp* jparse(boost::json::value v);
-};
-
-class TupleHasIndexOp : public InterpOp
+LoadConstOp* LoadConstOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    const BSQUnionType* layouttype;
-    const BSQTupleIndex idx;
+    return new LoadConstOp(j_sinfo(v), j_trgt(v), j_arg(v), j_oftype(v));
+}
 
-    TupleHasIndexOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
-    virtual ~TupleHasIndexOp() {;}
-
-    static TupleHasIndexOp* jparse(boost::json::value v);
-};
-
-class RecordHasPropertyOp : public InterpOp
+TupleHasIndexOp::TupleHasIndexOp* jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    const BSQUnionType* layouttype;
-    const BSQRecordPropertyID propId;
+    return new TupleHasIndexOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonGetAsUInt<BSQTupleIndex>(v, "idx"));
+}
 
-    RecordHasPropertyOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::RecordHasPropertyOp), trgt(trgt), arg(arg), layouttype(layouttype), propId(propId) {;}
-    virtual ~RecordHasPropertyOp() {;}
-
-    static RecordHasPropertyOp* jparse(boost::json::value v);
-};
-
-class LoadTupleIndexDirectOp : public InterpOp
+RecordHasPropertyOp* RecordHasPropertyOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const uint32_t slotoffset;
-    const BSQTupleIndex idx;
+    return new RecordHasPropertyOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")));
+}
 
-    LoadTupleIndexDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx) {;}
-    virtual ~LoadTupleIndexDirectOp() {;}
-
-    static LoadTupleIndexDirectOp* jparse(boost::json::value v);
-};
-
-class LoadTupleIndexVirtualOp : public InterpOp
+LoadTupleIndexDirectOp* LoadTupleIndexDirectOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQUnionType* layouttype;
-    const BSQTupleIndex idx;
+    return new LoadTupleIndexDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonGetAsUInt<BSQTupleIndex>(v, "idx"));
+}
 
-    LoadTupleIndexVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx) {;}
-    virtual ~LoadTupleIndexVirtualOp() {;}
-
-    static LoadTupleIndexVirtualOp* jparse(boost::json::value v);
-};
-
-class LoadTupleIndexSetGuardDirectOp : public InterpOp
+LoadTupleIndexVirtualOp* LoadTupleIndexVirtualOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const uint32_t slotoffset;
-    const BSQTupleIndex idx;
-    const BSQGuard guard;
+    return new LoadTupleIndexVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonGetAsUInt<BSQTupleIndex>(v, "idx"));
+}
 
-    LoadTupleIndexSetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx), guard(guard) {;}
-    virtual ~LoadTupleIndexSetGuardDirectOp() {;}
-
-    static LoadTupleIndexSetGuardDirectOp* jparse(boost::json::value v);
-};
-
-class LoadTupleIndexSetGuardVirtualOp : public InterpOp
+LoadTupleIndexSetGuardDirectOp* LoadTupleIndexSetGuardDirectOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQUnionType* layouttype;
-    const BSQTupleIndex idx;
-    const BSQGuard guard;
+    return new LoadTupleIndexSetGuardDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonGetAsUInt<BSQTupleIndex>(v, "idx"), j_guard(v));
+}
 
-    LoadTupleIndexSetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx), guard(guard) {;}
-    virtual ~LoadTupleIndexSetGuardVirtualOp() {;}
-
-    static LoadTupleIndexSetGuardVirtualOp* jparse(boost::json::value v);
-};
-
-class LoadRecordPropertyDirectOp : public InterpOp
+LoadTupleIndexSetGuardVirtualOp* LoadTupleIndexSetGuardVirtualOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const uint32_t slotoffset;
-    const BSQRecordPropertyID propId;
+    return new LoadTupleIndexSetGuardVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonGetAsUInt<BSQTupleIndex>(v, "idx"), j_guard(v));
+}
 
-    LoadRecordPropertyDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId) {;}
-    virtual ~LoadRecordPropertyDirectOp() {;}
-
-    static LoadRecordPropertyDirectOp* jparse(boost::json::value v);
-};
-
-class LoadRecordPropertyVirtualOp : public InterpOp
+LoadRecordPropertyDirectOp* LoadRecordPropertyDirectOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQUnionType* layouttype;
-    const BSQRecordPropertyID propId;
+    return new LoadRecordPropertyDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")));
+}
 
-    LoadRecordPropertyVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId) {;}
-    virtual ~LoadRecordPropertyVirtualOp() {;}
-
-    static LoadRecordPropertyVirtualOp* jparse(boost::json::value v);
-};
-
-class LoadRecordPropertySetGuardDirectOp : public InterpOp
+LoadRecordPropertyVirtualOp* LoadRecordPropertyVirtualOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const uint32_t slotoffset;
-    const BSQRecordPropertyID propId;
-    const BSQGuard guard;
+    return new LoadRecordPropertyVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")));
+}
 
-    LoadRecordPropertySetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId), guard(guard) {;}
-    virtual ~LoadRecordPropertySetGuardDirectOp() {;}
-
-    static LoadRecordPropertySetGuardDirectOp* jparse(boost::json::value v);
-};
-
-class LoadRecordPropertySetGuardVirtualOp : public InterpOp
+LoadRecordPropertySetGuardDirectOp* LoadRecordPropertySetGuardDirectOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQUnionType* layouttype;
-    const BSQRecordPropertyID propId;
-    const BSQGuard guard;
+    return new LoadRecordPropertySetGuardDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")), j_guard(v));
+}
 
-    LoadRecordPropertySetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId), guard(guard) {;}
-    virtual ~LoadRecordPropertySetGuardVirtualOp() {;}
-
-    static LoadRecordPropertySetGuardVirtualOp* jparse(boost::json::value v);
-};
-
-class LoadEntityFieldDirectOp : public InterpOp
+LoadRecordPropertySetGuardVirtualOp* LoadRecordPropertySetGuardVirtualOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const uint32_t slotoffset;
-    const BSQFieldID fieldId;
+    return new LoadRecordPropertySetGuardVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")), j_guard(v));
+}
 
-    LoadEntityFieldDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), fieldId(fieldId) {;}
-    virtual ~LoadEntityFieldDirectOp() {;}
-
-    static LoadEntityFieldDirectOp* jparse(boost::json::value v);
-};
-
-class LoadEntityFieldVirtualOp : public InterpOp
+LoadEntityFieldDirectOp* LoadEntityFieldDirectOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQUnionType* layouttype;
-    const BSQFieldID fieldId;
+    return new LoadEntityFieldDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonParse_BSQFieldID(jsonGet(v, "fieldId")));
+}
 
-    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQUnionType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
-    virtual ~LoadEntityFieldVirtualOp() {;}
-
-    static LoadEntityFieldVirtualOp* jparse(boost::json::value v);
-};
-
-class ProjectTupleOp : public InterpOp
+LoadEntityFieldVirtualOp* LoadEntityFieldVirtualOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQEphemeralListType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const BSQType* flowtype;
-    const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs;
+    return new LoadEntityFieldVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQFieldID(jsonGet(v, "fieldId")));
+}
 
-    ProjectTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs) : InterpOp(sinfo, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
-    virtual ~ProjectTupleOp() {;}
-
-    static ProjectTupleOp* jparse(boost::json::value v);
-};
-
-class ProjectRecordOp : public InterpOp
+ProjectTupleOp* ProjectTupleOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQEphemeralListType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const BSQType* flowtype;
-    const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props;
+    std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs;
+    auto idxl = v.as_object().at("idxs").as_array();
+    for(size_t i = 0; i < idxl.size(); ++i)
+    {
+        auto vv = idxl[i].as_array();
+        idxs.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_uint64(), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2])));
+    }
 
-    ProjectRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props) : InterpOp(sinfo, OpCodeTag::ProjectRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), props(props) {;}
-    virtual ~ProjectRecordOp() {;}
+    return new ProjectTupleOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), idxs);
+}
 
-    static ProjectRecordOp* jparse(boost::json::value v);
-};
-
-class ProjectEntityOp : public InterpOp
+ProjectRecordOp* ProjectRecordOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQEphemeralListType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const BSQType* flowtype;
-    const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields;
+    std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props;
+    auto propl = v.as_object().at("props").as_array();
+    for(size_t i = 0; i < props.size(); ++i)
+    {
+        auto vv = propl[i].as_array();
+        props.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (BSQTupleIndex)vv[1].as_uint64(), jsonParse_BSQType(vv[2])));
+    }
 
-    ProjectEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields) : InterpOp(sinfo, OpCodeTag::ProjectEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), fields(fields) {;}
-    virtual ~ProjectEntityOp() {;}
+    return new ProjectRecordOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), props);
+}
 
-    static ProjectEntityOp* jparse(boost::json::value v);
-};
+ProjectEntityOp* ProjectEntityOp::jparse(boost::json::value v)
+{
+    std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields;
+    auto fieldl = v.as_object().at("fields").as_array();
+    for(size_t i = 0; i < fields.size(); ++i)
+    {
+        auto vv = fieldl[i].as_array();
+        fields.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (BSQTupleIndex)vv[1].as_uint64(), jsonParse_BSQType(vv[2])));
+    }
+
+    return new ProjectEntityOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), fields);
+}
+
+UpdateTupleOp* UpdateTupleOp::jparse(boost::json::value v)
+{
+    std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates;
+    auto updatel = v.as_object().at("updates").as_array();
+    for(size_t i = 0; i < updatel.size(); ++i)
+    {
+        auto vv = updatel[i].as_array();
+        updates.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_uint64(), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+    }
+
+    return new UpdateTupleOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
+}
+
+UpdateRecordOp* UpdateRecordOp::jparse(boost::json::value v)
+{
+    std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates;
+    auto updatel = v.as_object().at("updates").as_array();
+    for(size_t i = 0; i < updatel.size(); ++i)
+    {
+        auto vv = updatel[i].as_array();
+        updates.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+    }
+
+    return new UpdateRecordOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
+}
+
+UpdateEntityOp* UpdateEntityOp::jparse(boost::json::value v)
+{
+    std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates;
+    auto updatel = v.as_object().at("updates").as_array();
+    for(size_t i = 0; i < updatel.size(); ++i)
+    {
+        auto vv = updatel[i].as_array();
+        updates.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+    }
+
+    return new UpdateEntityOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
+}
+
+LoadFromEpehmeralListOp* LoadFromEpehmeralListOp::jparse(boost::json::value v)
+{
+    return new LoadFromEpehmeralListOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonGetAsUInt<uint32_t>(v, "index"));
+}
+
+MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(boost::json::value v)
+{
+    std::vector<TargetVar> trgts;
+    std::transform(v.as_object().at("trgts").as_array().cbegin(), v.as_object().at("trgts").as_array().cend(), std::back_inserter(trgts), [](boost::json::value tv) {
+        return jsonParse_TargetVar(tv);
+    });
+
+    std::vector<const BSQType*> trgttypes;
+    std::transform(v.as_object().at("trgttypes").as_array().cbegin(), v.as_object().at("trgttypes").as_array().cend(), std::back_inserter(trgts), [](boost::json::value tt) {
+        return jsonParse_BSQType(tt);
+    });
+
+    std::vector<uint32_t> slotoffsets;
+    std::transform(v.as_object().at("slotoffsets").as_array().cbegin(), v.as_object().at("slotoffsets").as_array().cend(), std::back_inserter(trgts), [](boost::json::value so) {
+        return (uint32_t)so.as_uint64();
+    });
+
+    std::vector<uint32_t> indexs;
+    std::transform(v.as_object().at("indexs").as_array().cbegin(), v.as_object().at("indexs").as_array().cend(), std::back_inserter(trgts), [](boost::json::value idx) {
+        return (uint32_t)idx.as_uint64();
+    });
+
+    return new MultiLoadFromEpehmeralListOp(j_sinfo(v), trgts, trgttypes, j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), slotoffsets, indexs);
+}
+
+SliceEphemeralListOp* SliceEphemeralListOp::jparse(boost::json::value v)
+{
+    return new SliceEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), jsonGetAsUInt<uint32_t>(v, "slotoffsetend"), jsonGetAsUInt<uint32_t>(v, "indexend"));
+}
+
+InvokeFixedFunctionOp* InvokeFixedFunctionOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new InvokeFixedFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), jsonGetAsUInt<BSQInvokeID>(v, "invokeId"), args, j_sguard(v), jsonGetAsInt<int32_t>(v, "optmaskoffset"));
+}
+
+InvokeVirtualFunctionOp* InvokeVirtualFunctionOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), jsonGetAsUInt<BSQVirtualInvokeID>(v, "invokeId"), jsonParse_BSQType(jsonGet(v, "rcvrlayouttype")), args, jsonGetAsInt<int32_t>(v, "optmaskoffset"));
+}
+
+InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), jsonGetAsUInt<BSQVirtualInvokeID>(v, "invokeId"), args);
+}
+
+ConstructorTupleOp* ConstructorTupleOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new ConstructorTupleOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
+}
+
+ConstructorTupleFromEphemeralListOp* ConstructorTupleFromEphemeralListOp::jparse(boost::json::value v)
+{
+    return new ConstructorTupleFromEphemeralListOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)));
+}
+
+ConstructorRecordOp* ConstructorRecordOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new ConstructorRecordOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
+}
+
+ConstructorRecordFromEphemeralListOp* ConstructorRecordFromEphemeralListOp::jparse(boost::json::value v)
+{
+    std::vector<uint32_t> proppositions;
+    std::transform(v.as_object().at("proppositions").as_array().cbegin(), v.as_object().at("proppositions").as_array().cend(), std::back_inserter(proppositions), [](boost::json::value pos) {
+        return (uint32_t)pos.as_uint64();
+    });
+
+    return new ConstructorRecordFromEphemeralListOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), proppositions);
+}
+
+EphemeralListExtendOp* EphemeralListExtendOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> ext;
+    std::transform(v.as_object().at("ext").as_array().cbegin(), v.as_object().at("ext").as_array().cend(), std::back_inserter(ext), [](boost::json::value ee) {
+        return jsonParse_Argument(ee);
+    });
+
+    return new EphemeralListExtendOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(jsonParse_BSQType(jsonGet(v, "resultType"))), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), ext);
+}
+
+ConstructorEphemeralListOp* ConstructorEphemeralListOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new ConstructorEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_oftype(v)), args);
+}
+
+ConstructorPrimaryCollectionEmptyOp* ConstructorPrimaryCollectionEmptyOp::jparse(boost::json::value v)
+{
+    return new ConstructorPrimaryCollectionEmptyOp(j_sinfo(v), j_trgt(v), j_oftype(v));
+}
+
+ConstructorPrimaryCollectionSingletonsOp* ConstructorPrimaryCollectionSingletonsOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new ConstructorPrimaryCollectionSingletonsOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
+}
+ConstructorPrimaryCollectionCopiesOp* ConstructorPrimaryCollectionCopiesOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new ConstructorPrimaryCollectionCopiesOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
+}
+
+ConstructorPrimaryCollectionMixedOp* ConstructorPrimaryCollectionMixedOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new ConstructorPrimaryCollectionMixedOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
+}
+
+PrefixNotOp* PrefixNotOp::jparse(boost::json::value v)
+{
+    return new PrefixNotOp(j_sinfo(v), j_trgt(v), j_arg(v));
+}
+
+AllTrueOp* AllTrueOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new AllTrueOp(j_sinfo(v), j_trgt(v), args);
+}
+
+SomeTrueOp* SomeTrueOp::jparse(boost::json::value v)
+{
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
+
+    return new SomeTrueOp(j_sinfo(v), j_trgt(v), args);
+}
+
+BinKeyEqFastOp* BinKeyEqFastOp::jparse(boost::json::value v)
+{
+    return new BinKeyEqFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_Argument(jsonGet(v, "argr"))); 
+}
     
-class UpdateTupleOp : public InterpOp
+BinKeyEqStaticOp* BinKeyEqStaticOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const BSQType* flowtype;
-    const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates;
+    return new BinKeyEqStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+}
 
-    UpdateTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
-    virtual ~UpdateTupleOp() {;}
-
-    static UpdateTupleOp* jparse(boost::json::value v);
-};
-
-class UpdateRecordOp : public InterpOp
+BinKeyEqVirtualOp* BinKeyEqVirtualOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const BSQType* flowtype;
-    const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates;
+    return new BinKeyEqVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+}
 
-    UpdateRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
-    virtual ~UpdateRecordOp() {;}
-
-    static UpdateRecordOp* jparse(boost::json::value v);
-};
-
-class UpdateEntityOp : public InterpOp
+BinKeyLessFastOp* BinKeyLessFastOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQType* layouttype;
-    const BSQType* flowtype;
-    const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates;
-
-    UpdateEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
-    virtual ~UpdateEntityOp() {;}
-
-    static UpdateEntityOp* jparse(boost::json::value v);
-};
-
-class LoadFromEpehmeralListOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const Argument arg;
-    const BSQEphemeralListType* argtype;
-    const uint32_t slotoffset;
-    const uint32_t index;
-
-    LoadFromEpehmeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQEphemeralListType* argtype, uint32_t slotoffset, uint32_t index) : InterpOp(sinfo, OpCodeTag::LoadFromEpehmeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), index(index) {;}
-    virtual ~LoadFromEpehmeralListOp() {;}
-
-    static LoadFromEpehmeralListOp* jparse(boost::json::value v);
-};
-
-class MultiLoadFromEpehmeralListOp : public InterpOp
-{
-public:
-    const std::vector<TargetVar> trgts;
-    const std::vector<const BSQType*> trgttypes;
-    const Argument arg;
-    const BSQEphemeralListType* argtype;
-    const std::vector<uint32_t> slotoffsets;
-    const std::vector<uint32_t> indexs;
-
-    MultiLoadFromEpehmeralListOp(SourceInfo sinfo, std::vector<TargetVar> trgts, std::vector<const BSQType*> trgttypes, Argument arg, BSQEphemeralListType* argtype, std::vector<uint32_t> slotoffsets, std::vector<uint32_t> indexs) : InterpOp(sinfo, OpCodeTag::MultiLoadFromEpehmeralListOp), trgts(trgts), trgttypes(trgttypes), arg(arg), argtype(argtype), slotoffsets(slotoffsets), indexs(indexs) {;}
-    virtual ~MultiLoadFromEpehmeralListOp() {;}
-
-    static MultiLoadFromEpehmeralListOp* jparse(boost::json::value v);
-};
-
-class SliceEphemeralListOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQEphemeralListType* trgttype;
-    const Argument arg;
-    const BSQEphemeralListType* argtype;
-    const uint32_t slotoffsetend;
-    const uint32_t indexend;
-
-    SliceEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, BSQEphemeralListType* argtype, uint32_t slotoffsetend, uint32_t indexend) : InterpOp(sinfo, OpCodeTag::SliceEphemeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffsetend(slotoffsetend), indexend(indexend) {;}
-    virtual ~SliceEphemeralListOp() {;}
-
-    static SliceEphemeralListOp* jparse(boost::json::value v);
-};
-
-class InvokeFixedFunctionOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const BSQInvokeID invokeId;
-    const std::vector<Argument> args;
-    const int32_t optmaskoffset;
-    const BSQStatementGuard sguard;
-
-    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, std::vector<Argument> args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeFixedFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), sguard(sguard), optmaskoffset(optmaskoffset) {;}
-    virtual ~InvokeFixedFunctionOp() {;}
-
-    static InvokeFixedFunctionOp* jparse(boost::json::value v);
-};
-
-class InvokeVirtualFunctionOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const BSQVirtualInvokeID invokeId;
-    const BSQType* rcvrlayouttype;
-    const int32_t optmaskoffset;
-    const std::vector<Argument> args;
+    return new BinKeyLessFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_Argument(jsonGet(v, "argr"))); 
+}
     
-    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const BSQType* rcvrlayouttype, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), rcvrlayouttype(rcvrlayouttype), args(args), optmaskoffset(optmaskoffset) {;}
-    virtual ~InvokeVirtualFunctionOp() {;}
-
-    static InvokeVirtualFunctionOp* jparse(boost::json::value v);
-};
-
-class InvokeVirtualOperatorOp : public InterpOp
+BinKeyLessStaticOp* BinKeyLessStaticOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* trgttype;
-    const BSQVirtualInvokeID invokeId;
-    const std::vector<Argument> args;
-    
-    InvokeVirtualOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::InvokeVirtualOperatorOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args) {;}
-    virtual ~InvokeVirtualOperatorOp() {;}
+    return new BinKeyLessStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+}
 
-    static InvokeVirtualOperatorOp* jparse(boost::json::value v);
-};
-
-class ConstructorTupleOp : public InterpOp
+BinKeyLessVirtualOp* BinKeyLessVirtualOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorTupleOp() {;}
+    return new BinKeyLessVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+}
 
-    static ConstructorTupleOp* jparse(boost::json::value v);
-};
-
-class ConstructorTupleFromEphemeralListOp : public InterpOp
+TypeIsNoneOp* TypeIsNoneOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument arg;
-    const BSQEphemeralListType* argtype;
-    
-    ConstructorTupleFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype) : InterpOp(sinfo, OpCodeTag::ConstructorTupleFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype) {;}
-    virtual ~ConstructorTupleFromEphemeralListOp() {;}
+    return new TypeIsNoneOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+}
 
-    static ConstructorTupleFromEphemeralListOp* jparse(boost::json::value v);
-};
-
-class ConstructorRecordOp : public InterpOp
+TypeIsSomeOp* TypeIsSomeOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorRecordOp() {;}
+    return new TypeIsSomeOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+}
 
-    static ConstructorRecordOp* jparse(boost::json::value v);
-};
-
-class ConstructorRecordFromEphemeralListOp : public InterpOp
+TypeTagIsOp* TypeTagIsOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument arg;
-    const BSQEphemeralListType* argtype;
-    const std::vector<uint32_t> proppositions; //if empty then assume properties are in same order as elist
-    
-    ConstructorRecordFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype, std::vector<BSQRecordPropertyID> positions) : InterpOp(sinfo, OpCodeTag::ConstructorRecordFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype), proppositions(proppositions) {;}
-    virtual ~ConstructorRecordFromEphemeralListOp() {;}
+    return new TypeTagIsOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+}
 
-    static ConstructorRecordFromEphemeralListOp* jparse(boost::json::value v);
-};
-
-class EphemeralListExtendOp : public InterpOp
+TypeTagSubtypeOfOp* TypeTagSubtypeOfOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQEphemeralListType* resultType;
-    const Argument arg;
-    const BSQEphemeralListType* argtype;
-    const std::vector<Argument> ext;
+    return new TypeTagSubtypeOfOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+}
 
-    EphemeralListExtendOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* resultType, Argument arg, const BSQEphemeralListType* argtype, std::vector<Argument> ext) : InterpOp(sinfo, OpCodeTag::EphemeralListExtendOp), trgt(trgt), resultType(resultType), arg(arg), argtype(argtype), ext(ext) {;}
-    virtual ~EphemeralListExtendOp() {;}
-
-    static EphemeralListExtendOp* jparse(boost::json::value v);
-};
-
-class ConstructorEphemeralListOp : public InterpOp
+JumpOp* JumpOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQEphemeralListType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorEphemeralListOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorEphemeralListOp() {;}
+    return new JumpOp(j_sinfo(v), jsonGetAsUInt<uint32_t>(v, "offset"), jsonGetAsString(v, "label"));
+}
 
-    static ConstructorEphemeralListOp* jparse(boost::json::value v);
-};
-
-class ConstructorPrimaryCollectionEmptyOp : public InterpOp
+JumpCondOp* JumpCondOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    
-    ConstructorPrimaryCollectionEmptyOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionEmptyOp), trgt(trgt), oftype(oftype) {;}
-    virtual ~ConstructorPrimaryCollectionEmptyOp() {;}
+    return new JumpCondOp(j_sinfo(v), j_arg(v), jsonGetAsUInt<uint32_t>(v, "toffset"), jsonGetAsUInt<uint32_t>(v, "foffset"), jsonGetAsString(v, "tlabel"), jsonGetAsString(v, "flabel"));
+}
 
-    static ConstructorPrimaryCollectionEmptyOp* jparse(boost::json::value v);
-};
-
-class ConstructorPrimaryCollectionSingletonsOp : public InterpOp
+JumpNoneOp* JumpNoneOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
+    return new JumpNoneOp(j_sinfo(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), jsonGetAsUInt<uint32_t>(v, "noffset"), jsonGetAsUInt<uint32_t>(v, "soffset"), jsonGetAsString(v, "nlabel"), jsonGetAsString(v, "slabel"));
+}
 
-    static ConstructorPrimaryCollectionEmptyOp* jparse(boost::json::value v);
-};
-
-class ConstructorPrimaryCollectionCopiesOp : public InterpOp
+RegisterAssignOp* RegisterAssignOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorPrimaryCollectionCopiesOp() {;}
+    return new RegisterAssignOp(j_sinfo(v), j_trgt(v), j_arg(v), j_oftype(v), j_sguard(v));
+}
 
-    static ConstructorPrimaryCollectionCopiesOp* jparse(boost::json::value v);
-};
-
-class ConstructorPrimaryCollectionMixedOp : public InterpOp
+ReturnAssignOp* ReturnAssignOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorPrimaryCollectionMixedOp() {;}
+    return new ReturnAssignOp(j_sinfo(v), j_trgt(v), j_arg(v), j_oftype(v));
+}
 
-    static ConstructorPrimaryCollectionMixedOp* jparse(boost::json::value v);
-};
-
-class PrefixNotOp : public InterpOp
+ReturnAssignOfConsOp* ReturnAssignOfConsOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    
-    PrefixNotOp(SourceInfo sinfo, TargetVar trgt, Argument arg) : InterpOp(sinfo, OpCodeTag::PrefixNotOp), trgt(trgt), arg(arg) {;}
-    virtual ~PrefixNotOp() {;}
+    std::vector<Argument> args;
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+        return jsonParse_Argument(arg);
+    });
 
-    static PrefixNotOp* jparse(boost::json::value v);
-};
+    return new ReturnAssignOfConsOp(j_sinfo(v), j_trgt(v), args, j_oftype(v));
+}
 
-class AllTrueOp : public InterpOp
+VarLifetimeStartOp* VarLifetimeStartOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const std::vector<Argument> args;
-    
-    AllTrueOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::AllTrueOp), trgt(trgt), args(args) {;}
-    virtual ~AllTrueOp() {;}
+    return new VarLifetimeStartOp(j_sinfo(v), jsonParse_Argument(jsonGet(v, "homelocation")), j_oftype(v), jsonGetAsString(v, "name"));
+}
 
-    static AllTrueOp* jparse(boost::json::value v);
-};
-
-class SomeTrueOp : public InterpOp
+VarLifetimeEndOp* VarLifetimeEndOp::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const std::vector<Argument> args;
-    
-    SomeTrueOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::SomeTrueOp), trgt(trgt), args(args) {;}
-    virtual ~SomeTrueOp() {;}
-
-    static SomeTrueOp* jparse(boost::json::value v);
-};
-
-class BinKeyEqFastOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument argl;
-    const Argument argr;
-    
-    BinKeyEqFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr) : InterpOp(sinfo, OpCodeTag::BinKeyEqFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr) {;}
-    virtual ~BinKeyEqFastOp() {;}
-
-    static BinKeyEqFastOp* jparse(boost::json::value v);
-};
-    
-class BinKeyEqStaticOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument argl;
-    const BSQType* argllayout;
-    const Argument argr;
-    const BSQType* argrlayout;
-    
-    BinKeyEqStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
-    virtual ~BinKeyEqStaticOp() {;}
-
-    static BinKeyEqStaticOp* jparse(boost::json::value v);
-};
-
-class BinKeyEqVirtualOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const Argument argl;
-    const BSQType* argllayout;
-    const Argument argr;
-    const BSQType* argrlayout;
-    
-    BinKeyEqVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
-    virtual ~BinKeyEqVirtualOp() {;}
-
-    static BinKeyEqVirtualOp* jparse(boost::json::value v);
-};
-
-
-class BinKeyLessFastOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument argl;
-    const Argument argr;
-    
-    BinKeyLessFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr) : InterpOp(sinfo, OpCodeTag::BinKeyLessFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr) {;}
-    virtual ~BinKeyLessFastOp() {;}
-
-    static BinKeyLessFastOp* jparse(boost::json::value v);
-};
-    
-class BinKeyLessStaticOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument argl;
-    const BSQType* argllayout;
-    const Argument argr;
-    const BSQType* argrlayout;
-    
-    BinKeyLessStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
-    virtual ~BinKeyLessStaticOp() {;}
-
-    static BinKeyLessStaticOp* jparse(boost::json::value v);
-};
-
-class BinKeyLessVirtualOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const Argument argl;
-    const BSQType* argltype;
-    const BSQType* argllayout;
-    const Argument argr;
-    const BSQType* argrtype;
-    const BSQType* argrlayout;
-    
-    BinKeyLessVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argltype, const BSQType* argllayout, Argument argr, const BSQType* argrtype, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), argl(argl), argltype(argltype), argllayout(argllayout), argr(argr), argrtype(argrtype), argrlayout(argrlayout) {;}
-    virtual ~BinKeyLessVirtualOp() {;}
-
-    static BinKeyLessVirtualOp* jparse(boost::json::value v);
-};
-
-class TypeIsNoneOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    const BSQType* arglayout;
-    const BSQStatementGuard sguard;
-    
-    TypeIsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
-    virtual ~TypeIsNoneOp() {;}
-
-    static TypeIsNoneOp* jparse(boost::json::value v);
-};
-
-class TypeIsSomeOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    const BSQType* arglayout;
-    const BSQStatementGuard sguard;
-    
-    TypeIsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
-    virtual ~TypeIsSomeOp() {;}
-
-    static TypeIsSomeOp* jparse(boost::json::value v);
-};
-
-class TypeTagIsOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument arg;
-    const BSQType* arglayout;
-    const BSQStatementGuard sguard;
-    
-    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagIsOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
-    virtual ~TypeTagIsOp() {;}
-
-    static TypeTagIsOp* jparse(boost::json::value v);
-};
-
-class TypeTagSubtypeOfOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQUnionType* oftype;
-    const Argument arg;
-    const BSQType* arglayout;
-    const BSQStatementGuard sguard;
-    
-    TypeTagSubtypeOfOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
-    virtual ~TypeTagSubtypeOfOp() {;}
-
-    static TypeTagSubtypeOfOp* jparse(boost::json::value v);
-};
-
-class JumpOp : public InterpOp
-{
-public:
-    const uint32_t offset;
-    const std::string label;
-    
-    JumpOp(SourceInfo sinfo, uint32_t offset, const std::string label) : InterpOp(sinfo, OpCodeTag::JumpOp), offset(offset), label(label) {;}
-    virtual ~JumpOp() {;}
-
-    static JumpOp* jparse(boost::json::value v);
-};
-
-class JumpCondOp : public InterpOp
-{
-public:
-    const Argument arg;
-    const uint32_t toffset;
-    const uint32_t foffset;
-    const std::string tlabel;
-    const std::string flabel;
-    
-    JumpCondOp(SourceInfo sinfo, Argument arg, uint32_t toffset, uint32_t foffset, const std::string tlabel, const std::string flabel) : InterpOp(sinfo, OpCodeTag::JumpCondOp), arg(arg), toffset(toffset), foffset(foffset), tlabel(tlabel), flabel(flabel) {;}
-    virtual ~JumpCondOp() {;}
-
-    static JumpCondOp* jparse(boost::json::value v);
-};
-
-class JumpNoneOp : public InterpOp
-{
-public:
-    const Argument arg;
-    const BSQType* arglayout;
-    const uint32_t noffset;
-    const uint32_t soffset;
-    const std::string nlabel;
-    const std::string slabel;
-    
-    JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQType* arglayout, uint32_t noffset, uint32_t soffset, const std::string nlabel, const std::string slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
-    virtual ~JumpNoneOp() {;}
-
-    static JumpNoneOp* jparse(boost::json::value v);
-};
-
-class RegisterAssignOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    const BSQType* oftype;
-    const BSQStatementGuard sguard;
-    
-    RegisterAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::RegisterAssignOp), trgt(trgt), arg(arg), oftype(oftype), sguard(sguard) {;}
-    virtual ~RegisterAssignOp() {;}
-
-    static RegisterAssignOp* jparse(boost::json::value v);
-};
-
-class ReturnAssignOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const Argument arg;
-    const BSQType* oftype;
-    
-    ReturnAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOp), trgt(trgt), arg(arg), oftype(oftype) {;}
-    virtual ~ReturnAssignOp() {;}
-
-    static ReturnAssignOp* jparse(boost::json::value v);
-};
-
-class ReturnAssignOfConsOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const std::vector<Argument> args;
-    const BSQType* oftype;
-    
-    ReturnAssignOfConsOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), trgt(trgt), args(args), oftype(oftype) {;}
-    virtual ~ReturnAssignOfConsOp() {;}
-
-    static ReturnAssignOfConsOp* jparse(boost::json::value v);
-};
-
-class VarLifetimeStartOp : public InterpOp
-{
-public:
-    const Argument homelocation;
-    const BSQType* oftype;
-    const std::string name;
-    
-    VarLifetimeStartOp(SourceInfo sinfo, Argument homelocation, const BSQType* oftype, const std::string name) : InterpOp(sinfo, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
-    virtual ~VarLifetimeStartOp() {;}
-
-    static VarLifetimeStartOp* jparse(boost::json::value v);
-};
-
-class VarLifetimeEndOp : public InterpOp
-{
-public:
-    const std::string name;
-    
-    VarLifetimeEndOp(SourceInfo sinfo, const std::string name) : InterpOp(sinfo, OpCodeTag::VarLifetimeEndOp), name(name) {;}
-    virtual ~VarLifetimeEndOp() {;}
-
-    static VarLifetimeEndOp* jparse(boost::json::value v);
-};
+    return new VarLifetimeEndOp(j_sinfo(v), jsonGetAsString(v, "name"));
+}
 
 template <OpCodeTag tag>
-class PrimitiveNegateOperatorOp : public InterpOp
+PrimitiveNegateOperatorOp<tag>* PrimitiveNegateOperatorOp<tag>::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument arg;
-    
-    PrimitiveNegateOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), arg(arg) {;}
-    virtual ~PrimitiveNegateOperatorOp() {;}
-
-    static PrimitiveNegateOperatorOp* jparse(boost::json::value v);
-};
+    return new PrimitiveNegateOperatorOp<tag>(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v));
+}
 
 template <OpCodeTag tag>
-class PrimitiveBinaryOperatorOp : public InterpOp
+PrimitiveBinaryOperatorOp<tag>* PrimitiveBinaryOperatorOp<tag>::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument larg;
-    const Argument rarg;
-    
-    PrimitiveBinaryOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
-    virtual ~PrimitiveBinaryOperatorOp() {;}
-
-    static PrimitiveBinaryOperatorOp* jparse(boost::json::value v);
-};
+    return new PrimitiveBinaryOperatorOp<tag>(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
+}
 
 template <OpCodeTag tag>
-class PrimitiveBinaryCompareOp : public InterpOp
+PrimitiveBinaryCompareOp<tag>* PrimitiveBinaryCompareOp<tag>::jparse(boost::json::value v)
 {
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const Argument larg;
-    const Argument rarg;
-    
-    PrimitiveBinaryCompareOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
-    virtual ~PrimitiveBinaryCompareOp() {;}
+    return new PrimitiveBinaryCompareOp<tag>(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
+}
 
-    static PrimitiveBinaryCompareOp* jparse(boost::json::value v);
+
+InterpOp* InterpOp::jparse(boost::json::value v)
+{
+    auto tag = jsonGetAsTag<OpCodeTag>(v, "tag");
+
+    switch(tag)
+    {
+    case OpCodeTag::DeadFlowOp:
+        return DeadFlowOp::jparse(v);
+    case OpCodeTag::AbortOp:
+        return AbortOp::jparse(v);
+    case OpCodeTag::AssertOp:
+        return AssertOp::jparse(v);
+    case OpCodeTag::DebugOp:
+        return DebugOp::jparse(v);
+    case OpCodeTag::LoadUnintVariableValueOp:
+        return LoadUnintVariableValueOp::jparse(v);
+    case OpCodeTag::NoneInitUnionOp:
+        return NoneInitUnionOp::jparse(v);
+    case OpCodeTag::StoreConstantMaskValueOp:
+        return StoreConstantMaskValueOp::jparse(v);
+    case OpCodeTag::DirectAssignOp:
+        return DirectAssignOp::jparse(v);
+    case OpCodeTag::BoxOp:
+        return BoxOp::jparse(v);
+    case OpCodeTag::ExtractOp:
+        return ExtractOp::jparse(v);
+    case OpCodeTag::LoadConstOp:
+        return LoadConstOp::jparse(v);
+    case OpCodeTag::TupleHasIndexOp:
+        return TupleHasIndexOp::jparse(v);
+    case OpCodeTag::RecordHasPropertyOp:
+        return RecordHasPropertyOp::jparse(v);
+    case OpCodeTag::LoadTupleIndexDirectOp:
+        return LoadTupleIndexDirectOp::jparse(v);
+    case OpCodeTag::LoadTupleIndexVirtualOp:
+        return LoadTupleIndexVirtualOp::jparse(v);
+    case OpCodeTag::LoadTupleIndexSetGuardDirectOp:
+        return LoadTupleIndexSetGuardDirectOp::jparse(v);
+    case OpCodeTag::LoadTupleIndexSetGuardVirtualOp:
+        return LoadTupleIndexSetGuardVirtualOp::jparse(v);
+    case OpCodeTag::LoadRecordPropertyDirectOp:
+        return LoadRecordPropertyDirectOp::jparse(v);
+    case OpCodeTag::LoadRecordPropertyVirtualOp:
+        return LoadRecordPropertyVirtualOp::jparse(v);
+    case OpCodeTag::LoadRecordPropertySetGuardDirectOp:
+        return LoadRecordPropertySetGuardDirectOp::jparse(v);
+    case OpCodeTag::LoadRecordPropertySetGuardVirtualOp:
+        return LoadRecordPropertySetGuardVirtualOp::jparse(v);
+    case OpCodeTag::LoadEntityFieldDirectOp:
+        return LoadEntityFieldDirectOp::jparse(v);
+    case OpCodeTag::LoadEntityFieldVirtualOp:
+        return LoadEntityFieldVirtualOp::jparse(v);
+    case OpCodeTag::ProjectTupleOp:
+        return ProjectTupleOp::jparse(v);
+    case OpCodeTag::ProjectRecordOp:
+        return ProjectRecordOp::jparse(v);
+    case OpCodeTag::ProjectEntityOp:
+        return ProjectEntityOp::jparse(v);
+    case OpCodeTag::UpdateTupleOp:
+        return UpdateTupleOp::jparse(v);
+    case OpCodeTag::UpdateRecordOp:
+        return UpdateRecordOp::jparse(v);
+    case OpCodeTag::UpdateEntityOp:
+        return UpdateEntityOp::jparse(v);
+    case OpCodeTag::LoadFromEpehmeralListOp:
+        return LoadFromEpehmeralListOp::jparse(v);
+    case OpCodeTag::MultiLoadFromEpehmeralListOp:
+        return MultiLoadFromEpehmeralListOp::jparse(v);
+    case OpCodeTag::SliceEphemeralListOp:
+        return SliceEphemeralListOp::jparse(v);
+    case OpCodeTag::InvokeFixedFunctionOp:
+        return InvokeFixedFunctionOp::jparse(v);
+    case OpCodeTag::InvokeVirtualFunctionOp:
+        return InvokeVirtualFunctionOp::jparse(v);
+    case OpCodeTag::InvokeVirtualOperatorOp:
+        return InvokeVirtualOperatorOp::jparse(v);
+    case OpCodeTag::ConstructorTupleOp:
+        return ConstructorTupleOp::jparse(v);
+    case OpCodeTag::ConstructorTupleFromEphemeralListOp:
+        return ConstructorTupleFromEphemeralListOp::jparse(v);
+    case OpCodeTag::ConstructorRecordOp:
+        return ConstructorRecordOp::jparse(v);
+    case OpCodeTag::ConstructorRecordFromEphemeralListOp:
+        return ConstructorTupleFromEphemeralListOp::jparse(v);
+    case OpCodeTag::EphemeralListExtendOp:
+        return EphemeralListExtendOp::jparse(v);
+    case OpCodeTag::ConstructorEphemeralListOp:
+        return ConstructorEphemeralListOp::jparse(v);
+    case OpCodeTag::ConstructorPrimaryCollectionEmptyOp:
+        return ConstructorPrimaryCollectionEmptyOp::jparse(v);
+    case OpCodeTag::ConstructorPrimaryCollectionSingletonsOp:
+        return ConstructorPrimaryCollectionSingletonsOp::jparse(v);
+    case OpCodeTag::ConstructorPrimaryCollectionCopiesOp:
+        return ConstructorPrimaryCollectionCopiesOp::jparse(v);
+    case OpCodeTag::ConstructorPrimaryCollectionMixedOp:
+        return ConstructorPrimaryCollectionMixedOp::jparse(v);
+    case OpCodeTag::PrefixNotOp:
+        return PrefixNotOp::jparse(v);
+    case OpCodeTag::AllTrueOp:
+        return AllTrueOp::jparse(v);
+    case OpCodeTag::SomeTrueOp:
+        return SomeTrueOp::jparse(v);
+    case OpCodeTag::BinKeyEqFastOp:
+        return BinKeyEqFastOp::jparse(v);
+    case OpCodeTag::BinKeyEqStaticOp:
+        return BinKeyEqStaticOp::jparse(v);
+    case OpCodeTag::BinKeyEqVirtualOp:
+        return BinKeyEqVirtualOp::jparse(v);
+    case OpCodeTag::BinKeyLessFastOp:
+        return BinKeyLessFastOp::jparse(v);
+    case OpCodeTag::BinKeyLessStaticOp:
+        return BinKeyLessStaticOp::jparse(v);
+    case OpCodeTag::BinKeyLessVirtualOp:
+        return BinKeyLessVirtualOp::jparse(v);
+    case OpCodeTag::TypeIsNoneOp:
+        return TypeIsNoneOp::jparse(v);
+    case OpCodeTag::TypeIsSomeOp:
+        return TypeIsSomeOp::jparse(v);
+    case OpCodeTag::TypeTagIsOp:
+        return TypeTagIsOp::jparse(v);
+    case OpCodeTag::TypeTagSubtypeOfOp:
+        return TypeTagSubtypeOfOp::jparse(v);
+    case OpCodeTag::JumpOp:
+        return JumpOp::jparse(v);
+    case OpCodeTag::JumpCondOp:
+        return JumpCondOp::jparse(v);
+    case OpCodeTag::JumpNoneOp:
+        return JumpNoneOp::jparse(v);
+    case OpCodeTag::RegisterAssignOp:
+        return RegisterAssignOp::jparse(v);
+    case OpCodeTag::ReturnAssignOp:
+        return ReturnAssignOp::jparse(v);
+    case OpCodeTag::ReturnAssignOfConsOp:
+        return ReturnAssignOfConsOp::jparse(v);
+    case OpCodeTag::VarLifetimeStartOp:
+        return VarLifetimeStartOp::jparse(v);
+    case OpCodeTag::VarLifetimeEndOp:
+        return VarLifetimeEndOp::jparse(v);
+    case OpCodeTag::NegateIntOp:
+        return PrimitiveNegateOperatorOp<OpCodeTag::NegateIntOp>::jparse(v);
+    case OpCodeTag::NegateBigIntOp:
+        return PrimitiveNegateOperatorOp<OpCodeTag::NegateBigIntOp>::jparse(v);
+    case OpCodeTag::NegateRationalOp:
+        return PrimitiveNegateOperatorOp<OpCodeTag::NegateRationalOp>::jparse(v);
+    case OpCodeTag::NegateFloatOp:
+        return PrimitiveNegateOperatorOp<OpCodeTag::NegateFloatOp>::jparse(v);
+    case OpCodeTag::NegateDecimalOp:
+        return PrimitiveNegateOperatorOp<OpCodeTag::NegateDecimalOp>::jparse(v);
+    case OpCodeTag::AddNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::AddNatOp>::jparse(v);
+    case OpCodeTag::AddIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::AddIntOp>::jparse(v);
+    case OpCodeTag::AddBigNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::AddBigNatOp>::jparse(v);
+    case OpCodeTag::AddBigIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::AddBigIntOp>::jparse(v);
+    case OpCodeTag::AddRationalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::AddRationalOp>::jparse(v);
+    case OpCodeTag::AddFloatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::AddFloatOp>::jparse(v);
+    case OpCodeTag::AddDecimalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::AddDecimalOp>::jparse(v);
+    case OpCodeTag::SubNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::SubNatOp>::jparse(v);
+    case OpCodeTag::SubIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::SubIntOp>::jparse(v);
+    case OpCodeTag::SubBigNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::SubBigNatOp>::jparse(v);
+    case OpCodeTag::SubBigIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::SubBigIntOp>::jparse(v);
+    case OpCodeTag::SubRationalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::SubRationalOp>::jparse(v);
+    case OpCodeTag::SubFloatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::SubFloatOp>::jparse(v);
+    case OpCodeTag::SubDecimalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::SubDecimalOp>::jparse(v);
+    case OpCodeTag::MultNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::MultNatOp>::jparse(v);
+    case OpCodeTag::MultIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::MultIntOp>::jparse(v);
+    case OpCodeTag::MultBigNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::MultBigNatOp>::jparse(v);
+    case OpCodeTag::MultBigIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::MultBigIntOp>::jparse(v);
+    case OpCodeTag::MultRationalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::MultRationalOp>::jparse(v);
+    case OpCodeTag::MultFloatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::MultFloatOp>::jparse(v);
+    case OpCodeTag::MultDecimalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::MultDecimalOp>::jparse(v);
+    case OpCodeTag::DivNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::DivNatOp>::jparse(v);
+    case OpCodeTag::DivIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::DivIntOp>::jparse(v);
+    case OpCodeTag::DivBigNatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::DivBigNatOp>::jparse(v);
+    case OpCodeTag::DivBigIntOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::DivBigIntOp>::jparse(v);
+    case OpCodeTag::DivRationalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::DivRationalOp>::jparse(v);
+    case OpCodeTag::DivFloatOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::DivFloatOp>::jparse(v);
+    case OpCodeTag::DivDecimalOp:
+        return PrimitiveBinaryOperatorOp<OpCodeTag::DivDecimalOp>::jparse(v);
+    case OpCodeTag::EqNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::EqNatOp>::jparse(v);
+    case OpCodeTag::EqIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::EqIntOp>::jparse(v);
+    case OpCodeTag::EqBigNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::EqBigNatOp>::jparse(v);
+    case OpCodeTag::EqBigIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::EqBigIntOp>::jparse(v);
+    case OpCodeTag::EqRationalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::EqRationalOp>::jparse(v);
+    case OpCodeTag::NeqNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqNatOp>::jparse(v);
+    case OpCodeTag::NeqIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqIntOp>::jparse(v);
+    case OpCodeTag::NeqBigNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqBigNatOp>::jparse(v);
+    case OpCodeTag::NeqBigIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqBigIntOp>::jparse(v);
+    case OpCodeTag::NeqRationalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqRationalOp>::jparse(v);
+    case OpCodeTag::LtNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtNatOp>::jparse(v);
+    case OpCodeTag::LtIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtIntOp>::jparse(v);
+    case OpCodeTag::LtBigNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtBigNatOp>::jparse(v);
+    case OpCodeTag::LtBigIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtBigIntOp>::jparse(v);
+    case OpCodeTag::LtRationalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtRationalOp>::jparse(v);
+    case OpCodeTag::LtFloatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtFloatOp>::jparse(v);
+    case OpCodeTag::LtDecimalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtDecimalOp>::jparse(v);
+    case OpCodeTag::GtNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtNatOp>::jparse(v);
+    case OpCodeTag::GtIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtIntOp>::jparse(v);
+    case OpCodeTag::GtBigNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtBigNatOp>::jparse(v);
+    case OpCodeTag::GtBigIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtBigIntOp>::jparse(v);
+    case OpCodeTag::GtRationalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtRationalOp>::jparse(v);
+    case OpCodeTag::GtFloatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtFloatOp>::jparse(v);
+    case OpCodeTag::GtDecimalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtDecimalOp>::jparse(v);
+    case OpCodeTag::LeNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeNatOp>::jparse(v);
+    case OpCodeTag::LeIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeIntOp>::jparse(v);
+    case OpCodeTag::LeBigNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeBigNatOp>::jparse(v);
+    case OpCodeTag::LeBigIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeBigIntOp>::jparse(v);
+    case OpCodeTag::LeRationalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeRationalOp>::jparse(v);
+    case OpCodeTag::LeFloatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeFloatOp>::jparse(v);
+    case OpCodeTag::LeDecimalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeDecimalOp>::jparse(v);
+    case OpCodeTag::GeNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeNatOp>::jparse(v);
+    case OpCodeTag::GeIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeIntOp>::jparse(v);
+    case OpCodeTag::GeBigNatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeBigNatOp>::jparse(v);
+    case OpCodeTag::GeBigIntOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeBigIntOp>::jparse(v);
+    case OpCodeTag::GeRationalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeRationalOp>::jparse(v);
+    case OpCodeTag::GeFloatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeFloatOp>::jparse(v);
+    case OpCodeTag::GeDecimalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeDecimalOp>::jparse(v);
+    case OpCodeTag::EqStrPosOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::EqStrPosOp>::jparse(v);
+    case OpCodeTag::NeqStrPosOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqStrPosOp>::jparse(v);
+    case OpCodeTag::LtStrPosOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LtStrPosOp>::jparse(v);
+    case OpCodeTag::GtStrPosOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GtStrPosOp>::jparse(v);
+    case OpCodeTag::LeStrPosOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::LeStrPosOp>::jparse(v);
+    case OpCodeTag::GeStrPosOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::GeStrPosOp>::jparse(v);
+    default: {
+        assert(false);
+        return nullptr;
+    }
+    }
+}

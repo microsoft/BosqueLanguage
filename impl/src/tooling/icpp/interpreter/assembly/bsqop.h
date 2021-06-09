@@ -225,6 +225,8 @@ public:
 
     InterpOp(SourceInfo sinfo, OpCodeTag tag) : tag(tag), sinfo(sinfo) {;}
     virtual ~InterpOp() {;}
+
+    static InterpOp* jparse(boost::json::value v);
 };
 
 class DeadFlowOp : public InterpOp
@@ -279,7 +281,7 @@ public:
     const TargetVar trgt;
     const BSQType* oftype;
 
-    LoadUnintVariableValueOp(SourceInfo sinfo, TargetVar trgt, BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
+    LoadUnintVariableValueOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
     virtual ~LoadUnintVariableValueOp() {;}
 
     static LoadUnintVariableValueOp* jparse(boost::json::value v);
@@ -291,7 +293,7 @@ public:
     const TargetVar trgt;
     const BSQUnionType* oftype;
 
-    NoneInitUnionOp(SourceInfo sinfo, TargetVar trgt, BSQUnionType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
+    NoneInitUnionOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
     virtual ~NoneInitUnionOp() {;}
 
     static NoneInitUnionOp* jparse(boost::json::value v);
@@ -318,7 +320,7 @@ public:
     const Argument arg;
     const BSQStatementGuard sguard;
 
-    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, uint32_t size, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
+    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, uint32_t size, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
     virtual ~DirectAssignOp() {;}
 
     static DirectAssignOp* jparse(boost::json::value v);
@@ -333,7 +335,7 @@ public:
     const BSQType* fromtype;
     const BSQStatementGuard sguard;
 
-    BoxOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    BoxOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~BoxOp() {;}
 
     static BoxOp* jparse(boost::json::value v);
@@ -348,7 +350,7 @@ public:
     const BSQType* fromtype;
     const BSQStatementGuard sguard;
 
-    ExtractOp(SourceInfo sinfo, TargetVar trgt, BSQType* intotype, Argument arg, BSQType* fromtype, const BSQStatementGuard& sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    ExtractOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~ExtractOp() {;}
 
     static ExtractOp* jparse(boost::json::value v);
@@ -361,7 +363,7 @@ public:
     const Argument arg;
     const BSQType* oftype;
 
-    LoadConstOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadConstOp), trgt(trgt), arg(arg), oftype(oftype) {;}
+    LoadConstOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadConstOp), trgt(trgt), arg(arg), oftype(oftype) {;}
     virtual ~LoadConstOp() {;}
 
     static LoadConstOp* jparse(boost::json::value v);
@@ -375,7 +377,7 @@ public:
     const BSQUnionType* layouttype;
     const BSQTupleIndex idx;
 
-    TupleHasIndexOp(SourceInfo sinfo, TargetVar trgt, Argument arg, BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
+    TupleHasIndexOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
     virtual ~TupleHasIndexOp() {;}
 
     static TupleHasIndexOp* jparse(boost::json::value v);
@@ -548,7 +550,7 @@ public:
     const BSQUnionType* layouttype;
     const BSQFieldID fieldId;
 
-    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQUnionType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
+    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldVirtualOp() {;}
 
     static LoadEntityFieldVirtualOp* jparse(boost::json::value v);
@@ -660,7 +662,7 @@ public:
     const uint32_t slotoffset;
     const uint32_t index;
 
-    LoadFromEpehmeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, BSQEphemeralListType* argtype, uint32_t slotoffset, uint32_t index) : InterpOp(sinfo, OpCodeTag::LoadFromEpehmeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), index(index) {;}
+    LoadFromEpehmeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQEphemeralListType* argtype, uint32_t slotoffset, uint32_t index) : InterpOp(sinfo, OpCodeTag::LoadFromEpehmeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), index(index) {;}
     virtual ~LoadFromEpehmeralListOp() {;}
 
     static LoadFromEpehmeralListOp* jparse(boost::json::value v);
@@ -676,7 +678,7 @@ public:
     const std::vector<uint32_t> slotoffsets;
     const std::vector<uint32_t> indexs;
 
-    MultiLoadFromEpehmeralListOp(SourceInfo sinfo, std::vector<TargetVar> trgts, std::vector<const BSQType*> trgttypes, Argument arg, BSQEphemeralListType* argtype, std::vector<uint32_t> slotoffsets, std::vector<uint32_t> indexs) : InterpOp(sinfo, OpCodeTag::MultiLoadFromEpehmeralListOp), trgts(trgts), trgttypes(trgttypes), arg(arg), argtype(argtype), slotoffsets(slotoffsets), indexs(indexs) {;}
+    MultiLoadFromEpehmeralListOp(SourceInfo sinfo, std::vector<TargetVar> trgts, std::vector<const BSQType*> trgttypes, Argument arg, const BSQEphemeralListType* argtype, std::vector<uint32_t> slotoffsets, std::vector<uint32_t> indexs) : InterpOp(sinfo, OpCodeTag::MultiLoadFromEpehmeralListOp), trgts(trgts), trgttypes(trgttypes), arg(arg), argtype(argtype), slotoffsets(slotoffsets), indexs(indexs) {;}
     virtual ~MultiLoadFromEpehmeralListOp() {;}
 
     static MultiLoadFromEpehmeralListOp* jparse(boost::json::value v);
@@ -692,7 +694,7 @@ public:
     const uint32_t slotoffsetend;
     const uint32_t indexend;
 
-    SliceEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, BSQEphemeralListType* argtype, uint32_t slotoffsetend, uint32_t indexend) : InterpOp(sinfo, OpCodeTag::SliceEphemeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffsetend(slotoffsetend), indexend(indexend) {;}
+    SliceEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQEphemeralListType* argtype, uint32_t slotoffsetend, uint32_t indexend) : InterpOp(sinfo, OpCodeTag::SliceEphemeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffsetend(slotoffsetend), indexend(indexend) {;}
     virtual ~SliceEphemeralListOp() {;}
 
     static SliceEphemeralListOp* jparse(boost::json::value v);
@@ -738,6 +740,10 @@ public:
     const BSQVirtualInvokeID invokeId;
     const std::vector<Argument> args;
     
+    //
+    //TODO: we probably need to know about the layout and flow type of each arg too
+    //
+
     InvokeVirtualOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::InvokeVirtualOperatorOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args) {;}
     virtual ~InvokeVirtualOperatorOp() {;}
 
@@ -849,7 +855,7 @@ public:
     ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
 
-    static ConstructorPrimaryCollectionEmptyOp* jparse(boost::json::value v);
+    static ConstructorPrimaryCollectionSingletonsOp* jparse(boost::json::value v);
 };
 
 class ConstructorPrimaryCollectionCopiesOp : public InterpOp
@@ -995,13 +1001,11 @@ class BinKeyLessVirtualOp : public InterpOp
 public:
     const TargetVar trgt;
     const Argument argl;
-    const BSQType* argltype;
     const BSQType* argllayout;
     const Argument argr;
-    const BSQType* argrtype;
     const BSQType* argrlayout;
     
-    BinKeyLessVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argltype, const BSQType* argllayout, Argument argr, const BSQType* argrtype, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), argl(argl), argltype(argltype), argllayout(argllayout), argr(argr), argrtype(argrtype), argrlayout(argrlayout) {;}
+    BinKeyLessVirtualOp(SourceInfo sinfo, TargetVar trgt, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
     virtual ~BinKeyLessVirtualOp() {;}
 
     static BinKeyLessVirtualOp* jparse(boost::json::value v);

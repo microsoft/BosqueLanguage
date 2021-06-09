@@ -1276,11 +1276,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::BinKeyLessFastOp:
     {
-        this->evalBinKeyLessVirtualOp(static_cast<const BinKeyLessVirtualOp*>(op));
+        this->evalBinKeyLessFastOp(static_cast<const BinKeyLessFastOp*>(op));
     }
     case OpCodeTag::BinKeyLessStaticOp:
     {
-        this->evalBinKeyLessVirtualOp(static_cast<const BinKeyLessVirtualOp*>(op));
+        this->evalBinKeyLessStaticOp(static_cast<const BinKeyLessStaticOp*>(op));
     }
     case OpCodeTag::BinKeyLessVirtualOp:
     {
