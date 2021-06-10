@@ -120,6 +120,42 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     return res;
 }
 
+bool tupleStructEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    const BSQTupleInfo* ttype1 = dynamic_cast<const BSQTupleInfo*>(data1);
+    bool isstruct = btype->tkind == BSQTypeKind::Struct;
+    std::string res = isstruct ? "#[" : "@[";
+    for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
+    {
+        if(i != 0)
+        {
+            res += ", ";
+        }
+
+        auto itype = BSQType::g_typetable[ttype->ttypes[i]];
+        auto idata = btype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
+        res += itype->fpDisplay(itype, idata);
+    }
+    res += "]";
+
+    return res;
+}
+
+bool tupleStructLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+bool tupleRefEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
+bool tupleRefLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
+}
+
 bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
     auto tupinfo = dynamic_cast<const BSQTupleInfo*>(btype);

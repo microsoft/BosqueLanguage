@@ -9,7 +9,13 @@
 #include "bsqtype.h"
 #include "bsqop.h"
 
-class MIRConstantDecl 
+class BSQTypeDecl
+{
+public:
+    static void jsonLoad(boost::json::value v);
+};
+
+class BSQConstantDecl 
 {
 public: 
     const BSQConstantID gkey;
@@ -17,8 +23,8 @@ public:
     const BSQInvokeID valueInvoke;
     const BSQType* ctype;
 
-    MIRConstantDecl(BSQConstantID gkey, uint64_t storageOffset, BSQInvokeID valueInvoke, BSQType* ctype): gkey(gkey), storageOffset(storageOffset), valueInvoke(valueInvoke), ctype(ctype) {;}
-    ~MIRConstantDecl() {;}
+    BSQConstantDecl(BSQConstantID gkey, uint64_t storageOffset, BSQInvokeID valueInvoke, BSQType* ctype): gkey(gkey), storageOffset(storageOffset), valueInvoke(valueInvoke), ctype(ctype) {;}
+    ~BSQConstantDecl() {;}
 };
 
 class BSQFunctionParameter 

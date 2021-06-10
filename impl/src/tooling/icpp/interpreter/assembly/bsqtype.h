@@ -364,6 +364,11 @@ inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
 //Concrete types
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool tupleStructEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool tupleStructLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool tupleRefEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+bool tupleRefLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2);
+
 bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
 void tupleGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
 

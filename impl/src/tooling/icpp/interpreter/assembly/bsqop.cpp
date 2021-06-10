@@ -384,7 +384,7 @@ InvokeVirtualFunctionOp* InvokeVirtualFunctionOp::jparse(boost::json::value v)
         return jsonParse_Argument(arg);
     });
 
-    return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), jsonGetAsUInt<BSQVirtualInvokeID>(v, "invokeId"), jsonParse_BSQType(jsonGet(v, "rcvrlayouttype")), args, jsonGetAsInt<int32_t>(v, "optmaskoffset"));
+    return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_invokenameToIDMap[jsonGetAsString(v, "invokeId")], jsonParse_BSQType(jsonGet(v, "rcvrlayouttype")), args, jsonGetAsInt<int32_t>(v, "optmaskoffset"));
 }
 
 InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(boost::json::value v)
@@ -394,7 +394,7 @@ InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(boost::json::value v)
         return jsonParse_Argument(arg);
     });
 
-    return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), jsonGetAsUInt<BSQVirtualInvokeID>(v, "invokeId"), args);
+    return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[jsonGetAsString(v, "invokeId")], args);
 }
 
 ConstructorTupleOp* ConstructorTupleOp::jparse(boost::json::value v)

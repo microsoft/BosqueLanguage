@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { Argument, ICPPOp } from "./icpp_exp";
 
 import * as assert from "assert";
@@ -21,14 +21,14 @@ const UNIVERSAL_SIZE = 40;
 
 enum ICPPTypeKind
 {
-    Invalid = "BSQTypeKind::Invalid",
-    Register = "BSQTypeKind::Register",
-    Struct = "BSQTypeKind::Struct",
-    String = "BSQTypeKind::String",
-    BigNum = "BSQTypeKind::BigNum",
-    Ref = "BSQTypeKind::Ref",
-    UnionInline = "BSQTypeKind::UnionInline",
-    UnionRef = "BSQTypeKind::UnionRef"
+    Invalid = 0x0,
+    Register,
+    Struct,
+    String,
+    BigNum,
+    Ref,
+    UnionInline,
+    UnionRef
 }
 
 type RefMask = string;
@@ -64,6 +64,10 @@ class ICPPTypeSizeInfo {
     static createByRefTypeInfo(heapsize: number, heapmask: RefMask | undefined): ICPPTypeSizeInfo {
         return new ICPPTypeSizeInfo(heapsize, ICPP_WORD_SIZE, ICPP_WORD_SIZE, heapmask, "2");
     }
+
+    jemit(): any {
+        return {heapsize: this.heapsize, inlinedatasize: this.inlinedatasize, assigndatasize: this.assigndatasize, heapmask: this.heapmask, inlinedmask: this.inlinedmask};
+    }
 }
 
 class ICPPType {
@@ -78,6 +82,12 @@ class ICPPType {
         this.tkind = tkind;
         this.allocinfo = allocinfo;
         this.isbuiltin = isbuiltin;
+    }
+
+    jemitType(): object {
+        assert(!this.isbuiltin); //shouldn't be emitting these since they are "well known"
+
+        return {tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo};
     }
 }
 
@@ -109,6 +119,10 @@ class ICPPTypeTuple extends ICPPType {
     static createByRefTuple(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTypeTuple {
         return new ICPPTypeTuple(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), idxtypes, idxoffsets);
     }
+
+    jemitTupleType(iskey: boolean, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
+        return {...this.jemitType(), iskey: iskey, vtable: vtable, maxIndex: this.maxIndex, ttypes: this.ttypes, idxoffsets: this.idxoffsets};
+    }
 }
 
 class ICPPTypeRecord extends ICPPType {
@@ -132,6 +146,10 @@ class ICPPTypeRecord extends ICPPType {
     static createByRefRecord(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPTypeRecord {
         return new ICPPTypeRecord(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets);
     }
+
+    jemit(): object {
+        return {...super.jemit(), propertynames: this.propertynames, propertytypes: this.propertytypes, propertyoffsets: this.propertyoffsets};
+    }
 }
 
 class ICPPTypeEntity extends ICPPType {
@@ -154,6 +172,10 @@ class ICPPTypeEntity extends ICPPType {
 
     static createByRefEntity(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPTypeEntity {
         return new ICPPTypeEntity(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets);
+    }
+
+    jemit(): object {
+        return {...super.jemit(), fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
     }
 }
 
