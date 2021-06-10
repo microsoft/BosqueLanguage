@@ -4188,14 +4188,8 @@ class Parser {
                 else if(ename === "Set") {
                     specialinfo.push(SpecialTypeCategory.SetTypeDecl);
                 }
-                else if(ename === "DynamicSet") {
-                    specialinfo.push(SpecialTypeCategory.DynamicSetTypeDecl);
-                }
                 else if(ename === "Map") {
                     specialinfo.push(SpecialTypeCategory.MapTypeDecl);
-                }
-                else if(ename === "DynamicMap") {
-                    specialinfo.push(SpecialTypeCategory.DynamicMapTypeDecl);
                 }
                 else {
                     //not special

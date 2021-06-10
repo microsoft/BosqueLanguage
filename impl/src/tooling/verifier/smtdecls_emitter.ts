@@ -370,17 +370,7 @@ class SMTEmitter {
         assert(false);
     }
         
-    private processDynamicSetTypeDecl(sdecl: MIREntityTypeDecl) {
-        //NOT IMPLEMENTED YET
-        assert(false);
-    }
-        
     private processMapTypeDecl(mdecl: MIREntityTypeDecl) {
-        //NOT IMPLEMENTED YET
-        assert(false);
-    }
-    
-    private processDynamicMapTypeDecl(mdecl: MIREntityTypeDecl) {
         //NOT IMPLEMENTED YET
         assert(false);
     }
@@ -575,14 +565,8 @@ class SMTEmitter {
             else if (edcl.specialDecls.has(MIRSpecialTypeCategory.SetTypeDecl)) {
                 this.processSetTypeDecl(edcl);
             }
-            else if (edcl.specialDecls.has(MIRSpecialTypeCategory.DynamicSetTypeDecl)) {
-                this.processDynamicSetTypeDecl(edcl);
-            }
             else if (edcl.specialDecls.has(MIRSpecialTypeCategory.MapTypeDecl)) {
                 this.processMapTypeDecl(edcl);
-            }
-            else if (edcl.specialDecls.has(MIRSpecialTypeCategory.DynamicMapTypeDecl)) {
-                this.processDynamicMapTypeDecl(edcl);
             }
             else {
                 if (edcl.ns !== "NSCore" || BuiltinEntityDeclNames.find((be) => be === edcl.name) === undefined) {

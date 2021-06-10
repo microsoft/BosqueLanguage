@@ -316,8 +316,8 @@ class BSQRegex {
 }
 
 enum SpecialCharKind {
-    Wildcard = "Wildcard",
-    WhiteSpace = "WhiteSpace"
+    Wildcard = 0x0,
+    WhiteSpace
 }
 
 abstract class RegexComponent {
@@ -351,7 +351,7 @@ abstract class RegexComponent {
                 case "Optional":
                     return Optional.jparse(obj);
                 case "Alternation":
-                    return Optional.jparse(obj);
+                    return Alternation.jparse(obj);
                 default:
                     return Sequence.jparse(obj);
             }

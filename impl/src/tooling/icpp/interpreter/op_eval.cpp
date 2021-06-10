@@ -782,7 +782,7 @@ void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)
 
 void Evaluator::evalBinKeyEqFastOp(const BinKeyEqFastOp* op)
 {
-    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyEqual(this->evalArgument(op->argl), this->evalArgument(op->argr)));
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, this->evalArgument(op->argl), this->evalArgument(op->argr)) == 0);
 }
 
 void Evaluator::evalBinKeyEqStaticOp(const BinKeyEqStaticOp* op)
@@ -790,7 +790,7 @@ void Evaluator::evalBinKeyEqStaticOp(const BinKeyEqStaticOp* op)
     auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
     auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
     
-    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyEqual(lldata, rrdata));
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) == 0);
 }
 
 void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
@@ -807,13 +807,13 @@ void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
         auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
         auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
     
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->keyops.fpKeyEqual(lldata, rrdata));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->fpkeycmp(lltype, lldata, rrdata) == 0);
     }
 }
 
 void Evaluator::evalBinKeyLessFastOp(const BinKeyLessFastOp* op)
 {
-    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyLess(this->evalArgument(op->argl), this->evalArgument(op->argr)));
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, this->evalArgument(op->argl), this->evalArgument(op->argr)) < 0);
 }
 
 void Evaluator::evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op)
@@ -821,7 +821,7 @@ void Evaluator::evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op)
     auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
     auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
     
-    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->keyops.fpKeyLess(lldata, rrdata));
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) < 0);
 }
 
 void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
@@ -838,7 +838,7 @@ void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
         auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
         auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
     
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->keyops.fpKeyLess(lldata, rrdata));
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->fpkeycmp(lltype, lldata, rrdata) < 0);
     }
 }
 

@@ -84,10 +84,10 @@ class ICPPType {
         this.isbuiltin = isbuiltin;
     }
 
-    jemitType(): object {
+    jemitType(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
         assert(!this.isbuiltin); //shouldn't be emitting these since they are "well known"
 
-        return {tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo};
+        return {tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo, vtable: vtable};
     }
 }
 
@@ -95,6 +95,10 @@ class ICPPTypeRegister extends ICPPType {
     constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask) {
         super(tkey, ICPPTypeKind.Register, ICPPTypeSizeInfo.createByRegisterTypeInfo(inlinedatasize, assigndatasize, inlinedmask), true);
         assert(inlinedatasize <= UNIVERSAL_SIZE);
+    }
+
+    jemitRegister(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
+        return this.jemitType(vtable);
     }
 }
 
@@ -121,7 +125,7 @@ class ICPPTypeTuple extends ICPPType {
     }
 
     jemitTupleType(iskey: boolean, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
-        return {...this.jemitType(), iskey: iskey, vtable: vtable, maxIndex: this.maxIndex, ttypes: this.ttypes, idxoffsets: this.idxoffsets};
+        return {...this.jemitType(vtable), iskey: iskey, maxIndex: this.maxIndex, ttypes: this.ttypes, idxoffsets: this.idxoffsets};
     }
 }
 
@@ -147,8 +151,8 @@ class ICPPTypeRecord extends ICPPType {
         return new ICPPTypeRecord(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets);
     }
 
-    jemit(): object {
-        return {...super.jemit(), propertynames: this.propertynames, propertytypes: this.propertytypes, propertyoffsets: this.propertyoffsets};
+    jemitRecord(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
+        return {...this.jemitType(vtable), propertynames: this.propertynames, propertytypes: this.propertytypes, propertyoffsets: this.propertyoffsets};
     }
 }
 
@@ -174,8 +178,53 @@ class ICPPTypeEntity extends ICPPType {
         return new ICPPTypeEntity(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets);
     }
 
-    jemit(): object {
-        return {...super.jemit(), fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    jemitValidator(re: object): object {
+        return {...this.jemitType([]), specialdecl: "validator", regex: re, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    }
+
+    jemitStringOf(validator: MIRResolvedTypeKey): object {
+        return {...this.jemitType([]), specialdecl: "stringof", validator: validator, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    }
+
+    jemitDataString(chkinv: MIRInvokeKey): object {
+        return {...this.jemitType([]), specialdecl: "datastring", chkinv: chkinv, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    }
+
+    jemitTypedNumber(underlying: MIRResolvedTypeKey, primitive: MIRResolvedTypeKey): object {
+        return {...this.jemitType([]), specialdecl: "typednumber", underlying: underlying, primitive: primitive, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    }
+
+    jemitVector(t: MIRResolvedTypeKey, size: number): object {
+        assert(false);
+        return (undefined as any) as object;
+    }
+
+    jemitList(t: MIRResolvedTypeKey): object {
+        return {...this.jemitType([]), specialdecl: "list", t: t, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    }
+
+    jemitStack(t: MIRResolvedTypeKey): object {
+        assert(false);
+        return (undefined as any) as object;
+    }
+
+    jemitQueue(t: MIRResolvedTypeKey): object {
+        assert(false);
+        return (undefined as any) as object;
+    }
+
+    jemitSet(t: MIRResolvedTypeKey): object {
+        assert(false);
+        return (undefined as any) as object;
+    }
+
+    jemitMap(k: MIRResolvedTypeKey, v: MIRResolvedTypeKey): object {
+        assert(false);
+        return (undefined as any) as object;
+    }
+
+    jemitEntity(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
+        return {...this.jemitType(vtable), fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
     }
 }
 
@@ -189,17 +238,29 @@ class ICPPTypeEphemeralList extends ICPPType {
         this.etypes = etypes;
         this.eoffsets = eoffsets;
     }
+
+    jemitEphemeralList(): object {
+        return {...this.jemitType([]), etypes: this.etypes, eoffsets: this.eoffsets};
+    }
 }
 
 class ICPPTypeInlineUnion extends ICPPType {
     constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask) {
         super(tkey, ICPPTypeKind.UnionInline, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), false);
     }
+
+    jemitInlineUnion(subtypes: MIRResolvedTypeKey[]): object {
+        return {...this.jemitType([]), subtypes: subtypes};
+    }
 }
 
 class ICPPTypeRefUnion extends ICPPType {
     constructor(tkey: MIRResolvedTypeKey) {
         super( tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"), false);
+    }
+
+    jemitRefUnion(subtypes: MIRResolvedTypeKey[]): object {
+        return {...this.jemitType([]), subtypes: subtypes};
     }
 }
 

@@ -278,9 +278,7 @@ enum MIRSpecialTypeCategory {
     StackTypeDecl = "StackTypeDecl",
     QueueTypeDecl = "QueueTypeDecl",
     SetTypeDecl = "SetTypeDecl",
-    DynamicSetTypeDecl = "DynamicSetTypeDecl",
-    MapTypeDecl = "MapTypeDecl",
-    DynamicMapTypeDecl = "DynamicMapTypeDecl"
+    MapTypeDecl = "MapTypeDecl"
 }
 
 class MIREntityTypeDecl extends MIROOTypeDecl {
@@ -323,11 +321,11 @@ class MIREntityTypeDecl extends MIROOTypeDecl {
     }
 
     isTypeASetEntity(): boolean {
-        return this.specialDecls.has(MIRSpecialTypeCategory.SetTypeDecl) || this.specialDecls.has(MIRSpecialTypeCategory.DynamicSetTypeDecl);
+        return this.specialDecls.has(MIRSpecialTypeCategory.SetTypeDecl);
     }
 
     isTypeAMapEntity(): boolean {
-        return this.specialDecls.has(MIRSpecialTypeCategory.MapTypeDecl) || this.specialDecls.has(MIRSpecialTypeCategory.DynamicMapTypeDecl);
+        return this.specialDecls.has(MIRSpecialTypeCategory.MapTypeDecl);
     }
 
     isTypeGrounded(): boolean {

@@ -166,9 +166,6 @@ typedef uint64_t GC_META_DATA_WORD;
 //Generic pointer to a storage location that holds a value
 typedef void* StorageLocationPtr;
 
-typedef bool (*KeyEqualFP)(StorageLocationPtr, StorageLocationPtr);
-typedef bool (*KeyLessFP)(StorageLocationPtr, StorageLocationPtr);
-
 #define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
 #define IS_INLINE_BIGNUM(N) false
 

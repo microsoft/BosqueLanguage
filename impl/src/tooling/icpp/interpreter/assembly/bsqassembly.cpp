@@ -98,12 +98,79 @@ void j_vtable(std::map<BSQVirtualInvokeID, BSQInvokeID>& vtable, boost::json::va
     }
 }
 
-BSQType* jsonLoadTupleType(boost::json::value v)
+const BSQType* jsonLoadValidatorType(boost::json::value v)
+{
+    auto re = bsqRegexJSONParse_impl(v.as_object().at("regex"));
+    return new BSQValidatorType(j_tkey(v), j_name(v), re);
+}
+
+const BSQType* jsonLoadStringOfType(boost::json::value v)
+{
+    auto vname = std::string(v.as_object().at("validator").as_string().cbegin(), v.as_object().at("validator").as_string().cend());
+    auto vtid = Environment::g_typenameToIDMap[vname];
+
+    return new BSQStringOfType(j_tkey(v), j_name(v), vtid);
+}
+
+const BSQType* jsonLoadDataStringType(boost::json::value v)
+{
+    auto iname = std::string(v.as_object().at("chkinv").as_string().cbegin(), v.as_object().at("chkinv").as_string().cend());
+    auto inv = Environment::g_invokenameToIDMap[iname];
+
+    return new BSQDataStringType(j_tkey(v), j_name(v), inv);
+}
+
+const BSQType* jsonLoadTypedNumberType(boost::json::value v)
+{
+    auto primitivename = std::string(v.as_object().at("primitive").as_string().cbegin(), v.as_object().at("primitive").as_string().cend());
+    auto primitive = Environment::g_typenameToIDMap[primitivename];
+
+    auto underlyingname = std::string(v.as_object().at("underlying").as_string().cbegin(), v.as_object().at("underlying").as_string().cend());
+    auto underlying = Environment::g_typenameToIDMap[underlyingname];
+
+    switch(primitive)
+    {
+    case BSQ_TYPE_ID_BOOL:
+        return new BSQTypedNumberType<BSQBool>(j_tkey(v), j_name(v), underlying); 
+    case BSQ_TYPE_ID_NAT:
+        return new BSQTypedNumberType<BSQNat>(j_tkey(v), j_name(v), underlying); 
+    case BSQ_TYPE_ID_INT:
+        return new BSQTypedNumberType<BSQInt>(j_tkey(v), j_name(v), underlying);
+    case BSQ_TYPE_ID_BIGNAT:
+        return new BSQTypedBigNumberType<BSQBigNat>(j_tkey(v), j_name(v), underlying);
+    case BSQ_TYPE_ID_BIGINT:
+        return new BSQTypedBigNumberType<BSQBigInt>(j_tkey(v), j_name(v), underlying);
+    case BSQ_TYPE_ID_FLOAT:
+        return new BSQTypedNumberType<BSQFloat>(j_tkey(v), j_name(v), underlying); 
+    case BSQ_TYPE_ID_DECIMAL:
+        return new BSQTypedNumberType<BSQDecimal>(j_tkey(v), j_name(v), underlying); 
+    case BSQ_TYPE_ID_RATIONAL:
+        return new BSQTypedNumberType<BSQRational>(j_tkey(v), j_name(v), underlying);
+    case BSQ_TYPE_ID_ISOTIME:
+        return new BSQTypedNumberType<BSQISOTime>(j_tkey(v), j_name(v), underlying); 
+    case BSQ_TYPE_ID_LOGICALTIME:
+        return new BSQTypedNumberType<BSQLogicalTime>(j_tkey(v), j_name(v), underlying); 
+    case BSQ_TYPE_ID_UUID:
+        return new BSQTypedUUIDNumberType(j_tkey(v), j_name(v)); 
+    case BSQ_TYPE_ID_CONTENTHASH:
+        return new BSQTypedContentHashType(j_tkey(v), j_name(v));
+    default: {
+        assert(false);
+        return nullptr;
+    }
+    }
+}
+
+const BSQType* jsonLoadListType(boost::json::value v)
+{
+    xxxx;
+}
+
+const BSQType* jsonLoadTupleType(boost::json::value v)
 {
     auto tid = j_tkey(v);
     auto tkind = j_tkind(v);
     auto allocinfo = j_allocinfo(v);
-    KeyFunctorSet keyops = j_iskey(v) ? KeyFunctorSet{tupleEqual_impl, tupleLessThan_impl} : EMPTY_KEY_FUNCTOR_SET;
 
     std::map<BSQVirtualInvokeID, BSQInvokeID> vtable;
     j_vtable(vtable, v);
@@ -123,35 +190,66 @@ BSQType* jsonLoadTupleType(boost::json::value v)
 
     if(tkind == BSQTypeKind::Ref) 
     {
-        return new BSQTupleRefType(tid, allocinfo.heapsize, allocinfo.heapmask, vtable, keyops, j_name(v), maxIndex, ttypes, idxoffsets);
+        return new BSQTupleRefType(tid, allocinfo.heapsize, allocinfo.heapmask, vtable, j_name(v), maxIndex, ttypes, idxoffsets);
     }
     else 
     {
-        return new BSQTupleStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, vtable, keyops, j_name(v), maxIndex, ttypes, idxoffsets);
+        return new BSQTupleStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, vtable, j_name(v), maxIndex, ttypes, idxoffsets);
     }
 }
 
-BSQType* jsonLoadRecordType(boost::json::value v)
+const BSQType* jsonLoadRecordType(boost::json::value v)
+{
+    auto tid = j_tkey(v);
+    auto tkind = j_tkind(v);
+    auto allocinfo = j_allocinfo(v);
+
+    std::map<BSQVirtualInvokeID, BSQInvokeID> vtable;
+    j_vtable(vtable, v);
+
+    std::vector<BSQRecordPropertyID> propertynames;
+    std::transform(v.as_object().at("propertynames").as_array().cbegin(), v.as_object().at("propertynames").as_array().cend(), std::back_inserter(propertynames), [](boost::json::value prop) {
+        auto pstr = std::string(prop.as_string().cbegin(), prop.as_string().cend());
+        return Environment::g_propertynameToIDMap[pstr];
+    });
+
+    std::vector<BSQTypeID> propertytypes;
+    std::transform(v.as_object().at("propertytypes").as_array().cbegin(), v.as_object().at("propertytypes").as_array().cend(), std::back_inserter(propertytypes), [](boost::json::value rtype) {
+        auto tstr = std::string(rtype.as_string().cbegin(), rtype.as_string().cend());
+        return Environment::g_typenameToIDMap[tstr];
+    });
+
+    std::vector<size_t> propertyoffsets;
+    std::transform(v.as_object().at("propertyoffsets").as_array().cbegin(), v.as_object().at("propertyoffsets").as_array().cend(), std::back_inserter(propertyoffsets), [](boost::json::value offset) {
+        return (size_t)offset.as_uint64();
+    });
+
+    if(tkind == BSQTypeKind::Ref) 
+    {
+        return new BSQRecordRefType(tid, allocinfo.heapsize, allocinfo.heapmask, vtable, j_name(v), propertynames, propertytypes, propertyoffsets);
+    }
+    else 
+    {
+        return new BSQRecordStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, vtable, j_name(v), propertynames, propertytypes, propertyoffsets);
+    }
+}
+
+const BSQType* jsonLoadEntityType(boost::json::value v)
 {
     xxxx;
 }
 
-BSQType* jsonLoadEntityType(boost::json::value v)
+const BSQType* jsonLoadEphemeralListType(boost::json::value v)
 {
     xxxx;
 }
 
-BSQType* jsonLoadEphemeralListType(boost::json::value v)
+const BSQType* jsonLoadInlineUnionType(boost::json::value v)
 {
     xxxx;
 }
 
-BSQType* jsonLoadInlineUnionType(boost::json::value v)
-{
-    xxxx;
-}
-
-BSQType* jsonLoadRefUnionType(boost::json::value v)
+const BSQType* jsonLoadRefUnionType(boost::json::value v)
 {
     xxxx;
 }

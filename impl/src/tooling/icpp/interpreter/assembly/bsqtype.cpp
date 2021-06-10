@@ -120,40 +120,44 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     return res;
 }
 
-bool tupleStructEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+int tupleStructKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    const BSQTupleInfo* ttype1 = dynamic_cast<const BSQTupleInfo*>(data1);
-    bool isstruct = btype->tkind == BSQTypeKind::Struct;
-    std::string res = isstruct ? "#[" : "@[";
+    const BSQTupleInfo* ttype = dynamic_cast<const BSQTupleInfo*>(btype);
+    const BSQStructType* tsi = dynamic_cast<const BSQStructType*>(btype);
+
     for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
     {
-        if(i != 0)
-        {
-            res += ", ";
-        }
-
         auto itype = BSQType::g_typetable[ttype->ttypes[i]];
-        auto idata = btype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
-        res += itype->fpDisplay(itype, idata);
+        auto offset = ttype->idxoffsets[i];
+
+        auto cvr = itype->fpkeycmp(itype, tsi->indexStorageLocationOffset(data1, offset), tsi->indexStorageLocationOffset(data2, offset));
+        if(cvr != 0)
+        {
+            return cvr;
+        }
     }
-    res += "]";
-
-    return res;
+    
+    return 0;
 }
 
-bool tupleStructLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
+int tupleRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    xxxx;
-}
+    const BSQTupleInfo* ttype = dynamic_cast<const BSQTupleInfo*>(btype);
+    const BSQRefType* tsi = dynamic_cast<const BSQRefType*>(btype);
 
-bool tupleRefEqual_impl(StorageLocationPtr data1, StorageLocationPtr data2)
-{
-    xxxx;
-}
+    for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
+    {
+        auto itype = BSQType::g_typetable[ttype->ttypes[i]];
+        auto offset = ttype->idxoffsets[i];
 
-bool tupleRefLessThan_impl(StorageLocationPtr data1, StorageLocationPtr data2)
-{
-    xxxx;
+        auto cvr = itype->fpkeycmp(itype, tsi->indexStorageLocationOffset(data1, offset), tsi->indexStorageLocationOffset(data2, offset));
+        if(cvr != 0)
+        {
+            return cvr;
+        }
+    }
+    
+    return 0;
 }
 
 bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
@@ -251,6 +255,46 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     res += "}";
 
     return res;
+}
+
+int recordStructKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    const BSQRecordInfo* ttype = dynamic_cast<const BSQRecordInfo*>(btype);
+    const BSQStructType* tsi = dynamic_cast<const BSQStructType*>(btype);
+
+    for(size_t i = 0; i < ttype->propertyoffsets.size(); ++i)
+    {
+        auto itype = BSQType::g_typetable[ttype->rtypes[i]];
+        auto offset = ttype->propertyoffsets[i];
+
+        auto cvr = itype->fpkeycmp(itype, tsi->indexStorageLocationOffset(data1, offset), tsi->indexStorageLocationOffset(data2, offset));
+        if(cvr != 0)
+        {
+            return cvr;
+        }
+    }
+    
+    return 0;
+}
+
+int recordRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    const BSQRecordInfo* ttype = dynamic_cast<const BSQRecordInfo*>(btype);
+    const BSQRefType* tsi = dynamic_cast<const BSQRefType*>(btype);
+
+    for(size_t i = 0; i < ttype->propertyoffsets.size(); ++i)
+    {
+        auto itype = BSQType::g_typetable[ttype->rtypes[i]];
+        auto offset = ttype->propertyoffsets[i];
+
+        auto cvr = itype->fpkeycmp(itype, tsi->indexStorageLocationOffset(data1, offset), tsi->indexStorageLocationOffset(data2, offset));
+        if(cvr != 0)
+        {
+            return cvr;
+        }
+    }
+    
+    return 0;
 }
 
 bool recordJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
@@ -408,6 +452,34 @@ std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     return rtype->fpDisplay(rtype, SLPTR_LOAD_UNION_INLINE_DATAPTR(data));
 }
 
+int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    auto tdiff = SLPTR_LOAD_UNION_INLINE_TYPE(data1)->tid - SLPTR_LOAD_UNION_INLINE_TYPE(data2)->tid;
+    if(tdiff != 0)
+    {
+        return tdiff;
+    }
+    else
+    {
+        auto tt = SLPTR_LOAD_UNION_INLINE_TYPE(data1);
+        return tt->fpkeycmp(tt, SLPTR_LOAD_UNION_INLINE_DATAPTR(data1), SLPTR_LOAD_UNION_INLINE_DATAPTR(data2));
+    }
+}
+
+int unionRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    auto tdiff = SLPTR_LOAD_HEAP_TYPE_ANY(data1)->tid - SLPTR_LOAD_HEAP_TYPE_ANY(data2)->tid;
+    if(tdiff != 0)
+    {
+        return tdiff;
+    }
+    else
+    {
+        auto tt = SLPTR_LOAD_HEAP_TYPE_ANY(data1);
+        return tt->fpkeycmp(tt, data1, data2);
+    }
+}
+
 const BSQType* unionJSONParse_impl_select(const BSQUnionType* utype, const boost::json::value& jv, StorageLocationPtr sl)
 {
     std::vector<const BSQType*> opts;
@@ -490,7 +562,6 @@ bool unionJSONParse_impl(const BSQType* btype, const boost::json::value& jv, Sto
     if(utype->isInline())
     {
         SLPTR_STORE_UNION_INLINE_TYPE(ptype, sl);
-        
     }
 
     return true;

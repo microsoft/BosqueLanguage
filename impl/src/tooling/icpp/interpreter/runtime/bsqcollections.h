@@ -37,7 +37,7 @@ class BSQListReprType : public BSQRefType
 {
 public:
     BSQListReprType(uint64_t allocsize, RefMask heapmask, std::string name):
-        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_FUNCTOR_SET, entityListReprDisplay_impl, name, {nullptr, nullptr})
+        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityListReprDisplay_impl, name, {nullptr, nullptr})
     {;}
 
     virtual ~BSQListReprType() {;}
@@ -193,7 +193,7 @@ public:
     const uint64_t esize;
     const BSQType* etype;
 
-    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_FUNCTOR_SET, entityListDisplay_impl, name, {entityListParse_impl, entityListGenerateRandom_impl}), esize(etype->allocinfo.inlinedatasize), etype(etype)
+    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_CMP, entityListDisplay_impl, name, {entityListParse_impl, entityListGenerateRandom_impl}), esize(etype->allocinfo.inlinedatasize), etype(etype)
     {
         static_assert(sizeof(BSQList) == 16);
     }

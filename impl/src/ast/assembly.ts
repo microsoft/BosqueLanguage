@@ -321,9 +321,7 @@ enum SpecialTypeCategory {
     StackTypeDecl = "StackTypeDecl",
     QueueTypeDecl = "QueueTypeDecl",
     SetTypeDecl = "SetTypeDecl",
-    DynamicSetTypeDecl = "DynamicSetTypeDecl",
     MapTypeDecl = "MapTypeDecl",
-    DynamicMapTypeDecl = "DynamicMapTypeDecl"
 }
 
 class OOPTypeDecl {
@@ -388,11 +386,11 @@ class OOPTypeDecl {
     }
 
     isTypeASetEntity(): boolean {
-        return this.specialDecls.has(SpecialTypeCategory.SetTypeDecl) || this.specialDecls.has(SpecialTypeCategory.DynamicSetTypeDecl);
+        return this.specialDecls.has(SpecialTypeCategory.SetTypeDecl);
     }
 
     isTypeAMapEntity(): boolean {
-        return this.specialDecls.has(SpecialTypeCategory.MapTypeDecl) || this.specialDecls.has(SpecialTypeCategory.DynamicMapTypeDecl);
+        return this.specialDecls.has(SpecialTypeCategory.MapTypeDecl);
     }
 
     isTypeGrounded(): boolean {
