@@ -300,20 +300,105 @@ const BSQType* jsonLoadEntityType(boost::json::value v)
 
 const BSQType* jsonLoadEphemeralListType(boost::json::value v)
 {
-    xxxx;
+    auto allocinfo = j_allocinfo(v);
+
+    std::vector<BSQTypeID> etypes;
+    std::transform(v.as_object().at("etypes").as_array().cbegin(), v.as_object().at("etypes").as_array().cend(), std::back_inserter(etypes), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+        return Environment::g_typenameToIDMap[tstr];
+    });
+
+    std::vector<size_t> idxoffsets;
+    std::transform(v.as_object().at("idxoffsets").as_array().cbegin(), v.as_object().at("idxoffsets").as_array().cend(), std::back_inserter(idxoffsets), [](boost::json::value offset) {
+        return (size_t)offset.as_uint64();
+    });
+
+    return new BSQEphemeralListType(j_tkey(v), allocinfo.inlinedatasize, allocinfo.inlinedmask, j_name(v), etypes, idxoffsets);
 }
 
 const BSQType* jsonLoadInlineUnionType(boost::json::value v)
 {
-    xxxx;
+    auto allocinfo = j_allocinfo(v);
+
+    std::vector<BSQTypeID> subtypes;
+    std::transform(v.as_object().at("subtypes").as_array().cbegin(), v.as_object().at("subtypes").as_array().cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+        return Environment::g_typenameToIDMap[tstr];
+    });
+
+    return new BSQUnionInlineType(j_tkey(v), allocinfo.inlinedatasize, allocinfo.inlinedmask, j_name(v), subtypes);
 }
 
 const BSQType* jsonLoadRefUnionType(boost::json::value v)
 {
-    xxxx;
+    std::vector<BSQTypeID> subtypes;
+    std::transform(v.as_object().at("subtypes").as_array().cbegin(), v.as_object().at("subtypes").as_array().cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+        return Environment::g_typenameToIDMap[tstr];
+    });
+
+    return new BSQUnionRefType(j_tkey(v), j_name(v), subtypes);
 }
+
+enum class ICPPParseTag
+{
+    ValidatorTag = 0x0,
+    StringOfTag,
+    DataStringTag,
+    TypedNumberTag,
+    ListTag,
+    TupleTag,
+    RecordTag,
+    EntityTag,
+    EphemeralListTag,
+    InlineUnionTag,
+    RefUnionTag
+};
 
 void BSQTypeDecl::jsonLoad(boost::json::value v)
 {
-    xxxx;
+    const BSQType* ttype = nullptr;
+
+    ICPPParseTag ptag = (ICPPParseTag)v.as_object().at("ptag").as_uint64();
+    switch(ptag)
+    {
+    case ICPPParseTag::ValidatorTag:
+        ttype = jsonLoadValidatorType(v);
+        break;
+    case ICPPParseTag::StringOfTag:
+        ttype = jsonLoadStringOfType(v);
+        break;
+    case ICPPParseTag::DataStringTag:
+        ttype = jsonLoadDataStringType(v);
+        break;
+    case ICPPParseTag::TypedNumberTag:
+        ttype = jsonLoadTypedNumberType(v);
+        break;
+    case ICPPParseTag::ListTag:
+        ttype = jsonLoadListType(v);
+        break;
+    case ICPPParseTag::TupleTag:
+        ttype = jsonLoadTupleType(v);
+        break;
+    case ICPPParseTag::RecordTag:
+        ttype = jsonLoadRecordType(v);
+        break;
+    case ICPPParseTag::EntityTag:
+        ttype = jsonLoadEntityType(v);
+        break;
+    case ICPPParseTag::EphemeralListTag:
+        ttype = jsonLoadEphemeralListType(v);
+        break;
+    case ICPPParseTag::InlineUnionTag:
+        ttype = jsonLoadInlineUnionType(v);
+        break;
+    case ICPPParseTag::RefUnionTag:
+        ttype = jsonLoadRefUnionType(v);
+        break;
+    default:
+        assert(false);
+        break;
+    }
+
+    BSQType::g_typetable[ttype->tid] = ttype;
 }

@@ -11,7 +11,6 @@ bool Environment::g_small_model_gen = true;
 uint8_t* Environment::g_constantbuffer = nullptr;
 std::vector<BSQInvokeDecl*> Environment::g_invokes;
 
-std::map<std::string, const BSQType*> Environment::g_typenameToDeclMap;
 std::map<std::string, BSQTypeID> Environment::g_typenameToIDMap;
 std::map<std::string, RefMask> Environment::g_stringmaskToDeclMap;
 std::map<std::string, BSQRecordPropertyID> Environment::g_propertynameToIDMap;

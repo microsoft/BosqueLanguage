@@ -493,7 +493,7 @@ public:
     const std::vector<BSQTypeID> etypes;
     const std::vector<size_t> idxoffsets;
 
-    BSQEphemeralListType(BSQTypeID tid, BSQTypeKind tkind, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets): 
+    BSQEphemeralListType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets): 
         BSQStructType(tid, datasize, imask, {}, nullptr, ephemeralDisplay_impl, name, {ephemeralJSONParse_impl, ephemeralGenerateRandom_impl}), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
@@ -524,7 +524,7 @@ public:
 class BSQUnionInlineType : public BSQUnionType
 {
 public:
-    BSQUnionInlineType(BSQTypeID tid, uint64_t datasize, const RefMask imask, DisplayFP fpDisplay, std::string name, std::vector<BSQTypeID> subtypes): 
+    BSQUnionInlineType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> subtypes): 
         BSQUnionType(tid, BSQTypeKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, unionInlineKeyCmp_impl, name, subtypes)
     {;}
 
@@ -564,7 +564,7 @@ public:
 class BSQUnionRefType : public BSQUnionType
 {
 public:
-    BSQUnionRefType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, std::vector<BSQTypeID> subtypes): 
+    BSQUnionRefType(BSQTypeID tid, std::string name, std::vector<BSQTypeID> subtypes): 
         BSQUnionType(tid, BSQTypeKind::UnionRef, { sizeof(void*), sizeof(void*), sizeof(void*), nullptr, "2" }, unionRefKeyCmp_impl, name, subtypes)
     {;}
 

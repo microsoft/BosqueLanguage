@@ -68,8 +68,9 @@ BSQStatementGuard jsonParse_BSQStatementGuard(boost::json::value val)
 
 const BSQType* jsonParse_BSQType(boost::json::value val)
 {
-     auto tname = std::string(val.as_string().cbegin(), val.as_string().cend());
-    return Environment::g_typenameToDeclMap[tname];
+    auto tname = std::string(val.as_string().cbegin(), val.as_string().cend());
+    auto tid = Environment::g_typenameToIDMap[tname];
+    return BSQType::g_typetable[tid];
 }
 
 BSQRecordPropertyID jsonParse_BSQRecordPropertyID(boost::json::value val)

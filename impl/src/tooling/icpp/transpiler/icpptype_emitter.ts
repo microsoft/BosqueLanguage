@@ -3,10 +3,10 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
-import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion } from "./icpp_assembly";
+import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion, ICPPParseTag } from "./icpp_assembly";
 
 import { ArgumentTag, Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar, NONE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
@@ -137,9 +137,29 @@ class ICPPTypeEmitter {
             mask = mask + icppentries[i].allocinfo.inlinedmask;
         }
 
+        let ptag: ICPPParseTag = ICPPParseTag.EntityTag;
+        if(tt.specialDecls.has(MIRSpecialTypeCategory.ValidatorTypeDecl)) {
+            ptag = ICPPParseTag.ValidatorTag;
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.StringOfDecl)) {
+            ptag = ICPPParseTag.StringOfTag;
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
+            ptag = ICPPParseTag.DataStringTag;
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric)) {
+            ptag = ICPPParseTag.TypedNumberTag;
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.ListTypeDecl)) {
+            ptag = ICPPParseTag.ListTag;
+        }
+        else {
+            //No other tags handled yet
+        }
+
         return tt.attributes.includes("struct") 
-            ? ICPPTypeEntity.createByValueEntity(tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
-            : ICPPTypeEntity.createByRefEntity(tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
+            ? ICPPTypeEntity.createByValueEntity(ptag, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
+            : ICPPTypeEntity.createByRefEntity(ptag, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets)
     }
 
     private getICPPTypeForEphemeralList(tt: MIREphemeralListType): ICPPTypeEphemeralList {
@@ -178,10 +198,10 @@ class ICPPTypeEmitter {
             iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            iidata = new ICPPType(tt.trkey, ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
+            iidata = new ICPPType(ICPPParseTag.BuiltinTag, tt.trkey, ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411")); 
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            iidata = new ICPPType(tt.trkey, ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411"), true); 
+            iidata = new ICPPType(ICPPParseTag.BuiltinTag, tt.trkey, ICPPTypeKind.BigNum, new ICPPTypeSizeInfo(3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, 3*ICPP_WORD_SIZE, undefined, "411")); 
         }
         else if (this.isType(tt, "NSCore::Float")) {
             iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
@@ -196,10 +216,10 @@ class ICPPTypeEmitter {
             iidata = new ICPPTypeRegister(tt.trkey, 5*ICPP_WORD_SIZE, 5*ICPP_WORD_SIZE, "31121"); 
         }
         else if (this.isType(tt, "NSCore::String")) {
-            iidata = new ICPPType(tt.trkey, ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31", "31"), true);
+            iidata = new ICPPType(ICPPParseTag.BuiltinTag, tt.trkey, ICPPTypeKind.String, new ICPPTypeSizeInfo(2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31", "31"));
         }
         else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            iidata = new ICPPType(tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(34*ICPP_WORD_SIZE, "2"), true)
+            iidata = new ICPPType(ICPPParseTag.BuiltinTag, tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(34*ICPP_WORD_SIZE, "2"))
         }
         else if(this.isType(tt, "NSCore::ISOTime")) {
             iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
@@ -208,10 +228,10 @@ class ICPPTypeEmitter {
             iidata = new ICPPTypeRegister(tt.trkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1"); 
         }
         else if(this.isType(tt, "NSCore::UUID")) {
-            iidata = new ICPPType(tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(2*ICPP_WORD_SIZE, undefined), true); 
+            iidata = new ICPPType(ICPPParseTag.BuiltinTag, tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(2*ICPP_WORD_SIZE, undefined)); 
         }
         else if(this.isType(tt, "NSCore::ContentHash")) {
-            iidata = new ICPPType(tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(64*ICPP_WORD_SIZE, undefined), true); 
+            iidata = new ICPPType(ICPPParseTag.BuiltinTag, tt.trkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(64*ICPP_WORD_SIZE, undefined)); 
         }
         else if (this.isType(tt, "NSCore::Regex")) {
             iidata = new ICPPTypeRegister(tt.trkey, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11"); 
