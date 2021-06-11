@@ -19,7 +19,7 @@ struct BSQListReprIterator
     int64_t lpos;
 
     const BSQType* etype;
-    int16_t esize;
+    uint64_t esize;
 };
 
 void registerIteratorGCRoots(BSQListReprIterator* iter);
@@ -28,7 +28,7 @@ void releaseIteratorGCRoots();
 bool iteratorIsValid(const BSQListReprIterator* iter);
 void initializeListIterPosition(BSQListReprIterator* iter, int64_t pos);
 
-void iteratorGetElement(const BSQListReprIterator* iter, void* into, const BSQType* etype);
+void iteratorGetElement(const BSQListReprIterator* iter, void* into);
 void incrementListIterator(BSQListReprIterator* iter);
 
 std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -54,7 +54,6 @@ struct BSQListFlatK
 {
     uint32_t bytes;
     uint32_t ecount;
-    uint8_t data[k];
 };
 
 class BSQListFlatKTypeAbstract : public BSQListReprType
@@ -112,7 +111,7 @@ template<uint16_t k>
 class BSQListFlatKType : public BSQListFlatKTypeAbstract
 {
 public:
-    BSQListFlatKType(std::string name, RefMask heapmask): BSQListFlatKTypeAbstract(sizeof(BSQListFlatK<k>), heapmask, name) {;}
+    BSQListFlatKType(std::string name, uint64_t esize, RefMask heapmask): BSQListFlatKTypeAbstract(sizeof(BSQListFlatK<k>) + (k * esize), heapmask, name) {;}
 
     virtual ~BSQListFlatKType() {;}
 };
@@ -146,7 +145,7 @@ struct BSQListConcat
 class BSQListConcatType : public BSQListReprType
 {
 public:
-    BSQListConcatType(BSQTypeID tid, std::string name): BSQListReprType(sizeof(BSQListConcat), "22", name) {;}
+    BSQListConcatType(std::string name): BSQListReprType(sizeof(BSQListConcat), "22", name) {;}
     virtual ~BSQListConcatType() {;}
 
     uint64_t getLength(void* data) const override final;
@@ -191,9 +190,9 @@ public:
     static std::map<BSQTypeID, ListTypeConstructorInfo> g_listTypeMap;
 
     const uint64_t esize;
-    const BSQType* etype;
+    const BSQTypeID etype;
 
-    BSQListType(BSQTypeID tid, std::string name, const BSQType* etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_CMP, entityListDisplay_impl, name, {entityListParse_impl, entityListGenerateRandom_impl}), esize(etype->allocinfo.inlinedatasize), etype(etype)
+    BSQListType(BSQTypeID tid, std::string name, uint64_t esize, BSQTypeID etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_CMP, entityListDisplay_impl, name, {entityListParse_impl, entityListGenerateRandom_impl}), esize(esize), etype(etype)
     {
         static_assert(sizeof(BSQList) == 16);
     }

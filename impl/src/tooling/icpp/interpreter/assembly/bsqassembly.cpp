@@ -163,7 +163,35 @@ const BSQType* jsonLoadTypedNumberType(boost::json::value v)
 
 const BSQType* jsonLoadListType(boost::json::value v)
 {
-    xxxx;
+    std::string etypestr = std::string(v.as_object().at("etype").as_string().cbegin(), v.as_object().at("etype").as_string().cend());
+    BSQTypeID etype = Environment::g_typenameToIDMap[etypestr];
+
+    uint64_t esize = v.as_object().at("esize").as_uint64();
+
+    std::string emaskstr = std::string(v.as_object().at("emask").as_string().cbegin(), v.as_object().at("emask").as_string().cend());
+    RefMask emask = Environment::g_stringmaskToDeclMap[emaskstr];
+
+    BSQListFlatKType<4>* list4 = new BSQListFlatKType<4>(j_name(v) + "_cons4", esize, emask);
+    BSQListFlatKType<8>* list8 = new BSQListFlatKType<8>(j_name(v) + "_cons8", esize, emask);
+    BSQListFlatKType<12>* list12 = new BSQListFlatKType<12>(j_name(v) + "_cons12", esize, emask);
+    BSQListFlatKType<16>* list16 = new BSQListFlatKType<16>(j_name(v) + "_cons16", esize, emask);
+    BSQListFlatKType<24>* list24 = new BSQListFlatKType<24>(j_name(v) + "_cons24", esize, emask);
+    BSQListFlatKType<32>* list32 = new BSQListFlatKType<32>(j_name(v) + "_cons32", esize, emask);
+    BSQListFlatKType<40>* list40 = new BSQListFlatKType<40>(j_name(v) + "_cons40", esize, emask);
+
+    BSQListSliceType* slice = new BSQListSliceType(j_name(v) + "_consslice");
+    BSQListConcatType* concat = new BSQListConcatType(j_name(v) + "_consconcat");
+
+    BSQListType* ltype = new BSQListType(j_tkey(v), j_name(v), esize, etype);
+
+    BSQListType::g_listTypeMap[j_tkey(v)] = ListTypeConstructorInfo{
+        ltype, 
+        list4, list8, list12, list16, list24, list32, list40,
+        slice, concat,
+        {{4, list4}, {8, list8}, {12, list12}, {16, list16}, {24, list24}, {32, list32}, {40, list40}}
+    };
+
+    return ltype;
 }
 
 const BSQType* jsonLoadTupleType(boost::json::value v)
@@ -236,7 +264,38 @@ const BSQType* jsonLoadRecordType(boost::json::value v)
 
 const BSQType* jsonLoadEntityType(boost::json::value v)
 {
-    xxxx;
+    auto tid = j_tkey(v);
+    auto tkind = j_tkind(v);
+    auto allocinfo = j_allocinfo(v);
+
+    std::map<BSQVirtualInvokeID, BSQInvokeID> vtable;
+    j_vtable(vtable, v);
+
+    std::vector<BSQFieldID> fieldnames;
+    std::transform(v.as_object().at("fieldnames").as_array().cbegin(), v.as_object().at("fieldnames").as_array().cend(), std::back_inserter(fieldnames), [](boost::json::value prop) {
+        auto pstr = std::string(prop.as_string().cbegin(), prop.as_string().cend());
+        return Environment::g_fieldnameToIDMap[pstr];
+    });
+
+    std::vector<BSQTypeID> fieldtypes;
+    std::transform(v.as_object().at("fieldtypes").as_array().cbegin(), v.as_object().at("fieldtypes").as_array().cend(), std::back_inserter(fieldtypes), [](boost::json::value rtype) {
+        auto tstr = std::string(rtype.as_string().cbegin(), rtype.as_string().cend());
+        return Environment::g_typenameToIDMap[tstr];
+    });
+
+    std::vector<size_t> fieldoffsets;
+    std::transform(v.as_object().at("fieldoffsets").as_array().cbegin(), v.as_object().at("fieldoffsets").as_array().cend(), std::back_inserter(fieldoffsets), [](boost::json::value offset) {
+        return (size_t)offset.as_uint64();
+    });
+
+    if(tkind == BSQTypeKind::Ref) 
+    {
+        return new BSQEntityRefType(tid, allocinfo.heapsize, allocinfo.heapmask, vtable, j_name(v), fieldnames, fieldtypes, fieldoffsets);
+    }
+    else 
+    {
+        return new BSQEntityStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, vtable, j_name(v), fieldnames, fieldtypes, fieldoffsets);
+    }
 }
 
 const BSQType* jsonLoadEphemeralListType(boost::json::value v)

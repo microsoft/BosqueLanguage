@@ -179,7 +179,7 @@ class ICPPTypeEntity extends ICPPType {
     }
 
     jemitValidator(re: object): object {
-        return {...this.jemitType([]), specialdecl: "validator", regex: re, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+        return {...this.jemitType([]), specialdecl: "validator", regex: re};
     }
 
     jemitStringOf(validator: MIRResolvedTypeKey): object {
@@ -194,13 +194,13 @@ class ICPPTypeEntity extends ICPPType {
         return {...this.jemitType([]), specialdecl: "typednumber", underlying: underlying, primitive: primitive, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
     }
 
-    jemitVector(t: MIRResolvedTypeKey, size: number): object {
+    jemitVector(etype: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
         assert(false);
         return (undefined as any) as object;
     }
 
-    jemitList(t: MIRResolvedTypeKey): object {
-        return {...this.jemitType([]), specialdecl: "list", t: t, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    jemitList(etype: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
+        return {...this.jemitType([]), specialdecl: "list", etype: etype, esize: esize, emask: emask};
     }
 
     jemitStack(t: MIRResolvedTypeKey): object {

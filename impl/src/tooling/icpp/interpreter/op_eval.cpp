@@ -727,6 +727,7 @@ void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPr
         });
 
         const BSQListFlatKTypeAbstract* klist = fltype->second;
+        auto etype = BSQType::g_typetable[ltype->etype];
         void* res = Allocator::GlobalAllocator.allocateDynamic(klist);
         klist->initializeCountInfo(res, ct, ltype->esize);
 
@@ -736,8 +737,8 @@ void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPr
         uint8_t* iter = klist->initializeWriteIter(res);
         for(size_t i = 0; i < op->args.size(); ++i)
         {
-            klist->storeDataToPostion(iter, ltype->etype, this->evalArgument(op->args[i]));
-            klist->advanceWriteIter(&iter, ltype->etype);
+            klist->storeDataToPostion(iter, etype, this->evalArgument(op->args[i]));
+            klist->advanceWriteIter(&iter, etype);
         }
     }
     else

@@ -35,9 +35,9 @@ void initializeListIterPosition(BSQListReprIterator* iter, int64_t pos)
     }
 }
 
-void iteratorGetElement(const BSQListReprIterator* iter, void* into, const BSQType* etype)
+void iteratorGetElement(const BSQListReprIterator* iter, void* into)
 {
-    etype->storeValue(into, BSQListFlatKTypeAbstract::getDataBytes(iter->cbuff) + iter->cpos);
+    iter->etype->storeValue(into, BSQListFlatKTypeAbstract::getDataBytes(iter->cbuff) + iter->cpos);
 }
 
 void incrementListIterator(BSQListReprIterator* iter)
@@ -228,7 +228,7 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
         BSQListReprIterator iter;
         dynamic_cast<const BSQListType*>(btype)->initializeIteratorBegin(&iter, data);
 
-        auto etype = dynamic_cast<const BSQListType*>(btype)->etype;
+        auto etype = BSQType::g_typetable[dynamic_cast<const BSQListType*>(btype)->etype];
         void* estack = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
         etype->clearValue(estack);
 
@@ -239,7 +239,7 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
 
         while(iteratorIsValid(&iter))
         {
-            iteratorGetElement(&iter, estack, etype);
+            iteratorGetElement(&iter, estack);
             ll += etype->fpDisplay(etype, estack);
         }
 
@@ -259,9 +259,10 @@ bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, St
     }
     
     auto ltype = dynamic_cast<const BSQListType*>(btype);
+    auto etype = BSQType::g_typetable[ltype->etype];
     const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
 
-    auto vbuff = BSQ_STACK_SPACE_ALLOC(ltype->etype->allocinfo.inlinedatasize);
+    auto vbuff = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
     const boost::json::array& jlist = jv.as_array();
 
     //
@@ -287,8 +288,8 @@ bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, St
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
         for (size_t i = 0; i < jlist.size(); ++i)
         {
-            ltype->etype->consops.fpJSONParse(ltype->etype, jlist.at(i), &vbuff);
-            ltype->etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
+            etype->consops.fpJSONParse(etype, jlist.at(i), &vbuff);
+            etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
         }
 
         BSQList ll = {tt, jlist.size()};
@@ -303,9 +304,10 @@ bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, St
 void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
 {
     auto ltype = dynamic_cast<const BSQListType*>(btype);
+    auto etype = BSQType::g_typetable[ltype->etype];
     const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
 
-    auto vbuff = BSQ_STACK_SPACE_ALLOC(ltype->etype->allocinfo.inlinedatasize);
+    auto vbuff = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
     
     auto lim = Environment::g_small_model_gen ? 3 : 40;
     std::uniform_int_distribution<size_t> sizedist(0, lim);
@@ -328,8 +330,8 @@ void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, Sto
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
         for (size_t i = 0; i < ct; ++i)
         {
-            ltype->etype->consops.fpGenerateRandom(ltype->etype, rnd, &vbuff);
-            ltype->etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
+            etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
+            etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
         }
 
         BSQList ll = {tt, ct};
@@ -352,7 +354,7 @@ void BSQListType::initializeIteratorGivenPosition(BSQListReprIterator* iter, Sto
     iter->lroot = l.repr;
     iter->lpos = 0;
 
-    iter->etype = this->etype;
+    iter->etype = BSQType::g_typetable[this->etype];
     iter->esize = this->esize; 
 
     if(l.size != 0)
@@ -411,7 +413,7 @@ BSQList BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2) const
             initializeIteratorBegin(&iter1, s1);
             while(iteratorIsValid(&iter1))
             {
-                iteratorGetElement(&iter1, curr, this->etype);
+                iteratorGetElement(&iter1, curr);
                 curr += this->esize;
                 incrementListIterator(&iter1);
             }
@@ -420,7 +422,7 @@ BSQList BSQListType::concat2(StorageLocationPtr s1, StorageLocationPtr s2) const
             initializeIteratorBegin(&iter2, s2);
             while(iteratorIsValid(&iter2))
             {
-                iteratorGetElement(&iter2, curr, this->etype);
+                iteratorGetElement(&iter2, curr);
                 curr += this->esize;
                 incrementListIterator(&iter2);
             }
@@ -467,7 +469,7 @@ BSQList BSQListType::slice(StorageLocationPtr l, uint64_t startpos, uint64_t end
 
             for(uint64_t i = 0; i < dist; ++i)
             {
-                iteratorGetElement(&iter, curr, this->etype);
+                iteratorGetElement(&iter, curr);
 
                 curr += this->esize;
                 incrementListIterator(&iter);
