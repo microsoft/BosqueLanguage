@@ -9,23 +9,10 @@
 #include "bsqtype.h"
 #include "bsqop.h"
 
-class BSQTypeDecl
-{
-public:
-    static void jsonLoad(boost::json::value v);
-};
+void jsonLoadBSQTypeDecl(boost::json::value v);
 
-class BSQConstantDecl 
-{
-public: 
-    const BSQConstantID gkey;
-    const uint64_t storageOffset;
-    const BSQInvokeID valueInvoke;
-    const BSQType* ctype;
-
-    BSQConstantDecl(BSQConstantID gkey, uint64_t storageOffset, BSQInvokeID valueInvoke, BSQType* ctype): gkey(gkey), storageOffset(storageOffset), valueInvoke(valueInvoke), ctype(ctype) {;}
-    ~BSQConstantDecl() {;}
-};
+void jsonLoadBSQLiteralDecl(boost::json::value v, size_t& storageOffset, const BSQType*& gtype, std::string& lval);
+void jsonLoadBSQConstantDecl(boost::json::value v, size_t& storageOffset, BSQInvokeID& ikey, const BSQType*& gtype);
 
 class BSQFunctionParameter 
 {
@@ -64,6 +51,8 @@ public:
     virtual ~BSQInvokeDecl() {;}
 
     virtual bool isPrimitive() const = 0;
+
+    static void jsonLoad(boost::json::value v);
 };
 
 class BSQInvokeBodyDecl : public BSQInvokeDecl 
@@ -89,6 +78,8 @@ public:
     {
         return false;
     }
+
+    static BSQInvokeBodyDecl* jsonLoad(boost::json::value v);
 };
 
 class BSQPCode
@@ -109,10 +100,10 @@ public:
     const std::string implkeyname;
     const std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap;
     const std::map<std::string, std::pair<uint32_t, const BSQType*>> mixedoffsetMap;
-    const std::map<char, BSQTypeID> binds;
-    const std::map<std::string, BSQPCode> pcodes;
+    const std::map<std::string, const BSQType*> binds;
+    const std::map<std::string, BSQPCode*> pcodes;
 
-    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname,  std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap, std::map<std::string, std::pair<uint32_t, const BSQType*>> mixedoffsetMap, std::map<char, BSQTypeID> binds, std::map<std::string, BSQPCode> pcodes)
+    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap, std::map<std::string, std::pair<uint32_t, const BSQType*>> mixedoffsetMap, std::map<std::string, const BSQType*> binds, std::map<std::string, BSQPCode*> pcodes)
     : BSQInvokeDecl(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, mixedstackBytes, mixedMask, maskSlots), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), scalaroffsetMap(scalaroffsetMap), mixedoffsetMap(mixedoffsetMap), binds(binds), pcodes(pcodes)
     {;}
 
@@ -122,4 +113,6 @@ public:
     {
         return true;
     }
+
+    static BSQInvokePrimitiveDecl* jsonLoad(boost::json::value v);
 };

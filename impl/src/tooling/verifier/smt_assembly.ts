@@ -259,7 +259,6 @@ class SMTModelState {
     }
 }
 
-
 type SMTCallGNode = {
     invoke: string,
     callees: Set<string>,

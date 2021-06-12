@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
+import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { Argument, ICPPOp } from "./icpp_exp";
 
 import * as assert from "assert";
@@ -290,6 +290,10 @@ class ICPPFunctionParameter {
         this.name = name;
         this.ptype = ptype;
     }
+
+    jsonEmit(): object {
+        return {name: this.name, ptype: this.ptype.tkey};
+    }
 }
 
 class ICPPInvokeDecl {
@@ -325,6 +329,10 @@ class ICPPInvokeDecl {
 
         this.maskSlots = maskSlots;
     }
+
+    jsonEmit(): object {
+        return {name: this.name, ikey: this.ikey, srcFile: this.srcFile, sinfo: this.sinfo, recursive: this.recursive, params: this.params.map((param) => param.jsonEmit()), resultType: this.resultType.tkey, scalarStackBytes: this.scalarStackBytes, mixedStackBytes: this.mixedStackBytes, mixedStackMask: this.mixedStackMask, maskSlots: this.maskSlots};
+    }
 }
 
 class ICPPInvokeBodyDecl extends ICPPInvokeDecl 
@@ -337,6 +345,10 @@ class ICPPInvokeBodyDecl extends ICPPInvokeDecl
         this.body = body;
         this.argmaskSize = argmaskSize;
     }
+
+    jsonEmit(): object {
+        return {...super.jsonEmit(), isbuiltin: false, body: this.body, argmaskSize: this.argmaskSize};
+    }
 }
 
 class ICPPPCode
@@ -347,6 +359,10 @@ class ICPPPCode
     constructor(code: MIRInvokeKey, cargs: Argument[]) {
         this.code = code;
         this.cargs = cargs;
+    }
+
+    jsonEmit(): object {
+        return {code: this.code, cargs: this.cargs};
     }
 }
 
@@ -368,11 +384,72 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl
         this.binds = binds;
         this.pcodes = pcodes;
     }
+
+    jsonEmit(): object {
+        const soffsets = [...this.scalaroffsetMap].map((v) => {
+            return {name: v[0], info: v[1]};
+        });
+
+        const moffsets = [...this.mixedoffsetMap].map((v) => {
+            return {name: v[0], info: v[1]};
+        });
+
+        const binds = [...this.binds].map((v) => {
+            return {name: v[0], ttype: v[1].tkey};
+        });
+
+        const pcodes = [...this.pcodes].map((v) => {
+            return {name: v[0], pc: v[1]};
+        });
+
+        return {...super.jsonEmit(), isbuiltin: true, enclosingtype: this.enclosingtype, implkeyname: this.implkeyname, scalaroffsetMap: soffsets, mixedoffsetMap: moffsets, binds: binds, pcodes: pcodes};
+    }
+}
+
+class ICPPConstDecl 
+{
+    readonly gkey: MIRGlobalKey;
+    readonly storageOffset: number;
+    readonly valueInvoke: MIRInvokeKey;
+    readonly ctype: ICPPType;
+
+    constructor(gkey: MIRGlobalKey, storageOffset: number, valueInvoke: MIRInvokeKey, ctype: ICPPType) {
+        this.gkey = gkey;
+        this.storageOffset = storageOffset;
+        this.valueInvoke = valueInvoke;
+        this.ctype = ctype;
+    }
+
+    jsonEmit(): object {
+        return { storageOffset: this.storageOffset, valueInvoke: this.valueInvoke, ctype: this.ctype.tkey };
+    }
+}
+
+class ICPPAssembly
+{
+    readonly typecount: number;
+    readonly cbuffsize: number;
+    readonly cmask: RefMask;
+
+    readonly typenames: MIRResolvedTypeKey[];
+    readonly propertynames: string[];
+    readonly fieldnames: MIRFieldKey[];
+
+    readonly invokenames: MIRInvokeKey[];
+    readonly vinvokenames: MIRVirtualMethodKey[];
+
+    readonly typedecls: ICPPType[];
+    readonly invdecls: ICPPInvokeDecl[];
+
+    readonly litdecls: { offset: number, storage: ICPPType, value: string }[];
+    readonly constdecls: ICPPConstDecl[];
 }
 
 export {
     TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_SIZE, ICPPParseTag,
     ICPPTypeKind, ICPPTypeSizeInfo, RefMask,
     ICPPType, ICPPTypeRegister, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeInlineUnion, ICPPTypeRefUnion,
-    ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl
+    ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
+    ICPPConstDecl,
+    ICPPAssembly
 };

@@ -372,6 +372,7 @@ class ICPPBodyEmitter {
             assert(cval instanceof MIRConstantRegex);
 
             const rval = (cval as MIRConstantRegex).value;
+            this.registerSpecialLiteralValue(rval.restr, "NSCore::Regex");
             return this.getSpecialLiteralValue(rval.restr);
         }
     }

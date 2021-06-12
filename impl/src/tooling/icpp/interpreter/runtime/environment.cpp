@@ -17,3 +17,9 @@ std::map<std::string, BSQRecordPropertyID> Environment::g_propertynameToIDMap;
 std::map<std::string, BSQFieldID> Environment::g_fieldnameToIDMap;
 std::map<std::string, BSQInvokeID> Environment::g_invokenameToIDMap;
 std::map<std::string, BSQVirtualInvokeID> Environment::g_vinvokenameToIDMap;
+
+std::map<std::string, BSQPrimitiveImplTag> Environment::g_primitiveinvokenameToIDMap = {
+    {"validator_accepts", BSQPrimitiveImplTag::validator_accepts},
+    {"string_empty", BSQPrimitiveImplTag::string_empty},
+    {"string_append", BSQPrimitiveImplTag::string_append}
+};

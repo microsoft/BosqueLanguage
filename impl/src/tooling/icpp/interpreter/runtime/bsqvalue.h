@@ -448,6 +448,11 @@ public:
 
     virtual ~BSQStringType() {;}
 
+    void storeValueDirect(StorageLocationPtr trgt, BSQString s) const
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, s);
+    }
+
     void clearValue(StorageLocationPtr trgt) const override final
     {
         SLPTR_STORE_CONTENTS_AS(BSQString, trgt, {0});

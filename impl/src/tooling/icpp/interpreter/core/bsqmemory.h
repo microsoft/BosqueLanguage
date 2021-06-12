@@ -886,8 +886,9 @@ public:
         }
     }
 
-    void setGlobalsMemory(void* globals)
+    void setGlobalsMemory(void* globals, const RefMask mask)
     {
         this->globals_mem = globals;
+        this->globals_mask = mask;
     }
 };

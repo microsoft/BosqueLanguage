@@ -36,6 +36,7 @@ const BSQType* BSQType::g_typeISOTime = new BSQISOTimeType();
 const BSQType* BSQType::g_typeLogicalTime = new BSQLogicalTimeType();
 const BSQType* BSQType::g_typeUUID = new BSQUUIDType();
 const BSQType* BSQType::g_typeContentHash = new BSQContentHashType();
+const BSQType* BSQType::g_typeRegex = new BSQRegexType();
 
 std::string generateRandomChar(RandGenerator& rnd)
 {

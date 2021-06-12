@@ -10,7 +10,6 @@
 #include <boost/json.hpp>
 
 bool loadJSONFromFile(const std::string& filename, boost::json::value& jval);
+void loadAssembly(const boost::json::value jval);
 
-void initialize();
-void loadAssembly(const boost::json::value& jval);
 void run(const std::string& main, StorageLocationPtr res);

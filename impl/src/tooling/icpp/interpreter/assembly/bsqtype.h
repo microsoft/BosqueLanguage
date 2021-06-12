@@ -139,6 +139,7 @@ public:
     static const BSQType* g_typeLogicalTime;
     static const BSQType* g_typeUUID;
     static const BSQType* g_typeContentHash;
+    static const BSQType* g_typeRegex;
 
     const BSQTypeID tid;
     const BSQTypeKind tkind;

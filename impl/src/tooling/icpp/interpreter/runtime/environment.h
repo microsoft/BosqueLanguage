@@ -30,4 +30,5 @@ public:
     static std::map<std::string, BSQFieldID> g_fieldnameToIDMap;
     static std::map<std::string, BSQInvokeID> g_invokenameToIDMap;
     static std::map<std::string, BSQVirtualInvokeID> g_vinvokenameToIDMap;
+    static std::map<std::string, BSQPrimitiveImplTag> g_primitiveinvokenameToIDMap;
 };
