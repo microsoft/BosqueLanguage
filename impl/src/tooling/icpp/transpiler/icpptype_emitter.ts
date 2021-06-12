@@ -147,7 +147,10 @@ class ICPPTypeEmitter {
         else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
             ptag = ICPPParseTag.DataStringTag;
         }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric)) {
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric) || tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclDecl)) {
+            //
+            //TODO: this is odd... we want to handle general typedecl that are of API types as well somehow so we need to adjust this a bit
+            //
             ptag = ICPPParseTag.TypedNumberTag;
         }
         else if(tt.specialDecls.has(MIRSpecialTypeCategory.ListTypeDecl)) {

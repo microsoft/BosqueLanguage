@@ -37,7 +37,7 @@ class ICPPBodyEmitter {
     private literalMap: Map<string, number> = new Map<string, number>();
     private constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
     private constsize: number = UNIVERSAL_SIZE;
-    private constlayout: {offset: number, storage: ICPPType, value: string}[] = [];
+    private constlayout: {offset: number, storage: ICPPType, value: string, isliteral: boolean}[] = [];
     
     private maskMap: Map<string, number> = new Map<string, number>();
     private masksize: number = 0;
@@ -306,7 +306,7 @@ class ICPPBodyEmitter {
         if (!this.literalMap.has(vlit)) {
             const ttype = this.typegen.getICPPTypeData(this.typegen.getMIRType(vtype));
             this.literalMap.set(vlit, this.constsize);
-            this.constlayout.push({ offset: this.constsize, storage: ttype, value: vlit });
+            this.constlayout.push({ offset: this.constsize, storage: ttype, value: vlit, isliteral: true });
             this.constsize += ttype.allocinfo.inlinedatasize;
         }
     }

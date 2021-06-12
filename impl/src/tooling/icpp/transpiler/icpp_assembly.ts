@@ -443,6 +443,11 @@ class ICPPAssembly
 
     readonly litdecls: { offset: number, storage: ICPPType, value: string }[];
     readonly constdecls: ICPPConstDecl[];
+
+    readonly typedecsl: ICPPType[];
+    readonly fdecls: ICPPInvokeDecl[];
+
+    readonly entrypoint: MIRInvokeKey;
 }
 
 export {
