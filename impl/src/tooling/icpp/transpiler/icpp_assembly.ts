@@ -438,14 +438,13 @@ class ICPPAssembly
     readonly invokenames: MIRInvokeKey[];
     readonly vinvokenames: MIRVirtualMethodKey[];
 
+    readonly vtable: {oftype: MIRResolvedTypeKey, vtable: Map<MIRVirtualMethodKey, MIRInvokeKey>}[];
+
     readonly typedecls: ICPPType[];
     readonly invdecls: ICPPInvokeDecl[];
 
     readonly litdecls: { offset: number, storage: ICPPType, value: string }[];
     readonly constdecls: ICPPConstDecl[];
-
-    readonly typedecsl: ICPPType[];
-    readonly fdecls: ICPPInvokeDecl[];
 
     readonly entrypoint: MIRInvokeKey;
 }

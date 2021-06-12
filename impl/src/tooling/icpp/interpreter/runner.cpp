@@ -233,7 +233,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
 
     ////
     //Load Constants
-    std::for_each(jv.as_object().at("litdecls").as_array().cbegin(), jv.as_object().at("litdecls").as_array().cend(), [&runner](boost::json::value ldecl) {
+    std::for_each(jv.as_object().at("constdecls").as_array().cbegin(), jv.as_object().at("constdecls").as_array().cend(), [&runner](boost::json::value ldecl) {
         size_t storageOffset;
         BSQInvokeID ikey;
         const BSQType* gtype; 
