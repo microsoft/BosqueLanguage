@@ -438,7 +438,7 @@ class ICPPAssembly
     readonly invokenames: MIRInvokeKey[];
     readonly vinvokenames: MIRVirtualMethodKey[];
 
-    readonly vtable: {oftype: MIRResolvedTypeKey, vtable: Map<MIRVirtualMethodKey, MIRInvokeKey>}[];
+    readonly vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[];
 
     readonly typedecls: ICPPType[];
     readonly invdecls: ICPPInvokeDecl[];
@@ -447,6 +447,64 @@ class ICPPAssembly
     readonly constdecls: ICPPConstDecl[];
 
     readonly entrypoint: MIRInvokeKey;
+
+    constructor(typecount: number, cbuffsize: number, cmask: RefMask, typenames: MIRResolvedTypeKey[], propertynames: string[], fieldnames: MIRFieldKey[],
+        invokenames: MIRInvokeKey[], vinvokenames: MIRVirtualMethodKey[], vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[],
+        typedecls: ICPPType[], invdecls: ICPPInvokeDecl[], litdecls: { offset: number, storage: ICPPType, value: string }[], constdecls: ICPPConstDecl[], 
+        entrypoint: MIRInvokeKey) {
+            this.typecount = typecount;
+            this.cbuffsize = cbuffsize;
+            this.cmask = cmask;
+
+            this.typenames = typenames;
+            this.propertynames = propertynames;
+            this.fieldnames = fieldnames;
+
+            this.invokenames = invokenames;
+            this.vinvokenames = vinvokenames;
+
+            this.vtable = vtable;
+
+            this.typedecls = typedecls;
+            this.invdecls = invdecls;
+
+            this.litdecls = litdecls;
+            this.constdecls = constdecls;
+
+            this.entrypoint = entrypoint;
+    }
+
+    jsonEmit(): object {
+        return {
+            typecount: this.typecount,
+            cbuffsize: this.cbuffsize,
+            cmask: this.cmask,
+
+            typenames: this.typenames.sort(),
+            propertynames: this.propertynames.sort(),
+            fieldnames: this.fieldnames.sort(),
+
+            invokenames: this.invokenames.sort(),
+            vinvokenames: this.vinvokenames.sort(),
+
+            vtable: this.vtable.sort((a, b) => a.oftype.localeCompare(b.oftype)),
+
+            typedecls: this.typedecls.sort((a, b) => a.tkey.localeCompare(b.tkey)).map((tdecl) => {
+                const vtbl = this.vtable.find((vte) => vte.oftype === tdecl.tkey) as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]};
+                tdecl.jemitType(vtbl.vtable);
+            }),
+
+            invdecls: this.invdecls.sort((a, b) => a.ikey.localeCompare(b.ikey)).map((inv) => inv.jsonEmit()),
+
+            litdecls: this.litdecls.sort((a, b) => a.value.localeCompare(b.value)).map((lv) => {
+                return {offset: lv.offset, storage: lv.storage.tkey, value: lv.value};
+            }),
+
+            constdecls: this.constdecls.sort((a, b) => a.gkey.localeCompare(b.gkey)).map((cd) => cd.jsonEmit()),
+
+            entrypoint: this.entrypoint
+        };
+    }
 }
 
 export {
