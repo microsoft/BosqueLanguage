@@ -34,10 +34,10 @@ class ICPPBodyEmitter {
     private mixedStackSize: number = 0;
     private mixedStackLayout: {offset: number, name: string, storage: ICPPType}[] = [];
 
-    private literalMap: Map<string, number> = new Map<string, number>();
-    private constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
-    private constsize: number = UNIVERSAL_SIZE;
-    private constlayout: {offset: number, storage: ICPPType, value: string, isliteral: boolean}[] = [];
+    literalMap: Map<string, number> = new Map<string, number>();
+    constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
+    constsize: number = UNIVERSAL_SIZE;
+    constlayout: {offset: number, storage: ICPPType, value: string, isliteral: boolean}[] = [];
     
     private maskMap: Map<string, number> = new Map<string, number>();
     private masksize: number = 0;
@@ -280,9 +280,19 @@ class ICPPBodyEmitter {
 
         this.currentRType = typegen.getMIRType("NSCore::None");
 
+        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPTypeData(this.typegen.getMIRType("NSCore::None")), value: "None", isliteral: true });
+        this.constsize = UNIVERSAL_SIZE;
+
         this.registerSpecialLiteralValue("none", "NSCore::None");
         this.registerSpecialLiteralValue("true", "NSCore::Bool");
         this.registerSpecialLiteralValue("false", "NSCore::Bool");
+
+        this.assembly.constantDecls.forEach((cdecl) => {
+            const decltype = this.typegen.getICPPTypeData(this.typegen.getMIRType(cdecl.declaredType));
+            this.constlayout.push({ offset: this.constsize, storage: decltype, value: cdecl.gkey, isliteral: false });
+
+            this.constsize += decltype.allocinfo.inlinedatasize;
+        });
     }
 
     initializeBodyGen(srcFile: string, rtype: MIRType, argsmap: Map<string, number>) {

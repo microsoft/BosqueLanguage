@@ -3,12 +3,13 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRInvokeDecl } from "../../../compiler/mir_assembly";
-import { MIRFieldKey, MIRInvokeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { ICPPAssembly, ICPPParseTag, ICPPTypeEntity, ICPPTypeRecord, TranspilerOptions } from "./icpp_assembly";
+import { MIRAssembly, MIREntityTypeDecl, MIRInvokeDecl } from "../../../compiler/mir_assembly";
+import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
+import { ICPPAssembly, ICPPConstDecl, ICPPParseTag, ICPPTypeEntity, ICPPTypeRecord, TranspilerOptions } from "./icpp_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { ICPPBodyEmitter } from "./iccpbody_emitter";
 import { constructCallGraphInfo } from "../../../compiler/mir_callg";
+import { SourceInfo } from "../../../ast/parser";
 
 class ICPPEmitter {
     readonly assembly: MIRAssembly;
@@ -68,25 +69,104 @@ class ICPPEmitter {
             }
         }
         
-        /*
-        this.bemitter.requiredProjectVirtualTupleIndex.forEach((rvpt) => this.icppasm.invdecls.push(this.bemitter.generateProjectTupleIndexVirtual(rvpt)));
-        this.bemitter.requiredProjectVirtualRecordProperty.forEach((rvpr) => this.icppasm.invdecls.push(this.bemitter.generateProjectRecordPropertyVirtual(rvpr)));
-        this.bemitter.requiredProjectVirtualEntityField.forEach((rvpe) => this.icppasm.invdecls.push(this.bemitter.generateProjectEntityFieldVirtual(rvpe)));
+        this.bemitter.requiredProjectVirtualTupleIndex.forEach((rvpt) => {
+            const vtype = rvpt.argflowtype;
+            const opts = [...this.assembly.typeMap].filter((tme) => this.temitter.isUniqueTupleType(tme[1]) && this.assembly.subtypeOf(tme[1], vtype)).map((tme) => tme[1]);
 
+            opts.forEach((ttup) => {
+                const oper = this.bemitter.generateProjectTupleIndexVirtual(rvpt, new SourceInfo(-1, -1, -1 ,-1), ttup);
+                this.icppasm.invdecls.push(oper);
 
-    vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[] = [];
+                let vte = this.icppasm.vtable.find((v) => v.oftype === ttup.trkey);
+                if(vte !== undefined) {
+                    vte.vtable.push({vcall: rvpt.inv, inv: oper.ikey});
+                }
+                else {
+                    vte = { oftype: ttup.trkey, vtable: [{vcall: rvpt.inv, inv: oper.ikey}] };
+                    this.icppasm.vtable.push(vte);
+                }
+            });
+        });
 
-    typedecls: ICPPType[] = [];
-    invdecls: ICPPInvokeDecl[] = [];
+        this.bemitter.requiredProjectVirtualRecordProperty.forEach((rvpr) => {
+            const vtype = rvpr.argflowtype;
+            const opts = [...this.assembly.typeMap].filter((tme) => this.temitter.isUniqueRecordType(tme[1]) && this.assembly.subtypeOf(tme[1], vtype)).map((tme) => tme[1]);
 
-    litdecls: { offset: number, storage: ICPPType, value: string }[] = [];
-    constdecls: ICPPConstDecl[] = [];
+            opts.forEach((trec) => {
+                const oper = this.bemitter.generateProjectRecordPropertyVirtual(rvpr, new SourceInfo(-1, -1, -1 ,-1), trec);
+                this.icppasm.invdecls.push(oper);
 
-        xxxx;
-        */
+                let vte = this.icppasm.vtable.find((v) => v.oftype === trec.trkey);
+                if(vte !== undefined) {
+                    vte.vtable.push({vcall: rvpr.inv, inv: oper.ikey});
+                }
+                else {
+                    vte = { oftype: trec.trkey, vtable: [{vcall: rvpr.inv, inv: oper.ikey}] };
+                    this.icppasm.vtable.push(vte);
+                }
+            });
+        });
+
+        this.bemitter.requiredProjectVirtualEntityField.forEach((rvpe) => {
+            const vtype = rvpe.argflowtype;
+            const opts = [...this.assembly.typeMap].filter((tme) => this.temitter.isUniqueEntityType(tme[1]) && this.assembly.subtypeOf(tme[1], vtype)).map((tme) => tme[1]);
+
+            opts.forEach((tentity) => {
+                const oper = this.bemitter.generateProjectEntityFieldVirtual(rvpe, new SourceInfo(-1, -1, -1 ,-1), tentity);
+                this.icppasm.invdecls.push(oper);
+
+                let vte = this.icppasm.vtable.find((v) => v.oftype === tentity.trkey);
+                if(vte !== undefined) {
+                    vte.vtable.push({vcall: rvpe.inv, inv: oper.ikey});
+                }
+                else {
+                    vte = { oftype: tentity.trkey, vtable: [{vcall: rvpe.inv, inv: oper.ikey}] };
+                    this.icppasm.vtable.push(vte);
+                }
+            });
+        });
+
+        this.icppasm.cbuffsize = this.bemitter.constsize;
+        this.icppasm.cmask = "11111";
+        for(let i = 1; i < this.bemitter.constlayout.length; ++i) {
+            this.icppasm.cmask += this.bemitter.constlayout[i].storage.allocinfo.inlinedmask;
+        }
+
+        this.assembly.constantDecls.forEach((cdecl) => {
+            const decltype = this.temitter.getICPPTypeData(this.temitter.getMIRType(cdecl.declaredType));
+            const offset = this.bemitter.constMap.get(cdecl.gkey) as number;
+            new ICPPConstDecl(cdecl.gkey, offset, cdecl.value, decltype);
+
+            this.icppasm.cbuffsize += decltype.allocinfo.inlinedatasize;
+            this.icppasm.cmask += decltype.allocinfo.inlinedmask;
+        });
+
+        this.icppasm.litdecls = this.bemitter.constlayout.slice(1)
+            .filter((cle) => cle.isliteral)
+            .map((cle) => {
+                return { offset: cle.offset, storage: cle.storage, value: cle.value };
+            });
+
+        this.icppasm.typenames.forEach((tt) => {
+            const mirtype = this.temitter.getMIRType(tt);
+            this.icppasm.typedecls.push(this.temitter.getICPPTypeData(mirtype));
+
+            if(this.temitter.isUniqueEntityType(mirtype)) {
+                const mdecl = this.assembly.entityDecls.get(mirtype.trkey) as MIREntityTypeDecl;
+                let vte = this.icppasm.vtable.find((v) => v.oftype === mdecl.tkey);
+                if(vte === undefined) {
+                    vte = { oftype: mdecl.tkey, vtable: [] };
+                    this.icppasm.vtable.push(vte);
+                }
+
+                mdecl.vcallMap.forEach((vc) => {
+                    (vte as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}).vtable.push({vcall: vc[0], inv: vc[1]});
+                });
+            }
+        });
     }
 
-    static generateSMTAssemblyForValidate(assembly: MIRAssembly, vopts: TranspilerOptions, entrypoint: MIRInvokeKey): ICPPAssembly {
+    static generateICPPAssembly(assembly: MIRAssembly, vopts: TranspilerOptions, entrypoint: MIRInvokeKey): ICPPAssembly {
         const temitter = new ICPPTypeEmitter(assembly, vopts);
         const bemitter = new ICPPBodyEmitter(assembly, temitter, vopts);
 
