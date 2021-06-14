@@ -87,10 +87,10 @@ function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean)
     return masm as MIRAssembly;
 }
 
-function generateSMTAssemblyForValidate(masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey, errorTrgtPos: { file: string, line: number, pos: number }, maxgas: number): SMTAssembly | undefined {
+function generateSMTAssemblyForValidate(masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey, errorTrgtPos: { file: string, line: number, pos: number }): SMTAssembly | undefined {
     let res: SMTAssembly | undefined = undefined;
     try {
-        res = SMTEmitter.generateSMTAssemblyForValidate(masm, vopts, errorTrgtPos, entrypoint, maxgas);
+        res = SMTEmitter.generateSMTAssemblyForValidate(masm, vopts, errorTrgtPos, entrypoint);
     } catch(e) {
         process.stdout.write(chalk.red(`SMT generate error -- ${e}\n`));
         process.exit(1);
@@ -213,7 +213,6 @@ Commander.parse(process.argv);
 const smtpath = Path.normalize(Path.join(bosque_dir, Commander.prover === "z3" ? platpathz3 : platpathcvc4));
 const smtargs = (Commander.prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi-all --tlimit=1000";
 
-const maxgas = 0;
 const timeout = 10000;
 const vopts = {
     ISize: 5,
@@ -239,7 +238,7 @@ process.stdout.write(`Processing Bosque sources in:\n${Commander.args.join("\n")
 const massembly = generateMASM(Commander.args, Commander.entrypoint, Commander.small !== undefined);
 
 if(Commander.mode === "errorlocs" || Commander.location === undefined) {
-    const sasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, {file: "[]", line: -1, pos: -1}, maxgas);
+    const sasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, {file: "[]", line: -1, pos: -1});
     if(sasm !== undefined) {
         process.stdout.write("Possible error lines:\n")
         process.stdout.write(JSON.stringify(sasm.allErrors, undefined, 2) + "\n")
@@ -262,7 +261,7 @@ if (Commander.location !== undefined) {
 
 setImmediate(() => {
     try {
-        const smtasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, errlocation, maxgas);
+        const smtasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, errlocation);
         if (smtasm === undefined) {
             process.stdout.write(chalk.red("Error -- Failed to generate SMTLIB code\n"));
             process.exit(1);

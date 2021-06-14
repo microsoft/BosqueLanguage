@@ -293,7 +293,13 @@ class SMTAssembly {
         "TypeTag_Float",
         "TypeTag_Decimal",
         "TypeTag_Rational",
+        "TypeTag_StringPos",
         "TypeTag_String",
+        "TypeTag_ByteBuffer",
+        "TypeTag_ISOTime",
+        "TypeTag_LogicalTime",
+        "TypeTag_UUID",
+        "TypeTag_ContentHash",
         "TypeTag_Regex"
     ];
     keytypeTags: string[] = [
@@ -303,7 +309,11 @@ class SMTAssembly {
         "TypeTag_Nat",
         "TypeTag_BigInt",
         "TypeTag_BigNat",
-        "TypeTag_String"
+        "TypeTag_String",
+        "TypeTag_ISOTime",
+        "TypeTag_LogicalTime",
+        "TypeTag_UUID",
+        "TypeTag_ContentHash"
     ];
 
     abstractTypes: string[] = [];

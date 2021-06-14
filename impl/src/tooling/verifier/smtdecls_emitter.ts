@@ -457,7 +457,7 @@ class SMTEmitter {
         }
     }
 
-    private initializeSMTAssembly(assembly: MIRAssembly, entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, maxgas: number) {
+    private initializeSMTAssembly(assembly: MIRAssembly, entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
         const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
         const cginfo = constructCallGraphInfo([entrypoint, ...cinits], assembly);
         const rcg = [...cginfo.topologicalOrder].reverse();
@@ -493,7 +493,7 @@ class SMTEmitter {
             }
         }
 
-        ["NSCore::None", "NSCore::Bool", "NSCore::Int", "NSCore::Nat", "NSCore::BigInt", "NSCore::BigNat", "NSCore::Float", "NSCore::Decimal", "NSCore::Rational", "NSCore::String", "NSCore::Regex"]
+        ["NSCore::None", "NSCore::Bool", "NSCore::Int", "NSCore::Nat", "NSCore::BigInt", "NSCore::BigNat", "NSCore::Float", "NSCore::Decimal", "NSCore::Rational", "NSCore::StringPos", "NSCore::String", "NSCore::ByteBuffer", "NSCore::ISOTime", "NSCore::LogicalTime", "NSCore::UUID", "NSCore::ContentHash", "NSCore::Regex"]
             .forEach((ptype) => {
                 const rtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(ptype));
                 if(this.assembly.resultTypes.find((rtt) => rtt.ctype.name === rtype.name) === undefined) {
@@ -745,7 +745,7 @@ class SMTEmitter {
         this.assembly.allErrors = this.bemitter.allErrors;
     }
 
-    static generateSMTAssemblyForValidate(assembly: MIRAssembly, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, maxgas: number): SMTAssembly {
+    static generateSMTAssemblyForValidate(assembly: MIRAssembly, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): SMTAssembly {
         const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
         const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, errorTrgtPos);
 
@@ -754,7 +754,7 @@ class SMTEmitter {
         const smtassembly = new SMTAssembly(vopts, temitter.mangle(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
-        smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety, maxgas);
+        smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
 
         ////////////
         const mirep = assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl;

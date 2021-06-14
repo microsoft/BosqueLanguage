@@ -146,7 +146,6 @@ function runSMT2File(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Rea
     res.stdin.end();
 }
 
-const maxgas = 0;
 const timeout = 10000;
 const vopts = {
     ISize: 5,
@@ -166,13 +165,13 @@ function enqueueSMTTest(prover: "z3" | "cvc4", mode: "Refute" | "Reach", macrode
         return;
     }
 
-    const sasm = SMTEmitter.generateSMTAssemblyForValidate(massembly[0], vopts, { file: "[]", line: -1, pos: -1 }, "NSMain::main", maxgas);
+    const sasm = SMTEmitter.generateSMTAssemblyForValidate(massembly[0], vopts, { file: "[]", line: -1, pos: -1 }, "NSMain::main");
     const errlocation = sasm.allErrors.find((ee) => ee.file === "test.bsq" && ee.line === trgtline);
     if(errlocation === undefined) {
         cb("error", start, new Date(), "Invalid trgt line");
     }
     else {
-        const smtasm = SMTEmitter.generateSMTAssemblyForValidate(massembly[0], vopts, errlocation, "NSMain::main", maxgas);
+        const smtasm = SMTEmitter.generateSMTAssemblyForValidate(massembly[0], vopts, errlocation, "NSMain::main");
         const smfc = buildSMT2file(smtasm, smtruntime, timeout, mode);
 
         runSMT2File(prover, smfc, mode, start, cb);

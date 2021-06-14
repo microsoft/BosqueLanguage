@@ -428,8 +428,8 @@ class ICPPConstDecl
 class ICPPAssembly
 {
     readonly typecount: number;
-    readonly cbuffsize: number;
-    readonly cmask: RefMask;
+    cbuffsize: number = 0;
+    cmask: RefMask = "";
 
     readonly typenames: MIRResolvedTypeKey[];
     readonly propertynames: string[];
@@ -438,40 +438,27 @@ class ICPPAssembly
     readonly invokenames: MIRInvokeKey[];
     readonly vinvokenames: MIRVirtualMethodKey[];
 
-    readonly vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[];
+    vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[] = [];
 
-    readonly typedecls: ICPPType[];
-    readonly invdecls: ICPPInvokeDecl[];
+    typedecls: ICPPType[] = [];
+    invdecls: ICPPInvokeDecl[] = [];
 
-    readonly litdecls: { offset: number, storage: ICPPType, value: string }[];
-    readonly constdecls: ICPPConstDecl[];
+    litdecls: { offset: number, storage: ICPPType, value: string }[] = [];
+    constdecls: ICPPConstDecl[] = [];
 
     readonly entrypoint: MIRInvokeKey;
 
-    constructor(typecount: number, cbuffsize: number, cmask: RefMask, typenames: MIRResolvedTypeKey[], propertynames: string[], fieldnames: MIRFieldKey[],
-        invokenames: MIRInvokeKey[], vinvokenames: MIRVirtualMethodKey[], vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[],
-        typedecls: ICPPType[], invdecls: ICPPInvokeDecl[], litdecls: { offset: number, storage: ICPPType, value: string }[], constdecls: ICPPConstDecl[], 
-        entrypoint: MIRInvokeKey) {
-            this.typecount = typecount;
-            this.cbuffsize = cbuffsize;
-            this.cmask = cmask;
+    constructor(typecount: number, typenames: MIRResolvedTypeKey[], propertynames: string[], fieldnames: MIRFieldKey[], invokenames: MIRInvokeKey[], vinvokenames: MIRVirtualMethodKey[], entrypoint: MIRInvokeKey) {
+        this.typecount = typecount;
 
-            this.typenames = typenames;
-            this.propertynames = propertynames;
-            this.fieldnames = fieldnames;
+        this.typenames = typenames;
+        this.propertynames = propertynames;
+        this.fieldnames = fieldnames;
 
-            this.invokenames = invokenames;
-            this.vinvokenames = vinvokenames;
+        this.invokenames = invokenames;
+        this.vinvokenames = vinvokenames;
 
-            this.vtable = vtable;
-
-            this.typedecls = typedecls;
-            this.invdecls = invdecls;
-
-            this.litdecls = litdecls;
-            this.constdecls = constdecls;
-
-            this.entrypoint = entrypoint;
+        this.entrypoint = entrypoint;
     }
 
     jsonEmit(): object {
