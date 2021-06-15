@@ -178,6 +178,30 @@ enum class OpCodeTag
     GeStrPosOp
 };
 
+
+boost::json::value jsonGet(boost::json::value val, const char* prop);
+bool jsonGetAsBool(boost::json::value val, const char* prop);
+
+template <typename T>
+T jsonGetAsTag(boost::json::value val, const char* prop)
+{
+    return (T)jsonGet(val, prop).as_uint64();
+}
+
+template <typename T>
+T jsonGetAsInt(boost::json::value val, const char* prop)
+{
+    return (T)jsonGet(val, prop).as_int64();
+}
+
+template <typename T>
+T jsonGetAsUInt(boost::json::value val, const char* prop)
+{
+    return (T)jsonGet(val, prop).as_uint64();
+}
+
+std::string jsonGetAsString(boost::json::value val, const char* prop);
+
 struct Argument
 {
     ArgumentTag kind;
@@ -216,6 +240,12 @@ struct BSQStatementGuard
     bool enabled; //true if this statment guard is active and should be used
 };
 BSQStatementGuard jsonParse_BSQStatementGuard(boost::json::value val);
+
+
+const BSQType* jsonParse_BSQType(boost::json::value val);
+BSQRecordPropertyID jsonParse_BSQRecordPropertyID(boost::json::value val);
+BSQFieldID jsonParse_BSQFieldID(boost::json::value val);
+SourceInfo j_sinfo(boost::json::value val);
 
 class InterpOp
 {
@@ -799,7 +829,7 @@ public:
     const BSQEphemeralListType* argtype;
     const std::vector<uint32_t> proppositions; //if empty then assume properties are in same order as elist
     
-    ConstructorRecordFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype, std::vector<BSQRecordPropertyID> positions) : InterpOp(sinfo, OpCodeTag::ConstructorRecordFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype), proppositions(proppositions) {;}
+    ConstructorRecordFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype, std::vector<BSQRecordPropertyID> proppositions) : InterpOp(sinfo, OpCodeTag::ConstructorRecordFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype), proppositions(proppositions) {;}
     virtual ~ConstructorRecordFromEphemeralListOp() {;}
 
     static ConstructorRecordFromEphemeralListOp* jparse(boost::json::value v);
@@ -1176,7 +1206,7 @@ public:
     static VarLifetimeEndOp* jparse(boost::json::value v);
 };
 
-template <OpCodeTag tag>
+template <OpCodeTag ttag>
 class PrimitiveNegateOperatorOp : public InterpOp
 {
 public:
@@ -1184,13 +1214,13 @@ public:
     const BSQType* oftype;
     const Argument arg;
     
-    PrimitiveNegateOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), arg(arg) {;}
+    PrimitiveNegateOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg) : InterpOp(sinfo, ttag), trgt(trgt), oftype(oftype), arg(arg) {;}
     virtual ~PrimitiveNegateOperatorOp() {;}
 
     static PrimitiveNegateOperatorOp* jparse(boost::json::value v);
 };
 
-template <OpCodeTag tag>
+template <OpCodeTag ttag>
 class PrimitiveBinaryOperatorOp : public InterpOp
 {
 public:
@@ -1199,13 +1229,13 @@ public:
     const Argument larg;
     const Argument rarg;
     
-    PrimitiveBinaryOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
+    PrimitiveBinaryOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, ttag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
     virtual ~PrimitiveBinaryOperatorOp() {;}
 
     static PrimitiveBinaryOperatorOp* jparse(boost::json::value v);
 };
 
-template <OpCodeTag tag>
+template <OpCodeTag ttag>
 class PrimitiveBinaryCompareOp : public InterpOp
 {
 public:
@@ -1214,7 +1244,7 @@ public:
     const Argument larg;
     const Argument rarg;
     
-    PrimitiveBinaryCompareOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, tag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
+    PrimitiveBinaryCompareOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, ttag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
     virtual ~PrimitiveBinaryCompareOp() {;}
 
     static PrimitiveBinaryCompareOp* jparse(boost::json::value v);

@@ -3,9 +3,9 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityTypeDecl, MIRInvokeDecl } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRInvokeDecl } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { ICPPAssembly, ICPPConstDecl, ICPPParseTag, ICPPTypeEntity, ICPPTypeRecord, TranspilerOptions } from "./icpp_assembly";
+import { ICPPAssembly, ICPPConstDecl, ICPPParseTag, ICPPTypeEntity, ICPPTypeInlineUnion, ICPPTypeRecord, ICPPTypeRefUnion, TranspilerOptions } from "./icpp_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { ICPPBodyEmitter } from "./iccpbody_emitter";
 import { constructCallGraphInfo } from "../../../compiler/mir_callg";
@@ -147,9 +147,17 @@ class ICPPEmitter {
                 return { offset: cle.offset, storage: cle.storage, value: cle.value };
             });
 
+
+        const basetypes = [...this.assembly.typeMap].map((tt) => tt[1]).filter((tt) => tt.options.length === 1 && !(tt.options[0] instanceof MIRConceptType));
         this.icppasm.typenames.forEach((tt) => {
             const mirtype = this.temitter.getMIRType(tt);
-            this.icppasm.typedecls.push(this.temitter.getICPPTypeData(mirtype));
+            const icpptype = this.temitter.getICPPTypeData(mirtype);
+            this.icppasm.typedecls.push(icpptype);
+
+            if(icpptype instanceof ICPPTypeInlineUnion || icpptype instanceof ICPPTypeRefUnion) {
+                const subtypes = basetypes.filter((btype) => this.assembly.subtypeOf(btype, mirtype)).map((tt) => tt.trkey).sort();
+                this.icppasm.subtypes.set(mirtype.trkey, new Set<MIRResolvedTypeKey>(subtypes));
+            }
 
             if(this.temitter.isUniqueEntityType(mirtype)) {
                 const mdecl = this.assembly.entityDecls.get(mirtype.trkey) as MIREntityTypeDecl;

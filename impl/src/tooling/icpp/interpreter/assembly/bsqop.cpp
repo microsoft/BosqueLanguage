@@ -18,24 +18,6 @@ bool jsonGetAsBool(boost::json::value val, const char* prop)
     return jsonGet(val, prop).as_bool();
 }
 
-template <typename T>
-T jsonGetAsTag(boost::json::value val, const char* prop)
-{
-    return (T)jsonGet(val, prop).as_uint64();
-}
-
-template <typename T>
-T jsonGetAsInt(boost::json::value val, const char* prop)
-{
-    return (T)jsonGet(val, prop).as_int64();
-}
-
-template <typename T>
-T jsonGetAsUInt(boost::json::value val, const char* prop)
-{
-    return (T)jsonGet(val, prop).as_uint64();
-}
-
 std::string jsonGetAsString(boost::json::value val, const char* prop)
 {
     return std::string(jsonGet(val, prop).as_string().cbegin(), jsonGet(val, prop).as_string().cend());

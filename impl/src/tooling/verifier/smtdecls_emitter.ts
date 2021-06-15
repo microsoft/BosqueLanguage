@@ -97,7 +97,10 @@ class SMTEmitter {
         this.walkAndGenerateHavocType(this.temitter.getMIRType("NSCore::String"), havocfuncs);
         const bcreate = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType("NSCore::String"), new SMTVar("path"), new SMTConst("BNat@zero"));
 
-        const vre = this.bemitter.assembly.validatorRegexs.get(tt.trkey) as BSQRegex;
+        const ttdecl = this.bemitter.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
+        const ctype = ((ttdecl.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[]).find((tke) => tke.tname === "T") as { tname: string, tkind: MIRResolvedTypeKey }).tkind;
+        
+        const vre = this.bemitter.assembly.validatorRegexs.get(ctype) as BSQRegex;
         const lre = vre.compileToSMTValidator(this.bemitter.vopts.StringOpt === "ASCII");
 
         let accept: SMTExp = new SMTConst("false");

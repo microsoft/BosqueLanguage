@@ -7,28 +7,6 @@
 #include "../core/bsqmemory.h"
 #include "../runtime/environment.h"
 
-boost::json::value jsonGet(boost::json::value val, const char* prop)
-{
-    assert(val.is_object());
-    return val.as_object().at(prop);
-}
-
-template <typename T>
-T jsonGetAsUInt(boost::json::value val, const char* prop)
-{
-    return (T)jsonGet(val, prop).as_uint64();
-}
-
-SourceInfo jsonParse_SourceInfo(boost::json::value val)
-{
-    return SourceInfo{ jsonGetAsUInt<uint32_t>(val, "line"), jsonGetAsUInt<uint32_t>(val, "column") };
-}
-
-SourceInfo j_sinfo(boost::json::value val)
-{
-    return jsonParse_SourceInfo(jsonGet(val, "sinfo"));
-}
-
 RefMask jsonLoadRefMask(boost::json::value val)
 {
     if(val.is_null())
@@ -135,29 +113,25 @@ const BSQType* jsonLoadTypedNumberType(boost::json::value v)
     switch(primitive)
     {
     case BSQ_TYPE_ID_BOOL:
-        return new BSQTypedNumberType<BSQBool>(j_tkey(v), j_name(v), underlying); 
+        return new BSQTypedNumberType<BSQBool>(j_tkey(v), j_name(v), underlying, BSQType::g_typeBool); 
     case BSQ_TYPE_ID_NAT:
-        return new BSQTypedNumberType<BSQNat>(j_tkey(v), j_name(v), underlying); 
+        return new BSQTypedNumberType<BSQNat>(j_tkey(v), j_name(v), underlying, BSQType::g_typeNat); 
     case BSQ_TYPE_ID_INT:
-        return new BSQTypedNumberType<BSQInt>(j_tkey(v), j_name(v), underlying);
+        return new BSQTypedNumberType<BSQInt>(j_tkey(v), j_name(v), underlying, BSQType::g_typeInt);
     case BSQ_TYPE_ID_BIGNAT:
-        return new BSQTypedBigNumberType<BSQBigNat>(j_tkey(v), j_name(v), underlying);
+        return new BSQTypedBigNumberType<BSQBigNat>(j_tkey(v), j_name(v), underlying, BSQType::g_typeBigNat);
     case BSQ_TYPE_ID_BIGINT:
-        return new BSQTypedBigNumberType<BSQBigInt>(j_tkey(v), j_name(v), underlying);
+        return new BSQTypedBigNumberType<BSQBigInt>(j_tkey(v), j_name(v), underlying, BSQType::g_typeBigInt);
     case BSQ_TYPE_ID_FLOAT:
-        return new BSQTypedNumberType<BSQFloat>(j_tkey(v), j_name(v), underlying); 
+        return new BSQTypedNumberType<BSQFloat>(j_tkey(v), j_name(v), underlying, BSQType::g_typeFloat); 
     case BSQ_TYPE_ID_DECIMAL:
-        return new BSQTypedNumberType<BSQDecimal>(j_tkey(v), j_name(v), underlying); 
+        return new BSQTypedNumberType<BSQDecimal>(j_tkey(v), j_name(v), underlying, BSQType::g_typeDecimal); 
     case BSQ_TYPE_ID_RATIONAL:
-        return new BSQTypedNumberType<BSQRational>(j_tkey(v), j_name(v), underlying);
+        return new BSQTypedNumberType<BSQRational>(j_tkey(v), j_name(v), underlying, BSQType::g_typeRational);
     case BSQ_TYPE_ID_ISOTIME:
-        return new BSQTypedNumberType<BSQISOTime>(j_tkey(v), j_name(v), underlying); 
+        return new BSQTypedNumberType<BSQISOTime>(j_tkey(v), j_name(v), underlying, BSQType::g_typeISOTime); 
     case BSQ_TYPE_ID_LOGICALTIME:
-        return new BSQTypedNumberType<BSQLogicalTime>(j_tkey(v), j_name(v), underlying); 
-    case BSQ_TYPE_ID_UUID:
-        return new BSQTypedUUIDNumberType(j_tkey(v), j_name(v)); 
-    case BSQ_TYPE_ID_CONTENTHASH:
-        return new BSQTypedContentHashType(j_tkey(v), j_name(v));
+        return new BSQTypedNumberType<BSQLogicalTime>(j_tkey(v), j_name(v), underlying, BSQType::g_typeLogicalTime); 
     default: {
         assert(false);
         return nullptr;
@@ -455,7 +429,7 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(boost::json::value v)
         auto tstr = std::string(param.as_object().at("ptype").as_string().cbegin(), param.as_object().at("ptype").as_string().cend());
         auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
-        return new BSQFunctionParameter(j_name(param), ptype);
+        return BSQFunctionParameter{j_name(param), ptype};
     });
 
     auto rstr = std::string(v.as_object().at("resultType").as_string().cbegin(), v.as_object().at("resultType").as_string().cend());
@@ -465,7 +439,7 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(boost::json::value v)
     const RefMask mask = jsonLoadRefMask(v.as_object().at("mixedStackMask"));
 
     std::vector<InterpOp*> body;
-    std::transform(v.as_object().at("body").as_array().cbegin(), v.as_object().at("body").as_array().cend(), std::back_inserter(params), [](boost::json::value jop) {
+    std::transform(v.as_object().at("body").as_array().cbegin(), v.as_object().at("body").as_array().cend(), std::back_inserter(body), [](boost::json::value jop) {
         return InterpOp::jparse(jop);
     });
 
@@ -486,7 +460,7 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
         auto tstr = std::string(param.as_object().at("ptype").as_string().cbegin(), param.as_object().at("ptype").as_string().cend());
         auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
-        return new BSQFunctionParameter(j_name(param), ptype);
+        return BSQFunctionParameter{j_name(param), ptype};
     });
 
     auto rstr = std::string(v.as_object().at("resultType").as_string().cbegin(), v.as_object().at("resultType").as_string().cend());

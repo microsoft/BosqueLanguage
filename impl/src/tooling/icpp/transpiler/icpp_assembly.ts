@@ -7,6 +7,7 @@ import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtual
 import { Argument, ICPPOp } from "./icpp_exp";
 
 import * as assert from "assert";
+import { BSQRegex } from "../../../ast/bsqregex";
 
 type TranspilerOptions = {
 };
@@ -77,7 +78,12 @@ enum ICPPParseTag
     StringOfTag,
     DataStringTag,
     TypedNumberTag,
+    VectorTag,
     ListTag,
+    StackTag,
+    QueueTag,
+    SetTag,
+    MapTag,
     TupleTag,
     RecordTag,
     EntityTag,
@@ -93,25 +99,27 @@ class ICPPType {
     readonly allocinfo: ICPPTypeSizeInfo; //memory size information
 
     readonly ptag: ICPPParseTag
-
-    constructor(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo) {
+    readonly iskey: boolean;
+    
+    constructor(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, iskey: boolean) {
         this.tkey = tkey;
         this.tkind = tkind;
         this.allocinfo = allocinfo;
 
         this.ptag = ptag;
+        this.iskey = iskey;
     }
 
     jemitType(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
         assert(this.ptag !== ICPPParseTag.BuiltinTag); //shouldn't be emitting these since they are "well known"
 
-        return {ptag: this.ptag, tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo, vtable: vtable};
+        return {ptag: this.ptag, iskey: this.iskey, tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo, vtable: vtable};
     }
 }
 
 class ICPPTypeRegister extends ICPPType {
-    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask) {
-        super(ICPPParseTag.BuiltinTag, tkey, ICPPTypeKind.Register, ICPPTypeSizeInfo.createByRegisterTypeInfo(inlinedatasize, assigndatasize, inlinedmask));
+    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask, iskey: boolean) {
+        super(ICPPParseTag.BuiltinTag, tkey, ICPPTypeKind.Register, ICPPTypeSizeInfo.createByRegisterTypeInfo(inlinedatasize, assigndatasize, inlinedmask), iskey);
         assert(inlinedatasize <= UNIVERSAL_SIZE);
     }
 
@@ -125,25 +133,25 @@ class ICPPTypeTuple extends ICPPType {
     readonly ttypes: MIRResolvedTypeKey[];
     readonly idxoffsets: number[];
 
-    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]) {
-        super(ICPPParseTag.TupleTag, tkey, tkind, allocinfo);
+    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[], iskey: boolean) {
+        super(ICPPParseTag.TupleTag, tkey, tkind, allocinfo, iskey);
 
         this.maxIndex = idxtypes.length;
         this.ttypes = idxtypes;
         this.idxoffsets = idxoffsets;
     }
 
-    static createByValueTuple(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTypeTuple {
+    static createByValueTuple(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[], iskey: boolean): ICPPTypeTuple {
         assert(inlinedatasize <= UNIVERSAL_SIZE);
-        return new ICPPTypeTuple(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), idxtypes, idxoffsets);
+        return new ICPPTypeTuple(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), idxtypes, idxoffsets, iskey);
     }
 
-    static createByRefTuple(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTypeTuple {
-        return new ICPPTypeTuple(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), idxtypes, idxoffsets);
+    static createByRefTuple(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[], iskey: boolean): ICPPTypeTuple {
+        return new ICPPTypeTuple(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), idxtypes, idxoffsets, iskey);
     }
 
-    jemitTupleType(iskey: boolean, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
-        return {...this.jemitType(vtable), iskey: iskey, maxIndex: this.maxIndex, ttypes: this.ttypes, idxoffsets: this.idxoffsets};
+    jemitTupleType(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
+        return {...this.jemitType(vtable), maxIndex: this.maxIndex, ttypes: this.ttypes, idxoffsets: this.idxoffsets};
     }
 }
 
@@ -152,21 +160,21 @@ class ICPPTypeRecord extends ICPPType {
     readonly propertytypes: MIRResolvedTypeKey[];
     readonly propertyoffsets: number[];
 
-    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]) {
-        super(ICPPParseTag.RecordTag, tkey, tkind, allocinfo);
+    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[], iskey: boolean) {
+        super(ICPPParseTag.RecordTag, tkey, tkind, allocinfo, iskey);
 
         this.propertynames = propertynames;
         this.propertytypes = propertytypes;
         this.propertyoffsets = propertyoffsets;
     }
 
-    static createByValueRecord(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPTypeRecord {
+    static createByValueRecord(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[], iskey: boolean): ICPPTypeRecord {
         assert(inlinedatasize <= UNIVERSAL_SIZE);
-        return new ICPPTypeRecord(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), propertynames, propertytypes, propertyoffsets);
+        return new ICPPTypeRecord(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), propertynames, propertytypes, propertyoffsets, iskey);
     }
 
-    static createByRefRecord(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPTypeRecord {
-        return new ICPPTypeRecord(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets);
+    static createByRefRecord(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[], iskey: boolean): ICPPTypeRecord {
+        return new ICPPTypeRecord(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets, iskey);
     }
 
     jemitRecord(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
@@ -178,22 +186,25 @@ class ICPPTypeEntity extends ICPPType {
     readonly fieldnames: MIRFieldKey[];
     readonly fieldtypes: MIRResolvedTypeKey[];
     readonly fieldoffsets: number[];
+    readonly extradata: any;
 
-    constructor(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]) {
-        super(ptag, tkey, tkind, allocinfo);
+    constructor(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[], iskey: boolean, extradata: any) {
+        super(ptag, tkey, tkind, allocinfo, iskey);
 
         this.fieldnames = fieldnames;
         this.fieldtypes = fieldtypes;
         this.fieldoffsets = fieldoffsets;
+
+        this.extradata = extradata;
     }
 
-    static createByValueEntity(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPTypeEntity {
+    static createByValueEntity(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[], iskey: boolean, extradata: any): ICPPTypeEntity {
         assert(inlinedatasize <= UNIVERSAL_SIZE);
-        return new ICPPTypeEntity(ptag, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), fieldnames, fieldtypes, fieldoffsets);
+        return new ICPPTypeEntity(ptag, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), fieldnames, fieldtypes, fieldoffsets, iskey, extradata);
     }
 
-    static createByRefEntity(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPTypeEntity {
-        return new ICPPTypeEntity(ptag, tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets);
+    static createByRefEntity(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[], iskey: boolean, extradata: any): ICPPTypeEntity {
+        return new ICPPTypeEntity(ptag, tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets, iskey, extradata);
     }
 
     jemitValidator(re: object): object {
@@ -251,7 +262,7 @@ class ICPPTypeEphemeralList extends ICPPType {
     readonly eoffsets: number[];
 
     constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, etypes: MIRResolvedTypeKey[], eoffsets: number[]) {
-        super(ICPPParseTag.EphemeralListTag, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask));
+        super(ICPPParseTag.EphemeralListTag, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), false);
 
         this.etypes = etypes;
         this.eoffsets = eoffsets;
@@ -263,8 +274,8 @@ class ICPPTypeEphemeralList extends ICPPType {
 }
 
 class ICPPTypeInlineUnion extends ICPPType {
-    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask) {
-        super(ICPPParseTag.InlineUnionTag, tkey, ICPPTypeKind.UnionInline, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask));
+    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, iskey: boolean) {
+        super(ICPPParseTag.InlineUnionTag, tkey, ICPPTypeKind.UnionInline, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), iskey);
     }
 
     jemitInlineUnion(subtypes: MIRResolvedTypeKey[]): object {
@@ -273,8 +284,8 @@ class ICPPTypeInlineUnion extends ICPPType {
 }
 
 class ICPPTypeRefUnion extends ICPPType {
-    constructor(tkey: MIRResolvedTypeKey) {
-        super(ICPPParseTag.RefUnionTag, tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"));
+    constructor(tkey: MIRResolvedTypeKey, iskey: boolean) {
+        super(ICPPParseTag.RefUnionTag, tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"), iskey);
     }
 
     jemitRefUnion(subtypes: MIRResolvedTypeKey[]): object {
@@ -439,6 +450,7 @@ class ICPPAssembly
     readonly vinvokenames: MIRVirtualMethodKey[];
 
     vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[] = [];
+    subtypes: Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>> = new Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>>();
 
     typedecls: ICPPType[] = [];
     invdecls: ICPPInvokeDecl[] = [];
@@ -478,7 +490,71 @@ class ICPPAssembly
 
             typedecls: this.typedecls.sort((a, b) => a.tkey.localeCompare(b.tkey)).map((tdecl) => {
                 const vtbl = this.vtable.find((vte) => vte.oftype === tdecl.tkey) as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]};
-                tdecl.jemitType(vtbl.vtable);
+
+                if(tdecl instanceof ICPPTypeRegister) {
+                    return tdecl.jemitRegister(vtbl.vtable);
+                }
+                else if (tdecl instanceof ICPPTypeTuple) {
+                    return tdecl.jemitTupleType(vtbl.vtable);
+                }
+                else if (tdecl instanceof ICPPTypeRecord) {
+                    return tdecl.jemitRecord(vtbl.vtable);
+                }
+                else if (tdecl instanceof ICPPTypeEphemeralList) {
+                    return tdecl.jemitEphemeralList();
+                }
+                else if(tdecl instanceof ICPPTypeInlineUnion) {
+                    return tdecl.jemitInlineUnion([...(this.subtypes.get(tdecl.tkey) as Set<MIRResolvedTypeKey>)].sort());
+                }
+                else if (tdecl instanceof ICPPTypeRefUnion) {
+                    return tdecl.jemitRefUnion([...(this.subtypes.get(tdecl.tkey) as Set<MIRResolvedTypeKey>)].sort());
+                }
+                else {
+                    const edecl = tdecl as ICPPTypeEntity;
+
+                    switch(edecl.ptag) {
+                        case ICPPParseTag.ValidatorTag:
+                            return edecl.jemitValidator((edecl.extradata as BSQRegex).jemit());
+                        case ICPPParseTag.StringOfTag:
+                            return edecl.jemitStringOf(edecl.extradata as MIRResolvedTypeKey);
+                        case ICPPParseTag.DataStringTag:
+                            return edecl.jemitDataString(edecl.extradata as MIRResolvedTypeKey);
+                        case ICPPParseTag.TypedNumberTag: {
+                            //
+                            //TODO: we need to switch this to encode the underlying and primitive types in the type decl really -- not as
+                            //         the funky v field -- we probably want to add some extra access (and maybe constructor) magic too 
+                            //
+                            return edecl.jemitTypedNumber(edecl.extradata as MIRResolvedTypeKey, edecl.extradata as MIRResolvedTypeKey);
+                        }
+                        case ICPPParseTag.VectorTag: {
+                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
+                            return edecl.jemitVector(oftype.tkey, oftype.allocinfo.inlinedatasize, oftype.allocinfo.inlinedmask);
+                        }
+                        case ICPPParseTag.ListTag: {
+                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
+                            return edecl.jemitList(oftype.tkey, oftype.allocinfo.inlinedatasize, oftype.allocinfo.inlinedmask);
+                        }
+                        case ICPPParseTag.StackTag: {
+                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
+                            return edecl.jemitStack(oftype.tkey);
+                        }
+                        case ICPPParseTag.QueueTag: {
+                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
+                            return edecl.jemitQueue(oftype.tkey);
+                        }
+                        case ICPPParseTag.SetTag: {
+                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
+                            return edecl.jemitSet(oftype.tkey);
+                        }
+                        case ICPPParseTag.MapTag: {
+                            const ktype = this.typedecls.find((oft) => oft.tkey === edecl.extradata[0] as MIRResolvedTypeKey) as ICPPType;
+                            const vtype = this.typedecls.find((oft) => oft.tkey === edecl.extradata[1] as MIRResolvedTypeKey) as ICPPType;
+                            return edecl.jemitMap(ktype.tkey, vtype.tkey);
+                        }
+                        default:
+                            return edecl.jemitEntity(vtbl.vtable);
+                    }
+                }
             }),
 
             invdecls: this.invdecls.sort((a, b) => a.ikey.localeCompare(b.ikey)).map((inv) => inv.jsonEmit()),

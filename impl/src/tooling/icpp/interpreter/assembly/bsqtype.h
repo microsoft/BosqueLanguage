@@ -341,7 +341,8 @@ public:
 template <bool isRoot>
 GCProcessOperatorFP getProcessFP(const BSQType* tt)
 {
-    static_assert(false);
+    assert(false);
+    return nullptr;
 }
 
 template <>
@@ -517,9 +518,9 @@ public:
         BSQType(tid, tkind, allocinfo, {0}, {}, fpkeycmp, unionDisplay_impl, name, {unionJSONParse_impl, unionGenerateRandom_impl}), subtypes(subtypes)
     {;}
 
-    ~BSQUnionType() {;}
+    virtual ~BSQUnionType() {;}
 
-    virtual bool isInline() const;
+    virtual bool isInline() const = 0;
 };
 
 class BSQUnionInlineType : public BSQUnionType
@@ -529,9 +530,9 @@ public:
         BSQUnionType(tid, BSQTypeKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, unionInlineKeyCmp_impl, name, subtypes)
     {;}
 
-    ~BSQUnionInlineType() {;}
+    virtual ~BSQUnionInlineType() {;}
 
-    bool isInline() const final
+    bool isInline() const override final
     {
         return true;
     }
@@ -569,9 +570,9 @@ public:
         BSQUnionType(tid, BSQTypeKind::UnionRef, { sizeof(void*), sizeof(void*), sizeof(void*), nullptr, "2" }, unionRefKeyCmp_impl, name, subtypes)
     {;}
 
-    ~BSQUnionRefType() {;}
+    virtual ~BSQUnionRefType() {;}
 
-    bool isInline() const final
+    bool isInline() const override final
     {
         return false;
     }

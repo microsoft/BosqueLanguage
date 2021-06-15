@@ -6364,7 +6364,10 @@ class TypeChecker {
                 });
 
                 let specialTemplateInfo: { tname: string, tkind: MIRResolvedTypeKey }[] | undefined = undefined;
-                if (tdecl.specialDecls.has(SpecialTypeCategory.VectorTypeDecl) || tdecl.specialDecls.has(SpecialTypeCategory.ListTypeDecl)) {
+                if (tdecl.specialDecls.has(SpecialTypeCategory.StringOfDecl) || tdecl.specialDecls.has(SpecialTypeCategory.DataStringDecl)) {
+                    specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType).trkey }];
+                }
+                else if (tdecl.specialDecls.has(SpecialTypeCategory.VectorTypeDecl) || tdecl.specialDecls.has(SpecialTypeCategory.ListTypeDecl)) {
                     specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType).trkey }];
                 }
                 else if (tdecl.specialDecls.has(SpecialTypeCategory.QueueTypeDecl) || tdecl.specialDecls.has(SpecialTypeCategory.StackTypeDecl)) {

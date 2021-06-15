@@ -395,7 +395,7 @@ int main(int argc, char** argv)
         //TODO: check success and print res
 
         auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        printf("Elapsed time %u...\n", delta_ms);
+        printf("Elapsed time %lli...\n", delta_ms);
     }
     else
     {

@@ -106,6 +106,25 @@ public:
     virtual ~BSQIntType() {;}
 };
 
+
+#ifdef __APPLE__
+#define BIGNAT_SIZE 32
+#define BIGINT_SIZE 32
+#define RATIONAL_SIZE (BIGNAT_SIZE + sizeof(BSQNat))
+
+#define BIGNAT_MASK "4111"
+#define BIGINT_MASK "4111"
+#define RATIONAL_MASK "41111"
+#else
+#define BIGNAT_SIZE 24
+#define BIGINT_SIZE 24
+#define RATIONAL_SIZE (BIGNAT_SIZE + sizeof(BSQNat))
+
+#define BIGNAT_MASK "411"
+#define BIGINT_MASK "411"
+#define RATIONAL_MASK "4111"
+#endif
+
 ////
 //BigNat
 typedef boost::multiprecision::cpp_int BSQBigNat;
@@ -123,9 +142,9 @@ void entityBigNatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, S
 class BSQBigNatType : public BSQBigNumType<BSQBigNat>
 {
 public:
-    BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, sizeof(BSQBigNat), "411", entityBigNatKeyCmp_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {entityBigNatJSONParse_impl, entityBigNatGenerateRandom_impl}) 
+    BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, BIGNAT_SIZE, BIGNAT_MASK, entityBigNatKeyCmp_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {entityBigNatJSONParse_impl, entityBigNatGenerateRandom_impl}) 
     {
-        static_assert(sizeof(BSQBigNat) == 24);
+        assert(sizeof(BSQBigNat) == BIGNAT_SIZE);
     }
 
     virtual ~BSQBigNatType() {;}
@@ -148,9 +167,9 @@ void entityBigIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, S
 class BSQBigIntType : public BSQBigNumType<BSQBigInt>
 {
 public:
-    BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, sizeof(BSQBigInt), "411", entityBigIntKeyCmp_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {entityBigIntJSONParse_impl, entityBigIntGenerateRandom_impl}) 
+    BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, BIGINT_SIZE, BIGINT_MASK, entityBigIntKeyCmp_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {entityBigIntJSONParse_impl, entityBigIntGenerateRandom_impl}) 
     {
-        static_assert(sizeof(BSQBigNat) == 24);
+        assert(sizeof(BSQBigInt) == BIGINT_SIZE);
     }
 
     virtual ~BSQBigIntType() {;}
@@ -205,8 +224,8 @@ public:
 //Rational
 struct BSQRational
 {
-    boost::multiprecision::int128_t numerator;
-    uint64_t denominator;
+    BSQBigInt numerator;
+    BSQNat denominator;
 };
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -217,9 +236,9 @@ void entityRationalGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd,
 class BSQRationalType : public BSQRegisterType<BSQRational>
 {
 public:
-    BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, sizeof(BSQRational), "1111", EMPTY_KEY_CMP, entityRationalDisplay_impl, "NSCore::Rational", {entityRationalJSONParse_impl, entityRationalGenerateRandom_impl}) 
+    BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, RATIONAL_SIZE, RATIONAL_MASK, EMPTY_KEY_CMP, entityRationalDisplay_impl, "NSCore::Rational", {entityRationalJSONParse_impl, entityRationalGenerateRandom_impl}) 
     {
-        static_assert(sizeof(BSQRational) == 32);
+        assert(sizeof(BSQRational) == RATIONAL_SIZE);
     }
 
     virtual ~BSQRationalType() {;}
@@ -900,8 +919,8 @@ template <typename T>
 class BSQTypedNumberType : public BSQRegisterType<T>, public BSQTypedNumberTypeAbstract
 {
 public:
-   BSQTypedNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying)
-    : BSQRegisterType(tid, underlying->allocinfo.inlinedatasize, underlying->allocinfo.inlinedmask, underlying->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl, entityTypedNumberGenerateRandom_impl}), 
+   BSQTypedNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
+    : BSQRegisterType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl, entityTypedNumberGenerateRandom_impl}), 
     BSQTypedNumberTypeAbstract(underlying)
     {;}
 
@@ -912,32 +931,14 @@ template <typename T>
 class BSQTypedBigNumberType : public BSQBigNumType<T>, public BSQTypedNumberTypeAbstract
 {
 public:
-   BSQTypedBigNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying)
-    : BSQRegisterType(tid, underlying->allocinfo.inlinedatasize, underlying->allocinfo.inlinedmask, underlying->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl, entityTypedNumberGenerateRandom_impl}), 
+   BSQTypedBigNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
+    : BSQBigNumType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl, entityTypedNumberGenerateRandom_impl}), 
     BSQTypedNumberTypeAbstract(underlying)
     {;}
 
     virtual ~BSQTypedBigNumberType() {;}
 };
 
-class BSQTypedUUIDNumberType : public BSQUUIDType, public BSQTypedNumberTypeAbstract
-{
-public:
-   BSQTypedUUIDNumberType(BSQTypeID tid, std::string name)
-    : BSQUUIDType(), 
-    BSQTypedNumberTypeAbstract(BSQ_TYPE_ID_UUID)
-    {;}
-
-    virtual ~BSQTypedUUIDNumberType() {;}
-};
-
-class BSQTypedContentHashType : public BSQContentHashType, public BSQTypedNumberTypeAbstract
-{
-public:
-   BSQTypedContentHashType(BSQTypeID tid, std::string name)
-    : BSQContentHashType(), 
-    BSQTypedNumberTypeAbstract(BSQ_TYPE_ID_CONTENTHASH)
-    {;}
-
-    virtual ~BSQTypedContentHashType() {;}
-};
+//
+//TODO: need to support things that are any APIType not just numeric
+//
