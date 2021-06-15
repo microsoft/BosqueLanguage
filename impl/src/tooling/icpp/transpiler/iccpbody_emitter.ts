@@ -1585,11 +1585,15 @@ class ICPPBodyEmitter {
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
 
-            return this.generateICPPInvoke(idecl as MIRInvokePrimitiveDecl);
+            return this.generateBuiltinICPPInvoke(idecl as MIRInvokePrimitiveDecl);
         }
     }
 
     generateBuiltinICPPInvoke(idecl: MIRInvokePrimitiveDecl): ICPPInvokeDecl | undefined {
+        if(idecl.implkey === "default") {
+            return undefined;
+        }
+        
         const params = idecl.params.map((arg) => {
             return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
         });

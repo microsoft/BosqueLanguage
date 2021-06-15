@@ -22,7 +22,7 @@ const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
 function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean): MIRAssembly {
     let code: { relativePath: string, contents: string }[] = [];
     try {
-        const coredir = Path.join(bosque_dir, "bin/core/verify");
+        const coredir = Path.join(bosque_dir, "bin/core/execute");
         const corefiles = FS.readdirSync(coredir);
 
         for (let i = 0; i < corefiles.length; ++i) {
