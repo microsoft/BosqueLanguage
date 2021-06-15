@@ -152,24 +152,27 @@ class ICPPEmitter {
         this.icppasm.typenames.forEach((tt) => {
             const mirtype = this.temitter.getMIRType(tt);
             const icpptype = this.temitter.getICPPTypeData(mirtype);
-            this.icppasm.typedecls.push(icpptype);
 
-            if(icpptype instanceof ICPPTypeInlineUnion || icpptype instanceof ICPPTypeRefUnion) {
-                const subtypes = basetypes.filter((btype) => this.assembly.subtypeOf(btype, mirtype)).map((tt) => tt.trkey).sort();
-                this.icppasm.subtypes.set(mirtype.trkey, new Set<MIRResolvedTypeKey>(subtypes));
-            }
+            if (icpptype.ptag !== ICPPParseTag.BuiltinTag && !["NSCore::Any", "NSCore::Some"].includes(icpptype.tkey)) {
+                this.icppasm.typedecls.push(icpptype);
 
-            if(this.temitter.isUniqueEntityType(mirtype)) {
-                const mdecl = this.assembly.entityDecls.get(mirtype.trkey) as MIREntityTypeDecl;
-                let vte = this.icppasm.vtable.find((v) => v.oftype === mdecl.tkey);
-                if(vte === undefined) {
-                    vte = { oftype: mdecl.tkey, vtable: [] };
-                    this.icppasm.vtable.push(vte);
+                if (icpptype instanceof ICPPTypeInlineUnion || icpptype instanceof ICPPTypeRefUnion) {
+                    const subtypes = basetypes.filter((btype) => this.assembly.subtypeOf(btype, mirtype)).map((tt) => tt.trkey).sort();
+                    this.icppasm.subtypes.set(mirtype.trkey, new Set<MIRResolvedTypeKey>(subtypes));
                 }
 
-                mdecl.vcallMap.forEach((vc) => {
-                    (vte as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}).vtable.push({vcall: vc[0], inv: vc[1]});
-                });
+                if (this.temitter.isUniqueEntityType(mirtype)) {
+                    const mdecl = this.assembly.entityDecls.get(mirtype.trkey) as MIREntityTypeDecl;
+                    let vte = this.icppasm.vtable.find((v) => v.oftype === mdecl.tkey);
+                    if (vte === undefined) {
+                        vte = { oftype: mdecl.tkey, vtable: [] };
+                        this.icppasm.vtable.push(vte);
+                    }
+
+                    mdecl.vcallMap.forEach((vc) => {
+                        (vte as { oftype: MIRResolvedTypeKey, vtable: { vcall: MIRVirtualMethodKey, inv: MIRInvokeKey }[] }).vtable.push({ vcall: vc[0], inv: vc[1] });
+                    });
+                }
             }
         });
     }
