@@ -1,0 +1,402 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive types used in the Bosque language
+namespace NSCore;
+
+//<summary>Special type which all values are instances of.</summary>
+mixed concept Any {
+    method is<T>(): Bool # special_method
+    method as<T>(): T # special_method
+
+    method asOrNone<T>(): T? {
+        return this.is<T>() ? this.as<T>() : none;
+    }
+
+    method asTry<T>(out? v: T): Bool {
+        if(!this.is<T>()) {
+            return false;
+        }
+        else {
+            v = this.as<T>();
+            return true;
+        }
+    }
+
+    method isSome(): Bool # special_method
+    method isNone(): Bool # special_method
+}
+
+//<summary>Special type for representing all non-none values.</summary>
+mixed concept Some provides Any {
+}
+
+//<summary>Special type for indicating a value can be used as a key in a collection.</summary>
+mixed concept KeyType provides Any {
+    function equal<T grounded KeyType>(a: T, b: T): Bool # special_method
+    function less<T grounded KeyType>(a: T, b: T): Bool # special_method
+}
+
+//<summary>Type for indicating that a datatype is Plain-Old-Data.</summary>
+mixed concept PODType provides APIType {
+}
+
+//<summary>Type to unify Buffers and APITypes at top level for checking</summary>
+mixed concept APIValue provides Any {
+}
+
+//<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
+mixed concept APIType provides APIValue {
+}
+
+//<summary>Type for representing the none-value.</summary>
+__internal grounded struct entity None provides KeyType, PODType, APIType {
+}
+
+//<summary>Primitive boolean value.</summary>
+__internal grounded struct entity Bool provides Some, KeyType, PODType, APIType {
+}
+
+abstract prefix operator +(a: Some): Some;
+abstract prefix operator -(a: Some): Some;
+abstract infix operator *(a: Some, b: Some): Some;
+abstract infix operator /(a: Some, b: Some): Some;
+abstract infix operator +(a: Some, b: Some): Some;
+abstract infix operator -(a: Some, b: Some): Some;
+abstract infix operator ==(a: Some, b: Some): Bool;
+abstract infix operator !=(a: Some, b: Some): Bool;
+abstract infix operator <(a: Some, b: Some): Bool;
+abstract infix operator >(a: Some, b: Some): Bool;
+abstract infix operator <=(a: Some, b: Some): Bool;
+abstract infix operator >=(a: Some, b: Some): Bool;
+
+//<summary>Primitive integer value.</summary>
+__internal grounded struct entity Int provides Some, KeyType, PODType, APIType {
+}
+__primitive inline prefix operator +(a: Int): Int = default;
+__primitive inline prefix operator -(a: Int): Int = default;
+__primitive inline infix operator *(a: Int, b: Int): Int = default;
+__primitive inline infix operator /(a: Int, b: Int): Int = default;
+__primitive inline infix operator +(a: Int, b: Int): Int = default;
+__primitive inline infix operator -(a: Int, b: Int): Int = default;
+__primitive inline infix operator ==(a: Int, b: Int): Bool = default;
+__primitive inline infix operator !=(a: Int, b: Int): Bool = default;
+__primitive inline infix operator <(a: Int, b: Int): Bool = default;
+__primitive inline infix operator >(a: Int, b: Int): Bool = default;
+__primitive inline infix operator <=(a: Int, b: Int): Bool = default;
+__primitive inline infix operator >=(a: Int, b: Int): Bool = default;
+
+//<summary>Primitive natural number value.</summary>
+__internal grounded struct entity Nat provides Some, KeyType, PODType, APIType {
+}
+__primitive inline prefix operator +(a: Nat): Nat = default;
+__primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator /(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator +(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator -(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator ==(a: Nat, b: Nat): Bool = default;
+__primitive inline infix operator !=(a: Nat, b: Nat): Bool = default;
+__primitive inline infix operator <(a: Nat, b: Nat): Bool = default;
+__primitive inline infix operator >(a: Nat, b: Nat): Bool = default;
+__primitive inline infix operator <=(a: Nat, b: Nat): Bool = default;
+__primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
+
+//<summary>Primitive big-integer value.</summary>
+__internal grounded struct entity BigInt provides Some, KeyType, PODType, APIType {
+}
+__primitive inline prefix operator +(a: BigInt): BigInt = default;
+__primitive inline prefix operator -(a: BigInt): BigInt = default;
+__primitive inline infix operator *(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator /(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator +(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator -(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator ==(a: BigInt, b: BigInt): Bool = default;
+__primitive inline infix operator !=(a: BigInt, b: BigInt): Bool = default;
+__primitive inline infix operator <(a: BigInt, b: BigInt): Bool = default;
+__primitive inline infix operator >(a: BigInt, b: BigInt): Bool = default;
+__primitive inline infix operator <=(a: BigInt, b: BigInt): Bool = default;
+__primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
+
+//<summary>Primitive big-integer value.</summary>
+__internal grounded struct entity BigNat provides Some, KeyType, PODType, APIType {
+}
+__primitive inline prefix operator +(a: BigNat): BigNat = default;
+__primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator /(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator +(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator -(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator ==(a: BigNat, b: BigNat): Bool = default;
+__primitive inline infix operator !=(a: BigNat, b: BigNat): Bool = default;
+__primitive inline infix operator <(a: BigNat, b: BigNat): Bool = default;
+__primitive inline infix operator >(a: BigNat, b: BigNat): Bool = default;
+__primitive inline infix operator <=(a: BigNat, b: BigNat): Bool = default;
+__primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
+
+//<summary>Primitive rational value.</summary>
+__internal grounded struct entity Rational provides Some, PODType, APIType {
+}
+__primitive inline prefix operator +(a: Rational): Rational = default;
+__primitive inline prefix operator -(a: Rational): Rational = default;
+__primitive inline infix operator *(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator /(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator +(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator -(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator ==(a: Rational, b: Rational): Bool = default;
+__primitive inline infix operator !=(a: Rational, b: Rational): Bool = default;
+__primitive inline infix operator <(a: Rational, b: Rational): Bool = default;
+__primitive inline infix operator >(a: Rational, b: Rational): Bool = default;
+__primitive inline infix operator <=(a: Rational, b: Rational): Bool = default;
+__primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
+
+//<summary>Primitive float value -- compiler flags control bitness -- defaults to 64bit.</summary>
+__internal grounded struct entity Float provides Some, PODType, APIType {
+}
+__primitive inline prefix operator +(a: Float): Float = default;
+__primitive inline prefix operator -(a: Float): Float = default;
+__primitive inline infix operator *(a: Float, b: Float): Float = default;
+__primitive inline infix operator /(a: Float, b: Float): Float = default;
+__primitive inline infix operator +(a: Float, b: Float): Float = default;
+__primitive inline infix operator -(a: Float, b: Float): Float = default;
+__primitive inline infix operator <(a: Float, b: Float): Bool = default;
+__primitive inline infix operator >(a: Float, b: Float): Bool = default;
+__primitive inline infix operator <=(a: Float, b: Float): Bool = default;
+__primitive inline infix operator >=(a: Float, b: Float): Bool = default;
+
+//<summary>Primitive float decimal value.</summary>
+__internal grounded struct entity Decimal provides Some, PODType, APIType {
+}
+__primitive inline prefix operator +(a: Decimal): Decimal = default;
+__primitive inline prefix operator -(a: Decimal): Decimal = default;
+__primitive inline infix operator *(a: Decimal, b: Decimal): Decimal = default;
+__primitive inline infix operator /(a: Decimal, b: Decimal): Decimal = default;
+__primitive inline infix operator +(a: Decimal, b: Decimal): Decimal = default;
+__primitive inline infix operator -(a: Decimal, b: Decimal): Decimal = default;
+__primitive inline infix operator <(a: Decimal, b: Decimal): Bool = default;
+__primitive inline infix operator >(a: Decimal, b: Decimal): Bool = default;
+__primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;
+__primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
+
+//<summary>Primitive string position value.</summary>
+__internal struct entity StringPos provides Some {
+}
+__primitive inline infix operator <(a: StringPos, b: StringPos): Bool = default;
+__primitive inline infix operator >(a: StringPos, b: StringPos): Bool = default;
+__primitive inline infix operator <=(a: StringPos, b: StringPos): Bool = default;
+__primitive inline infix operator >=(a: StringPos, b: StringPos): Bool = default;
+
+//<summary>Primitive string value.</summary>
+__internal grounded struct entity String provides Some, KeyType, PODType, APIType {
+    __safe private function s_empty(s: String): Bool # string_empty
+    
+    __safe private function s_iteratorMin(s: String): StringPos # string_iterator_min
+    __safe private function s_iteratorMax(s: String): StringPos # string_iterator_max
+    __safe private function s_iteratorBegin(s: String): StringPos # string_iterator_begin
+    __safe private function s_iteratorEnd(s: String): StringPos # string_iterator_end
+    
+    __assume_safe private function s_concat2(s1: String, s2: String): String # string_append
+    __assume_safe private function s_slice(s: String, start: StringPos, end: StringPos): String # string_slice
+    
+    function concat2(s1: String, s2: String): String {
+        return String::s_concat2(s1, s2);
+    }
+
+    function concat3(s1: String, s2: String, s3: String): String {
+        return String::s_concat2(s1, String::s_concat2(s2, s3));
+    }
+
+    method empty(): Bool {
+        return String::s_empty(this);
+    }
+
+    method append(s: String): String {
+        return String::s_concat2(this, s);
+    }
+
+    method prepend(s: String): String {
+        return String::s_concat2(s, this);
+    }
+
+    method slice(start?: StringPos=this.iteratorBegin(), end?: StringPos=this.iteratorMax()): String 
+        requires release this.iteratorMin() < start & start <= end & end <= this.iteratorMax();
+    {
+        return String::s_slice(this, start, end);
+    }
+
+    method iteratorMin(): StringPos {
+        return String::s_iteratorMin(this);
+    }
+
+    method iteratorMax(): StringPos {
+        return String::s_iteratorMax(this);
+    }
+
+    method iteratorBegin(): StringPos {
+        return String::s_iteratorBegin(this);
+    }
+
+    method iteratorEnd(): StringPos {
+        return String::s_iteratorEnd(this);
+    }
+}
+
+//<summary>Primitive safe string value.</summary>
+grounded struct entity StringOf<T where validator> provides Some, KeyType, PODType, APIType {
+    private field str: String;
+
+    method string(): String {
+        return this.str;
+    }
+
+    function from(str: String): StringOf<T>
+        requires release T::accepts(str);
+    {
+        return StringOf<T>#{ str=str };
+    }
+}
+
+//<summary>Primitive DataString value.</summary>
+grounded struct entity DataString<T where parsable> provides Some, APIValue {
+    private field str: String;
+
+    method string(): String {
+        return this.str;
+    }
+
+    function from(str: String): DataString<T> 
+        requires release T::parse(str).isOk();
+    {
+        return DataString<T>#{ str=str };
+    }
+}
+
+enum BufferFormat {
+    text,
+    bosque,
+    json
+}
+
+enum BufferEncoding {
+    utf8,
+    binary
+}
+
+enum BufferCompression {
+    off,
+    time,
+    space
+}
+
+//<summary>An efficient buffer encoding for data.</summary>
+struct entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
+    private field format: BufferFormat;
+    private field encoding: BufferEncoding;
+    private field compression: BufferCompression;
+    private field buf: ByteBuffer;
+}
+
+//<summary>An efficient buffer encoding for data.</summary>
+struct entity DataBuffer<T where parsable> provides Some, APIValue {
+    private field format: BufferFormat;
+    private field encoding: BufferEncoding;
+    private field compression: BufferCompression;
+    private field buf: ByteBuffer;
+}
+
+//<summary>An efficient byte buffer for data.</summary>
+__internal entity ByteBuffer provides Some, APIValue {
+}
+
+//<summary>Primitive ISOTime value.</summary>
+__internal grounded struct entity ISOTime provides Some, PODType, APIType {
+}
+
+//<summary>Primitive LogicalTime value.</summary>
+__internal grounded struct entity LogicalTime provides Some, KeyType, PODType, APIType {
+}
+
+//<summary>Primitive UUID value.</summary>
+__internal grounded entity UUID provides Some, KeyType, PODType, APIType {
+}
+
+//<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
+__internal grounded entity ContentHash provides Some, KeyType, PODType, APIType {
+}
+
+//<summary>Primitive regex value.</summary>
+__internal entity Regex provides Some {
+}
+
+struct entity RegexMatch provides Some {
+    field index: Nat;
+    field length: Nat;
+
+    invariant $index >= 0n & $length >= 0n;
+}
+
+//<summary>Static methods for Tuples.</summary>
+concept Tuple provides Some {
+    function append(arg: Any): Tuple # special_method
+}
+
+//<summary>Static methods for Records.</summary>
+concept Record provides Some {
+    function join(arg: Any): Record # special_method
+}
+
+//<summary>Result type.</summary>
+struct concept Result<T, E=Any> provides Some {
+    struct entity Ok provides Result<T, E> {
+        field value: T;
+
+        function create(value: T): Ok {
+            return Ok@{ value = value };
+        }
+    }
+
+    struct entity Err provides Result<T, E> {
+        field info: E;
+
+        function create(info: E): Err {
+            return Err@{ info = info };
+        }
+    }
+
+    function createOk(value: T): Result<T, E> {
+        return Ok::create(value);
+    }
+
+    function createErr(info: E): Result<T, E> {
+        return Err::create(info);
+    }
+
+    method isOk(): Bool {
+        return this.is<Ok>();
+    }
+
+    method isErr(): Bool {
+        return this.is<Err>();
+    }
+
+    method value(): T {
+        return this.as<Ok>().value;
+    }
+
+    method error(): E {
+        return this.as<Err>().info;
+    }
+
+    method convert<U=?, V=?>(): Result<U, V> {
+        return this.isOk()? Result<U, V>::createOk(this.value().as<U>()) : Result<U, V>::createErr(this.error().as<V>()); 
+    }
+}
+
+//<summary>All actual entities/concepts implicitly provide this concept.</summary>
+mixed concept Object provides Some {
+}
+
+//<summary>All collections provide this concept so we can expand them with spread operators.</summary>
+mixed concept Expandoable<T> provides Object {
+    method expand<U>(): List<U> # special_method
+}

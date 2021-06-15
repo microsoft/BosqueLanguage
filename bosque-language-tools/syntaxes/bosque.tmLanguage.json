@@ -1,8 +1,5 @@
 {
 	"name": "Bosque",
-	"fileTypes": [
-	    "bsq"
-	],
 	"patterns": [
 		{
 			"include": "#comments"

@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { Assembly } from "./assembly";
+import { Assembly, NamespaceOperatorDecl } from "./assembly";
 import { NominalTypeSignature, TypeSignature, AutoTypeSignature } from "./type_signature";
 
 class FunctionScope {
@@ -11,7 +11,7 @@ class FunctionScope {
     private m_captured: Set<string>;
     private readonly m_ispcode: boolean;
     private readonly m_args: Set<string>;
-    private m_locals: Set<string>[];
+    private m_locals: { name: string, scopedname: string, isbinder: boolean }[][];
 
     constructor(args: Set<string>, rtype: TypeSignature, ispcode: boolean) {
         this.m_rtype = rtype;
@@ -22,7 +22,7 @@ class FunctionScope {
     }
 
     pushLocalScope() {
-        this.m_locals.push(new Set<string>());
+        this.m_locals.push([]);
     }
 
     popLocalScope() {
@@ -34,21 +34,22 @@ class FunctionScope {
     }
 
     isVarNameDefined(name: string): boolean {
-        if (this.m_locals.some((frame) => frame.has(name))) {
-            return true;
-        }
-
-        return this.m_args.has(name) || this.m_captured.has(name);
+        return this.m_args.has(name) || this.m_locals.some((frame) => frame.some((fr) => fr.name === name));
     }
 
-    defineLocalVar(name: string) {
-        this.m_locals[this.m_locals.length - 1].add(name);
+    getScopedVarName(name: string): string {
+        for (let i = this.m_locals.length - 1; i >= 0; --i) {
+            const vinfo = this.m_locals[i].find((fr) => fr.name === name);
+            if (vinfo !== undefined) {
+                return vinfo.scopedname;
+            }
+        }
+
+        return name;
     }
 
-    useLocalVar(name: string) {
-        if (!this.isVarNameDefined(name)) {
-            this.m_captured.add(name);
-        }
+    defineLocalVar(name: string, scopedname: string, isbinder: boolean) {
+        this.m_locals[this.m_locals.length - 1].push({ name: name, scopedname: scopedname, isbinder: isbinder });
     }
 
     getCaptureVars(): Set<string> {
@@ -69,7 +70,19 @@ class ParserEnvironment {
     readonly assembly: Assembly;
 
     readonly SpecialAnySignature: TypeSignature;
+    readonly SpecialSomeSignature: TypeSignature;
     readonly SpecialNoneSignature: TypeSignature;
+    readonly SpecialBoolSignature: TypeSignature;
+    
+    readonly SpecialIntSignature: TypeSignature;
+    readonly SpecialNatSignature: TypeSignature;
+    readonly SpecialFloatSignature: TypeSignature;
+    readonly SpecialDecimalSignature: TypeSignature;
+    readonly SpecialQuadFloatSignature: TypeSignature;
+    readonly SpecialBigIntSignature: TypeSignature;
+    readonly SpecialBigNatSignature: TypeSignature;
+    readonly SpecialRationalSignature: TypeSignature;
+
     readonly SpecialAutoSignature: TypeSignature;
 
     constructor(assembly: Assembly) {
@@ -80,8 +93,20 @@ class ParserEnvironment {
 
         this.m_functionScopes = [];
 
-        this.SpecialAnySignature = new NominalTypeSignature("NSCore", "Any", []);
-        this.SpecialNoneSignature = new NominalTypeSignature("NSCore", "None", []);
+        this.SpecialAnySignature = new NominalTypeSignature("NSCore", ["Any"], []);
+        this.SpecialSomeSignature = new NominalTypeSignature("NSCore", ["Some"], []);
+        this.SpecialNoneSignature = new NominalTypeSignature("NSCore", ["None"], []);
+        this.SpecialBoolSignature = new NominalTypeSignature("NSCore", ["Bool"], []);
+
+        this.SpecialIntSignature = new NominalTypeSignature("NSCore", ["Int"], []);
+        this.SpecialNatSignature = new NominalTypeSignature("NSCore", ["Nat"], []);
+        this.SpecialFloatSignature = new NominalTypeSignature("NSCore", ["Float64"], []);
+        this.SpecialDecimalSignature = new NominalTypeSignature("NSCore", ["Decimal"], []);
+        this.SpecialQuadFloatSignature = new NominalTypeSignature("NSCore", ["Float128"], []);
+        this.SpecialBigIntSignature = new NominalTypeSignature("NSCore", ["BigInt"], []);
+        this.SpecialBigNatSignature = new NominalTypeSignature("NSCore", ["BigNat"], []);
+        this.SpecialRationalSignature = new NominalTypeSignature("NSCore", ["Rational"], []);
+        
         this.SpecialAutoSignature = new AutoTypeSignature();
     }
 
@@ -110,6 +135,33 @@ class ParserEnvironment {
         return this.m_currentNamespace as string;
     }
 
+    isVarDefinedInAnyScope(name: string): boolean {
+        return this.m_functionScopes.some((sc) => sc.isVarNameDefined(name));
+    }
+
+    useLocalVar(name: string): string {
+        const cscope = this.getCurrentFunctionScope();
+        if (cscope.isPCodeEnv() && name === "this") {
+            cscope.getCaptureVars().add("%this_captured");
+            return "%this_captured";
+        }
+
+        if(name.startsWith("$")) {
+            for(let i = this.m_functionScopes.length - 1; i >= 0; --i) {
+                if(this.m_functionScopes[i].isVarNameDefined(name)) {
+                    name = this.m_functionScopes[i].getScopedVarName(name);
+                    break;
+                }
+            }
+        }
+
+        if (!cscope.isVarNameDefined(name) && cscope.isPCodeEnv()) {
+            cscope.getCaptureVars().add(name);
+        }
+        
+        return name;
+    }
+
     tryResolveNamespace(ns: string | undefined, typename: string): string | undefined {
         if (ns !== undefined) {
             return ns;
@@ -129,6 +181,40 @@ class ParserEnvironment {
                 return fromns !== undefined ? fromns.fromNamespace : undefined;
             }
         }
+    }
+
+    tryResolveAsPrefixUnaryOperator(opname: string, level: number): string | undefined {
+        const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
+        if (nsdecl.declaredNames.has(this.m_currentNamespace + "::" + opname) && nsdecl.operators.get(opname) !== undefined) {
+            const opdecls = nsdecl.operators.get(opname) as NamespaceOperatorDecl[];
+            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
+        }
+
+        const nsmaindecl = this.assembly.getNamespace("NSCore");
+        if (nsmaindecl.declaredNames.has("NSCore::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+            const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
+            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "NSCore" : undefined;
+        }
+
+        const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);
+        return fromns !== undefined ? fromns.fromNamespace : undefined;
+    }
+
+    tryResolveAsInfixBinaryOperator(opname: string, level: number): string | undefined {
+        const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
+        if (nsdecl.declaredNames.has(this.m_currentNamespace + "::" + opname) && nsdecl.operators.get(opname) !== undefined) {
+            const opdecls = nsdecl.operators.get(opname) as NamespaceOperatorDecl[];
+            return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
+        }
+
+        const nsmaindecl = this.assembly.getNamespace("NSCore");
+        if (nsmaindecl.declaredNames.has("NSCore::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+            const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
+            return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? "NSCore" : undefined;
+        }
+        
+        const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);
+        return fromns !== undefined ? fromns.fromNamespace : undefined;
     }
 }
 
