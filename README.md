@@ -2,7 +2,7 @@
 
 [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Microsoft/BosqueLanguage/blob/master/LICENSE.txt)
 [![PR's Welcome](https://img.shields.io/badge/PRs%20-welcome-brightgreen.svg)](#contribute)
-[![Build Health](https://img.shields.io/github/workflow/status/mrkmarron/BosqueLanguage/nodeci)](https://github.com/mrkmarron/BosqueLanguage/actions) 
+[![Build Health](https://img.shields.io/github/workflow/status/microsoft/BosqueLanguage/nodeci)](https://github.com/microsoft/BosqueLanguage/actions) 
 
 
 ## The Bosque Project
@@ -14,7 +14,7 @@ The Bosque Programming Language project is a ground up language & tooling co-des
 
 ### The Role of Intermediate Representations
 
-Compiler intermediate representations (IRs) are traditionally thought of, and designed with, a specific source language (or languages) in mind. Their historical use has primarily been as an intermediate step in the process of lowering a source language program, with all of the associated syntactic sugar, into a final executable binary. However, over time they have become increasingly important in supporting program analysis and IDE tooling tasks. In these scenarios choices which were did not matter in the context of the compilation workflow can have major negative impacts.
+Compiler intermediate representations (IRs) are traditionally thought of, and designed with, a specific source language (or languages) in mind. Their historical use has primarily been as an intermediate step in the process of lowering a source language program, with all of the associated syntactic sugar, into a final executable binary. However, over time they have become increasingly important in supporting program analysis and IDE tooling tasks. In these scenarios choices which did not matter in the context of the compilation workflow can have major negative impacts.
 
 In the Bosque project we ask the question of what happens if the IR is designed explicitly to support the rich needs of automated code reasoning, IDE tooling, etc. With this novel IR first perspective we are exploring a new way to think about and build a language intermediate representation and tools that utilize it. Our initial experiments show that this empowers a range of next-generation experiences including symbolic-testing, enhanced fuzzing, soft-realtime compilation with stable GC support, API auto-marshaling, and more!
 
@@ -35,6 +35,31 @@ An overarching theme of the Bosque project is increasing the ability of automate
 **Note:** This repository and code are currently still experimental. This means that the language is subject to revision, there are bugs and missing functionality, and the performance is limited. 
 
 ## News
+**June 2021**
+Pushing version 0.8.0 as new master -- this update obsoletes the previous prototype version and lays the ground work for an eventual stable release. Major rework was done in the language, type-checker, validator implementation, and runtime. More details will be posted soon but the headline is exciting improvements in all areas.
+
+However, this also means many many things are broken. Fixes and tests are coming online continuously and I will be opening a number of issues that are suitable for community contributions. Looking forward to seeing Bosque move from an exciting concept and toward a practical language!
+
+**March 2021** 
+Update on road to 1.0 -- this branch now builds and runs a small set of tests for the verifier and model checker! Progress on this work has been slow and hard but it looks to be paying off.
+
+**December 2020** 
+Big news on our road to a 1.0 version of Bosque!
+
+While there are many things we liked about the initial experiments with the language there were some features missing that we really wanted to add and some things that, in hindsight, we knew could be done much better. I have been working extensively in a side branch, and while there is still much to do, wanted to get [this code](https://github.com/microsoft/BosqueLanguage/tree/road_to_1_0) into the main repo for anyone interested.
+
+Some highlights of the work include:
+- Operators with static and dynamic dispatch forms (plus overloading of builtins). With support for literal expression (literal Bools, Ints, Typed Ints, and Enums) dispatching this brings powerful ways to express computations -- `operator op(cond: Bool==true, data: string) {...} operator op(cond: Bool==false, data: string) {...}`.
+- Typed Numbers (aka unit types) to support type safe and expressive code -- `let speed = 2.0_MetersPerSecond`
+- Reworked Tuples/Records and equality to allow Tuples/Records as key types and simplify the encoding of equality in SMT.
+- Literal Template Types -- `typedef Point2D = Vector<2, Float>;`
+- Support for derived and default values of fields as well as improved optional type support.
+- Greatly improved type (and template type) inference.
+- Overall design simplifications that allow us to produce simpler SMT encodings and target specialized theories in [Z3](https://rise4fun.com/z3/tutorial) as well as to apply more aggressive compiler optimizations.
+- A new and novel reference counting GC design.
+- Binders and default variable introduction -- `switch(x.f) { type Int => $match + 1; _ => $match; }` or `x.{f=$f+1}`.
+
+There is still a lot of work to complete all of these changes but I am very excited at what the resulting language looks like and the impact is has on the verification/validation/compilation tooling story. I want to thank everyone who has contributed on this journey either through PRs, issues, comments, new ideas, and other miscellaneous feedback. 
 
 **May 2020:** We will be running a Bosque Webinar with Live Q&A on May 27th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
 

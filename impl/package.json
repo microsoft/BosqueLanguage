@@ -5,7 +5,7 @@
         "name": "Mark Marron <marron@microsoft.com>"
     },
     "license": "MIT",
-    "version": "0.5.0-rc-1",
+    "version": "0.8.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/Microsoft/BosqueLanguage"
