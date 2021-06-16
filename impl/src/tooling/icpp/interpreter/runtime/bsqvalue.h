@@ -118,7 +118,7 @@ public:
 #else
 #define BIGNAT_SIZE (size_t)24
 #define BIGINT_SIZE (size_t)24
-#define RATIONAL_SIZE (size_t)40
+#define RATIONAL_SIZE (size_t)32
 
 #define BIGNAT_MASK "411"
 #define BIGINT_MASK "411"

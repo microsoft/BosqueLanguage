@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRInvokeDecl } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { ICPPAssembly, ICPPConstDecl, ICPPParseTag, ICPPTypeEntity, ICPPTypeInlineUnion, ICPPTypeRecord, ICPPTypeRefUnion, TranspilerOptions } from "./icpp_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
@@ -32,7 +32,9 @@ class ICPPEmitter {
         const allproperties = new Set<string>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPTypeRecord).map((rt) => (rt as ICPPTypeRecord).propertynames)));
         const allfields = new Set<MIRFieldKey>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPTypeEntity).map((rt) => (rt as ICPPTypeEntity).fieldnames)));
         
-        const allinvokes = new Set([...assembly.invokeDecls, ...assembly.primitiveInvokeDecls].map((v) => v[0]));
+        const allinvokes = new Set([...assembly.invokeDecls, ...assembly.primitiveInvokeDecls]
+            .filter((iiv) => !(iiv[1] instanceof MIRInvokePrimitiveDecl) || (iiv[1] as MIRInvokePrimitiveDecl).implkey !== "default")
+            .map((iiv) => iiv[0]));
         const allvinvokes = new Set(...(([] as MIRVirtualMethodKey[]).concat(...[...assembly.entityDecls].map((edcl) => [...edcl[1].vcallMap].map((ee) => ee[0])))));
 
         return new ICPPAssembly(decltypes.length, alltypenames, [...allproperties].sort(), [...allfields].sort(), [...allinvokes].sort(), [...allvinvokes].sort(), entrypoint);
@@ -147,13 +149,12 @@ class ICPPEmitter {
                 return { offset: cle.offset, storage: cle.storage, value: cle.value };
             });
 
-
         const basetypes = [...this.assembly.typeMap].map((tt) => tt[1]).filter((tt) => tt.options.length === 1 && !(tt.options[0] instanceof MIRConceptType));
         this.icppasm.typenames.forEach((tt) => {
             const mirtype = this.temitter.getMIRType(tt);
             const icpptype = this.temitter.getICPPTypeData(mirtype);
 
-            if (icpptype.ptag !== ICPPParseTag.BuiltinTag && !["NSCore::Any", "NSCore::Some"].includes(icpptype.tkey)) {
+            if (icpptype.ptag !== ICPPParseTag.BuiltinTag) {
                 this.icppasm.typedecls.push(icpptype);
 
                 if (icpptype instanceof ICPPTypeInlineUnion || icpptype instanceof ICPPTypeRefUnion) {

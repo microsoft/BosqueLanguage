@@ -178,13 +178,19 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
     GC_MEM_COPY(gmask, gmaskstr.c_str(), gmaskstr.size());
     gmask[gmaskstr.size()] = '\0';
 
-    initialize((size_t)jv.as_object().at("typecount").as_uint64(), (size_t)jv.as_object().at("cbuffsize").as_uint64(), gmask);
+    auto typecount = (size_t)jv.as_object().at("typecount").as_int64();
+    auto cbuffsize = (size_t)jv.as_object().at("cbuffsize").as_int64();
+    initialize(typecount, cbuffsize, gmask);
     
     ////
     //Get all of our name to map ids setup
-    std::for_each(jv.as_object().at("typenames").as_array().cbegin(), jv.as_object().at("typenames").as_array().cend(), [](boost::json::value tname) {
+    auto bultintypecount = Environment::g_typenameToIDMap.size();
+    std::for_each(jv.as_object().at("typenames").as_array().cbegin(), jv.as_object().at("typenames").as_array().cend(), [bultintypecount](boost::json::value tname) {
         auto tstr = std::string(tname.as_string().cbegin(), tname.as_string().cend());
-        Environment::g_typenameToIDMap[tstr] = Environment::g_typenameToIDMap.size() + BSQ_TYPE_ID_BUILTIN_MAX;
+        if(Environment::g_typenameToIDMap.find(tstr) == Environment::g_typenameToIDMap.cend())
+        {
+            Environment::g_typenameToIDMap[tstr] = (Environment::g_typenameToIDMap.size() + BSQ_TYPE_ID_BUILTIN_MAX) - bultintypecount;
+        }
     });
     
     std::for_each(jv.as_object().at("propertynames").as_array().cbegin(), jv.as_object().at("propertynames").as_array().cend(), [](boost::json::value pname) {
@@ -217,6 +223,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
 
     ////
     //Load Functions
+    Environment::g_invokes.resize(Environment::g_invokenameToIDMap.size());
     std::for_each(jv.as_object().at("invdecls").as_array().cbegin(), jv.as_object().at("invdecls").as_array().cend(), [](boost::json::value idecl) {
         BSQInvokeDecl::jsonLoad(idecl);
     });
@@ -265,7 +272,7 @@ bool parseJSONArgs(const boost::json::value args, const std::vector<BSQFunctionP
 
         argslocs.push_back(trgt);
     }
-    return false;
+    return true;
 }
 
 void genRandomArgs(RandGenerator& rnd, const std::vector<BSQFunctionParameter>& params, uint8_t* argsroot, const std::map<size_t, size_t>& pposmap, std::vector<StorageLocationPtr>& argslocs)
@@ -279,57 +286,79 @@ void genRandomArgs(RandGenerator& rnd, const std::vector<BSQFunctionParameter>& 
     }
 }
 
-void run(Evaluator& runner, const std::string& main, const boost::json::value& args, StorageLocationPtr res)
+std::string run(Evaluator& runner, const std::string& main, const boost::json::value& args)
 {
-    auto filename = std::string("[MAIN INITIALIZE]");
-    BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
-    BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
-
-    size_t argsbytes = 0;
-    std::string argsmask;
-    std::map<size_t, size_t> pposmap;
-    for(size_t i = 0; i < call->params.size(); ++i)
+    if(setjmp(Environment::g_entrybuff) > 0)
     {
-        pposmap[i] = argsbytes;
-
-        argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
-        argsmask += call->params[i].ptype->allocinfo.inlinedmask;
+        fprintf(stderr, "Bosque Assertion!!!\n");
+        exit(1);
     }
+    else
+    {
+        auto filename = std::string("[MAIN INITIALIZE]");
+        BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
+        BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
 
-    uint8_t* argsroot = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
-    GCStack::pushFrame((void**)argsroot, argsmask.c_str());
+        size_t argsbytes = call->resultType->allocinfo.inlinedatasize;
+        std::string argsmask = call->resultType->allocinfo.inlinedmask;
+        std::map<size_t, size_t> pposmap;
+        for(size_t i = 0; i < call->params.size(); ++i)
+        {
+            pposmap[i] = argsbytes;
+
+            argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
+            argsmask += call->params[i].ptype->allocinfo.inlinedmask;
+        }
+
+        uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
+        GCStack::pushFrame((void**)mframe, argsmask.c_str());
  
-    std::vector<void*> argslocs;
-    bool argsok = parseJSONArgs(args, call->params, argsroot, pposmap, argslocs);
-    BSQ_LANGUAGE_ASSERT(argsok, &filename, -1, "Could not parse entrypoint arguments");
+        std::vector<void*> argslocs;
+        uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
+        bool argsok = parseJSONArgs(args, call->params, argsroot, pposmap, argslocs);
+        BSQ_LANGUAGE_ASSERT(argsok, &filename, -1, "Could not parse entrypoint arguments");
 
-    runner.invokeMain(call, argslocs, res, call->resultType, call->resultArg);
+        runner.invokeMain(call, argslocs, mframe, call->resultType, call->resultArg);
+
+        return call->resultType->fpDisplay(call->resultType, mframe);
+    }
 }
 
-void fuzz(Evaluator& runner, RandGenerator& rnd, const std::string& main, StorageLocationPtr res)
+std::string fuzz(Evaluator& runner, RandGenerator& rnd, const std::string& main)
 {
-    auto filename = std::string("[MAIN INITIALIZE]");
-    BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
-    BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
-
-    size_t argsbytes = 0;
-    std::string argsmask;
-    std::map<size_t, size_t> pposmap;
-    for(size_t i = 0; i < call->params.size(); ++i)
+    if(setjmp(Environment::g_entrybuff) > 0)
     {
-        pposmap[i] = argsbytes;
-
-        argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
-        argsmask += call->params[i].ptype->allocinfo.inlinedmask;
+        fprintf(stderr, "Bosque Assertion!!!\n");
+        exit(1);
     }
+    else
+    {
+        auto filename = std::string("[MAIN INITIALIZE]");
+        BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
+        BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
 
-    uint8_t* argsroot = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
-    GCStack::pushFrame((void**)argsroot, argsmask.c_str());
+        size_t argsbytes = call->resultType->allocinfo.inlinedatasize;
+        std::string argsmask = call->resultType->allocinfo.inlinedmask;
+        std::map<size_t, size_t> pposmap;
+        for(size_t i = 0; i < call->params.size(); ++i)
+        {
+            pposmap[i] = argsbytes;
+
+            argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
+            argsmask += call->params[i].ptype->allocinfo.inlinedmask;
+        }
+
+        uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
+        GCStack::pushFrame((void**)mframe, argsmask.c_str());
  
-    std::vector<void*> argslocs;
-    genRandomArgs(rnd, call->params, argsroot, pposmap, argslocs);
+        std::vector<void*> argslocs;
+        uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
+        genRandomArgs(rnd, call->params, argsroot, pposmap, argslocs);
 
-    runner.invokeMain(call, argslocs, res, call->resultType, call->resultArg);
+        runner.invokeMain(call, argslocs, mframe, call->resultType, call->resultArg);
+
+        return "DONE!!!";
+    }
 }
 
 void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std::string& input)
@@ -340,22 +369,26 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
         exit(1);
     }
 
-    if(argc == 3)
-    {
-        //TODO: if arg is "package" then then read json on stdin that has {args: [...], program: P}
-        mode = "run";
-        prog = std::string(argv[1]);
-        input = std::string(argv[2]);
-    }
-    else
+    if(argc == 3 && std::string(argv[1]) == std::string("fuzz"))
     {
         mode = std::string(argv[1]);
         prog = std::string(argv[2]);
-
-        if(mode == "run")
+    }
+    else
+    {
+         mode = "run";
+        if(std::string(argv[1]) == std::string("run"))
         {
+            prog = std::string(argv[2]);
             input = std::string(argv[3]);
         }
+        else
+        {
+            prog = std::string(argv[1]);
+            input = std::string(argv[2]);
+        }
+        //TODO: if arg is "package" then then read json on stdin that has {args: [...], program: P}
+        
     }
 
     if(mode != "run" && mode != "fuzz")
@@ -373,7 +406,7 @@ int main(int argc, char** argv)
     parseArgs(argc, argv, mode, prog, input);
 
     boost::json::value jval;
-    bool ok = loadJSONFromFile(std::string{argv[1]}, jval);
+    bool ok = loadJSONFromFile(prog, jval);
     if(!ok)
     {
         fprintf(stderr, "Failed to load file %s\n", argv[1]);
@@ -382,20 +415,16 @@ int main(int argc, char** argv)
     Evaluator runner;
     std::string main = loadAssembly(jval, runner);
 
-    StorageLocationPtr res = nullptr;
-    Allocator::GlobalAllocator.pushRoot(&res);
-
     if(mode == "run")
     {
         auto jv = boost::json::parse(input);
 
         auto start = std::chrono::system_clock::now();
-        run(runner, main, jv, res);
+        std::string res = run(runner, main, jv);
         auto end = std::chrono::system_clock::now();
 
-        //TODO: check success and print res
-
         auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        printf("> %s\n", res.c_str());
         printf("Elapsed time %lli...\n", delta_ms);
     }
     else
@@ -404,9 +433,7 @@ int main(int argc, char** argv)
         printf("Fuzzing with seed %u...\n", seed);
 
         RandGenerator rnd(seed);
-        fuzz(runner, rnd, main, res);
-
-        //TODO: check success and print res
+        std::string res = fuzz(runner, rnd, main);
     }
     return 0;
 }
