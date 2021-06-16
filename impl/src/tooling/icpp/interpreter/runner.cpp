@@ -288,6 +288,27 @@ void genRandomArgs(RandGenerator& rnd, const std::vector<BSQFunctionParameter>& 
 
 std::string run(Evaluator& runner, const std::string& main, const boost::json::value& args)
 {
+    auto filename = std::string("[MAIN INITIALIZE]");
+    BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
+    BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
+
+    size_t argsbytes = call->resultType->allocinfo.inlinedatasize;
+    std::string argsmask = call->resultType->allocinfo.inlinedmask;
+    std::map<size_t, size_t> pposmap;
+    for(size_t i = 0; i < call->params.size(); ++i)
+    {
+        pposmap[i] = argsbytes;
+
+        argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
+        argsmask += call->params[i].ptype->allocinfo.inlinedmask;
+    }
+
+    uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
+    GCStack::pushFrame((void**)mframe, argsmask.c_str());
+
+    std::vector<void*> argslocs;
+    uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
+
     if(setjmp(Environment::g_entrybuff) > 0)
     {
         fprintf(stderr, "Bosque Assertion!!!\n");
@@ -295,26 +316,6 @@ std::string run(Evaluator& runner, const std::string& main, const boost::json::v
     }
     else
     {
-        auto filename = std::string("[MAIN INITIALIZE]");
-        BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
-        BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
-
-        size_t argsbytes = call->resultType->allocinfo.inlinedatasize;
-        std::string argsmask = call->resultType->allocinfo.inlinedmask;
-        std::map<size_t, size_t> pposmap;
-        for(size_t i = 0; i < call->params.size(); ++i)
-        {
-            pposmap[i] = argsbytes;
-
-            argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
-            argsmask += call->params[i].ptype->allocinfo.inlinedmask;
-        }
-
-        uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
-        GCStack::pushFrame((void**)mframe, argsmask.c_str());
- 
-        std::vector<void*> argslocs;
-        uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
         bool argsok = parseJSONArgs(args, call->params, argsroot, pposmap, argslocs);
         BSQ_LANGUAGE_ASSERT(argsok, &filename, -1, "Could not parse entrypoint arguments");
 
@@ -324,41 +325,71 @@ std::string run(Evaluator& runner, const std::string& main, const boost::json::v
     }
 }
 
-std::string fuzz(Evaluator& runner, RandGenerator& rnd, const std::string& main)
+bool fuzzrun(Evaluator& runner, RandGenerator& rnd, BSQInvokeBodyDecl* call, uint8_t* argsroot, const std::map<size_t, size_t>& pposmap, uint8_t* mframe)
 {
     if(setjmp(Environment::g_entrybuff) > 0)
     {
-        fprintf(stderr, "Bosque Assertion!!!\n");
-        exit(1);
+        fprintf(stderr, "---Triggered Assertion---\n");
+        std::string args = "[";
+        for(size_t i = 0; i < call->params.size(); ++i)
+        {
+            if(i != 0)
+            {
+                args += ", ";
+            }
+
+            auto pp = call->params[i].ptype->fpDisplay(call->params[i].ptype, argsroot + pposmap.at(i));
+            args += pp;
+        }
+        args += "]";
+
+        fprintf(stderr, "%s\n", args.c_str());
+
+        return false;
     }
     else
     {
-        auto filename = std::string("[MAIN INITIALIZE]");
-        BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
-        BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
-
-        size_t argsbytes = call->resultType->allocinfo.inlinedatasize;
-        std::string argsmask = call->resultType->allocinfo.inlinedmask;
-        std::map<size_t, size_t> pposmap;
-        for(size_t i = 0; i < call->params.size(); ++i)
-        {
-            pposmap[i] = argsbytes;
-
-            argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
-            argsmask += call->params[i].ptype->allocinfo.inlinedmask;
-        }
-
-        uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
-        GCStack::pushFrame((void**)mframe, argsmask.c_str());
- 
         std::vector<void*> argslocs;
-        uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
         genRandomArgs(rnd, call->params, argsroot, pposmap, argslocs);
-
         runner.invokeMain(call, argslocs, mframe, call->resultType, call->resultArg);
 
-        return "DONE!!!";
+        return true;
     }
+}
+
+void fuzz(Evaluator& runner, RandGenerator& rnd, const std::string& main)
+{
+    auto filename = std::string("[MAIN INITIALIZE]");
+    BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
+    BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
+
+    size_t argsbytes = call->resultType->allocinfo.inlinedatasize;
+    std::string argsmask = call->resultType->allocinfo.inlinedmask;
+    std::map<size_t, size_t> pposmap;
+    for(size_t i = 0; i < call->params.size(); ++i)
+    {
+        pposmap[i] = argsbytes;
+
+        argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
+        argsmask += call->params[i].ptype->allocinfo.inlinedmask;
+    }
+
+    uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
+    GCStack::pushFrame((void**)mframe, argsmask.c_str());
+ 
+    uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
+
+    unsigned failcount = 0;
+    for(size_t icount = 0; icount < 10; ++icount)
+    {
+        bool ok = fuzzrun(runner, rnd, call, argsroot, pposmap, mframe);
+        if(!ok)
+        {
+            failcount++;
+        }
+    }
+
+    fprintf(stderr, "Ran 10 tests -- %u failures\n", failcount);
 }
 
 void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std::string& input)
@@ -387,8 +418,6 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
             prog = std::string(argv[1]);
             input = std::string(argv[2]);
         }
-        //TODO: if arg is "package" then then read json on stdin that has {args: [...], program: P}
-        
     }
 
     if(mode != "run" && mode != "fuzz")
@@ -433,7 +462,7 @@ int main(int argc, char** argv)
         printf("Fuzzing with seed %u...\n", seed);
 
         RandGenerator rnd(seed);
-        std::string res = fuzz(runner, rnd, main);
+        fuzz(runner, rnd, main);
     }
     return 0;
 }

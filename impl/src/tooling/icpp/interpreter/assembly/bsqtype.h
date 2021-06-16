@@ -88,7 +88,7 @@ constexpr GCFunctorSet MASK_GC_FUNCTOR_SET{ gcDecOperator_maskImpl, gcClearOpera
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
 constexpr KeyCmpFP EMPTY_KEY_CMP = nullptr;
 
-typedef  std::default_random_engine RandGenerator;
+typedef std::default_random_engine RandGenerator;
 typedef bool (*JSONParseFP)(const BSQType* btype, const boost::json::value&, StorageLocationPtr);
 typedef void (*GenerateRandom)(const BSQType* btype, RandGenerator&, StorageLocationPtr);
 
