@@ -108,17 +108,17 @@ public:
 
 
 #ifdef __APPLE__
-#define BIGNAT_SIZE 32
-#define BIGINT_SIZE 32
-#define RATIONAL_SIZE (BIGNAT_SIZE + sizeof(BSQNat))
+#define BIGNAT_SIZE (size_t)32
+#define BIGINT_SIZE (size_t)32
+#define RATIONAL_SIZE (size_t)48
 
 #define BIGNAT_MASK "4111"
 #define BIGINT_MASK "4111"
-#define RATIONAL_MASK "41111"
+#define RATIONAL_MASK "411111"
 #else
-#define BIGNAT_SIZE 24
-#define BIGINT_SIZE 24
-#define RATIONAL_SIZE (BIGNAT_SIZE + sizeof(BSQNat))
+#define BIGNAT_SIZE (size_t)24
+#define BIGINT_SIZE (size_t)24
+#define RATIONAL_SIZE (size_t)40
 
 #define BIGNAT_MASK "411"
 #define BIGINT_MASK "411"
@@ -144,7 +144,7 @@ class BSQBigNatType : public BSQBigNumType<BSQBigNat>
 public:
     BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, BIGNAT_SIZE, BIGNAT_MASK, entityBigNatKeyCmp_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {entityBigNatJSONParse_impl, entityBigNatGenerateRandom_impl}) 
     {
-        assert(sizeof(BSQBigNat) == BIGNAT_SIZE);
+        static_assert(sizeof(BSQBigNat) == BIGNAT_SIZE);
     }
 
     virtual ~BSQBigNatType() {;}
@@ -169,7 +169,7 @@ class BSQBigIntType : public BSQBigNumType<BSQBigInt>
 public:
     BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, BIGINT_SIZE, BIGINT_MASK, entityBigIntKeyCmp_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {entityBigIntJSONParse_impl, entityBigIntGenerateRandom_impl}) 
     {
-        assert(sizeof(BSQBigInt) == BIGINT_SIZE);
+        static_assert(sizeof(BSQBigInt) == BIGINT_SIZE);
     }
 
     virtual ~BSQBigIntType() {;}
@@ -238,7 +238,7 @@ class BSQRationalType : public BSQRegisterType<BSQRational>
 public:
     BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, RATIONAL_SIZE, RATIONAL_MASK, EMPTY_KEY_CMP, entityRationalDisplay_impl, "NSCore::Rational", {entityRationalJSONParse_impl, entityRationalGenerateRandom_impl}) 
     {
-        assert(sizeof(BSQRational) == RATIONAL_SIZE);
+        static_assert(sizeof(BSQRational) == RATIONAL_SIZE);
     }
 
     virtual ~BSQRationalType() {;}

@@ -127,7 +127,7 @@ class ICPPEmitter {
         });
 
         this.icppasm.cbuffsize = this.bemitter.constsize;
-        this.icppasm.cmask = "11111";
+        this.icppasm.cmask = "111111";
         for(let i = 1; i < this.bemitter.constlayout.length; ++i) {
             this.icppasm.cmask += this.bemitter.constlayout[i].storage.allocinfo.inlinedmask;
         }

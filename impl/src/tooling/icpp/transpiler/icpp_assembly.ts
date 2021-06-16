@@ -18,7 +18,7 @@ type SourceInfo = {
 };
 
 const ICPP_WORD_SIZE = 8;
-const UNIVERSAL_SIZE = 40;
+const UNIVERSAL_SIZE = 48;
 
 enum ICPPTypeKind
 {

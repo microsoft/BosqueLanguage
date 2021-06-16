@@ -24,6 +24,7 @@ bool loadJSONFromFile(const std::string& filename, boost::json::value& jval)
     while(getline(file,line))
     {
         std::copy(line.cbegin(), line.cend(), std::back_inserter(contents));
+        line.clear();
     }
     file.close();
 
@@ -339,7 +340,7 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
         exit(1);
     }
 
-    if(argc == 2)
+    if(argc == 3)
     {
         //TODO: if arg is "package" then then read json on stdin that has {args: [...], program: P}
         mode = "run";
