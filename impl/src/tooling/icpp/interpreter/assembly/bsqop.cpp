@@ -244,7 +244,7 @@ ProjectTupleOp* ProjectTupleOp::jparse(boost::json::value v)
     for(size_t i = 0; i < idxl.size(); ++i)
     {
         auto vv = idxl[i].as_array();
-        idxs.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_uint64(), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2])));
+        idxs.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_int64(), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2])));
     }
 
     return new ProjectTupleOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), idxs);
@@ -257,7 +257,7 @@ ProjectRecordOp* ProjectRecordOp::jparse(boost::json::value v)
     for(size_t i = 0; i < props.size(); ++i)
     {
         auto vv = propl[i].as_array();
-        props.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (BSQTupleIndex)vv[1].as_uint64(), jsonParse_BSQType(vv[2])));
+        props.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (BSQTupleIndex)vv[1].as_int64(), jsonParse_BSQType(vv[2])));
     }
 
     return new ProjectRecordOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), props);
@@ -270,7 +270,7 @@ ProjectEntityOp* ProjectEntityOp::jparse(boost::json::value v)
     for(size_t i = 0; i < fields.size(); ++i)
     {
         auto vv = fieldl[i].as_array();
-        fields.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (BSQTupleIndex)vv[1].as_uint64(), jsonParse_BSQType(vv[2])));
+        fields.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (BSQTupleIndex)vv[1].as_int64(), jsonParse_BSQType(vv[2])));
     }
 
     return new ProjectEntityOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), fields);
@@ -283,7 +283,7 @@ UpdateTupleOp* UpdateTupleOp::jparse(boost::json::value v)
     for(size_t i = 0; i < updatel.size(); ++i)
     {
         auto vv = updatel[i].as_array();
-        updates.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_uint64(), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+        updates.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_int64(), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
     }
 
     return new UpdateTupleOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
@@ -296,7 +296,7 @@ UpdateRecordOp* UpdateRecordOp::jparse(boost::json::value v)
     for(size_t i = 0; i < updatel.size(); ++i)
     {
         auto vv = updatel[i].as_array();
-        updates.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+        updates.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
     }
 
     return new UpdateRecordOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
@@ -309,7 +309,7 @@ UpdateEntityOp* UpdateEntityOp::jparse(boost::json::value v)
     for(size_t i = 0; i < updatel.size(); ++i)
     {
         auto vv = updatel[i].as_array();
-        updates.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (uint32_t)vv[1].as_uint64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+        updates.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
     }
 
     return new UpdateEntityOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
@@ -334,12 +334,12 @@ MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(boost::json::
 
     std::vector<uint32_t> slotoffsets;
     std::transform(v.as_object().at("slotoffsets").as_array().cbegin(), v.as_object().at("slotoffsets").as_array().cend(), std::back_inserter(slotoffsets), [](boost::json::value so) {
-        return (uint32_t)so.as_uint64();
+        return (uint32_t)so.as_int64();
     });
 
     std::vector<uint32_t> indexs;
     std::transform(v.as_object().at("indexs").as_array().cbegin(), v.as_object().at("indexs").as_array().cend(), std::back_inserter(indexs), [](boost::json::value idx) {
-        return (uint32_t)idx.as_uint64();
+        return (uint32_t)idx.as_int64();
     });
 
     return new MultiLoadFromEpehmeralListOp(j_sinfo(v), trgts, trgttypes, j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), slotoffsets, indexs);
@@ -409,7 +409,7 @@ ConstructorRecordFromEphemeralListOp* ConstructorRecordFromEphemeralListOp::jpar
 {
     std::vector<uint32_t> proppositions;
     std::transform(v.as_object().at("proppositions").as_array().cbegin(), v.as_object().at("proppositions").as_array().cend(), std::back_inserter(proppositions), [](boost::json::value pos) {
-        return (uint32_t)pos.as_uint64();
+        return (uint32_t)pos.as_int64();
     });
 
     return new ConstructorRecordFromEphemeralListOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), proppositions);

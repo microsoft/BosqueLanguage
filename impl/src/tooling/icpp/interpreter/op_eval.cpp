@@ -586,6 +586,10 @@ void Evaluator::evalInvokeFixedFunctionOp<false>(const InvokeFixedFunctionOp* op
 
 void Evaluator::evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op)
 {
+    //
+    //TODO: remember to handle the case where rcvr layout is inline union but target call expects a ref union
+    //
+
     //NOT IMPLEMENTED
     assert(false);
 }
@@ -1042,30 +1046,37 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::DeadFlowOp:
     {
         this->evalDeadFlowOp();
+        break;
     }
     case OpCodeTag::AbortOp:
     {
         this->evalAbortOp(static_cast<const AbortOp*>(op));
+        break;
     }
     case OpCodeTag::AssertOp:
     {
         this->evalAssertCheckOp(static_cast<const AssertOp*>(op));
+        break;
     }
     case OpCodeTag::DebugOp:
     {
         this->evalDebugOp(static_cast<const DebugOp*>(op));
+        break;
     }
     case OpCodeTag::LoadUnintVariableValueOp:
     {
         this->evalLoadUnintVariableValueOp(static_cast<const LoadUnintVariableValueOp*>(op));
+        break;
     }
     case OpCodeTag::NoneInitUnionOp:
     {
         this->evalNoneInitUnionOp(static_cast<const NoneInitUnionOp*>(op));
+        break;
     }
     case OpCodeTag::StoreConstantMaskValueOp:
     {
         this->evalStoreConstantMaskValueOp(static_cast<const StoreConstantMaskValueOp*>(op));
+        break;
     }
     case OpCodeTag::DirectAssignOp:
     {
@@ -1078,6 +1089,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalDirectAssignOp<false>(daop);
         }
+        break;
     }
     case OpCodeTag::BoxOp:
     {
@@ -1090,6 +1102,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalBoxOp<false>(bop);
         }
+        break;
     }
     case OpCodeTag::ExtractOp:
     {
@@ -1102,94 +1115,117 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalExtractOp<false>(exop);
         }
+        break;
     }
     case OpCodeTag::LoadConstOp:
     {
         this->evalLoadConstOp(static_cast<const LoadConstOp*>(op));
+        break;
     }
     case OpCodeTag::TupleHasIndexOp:
     {
         this->evalTupleHasIndexOp(static_cast<const TupleHasIndexOp*>(op));
+        break;
     }
     case OpCodeTag::RecordHasPropertyOp:
     {
         this->evalRecordHasPropertyOp(static_cast<const RecordHasPropertyOp*>(op));
+        break;
     }
     case OpCodeTag::LoadTupleIndexDirectOp:
     {
         this->evalLoadTupleIndexDirectOp(static_cast<const LoadTupleIndexDirectOp*>(op));
+        break;
     }
     case OpCodeTag::LoadTupleIndexVirtualOp:
     {
         this->evalLoadTupleIndexVirtualOp(static_cast<const LoadTupleIndexVirtualOp*>(op));
+        break;
     }
     case OpCodeTag::LoadTupleIndexSetGuardDirectOp:
     {
         this->evalLoadTupleIndexSetGuardDirectOp(static_cast<const LoadTupleIndexSetGuardDirectOp*>(op));
+        break;
     }
     case OpCodeTag::LoadTupleIndexSetGuardVirtualOp:
     {
         this->evalLoadTupleIndexSetGuardVirtualOp(static_cast<const LoadTupleIndexSetGuardVirtualOp*>(op));
+        break;
     }
     case OpCodeTag::LoadRecordPropertyDirectOp:
     {
         this->evalLoadRecordPropertyDirectOp(static_cast<const LoadRecordPropertyDirectOp*>(op));
+        break;
     }
     case OpCodeTag::LoadRecordPropertyVirtualOp:
     {
         this->evalLoadRecordPropertyVirtualOp(static_cast<const LoadRecordPropertyVirtualOp*>(op));
+        break;
     }
     case OpCodeTag::LoadRecordPropertySetGuardDirectOp:
     {
         this->evalLoadRecordPropertySetGuardDirectOp(static_cast<const LoadRecordPropertySetGuardDirectOp*>(op));
+        break;
     }
     case OpCodeTag::LoadRecordPropertySetGuardVirtualOp:
     {
         this->evalLoadRecordPropertySetGuardVirtualOp(static_cast<const LoadRecordPropertySetGuardVirtualOp*>(op));
+        break;
     }
     case OpCodeTag::LoadEntityFieldDirectOp:
     {
         this->evalLoadDirectFieldOp(static_cast<const LoadEntityFieldDirectOp*>(op));
+        break;
     }
     case OpCodeTag::LoadEntityFieldVirtualOp:
     {
         this->evalLoadVirtualFieldOp(static_cast<const LoadEntityFieldVirtualOp*>(op));
+        break;
     }
     case OpCodeTag::ProjectTupleOp:
     {
         this->evalProjectTupleOp(static_cast<const ProjectTupleOp*>(op));
+        break;
     }
     case OpCodeTag::ProjectRecordOp:
     {
         this->evalProjectRecordOp(static_cast<const ProjectRecordOp*>(op));
+        break;
     }
     case OpCodeTag::ProjectEntityOp:
     {
         this->evalProjectEntityOp(static_cast<const ProjectEntityOp*>(op));
+        break;
     }
     case OpCodeTag::UpdateTupleOp:
     {
         this->evalUpdateTupleOp(static_cast<const UpdateTupleOp*>(op));
+        break;
     }
     case OpCodeTag::UpdateRecordOp:
     {
         this->evalUpdateRecordOp(static_cast<const UpdateRecordOp*>(op));
+        break;
     }
     case OpCodeTag::UpdateEntityOp:
     {
         this->evalUpdateEntityOp(static_cast<const UpdateEntityOp*>(op));
+        break;
     }
     case OpCodeTag::LoadFromEpehmeralListOp:
     {
         this->evalLoadFromEpehmeralListOp(static_cast<const LoadFromEpehmeralListOp*>(op));
+        break;
     }
     case OpCodeTag::MultiLoadFromEpehmeralListOp:
     {
         this->evalMultiLoadFromEpehmeralListOp(static_cast<const MultiLoadFromEpehmeralListOp*>(op));
+        break;
     }
     case OpCodeTag::SliceEphemeralListOp:
     {
         this->evalSliceEphemeralListOp(static_cast<const SliceEphemeralListOp*>(op));
+        break;
     }
     case OpCodeTag::InvokeFixedFunctionOp:
     {
@@ -1202,90 +1238,112 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalInvokeFixedFunctionOp<false>(opc);
         }
+        break;
     }
     case OpCodeTag::InvokeVirtualFunctionOp:
     {
         this->evalInvokeVirtualFunctionOp(static_cast<const InvokeVirtualFunctionOp*>(op));
+        break;
     }
     case OpCodeTag::InvokeVirtualOperatorOp:
     {
         this->evalInvokeVirtualOperatorOp(static_cast<const InvokeVirtualOperatorOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorTupleOp:
     {
         this->evalConstructorTupleOp(static_cast<const ConstructorTupleOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorTupleFromEphemeralListOp:
     {
         this->evalConstructorTupleFromEphemeralListOp(static_cast<const ConstructorTupleFromEphemeralListOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorRecordOp:
     {
         this->evalConstructorRecordOp(static_cast<const ConstructorRecordOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorRecordFromEphemeralListOp:
     {
         this->evalConstructorRecordFromEphemeralListOp(static_cast<const ConstructorRecordFromEphemeralListOp*>(op));
+        break;
     }
     case OpCodeTag::EphemeralListExtendOp:
     {
         this->evalEphemeralListExtendOp(static_cast<const EphemeralListExtendOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorEphemeralListOp:
     {
         this->evalConstructorEphemeralListOp(static_cast<const ConstructorEphemeralListOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorPrimaryCollectionEmptyOp:
     {
         this->evalConstructorPrimaryCollectionEmptyOp(static_cast<const ConstructorPrimaryCollectionEmptyOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorPrimaryCollectionSingletonsOp:
     {
         this->evalConstructorPrimaryCollectionSingletonsOp(static_cast<const ConstructorPrimaryCollectionSingletonsOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorPrimaryCollectionCopiesOp:
     {
         this->evalConstructorPrimaryCollectionCopiesOp(static_cast<const ConstructorPrimaryCollectionCopiesOp*>(op));
+        break;
     }
     case OpCodeTag::ConstructorPrimaryCollectionMixedOp:
     {
         this->evalConstructorPrimaryCollectionMixedOp(static_cast<const ConstructorPrimaryCollectionMixedOp*>(op));
+        break;
     }
     case OpCodeTag::PrefixNotOp:
     {
         this->evalPrefixNotOp(static_cast<const PrefixNotOp*>(op));
+        break;
     }
     case OpCodeTag::AllTrueOp:
     {
         this->evalAllTrueOp(static_cast<const AllTrueOp*>(op));
+        break;
     }
     case OpCodeTag::SomeTrueOp:
     {
         this->evalSomeTrueOp(static_cast<const SomeTrueOp*>(op));
+        break;
     }
     case OpCodeTag::BinKeyEqFastOp:
     {
         this->evalBinKeyEqFastOp(static_cast<const BinKeyEqFastOp*>(op));
+        break;
     }
     case OpCodeTag::BinKeyEqStaticOp:
     {
         this->evalBinKeyEqStaticOp(static_cast<const BinKeyEqStaticOp*>(op));
+        break;
     }
     case OpCodeTag::BinKeyEqVirtualOp:
     {
         this->evalBinKeyEqVirtualOp(static_cast<const BinKeyEqVirtualOp*>(op));
+        break;
     }
     case OpCodeTag::BinKeyLessFastOp:
     {
         this->evalBinKeyLessFastOp(static_cast<const BinKeyLessFastOp*>(op));
+        break;
     }
     case OpCodeTag::BinKeyLessStaticOp:
     {
         this->evalBinKeyLessStaticOp(static_cast<const BinKeyLessStaticOp*>(op));
+        break;
     }
     case OpCodeTag::BinKeyLessVirtualOp:
     {
         this->evalBinKeyLessVirtualOp(static_cast<const BinKeyLessVirtualOp*>(op));
+        break;
     }
     case OpCodeTag::TypeIsNoneOp:
     {
@@ -1298,6 +1356,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalIsNoneOp<false>(opc);
         }
+        break;
     }
     case OpCodeTag::TypeIsSomeOp:
     {
@@ -1310,6 +1369,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalIsSomeOp<false>(opc);
         }
+        break;
     }
     case OpCodeTag::TypeTagIsOp:
     {
@@ -1322,6 +1382,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalTypeTagIsOp<false>(opc);
         }
+        break;
     }
     case OpCodeTag::TypeTagSubtypeOfOp:
     {
@@ -1334,6 +1395,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalTypeTagSubtypeOfOp<false>(opc);
         }
+        break;
     }
     //
     // ---- jump operations are handled in the outer loop ----
@@ -1349,308 +1411,384 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         {
             this->evalRegisterAssignOp<false>(opc);
         }
+        break;
     }
     case OpCodeTag::ReturnAssignOp:
     {
         this->evalReturnAssignOp(static_cast<const ReturnAssignOp*>(op));
+        break;
     }
     case OpCodeTag::ReturnAssignOfConsOp:
     {
         this->evalReturnAssignOfConsOp(static_cast<const ReturnAssignOfConsOp*>(op));
+        break;
     }
 #ifdef BSQ_DEBUG_BUILD 
     case OpCodeTag::VarLifetimeStartOp:
     {
         this->evalVarLifetimeStartOp(static_cast<const VarLifetimeStartOp*>(op));
+        break;
     }
     case OpCodeTag::VarLifetimeEndOp:
     {
         this->evalVarLifetimeEndOp(static_cast<const VarLifetimeEndOp*>(op));
+        break;
     }
 #endif
     case OpCodeTag::NegateIntOp:
     {
         PrimitiveNegateOperatorMacroChecked(this, op, OpCodeTag::NegateDecimalOp, BSQInt, boost::safe_numerics::checked::minus<BSQInt>, "Int negation overflow/underflow");
+        break;
     }
     case OpCodeTag::NegateBigIntOp:
     {
         PrimitiveNegateOperatorMacroSafe(this, op, OpCodeTag::NegateBigIntOp, BSQBigInt);
+        break;
     }
     case OpCodeTag::NegateRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::NegateFloatOp:
     {
         PrimitiveNegateOperatorMacroSafe(this, op, OpCodeTag::NegateFloatOp, BSQFloat);
+        break;
     }
     case OpCodeTag::NegateDecimalOp:
     {
         PrimitiveNegateOperatorMacroSafe(this, op, OpCodeTag::NegateDecimalOp, BSQDecimal);
+        break;
     }
     case OpCodeTag::AddNatOp:
     {
         PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddNatOp, BSQNat, boost::safe_numerics::checked::add<BSQNat>, "Nat addition overflow")
+        break;
     }
     case OpCodeTag::AddIntOp:
     {
         PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddIntOp, BSQInt, boost::safe_numerics::checked::add<BSQInt>, "Int addition overflow/underflow")
+        break;
     }
     case OpCodeTag::AddBigNatOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddBigNatOp, BSQBigNat, +)
+        break;
     }
     case OpCodeTag::AddBigIntOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddBigIntOp, BSQBigInt, +)
+        break;
     }
     case OpCodeTag::AddRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::AddFloatOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddFloatOp, BSQFloat, +)
+        break;
     }
     case OpCodeTag::AddDecimalOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::AddDecimalOp, BSQDecimal, +)
+        break;
     }
     case OpCodeTag::SubNatOp:
     {
         PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubNatOp, BSQNat, boost::safe_numerics::checked::subtract<BSQNat>, "Nat subtraction overflow")
+        break;
     }
     case OpCodeTag::SubIntOp:
     {
         PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubIntOp, BSQInt, boost::safe_numerics::checked::subtract<BSQInt>, "Int subtraction overflow/underflow")
+        break;
     }
     case OpCodeTag::SubBigNatOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubBigNatOp, BSQBigNat, -)
+        break;
     }
     case OpCodeTag::SubBigIntOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubBigIntOp, BSQBigInt, -)
+        break;
     }
     case OpCodeTag::SubRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::SubFloatOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubFloatOp, BSQFloat, -)
+        break;
     }
     case OpCodeTag::SubDecimalOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::SubDecimalOp, BSQDecimal, -)
+        break;
     }
     case OpCodeTag::MultNatOp:
     {
         PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultNatOp, BSQNat, boost::safe_numerics::checked::multiply<BSQNat>, "Nat multiplication overflow")
+        break;
     }
     case OpCodeTag::MultIntOp:
     {
         PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultIntOp, BSQInt, boost::safe_numerics::checked::multiply<BSQInt>, "Int multiplication underflow/overflow")
+        break;
     }
     case OpCodeTag::MultBigNatOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultBigNatOp, BSQBigNat, *)
+        break;
     }
     case OpCodeTag::MultBigIntOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultBigIntOp, BSQBigInt, *)
+        break;
     }
     case OpCodeTag::MultRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::MultFloatOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultFloatOp, BSQFloat, *)
+        break;
     }
     case OpCodeTag::MultDecimalOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::MultDecimalOp, BSQDecimal, *)
+        break;
     }
     case OpCodeTag::DivNatOp:
     {
         PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivNatOp, BSQNat)
+        break;
     }
     case OpCodeTag::DivIntOp:
     {
         PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivIntOp, BSQInt)
+        break;
     }
     case OpCodeTag::DivBigNatOp:
     {
         PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivBigNatOp, BSQBigNat)
+        break;
     }
     case OpCodeTag::DivBigIntOp:
     {
         PrimitiveBinaryOperatorMacroCheckedDiv(this, op, OpCodeTag::DivBigIntOp, BSQBigInt)
+        break;
     }
     case OpCodeTag::DivRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::DivFloatOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::DivFloatOp, BSQFloat, /)
+        break;
     }
     case OpCodeTag::DivDecimalOp:
     {
         PrimitiveBinaryOperatorMacroSafe(this, op, OpCodeTag::DivDecimalOp, BSQDecimal, /)
+        break;
     }
     case OpCodeTag::EqNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqNatOp, BSQNat, ==)
+        break;
     }
     case OpCodeTag::EqIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqIntOp, BSQInt, ==)
+        break;
     }
     case OpCodeTag::EqBigNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqBigNatOp, BSQBigNat, ==)
+        break;
     }
     case OpCodeTag::EqBigIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::EqBigIntOp, BSQBigInt, ==)
+        break;
     }
     case OpCodeTag::EqRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::NeqNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqNatOp, BSQNat, !=)
+        break;
     }
     case OpCodeTag::NeqIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqIntOp, BSQInt, !=)
+        break;
     }
     case OpCodeTag::NeqBigNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqBigNatOp, BSQBigNat, !=)
+        break;
     }
     case OpCodeTag::NeqBigIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqBigIntOp, BSQBigInt, !=)
+        break;
     }
     case OpCodeTag::NeqRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::LtNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtNatOp, BSQNat, <)
+        break;
     }
     case OpCodeTag::LtIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtIntOp, BSQInt, <)
+        break;
     }
     case OpCodeTag::LtBigNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtBigNatOp, BSQBigNat, <)
+        break;
     }
     case OpCodeTag::LtBigIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LtBigIntOp, BSQBigInt, <)
+        break;
     }
     case OpCodeTag::LtRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::LtFloatOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, <)
+        break;
     }
     case OpCodeTag::LtDecimalOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, <)
+        break;
     }
     case OpCodeTag::GtNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtNatOp, BSQNat, >)
+        break;
     }
     case OpCodeTag::GtIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtIntOp, BSQInt, >)
+        break;
     }
     case OpCodeTag::GtBigNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtBigNatOp, BSQBigNat, >)
+        break;
     }
     case OpCodeTag::GtBigIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtBigIntOp, BSQBigInt, >)
+        break;
     }
     case OpCodeTag::GtRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::GtFloatOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, >)
+        break;
     }
     case OpCodeTag::GtDecimalOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, >)
+        break;
     }
     case OpCodeTag::LeNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeNatOp, BSQNat, <=)
+        break;
     }
     case OpCodeTag::LeIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeIntOp, BSQInt, <=)
+        break;
     }
     case OpCodeTag::LeBigNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeBigNatOp, BSQBigNat, <=)
+        break;
     }
     case OpCodeTag::LeBigIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeBigIntOp, BSQBigInt, <=)
+        break;
     }
     case OpCodeTag::LeRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::LeFloatOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, <=)
+        break;
     }
     case OpCodeTag::LeDecimalOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, <=)
+        break;
     }
     case OpCodeTag::GeNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeNatOp, BSQNat, >=)
+        break;
     }
     case OpCodeTag::GeIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeIntOp, BSQInt, >=)
+        break;
     }
     case OpCodeTag::GeBigNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeBigNatOp, BSQBigNat, >=)
+        break;
     }
     case OpCodeTag::GeBigIntOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeBigIntOp, BSQBigInt, >=)
+        break;
     }
     case OpCodeTag::GeRationalOp:
     {
         assert(false);
+        break;
     }
     case OpCodeTag::GeFloatOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, >=)
+        break;
     }
     case OpCodeTag::GeDecimalOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, >=)
+        break;
     }
     case OpCodeTag::EqStrPosOp:
     {
@@ -1658,6 +1796,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
         auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorEqual(&i1, &i2));
+        break;
     }
     case OpCodeTag::NeqStrPosOp:
     {
@@ -1665,6 +1804,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
         auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorEqual(&i1, &i2));
+        break;
     }
     case OpCodeTag::LtStrPosOp:
     {
@@ -1672,6 +1812,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
         auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorLess(&i1, &i2));
+        break;
     }
     case OpCodeTag::GtStrPosOp:
     {
@@ -1679,6 +1820,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
         auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorLess(&i2, &i1));
+        break;
     }
     case OpCodeTag::LeStrPosOp:
     {
@@ -1686,6 +1828,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
         auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorLess(&i2, &i1));
+        break;
     }
     case OpCodeTag::GeStrPosOp:
     {
@@ -1693,10 +1836,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
         auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorLess(&i1, &i2));
+        break;
     }
     default:
     {
         assert(false);
+        break;
     }
     }
 }
@@ -1711,19 +1856,23 @@ void Evaluator::evaluateOpCodeBlocks()
         case OpCodeTag::JumpOp:
         {
             op = this->evalJumpOp(static_cast<const JumpOp*>(op));
+            break;
         }
         case OpCodeTag::JumpCondOp:
         {
             op = this->evalJumpCondOp(static_cast<const JumpCondOp*>(op));
+            break;
         }
         case OpCodeTag::JumpNoneOp:
         {
             op = this->evalJumpNoneOp(static_cast<const JumpNoneOp*>(op));
+            break;
         }
         default:
         {
             this->evaluateOpCode(op);
             op = this->advanceCurrentOp();
+            break;
         }
         }
     } while (this->hasMoreOps());

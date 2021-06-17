@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRInvokeDecl } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { ICPPAssembly, ICPPConstDecl, ICPPParseTag, ICPPTypeEntity, ICPPTypeInlineUnion, ICPPTypeRecord, ICPPTypeRefUnion, TranspilerOptions } from "./icpp_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
@@ -32,7 +32,9 @@ class ICPPEmitter {
         const allproperties = new Set<string>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPTypeRecord).map((rt) => (rt as ICPPTypeRecord).propertynames)));
         const allfields = new Set<MIRFieldKey>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPTypeEntity).map((rt) => (rt as ICPPTypeEntity).fieldnames)));
         
-        const allinvokes = new Set([...assembly.invokeDecls, ...assembly.primitiveInvokeDecls].map((v) => v[0]));
+        const allinvokes = new Set([...assembly.invokeDecls, ...assembly.primitiveInvokeDecls]
+            .filter((iiv) => !(iiv[1] instanceof MIRInvokePrimitiveDecl) || (iiv[1] as MIRInvokePrimitiveDecl).implkey !== "default")
+            .map((iiv) => iiv[0]));
         const allvinvokes = new Set(...(([] as MIRVirtualMethodKey[]).concat(...[...assembly.entityDecls].map((edcl) => [...edcl[1].vcallMap].map((ee) => ee[0])))));
 
         return new ICPPAssembly(decltypes.length, alltypenames, [...allproperties].sort(), [...allfields].sort(), [...allinvokes].sort(), [...allvinvokes].sort(), entrypoint);
@@ -127,7 +129,7 @@ class ICPPEmitter {
         });
 
         this.icppasm.cbuffsize = this.bemitter.constsize;
-        this.icppasm.cmask = "11111";
+        this.icppasm.cmask = "111111";
         for(let i = 1; i < this.bemitter.constlayout.length; ++i) {
             this.icppasm.cmask += this.bemitter.constlayout[i].storage.allocinfo.inlinedmask;
         }
@@ -147,29 +149,31 @@ class ICPPEmitter {
                 return { offset: cle.offset, storage: cle.storage, value: cle.value };
             });
 
-
         const basetypes = [...this.assembly.typeMap].map((tt) => tt[1]).filter((tt) => tt.options.length === 1 && !(tt.options[0] instanceof MIRConceptType));
         this.icppasm.typenames.forEach((tt) => {
             const mirtype = this.temitter.getMIRType(tt);
             const icpptype = this.temitter.getICPPTypeData(mirtype);
-            this.icppasm.typedecls.push(icpptype);
 
-            if(icpptype instanceof ICPPTypeInlineUnion || icpptype instanceof ICPPTypeRefUnion) {
-                const subtypes = basetypes.filter((btype) => this.assembly.subtypeOf(btype, mirtype)).map((tt) => tt.trkey).sort();
-                this.icppasm.subtypes.set(mirtype.trkey, new Set<MIRResolvedTypeKey>(subtypes));
-            }
+            if (icpptype.ptag !== ICPPParseTag.BuiltinTag) {
+                this.icppasm.typedecls.push(icpptype);
 
-            if(this.temitter.isUniqueEntityType(mirtype)) {
-                const mdecl = this.assembly.entityDecls.get(mirtype.trkey) as MIREntityTypeDecl;
-                let vte = this.icppasm.vtable.find((v) => v.oftype === mdecl.tkey);
-                if(vte === undefined) {
-                    vte = { oftype: mdecl.tkey, vtable: [] };
-                    this.icppasm.vtable.push(vte);
+                if (icpptype instanceof ICPPTypeInlineUnion || icpptype instanceof ICPPTypeRefUnion) {
+                    const subtypes = basetypes.filter((btype) => this.assembly.subtypeOf(btype, mirtype)).map((tt) => tt.trkey).sort();
+                    this.icppasm.subtypes.set(mirtype.trkey, new Set<MIRResolvedTypeKey>(subtypes));
                 }
 
-                mdecl.vcallMap.forEach((vc) => {
-                    (vte as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}).vtable.push({vcall: vc[0], inv: vc[1]});
-                });
+                if (this.temitter.isUniqueEntityType(mirtype)) {
+                    const mdecl = this.assembly.entityDecls.get(mirtype.trkey) as MIREntityTypeDecl;
+                    let vte = this.icppasm.vtable.find((v) => v.oftype === mdecl.tkey);
+                    if (vte === undefined) {
+                        vte = { oftype: mdecl.tkey, vtable: [] };
+                        this.icppasm.vtable.push(vte);
+                    }
+
+                    mdecl.vcallMap.forEach((vc) => {
+                        (vte as { oftype: MIRResolvedTypeKey, vtable: { vcall: MIRVirtualMethodKey, inv: MIRInvokeKey }[] }).vtable.push({ vcall: vc[0], inv: vc[1] });
+                    });
+                }
             }
         });
     }
