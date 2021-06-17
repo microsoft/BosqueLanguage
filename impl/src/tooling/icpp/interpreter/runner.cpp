@@ -11,6 +11,25 @@
 
 #include <boost/json/src.hpp>
 
+bool loadJSONFromStdIn(const std::string& filename, boost::json::value& jval, boost::json::value& jargs)
+{
+    std::vector<char> contents;
+    std::ifstream instrm(stdin);
+    
+    std::string line;
+    while(getline(instrm, line))
+    {
+        std::copy(line.cbegin(), line.cend(), std::back_inserter(contents));
+        line.clear();
+    }
+
+    auto jv = boost::json::parse(std::string(contents.cbegin(), contents.cend()));
+    jval = jv.as_object().at("code");
+    jargs = jv.as_object().at("args");
+
+    return true;
+}
+
 bool loadJSONFromFile(const std::string& filename, boost::json::value& jval)
 {
     std::vector<char> contents;
@@ -21,7 +40,7 @@ bool loadJSONFromFile(const std::string& filename, boost::json::value& jval)
     }
 
     std::string line;
-    while(getline(file,line))
+    while(getline(file, line))
     {
         std::copy(line.cbegin(), line.cend(), std::back_inserter(contents));
         line.clear();
@@ -286,7 +305,7 @@ void genRandomArgs(RandGenerator& rnd, const std::vector<BSQFunctionParameter>& 
     }
 }
 
-std::string run(Evaluator& runner, const std::string& main, const boost::json::value& args)
+bool run(Evaluator& runner, const std::string& main, const boost::json::value& args, std::string& res)
 {
     auto filename = std::string("[MAIN INITIALIZE]");
     BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
@@ -311,8 +330,7 @@ std::string run(Evaluator& runner, const std::string& main, const boost::json::v
 
     if(setjmp(Environment::g_entrybuff) > 0)
     {
-        fprintf(stderr, "Bosque Assertion!!!\n");
-        exit(1);
+        return false;
     }
     else
     {
@@ -321,7 +339,8 @@ std::string run(Evaluator& runner, const std::string& main, const boost::json::v
 
         runner.invokeMain(call, argslocs, mframe, call->resultType, call->resultArg);
 
-        return call->resultType->fpDisplay(call->resultType, mframe);
+        res = call->resultType->fpDisplay(call->resultType, mframe);
+        return true;
     }
 }
 
@@ -394,35 +413,31 @@ void fuzz(Evaluator& runner, RandGenerator& rnd, const std::string& main)
 
 void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std::string& input)
 {
-    if(argc == 1)
+    if(argc == 2 && std::string(argv[1]) == std::string("stream"))
     {
-        fprintf(stderr, "Usage: icpp [run|fuzz] bytecode.bsqir input\n");
-        exit(1);
+        mode = "stream";
     }
-
-    if(argc == 3 && std::string(argv[1]) == std::string("fuzz"))
+    else if(argc == 2)
     {
-        mode = std::string(argv[1]);
+        mode = "run";
+        prog = std::string(argv[1]);
+        input = std::string(argv[2]);
+    }
+    else if(argc == 3 && std::string(argv[1]) == std::string("fuzz"))
+    {
+        mode = "fuzz";
+        prog = std::string(argv[2]);
+    }
+    else if(argc == 3 && std::string(argv[1]) == std::string("run"))
+    {
+        mode = "run";
         prog = std::string(argv[2]);
     }
     else
     {
-         mode = "run";
-        if(std::string(argv[1]) == std::string("run"))
-        {
-            prog = std::string(argv[2]);
-            input = std::string(argv[3]);
-        }
-        else
-        {
-            prog = std::string(argv[1]);
-            input = std::string(argv[2]);
-        }
-    }
-
-    if(mode != "run" && mode != "fuzz")
-    {
-        fprintf(stderr, "Usage: icpp [run|fuzz] bytecode.bsqir\n");
+        fprintf(stderr, "Usage: icpp [run] bytecode.bsqir args[]\n");
+        fprintf(stderr, "Usage: icpp fuzz bytecode.bsqir\n");
+        fflush(stderr);
         exit(1);
     }
 }
@@ -434,35 +449,77 @@ int main(int argc, char** argv)
     std::string input;
     parseArgs(argc, argv, mode, prog, input);
 
-    boost::json::value jval;
-    bool ok = loadJSONFromFile(prog, jval);
-    if(!ok)
+    if(mode == "stream")
     {
-        fprintf(stderr, "Failed to load file %s\n", argv[1]);
-    }
+        boost::json::value jcode;
+        boost::json::value jargs;
+        bool ok = loadJSONFromStdIn(prog, jcode, jargs);
+        if(!ok)
+        {
+            fprintf(stderr, "Failed to load JSON...\n");
+            fflush(stderr);
+            exit(1);
+        }
 
-    Evaluator runner;
-    std::string main = loadAssembly(jval, runner);
+        Evaluator runner;
+        std::string main = loadAssembly(jcode, runner);
 
-    if(mode == "run")
-    {
-        auto jv = boost::json::parse(input);
+        std::string res;
+        bool success = run(runner, main, jargs, res);
+        if(success)
+        {
+            printf("%s", res.c_str());
+        }
+        else
+        {
+            printf("!ERROR!");
+        }
 
-        auto start = std::chrono::system_clock::now();
-        std::string res = run(runner, main, jv);
-        auto end = std::chrono::system_clock::now();
-
-        auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        printf("> %s\n", res.c_str());
-        printf("Elapsed time %lli...\n", delta_ms);
+        return 0;
     }
     else
     {
-        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-        printf("Fuzzing with seed %u...\n", seed);
+        boost::json::value jcode;
+        bool ok = loadJSONFromFile(prog, jcode);
+        if(!ok)
+        {
+            fprintf(stderr, "Failed to load file %s\n", argv[1]);
+            fflush(stderr);
+            exit(1);
+        }
 
-        RandGenerator rnd(seed);
-        fuzz(runner, rnd, main);
+        Evaluator runner;
+        std::string main = loadAssembly(jcode, runner);
+
+        if(mode == "run")
+        {
+            auto jargs = boost::json::parse(input);
+
+            std::string res;
+            auto start = std::chrono::system_clock::now();
+            bool success = run(runner, main, jargs, res);
+            auto end = std::chrono::system_clock::now();
+
+            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+            if(success)
+            {
+                printf("> %s\n", res.c_str());
+            }
+            else
+            {
+                printf("!ERROR!\n");
+            }
+            printf("Elapsed time %lli...\n", delta_ms);
+        }
+        else
+        {
+            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+            printf("Fuzzing with seed %u...\n", seed);
+
+            RandGenerator rnd(seed);
+            fuzz(runner, rnd, main);
+        }
+
+        return 0;
     }
-    return 0;
 }

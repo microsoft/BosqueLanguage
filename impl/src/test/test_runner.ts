@@ -142,7 +142,8 @@ class IndividualReachableTestInfo extends IndividualTestInfo {
 }
 
 class IndividualICPPTestInfo extends IndividualTestInfo {
-    readonly line: number;
+    readonly jargs: any[];
+    readonly expected: string | null;
 
     private static ctemplate = 
 "namespace NSMain;\n\
@@ -154,19 +155,20 @@ class IndividualICPPTestInfo extends IndividualTestInfo {
 %%CODE%%\n\
 ";
 
-    constructor(name: string, fullname: string, code: string, line: number, extraSrc: string | undefined) {
+    constructor(name: string, fullname: string, code: string, jargs: any[], expected: string | null, extraSrc: string | undefined) {
         super(name, fullname, code, extraSrc);
 
-        this.line = line;
+        this.jargs = jargs;
+        this.expected = expected;
     }
 
-    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualICPPTestInfo {
+    static create(name: string, fullname: string, sig: string, action: string, code: string, jargs: any[], expected: string | null, extraSrc: string | undefined): IndividualICPPTestInfo {
         const rcode = IndividualICPPTestInfo.ctemplate
             .replace("%%SIG%%", sig)
             .replace("%%ACTION%%", action)
             .replace("%%CODE%%", code);
 
-        return new IndividualICPPTestInfo(name, fullname, rcode, 4, extraSrc);
+        return new IndividualICPPTestInfo(name, fullname, rcode, jargs, expected, extraSrc);
     }
 }
 
@@ -178,7 +180,7 @@ type APITestGroupJSON = {
     typechk: string[],
     refutes: string[],
     reachables: string[],
-    icppruns: string[]
+    icpp: [string, any[], string | null]
 };
 
 class APITestGroup {
@@ -192,10 +194,10 @@ class APITestGroup {
 
     static create(scopename: string, spec: APITestGroupJSON): APITestGroup {
         const groupname = `${scopename}.${spec.test}`;
-        const compiles = spec.typechk.map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const refutes = spec.refutes.map((tt, i) => IndividualRefuteTestInfo.create(`refute#${i}`, `${groupname}.refute#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const reachables = spec.reachables.map((tt, i) => IndividualReachableTestInfo.create(`reach#${i}`, `${groupname}.reach#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const icppruns = spec.icppruns.map((tt, i) => IndividualReachableTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const compiles = (spec.typechk || []).map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const refutes = (spec.refutes || []).map((tt, i) => IndividualRefuteTestInfo.create(`refute#${i}`, `${groupname}.refute#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const reachables = (spec.reachables || []).map((tt, i) => IndividualReachableTestInfo.create(`reach#${i}`, `${groupname}.reach#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const icppruns = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, (tt as [string, any[], string | null])[0], spec.code, (tt as [string, any[], string | null])[1], (tt as [string, any[], string | null])[2], spec.src || undefined));
         return new APITestGroup(groupname, [...compiles, ...refutes, ...reachables, ...icppruns]);
     }
 
@@ -435,11 +437,12 @@ class TestRunner {
         }
         else if (result === "fail") {
             this.results.failed.push(new TestResult(test, start, end, "fail", info));
-            this.inccb(test.fullname + ": " + chalk.red("fail") + "\n");
+            const failinfo = info !== undefined ? ` with: \n${info.slice(0, 80)}${info.length > 80 ? "..." : ""}` : "";
+            this.inccb(test.fullname + ": " + chalk.red("fail") + failinfo + "\n");
         }
         else {
             this.results.failed.push(new TestResult(test, start, end, "error", info));
-            const errinfo = info !== undefined ? ` with ${info.slice(0, 160)}${info.length > 160 ? "..." : ""}` : "";
+            const errinfo = info !== undefined ? ` with ${info.slice(0, 80)}${info.length > 80 ? "..." : ""}` : "";
             this.inccb(test.fullname + ": " + chalk.magenta("error") + errinfo + "\n");
         }
     }
@@ -508,7 +511,7 @@ class TestRunner {
                 const handler = this.generateTestResultCallback(tt);
                 this.queued.push(tt.fullname);
                 try {
-                    enqueueICPPTest([], this.icpp_assets.corefiles, code, handler);
+                    enqueueICPPTest([], this.icpp_assets.corefiles, code, tt.jargs, tt.expected, handler);
                 }
                 catch (ex) {
                     handler("error", new Date(), new Date(), `${ex}`);

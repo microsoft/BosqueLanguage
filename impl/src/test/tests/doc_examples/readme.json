@@ -2,7 +2,7 @@
     "suite": "readme",
     "tests": [
         {
-            "test": "add",
+            "test": "addchk",
             "src": null,
             "sig": "function main(x: Nat, y: Nat): Bool",
             "code": "function add2(x: Nat, y: Nat): Nat { return x + y; }",
@@ -23,6 +23,15 @@
                 "add2(x, y) == 3n",
                 "add2(x=x, 1) == 3n",
                 "add2(y=y, 1) == 3n"
+            ]
+        },
+        {
+            "test": "addex",
+            "src": null,
+            "sig": "function main(x: Nat, y: Nat): Nat",
+            "code": "",
+            "icpp": [
+                ["x + y", [2, 3], "5n"]
             ]
         },
         {

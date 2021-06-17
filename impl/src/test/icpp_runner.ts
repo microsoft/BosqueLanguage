@@ -33,45 +33,27 @@ function generateMASM(corefiles: {relativePath: string, contents: string}[], tes
     return [masm, errors];
 }
 
-function runICPPFile(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Reach", start: Date, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+function runICPPFile(jv: any, expected: string | null, start: Date, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+    const cpath = Path.normalize(Path.join(bosque_dir, icpppath as string));
 
-    const smtpath = Path.normalize(Path.join(bosque_dir, (prover === "z3" ? z3pathsmt : cvc4pathsmt) as string));
-    const smtflags = (prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi-all --tlimit=1000";
-
-    const res = exec(`${smtpath} ${smtflags}`, (err: ExecException | null, stdout: string, stderr: string) => {
+    const res = exec(`${cpath} stream`, (err: ExecException | null, stdout: string, stderr: string) => {
         if (err) {
             cb("error", start, new Date(), stdout);
         }
         else {
             const res = stdout.trim();
 
-            if (mode === "Refute") {
-                if (res === "unsat") {
-                    cb("pass", start, new Date());
-                }
-                else if (res === "sat") {
-                    cb("fail", start, new Date());
-                }
-                else {
-                    cb("unknown/timeout", start, new Date(), stdout);
-                }
+            if (res === expected || (expected === null && res === "!ERROR!")) {
+               cb("pass", start, new Date());
             }
             else {
-                if (res === "sat") {
-                    cb("pass", start, new Date());
-                }
-                else if (res === "unsat") {
-                    cb("fail", start, new Date());
-                }
-                else {
-                    cb("unknown/timeout", start, new Date(), stdout);
-                }
+                cb("fail", start, new Date(), `Expected ${expected}\nActual   ${res}\n`);
             }
         }
     });
 
     res.stdin.setDefaultEncoding('utf-8');
-    res.stdin.write(cfile);
+    res.stdin.write(JSON.stringify(jv));
     res.stdin.end();
 }
 
@@ -88,9 +70,10 @@ function generateICPPAssembly(masm: MIRAssembly, topts: TranspilerOptions, entry
     return res;
 }
 
-function enqueueICPPTest(macrodefs: string[], corefiles: {relativePath: string, contents: string}[], testsrc: string, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+function enqueueICPPTest(macrodefs: string[], corefiles: {relativePath: string, contents: string}[], testsrc: string, jargs: any[], expected: string | null, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
     const massembly = generateMASM(corefiles, testsrc, macrodefs);
+
     if(massembly[0] === undefined) {
         cb("error", start, new Date(), "Failed to generate assembly -- " + JSON.stringify(massembly[1]));
         return;
@@ -101,9 +84,10 @@ function enqueueICPPTest(macrodefs: string[], corefiles: {relativePath: string, 
             cb("error", start, new Date(), "Invalid trgt line");
         }
         else {
-            const icppjson = JSON.stringify(icppasm.jsonEmit(), undefined, "  ");
+            const icppjson = icppasm.jsonEmit();
+            const jv = {code: icppjson, args: jargs};
 
-            runSMT2File(prover, smfc, mode, start, cb);
+            runICPPFile(jv, expected, start, cb);
         }
     }
 }
