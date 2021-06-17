@@ -82,6 +82,7 @@ class ICPPBodyEmitter {
             const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
 
             this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
+            this.scalarStackMap.set(vname, this.scalarStackSize);
             this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
             return trgt;
@@ -90,6 +91,7 @@ class ICPPBodyEmitter {
             const trgt = { kind: ArgumentTag.LocalMixed, offset: this.scalarStackSize };
 
             this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
+            this.mixedStackMap.set(vname, this.mixedStackSize);
             this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
             return trgt;
@@ -100,7 +102,9 @@ class ICPPBodyEmitter {
         if (oftype.allocinfo.isScalarOnlyInline()) {
             const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
 
-            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: `@scalar_scratch_${this.scalarStackLayout.length}`, storage: oftype });
+            const vname =  `@scalar_scratch_${this.scalarStackLayout.length}`;
+            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
+            this.scalarStackMap.set(vname, this.scalarStackSize);
             this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
             return [trgt, ICPPOpEmitter.genLocalScalarArgument(trgt.offset)];
@@ -108,7 +112,9 @@ class ICPPBodyEmitter {
         else {
             const trgt = { kind: ArgumentTag.LocalMixed, offset: this.scalarStackSize };
 
-            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: `@mixed_scratch_${this.mixedStackLayout.length}`, storage: oftype });
+            const vname = `@mixed_scratch_${this.mixedStackLayout.length}`;
+            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
+            this.mixedStackMap.set(vname, this.mixedStackSize);
             this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
 
@@ -199,7 +205,7 @@ class ICPPBodyEmitter {
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }, sinfo: SourceInfo, recordtype: MIRType): ICPPInvokeDecl {
@@ -234,7 +240,7 @@ class ICPPBodyEmitter {
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }, sinfo: SourceInfo, entitytype: MIRType): ICPPInvokeDecl {
@@ -269,7 +275,7 @@ class ICPPBodyEmitter {
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: TranspilerOptions) {
@@ -1489,10 +1495,10 @@ class ICPPBodyEmitter {
 
         //Generate basic logic
         blocks.forEach((bb) => {
-            let ii = bb.ops.findIndex((op) => !(op instanceof MIRPhi));
+            let ii = Math.max(0, bb.ops.findIndex((op) => !(op instanceof MIRPhi)));
             let done = false;
             let icpp: ICPPOp[] = [];
-            while (!done) {
+            while (!done && ii < bb.ops.length) {
                 const op = bb.ops[ii];
                 if (op.tag === MIROpTag.MIRJump || op.tag === MIROpTag.MIRJumpCond || op.tag === MIROpTag.MIRJumpNone || op.tag === MIROpTag.MIRAbort) {
                     break;
@@ -1511,7 +1517,7 @@ class ICPPBodyEmitter {
 
         //Fixup phi assigns
         blocks.forEach((bb) => {
-            const ii = bb.ops.findIndex((op) => !(op instanceof MIRPhi));
+            const ii = Math.max(0, bb.ops.findIndex((op) => !(op instanceof MIRPhi)));
             for(let i = 0; i < ii; ++i) {
                 const phi = bb.ops[i] as MIRPhi;
                 const icpptrgt = this.trgtToICPPTargetLocation(phi.trgt, phi.layouttype);
@@ -1528,34 +1534,39 @@ class ICPPBodyEmitter {
         let blockdeltas: Map<string, number> = new Map<string, number>();
         for(let j = 0; j < blockrevorder.length; ++j) {
             const bb = blocks.get(blockrevorder[j]) as MIRBasicBlock;
-            const jop = bb.ops[bb.ops.length - 1];
+            
+            if(bb.label === "exit") {
+                blockdeltas.set(bb.label, ops.length);
+                continue;
+            }
 
-            blockdeltas.set(bb.label, ops.length);
+            const jop = bb.ops[bb.ops.length - 1];
             let insblock = icppblocks.get(blockrevorder[j]) as ICPPOp[];
             if (jop.tag === MIROpTag.MIRAbort) {
                 insblock.push(this.processAbort(jop as MIRAbort));
             }
             else if (jop.tag === MIROpTag.MIRJump) {
                 const djump = jop as MIRJump;
-                const jdelta = ops.length - (blockdeltas.get(djump.trgtblock) as number);
+                const jdelta = (ops.length + 1) - (blockdeltas.get(djump.trgtblock) as number);
                 insblock.push(ICPPOpEmitter.genJumpOp(djump.sinfo, jdelta, djump.trgtblock));
             }
             else if (jop.tag === MIROpTag.MIRJumpCond) {
                 const djump = jop as MIRJumpCond;
-                const jdeltatrue = ops.length - (blockdeltas.get(djump.trueblock) as number);
-                const jdeltafalse = ops.length - (blockdeltas.get(djump.falseblock) as number);
+                const jdeltatrue = (ops.length + 1) - (blockdeltas.get(djump.trueblock) as number);
+                const jdeltafalse = (ops.length + 1) - (blockdeltas.get(djump.falseblock) as number);
                 insblock.push(ICPPOpEmitter.genJumpCondOp(djump.sinfo, this.argToICPPLocation(djump.arg), jdeltatrue, jdeltafalse, djump.trueblock, djump.falseblock));
             }
             else {
                 assert(jop.tag === MIROpTag.MIRJumpNone);
 
                 const djump = jop as MIRJumpNone;
-                const jdeltanone = ops.length - (blockdeltas.get(djump.noneblock) as number);
-                const jdeltasome = ops.length - (blockdeltas.get(djump.someblock) as number);
+                const jdeltanone = (ops.length + 1) - (blockdeltas.get(djump.noneblock) as number);
+                const jdeltasome = (ops.length + 1) - (blockdeltas.get(djump.someblock) as number);
                 insblock.push(ICPPOpEmitter.genJumpNoneOp(djump.sinfo, this.argToICPPLocation(djump.arg), djump.arglayouttype, jdeltanone, jdeltasome, djump.noneblock, djump.someblock));
             }
 
-            ops.push(...insblock);
+            ops = [...insblock, ...ops];
+            blockdeltas.set(bb.label, ops.length);
         }
 
         return ops;
@@ -1580,7 +1591,7 @@ class ICPPBodyEmitter {
             const revblocks = topologicalOrder((idecl as MIRInvokeBodyDecl).body.body).reverse().map((bb) => bb.label);
             const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, revblocks);
 
-            return new ICPPInvokeBodyDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
+            return new ICPPInvokeBodyDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
         }
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);

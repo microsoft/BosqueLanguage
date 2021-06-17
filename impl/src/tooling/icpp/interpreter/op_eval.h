@@ -32,14 +32,14 @@ public:
 class Evaluator
 {
 private:
-    EvaluatorFrame* cframe;
-    int32_t cpos;
+    EvaluatorFrame* cframe = nullptr;
+    int32_t cpos = 0;
     static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
 
 #ifdef BSQ_DEBUG_BUILD
     inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
-        auto cf = Evaluator::g_callstack + this->cpos++;
+        auto cf = Evaluator::g_callstack + this->cpos;
         cf->dbg_file = dbg_file;
         cf->dbg_function = dbg_function;
         cf->dbg_prevline = 0;
@@ -52,25 +52,39 @@ private:
         cf->cpos = cf->ops->cbegin();
         cf->epos = cf->ops->cend();
         cf->dbg_line = (*cf->cpos)->sinfo.line;
+
+        this->cframe = Evaluator::g_callstack + this->cpos;
+        this->cpos++;
     }
 #else
     inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
-        auto cf = Evaluator::g_callstack + cpos++;
+        auto cf = Evaluator::g_callstack + cpos;
         cf->argsbase = argsbase;
-         cf->scalarbase = scalarbase;
+        cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
         cf->cpos = cf->ops->cbegin();
         cf->epos = cf->ops->cend();
+
+        this->cframe = Evaluator::g_callstack + this->cpos;
+        this->cpos++;
     }
 #endif
 
     inline void popFrame()
     {
         this->cpos--;
+        if(this->cpos == 0)
+        {
+            this->cframe = nullptr;
+        }
+        else
+        {
+            this->cframe = Evaluator::g_callstack + this->cpos;
+        }
     }
 
 #ifdef BSQ_DEBUG_BUILD
@@ -99,12 +113,19 @@ private:
     {
         this->cframe->cpos += offset;
 
+        if(this->cframe->cpos == this->cframe->epos)
+        {
+            return nullptr;
+        }
+        else
+        {
 #ifdef BSQ_DEBUG_BUILD
-        this->cframe->dbg_prevline = this->cframe->dbg_line;
-        this->cframe->dbg_line = (*this->cframe->cpos)->sinfo.line;  
+            this->cframe->dbg_prevline = this->cframe->dbg_line;
+            this->cframe->dbg_line = (*this->cframe->cpos)->sinfo.line;  
 #endif
 
-        return *this->cframe->cpos;
+            return *this->cframe->cpos;
+        }
     }
 
     inline InterpOp* advanceCurrentOp()

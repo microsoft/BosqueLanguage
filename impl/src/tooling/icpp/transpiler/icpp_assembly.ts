@@ -18,7 +18,7 @@ type SourceInfo = {
 };
 
 const ICPP_WORD_SIZE = 8;
-const UNIVERSAL_SIZE = 40;
+const UNIVERSAL_SIZE = 48;
 
 enum ICPPTypeKind
 {
@@ -67,7 +67,7 @@ class ICPPTypeSizeInfo {
     }
 
     jemit(): any {
-        return {heapsize: this.heapsize, inlinedatasize: this.inlinedatasize, assigndatasize: this.assigndatasize, heapmask: this.heapmask, inlinedmask: this.inlinedmask};
+        return {heapsize: this.heapsize, inlinedatasize: this.inlinedatasize, assigndatasize: this.assigndatasize, heapmask: this.heapmask || null, inlinedmask: this.inlinedmask};
     }
 }
 
@@ -113,7 +113,7 @@ class ICPPType {
     jemitType(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
         assert(this.ptag !== ICPPParseTag.BuiltinTag); //shouldn't be emitting these since they are "well known"
 
-        return {ptag: this.ptag, iskey: this.iskey, tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo, vtable: vtable};
+        return {ptag: this.ptag, iskey: this.iskey, tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo.jemit(), name: this.tkey, vtable: vtable};
     }
 }
 
@@ -349,16 +349,18 @@ class ICPPInvokeDecl {
 class ICPPInvokeBodyDecl extends ICPPInvokeDecl 
 {
     readonly body: ICPPOp[];
+    readonly resultArg: Argument;
     readonly argmaskSize: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: ICPPType, resultArg: Argument, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
         super(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
         this.body = body;
+        this.resultArg = resultArg;
         this.argmaskSize = argmaskSize;
     }
 
     jsonEmit(): object {
-        return {...super.jsonEmit(), isbuiltin: false, body: this.body, argmaskSize: this.argmaskSize};
+        return {...super.jsonEmit(), isbuiltin: false, resultArg: this.resultArg, body: this.body, argmaskSize: this.argmaskSize};
     }
 }
 

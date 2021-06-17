@@ -22,8 +22,9 @@
     "scripts": {
         "build": "tsc -p tsconfig.json && node ./build/resource_copy.js",
         "icppbuild": "node ./build/interpreter_build.js",
-        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./bin/test/test_runner.js",
-        "testcvc4": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./bin/test/test_runner.js --prover cvc4"
+        "testsmt": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./bin/test/test_runner.js --restriction check",
+        "testicpp": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/interpreter_build.js && node ./bin/test/test_runner.js --restriction execute",
+        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/interpreter_build.js && node ./bin/test/test_runner.js"
     },
     "files": [
         "bin/*"

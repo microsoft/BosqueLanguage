@@ -12,6 +12,7 @@ import chalk from "chalk";
 
 import { enqueueSMTTest, smtlib_path, smtruntime_path } from "./smt_runner";
 import { runCompilerTest } from "./compile_runner";
+import { enqueueICPPTest, icpplib_path } from "./icpp_runner";
 
 const testroot = Path.normalize(Path.join(__dirname, "tests"));
 
@@ -31,8 +32,25 @@ abstract class IndividualTestInfo {
     }
 
     generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
-        if(restriction === "*" || this.fullname.startsWith(restriction)) {
-            tests.push(this);
+        if(restriction === "compile") {
+            if(this instanceof IndividualCompileWarnTest) {
+                tests.push(this);
+            }
+        }
+        else if(restriction === "check") {
+            if((this instanceof IndividualRefuteTestInfo) || (this instanceof IndividualReachableTestInfo)) {
+                tests.push(this);
+            }
+        }
+        else if(restriction === "execute") {
+            if(this instanceof IndividualICPPTestInfo) {
+                tests.push(this);
+            }
+        }
+        else { 
+            if(restriction === "*" || this.fullname.startsWith(restriction)) {
+                tests.push(this);
+            }
         }
     }
 }
@@ -123,6 +141,37 @@ class IndividualReachableTestInfo extends IndividualTestInfo {
     }
 }
 
+class IndividualICPPTestInfo extends IndividualTestInfo {
+    readonly jargs: any[];
+    readonly expected: string | null;
+
+    private static ctemplate = 
+"namespace NSMain;\n\
+\n\
+%%SIG%% {\n\
+    return %%ACTION%%;\n\
+}\n\
+\n\
+%%CODE%%\n\
+";
+
+    constructor(name: string, fullname: string, code: string, jargs: any[], expected: string | null, extraSrc: string | undefined) {
+        super(name, fullname, code, extraSrc);
+
+        this.jargs = jargs;
+        this.expected = expected;
+    }
+
+    static create(name: string, fullname: string, sig: string, action: string, code: string, jargs: any[], expected: string | null, extraSrc: string | undefined): IndividualICPPTestInfo {
+        const rcode = IndividualICPPTestInfo.ctemplate
+            .replace("%%SIG%%", sig)
+            .replace("%%ACTION%%", action)
+            .replace("%%CODE%%", code);
+
+        return new IndividualICPPTestInfo(name, fullname, rcode, jargs, expected, extraSrc);
+    }
+}
+
 type APITestGroupJSON = {
     test: string,
     src: string | null,
@@ -130,7 +179,8 @@ type APITestGroupJSON = {
     code: string,
     typechk: string[],
     refutes: string[],
-    reachables: string[]
+    reachables: string[],
+    icpp: [string, any[], string | null]
 };
 
 class APITestGroup {
@@ -144,11 +194,11 @@ class APITestGroup {
 
     static create(scopename: string, spec: APITestGroupJSON): APITestGroup {
         const groupname = `${scopename}.${spec.test}`;
-        const compiles = spec.typechk.map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const refutes = spec.refutes.map((tt, i) => IndividualRefuteTestInfo.create(`refute#${i}`, `${groupname}.refute#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const reachables = spec.reachables.map((tt, i) => IndividualReachableTestInfo.create(`reach#${i}`, `${groupname}.reach#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-
-        return new APITestGroup(groupname, [...compiles, ...refutes, ...reachables]);
+        const compiles = (spec.typechk || []).map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const refutes = (spec.refutes || []).map((tt, i) => IndividualRefuteTestInfo.create(`refute#${i}`, `${groupname}.refute#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const reachables = (spec.reachables || []).map((tt, i) => IndividualReachableTestInfo.create(`reach#${i}`, `${groupname}.reach#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const icppruns = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, (tt as [string, any[], string | null])[0], spec.code, (tt as [string, any[], string | null])[1], (tt as [string, any[], string | null])[2], spec.src || undefined));
+        return new APITestGroup(groupname, [...compiles, ...refutes, ...reachables, ...icppruns]);
     }
 
     generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
@@ -327,6 +377,42 @@ function loadSMTTestAssets(suite: TestSuite): SMTTestAssets {
     };
 }
 
+type ICPPTestAssets = {
+    corefiles: {relativePath: string, contents: string}[],
+    extras: Map<string, string>
+};
+
+function loadICPPTestAssets(suite: TestSuite): ICPPTestAssets {
+    let code: { relativePath: string, contents: string }[] = [];
+    const corefiles = FS.readdirSync(icpplib_path);
+    for (let i = 0; i < corefiles.length; ++i) {
+        const cfpath = Path.join(icpplib_path, corefiles[i]);
+        code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath, "utf8") });
+    }
+
+    let extras = new Map<string, string>();
+    for(let i = 0; i < suite.tests.length; ++i) {
+        const tf = suite.tests[i];
+        for (let j = 0; j < tf.tests.length; ++j) {
+            const ctg = tf.tests[j];
+            for (let k = 0; k < ctg.apitests.length; ++k) {
+                const stg = ctg.apitests[k];
+                stg.tests.filter((iti) => iti.extraSrc !== undefined).forEach((iti) => {
+                    const cc = Path.join(testroot, iti.extraSrc as string);
+                    const contents = FS.readFileSync(cc, "utf8");
+
+                    extras.set(iti.extraSrc as string, contents);
+                });
+            }
+        }
+    }
+
+    return {
+        corefiles: code,
+        extras: extras
+    };
+}
+
 class TestRunner {
     readonly suite: TestSuite;
     readonly plan: TestPlan;
@@ -342,6 +428,7 @@ class TestRunner {
     done: (results: TestRunResults) => void = (r: TestRunResults) => {;};
 
     smt_assets: SMTTestAssets;
+    icpp_assets: ICPPTestAssets;
     
     private testCompleteActionProcess(test: IndividualTestInfo, result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) {
         if (result === "pass") {
@@ -350,11 +437,12 @@ class TestRunner {
         }
         else if (result === "fail") {
             this.results.failed.push(new TestResult(test, start, end, "fail", info));
-            this.inccb(test.fullname + ": " + chalk.red("fail") + "\n");
+            const failinfo = info !== undefined ? ` with: \n${info.slice(0, 80)}${info.length > 80 ? "..." : ""}` : "";
+            this.inccb(test.fullname + ": " + chalk.red("fail") + failinfo + "\n");
         }
         else {
             this.results.failed.push(new TestResult(test, start, end, "error", info));
-            const errinfo = info !== undefined ? ` with ${info.slice(0, 160)}${info.length > 160 ? "..." : ""}` : "";
+            const errinfo = info !== undefined ? ` with ${info.slice(0, 80)}${info.length > 80 ? "..." : ""}` : "";
             this.inccb(test.fullname + ": " + chalk.magenta("error") + errinfo + "\n");
         }
     }
@@ -414,6 +502,21 @@ class TestRunner {
                     handler("error", new Date(), new Date(), `${ex}`);
                 }
             }
+            else if(tt instanceof IndividualICPPTestInfo) {
+                let code = tt.code;
+                if(tt.extraSrc !== undefined) {
+                    code = code + "\n\n" + this.icpp_assets.extras.get(tt.extraSrc) as string;
+                }
+
+                const handler = this.generateTestResultCallback(tt);
+                this.queued.push(tt.fullname);
+                try {
+                    enqueueICPPTest([], this.icpp_assets.corefiles, code, tt.jargs, tt.expected, handler);
+                }
+                catch (ex) {
+                    handler("error", new Date(), new Date(), `${ex}`);
+                }
+            }
             else {
                 assert(false);
                 break;
@@ -421,10 +524,11 @@ class TestRunner {
         }
     }
 
-    constructor(suite: TestSuite, smtassets: SMTTestAssets, plan: TestPlan, maxpar?: number) {
+    constructor(suite: TestSuite, smtassets: SMTTestAssets, icppassets: ICPPTestAssets, plan: TestPlan, maxpar?: number) {
         this.suite = suite;
         this.plan = plan;
         this.smt_assets = smtassets;
+        this.icpp_assets = icppassets;
 
         this.pending = [...this.plan.tests];
         this.queued = [];
@@ -461,8 +565,9 @@ const suite = loadTestSuite();
 const plan = suite.generateTestPlan(Commander.restriction)
 
 const smt_assets = loadSMTTestAssets(suite);
+const icpp_assets = loadICPPTestAssets(suite);
 
-const runner = new TestRunner(suite, smt_assets, plan, Commander.parallel);
+const runner = new TestRunner(suite, smt_assets, icpp_assets, plan, Commander.parallel);
 runner.run(
     (msg: string) => process.stdout.write(msg),
     (results: TestRunResults) => {

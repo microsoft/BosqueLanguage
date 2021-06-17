@@ -163,13 +163,13 @@ int entityNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
 
 bool entityNatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
-    if(!jv.is_uint64())
+    if(!jv.is_int64())
     {
         return false;
     }
     else
     {
-        dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, jv.as_uint64());
+        dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, jv.as_int64());
         return true;
     }
 }
@@ -1186,8 +1186,8 @@ std::string BSQCharRangeRe::generate(RandGenerator& rnd) const
 
 BSQCharRangeRe* BSQCharRangeRe::crangeoptJSONParse_impl(const boost::json::value& jv)
 {
-    auto lb = jv.as_object().at("lb").as_uint64();
-    auto ub = jv.as_object().at("ub").as_uint64();
+    auto lb = (uint64_t)jv.as_object().at("lb").as_int64();
+    auto ub = (uint64_t)jv.as_object().at("ub").as_int64();
 
     return new BSQCharRangeRe(lb, ub);
 }
@@ -1212,7 +1212,7 @@ std::string BSQCharClassRe::generate(RandGenerator& rnd) const
 
 BSQCharClassRe* BSQCharClassRe::classoptJSONParse_impl(const boost::json::value& jv)
 {
-    auto kind = (SpecialCharKind)jv.as_object().at("kind").as_uint64();
+    auto kind = (SpecialCharKind)jv.as_object().at("kind").as_int64();
 
     return new BSQCharClassRe(kind);
 }
@@ -1278,8 +1278,8 @@ std::string BSQRangeRepeatRe::generate(RandGenerator& rnd) const
  BSQRangeRepeatRe* BSQRangeRepeatRe::rangeoptJSONParse_impl(const boost::json::value& jv)
  {
     auto repeat = BSQRegexOpt::reoptJSONParse_impl(jv.as_object().at("repeat"));
-    auto min = (uint32_t)jv.as_object().at("min").as_uint64();
-    auto max = (uint32_t)jv.as_object().at("max").as_uint64();
+    auto min = (uint32_t)jv.as_object().at("min").as_int64();
+    auto max = (uint32_t)jv.as_object().at("max").as_int64();
 
     return new BSQRangeRepeatRe(min, max, repeat);
  }
