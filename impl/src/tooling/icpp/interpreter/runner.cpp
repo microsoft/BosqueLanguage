@@ -192,7 +192,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
 {
     ////
     //Initialize builtin stuff
-    auto gmaskstr = std::string(jv.as_object().at("cmask").as_string().cbegin(), jv.as_object().at("cmask").as_string().cend());
+    auto gmaskstr = std::string(jv.as_object().at("cmask").as_string().c_str());
     auto gmask = (char*)malloc(gmaskstr.size() + 1);
     GC_MEM_COPY(gmask, gmaskstr.c_str(), gmaskstr.size());
     gmask[gmaskstr.size()] = '\0';
@@ -205,7 +205,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
     //Get all of our name to map ids setup
     auto bultintypecount = Environment::g_typenameToIDMap.size();
     std::for_each(jv.as_object().at("typenames").as_array().cbegin(), jv.as_object().at("typenames").as_array().cend(), [bultintypecount](boost::json::value tname) {
-        auto tstr = std::string(tname.as_string().cbegin(), tname.as_string().cend());
+        auto tstr = std::string(tname.as_string().c_str());
         if(Environment::g_typenameToIDMap.find(tstr) == Environment::g_typenameToIDMap.cend())
         {
             Environment::g_typenameToIDMap[tstr] = (Environment::g_typenameToIDMap.size() + BSQ_TYPE_ID_BUILTIN_MAX) - bultintypecount;
@@ -213,24 +213,24 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
     });
     
     std::for_each(jv.as_object().at("propertynames").as_array().cbegin(), jv.as_object().at("propertynames").as_array().cend(), [](boost::json::value pname) {
-        auto tstr = std::string(pname.as_string().cbegin(), pname.as_string().cend());
+        auto tstr = std::string(pname.as_string().c_str());
         Environment::g_propertynameToIDMap[tstr] = Environment::g_propertynameToIDMap.size();
         BSQType::g_propertymap[Environment::g_propertynameToIDMap[tstr]] = tstr;
     });
 
     std::for_each(jv.as_object().at("fieldnames").as_array().cbegin(), jv.as_object().at("fieldnames").as_array().cend(), [](boost::json::value ttype) {
-        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+        auto tstr = std::string(ttype.as_string().c_str());
         Environment::g_fieldnameToIDMap[tstr] = Environment::g_fieldnameToIDMap.size();
         BSQType::g_fieldmap[Environment::g_fieldnameToIDMap[tstr]] = tstr;
     });
 
     std::for_each(jv.as_object().at("invokenames").as_array().cbegin(), jv.as_object().at("invokenames").as_array().cend(), [](boost::json::value tname) {
-        auto tstr = std::string(tname.as_string().cbegin(), tname.as_string().cend());
+        auto tstr = std::string(tname.as_string().c_str());
         Environment::g_invokenameToIDMap[tstr] = Environment::g_invokenameToIDMap.size();
     });
 
     std::for_each(jv.as_object().at("vinvokenames").as_array().cbegin(), jv.as_object().at("vinvokenames").as_array().cend(), [](boost::json::value tname) {
-        auto tstr = std::string(tname.as_string().cbegin(), tname.as_string().cend());
+        auto tstr = std::string(tname.as_string().c_str());
         Environment::g_vinvokenameToIDMap[tstr] = Environment::g_vinvokenameToIDMap.size();
     });
 
@@ -269,7 +269,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
         initializeConst(runner, storageOffset, ikey, gtype);
     });
 
-    auto entrypoint = std::string(jv.as_object().at("entrypoint").as_string().cbegin(), jv.as_object().at("entrypoint").as_string().cend());
+    auto entrypoint = std::string(jv.as_object().at("entrypoint").as_string().c_str());
     return entrypoint;
 }
 
@@ -417,21 +417,23 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
     {
         mode = "stream";
     }
-    else if(argc == 2)
+    else if(argc == 3)
     {
         mode = "run";
         prog = std::string(argv[1]);
         input = std::string(argv[2]);
     }
-    else if(argc == 3 && std::string(argv[1]) == std::string("fuzz"))
+    else if(argc == 4 && std::string(argv[1]) == std::string("fuzz"))
     {
         mode = "fuzz";
         prog = std::string(argv[2]);
+        input = std::string(argv[3]);
     }
-    else if(argc == 3 && std::string(argv[1]) == std::string("run"))
+    else if(argc == 4 && std::string(argv[1]) == std::string("run"))
     {
         mode = "run";
         prog = std::string(argv[2]);
+        input = std::string(argv[3]);
     }
     else
     {

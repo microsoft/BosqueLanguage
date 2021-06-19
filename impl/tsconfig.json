@@ -18,6 +18,7 @@
         "src/tooling/icpp/transpiler/*.ts",
         "src/tooling/verifier/*.ts",
         "src/runtimes/*.ts",
+        "src/runtimes/chk_modes/*.ts",
         "src/test/*.ts"
     ]
 }
