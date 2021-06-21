@@ -1,0 +1,3 @@
+tools/win/z3.exe filter=lfs diff=lfs merge=lfs -text
+tools/linux/z3.exe filter=lfs diff=lfs merge=lfs -text
+tools/macos/z3.exe filter=lfs diff=lfs merge=lfs -text

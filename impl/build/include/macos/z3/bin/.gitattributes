@@ -1,0 +1,6 @@
+com.microsoft.z3.jar filter=lfs diff=lfs merge=lfs -text
+libz3.a filter=lfs diff=lfs merge=lfs -text
+libz3.dylib filter=lfs diff=lfs merge=lfs -text
+libz3java.dylib filter=lfs diff=lfs merge=lfs -text
+z3 filter=lfs diff=lfs merge=lfs -text
+Microsoft.Z3.dll filter=lfs diff=lfs merge=lfs -text
