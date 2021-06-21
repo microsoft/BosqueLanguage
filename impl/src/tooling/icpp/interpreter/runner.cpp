@@ -14,10 +14,8 @@
 bool loadJSONFromStdIn(const std::string& filename, boost::json::value& jval, boost::json::value& jargs)
 {
     std::vector<char> contents;
-    std::ifstream instrm(stdin);
-    
     std::string line;
-    while(getline(instrm, line))
+    while(getline(std::cin, line))
     {
         std::copy(line.cbegin(), line.cend(), std::back_inserter(contents));
         line.clear();

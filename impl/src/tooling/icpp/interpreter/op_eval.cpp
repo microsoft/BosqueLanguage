@@ -1886,7 +1886,6 @@ void Evaluator::evaluateBody(StorageLocationPtr resultsl, const BSQType* restype
 
 void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
-    size_t argsbasesize = call->params.size() * sizeof(void*);
     void* argsbase = BSQ_STACK_SPACE_ALLOC(call->params.size() * sizeof(void*));
     void** curr = (void**)argsbase;
     for(size_t i = 0; i < call->params.size(); ++i)

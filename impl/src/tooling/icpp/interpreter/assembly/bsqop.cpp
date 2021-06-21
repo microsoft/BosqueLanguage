@@ -357,8 +357,6 @@ InvokeFixedFunctionOp* InvokeFixedFunctionOp::jparse(boost::json::value v)
         return jsonParse_Argument(arg);
     });
 
-auto vstr = jsonGetAsString(v, "invokeId");
-auto vid = Environment::g_invokenameToIDMap[vstr];
     return new InvokeFixedFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_invokenameToIDMap[jsonGetAsString(v, "invokeId")], args, j_sguard(v), jsonGetAsInt<int32_t>(v, "optmaskoffset"));
 }
 
