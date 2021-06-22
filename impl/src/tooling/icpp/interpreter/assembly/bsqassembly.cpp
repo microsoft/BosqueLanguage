@@ -15,7 +15,7 @@ RefMask jsonLoadRefMask(boost::json::value val)
     }
     else
     {
-        auto mstr = std::string(val.as_string().cbegin(), val.as_string().cend());
+        auto mstr = std::string(val.as_string().c_str());
         if (Environment::g_stringmaskToDeclMap.find(mstr) == Environment::g_stringmaskToDeclMap.cend())
         {
             auto rstr = (char*)malloc(mstr.size() + 1);
@@ -43,13 +43,13 @@ BSQTypeSizeInfo jsonLoadTypeSizeInfo(boost::json::value val)
 
 BSQTypeID j_tkey(boost::json::value v)
 {
-    auto tstr = std::string(v.as_object().at("tkey").as_string().cbegin(), v.as_object().at("tkey").as_string().cend());
+    auto tstr = jsonGetAsString(v, "tkey");
     return Environment::g_typenameToIDMap[tstr];
 }
 
 std::string j_name(boost::json::value v)
 {
-    return std::string(v.as_object().at("name").as_string().cbegin(), v.as_object().at("name").as_string().cend());
+    return jsonGetAsString(v, "name");
 }
 
 BSQTypeKind j_tkind(boost::json::value v)
@@ -72,10 +72,10 @@ void j_vtable(std::map<BSQVirtualInvokeID, BSQInvokeID>& vtable, boost::json::va
     auto varray = v.as_object().at("vtable").as_array();
     for(size_t i = 0; i < varray.size(); ++i)
     {
-        auto ventry = varray.at(i).as_object();
+        auto ventry = varray.at(i);
 
-        auto vstr = std::string(ventry.at("vcall").as_string().cbegin(), ventry.at("vcall").as_string().cend());
-        auto istr = std::string(ventry.at("inv").as_string().cbegin(), ventry.at("inv").as_string().cend());
+        auto vstr = jsonGetAsString(ventry, "vcall");
+        auto istr = jsonGetAsString(ventry, "inv");
         
         vtable[Environment::g_vinvokenameToIDMap[vstr]] = Environment::g_invokenameToIDMap[istr];
     }
@@ -89,7 +89,7 @@ const BSQType* jsonLoadValidatorType(boost::json::value v)
 
 const BSQType* jsonLoadStringOfType(boost::json::value v)
 {
-    auto vname = std::string(v.as_object().at("validator").as_string().cbegin(), v.as_object().at("validator").as_string().cend());
+    auto vname = jsonGetAsString(v, "validator");
     auto vtid = Environment::g_typenameToIDMap[vname];
 
     return new BSQStringOfType(j_tkey(v), j_name(v), vtid);
@@ -97,7 +97,7 @@ const BSQType* jsonLoadStringOfType(boost::json::value v)
 
 const BSQType* jsonLoadDataStringType(boost::json::value v)
 {
-    auto iname = std::string(v.as_object().at("chkinv").as_string().cbegin(), v.as_object().at("chkinv").as_string().cend());
+    auto iname = jsonGetAsString(v, "chkinv");
     auto inv = Environment::g_invokenameToIDMap[iname];
 
     return new BSQDataStringType(j_tkey(v), j_name(v), inv);
@@ -105,11 +105,8 @@ const BSQType* jsonLoadDataStringType(boost::json::value v)
 
 const BSQType* jsonLoadTypedNumberType(boost::json::value v)
 {
-    auto primitivename = std::string(v.as_object().at("primitive").as_string().cbegin(), v.as_object().at("primitive").as_string().cend());
-    auto primitive = Environment::g_typenameToIDMap[primitivename];
-
-    auto underlyingname = std::string(v.as_object().at("underlying").as_string().cbegin(), v.as_object().at("underlying").as_string().cend());
-    auto underlying = Environment::g_typenameToIDMap[underlyingname];
+    auto primitive = Environment::g_typenameToIDMap[jsonGetAsString(v, "primitive")];
+    auto underlying = Environment::g_typenameToIDMap[jsonGetAsString(v, "underlying")];
 
     switch(primitive)
     {
@@ -142,10 +139,9 @@ const BSQType* jsonLoadTypedNumberType(boost::json::value v)
 
 const BSQType* jsonLoadListType(boost::json::value v)
 {
-    std::string etypestr = std::string(v.as_object().at("etype").as_string().cbegin(), v.as_object().at("etype").as_string().cend());
-    BSQTypeID etype = Environment::g_typenameToIDMap[etypestr];
+    BSQTypeID etype = Environment::g_typenameToIDMap[jsonGetAsString(v, "etype")];
 
-    uint64_t esize = (uint64_t)v.as_object().at("esize").as_int64();
+    uint64_t esize = jsonGetAsUInt<uint64_t>(v, "esize");
     RefMask emask = jsonLoadRefMask(v.as_object().at("emask"));
 
     BSQListFlatKType<4>* list4 = new BSQListFlatKType<4>(j_name(v) + "_cons4", esize, emask);
@@ -183,13 +179,15 @@ const BSQType* jsonLoadTupleType(boost::json::value v)
     BSQTupleIndex maxIndex = (BSQTupleIndex)v.as_object().at("maxIndex").as_int64();
 
     std::vector<BSQTypeID> ttypes;
-    std::transform(v.as_object().at("ttypes").as_array().cbegin(), v.as_object().at("ttypes").as_array().cend(), std::back_inserter(ttypes), [](boost::json::value ttype) {
-        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+    auto ttlist = v.as_object().at("ttypes").as_array();
+    std::transform(ttlist.cbegin(), ttlist.cend(), std::back_inserter(ttypes), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().c_str());
         return Environment::g_typenameToIDMap[tstr];
     });
 
     std::vector<size_t> idxoffsets;
-    std::transform(v.as_object().at("idxoffsets").as_array().cbegin(), v.as_object().at("idxoffsets").as_array().cend(), std::back_inserter(idxoffsets), [](boost::json::value offset) {
+    auto idxlist = v.as_object().at("idxoffsets").as_array();
+    std::transform(idxlist.cbegin(), idxlist.cend(), std::back_inserter(idxoffsets), [](boost::json::value offset) {
         return (size_t)offset.as_int64();
     });
 
@@ -213,19 +211,22 @@ const BSQType* jsonLoadRecordType(boost::json::value v)
     j_vtable(vtable, v);
 
     std::vector<BSQRecordPropertyID> propertynames;
-    std::transform(v.as_object().at("propertynames").as_array().cbegin(), v.as_object().at("propertynames").as_array().cend(), std::back_inserter(propertynames), [](boost::json::value prop) {
-        auto pstr = std::string(prop.as_string().cbegin(), prop.as_string().cend());
+    auto pnlist = v.as_object().at("propertynames").as_array();
+    std::transform(pnlist.cbegin(), pnlist.cend(), std::back_inserter(propertynames), [](boost::json::value prop) {
+        auto pstr = std::string(prop.as_string().c_str());
         return Environment::g_propertynameToIDMap[pstr];
     });
 
     std::vector<BSQTypeID> propertytypes;
-    std::transform(v.as_object().at("propertytypes").as_array().cbegin(), v.as_object().at("propertytypes").as_array().cend(), std::back_inserter(propertytypes), [](boost::json::value rtype) {
-        auto tstr = std::string(rtype.as_string().cbegin(), rtype.as_string().cend());
+    auto ptlist = v.as_object().at("propertytypes").as_array();
+    std::transform(ptlist.cbegin(), ptlist.cend(), std::back_inserter(propertytypes), [](boost::json::value rtype) {
+        auto tstr = std::string(rtype.as_string().c_str());
         return Environment::g_typenameToIDMap[tstr];
     });
 
     std::vector<size_t> propertyoffsets;
-    std::transform(v.as_object().at("propertyoffsets").as_array().cbegin(), v.as_object().at("propertyoffsets").as_array().cend(), std::back_inserter(propertyoffsets), [](boost::json::value offset) {
+    auto polist = v.as_object().at("propertyoffsets").as_array();
+    std::transform(polist.cbegin(), polist.cend(), std::back_inserter(propertyoffsets), [](boost::json::value offset) {
         return (size_t)offset.as_int64();
     });
 
@@ -249,19 +250,22 @@ const BSQType* jsonLoadEntityType(boost::json::value v)
     j_vtable(vtable, v);
 
     std::vector<BSQFieldID> fieldnames;
-    std::transform(v.as_object().at("fieldnames").as_array().cbegin(), v.as_object().at("fieldnames").as_array().cend(), std::back_inserter(fieldnames), [](boost::json::value prop) {
-        auto pstr = std::string(prop.as_string().cbegin(), prop.as_string().cend());
+    auto fnlist = v.as_object().at("fieldnames").as_array();
+    std::transform(fnlist.cbegin(), fnlist.cend(), std::back_inserter(fieldnames), [](boost::json::value prop) {
+        auto pstr = std::string(prop.as_string().c_str());
         return Environment::g_fieldnameToIDMap[pstr];
     });
 
     std::vector<BSQTypeID> fieldtypes;
-    std::transform(v.as_object().at("fieldtypes").as_array().cbegin(), v.as_object().at("fieldtypes").as_array().cend(), std::back_inserter(fieldtypes), [](boost::json::value rtype) {
-        auto tstr = std::string(rtype.as_string().cbegin(), rtype.as_string().cend());
+    auto ftlist = v.as_object().at("fieldtypes").as_array();
+    std::transform(ftlist.cbegin(), ftlist.cend(), std::back_inserter(fieldtypes), [](boost::json::value rtype) {
+        auto tstr = std::string(rtype.as_string().c_str());
         return Environment::g_typenameToIDMap[tstr];
     });
 
     std::vector<size_t> fieldoffsets;
-    std::transform(v.as_object().at("fieldoffsets").as_array().cbegin(), v.as_object().at("fieldoffsets").as_array().cend(), std::back_inserter(fieldoffsets), [](boost::json::value offset) {
+    auto folist = v.as_object().at("fieldoffsets").as_array();
+    std::transform(folist.cbegin(), folist.cend(), std::back_inserter(fieldoffsets), [](boost::json::value offset) {
         return (size_t)offset.as_int64();
     });
 
@@ -280,13 +284,15 @@ const BSQType* jsonLoadEphemeralListType(boost::json::value v)
     auto allocinfo = j_allocinfo(v);
 
     std::vector<BSQTypeID> etypes;
-    std::transform(v.as_object().at("etypes").as_array().cbegin(), v.as_object().at("etypes").as_array().cend(), std::back_inserter(etypes), [](boost::json::value ttype) {
-        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+    auto etlist = v.as_object().at("etypes").as_array();
+    std::transform(etlist.cbegin(), etlist.cend(), std::back_inserter(etypes), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().c_str());
         return Environment::g_typenameToIDMap[tstr];
     });
 
     std::vector<size_t> idxoffsets;
-    std::transform(v.as_object().at("idxoffsets").as_array().cbegin(), v.as_object().at("idxoffsets").as_array().cend(), std::back_inserter(idxoffsets), [](boost::json::value offset) {
+    auto eolist = v.as_object().at("idxoffsets").as_array();
+    std::transform(eolist.cbegin(), eolist.cend(), std::back_inserter(idxoffsets), [](boost::json::value offset) {
         return (size_t)offset.as_int64();
     });
 
@@ -298,8 +304,9 @@ const BSQType* jsonLoadInlineUnionType(boost::json::value v)
     auto allocinfo = j_allocinfo(v);
 
     std::vector<BSQTypeID> subtypes;
-    std::transform(v.as_object().at("subtypes").as_array().cbegin(), v.as_object().at("subtypes").as_array().cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
-        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+    auto stlist = v.as_object().at("subtypes").as_array();
+    std::transform(stlist.cbegin(), stlist.cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().c_str());
         return Environment::g_typenameToIDMap[tstr];
     });
 
@@ -309,8 +316,9 @@ const BSQType* jsonLoadInlineUnionType(boost::json::value v)
 const BSQType* jsonLoadRefUnionType(boost::json::value v)
 {
     std::vector<BSQTypeID> subtypes;
-    std::transform(v.as_object().at("subtypes").as_array().cbegin(), v.as_object().at("subtypes").as_array().cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
-        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+    auto stlist = v.as_object().at("subtypes").as_array();
+    std::transform(stlist.cbegin(), stlist.cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().c_str());
         return Environment::g_typenameToIDMap[tstr];
     });
 
@@ -388,29 +396,22 @@ void jsonLoadBSQTypeDecl(boost::json::value v)
 
 void jsonLoadBSQLiteralDecl(boost::json::value v, size_t& storageOffset, const BSQType*& gtype, std::string& lval)
 {
-    storageOffset = (size_t)v.as_object().at("offset").as_int64();
-
-    auto gstr = std::string(v.as_object().at("storage").as_string().cbegin(), v.as_object().at("storage").as_string().cend());
-    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[gstr]];
-
-    lval = std::string(v.as_object().at("value").as_string().cbegin(), v.as_object().at("value").as_string().cend());
+    storageOffset = jsonGetAsUInt<size_t>(v, "offset");
+    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "storage")]];
+    lval = jsonGetAsString(v, "value");
 }
 
 void jsonLoadBSQConstantDecl(boost::json::value v, size_t& storageOffset, BSQInvokeID& ikey, const BSQType*& gtype)
 {
-    storageOffset = (size_t)v.as_object().at("storageOffset").as_int64();
-
-    auto ikeystr = std::string(v.as_object().at("valueInvoke").as_string().cbegin(), v.as_object().at("valueInvoke").as_string().cend());
-    ikey = Environment::g_invokenameToIDMap[ikeystr];
-
-    auto gstr = std::string(v.as_object().at("ctype").as_string().cbegin(), v.as_object().at("ctype").as_string().cend());
-    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[gstr]];
+    storageOffset = jsonGetAsUInt<size_t>(v, "storageOffset");
+    ikey = Environment::g_invokenameToIDMap[jsonGetAsString(v, "valueInvoke")];
+    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "ctype")]];
 }
 
 void BSQInvokeDecl::jsonLoad(boost::json::value v)
 {
     BSQInvokeDecl* dcl = nullptr;
-    if(v.as_object().at("isbuiltin").as_bool())
+    if(jsonGetAsBool(v, "isbuiltin"))
     {
         dcl = BSQInvokePrimitiveDecl::jsonLoad(v);
     }
@@ -424,23 +425,18 @@ void BSQInvokeDecl::jsonLoad(boost::json::value v)
 
 BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(boost::json::value v)
 {
-    auto ikeystr = std::string(v.as_object().at("ikey").as_string().cbegin(), v.as_object().at("ikey").as_string().cend());
-    auto ikey = Environment::g_invokenameToIDMap[ikeystr];
-
-    auto srcfile = std::string(v.as_object().at("srcFile").as_string().cbegin(), v.as_object().at("srcFile").as_string().cend());
-
-    auto recursive = v.as_object().at("recursive").as_bool();
+    auto ikey = Environment::g_invokenameToIDMap[jsonGetAsString(v, "ikey")];
+    auto srcfile =  jsonGetAsString(v, "srcFile");
+    auto recursive = jsonGetAsBool(v, "recursive");
 
     std::vector<BSQFunctionParameter> params;
     std::transform(v.as_object().at("params").as_array().cbegin(), v.as_object().at("params").as_array().cend(), std::back_inserter(params), [](boost::json::value param) {
-        auto tstr = std::string(param.as_object().at("ptype").as_string().cbegin(), param.as_object().at("ptype").as_string().cend());
+        auto tstr =  jsonGetAsString(param, "ptype");
         auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
         return BSQFunctionParameter{j_name(param), ptype};
     });
-
-    auto rstr = std::string(v.as_object().at("resultType").as_string().cbegin(), v.as_object().at("resultType").as_string().cend());
-    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[rstr]];
+    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "resultType")]];
 
     Argument resultArg = {(ArgumentTag)v.as_object().at("resultArg").as_object().at("kind").as_int64(), (uint32_t)v.as_object().at("resultArg").as_object().at("location").as_int64()}; 
     const RefMask mask = jsonLoadRefMask(v.as_object().at("mixedStackMask"));
@@ -455,43 +451,36 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(boost::json::value v)
 
 BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
 {
-    auto ikeystr = std::string(v.as_object().at("ikey").as_string().cbegin(), v.as_object().at("ikey").as_string().cend());
-    auto ikey = Environment::g_invokenameToIDMap[ikeystr];
-
-    auto srcfile = std::string(v.as_object().at("srcFile").as_string().cbegin(), v.as_object().at("srcFile").as_string().cend());
-
-    auto recursive = v.as_object().at("recursive").as_bool();
+    auto implkeyname = jsonGetAsString(v, "ikey");
+    auto ikey = Environment::g_invokenameToIDMap[implkeyname];
+    auto srcfile = jsonGetAsString(v, "srcFile");
+    auto recursive = jsonGetAsBool(v, "recursive");
 
     std::vector<BSQFunctionParameter> params;
     std::transform(v.as_object().at("params").as_array().cbegin(), v.as_object().at("params").as_array().cend(), std::back_inserter(params), [](boost::json::value param) {
-        auto tstr = std::string(param.as_object().at("ptype").as_string().cbegin(), param.as_object().at("ptype").as_string().cend());
+        auto tstr = jsonGetAsString(param, "ptype");
         auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
         return BSQFunctionParameter{j_name(param), ptype};
     });
-
-    auto rstr = std::string(v.as_object().at("resultType").as_string().cbegin(), v.as_object().at("resultType").as_string().cend());
-    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[rstr]];
+    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "resultType")]];
 
     const RefMask mask = jsonLoadRefMask(v.as_object().at("mixedStackMask"));
 
     const BSQType* enclosingtype = nullptr;
     if(v.as_object().at("enclosingtype").is_string())
     {
-        auto estr = std::string(v.as_object().at("enclosingtype").as_string().cbegin(), v.as_object().at("enclosingtype").as_string().cend());
-        enclosingtype = BSQType::g_typetable[Environment::g_typenameToIDMap[estr]];
+       enclosingtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "enclosingtype")]];
     }
 
-    auto implkeyname = std::string(v.as_object().at("implkey").as_string().cbegin(), v.as_object().at("implkey").as_string().cend());
-    BSQPrimitiveImplTag implkey = Environment::g_primitiveinvokenameToIDMap[implkeyname];
+    BSQPrimitiveImplTag implkey = Environment::g_primitiveinvokenameToIDMap[jsonGetAsString(v, "implkey")];
     
     std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap;
     std::for_each(v.as_object().at("scalaroffsetMap").as_array().cbegin(), v.as_object().at("scalaroffsetMap").as_array().cend(), [&scalaroffsetMap](boost::json::value so) {
-        auto name = std::string(so.as_object().at("name").as_string().cbegin(), so.as_object().at("name").as_string().cend());
-
+        auto name = jsonGetAsString(so, "name");
         auto offset = (uint32_t)so.as_object().at("info").as_array().at(0).as_int64();
 
-        auto tstr = std::string(so.as_object().at("info").as_array().at(1).as_string().cbegin(), so.as_object().at("info").as_array().at(1).as_string().cend());
+        auto tstr = std::string(so.as_object().at("info").as_array().at(1).as_string().c_str());
         auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
         scalaroffsetMap[name] = {offset, otype};
@@ -499,11 +488,10 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
 
     std::map<std::string, std::pair<uint32_t, const BSQType*>> mixedoffsetMap;
     std::for_each(v.as_object().at("scalaroffsetMap").as_array().cbegin(), v.as_object().at("scalaroffsetMap").as_array().cend(), [&mixedoffsetMap](boost::json::value mo) {
-        auto name = std::string(mo.as_object().at("name").as_string().cbegin(), mo.as_object().at("name").as_string().cend());
-
+        auto name = jsonGetAsString(mo, "name");
         auto offset = (uint32_t)mo.as_object().at("info").as_array().at(0).as_int64();
 
-        auto tstr = std::string(mo.as_object().at("info").as_array().at(1).as_string().cbegin(), mo.as_object().at("info").as_array().at(1).as_string().cend());
+        auto tstr = std::string(mo.as_object().at("info").as_array().at(1).as_string().c_str());
         auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
         mixedoffsetMap[name] = {offset, otype};
@@ -511,9 +499,9 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
 
     std::map<std::string, const BSQType*> binds;
     std::for_each(v.as_object().at("binds").as_array().cbegin(), v.as_object().at("binds").as_array().cend(), [&binds](boost::json::value b) {
-        auto name = std::string(b.as_object().at("name").as_string().cbegin(), b.as_object().at("name").as_string().cend());
+        auto name = jsonGetAsString(b, "name");
 
-        auto tstr = std::string(b.as_object().at("ttype").as_array().at(1).as_string().cbegin(), b.as_object().at("ttype").as_array().at(1).as_string().cend());
+        auto tstr = std::string(b.as_object().at("ttype").as_array().at(1).as_string().c_str());
         auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
         binds[name] = otype;
@@ -521,10 +509,8 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
 
     std::map<std::string, BSQPCode*> pcodes;
     std::for_each(v.as_object().at("pcodes").as_array().cbegin(), v.as_object().at("pcodes").as_array().cend(), [&pcodes](boost::json::value pcode) {
-        auto name = std::string(pcode.as_object().at("name").as_string().cbegin(), pcode.as_object().at("name").as_string().cend());
-
-        auto codestr = std::string(pcode.as_object().at("code").as_string().cbegin(), pcode.as_object().at("code").as_string().cend());
-        auto code = Environment::g_invokenameToIDMap[codestr];
+        auto name = jsonGetAsString(pcode, "name");
+        auto code = Environment::g_invokenameToIDMap[jsonGetAsString(pcode, "code")];
 
         std::vector<Argument> cargs;
         std::transform(pcode.as_object().at("cargs").as_array().cbegin(), pcode.as_object().at("cargs").as_array().cend(), std::back_inserter(cargs), [](boost::json::value carg) {

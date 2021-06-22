@@ -1126,7 +1126,7 @@ BSQRegexOpt* BSQRegexOpt::reoptJSONParse_impl(const boost::json::value& jv)
     }
     else
     {
-        auto tag = std::string(jv.as_object().at("tag").as_string().cbegin(), jv.as_object().at("tag").as_string().cbegin());
+        auto tag = jsonGetAsString(jv, "tag");
         if(tag == "CharClass")
         {
             return BSQCharClassRe::classoptJSONParse_impl(jv);
@@ -1169,7 +1169,7 @@ std::string BSQLiteralRe::generate(RandGenerator& rnd) const
 
 BSQLiteralRe* BSQLiteralRe::litoptJSONParse_impl(const boost::json::value& jv)
 {
-    auto lstr = std::string(jv.as_string().cbegin(), jv.as_string().cend());
+    auto lstr = std::string(jv.as_string().c_str());
     return new BSQLiteralRe(lstr);
 }
 
@@ -1347,9 +1347,9 @@ BSQSequenceRe* BSQSequenceRe::seqoptJSONParse_impl(const boost::json::value& jv)
 
 BSQRegex bsqRegexJSONParse_impl(const boost::json::value& jv)
 {
-    auto restr = std::string(jv.as_object().at("restr").as_string().cbegin(), jv.as_object().at("restr").as_string().cend());
-    auto isAnchorStart = jv.as_object().at("isAnchorStart").as_bool();
-    auto isAnchorEnd = jv.as_object().at("isAnchorEnd").as_bool();
+    auto restr = jsonGetAsString(jv, "restr");
+    auto isAnchorStart = jsonGetAsBool(jv, "isAnchorStart");
+    auto isAnchorEnd = jsonGetAsBool(jv, "isAnchorEnd");
     auto re = BSQRegexOpt::reoptJSONParse_impl(jv.as_object().at("re"));
 
     return BSQRegex{restr, std::regex{restr}, isAnchorStart, isAnchorEnd, re};

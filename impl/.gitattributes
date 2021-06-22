@@ -1,3 +1,0 @@
-impl/build/tools/win/cvc4.exe filter=lfs diff=lfs merge=lfs -text
-impl/build/tools/macos/cvc4 filter=lfs diff=lfs merge=lfs -text
-impl/build/tools/linux/cvc4 filter=lfs diff=lfs merge=lfs -text

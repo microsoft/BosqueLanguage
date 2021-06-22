@@ -10,14 +10,13 @@
 #include <fstream>
 
 #include <boost/json/src.hpp>
+//https://github.com/nlohmann/json
 
 bool loadJSONFromStdIn(const std::string& filename, boost::json::value& jval, boost::json::value& jargs)
 {
     std::vector<char> contents;
-    std::ifstream instrm(stdin);
-    
     std::string line;
-    while(getline(instrm, line))
+    while(getline(std::cin, line))
     {
         std::copy(line.cbegin(), line.cend(), std::back_inserter(contents));
         line.clear();
@@ -192,7 +191,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
 {
     ////
     //Initialize builtin stuff
-    auto gmaskstr = std::string(jv.as_object().at("cmask").as_string().cbegin(), jv.as_object().at("cmask").as_string().cend());
+    auto gmaskstr = jsonGetAsString(jv, "cmask");
     auto gmask = (char*)malloc(gmaskstr.size() + 1);
     GC_MEM_COPY(gmask, gmaskstr.c_str(), gmaskstr.size());
     gmask[gmaskstr.size()] = '\0';
@@ -204,52 +203,60 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
     ////
     //Get all of our name to map ids setup
     auto bultintypecount = Environment::g_typenameToIDMap.size();
-    std::for_each(jv.as_object().at("typenames").as_array().cbegin(), jv.as_object().at("typenames").as_array().cend(), [bultintypecount](boost::json::value tname) {
-        auto tstr = std::string(tname.as_string().cbegin(), tname.as_string().cend());
+    auto tnlist = jv.as_object().at("typenames").as_array();
+    std::for_each(tnlist.cbegin(), tnlist.cend(), [bultintypecount](boost::json::value tname) {
+        auto tstr = std::string(tname.as_string().c_str());
         if(Environment::g_typenameToIDMap.find(tstr) == Environment::g_typenameToIDMap.cend())
         {
             Environment::g_typenameToIDMap[tstr] = (Environment::g_typenameToIDMap.size() + BSQ_TYPE_ID_BUILTIN_MAX) - bultintypecount;
         }
     });
     
-    std::for_each(jv.as_object().at("propertynames").as_array().cbegin(), jv.as_object().at("propertynames").as_array().cend(), [](boost::json::value pname) {
-        auto tstr = std::string(pname.as_string().cbegin(), pname.as_string().cend());
+    auto pnlist = jv.as_object().at("propertynames").as_array();
+    std::for_each(pnlist.cbegin(), pnlist.cend(), [](boost::json::value pname) {
+        auto tstr = std::string(pname.as_string().c_str());
         Environment::g_propertynameToIDMap[tstr] = Environment::g_propertynameToIDMap.size();
         BSQType::g_propertymap[Environment::g_propertynameToIDMap[tstr]] = tstr;
     });
 
-    std::for_each(jv.as_object().at("fieldnames").as_array().cbegin(), jv.as_object().at("fieldnames").as_array().cend(), [](boost::json::value ttype) {
-        auto tstr = std::string(ttype.as_string().cbegin(), ttype.as_string().cend());
+    auto fnlist = jv.as_object().at("fieldnames").as_array();
+    std::for_each(fnlist.cbegin(), fnlist.cend(), [](boost::json::value ttype) {
+        auto tstr = std::string(ttype.as_string().c_str());
         Environment::g_fieldnameToIDMap[tstr] = Environment::g_fieldnameToIDMap.size();
         BSQType::g_fieldmap[Environment::g_fieldnameToIDMap[tstr]] = tstr;
     });
 
-    std::for_each(jv.as_object().at("invokenames").as_array().cbegin(), jv.as_object().at("invokenames").as_array().cend(), [](boost::json::value tname) {
-        auto tstr = std::string(tname.as_string().cbegin(), tname.as_string().cend());
+    auto inlist = jv.as_object().at("invokenames").as_array();
+    std::for_each(inlist.cbegin(), inlist.cend(), [](boost::json::value tname) {
+        auto tstr = std::string(tname.as_string().c_str());
         Environment::g_invokenameToIDMap[tstr] = Environment::g_invokenameToIDMap.size();
     });
 
-    std::for_each(jv.as_object().at("vinvokenames").as_array().cbegin(), jv.as_object().at("vinvokenames").as_array().cend(), [](boost::json::value tname) {
-        auto tstr = std::string(tname.as_string().cbegin(), tname.as_string().cend());
+    auto vnlist = jv.as_object().at("vinvokenames").as_array();
+    std::for_each(vnlist.cbegin(), vnlist.cend(), [](boost::json::value tname) {
+        auto tstr = std::string(tname.as_string().c_str());
         Environment::g_vinvokenameToIDMap[tstr] = Environment::g_vinvokenameToIDMap.size();
     });
 
     ////
     //Load Types
-    std::for_each(jv.as_object().at("typedecls").as_array().cbegin(), jv.as_object().at("typedecls").as_array().cend(), [](boost::json::value tdecl) {
+    auto tdlist = jv.as_object().at("typedecls").as_array();
+    std::for_each(tdlist.cbegin(), tdlist.cend(), [](boost::json::value tdecl) {
         jsonLoadBSQTypeDecl(tdecl);
     });
 
     ////
     //Load Functions
     Environment::g_invokes.resize(Environment::g_invokenameToIDMap.size());
-    std::for_each(jv.as_object().at("invdecls").as_array().cbegin(), jv.as_object().at("invdecls").as_array().cend(), [](boost::json::value idecl) {
+    auto idlist = jv.as_object().at("invdecls").as_array();
+    std::for_each(idlist.cbegin(), idlist.cend(), [](boost::json::value idecl) {
         BSQInvokeDecl::jsonLoad(idecl);
     });
 
     ////
     //Load Literals
-    std::for_each(jv.as_object().at("litdecls").as_array().cbegin(), jv.as_object().at("litdecls").as_array().cend(), [](boost::json::value ldecl) {
+    auto ldlist = jv.as_object().at("litdecls").as_array();
+    std::for_each(ldlist.cbegin(), ldlist.cend(), [](boost::json::value ldecl) {
         size_t storageOffset;
         const BSQType* gtype; 
         std::string lval;
@@ -260,7 +267,8 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
 
     ////
     //Load Constants
-    std::for_each(jv.as_object().at("constdecls").as_array().cbegin(), jv.as_object().at("constdecls").as_array().cend(), [&runner](boost::json::value ldecl) {
+    auto cdlist = jv.as_object().at("constdecls").as_array();
+    std::for_each(cdlist.cbegin(), cdlist.cend(), [&runner](boost::json::value ldecl) {
         size_t storageOffset;
         BSQInvokeID ikey;
         const BSQType* gtype; 
@@ -269,7 +277,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
         initializeConst(runner, storageOffset, ikey, gtype);
     });
 
-    auto entrypoint = std::string(jv.as_object().at("entrypoint").as_string().cbegin(), jv.as_object().at("entrypoint").as_string().cend());
+    auto entrypoint = jsonGetAsString(jv, "entrypoint");
     return entrypoint;
 }
 
@@ -326,7 +334,7 @@ bool run(Evaluator& runner, const std::string& main, const boost::json::value& a
     GCStack::pushFrame((void**)mframe, argsmask.c_str());
 
     std::vector<void*> argslocs;
-    uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
+    uint8_t* argsroot = mframe;
 
     if(setjmp(Environment::g_entrybuff) > 0)
     {
@@ -396,7 +404,7 @@ void fuzz(Evaluator& runner, RandGenerator& rnd, const std::string& main)
     uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
     GCStack::pushFrame((void**)mframe, argsmask.c_str());
  
-    uint8_t* argsroot = mframe + call->resultType->allocinfo.inlinedatasize;
+    uint8_t* argsroot = mframe;
 
     unsigned failcount = 0;
     for(size_t icount = 0; icount < 10; ++icount)
@@ -417,21 +425,23 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
     {
         mode = "stream";
     }
-    else if(argc == 2)
+    else if(argc == 3)
     {
         mode = "run";
         prog = std::string(argv[1]);
         input = std::string(argv[2]);
     }
-    else if(argc == 3 && std::string(argv[1]) == std::string("fuzz"))
+    else if(argc == 4 && std::string(argv[1]) == std::string("fuzz"))
     {
         mode = "fuzz";
         prog = std::string(argv[2]);
+        input = std::string(argv[3]);
     }
-    else if(argc == 3 && std::string(argv[1]) == std::string("run"))
+    else if(argc == 4 && std::string(argv[1]) == std::string("run"))
     {
         mode = "run";
         prog = std::string(argv[2]);
+        input = std::string(argv[3]);
     }
     else
     {

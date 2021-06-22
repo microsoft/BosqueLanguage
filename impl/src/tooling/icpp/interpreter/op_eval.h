@@ -39,6 +39,7 @@ private:
 #ifdef BSQ_DEBUG_BUILD
     inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
+        this->cpos++;
         auto cf = Evaluator::g_callstack + this->cpos;
         cf->dbg_file = dbg_file;
         cf->dbg_function = dbg_function;
@@ -54,11 +55,11 @@ private:
         cf->dbg_line = (*cf->cpos)->sinfo.line;
 
         this->cframe = Evaluator::g_callstack + this->cpos;
-        this->cpos++;
     }
 #else
     inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
+        this->cpos++;
         auto cf = Evaluator::g_callstack + cpos;
         cf->argsbase = argsbase;
         cf->scalarbase = scalarbase;
@@ -70,7 +71,6 @@ private:
         cf->epos = cf->ops->cend();
 
         this->cframe = Evaluator::g_callstack + this->cpos;
-        this->cpos++;
     }
 #endif
 
@@ -346,8 +346,8 @@ private:
 
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
 
-    void invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<Argument>& args, BSQBool* optmask);
-    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args);
+    void invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, const std::vector<Argument>& args, BSQBool* optmask);
+    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, const std::vector<Argument>& args);
     void invokePostlude();
 
     void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype);

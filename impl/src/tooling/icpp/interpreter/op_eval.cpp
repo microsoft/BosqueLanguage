@@ -6,6 +6,7 @@
 #include "op_eval.h"
 
 #include <boost/safe_numerics/checked_default.hpp>
+//https://github.com/dcleblanc/SafeInt
 
 ///Big Macro for generating code for primitive checked negate operations
 #define PrimitiveNegateOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATOR, ERROR) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
@@ -1886,38 +1887,39 @@ void Evaluator::evaluateBody(StorageLocationPtr resultsl, const BSQType* restype
 
 void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
+    void* argsbase = BSQ_STACK_SPACE_ALLOC(call->params.size() * sizeof(void*));
+    void** curr = (void**)argsbase;
+    for(size_t i = 0; i < call->params.size(); ++i)
+    {
+        *curr = this->evalArgument(args[i]);
+        curr++;
+    }
+
+    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
+    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    GC_MEM_ZERO(cstack, cssize);
+
+    size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    GC_MEM_ZERO(maskslots, maskslotbytes);
+
     if(call->isPrimitive())
     {
-        this->invokePrimitivePrelude((const BSQInvokePrimitiveDecl*)call, args);
+        this->invokePrimitivePrelude((const BSQInvokePrimitiveDecl*)call, argsbase, cstack, maskslots, args);
         this->evaluatePrimitiveBody((const BSQInvokePrimitiveDecl*)call, resultsl, call->resultType);
     }
     else
     {
-        this->invokePrelude((const BSQInvokeBodyDecl*)call, args, optmask);
+        this->invokePrelude((const BSQInvokeBodyDecl*)call, argsbase, cstack, maskslots, args, optmask);
         this->evaluateBody(resultsl, call->resultType, static_cast<const BSQInvokeBodyDecl*>(call)->resultArg);
     }
 
     this->invokePostlude();
 }
 
-void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<Argument>& args, BSQBool* optmask)
+void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, const std::vector<Argument>& args, BSQBool* optmask)
 {
-    void* argsbase = BSQ_STACK_SPACE_ALLOC(invk->params.size() * sizeof(void*));
-    void** curr = (void**)argsbase;
-    for(size_t i = 0; i < invk->params.size(); ++i)
-    {
-        *curr = this->evalArgument(args[i]);
-        curr++;
-    }
-
-    size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     uint8_t* mixedslots = cstack + invk->scalarstackBytes;
-    GC_MEM_ZERO(cstack, cssize);
-
-    size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
-    GC_MEM_ZERO(maskslots, maskslotbytes);
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
@@ -1927,20 +1929,9 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, const std::vector<A
 #endif
 }
     
-void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, const std::vector<Argument>& args)
+void Evaluator::invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, const std::vector<Argument>& args)
 {
-    void* argsbase = BSQ_STACK_SPACE_ALLOC(invk->params.size() * sizeof(void*));
-    void** curr = (void**)argsbase;
-    for(size_t i = 0; i < invk->params.size(); ++i)
-    {
-        *curr = this->evalArgument(args[i]);
-        curr++;
-    }
-
-    size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     uint8_t* mixedslots = cstack + invk->scalarstackBytes;
-    GC_MEM_ZERO(cstack, cssize);
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD

@@ -496,7 +496,7 @@ class TestRunner {
                 const handler = this.generateTestResultCallback(tt);
                 this.queued.push(tt.fullname);
                 try {
-                    enqueueSMTTest(Commander.prover as "z3" | "cvc4", mode, [], this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
+                    enqueueSMTTest(mode, [], this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
                 }
                 catch (ex) {
                     handler("error", new Date(), new Date(), `${ex}`);
@@ -553,7 +553,6 @@ class TestRunner {
 Commander
     .option("-m --parallel [parallel]", "Number of parallel tests to run simultaniously", 4)
     .option("-r --restriction [spec]", "Limit the test run to a specific set of tests", "*")
-    .option("-p --prover [prover]", "Prover to use (z3 | cvc4)", "z3")
     //
     //TODO: maybe want to run only SMT or only compiler tests too
     //

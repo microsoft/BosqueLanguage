@@ -14,24 +14,13 @@ import { VerifierOptions } from "../tooling/verifier/smt_exp";
 
 let z3pathsmt: string | undefined = undefined;
 if (process.platform === "win32") {
-    z3pathsmt = "build/tools/win/z3.exe";
+    z3pathsmt = "build/include/win/z3/bin/z3.exe";
 }
 else if (process.platform === "linux") {
-    z3pathsmt = "build/tools/linux/z3";
+    z3pathsmt = "build/include/linux/z3/bin/z3";
 }
 else {
-    z3pathsmt = "build/tools/macos/z3";
-}
-
-let cvc4pathsmt: string | undefined = undefined;
-if (process.platform === "win32") {
-    cvc4pathsmt = "build/tools/win/cvc4.exe";
-}
-else if (process.platform === "linux") {
-    cvc4pathsmt = "build/tools/linux/cvc4";
-}
-else {
-    cvc4pathsmt = "build/tools/macos/cvc4";
+    z3pathsmt = "build/include/macos/z3/bin/z3";
 }
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
@@ -104,10 +93,10 @@ function buildSMT2file(smtasm: SMTAssembly, smtruntime: string, timeout: number,
             .replace(";;ACTION;;", joinWithIndent(sfileinfo.ACTION, ""));
 }
 
-function runSMT2File(prover: "z3" | "cvc4", cfile: string, mode: "Refute" | "Reach", start: Date, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+function runSMT2File(cfile: string, mode: "Refute" | "Reach", start: Date, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
 
-    const smtpath = Path.normalize(Path.join(bosque_dir, (prover === "z3" ? z3pathsmt : cvc4pathsmt) as string));
-    const smtflags = (prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi-all --tlimit=1000";
+    const smtpath = Path.normalize(Path.join(bosque_dir, z3pathsmt as string));
+    const smtflags = "-smt2 -in";
 
     const res = exec(`${smtpath} ${smtflags}`, (err: ExecException | null, stdout: string, stderr: string) => {
         if (err) {
@@ -157,7 +146,7 @@ const vopts = {
     SpecializeSmallModelGen: false
 } as VerifierOptions;
 
-function enqueueSMTTest(prover: "z3" | "cvc4", mode: "Refute" | "Reach", macrodefs: string[], corefiles: {relativePath: string, contents: string}[], smtruntime: string, testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+function enqueueSMTTest(mode: "Refute" | "Reach", macrodefs: string[], corefiles: {relativePath: string, contents: string}[], smtruntime: string, testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
     const massembly = generateMASM(corefiles, testsrc, macrodefs);
     if(massembly[0] === undefined) {
@@ -174,7 +163,7 @@ function enqueueSMTTest(prover: "z3" | "cvc4", mode: "Refute" | "Reach", macrode
         const smtasm = SMTEmitter.generateSMTAssemblyForValidate(massembly[0], vopts, errlocation, "NSMain::main");
         const smfc = buildSMT2file(smtasm, smtruntime, timeout, mode);
 
-        runSMT2File(prover, smfc, mode, start, cb);
+        runSMT2File(smfc, mode, start, cb);
     }
 }
 
