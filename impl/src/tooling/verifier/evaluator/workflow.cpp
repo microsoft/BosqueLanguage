@@ -5,7 +5,6 @@
 
 #include "workflow.h"
 
-
 void find_model_example1() {
     std::cout << "find_model_example1\n";
     z3::context c;

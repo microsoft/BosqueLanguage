@@ -1,4 +1,0 @@
-impl/build/include/macos/z3/bin/Microsoft.Z3.dll filter=lfs diff=lfs merge=lfs -text
-impl/build/include/macos/mimalloc/bin/libmimalloc.dylib filter=lfs diff=lfs merge=lfs -text
-impl/build/include/macos/mimalloc/bin/libmimalloc.1.7.dylib filter=lfs diff=lfs merge=lfs -text
-impl/build/include/macos/mimalloc/bin/libmimalloc.a filter=lfs diff=lfs merge=lfs -text
