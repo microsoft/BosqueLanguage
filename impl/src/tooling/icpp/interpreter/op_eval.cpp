@@ -6,6 +6,7 @@
 #include "op_eval.h"
 
 #include <boost/safe_numerics/checked_default.hpp>
+//https://github.com/dcleblanc/SafeInt
 
 ///Big Macro for generating code for primitive checked negate operations
 #define PrimitiveNegateOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATOR, ERROR) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
