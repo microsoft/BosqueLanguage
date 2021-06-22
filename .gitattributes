@@ -1,5 +1,1 @@
-z3.exe filter=lfs diff=lfs merge=lfs -text
-z3 filter=lfs diff=lfs merge=lfs -text
-impl/build/tools/linux/z3 filter=lfs diff=lfs merge=lfs -text
-impl/build/tools/macos/z3 filter=lfs diff=lfs merge=lfs -text
-impl/build/tools/win/z3.exe filter=lfs diff=lfs merge=lfs -text
+impl/build/include/macos/z3/bin/Microsoft.Z3.dll filter=lfs diff=lfs merge=lfs -text
