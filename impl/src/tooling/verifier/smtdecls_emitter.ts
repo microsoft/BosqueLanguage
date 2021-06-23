@@ -522,8 +522,7 @@ class SMTEmitter {
             const vname = this.temitter.mangle(param.name);
 
             this.walkAndGenerateHavocType(mirptype, this.assembly.havocfuncs);
-            const vexp = this.temitter.generateHavocConstructorCall(mirptype, new SMTCallSimple("seq.unit", [new SMTConst("BNat@zero")]), new SMTConst(`(_ bv${i} ${this.assembly.vopts.ISize})`));
-            
+            const vexp = this.temitter.generateHavocConstructorCall(mirptype, new SMTCallSimple("Ctx@MakeStep", [new SMTConst("BNat@zero")]), new SMTConst(`(_ bv${i} ${this.assembly.vopts.ISize})`));
             
             return { vname: vname, vtype: this.temitter.generateResultType(mirptype), vinit: vexp, vchk: this.temitter.generateResultIsSuccessTest(mirptype, new SMTVar(vname)), callexp: this.temitter.generateResultGetSuccess(mirptype, new SMTVar(vname)) };
         });

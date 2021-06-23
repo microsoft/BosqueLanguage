@@ -620,7 +620,7 @@ class SMTTypeEmitter {
     }
 
     generateHavocConstructorPathExtend(path: SMTExp, step: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.++", [path, new SMTCallSimple("seq.unit", [step])]);
+        return new SMTCallSimple("seq.++", [path, new SMTCallSimple("Ctx@MakeStep", [step])]);
     }
 
     generateHavocConstructorCall(tt: MIRType, path: SMTExp, step: SMTExp): SMTExp {
