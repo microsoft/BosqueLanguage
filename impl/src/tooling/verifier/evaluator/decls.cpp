@@ -5,9 +5,24 @@
 
 #include "decls.h"
 
-void ExtractionInfo::loadConsFuncs(std::map<std::string, std::optional<z3::func_decl>>& consfuncs)
+void ExtractionInfo::loadConsFuncs()
 {
     xxx;
+}
+
+json ExtractionInfo::bvToNat(const z3::expr& bv) const
+{
+    xxxx;
+}
+
+json ExtractionInfo::bvToInt(const z3::expr& bv) const
+{
+    xxxx;
+}
+
+void ParseInfo::loadConsFuncs()
+{
+    xxxx;
 }
 
 bool FuzzInfo::hasConstantsForType(TypeTag tag) const
@@ -383,7 +398,7 @@ json NoneType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     return nullptr;
 }
 
-json NoneType::extract(ExtractionInfo* ex, z3::expr ctx) const
+json NoneType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
 {
     return nullptr;
 }
@@ -391,6 +406,18 @@ json NoneType::extract(ExtractionInfo* ex, z3::expr ctx) const
 std::string NoneType::consprint(json j) const
 {
     return "none";
+}
+
+std::optional<z3::expr> NoneType::parseJSON(ParseInfo* pinfo, json j) const
+{
+    if(!j.is_null())
+    {
+        return std::nullopt;
+    }
+    else
+    {
+        return pinfo->const_none;
+    }
 }
 
 BoolType* BoolType::jparse(json j)
@@ -404,7 +431,7 @@ json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     return distribution(rnd) == 1 ? true : false;
 }
 
-json BoolType::extract(ExtractionInfo* ex, z3::expr ctx) const
+json BoolType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
 {
     auto v = ex->evalConsFunc("NSCore::Bool", ctx);
     assert(v.is_bool() && (v.is_true() || v.is_false()));
@@ -415,6 +442,18 @@ json BoolType::extract(ExtractionInfo* ex, z3::expr ctx) const
 std::string BoolType::consprint(json j) const
 {
     return j.get<bool>() ? "true" : "false";
+}
+
+std::optional<z3::expr> BoolType::parseJSON(ParseInfo* pinfo, json j) const
+{
+    if(!j.is_boolean())
+    {
+        return std::nullopt;
+    }
+    else
+    {
+        return pinfo->c->bool_val(j.get<bool>());
+    }
 }
 
 NatType* NatType::jparse(json j)
@@ -434,24 +473,35 @@ json NatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
         auto ub = finfo.small_model_gen ? 10 : finfo.limits.nat_max;
     
         std::uniform_int_distribution<uint64_t> distribution(0, ub);
-        res = std::to_string(distribution(rnd));
+        res = distribution(rnd);
 
         finfo.addReuseForType(TypeTag::NatTag, res);
         return res;
     }
 }
 
-json NatType::extract(ExtractionInfo* ex, z3::expr ctx) const
+json NatType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
 {
     auto v = ex->evalConsFunc("NSCore::Nat", ctx);
     assert(v.is_bv());
 
-    return v.();
+    return ex->bvToNat(v);
+}
+
+std::optional<z3::expr> NatType::parseJSON(ParseInfo* pinfo, json j) const
+{
+    std::string nstr;
+    if(j.is_number_unsigned())
+    { 
+        nstr = std::to_string(j.get<uint64_t>());
+    }
+
+    return !nstr.empty() ? std::make_optional(pinfo->c->bv_val(nstr.c_str(), pinfo->bv_width)) : std::nullopt;
 }
 
 std::string NatType::consprint(json j) const
 {
-    return  j.get<std::string>() + "n";
+    return std::to_string(j.get<uint64_t>()) + "n";
 }
 
 IntType* IntType::jparse(json j)
@@ -461,23 +511,44 @@ IntType* IntType::jparse(json j)
 
 json IntType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
 {
-    xxxx;
-    auto lb = finfo.small_model_gen ? -10 : finfo.limits.int_min;
-    auto ub = finfo.small_model_gen ? 10 : finfo.limits.int_max;
+    json res;
+    if(finfo.sampleKnownOpt(TypeTag::NatTag, rnd, res))
+    {
+        return res;
+    }
+    else
+    {
+        auto lb = finfo.small_model_gen ? -10 : finfo.limits.int_min;
+        auto ub = finfo.small_model_gen ? 10 : finfo.limits.int_max;
     
-    std::uniform_int_distribution<uint64_t> distribution(lb, ub);
-    return std::to_string(distribution(rnd));
+        std::uniform_int_distribution<uint64_t> distribution(lb, ub);
+        res = distribution(rnd);
+
+        finfo.addReuseForType(TypeTag::NatTag, res);
+        return res;
+    }
 }
 
-json IntType::extract(ExtractionInfo* ex, z3::expr ctx) const
+json IntType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
 {
     auto v = ex->evalConsFunc("NSCore::Int", ctx);
     assert(v.is_bv());
 
-    return v.();
+    return ex->bvToInt(v);
 }
 
 std::string IntType::consprint(json j) const
 {
-    return j.get<std::string>() + "i";
+    return std::to_string(j.get<int64_t>()) + "i";
+}
+
+std::optional<z3::expr> NatType::parseJSON(ParseInfo* pinfo, json j) const
+{
+    std::string nstr;
+    if(j.is_number_integer())
+    { 
+        nstr = std::to_string(j.get<int64_t>());
+    }
+
+    return !nstr.empty() ? std::make_optional(pinfo->c->bv_val(nstr.c_str(), pinfo->bv_width)) : std::nullopt;
 }

@@ -76,7 +76,7 @@ public:
 class ExtractionInfo
 {
 private:
-    static void loadConsFuncs(std::map<std::string, std::optional<z3::func_decl>>& consfuncs);
+    void loadConsFuncs();
 
 public:
     z3::context* c;
@@ -85,10 +85,10 @@ public:
 
     ExtractionInfo(z3::context* c, z3::model* m) : c(c), m(m)
     {
-        ExtractionInfo::loadConsFuncs(this->consfuncs);
+        this->loadConsFuncs();
     }
 
-    z3::expr evalConsFunc(const char* cf, z3::expr ctx)
+    z3::expr evalConsFunc(const char* cf, const z3::expr& ctx)
     {
         auto valexp = this->consfuncs[cf].value()(ctx);
         auto resexp = this->m->eval(valexp, true);
@@ -96,9 +96,29 @@ public:
         return resexp;
     }
 
-    z3::expr advanceCtx(z3::expr ctx)
+    z3::expr advanceCtx(const z3::expr& ctx)
     {
         z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val(0, 5)));
+    }
+
+    json bvToNat(const z3::expr& bv) const;
+    json bvToInt(const z3::expr& bv) const;
+};
+
+class ParseInfo
+{
+private:
+    void loadConsFuncs();
+
+public:
+    std::optional<z3::expr> const_none;
+
+    z3::context* c;
+    const size_t bv_width;
+
+    ParseInfo(z3::context* c, size_t bv_width) : c(c), bv_width(bv_width)
+    {
+        this->loadConsFuncs();
     }
 };
 
@@ -266,9 +286,10 @@ public:
     static IType* jparse(json j);
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const = 0;
-    virtual json extract(ExtractionInfo* ex, z3::expr ctx) const = 0;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const = 0;
 
     virtual std::string consprint(json j) const = 0;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const = 0;
 };
 
 class NoneType : public IType
@@ -280,9 +301,10 @@ public:
     static NoneType* jparse(json j);
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, z3::expr ctx) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
     virtual std::string consprint(json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class BoolType : public IType
@@ -294,9 +316,10 @@ public:
     static BoolType* jparse(json j);
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, z3::expr ctx) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
     virtual std::string consprint(json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class NatType : public IType
@@ -308,9 +331,10 @@ public:
     static NatType* jparse(json j);
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, z3::expr ctx) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
     virtual std::string consprint(json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class IntType : public IType
@@ -322,9 +346,10 @@ public:
     static IntType* jparse(json j);
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, z3::expr ctx) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
     virtual std::string consprint(json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class BigNatType : public IType
@@ -334,9 +359,10 @@ public:
     virtual ~BigNatType() {;}
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, z3::expr ctx) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
     virtual std::string consprint(json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class BigIntType : public IType
@@ -346,9 +372,10 @@ public:
     virtual ~BigIntType() {;}
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, z3::expr ctx) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
     virtual std::string consprint(json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class RationalType : public IType
