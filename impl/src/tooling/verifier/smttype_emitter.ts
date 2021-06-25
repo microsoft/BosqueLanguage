@@ -193,6 +193,10 @@ class SMTTypeEmitter {
             return `TypeTag_${this.mangle(tt.trkey)}`;
         }
         else {
+            //
+            //TODO: want to handle the case of stringof, datastring, and typednumber -- should just use the underlying type and repr directly -- type safety ensures we won't use inapropriately
+            //
+
             assert(this.isUniqueEntityType(tt), "Should not be other options")
             return `TypeTag_${this.mangle(tt.trkey)}`;
         }
