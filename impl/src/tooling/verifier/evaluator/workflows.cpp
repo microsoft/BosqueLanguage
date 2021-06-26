@@ -3,7 +3,37 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-#include "workflow.h"
+#include "decls.h"
+
+////
+//Work flow #1 -- Refute or Witness an Error
+//Given a model that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
+//      + a signature, and smt arg names
+//Either:
+//  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
+//  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
+//  Timeout a and return the JSON payload -- {result: "unknown", time: number}
+
+json workflowValidate()
+{
+    xxxx;
+}
+
+////
+//Work flow #2 -- Compute an API result
+//Given a model, a signature, and a JSON representation of the arg vector 
+//Either:
+//  Compute the output of the function return the JSON payload -- {result: "result" | "fail", time: number, output: JSON}
+//  Timeout a and return the JSON payload -- {result: "unknown", time: number}
+
+////
+//Work flow #3 -- Compute an API input
+//Given a model that (1) havocs inputs, (2) invokes a call
+//      + a signature, smt output name, and JSON result 
+//Either:
+//  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
+//  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
+//  Timeout a and return the JSON payload -- {result: "unknown", time: number}
 
 void find_model_example1() 
 {
@@ -100,6 +130,10 @@ void find_model_example1()
             else if(name == "ListSize@UFCons_API")
             {
                 consfuncs["ListSize"] = v;
+            }
+            else if(name == "UnionItem@UFCons_API")
+            {
+                consfuncs["UnionItem"] = v;
             }
             else
             {

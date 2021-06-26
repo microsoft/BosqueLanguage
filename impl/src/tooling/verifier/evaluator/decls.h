@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <math.h>
+#include <ctime>
 
 #include <string>
 #include <regex>
@@ -58,6 +59,10 @@ struct NumericLimits
     double decimal_min;
     double decimal_max;
 
+    uint64_t iso_time_min;
+    uint64_t iso_time_max;
+    uint16_t ltime_max;
+
     uint16_t re_repeat_max;
     uint16_t strlen_max;
     uint16_t container_max;
@@ -91,6 +96,8 @@ private:
     void loadFuncs();
 
 public:
+    const std::map<std::string, const IType*> typemap;
+
     z3::context* c;
     z3::model* m;
     std::map<std::string, std::optional<z3::func_decl>> consfuncs;
@@ -109,15 +116,17 @@ public:
         return resexp;
     }
 
-    z3::expr advanceCtx(const z3::expr& ctx)
+    z3::expr stepContext(const z3::expr& ctx, size_t i)
     {
-        return z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val(0, 5)));
+        return z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val(i, 5)));
     }
 
     z3::expr evalResultSuccess(const std::string& tname, const z3::expr& exp)
     {
         return this->succfuncs[tname].value()(exp);
     }
+
+    size_t bvToNumber(const z3::expr& bv) const;
 
     json bvToNatJSON(const z3::expr& bv) const;
     json bvToIntJSON(const z3::expr& bv) const;
@@ -128,12 +137,18 @@ public:
     json realToRationalJSON(const z3::expr& iv) const;
     json realToFloatJSON(const z3::expr& iv) const;
     json realToDecimalJSON(const z3::expr& iv) const;
+
+    json intToLogicalTimeJSON(const z3::expr& iv) const;
 };
 
 class ConvInfo
 {
 public:
     const std::map<std::string, const IType*> typemap;
+
+    const std::regex re_numberinon;
+    const std::regex re_numberinoi;
+    const std::regex re_numberinof;
 
     ConvInfo(std::map<std::string, const IType*> typemap) : typemap(typemap) {;}
 };
@@ -149,15 +164,24 @@ public:
     const size_t bv_width;
 
     std::optional<z3::expr> const_none;
+    std::map<std::string, std::optional<z3::func_decl>> constuplefuncs;
+    std::map<std::string, std::optional<z3::func_decl>> consrecordfuncs;
+    std::map<std::string, std::optional<z3::func_decl>> conslistfuncs;
+
+    std::map<std::pair<std::string, std::string>, std::optional<z3::func_decl>> boxfuncs;
+
     z3::context* c;
 
     const std::regex re_numberinon;
     const std::regex re_numberinoi;
     const std::regex re_numberinof;
 
+    z3::expr_vector chks;
+
     ParseInfo(std::map<std::string, const IType*> typemap, size_t bv_width, z3::context* c) 
     : typemap(typemap), bv_width(bv_width), c(c), 
-    re_numberinon("^(+)?(0|[1-9][0-9]*)$"), re_numberinoi("^(+|-)?(0|[1-9][0-9]*)$"), re_numberinof("^(+|-)?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$")
+    re_numberinon("^(+)?(0|[1-9][0-9]*)$"), re_numberinoi("^(+|-)?(0|[1-9][0-9]*)$"), re_numberinof("^(+|-)?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$"),
+    chks(*c)
     {
         this->loadFuncs();
     }
@@ -318,12 +342,6 @@ public:
     static BSQRegex* parse(json j);
 };
 
-struct ParseExprs
-{
-    std::optional<z3::expr> value;
-    std::optional<z3::expr> chks;
-};
-
 class IType
 {
 public:
@@ -337,8 +355,8 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const = 0;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const = 0;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const = 0;
-    virtual ParseExprs parseJSON(ParseInfo* pinfo, json j) const = 0;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const = 0;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const = 0;
 };
 
 class NoneType : public IType
@@ -352,7 +370,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -367,7 +385,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -382,7 +400,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -397,7 +415,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -412,7 +430,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -427,7 +445,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -442,7 +460,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -457,7 +475,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -472,7 +490,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -487,7 +505,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -505,7 +523,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -515,7 +533,10 @@ public:
     const std::string primitive;
     const std::string oftype; //either another numberof or a primitive
 
-    NumberOfType(std::string name, std::string primitive, std::string oftype) : IType(name), primitive(primitive), oftype(oftype) {;}
+    std::optional<std::string> smtinvcall;
+    std::optional<std::string> cppinvcall;
+
+    NumberOfType(std::string name, std::string primitive, std::string oftype, std::optional<std::string> smtinvcall, std::optional<std::string> cppinvcall) : IType(name), primitive(primitive), oftype(oftype), smtinvcall(smtinvcall), cppinvcall(cppinvcall) {;}
     virtual ~NumberOfType() {;}
 
     static NumberOfType* jparse(json j);
@@ -523,7 +544,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -533,7 +554,10 @@ public:
     const std::string oftype;
     const bool isvalue;
 
-    DataStringType(std::string name, std::string oftype, bool isvalue) : IType(name), oftype(oftype), isvalue(isvalue) {;}
+    std::string smtinvcall;
+    std::string cppinvcall;
+
+    DataStringType(std::string name, std::string oftype, bool isvalue, std::string smtinvcall, std::string cppinvcall) : IType(name), oftype(oftype), isvalue(isvalue), smtinvcall(smtinvcall), cppinvcall(cppinvcall) {;}
     virtual ~DataStringType() {;}
 
     static DataStringType* jparse(json j);
@@ -541,7 +565,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -556,7 +580,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -571,7 +595,7 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
@@ -586,43 +610,139 @@ public:
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
     virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
-    virtual std::string consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
     virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class ISOTimeType : public IType
 {
+public:
+    ISOTimeType() : IType("NSCore::ISOTime") {;}
+    virtual ~ISOTimeType() {;}
 
+    static ISOTimeType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class LogicalTimeType : public IType
 {
+public:
+    LogicalTimeType() : IType("NSCore::LogicalTime") {;}
+    virtual ~LogicalTimeType() {;}
 
+    static LogicalTimeType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class UUIDType : public IType
 {
+public:
+    UUIDType() : IType("NSCore::UUID") {;}
+    virtual ~UUIDType() {;}
 
+    static UUIDType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class ContentHashType : public IType
 {
+public:
+    ContentHashType() : IType("NSCore::ContentHash") {;}
+    virtual ~ContentHashType() {;}
 
-};
+    static ContentHashType* jparse(json j);
 
-class RecordType : public IType
-{
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
 
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class TupleType : public IType
 {
+public:
+    const bool isvalue;
+    const std::vector<std::string> ttypes;
 
+    TupleType(std::string name, bool isvalue, std::vector<std::string> ttypes) : IType(name), isvalue(isvalue), ttypes(ttypes) {;}
+    virtual ~TupleType() {;}
+
+    static TupleType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
+};
+
+class RecordType : public IType
+{
+public:
+    const bool isvalue;
+    const std::vector<std::pair<std::string, std::string>> entries;
+
+    RecordType(std::string name, bool isvalue, std::vector<std::pair<std::string, std::string>> entries) : IType(name), isvalue(isvalue), entries(entries) {;}
+    virtual ~RecordType() {;}
+
+    static RecordType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class ListType : public IType
 {
+public:
+    const std::string oftype;
 
+    ListType(std::string name, std::string oftype) : IType(name), oftype(oftype) {;}
+    virtual ~ListType() {;}
+
+    static ListType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
+};
+
+class UnionType : public IType
+{
+public:
+    const bool iskey;
+    const std::vector<std::string> opts;
+
+    UnionType(std::string name, bool iskey, std::vector<std::string> opts) : IType(name), iskey(iskey), opts(opts) {;}
+    virtual ~UnionType() {;}
+
+    static UnionType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+
+    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
+    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
 };
 
 class InvokeSignature
