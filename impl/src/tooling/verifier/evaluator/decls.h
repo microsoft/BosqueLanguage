@@ -118,7 +118,7 @@ public:
 
     z3::expr stepContext(const z3::expr& ctx, size_t i)
     {
-        return z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val(i, 5)));
+        return z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val((int)i, 5)));
     }
 
     z3::expr evalResultSuccess(const std::string& tname, const z3::expr& exp)
@@ -747,9 +747,38 @@ public:
 
 class InvokeSignature
 {
+public:
+    const std::string name;
+    const IType* resType;
+    const std::vector<const IType*> argTypes;
 
+    InvokeSignature(std::string name, const IType* resType, std::vector<const IType*> argTypes): name(name), resType(resType), argTypes(argTypes) {;}
 };
 
-////
-// ------ Need to add in the signature thing
-////
+class APIModule
+{
+public:
+    const std::map<std::string, const IType*> typemap;
+    const std::vector<InvokeSignature*> siglist;
+
+    const std::map<std::string, std::vector<std::pair<std::string, json>>> constants;
+
+    APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> siglist, std::map<std::string, std::vector<std::pair<std::string, json>>> constants)
+    : typemap(typemap), siglist(siglist), constants(constants)
+    {
+        ;
+    }
+
+    ~APIModule()
+    {
+        for(auto iter = this->typemap.begin(); iter != this->typemap.end(); ++iter)
+        {
+            delete iter->second;
+        }
+
+        for(auto iter = this->siglist.begin(); iter != this->siglist.end(); ++iter)
+        {
+            delete *iter;
+        }
+    }
+};

@@ -7,28 +7,52 @@
 
 ////
 //Work flow #1 -- Refute or Witness an Error
-//Given a model that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
+//Given a smt decl that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
 //      + a signature, and smt arg names
 //Either:
 //  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
 //  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
 //  Timeout a and return the JSON payload -- {result: "unknown", time: number}
 
-json workflowValidate()
+json workflowValidate(std::string smt2decl, APIModule* module, std::string signame, std::vector<std::string> smtargnames)
 {
-    xxxx;
+    z3::context c;
+    z3::solver s(c);
+    s.from_string(smt2decl.c_str());
+
+    //check the formula
+    auto start = std::chrono::system_clock::now();
+    auto res = s.check();    
+    auto end = std::chrono::system_clock::now();
+
+    auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
+    if(res == z3::check_result::unknown)
+    {
+        return {
+            {"result", "unknown"},
+            {"time", delta_ms}
+        };
+    }
+    else if(res == z3::check_result::unsat)
+    {
+         std::cout << "Error is unreachable under restrictions!!!" << "\n";
+    }
+    else
+    {
+
+    }
 }
 
 ////
 //Work flow #2 -- Compute an API result
-//Given a model, a signature, and a JSON representation of the arg vector 
+//Given a smt decl, a signature, and a JSON representation of the arg vector 
 //Either:
 //  Compute the output of the function return the JSON payload -- {result: "result" | "fail", time: number, output: JSON}
 //  Timeout a and return the JSON payload -- {result: "unknown", time: number}
 
 ////
 //Work flow #3 -- Compute an API input
-//Given a model that (1) havocs inputs, (2) invokes a call
+//Given a smt decl that (1) havocs inputs, (2) invokes a call
 //      + a signature, smt output name, and JSON result 
 //Either:
 //  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
