@@ -5,59 +5,101 @@
 
 #include "decls.h"
 
-void ExtractionInfo::loadFuncs()
+#define JSON_MIN_SAFE_NUMBER -9007199254740991
+#define JSON_MAX_SAFE_NUMBER 9007199254740991
+
+z3::func_decl ExtractionInfo::getArgContextConstructor(const z3::model& m, const char* fname, const z3::sort& ressort) const
 {
-    xxx;
+    auto ctxsort = this->getArgContextTokenSort(m);
+    auto argconsf = m.ctx().function(fname, ctxsort, ressort);
+
+    return argconsf;
 }
 
-size_t ExtractionInfo::bvToNumber(const z3::expr& bv) const
+z3::sort ExtractionInfo::getArgContextTokenSort(const z3::model& m) const
+{
+    auto bvsort = m.ctx().bv_sort(this->apimodule->bv_width);
+    auto seqsort = m.ctx().seq_sort(bvsort);
+
+    return seqsort;
+}
+
+size_t ExtractionInfo::bvToCardinality(const z3::expr& bv) const
 {
     xxxx;
 }
 
-json ExtractionInfo::bvToNatJSON(const z3::expr& bv) const
+json ExtractionInfo::evalToBool(const z3::model& m, const z3::expr& e) const
 {
-    xxxx;
+    auto bstr = m.eval(e, true).to_string();
+    return bstr == "true";
 }
 
-json ExtractionInfo::bvToIntJSON(const z3::expr& bv) const
+json ExtractionInfo::evalToUnsignedNumber(const z3::model& m, const z3::expr& e) const
 {
-    xxxx;
+    auto nexp = m.eval(e, true);
+    auto nstr = nexp.to_string();
+    if(nexp.is_int())
+    {
+        try
+        {
+            return std::stoull(nstr);
+        }
+        catch(...)
+        {
+            ;
+        }
+
+        return nstr;
+    }
+    else
+    {
+        std::string sstr(nstr.cbegin() + 2, nstr.cend());
+        uint64_t res = std::stoull(sstr, nullptr, nstr[1] == 'b' ? 2 : 16);
+
+        if(res <= (uint64_t)JSON_MAX_SAFE_NUMBER)
+        {
+            return res;
+        }  
+        else
+        {
+            return std::to_string(res);
+        }
+    }
 }
 
-json ExtractionInfo::intToBigNatJSON(const z3::expr& iv) const
+json ExtractionInfo::evalToSignedNumber(const z3::model& m, const z3::expr& e) const
 {
-    xxxx;
-}
+    auto nexp = m.eval(e, true);
+    auto nstr = nexp.to_string();
+    if(nexp.is_int())
+    {
+        try
+        {
+            return std::stoll(nstr);
+        }
+        catch(...)
+        {
+            ;
+        }
 
-json ExtractionInfo::intToBigIntJSON(const z3::expr& iv) const
-{
-    xxxx;
-}
+        return nstr;
+    }
+    else
+    {
+        std::string sstr(nstr.cbegin() + 2, nstr.cend());
+        uint64_t res = std::stoull(sstr, nullptr, nstr[1] == 'b' ? 2 : 16);
 
-json ExtractionInfo::realToRationalJSON(const z3::expr& iv) const
-{
-    xxxx;
-}
-
-json ExtractionInfo::realToFloatJSON(const z3::expr& iv) const
-{
-    xxxx;
-}
-
-json ExtractionInfo::realToDecimalJSON(const z3::expr& iv) const
-{
-    xxxx;
-}
-
-json ExtractionInfo::intToLogicalTimeJSON(const z3::expr& iv) const
-{
-    xxxx;
-}
-
-void ParseInfo::loadFuncs()
-{
-    xxxx;
+        int64_t rres = (int64_t)((~res) + 1);
+        if(JSON_MIN_SAFE_NUMBER <= rres && rres <= JSON_MAX_SAFE_NUMBER)
+        {
+            return rres;
+        }  
+        else
+        {
+            return std::to_string(rres);
+        }
+    }
 }
 
 bool FuzzInfo::hasConstantsForType(std::string tag) const
@@ -435,7 +477,7 @@ IType* IType::jparse(json j)
 
 NoneType* NoneType::jparse(json j)
 {
-    return new NoneType();
+    return new NoneType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
 }
 
 json NoneType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -443,12 +485,19 @@ json NoneType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     return nullptr;
 }
 
-json NoneType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
-{
-    return nullptr;
-}
+ std::optional<z3::expr> NoneType::toz3arg(ParseInfo& pinfo, json j, z3::context& c) const
+ {
+     if(!j.is_null())
+    {
+        return std::nullopt;
+    }
+    else
+    {
+        return c.constant("bsq_none", c.uninterpreted_sort(this->smtname.c_str()));
+    }
+ }
 
-std::optional<std::string> NoneType::consprint(const ConvInfo& cinfo, json j) const
+std::optional<std::string> NoneType::tobsqarg(const ConvInfo& cinfo, json j) const
 {
     if(!j.is_null())
     {
@@ -460,21 +509,19 @@ std::optional<std::string> NoneType::consprint(const ConvInfo& cinfo, json j) co
     }
 }
 
-std::optional<z3::expr> NoneType::parseJSON(ParseInfo* pinfo, json j) const
+json NoneType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
-    if(!j.is_null())
-    {
-        return std::nullopt;
-    }
-    else
-    {
-        return pinfo->const_none;
-    }
+    return nullptr;
+}
+
+json NoneType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+{
+    return nullptr;
 }
 
 BoolType* BoolType::jparse(json j)
 {
-    return new BoolType();
+    return new BoolType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
 }
 
 json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -483,15 +530,19 @@ json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     return distribution(rnd) == 1 ? true : false;
 }
 
-json BoolType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
-{
-    auto v = ex->evalConsFunc(this->name, ctx);
-    assert(v.is_bool() && (v.is_true() || v.is_false()));
+ std::optional<z3::expr> BoolType::toz3arg(ParseInfo& pinfo, json j, z3::context& c) const
+ {
+     if(!j.is_boolean())
+    {
+        return std::nullopt;
+    }
+    else
+    {
+        return c.bool_val(j.get<bool>());
+    }
+ }
 
-    return v.is_true();
-}
-
-std::optional<std::string> BoolType::consprint(const ConvInfo& cinfo, json j) const
+std::optional<std::string> BoolType::tobsqarg(const ConvInfo& cinfo, json j) const
 {
     if(!j.is_boolean())
     {
@@ -503,16 +554,15 @@ std::optional<std::string> BoolType::consprint(const ConvInfo& cinfo, json j) co
     }
 }
 
-std::optional<z3::expr> BoolType::parseJSON(ParseInfo* pinfo, json j) const
+json BoolType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
-    if(!j.is_boolean())
-    {
-        return std::nullopt;
-    }
-    else
-    {
-        return pinfo->c->bool_val(j.get<bool>());
-    }
+    auto bef = ex.getArgContextConstructor(m, "BBool@UFCons_API", m.ctx().bool_sort());
+    ex.evalToBool(m, bef(ctx));
+}
+
+json BoolType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+{
+    return nullptr;
 }
 
 NatType* NatType::jparse(json j)

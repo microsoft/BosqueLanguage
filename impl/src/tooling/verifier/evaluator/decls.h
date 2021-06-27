@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <math.h>
 #include <ctime>
+#include <chrono>
 
 #include <string>
 #include <regex>
@@ -23,6 +24,8 @@ typedef std::default_random_engine RandGenerator;
 typedef nlohmann::json json;
 
 class IType;
+class InvokeSignature;
+class APIModule;
 
 enum class TypeTag
 {
@@ -48,7 +51,7 @@ enum class TypeTag
     ContentHashTag
 };
 
-struct NumericLimits
+struct NumericFuzzLimits
 {
     uint16_t nat_max;
     int16_t int_min;
@@ -68,13 +71,25 @@ struct NumericLimits
     uint16_t container_max;
 };
 
+
+class ConvInfo
+{
+public:
+    const APIModule* apimodule;
+
+    const std::regex re_numberinon;
+    const std::regex re_numberinoi;
+    const std::regex re_numberinof;
+
+    ConvInfo(const APIModule* apimodule) : apimodule(apimodule) {;}
+};
+
 class FuzzInfo
 {
 public:
-    const NumericLimits limits;
-    const std::map<std::string, const IType*> typemap;
+    const APIModule* apimodule;
+    const NumericFuzzLimits limits;
 
-    std::map<std::string, std::vector<std::pair<std::string, json>>> constants;
     std::map<std::string, std::vector<std::pair<std::string, json>>> reuse;
 
     bool hasConstantsForType(std::string tag) const;
@@ -87,114 +102,40 @@ public:
 
     bool sampleKnownOpt(std::string tag, RandGenerator& rnd, json& j);
 
-    FuzzInfo(NumericLimits limits, std::map<std::string, const IType*> typemap) : limits(limits), typemap(typemap) {;}
+    FuzzInfo(const APIModule* apimodule, NumericFuzzLimits limits) : limits(limits) {;}
 };
 
 class ExtractionInfo
 {
-private:
-    void loadFuncs();
-
 public:
-    const std::map<std::string, const IType*> typemap;
-    const size_t bv_width;
+    const APIModule* apimodule;
 
-    z3::context* c;
-    z3::model* m;
-    std::map<std::string, std::optional<z3::func_decl>> consfuncs;
-    std::map<std::string, std::optional<z3::func_decl>> succfuncs;
+    ExtractionInfo(const APIModule* apimodule): apimodule(apimodule) {;}
 
-    ExtractionInfo(std::map<std::string, const IType*> typemap, size_t bv_width, z3::context* c, z3::model* m)
-    : typemap(typemap), bv_width(bv_width), c(c), m(m)
-    {
-        this->loadFuncs();
-    }
+    z3::func_decl getArgContextConstructor(const z3::model& m, const char* fname, const z3::sort& ressort) const;
+    z3::sort getArgContextTokenSort(const z3::model& m) const;
 
-    z3::expr evalConsFunc(const std::string& tname, const z3::expr& ctx)
-    {
-        auto valexp = this->consfuncs[tname].value()(ctx);
-        auto resexp = this->m->eval(valexp, true);
+    size_t bvToCardinality(const z3::expr& bv) const;
 
-        return resexp;
-    }
-
-    z3::expr initialArgsContext()
-    {
-        return this->consfuncs["MakeStep"].value()(this->c->bv_val((int)0, this->bv_width));
-    }
-
-    z3::expr resultContext()
-    {
-        return this->consfuncs["MakeStep"].value()(this->c->bv_val((int)1, this->bv_width));
-    }
-
-    z3::expr stepContext(const z3::expr& ctx, size_t i)
-    {
-        return z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val((int)i, this->bv_width)));
-    }
-
-    z3::expr evalResultSuccess(const std::string& tname, const z3::expr& exp)
-    {
-        return this->succfuncs[tname].value()(exp);
-    }
-
-    size_t bvToNumber(const z3::expr& bv) const;
-
-    json bvToNatJSON(const z3::expr& bv) const;
-    json bvToIntJSON(const z3::expr& bv) const;
-
-    json intToBigNatJSON(const z3::expr& iv) const;
-    json intToBigIntJSON(const z3::expr& iv) const;
-
-    json realToRationalJSON(const z3::expr& iv) const;
-    json realToFloatJSON(const z3::expr& iv) const;
-    json realToDecimalJSON(const z3::expr& iv) const;
-
-    json intToLogicalTimeJSON(const z3::expr& iv) const;
-};
-
-class ConvInfo
-{
-public:
-    const std::map<std::string, const IType*> typemap;
-
-    const std::regex re_numberinon;
-    const std::regex re_numberinoi;
-    const std::regex re_numberinof;
-
-    ConvInfo(std::map<std::string, const IType*> typemap) : typemap(typemap) {;}
+    json evalToBool(const z3::model& m, const z3::expr& e) const;
+    json evalToUnsignedNumber(const z3::model& m, const z3::expr& e) const;
+    json evalToSignedNumber(const z3::model& m, const z3::expr& e) const;
 };
 
 class ParseInfo
 {
-private:
-    void loadFuncs();
-
 public:
-    const std::map<std::string, const IType*> typemap;
-    const size_t bv_width;
-
-    std::optional<z3::expr> const_none;
-    std::map<std::string, std::optional<z3::func_decl>> constuplefuncs;
-    std::map<std::string, std::optional<z3::func_decl>> consrecordfuncs;
-    std::map<std::string, std::optional<z3::func_decl>> conslistfuncs;
-
-    std::map<std::pair<std::string, std::string>, std::optional<z3::func_decl>> boxfuncs;
-
-    z3::context* c;
+    const APIModule* apimodule;
+    z3::expr_vector chks;
 
     const std::regex re_numberinon;
     const std::regex re_numberinoi;
     const std::regex re_numberinof;
 
-    z3::expr_vector chks;
-
-    ParseInfo(std::map<std::string, const IType*> typemap, size_t bv_width, z3::context* c) 
-    : typemap(typemap), bv_width(bv_width), c(c), 
-    re_numberinon("^(+)?(0|[1-9][0-9]*)$"), re_numberinoi("^(+|-)?(0|[1-9][0-9]*)$"), re_numberinof("^(+|-)?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$"),
-    chks(*c)
+    ParseInfo(const APIModule* apimodule, z3::expr_vector chks): apimodule(apimodule), chks(chks),
+    re_numberinon("^(+)?(0|[1-9][0-9]*)$"), re_numberinoi("^(+|-)?(0|[1-9][0-9]*)$"), re_numberinof("^(+|-)?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$")
     {
-        this->loadFuncs();
+        ;
     }
 };
 
@@ -358,46 +299,64 @@ class IType
 public:
     const std::string name;
 
-    IType(std::string name) : name(name) {;}
+    const bool iskey;
+    const std::string smtname;
+
+    IType(std::string name, bool iskey, std::string smtname) : name(name), iskey(iskey), smtname(smtname) {;}
     virtual ~IType() {;}
 
     static IType* jparse(json j);
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const = 0;
-    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const = 0;
 
-    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const = 0;
-    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const = 0;
+    virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const = 0;
+    virtual std::optional<std::string> tobsqarg(const ConvInfo& cinfo, json j) const = 0;
+
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const = 0;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const = 0;
 };
 
-class NoneType : public IType
+class IGroundedType : public IType
 {
 public:
-    NoneType() : IType("NSCore::None") {;}
+    const std::string boxfunc;
+
+    IGroundedType(std::string name, bool iskey, std::string smtname, std::string boxfunc): IType(name, iskey, smtname), boxfunc(boxfunc) {;}
+    virtual ~IGroundedType() {;}
+};
+
+class NoneType : public IGroundedType
+{
+public:
+    NoneType(std::string smtname, std::string boxfunc) : IGroundedType("NSCore::None", true, smtname, boxfunc) {;}
     virtual ~NoneType() {;}
 
     static NoneType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const;
 
-    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
-    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
+    virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const;
+    virtual std::optional<std::string> tobsqarg(const ConvInfo& cinfo, json j) const;
+
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const;
 };
 
-class BoolType : public IType
+class BoolType : public IGroundedType
 {
 public:
-    BoolType() : IType("NSCore::Bool") {;}
+    BoolType(std::string smtname, std::string boxfunc) : IGroundedType("NSCore::Bool", true, smtname, boxfunc) {;}
     virtual ~BoolType() {;}
 
     static BoolType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-    virtual json extract(ExtractionInfo* ex, const z3::expr& ctx) const override final;
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const;
 
-    virtual std::optional<std::string> consprint(const ConvInfo& cinfo, json j) const override final;
-    virtual std::optional<z3::expr> parseJSON(ParseInfo* pinfo, json j) const override final;
+    virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const;
+    virtual std::optional<std::string> tobsqarg(const ConvInfo& cinfo, json j) const;
+
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const;
 };
 
 class NatType : public IType
@@ -772,10 +731,12 @@ public:
     const std::map<std::string, const IType*> typemap;
     const std::vector<InvokeSignature*> siglist;
 
+    const size_t bv_width;
+
     const std::map<std::string, std::vector<std::pair<std::string, json>>> constants;
 
-    APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> siglist, std::map<std::string, std::vector<std::pair<std::string, json>>> constants)
-    : typemap(typemap), siglist(siglist), constants(constants)
+    APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> siglist, size_t bv_width, std::map<std::string, std::vector<std::pair<std::string, json>>> constants)
+    : typemap(typemap), siglist(siglist), bv_width(bv_width), constants(constants)
     {
         ;
     }
