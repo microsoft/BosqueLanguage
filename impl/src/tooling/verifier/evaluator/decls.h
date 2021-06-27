@@ -97,13 +97,15 @@ private:
 
 public:
     const std::map<std::string, const IType*> typemap;
+    const size_t bv_width;
 
     z3::context* c;
     z3::model* m;
     std::map<std::string, std::optional<z3::func_decl>> consfuncs;
     std::map<std::string, std::optional<z3::func_decl>> succfuncs;
 
-    ExtractionInfo(z3::context* c, z3::model* m) : c(c), m(m)
+    ExtractionInfo(std::map<std::string, const IType*> typemap, size_t bv_width, z3::context* c, z3::model* m)
+    : typemap(typemap), bv_width(bv_width), c(c), m(m)
     {
         this->loadFuncs();
     }
@@ -116,9 +118,19 @@ public:
         return resexp;
     }
 
+    z3::expr initialArgsContext()
+    {
+        return this->consfuncs["MakeStep"].value()(this->c->bv_val((int)0, this->bv_width));
+    }
+
+    z3::expr resultContext()
+    {
+        return this->consfuncs["MakeStep"].value()(this->c->bv_val((int)1, this->bv_width));
+    }
+
     z3::expr stepContext(const z3::expr& ctx, size_t i)
     {
-        return z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val((int)i, 5)));
+        return z3::concat(ctx, this->consfuncs["MakeStep"].value()(this->c->bv_val((int)i, this->bv_width)));
     }
 
     z3::expr evalResultSuccess(const std::string& tname, const z3::expr& exp)
@@ -160,7 +172,6 @@ private:
 
 public:
     const std::map<std::string, const IType*> typemap;
-
     const size_t bv_width;
 
     std::optional<z3::expr> const_none;

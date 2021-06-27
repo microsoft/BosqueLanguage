@@ -8,13 +8,14 @@
 ////
 //Work flow #1 -- Refute or Witness an Error
 //Given a smt decl that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
-//      + a signature, and smt arg names
+//      + a signature, and bvsize
 //Either:
 //  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
 //  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
-//  Timeout a and return the JSON payload -- {result: "unknown", time: number}
+//  Timeout a and return the JSON payload -- {result: "timeout", time: number}
+//  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowValidate(std::string smt2decl, APIModule* module, std::string signame, std::vector<std::string> smtargnames)
+json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string signame, size_t bvsize)
 {
     z3::context c;
     z3::solver s(c);
@@ -29,17 +30,42 @@ json workflowValidate(std::string smt2decl, APIModule* module, std::string signa
     if(res == z3::check_result::unknown)
     {
         return {
-            {"result", "unknown"},
+            {"result", "timeout"},
             {"time", delta_ms}
         };
     }
     else if(res == z3::check_result::unsat)
     {
-         std::cout << "Error is unreachable under restrictions!!!" << "\n";
+        return {
+            {"result", "infeasible"},
+            {"time", delta_ms}
+        };
     }
     else
     {
+        auto m = s.get_model();
+        ExtractionInfo einfo(apimodule->typemap, bvsize, &c, &m);
 
+        auto sig = std::find_if(apimodule->siglist.cbegin(), apimodule->siglist.cend(), [&signame](const InvokeSignature* sig) {
+            return sig->name == signame;
+        });
+
+        json argv = json::array();
+        auto rootctx = einfo.initialArgsContext();
+        for(size_t i = 0; i < (*sig)->argTypes.size(); ++i)
+        {
+            auto argtype = (*sig)->argTypes[i];
+            auto ctx = einfo.stepContext(rootctx, i);
+            auto jarg = argtype->extract(&einfo, ctx);
+
+            argv.push_back(jarg);
+        }
+
+        return {
+            {"result", "witness"},
+            {"time", delta_ms},
+            {"input", argv}
+        };
     }
 }
 
@@ -47,8 +73,65 @@ json workflowValidate(std::string smt2decl, APIModule* module, std::string signa
 //Work flow #2 -- Compute an API result
 //Given a smt decl, a signature, and a JSON representation of the arg vector 
 //Either:
-//  Compute the output of the function return the JSON payload -- {result: "result" | "fail", time: number, output: JSON}
-//  Timeout a and return the JSON payload -- {result: "unknown", time: number}
+//  Compute the output of the function return the JSON payload -- {result: "result" | "infeasible", time: number, output: JSON}
+//  Timeout a and return the JSON payload -- {result: "timeout", time: number}
+//  Main should also handle exceptions and -- {result: "error", info: string}
+
+json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string signame)
+{
+    z3::context c;
+    z3::solver s(c);
+    s.from_string(smt2decl.c_str());
+
+    //check the formula
+    auto start = std::chrono::system_clock::now();
+    auto res = s.check();    
+    auto end = std::chrono::system_clock::now();
+
+    auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
+    if(res == z3::check_result::unknown)
+    {
+        return {
+            {"result", "timeout"},
+            {"time", delta_ms}
+        };
+    }
+    else if(res == z3::check_result::unsat)
+    {
+        return {
+            {"result", "infeasible"},
+            {"time", delta_ms}
+        };
+    }
+    else
+    {
+        xxxx;
+
+        auto m = s.get_model();
+        ExtractionInfo einfo(apimodule->typemap, 64, &c, &m);
+
+        auto sig = std::find_if(apimodule->siglist.cbegin(), apimodule->siglist.cend(), [&signame](const InvokeSignature* sig) {
+            return sig->name == signame;
+        });
+
+        json argv = json::array();
+        auto rootctx = einfo.initialArgsContext();
+        for(size_t i = 0; i < (*sig)->argTypes.size(); ++i)
+        {
+            auto argtype = (*sig)->argTypes[i];
+            auto ctx = einfo.stepContext(rootctx, i);
+            auto jarg = argtype->extract(&einfo, ctx);
+
+            argv.push_back(jarg);
+        }
+
+        return {
+            {"result", "witness"},
+            {"time", delta_ms},
+            {"input", argv}
+        };
+    }
+}
 
 ////
 //Work flow #3 -- Compute an API input
