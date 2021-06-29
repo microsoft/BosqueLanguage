@@ -101,6 +101,7 @@ public:
 
     z3::func_decl getArgContextConstructor(const z3::model& m, const char* fname, const z3::sort& ressort) const;
     z3::sort getArgContextTokenSort(const z3::model& m) const;
+    z3::expr extendContext(const z3::model& m, const z3::expr& ctx, size_t i) const;
 
     size_t bvToCardinality(const z3::model& m, const z3::expr& bv) const;
     size_t intToCardinality(const z3::model& m, const z3::expr& iv) const;
@@ -140,6 +141,8 @@ public:
 
     std::optional<std::string> parseToRealNumber(json j) const;
     std::optional<std::string> parseToDecimalNumber(json j) const;
+
+    z3::expr callfunc(std::string fname, z3::expr_vector& args, const std::vector<std::string>& smtargtypes, const std::string& smtrestype, z3::context& c) const;
 };
 
 ////
@@ -686,10 +689,13 @@ public:
 class TupleType : public IGroundedType
 {
 public:
+    const std::string consfunc;
     const bool isvalue;
     const std::vector<std::string> ttypes;
 
-    TupleType(std::string name, bool iskey, std::string smtname, std::string boxfunc, bool isvalue, std::vector<std::string> ttypes) : IGroundedType(name, iskey, smtname, boxfunc), isvalue(isvalue), ttypes(ttypes) {;}
+    const std::vector<std::string> smtaccessors;
+
+    TupleType(std::string name, bool iskey, std::string smtname, std::string boxfunc, std::string consfunc, bool isvalue, std::vector<std::string> ttypes, std::vector<std::string> smtaccessors) : IGroundedType(name, iskey, smtname, boxfunc), consfunc(consfunc), isvalue(isvalue), ttypes(ttypes), smtaccessors(smtaccessors) {;}
     virtual ~TupleType() {;}
 
     static TupleType* jparse(json j);
