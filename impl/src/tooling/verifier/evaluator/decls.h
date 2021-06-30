@@ -53,6 +53,7 @@ enum class TypeTag
     TupleTag,
     RecordTag,
     ListTag,
+    EnumTag,
     UnionTag
 };
 
@@ -759,6 +760,26 @@ public:
     virtual ~ListType() {;}
 
     static ListType* jparse(json j);
+
+    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+
+    virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+};
+
+class EnumType : public IGroundedType
+{
+public:
+    const std::string smttagfunc;
+    const std::vector<std::pair<std::string, std::string>> enummap; //map from full enum names to the SMT constructor function names
+
+    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string smttagfunc, std::vector<std::pair<std::string, std::string>> enummap) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), smttagfunc(smttagfunc), enummap(enummap) {;}
+    virtual ~EnumType() {;}
+
+    static EnumType* jparse(json j);
 
     virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 

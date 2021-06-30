@@ -78,10 +78,10 @@ class ParserEnvironment {
     readonly SpecialNatSignature: TypeSignature;
     readonly SpecialFloatSignature: TypeSignature;
     readonly SpecialDecimalSignature: TypeSignature;
-    readonly SpecialQuadFloatSignature: TypeSignature;
     readonly SpecialBigIntSignature: TypeSignature;
     readonly SpecialBigNatSignature: TypeSignature;
     readonly SpecialRationalSignature: TypeSignature;
+    readonly SpecialStringSignature: TypeSignature;
 
     readonly SpecialAutoSignature: TypeSignature;
 
@@ -100,12 +100,12 @@ class ParserEnvironment {
 
         this.SpecialIntSignature = new NominalTypeSignature("NSCore", ["Int"], []);
         this.SpecialNatSignature = new NominalTypeSignature("NSCore", ["Nat"], []);
-        this.SpecialFloatSignature = new NominalTypeSignature("NSCore", ["Float64"], []);
+        this.SpecialFloatSignature = new NominalTypeSignature("NSCore", ["Float"], []);
         this.SpecialDecimalSignature = new NominalTypeSignature("NSCore", ["Decimal"], []);
-        this.SpecialQuadFloatSignature = new NominalTypeSignature("NSCore", ["Float128"], []);
         this.SpecialBigIntSignature = new NominalTypeSignature("NSCore", ["BigInt"], []);
         this.SpecialBigNatSignature = new NominalTypeSignature("NSCore", ["BigNat"], []);
         this.SpecialRationalSignature = new NominalTypeSignature("NSCore", ["Rational"], []);
+        this.SpecialStringSignature = new NominalTypeSignature("NSCore", ["String"], []);
         
         this.SpecialAutoSignature = new AutoTypeSignature();
     }

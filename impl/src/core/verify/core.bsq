@@ -45,6 +45,7 @@ mixed concept PODType provides APIType {
 
 //<summary>Type to unify Buffers and APITypes at top level for checking</summary>
 mixed concept APIValue provides Any {
+    function generate<T grounded APIValue>() T # apivalue_generate
 }
 
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
@@ -242,32 +243,34 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
 }
 
 //<summary>Primitive safe string value.</summary>
-grounded struct entity StringOf<T where validator> provides Some, KeyType, PODType, APIType {
-    private field str: String;
+_internal grounded struct entity StringOf<T where validator> provides Some, KeyType, PODType, APIType {
+    __safe private function s_string(s: StringOf<T>): String # stringof_string
+    __safe private function s_from(s: String): StringOf<T> # stringof_from
 
     method string(): String {
-        return this.str;
+        return StringOf<T>::s_string(this);
     }
 
     function from(str: String): StringOf<T>
         requires release T::accepts(str);
     {
-        return StringOf<T>#{ str=str };
+        return StringOf<T>::s_from(str);
     }
 }
 
 //<summary>Primitive DataString value.</summary>
-grounded struct entity DataString<T where parsable> provides Some, APIValue {
-    private field str: String;
+_internal grounded struct entity DataString<T where parsable> provides Some, APIValue {
+    __safe private function s_string(s: StringOf<T>): String # stringof_string
+    __safe private function s_from(s: String): StringOf<T> # stringof_from
 
     method string(): String {
-        return this.str;
+        return DataString<T>::s_string(this);
     }
 
-    function from(str: String): DataString<T> 
+    function from(str: String): StringOf<T>
         requires release T::parse(str).isOk();
     {
-        return DataString<T>#{ str=str };
+        return DataString<T>::s_from(str);
     }
 }
 
@@ -289,19 +292,19 @@ enum BufferCompression {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-struct entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
-    private field format: BufferFormat;
-    private field encoding: BufferEncoding;
-    private field compression: BufferCompression;
-    private field buf: ByteBuffer;
+_internal entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
+    //private field format: BufferFormat;
+    //private field encoding: BufferEncoding;
+    //private field compression: BufferCompression;
+    //private field buf: ByteBuffer;
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-struct entity DataBuffer<T where parsable> provides Some, APIValue {
-    private field format: BufferFormat;
-    private field encoding: BufferEncoding;
-    private field compression: BufferCompression;
-    private field buf: ByteBuffer;
+_internal entity DataBuffer<T where parsable> provides Some, APIValue {
+    //private field format: BufferFormat;
+    //private field encoding: BufferEncoding;
+    //private field compression: BufferCompression;
+    //private field buf: ByteBuffer;
 }
 
 //<summary>An efficient byte buffer for data.</summary>

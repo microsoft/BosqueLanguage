@@ -841,6 +841,8 @@ IType* IType::jparse(json j)
             return RecordType::jparse(j);
         case TypeTag::ListTag:
             return ListType::jparse(j);
+        case TypeTag::EnumTag:
+            return EnumType::jparse(j);
         case TypeTag::UnionTag:
             return UnionType::jparse(j);
         default: 
@@ -2314,6 +2316,87 @@ json ListType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m)
         jres.push_back(ttype->resextract(ex, ival, m));
     }
     return jres;
+}
+
+
+EnumType* EnumType::jparse(json j)
+{
+    std::vector<std::pair<std::string, std::string>> enummap;
+    auto jenummap = j["enummap"];
+    for (json::iterator iter = jenummap.begin(); iter != jenummap.end(); ++iter) 
+    {
+        auto name = iter.key();
+        auto val = iter.value().get<std::string>();
+
+        enummap.push_back(std::make_pair(name, val));
+    }
+
+    return new EnumType(j["name"].get<std::string>(), j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), j["smttagfunc"].get<std::string>(), enummap);
+}
+
+json EnumType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
+{
+    json res;
+    if(finfo.sampleKnownOpt(this->name, rnd, res))
+    {
+        return res;
+    }
+    else
+    {
+        std::uniform_int_distribution<size_t> distribution(0, this->enummap.size() - 1);
+        auto opt = distribution(rnd);
+
+        res = this->enummap[opt].first;
+
+        finfo.addReuseForType(this->name, res);
+        return res;
+    }
+}
+
+std::optional<z3::expr> EnumType::toz3arg(ParseInfo& pinfo, json j, z3::context& c) const
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+    
+    auto ename = j.get<std::string>();
+    auto ii = std::find_if(this->enummap.cbegin(), this->enummap.cend(), [&ename](const std::pair<std::string, std::string>& entry) {
+        return entry.first == ename;
+    });
+
+    if(ii == this->enummap.cend())
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(c.constant(ii->second.c_str(), getZ3SortFor(pinfo.apimodule, this, c)));
+}
+
+std::optional<std::string> EnumType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+        
+    return j.get<std::string>();
+}
+
+json EnumType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+{
+    auto bef = ex.getArgContextConstructor(m, "EnumChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
+    auto choice = ex.bvToCardinality(m, bef(ctx));
+
+    return this->enummap[choice].first;
+}
+
+json EnumType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+{
+    auto ref = m.ctx().constant(ex.resvar.c_str(), getZ3SortFor(ex.apimodule, this, m.ctx()));
+    auto enumconst = ex.callfunc(this->smttagfunc.c_str(), ref, this, ex.apimodule->typemap.find("NSCore::String")->second, m.ctx()).to_string();
+
+    return enumconst;
 }
 
 UnionType* UnionType::jparse(json j)

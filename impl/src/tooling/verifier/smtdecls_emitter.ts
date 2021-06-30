@@ -451,6 +451,9 @@ class SMTEmitter {
             else if (edecl.specialDecls.has(MIRSpecialTypeCategory.MapTypeDecl)) {
                 this.generateAPITypeConstructorFunction_Map(tt, havocfuncs);
             }
+            else if(edecl.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
+                xxxx;
+            }
             else {
                 //Don't need to do anything
             }
@@ -496,6 +499,7 @@ class SMTEmitter {
             }
         }
 
+        xxxx;
         ["NSCore::None", "NSCore::Bool", "NSCore::Int", "NSCore::Nat", "NSCore::BigInt", "NSCore::BigNat", "NSCore::Float", "NSCore::Decimal", "NSCore::Rational", "NSCore::StringPos", "NSCore::String", "NSCore::ByteBuffer", "NSCore::ISOTime", "NSCore::LogicalTime", "NSCore::UUID", "NSCore::ContentHash", "NSCore::Regex"]
             .forEach((ptype) => {
                 const rtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(ptype));
