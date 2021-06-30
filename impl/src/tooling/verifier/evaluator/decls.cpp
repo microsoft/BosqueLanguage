@@ -82,7 +82,8 @@ z3::sort getZ3SortFor(const APIModule* apimodule, const IType* tt, z3::context& 
     }
     else if(typenameMatches(tt, "NSCore::ByteBuffer") || typenameMatches(tt, "NSCore::Buffer") || typenameMatches(tt, "NSCore::DataBuffer"))
     {
-        return c.seq_sort(c.bv_sort(8));
+        z3::sort bv8sort = c.bv_sort(8);
+        return c.seq_sort(bv8sort);
     }
     else
     {
@@ -2461,4 +2462,53 @@ json UnionType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m
             return ttype->resextract(ex, vval, m);
         }
     }
+}
+
+InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, const IType*>& typemap)
+{
+    auto name = j["name"].get<std::string>();
+    auto resType = typemap.find(j["resType"].get<std::string>())->second;
+
+    std::vector<std::string> argnames;
+    auto jargnames = j["argnames"];
+    std::transform(jargnames.cbegin(), jargnames.cend(), std::back_inserter(argnames), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    std::vector<std::string> smtargnames;
+    auto jsmtargnames = j["smtargnames"];
+    std::transform(jsmtargnames.cbegin(), jsmtargnames.cend(), std::back_inserter(smtargnames), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    std::vector<const IType*> argTypes;
+    auto jargTypes = j["argTypes"];
+    std::transform(jargTypes.cbegin(), jargTypes.cend(), std::back_inserter(argTypes), [&typemap](const json& jv) {
+        return typemap.find(jv.get<std::string>())->second;
+    });
+
+    return new InvokeSignature(name, resType, argnames, smtargnames, argTypes);
+}
+
+APIModule* APIModule::jparse(json j)
+{
+    std::map<std::string, const IType*> typemap;
+    xxxx;
+    auto jtypemap = j["typemap"];
+    std::transform(jtypemap.cbegin(), jtypemap.cend(), std::back_inserter(siglist), [&typemap](const json& jv) {
+        return InvokeSignature::jparse(jv, typemap);
+    });
+
+    std::vector<InvokeSignature*> siglist;
+    auto jsiglist = j["siglist"];
+    std::transform(jsiglist.cbegin(), jsiglist.cend(), std::back_inserter(siglist), [&typemap](const json& jv) {
+        return InvokeSignature::jparse(jv, typemap);
+    });
+
+    std::map<std::string, std::vector<std::pair<std::string, json>>> constants;
+    //
+    //TODO: load constants
+    //
+
+    return new APIModule(typemap, siglist, j["bv_width"].get<size_t>(), constants);
 }

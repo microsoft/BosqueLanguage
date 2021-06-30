@@ -799,6 +799,8 @@ public:
     const std::vector<const IType*> argtypes;
     
     InvokeSignature(std::string name, const IType* resType, std::vector<std::string> argnames, std::vector<std::string> smtargnames, std::vector<const IType*> argTypes): name(name), resType(resType), argnames(argnames), smtargnames(smtargnames), argtypes(argtypes) {;}
+
+    static InvokeSignature* jparse(json j, const std::map<std::string, const IType*>& typemap);
 };
 
 class APIModule
@@ -828,4 +830,6 @@ public:
             delete *iter;
         }
     }
+
+    static APIModule* jparse(json j);
 };
