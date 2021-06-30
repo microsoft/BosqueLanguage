@@ -461,7 +461,7 @@ void FuzzInfo::addReuseForType(std::string tag, json j)
 
     std::string str = j.dump();
     auto mval = std::find_if(tve.cbegin(), tve.cend(), [&str](const std::pair<std::string, json>& entry) {
-        entry.first == str;
+        return entry.first == str;
     });
 
     if(mval == tve.cend())
@@ -989,7 +989,7 @@ std::optional<std::string> NatType::tobsqarg(const ParseInfo& pinfo, json j, con
 json NatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BNat@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
-    ex.evalToUnsignedNumber(m, bef(ctx));
+    return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
 json NatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1045,7 +1045,7 @@ std::optional<std::string> IntType::tobsqarg(const ParseInfo& pinfo, json j, con
 json IntType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BInt@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
-    ex.evalToUnsignedNumber(m, bef(ctx));
+    return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
 json IntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1101,7 +1101,7 @@ std::optional<std::string> BigNatType::tobsqarg(const ParseInfo& pinfo, json j, 
 json BigNatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BBigNat@UFCons_API", m.ctx().int_sort());
-    ex.evalToUnsignedNumber(m, bef(ctx));
+    return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
 json BigNatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1157,7 +1157,7 @@ std::optional<std::string> BigIntType::tobsqarg(const ParseInfo& pinfo, json j, 
 json BigIntType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BBigInt@UFCons_API", m.ctx().int_sort());
-    ex.evalToSignedNumber(m, bef(ctx));
+    return ex.evalToSignedNumber(m, bef(ctx));
 }
 
 json BigIntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1180,11 +1180,11 @@ json RationalType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     }
     else
     {
-        std::uniform_int_distribution<int64_t> distribution(finfo.limits.int_min, finfo.limits.int_max);
-        uint64_t num = distribution(rnd);
+        std::uniform_int_distribution<int64_t> numdistribution(finfo.limits.int_min, finfo.limits.int_max);
+        uint64_t num = numdistribution(rnd);
 
-        std::uniform_int_distribution<uint64_t> distribution(1, finfo.limits.nat_max);
-        uint64_t denom = distribution(rnd);
+        std::uniform_int_distribution<uint64_t> denomdistribution(1, finfo.limits.nat_max);
+        uint64_t denom = denomdistribution(rnd);
 
         res = std::to_string(num) + "/" + std::to_string(denom) + "R";
 
@@ -1284,7 +1284,7 @@ std::optional<std::string> FloatType::tobsqarg(const ParseInfo& pinfo, json j, c
 json FloatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BFloat@UFCons_API", m.ctx().real_sort());
-    ex.evalToRealNumber(m, bef(ctx));
+    return ex.evalToRealNumber(m, bef(ctx));
 }
 
 json FloatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1340,7 +1340,7 @@ std::optional<std::string> DecimalType::tobsqarg(const ParseInfo& pinfo, json j,
 json DecimalType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BDecimal@UFCons_API", m.ctx().real_sort());
-    ex.evalToDecimalNumber(m, bef(ctx));
+    return ex.evalToDecimalNumber(m, bef(ctx));
 }
 
 json DecimalType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1400,7 +1400,7 @@ std::optional<std::string> StringType::tobsqarg(const ParseInfo& pinfo, json j, 
 json StringType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().real_sort());
-    ex.evalToString(m, bef(ctx));
+    return ex.evalToString(m, bef(ctx));
 }
 
 json StringType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1461,7 +1461,7 @@ std::optional<std::string> StringOfType::tobsqarg(const ParseInfo& pinfo, json j
 json StringOfType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().string_sort());
-    ex.evalToString(m, bef(ctx));
+    return ex.evalToString(m, bef(ctx));
 }
 
 json StringOfType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1593,7 +1593,7 @@ std::optional<std::string> DataStringType::tobsqarg(const ParseInfo& pinfo, json
 json DataStringType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().string_sort());
-    ex.evalToString(m, bef(ctx));
+    return ex.evalToString(m, bef(ctx));
 }
 
 json DataStringType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -1754,7 +1754,7 @@ json ISOTimeType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model&
     char* curr = mbuff;
     auto utctime = std::gmtime(&tval);
     curr += strftime(curr, 96, "%Y-%m-%dT%H:%M:%S", utctime);
-    curr += snprintf(curr, 32, ".%03dZ", dval % 1000);
+    curr += snprintf(curr, 32, ".%03dZ", (int)(dval % 1000));
 
     return std::string(mbuff, curr);
 }
@@ -1770,7 +1770,7 @@ json ISOTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model&
     char* curr = mbuff;
     auto utctime = std::gmtime(&tval);
     curr += strftime(curr, 96, "%Y-%m-%dT%H:%M:%S", utctime);
-    curr += snprintf(curr, 32, ".%03dZ", dval % 1000);
+    curr += snprintf(curr, 32, ".%03dZ", (int)(dval % 1000));
 
     return std::string(mbuff, curr);
 }
@@ -1822,7 +1822,7 @@ std::optional<std::string> LogicalTimeType::tobsqarg(const ParseInfo& pinfo, jso
 json LogicalTimeType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BLogicalTime@UFCons_API", m.ctx().int_sort());
-    ex.evalToUnsignedNumber(m, bef(ctx));
+    return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
 json LogicalTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const

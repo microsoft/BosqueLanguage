@@ -7,6 +7,7 @@
 #include <math.h>
 #include <ctime>
 #include <chrono>
+#include <cstdio>
 
 #include <string>
 #include <regex>
