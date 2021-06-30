@@ -319,6 +319,7 @@
 (declare-fun BContentHash@UFCons_API ((Seq BNat)) Int)
 
 (declare-fun ListSize@UFCons_API ((Seq BNat)) BNat)
+(declare-fun UnionChoice@UFCons_API ((Seq BNat)) BNat)
 
 (define-fun Ctx@MakeStep ((i BNat)) (Seq BNat)
   (seq.unit i)

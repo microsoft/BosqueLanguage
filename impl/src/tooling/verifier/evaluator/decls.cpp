@@ -8,6 +8,88 @@
 #define JSON_MIN_SAFE_NUMBER -9007199254740991
 #define JSON_MAX_SAFE_NUMBER 9007199254740991
 
+bool typenameMatches(const IType* tt, const char* prefix)
+{
+    auto plen = strlen(prefix);
+    return tt->name.size() >= plen && std::equal(prefix, prefix + plen, tt->name.cbegin());
+}
+
+z3::sort getZ3SortFor(const APIModule* apimodule, const IType* tt, z3::context& c)
+{
+    if(tt->name == "NSCore::None")
+    {
+        return c.uninterpreted_sort("bsq_none");
+    }
+    else if(tt->name == "NSCore::Bool")
+    {
+        return c.bool_sort();
+    }
+    else if(tt->name == "NSCore::Nat")
+    {
+        return c.bv_sort(apimodule->bv_width);
+    }
+    else if(tt->name == "NSCore::Int")
+    {
+        return c.bv_sort(apimodule->bv_width);
+    }
+    else if(tt->name == "NSCore::BigNat")
+    {
+        return c.int_sort();
+    }
+    else if(tt->name == "NSCore::BigInt")
+    {
+        return c.int_sort();
+    }
+    else if(tt->name == "NSCore::Rational")
+    {
+        return c.real_sort();
+    }
+    else if(tt->name == "NSCore::Float")
+    {
+        return c.real_sort();
+    }
+    else if(tt->name == "NSCore::Decimal")
+    {
+        return c.real_sort();
+    }
+    else if(tt->name == "NSCore::String")
+    {
+        return c.string_sort();
+    }
+    else if(tt->name == "NSCore::ISOTime")
+    {
+        return c.int_sort();
+    }
+    else if(tt->name == "NSCore::LogicalTime")
+    {
+        return c.int_sort();
+    }
+    else if(tt->name == "NSCore::UUID")
+    {
+        return c.int_sort();
+    }
+    else if(tt->name == "NSCore::ContentHash")
+    {
+        return c.int_sort();
+    }
+    else if(typenameMatches(tt, "NSCore::StringOf") || typenameMatches(tt, "NSCore::DataString"))
+    {
+        return c.string_sort();
+    }
+    else if(typenameMatches(tt, "NSCore::NumberOf"))
+    {
+        return getZ3SortFor(apimodule, apimodule->typemap.find(dynamic_cast<const NumberOfType*>(tt)->primitive)->second, c);
+    }
+    else if(typenameMatches(tt, "NSCore::ByteBuffer") || typenameMatches(tt, "NSCore::Buffer") || typenameMatches(tt, "NSCore::DataBuffer"))
+    {
+        return c.seq_sort(c.bv_sort(8));
+    }
+    else
+    {
+        return c.uninterpreted_sort(tt->smtname.c_str());
+    }
+}
+
 z3::func_decl ExtractionInfo::getArgContextConstructor(const z3::model& m, const char* fname, const z3::sort& ressort) const
 {
     auto ctxsort = this->getArgContextTokenSort(m);
@@ -22,6 +104,16 @@ z3::sort ExtractionInfo::getArgContextTokenSort(const z3::model& m) const
     auto seqsort = m.ctx().seq_sort(bvsort);
 
     return seqsort;
+}
+
+z3::expr ExtractionInfo::genInitialContext(const z3::model& m) const
+{
+    auto bvsort = m.ctx().bv_sort(this->apimodule->bv_width);
+    auto seqsort = m.ctx().seq_sort(bvsort);
+    auto consf = m.ctx().function("Ctx@MakeStep", bvsort, seqsort);
+
+    auto ii = m.ctx().bv_val((uint64_t)0, bvsort);
+    return consf(ii);
 }
 
 z3::expr ExtractionInfo::extendContext(const z3::model& m, const z3::expr& ctx, size_t i) const
@@ -152,6 +244,30 @@ json ExtractionInfo::evalToString(const z3::model& m, const z3::expr& e) const
     assert(sexp.is_string_value());
 
     return sexp.to_string();
+}
+
+z3::expr ExtractionInfo::callfunc(std::string fname, const z3::expr_vector& args, const std::vector<const IType*>& argtypes, const IType* restype, z3::context& c) const
+{
+    auto ressort = getZ3SortFor(this->apimodule, restype, c);
+
+    z3::sort_vector argsorts(c);
+    for(size_t i = 0; i < argtypes.size(); ++i)
+    {
+        argsorts.push_back(getZ3SortFor(this->apimodule, argtypes[i], c));
+    }
+
+    auto consf = c.function(fname.c_str(), argsorts, ressort);
+
+    return consf(args);
+}
+
+
+z3::expr ExtractionInfo::callfunc(std::string fname, const z3::expr& arg, const IType* argtype, const IType* restype, z3::context& c) const
+{
+    z3::expr_vector argv(c);
+    argv.push_back(arg);
+
+    return this->callfunc(fname, argv, {argtype}, restype, c);
 }
 
 std::optional<uint64_t> ParseInfo::parseToUnsignedNumber(json j) const
@@ -293,19 +409,27 @@ std::optional<std::string> ParseInfo::parseToDecimalNumber(json j) const
     return nval;
 }
 
-z3::expr ParseInfo::callfunc(std::string fname, z3::expr_vector& args, const std::vector<std::string>& smtargtypes, const std::string& smtrestype, z3::context& c) const
+z3::expr ParseInfo::callfunc(std::string fname, const z3::expr_vector& args, const std::vector<const IType*>& argtypes, const IType* restype, z3::context& c) const
 {
-    auto ressort = c.uninterpreted_sort(smtrestype.c_str());
+    auto ressort = getZ3SortFor(this->apimodule, restype, c);
 
     z3::sort_vector argsorts(c);
-    for(size_t i = 0; i < smtargtypes.size(); ++i)
+    for(size_t i = 0; i < argtypes.size(); ++i)
     {
-        argsorts.push_back(c.uninterpreted_sort(smtargtypes[i].c_str()));
+        argsorts.push_back(getZ3SortFor(this->apimodule, argtypes[i], c));
     }
 
     auto consf = c.function(fname.c_str(), argsorts, ressort);
 
     return consf(args);
+}
+
+z3::expr ParseInfo::callfunc(std::string fname, const z3::expr& arg, const IType* argtype, const IType* restype, z3::context& c) const
+{
+    z3::expr_vector argv(c);
+    argv.push_back(arg);
+
+    return this->callfunc(fname, argv, {argtype}, restype, c);
 }
 
 bool FuzzInfo::hasConstantsForType(std::string tag) const
@@ -668,12 +792,67 @@ BSQRegex* BSQRegex::parse(json j)
 
 IType* IType::jparse(json j)
 {
-    xxxx;
+    switch(j["tag"].get<TypeTag>())
+    {
+        case TypeTag::NoneTag:
+            return NoneType::jparse(j);
+        case TypeTag::BoolTag:
+            return BoolType::jparse(j);
+        case TypeTag::NatTag:
+            return NatType::jparse(j);
+        case TypeTag::IntTag:
+            return IntType::jparse(j);
+        case TypeTag::BigNatTag:
+            return BigNatType::jparse(j);
+        case TypeTag::BigIntTag:
+            return BigIntType::jparse(j);
+        case TypeTag::RationalTag:
+            return RationalType::jparse(j);
+        case TypeTag::FloatTag:
+            return FloatType::jparse(j);
+        case TypeTag::DecimalTag:
+            return DecimalType::jparse(j);
+        case TypeTag::StringTag:
+            return StringType::jparse(j);
+        case TypeTag::StringOfTag:
+            return StringOfType::jparse(j);
+        case TypeTag::NumberOfTag:
+            return NumberOfType::jparse(j);
+        case TypeTag::DataStringTag:
+            return DataStringType::jparse(j);
+        case TypeTag::ByteBufferTag:
+            return ByteBufferType::jparse(j);
+        case TypeTag::BufferTag:
+            return BufferType::jparse(j);
+        case TypeTag::DataBufferTag:
+            return DataBufferType::jparse(j);
+        case TypeTag::ISOTag:
+            return ISOTimeType::jparse(j);
+        case TypeTag::LogicalTag:
+            return LogicalTimeType::jparse(j);
+        case TypeTag::UUIDTag:
+            return UUIDType::jparse(j);
+        case TypeTag::ContentHashTag:
+            return ContentHashType::jparse(j);
+        case TypeTag::TupleTag:
+            return TupleType::jparse(j);
+        case TypeTag::RecordTag:
+            return RecordType::jparse(j);
+        case TypeTag::ListTag:
+            return ListType::jparse(j);
+        case TypeTag::UnionTag:
+            return UnionType::jparse(j);
+        default: 
+        {
+            assert(false);
+            return nullptr;
+        }
+    }
 }
 
 NoneType* NoneType::jparse(json j)
 {
-    return new NoneType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new NoneType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json NoneType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -693,7 +872,7 @@ json NoneType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     }
  }
 
-std::optional<std::string> NoneType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> NoneType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     if(!j.is_null())
     {
@@ -717,7 +896,7 @@ json NoneType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m)
 
 BoolType* BoolType::jparse(json j)
 {
-    return new BoolType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new BoolType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -738,7 +917,7 @@ json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     }
  }
 
-std::optional<std::string> BoolType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> BoolType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     if(!j.is_boolean())
     {
@@ -764,7 +943,7 @@ json BoolType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m)
 
 NatType* NatType::jparse(json j)
 {
-    return new NatType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new NatType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json NatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -795,7 +974,7 @@ std::optional<z3::expr> NatType::toz3arg(ParseInfo& pinfo, json j, z3::context& 
     return std::make_optional(c.bv_val(nval.value(), pinfo.apimodule->bv_width));
 }
 
-std::optional<std::string> NatType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> NatType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     std::optional<uint64_t> nval = pinfo.parseToUnsignedNumber(j);
     if(!nval.has_value())
@@ -820,7 +999,7 @@ json NatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) 
 
 IntType* IntType::jparse(json j)
 {
-    return new IntType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new IntType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json IntType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -851,7 +1030,7 @@ std::optional<z3::expr> IntType::toz3arg(ParseInfo& pinfo, json j, z3::context& 
     return std::make_optional(c.bv_val(nval.value(), pinfo.apimodule->bv_width));
 }
 
-std::optional<std::string> IntType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> IntType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     std::optional<int64_t> nval = pinfo.parseToSignedNumber(j);
     if(!nval.has_value())
@@ -876,7 +1055,7 @@ json IntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) 
 
 BigNatType* BigNatType::jparse(json j)
 {
-    return new BigNatType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new BigNatType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json BigNatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -907,7 +1086,7 @@ std::optional<z3::expr> BigNatType::toz3arg(ParseInfo& pinfo, json j, z3::contex
     return std::make_optional(c.int_val(nval.value().c_str()));
 }
 
-std::optional<std::string> BigNatType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> BigNatType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     std::optional<std::string> nval = pinfo.parseToBigUnsignedNumber(j);
     if(!nval.has_value())
@@ -932,7 +1111,7 @@ json BigNatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& 
 
 BigIntType* BigIntType::jparse(json j)
 {
-    return new BigIntType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new BigIntType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json BigIntType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -963,7 +1142,7 @@ std::optional<z3::expr> BigIntType::toz3arg(ParseInfo& pinfo, json j, z3::contex
     return std::make_optional(c.int_val(nval.value().c_str()));
 }
 
-std::optional<std::string> BigIntType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> BigIntType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     std::optional<std::string> nval = pinfo.parseToBigSignedNumber(j);
     if(!nval.has_value())
@@ -988,7 +1167,7 @@ json BigIntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& 
 
 RationalType* RationalType::jparse(json j)
 {
-    return new RationalType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new RationalType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json RationalType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1029,7 +1208,7 @@ std::optional<z3::expr> RationalType::toz3arg(ParseInfo& pinfo, json j, z3::cont
     return (num.has_value() && denom.has_value()) ? std::make_optional(z3::to_real(num.value()) / z3::to_real(denom.value())) : std::nullopt;
 }
 
-std::optional<std::string> RationalType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> RationalType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
      if(!j.is_array())
     {
@@ -1039,8 +1218,8 @@ std::optional<std::string> RationalType::tobsqarg(const ParseInfo& pinfo, json j
     const BigIntType* numtype = (const BigIntType*)pinfo.apimodule->typemap.find("NSCore::BigInt")->second;
     const NatType* denomtype = (const NatType*)pinfo.apimodule->typemap.find("NSCore::Nat")->second;
 
-    auto num = numtype->tobsqarg(pinfo, j[0]);
-    auto denom = denomtype->tobsqarg(pinfo, j[1]);
+    auto num = numtype->tobsqarg(pinfo, j[0], "");
+    auto denom = denomtype->tobsqarg(pinfo, j[1], "");
         
     return (num.has_value() && denom.has_value()) ? std::make_optional(num.value() + "/" + denom.value() + "R") : std::nullopt;
 }
@@ -1059,7 +1238,7 @@ json RationalType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model
 
 FloatType* FloatType::jparse(json j)
 {
-    return new FloatType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new FloatType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json FloatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1090,7 +1269,7 @@ std::optional<z3::expr> FloatType::toz3arg(ParseInfo& pinfo, json j, z3::context
     return std::make_optional(c.real_val(fval.value().c_str()));
 }
 
-std::optional<std::string> FloatType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> FloatType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     auto fval = pinfo.parseToRealNumber(j);
     if(!fval.has_value())
@@ -1115,7 +1294,7 @@ json FloatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m
 
 DecimalType* DecimalType::jparse(json j)
 {
-    return new DecimalType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new DecimalType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json DecimalType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1146,7 +1325,7 @@ std::optional<z3::expr> DecimalType::toz3arg(ParseInfo& pinfo, json j, z3::conte
     return std::make_optional(c.real_val(fval.value().c_str()));
 }
 
-std::optional<std::string> DecimalType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> DecimalType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     auto fval = pinfo.parseToDecimalNumber(j);
     if(!fval.has_value())
@@ -1171,7 +1350,7 @@ json DecimalType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model&
 
 StringType* StringType::jparse(json j)
 {
-    return new StringType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new StringType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json StringType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1207,7 +1386,7 @@ std::optional<z3::expr> StringType::toz3arg(ParseInfo& pinfo, json j, z3::contex
     return std::make_optional(c.string_val(j.get<std::string>().c_str()));
 }
 
-std::optional<std::string> StringType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> StringType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     if(!j.is_string())
     {
@@ -1235,7 +1414,7 @@ StringOfType* StringOfType::jparse(json j)
     auto validator = j["validator"].get<std::string>();
     auto re_validate = BSQRegex::parse(j["re_validate"]);
 
-    return new StringOfType(name, j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>(), validator, re_validate);
+    return new StringOfType(name, j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), validator, re_validate);
 }
 
 json StringOfType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1268,7 +1447,7 @@ std::optional<z3::expr> StringOfType::toz3arg(ParseInfo& pinfo, json j, z3::cont
     return std::make_optional(c.string_val(j.get<std::string>().c_str()));
 }
 
-std::optional<std::string> StringOfType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> StringOfType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     if(!j.is_string())
     {
@@ -1299,7 +1478,7 @@ NumberOfType* NumberOfType::jparse(json j)
     std::optional<std::string> smtinvcall = (j["smtinvcall"] != nullptr) ? std::make_optional(j["smtinvcall"].get<std::string>()) : std::nullopt;
     std::optional<std::string> cppinvcall = (j["cppinvcall"] != nullptr) ? std::make_optional(j["smtinvcall"].get<std::string>()) : std::nullopt;
 
-    return new NumberOfType(name, j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>(), primitive, oftype, smtinvcall, cppinvcall);
+    return new NumberOfType(name, j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), primitive, oftype, smtinvcall, cppinvcall);
 }
 
 json NumberOfType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1333,9 +1512,9 @@ std::optional<z3::expr> NumberOfType::toz3arg(ParseInfo& pinfo, json j, z3::cont
     return pinfo.apimodule->typemap.find(this->primitive)->second->toz3arg(pinfo, j, c);
 }
 
-std::optional<std::string> NumberOfType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> NumberOfType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
-    auto pstr = pinfo.apimodule->typemap.find(this->primitive)->second->tobsqarg(pinfo, j);
+    auto pstr = pinfo.apimodule->typemap.find(this->primitive)->second->tobsqarg(pinfo, j, indent);
     if(!pstr.has_value())
     {
         return std::nullopt;
@@ -1363,7 +1542,7 @@ DataStringType* DataStringType::jparse(json j)
     std::string smtinvcall = j["smtinvcall"].get<std::string>();
     std::string cppinvcall = j["smtinvcall"].get<std::string>();
 
-    return new DataStringType(name, j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>(), oftype, isvalue, smtinvcall, cppinvcall);
+    return new DataStringType(name, j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), oftype, isvalue, smtinvcall, cppinvcall);
 }
 
 json DataStringType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1400,7 +1579,7 @@ std::optional<z3::expr> DataStringType::toz3arg(ParseInfo& pinfo, json j, z3::co
     return std::nullopt;
 }
 
-std::optional<std::string> DataStringType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> DataStringType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     if(!j.is_string())
     {
@@ -1440,7 +1619,7 @@ std::optional<z3::expr> ByteBufferType::toz3arg(ParseInfo& pinfo, json j, z3::co
     return std::nullopt;
 }
 
-std::optional<std::string> ByteBufferType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> ByteBufferType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     assert(false);
     return std::nullopt;
@@ -1476,7 +1655,7 @@ std::optional<z3::expr> BufferType::toz3arg(ParseInfo& pinfo, json j, z3::contex
     return std::nullopt;
 }
 
-std::optional<std::string> BufferType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> BufferType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     assert(false);
     return std::nullopt;
@@ -1512,7 +1691,7 @@ std::optional<z3::expr> DataBufferType::toz3arg(ParseInfo& pinfo, json j, z3::co
     return std::nullopt;
 }
 
-std::optional<std::string> DataBufferType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> DataBufferType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     assert(false);
     return std::nullopt;
@@ -1532,7 +1711,7 @@ json DataBufferType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::mod
 
 ISOTimeType* ISOTimeType::jparse(json j)
 {
-    return new ISOTimeType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new ISOTimeType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json ISOTimeType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1558,7 +1737,7 @@ std::optional<z3::expr> ISOTimeType::toz3arg(ParseInfo& pinfo, json j, z3::conte
     return std::nullopt;
 }
 
-std::optional<std::string> ISOTimeType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> ISOTimeType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     return j.get<std::string>();
 }
@@ -1597,7 +1776,7 @@ json ISOTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model&
 
 LogicalTimeType* LogicalTimeType::jparse(json j)
 {
-    return new LogicalTimeType(j["smtname"].get<std::string>(), j["boxfunc"].get<std::string>());
+    return new LogicalTimeType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json LogicalTimeType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1628,7 +1807,7 @@ std::optional<z3::expr> LogicalTimeType::toz3arg(ParseInfo& pinfo, json j, z3::c
     return std::make_optional(c.int_val(nval.value().c_str()));
 }
 
-std::optional<std::string> LogicalTimeType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> LogicalTimeType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     std::optional<std::string> nval = pinfo.parseToBigUnsignedNumber(j);
     if(!nval.has_value())
@@ -1669,7 +1848,7 @@ std::optional<z3::expr> UUIDType::toz3arg(ParseInfo& pinfo, json j, z3::context&
     return std::nullopt;
 }
 
-std::optional<std::string> UUIDType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> UUIDType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     assert(false);
     return std::nullopt;
@@ -1705,7 +1884,7 @@ std::optional<z3::expr> ContentHashType::toz3arg(ParseInfo& pinfo, json j, z3::c
     return std::nullopt;
 }
 
-std::optional<std::string> ContentHashType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> ContentHashType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     assert(false);
     return std::nullopt;
@@ -1729,7 +1908,9 @@ TupleType* TupleType::jparse(json j)
     auto iskey = j["iskey"].get<bool>();
     auto smtname = j["smtname"].get<std::string>();
     auto consfunc = j["consfunc"].get<std::string>();
-    auto boxfunc = j["boxfunc"].get<std::string>(); 
+    auto smttypetag = j["smttypetag"].get<std::string>();
+    auto boxfunc = j["boxfunc"].get<std::string>();
+    auto unboxfunc = j["unboxfunc"].get<std::string>();
     auto isvalue = j["isvalue"].get<bool>();
 
     std::vector<std::string> ttypes;
@@ -1738,7 +1919,13 @@ TupleType* TupleType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new TupleType(name, iskey, smtname, boxfunc, consfunc, isvalue, ttypes);
+    std::vector<std::string> smtaccessors;
+    auto jaccessors = j["smtaccessors"];
+    std::transform(jaccessors.cbegin(), jaccessors.cend(), std::back_inserter(ttypes), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    return new TupleType(name, iskey, smtname, smttypetag, boxfunc, unboxfunc, consfunc, isvalue, ttypes, smtaccessors);
 }
 
 json TupleType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1758,7 +1945,7 @@ std::optional<z3::expr> TupleType::toz3arg(ParseInfo& pinfo, json j, z3::context
         return std::nullopt;
     }
 
-    std::vector<std::string> smtargtypes;
+    std::vector<const IType*> argtypes;
     z3::expr_vector targs(c);
     for(size_t i = 0; i < this->ttypes.size(); ++i)
     {
@@ -1771,40 +1958,49 @@ std::optional<z3::expr> TupleType::toz3arg(ParseInfo& pinfo, json j, z3::context
             return std::nullopt;
         }
 
-        smtargtypes.push_back(ttype->smtname);
+        argtypes.push_back(ttype);
         targs.push_back(pexpr.value());
     }
 
-    return pinfo.callfunc(this->consfunc, targs, smtargtypes, this->smtname, c);
+    return pinfo.callfunc(this->consfunc, targs, argtypes, this, c);
 }
 
-std::optional<std::string> TupleType::tobsqarg(const ParseInfo& pinfo, json j) const
+std::optional<std::string> TupleType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
 {
     if(!j.is_array() || this->ttypes.size() != j.size())
     {
         return std::nullopt;
     }
 
+    auto iidt = indent + "  ";
     std::string bres;
     for(size_t i = 0; i < this->ttypes.size(); ++i)
     {
         const std::string& tt = this->ttypes[i];
-        if(i != 0)
-        {
-            bres += ", ";
-        }
-
+        
         auto ttype = pinfo.apimodule->typemap.find(tt)->second;
-        auto pexpr = ttype->tobsqarg(pinfo, j[i]);
+        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
         if(!pexpr.has_value())
         {
             return std::nullopt;
         }
 
-        bres += pexpr.value();
+        bres += '\n' + iidt + pexpr.value();
+
+        if(i != this->ttypes.size() - 1)
+        {
+            bres += ',' ;
+        }
     }
 
-    return std::make_optional(std::string(this->isvalue ? "#" : "@") + "[" + bres + "]");
+    if(this->ttypes.size() == 0)
+    {
+        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "[]");
+    }
+    else
+    {
+        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "[" + bres + indent + "]");
+    }
 }
 
 json TupleType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
@@ -1823,9 +2019,17 @@ json TupleType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m
 
 json TupleType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
 {
-    xxxx;
-    assert(false);
-    return nullptr;
+    auto jres = json::array();
+    for(size_t i = 0; i < this->ttypes.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+        auto ttype = ex.apimodule->typemap.find(tt)->second;
+
+        auto access = ex.callfunc(this->smtaccessors[i], res, this, ttype, m.ctx());
+        auto ival = m.eval(access, true);
+        jres.push_back(ttype->resextract(ex, ival, m));
+    }
+    return jres;
 }
 
 RecordType* RecordType::jparse(json j)
@@ -1833,104 +2037,157 @@ RecordType* RecordType::jparse(json j)
     auto name = j["name"].get<std::string>();
     auto iskey = j["iskey"].get<bool>();
     auto smtname = j["smtname"].get<std::string>();
+    auto smttypetag = j["smttypetag"].get<std::string>();
+    auto consfunc = j["consfunc"].get<std::string>();
     auto boxfunc = j["boxfunc"].get<std::string>();
+    auto unboxfunc = j["unboxfunc"].get<std::string>();
     auto isvalue = j["isvalue"].get<bool>();
 
-    std::vector<std::pair<std::string, std::string>> ttypes;
-    auto jtypes = j["entries"];
-    std::transform(jtypes.cbegin(), jtypes.cend(), std::back_inserter(ttypes), [](const json& jv) {
-        return std::make_pair(jv[0].get<std::string>(), jv[1].get<std::string>());
+    std::vector<std::string> props;
+    auto jprops = j["props"];
+    std::transform(jprops.cbegin(), jprops.cend(), std::back_inserter(props), [](const json& jv) {
+        return jv.get<std::string>();
     });
 
-    return new RecordType(name, iskey, smtname, boxfunc, isvalue, ttypes);
+    std::vector<std::string> ttypes;
+    auto jtypes = j["ttypes"];
+    std::transform(jtypes.cbegin(), jtypes.cend(), std::back_inserter(ttypes), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    std::vector<std::string> smtaccessors;
+    auto jaccessors = j["smtaccessors"];
+    std::transform(jaccessors.cbegin(), jaccessors.cend(), std::back_inserter(ttypes), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    return new RecordType(name, iskey, smtname, smttypetag, boxfunc, unboxfunc, consfunc, isvalue, props, ttypes, smtaccessors);
 }
 
 json RecordType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
 {
     auto jres = json::object();
-    for(size_t i = 0; i < this->entries.size(); ++i)
+    for(size_t i = 0; i < this->props.size(); ++i)
     {
-        const std::pair<std::string, std::string>& entry = this->entries[i];
-        auto ttype = finfo.typemap.find(entry.second)->second;
-        return jres[entry.first] = ttype->fuzz(finfo, rnd);
+        auto ttype = finfo.apimodule->typemap.find(this->ttypes[i])->second;
+        return jres[this->ttypes[i]] = ttype->fuzz(finfo, rnd);
     }
     return jres;
 }
 
-json RecordType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
+std::optional<z3::expr> RecordType::toz3arg(ParseInfo& pinfo, json j, z3::context& c) const
 {
-    auto jres = json::object();
-    for(size_t i = 0; i < this->entries.size(); ++i)
-    {
-        const std::pair<std::string, std::string>& entry = this->entries[i];
-        auto idxval = ex->evalConsFunc(entry.second, ex->stepContext(ctx, i));
-
-        auto ttype = ex->typemap.find(entry.second)->second;
-        jres[entry.first] = ttype->extract(ex, idxval);
-    }
-    return jres;
-}
-
-std::optional<std::string> RecordType::consprint(const ConvInfo& cinfo, json j) const
-{
-    if(!j.is_object() || this->entries.size() != j.size())
+    if(!j.is_object() || this->props.size() != j.size())
     {
         return std::nullopt;
     }
 
-    std::string bres;
-    for(size_t i = 0; i < this->entries.size(); ++i)
+    std::vector<const IType*> argtypes;
+    z3::expr_vector targs(c);
+    for(size_t i = 0; i < this->props.size(); ++i)
     {
-        const std::pair<std::string, std::string>& entry = this->entries[i];
-        if(i != 0)
-        {
-            bres += ", ";
-        }
+        const std::string& tt = this->ttypes[i];
+        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
 
-        auto ttype = cinfo.typemap.find(entry.second)->second;
-        auto pexpr = ttype->consprint(cinfo, j[entry.first]);
+        auto pexpr = ttype->toz3arg(pinfo, j[i], c);
         if(!pexpr.has_value())
         {
             return std::nullopt;
         }
 
-        bres += entry.first + ": " + pexpr.value();
-    }
-
-    return std::make_optional(std::string(this->isvalue ? "#" : "@") + "{" + bres + "}");
-}
-
-std::optional<z3::expr> RecordType::parseJSON(ParseInfo* pinfo, json j) const
-{
-    if(!j.is_object() || this->entries.size() != j.size())
-    {
-        return std::nullopt;
-    }
-
-    z3::expr_vector targs(*(pinfo->c));
-    for(size_t i = 0; i < this->entries.size(); ++i)
-    {
-        const std::pair<std::string, std::string>& entry = this->entries[i];
-        auto ttype = pinfo->typemap.find(entry.second)->second;
-
-        auto pexpr = ttype->parseJSON(pinfo, j[entry.first]);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
+        argtypes.push_back(ttype);
         targs.push_back(pexpr.value());
     }
 
-    return pinfo->consrecordfuncs[this->name].value()(targs);
+    return pinfo.callfunc(this->consfunc, targs, argtypes, this, c);
+}
+
+std::optional<std::string> RecordType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
+{
+    if(!j.is_object() || this->props.size() != j.size())
+    {
+        return std::nullopt;
+    }
+
+    auto iidt = indent + "  ";
+    std::string bres;
+    for(size_t i = 0; i < this->props.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+       
+        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
+        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
+        if(!pexpr.has_value())
+        {
+            return std::nullopt;
+        }
+
+        bres += '\n' + iidt + this->props[i] + "=" + pexpr.value();
+
+        if(i != this->ttypes.size() - 1)
+        {
+            bres += ',' ;
+        }
+    }
+
+    if(this->ttypes.size() == 0)
+    {
+        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "{}");
+    }
+    else
+    {
+        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "{" + bres + indent + "}");
+    }
+}
+
+json RecordType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+{
+    auto jres = json::object();
+    for(size_t i = 0; i < this->props.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+        auto idxval = ex.extendContext(m, ctx, i);
+
+        auto ttype = ex.apimodule->typemap.find(tt)->second;
+        jres[this->props[i]] = ttype->argextract(ex, idxval, m);
+    }
+    return jres;
+}
+
+json RecordType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+{
+    auto jres = json::object();
+    for(size_t i = 0; i < this->props.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+        auto ttype = ex.apimodule->typemap.find(tt)->second;
+
+        auto access = ex.callfunc(this->smtaccessors[i], res, this, ttype, m.ctx());
+        auto ival = m.eval(access, true);
+        jres[this->props[i]] = ttype->resextract(ex, ival, m);
+    }
+    return jres;
 }
 
 ListType* ListType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto oftype = j["oftype"].get<std::string>();
+    auto smtname = j["smtname"].get<std::string>();
+    auto smttypetag = j["smttypetag"].get<std::string>();
+    auto boxfunc = j["boxfunc"].get<std::string>();
+    auto unboxfunc = j["unboxfunc"].get<std::string>();
 
-    return new ListType(name, oftype);
+    auto oftype = j["oftype"].get<std::string>();
+    auto smtsizefunc = j["smtsizefunc"].get<std::string>();
+    auto smtgetfunc = j["smtgetfunc"].get<std::string>();
+
+    std::vector<std::string> smtconsfunc_k;
+    auto jcons = j["smtconsfunc_k"];
+    std::transform(jcons.cbegin(), jcons.cend(), std::back_inserter(smtconsfunc_k), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    return new ListType(name, smtname, smttypetag, boxfunc, unboxfunc, oftype, smtconsfunc_k, smtsizefunc, smtgetfunc);
 }
 
 json ListType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1938,7 +2195,7 @@ json ListType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     std::uniform_int_distribution<uint64_t> distribution(0, finfo.limits.container_max);
     auto lsize = distribution(rnd);
 
-    auto etype = finfo.typemap.find(this->oftype)->second;
+    auto etype = finfo.apimodule->typemap.find(this->oftype)->second;
     auto jres = json::array();
     for(size_t i = 0; i < lsize; ++i)
     {
@@ -1948,74 +2205,114 @@ json ListType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     return jres;
 }
 
-json ListType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
+std::optional<z3::expr> ListType::toz3arg(ParseInfo& pinfo, json j, z3::context& c) const
 {
-    auto etype = ex->typemap.find(this->oftype)->second;
-
-    auto v = ex->evalConsFunc("ListSize", ctx);
-    assert(v.is_bv());
-        
-    auto len = ex->bvToNumber(v);
-    auto jres = json::array();
-    for(size_t i = 0; i < len; ++i)
+    if(!j.is_array())
     {
-        auto idxval = ex->evalConsFunc(this->oftype, ex->stepContext(ctx, i));
-        jres.push_back(etype->extract(ex, idxval));
+        return std::nullopt;
+    }
+
+    auto ttype = pinfo.apimodule->typemap.find(this->oftype)->second;
+
+    std::vector<const IType*> argtypes;
+    z3::expr_vector targs(c);
+    for(size_t i = 0; i < j.size(); ++i)
+    {
+
+        auto pexpr = ttype->toz3arg(pinfo, j[i], c);
+        if(!pexpr.has_value())
+        {
+            return std::nullopt;
+        }
+
+        argtypes.push_back(ttype);
+        targs.push_back(pexpr.value());
+    }
+
+    //
+    //TODO: we need to add an append function here as well 
+    //
+    assert(j.size() <= 5);
+
+    if(j.size() == 0)
+    {
+        return c.constant(this->smtconsfunc_k[0].c_str(), c.uninterpreted_sort(this->smtname.c_str()));
+    }
+    else
+    {
+        return pinfo.callfunc(this->smtconsfunc_k[j.size()], targs, argtypes, this, c);
+    }
+}
+
+std::optional<std::string> ListType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
+{
+    if(!j.is_array())
+    {
+        return std::nullopt;
+    }
+
+    auto ttype = pinfo.apimodule->typemap.find(this->oftype)->second;
+
+    auto iidt = indent + "  ";
+    std::string bres;
+    for(size_t i = 0; i < j.size(); ++i)
+    {
+        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
+        if(!pexpr.has_value())
+        {
+            return std::nullopt;
+        }
+
+        bres += '\n' + iidt + pexpr.value();
+
+        if(i != j.size() - 1)
+        {
+            bres += ',' ;
+        }
+    }
+
+    if(j.size() == 0)
+    {
+        return std::make_optional(indent + this->name + "@" + "{}");
+    }
+    else
+    {
+        return std::make_optional(indent + this->name + "@" + "{" + bres + indent + "}");
+    }
+}
+
+json ListType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+{
+    auto jres = json::array();
+
+    auto lef = ex.getArgContextConstructor(m, "ListSize@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
+    auto lenval = ex.bvToCardinality(m, lef(ctx));
+
+    auto ttype = ex.apimodule->typemap.find(this->oftype)->second;
+
+    for(size_t i = 0; i < lenval; ++i)
+    {
+        auto idxval = ex.extendContext(m, ctx, i);
+        jres.push_back(ttype->argextract(ex, idxval, m));
     }
     return jres;
 }
 
-std::optional<std::string> ListType::consprint(const ConvInfo& cinfo, json j) const
+json ListType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
 {
-    if(!j.is_array())
+    auto lef = ex.callfunc(this->smtsizefunc, res, this, ex.apimodule->typemap.find("NSCore::Nat")->second, m.ctx());
+    auto lenval = ex.bvToCardinality(m, m.eval(lef, true));
+
+    auto ttype = ex.apimodule->typemap.find(this->oftype)->second;
+
+    auto jres = json::array();
+    for(size_t i = 0; i < lenval; ++i)
     {
-        return std::nullopt;
+        auto access = ex.callfunc(this->smtgetfunc, res, this, ttype, m.ctx());
+        auto ival = m.eval(access, true);
+        jres.push_back(ttype->resextract(ex, ival, m));
     }
-
-    auto etype = cinfo.typemap.find(this->oftype)->second;
-
-    std::string bres;
-    for(size_t i = 0; i < j.size(); ++i)
-    {
-        if(i != 0)
-        {
-            bres += ", ";
-        }
-
-        auto pexpr = etype->consprint(cinfo, j[i]);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        bres += pexpr.value();
-    }
-
-    return std::make_optional(this->name + "@" + "{" + bres + "}");
-}
-
-std::optional<z3::expr> ListType::parseJSON(ParseInfo* pinfo, json j) const
-{
-    if(!j.is_array())
-    {
-        return std::nullopt;
-    }
-
-    auto etype = pinfo->typemap.find(this->oftype)->second;
-
-    z3::expr_vector targs(*(pinfo->c));
-    for(size_t i = 0; i < j.size(); ++i)
-    {
-        auto pexpr = etype->parseJSON(pinfo, j[i]);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        targs.push_back(pexpr.value());
-    }
-
-    return pinfo->conslistfuncs[this->name].value()(targs);
+    return jres;
 }
 
 UnionType* UnionType::jparse(json j)
@@ -2023,13 +2320,17 @@ UnionType* UnionType::jparse(json j)
     auto name = j["name"].get<std::string>();
     auto iskey = j["iskey"].get<bool>();
 
+    auto smtname = j["smtname"].get<std::string>();
+    auto smttypefunc = j["smttypefunc"].get<std::string>();
+    auto smtunboxfunc = j["smtunboxfunc"].get<std::string>();
+
     std::vector<std::string> opts;
-    auto jtypes = j["opts"];
-    std::transform(jtypes.cbegin(), jtypes.cend(), std::back_inserter(opts), [](const json& jv) {
+    auto jopts = j["opts"];
+    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(opts), [](const json& jv) {
         return jv.get<std::string>();
     });
 
-    return new UnionType(name, iskey, opts);
+    return new UnionType(name, iskey, smtname, opts, smttypefunc, smtunboxfunc);
 }
 
 json UnionType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2037,25 +2338,70 @@ json UnionType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     std::uniform_int_distribution<uint64_t> distribution(0, this->opts.size() - 1);
     auto i = distribution(rnd);
 
-    auto otype = finfo.typemap.find(this->opts[i])->second;
+    auto otype = finfo.apimodule->typemap.find(this->opts[i])->second;
     return otype->fuzz(finfo, rnd);
 }
 
-json UnionType::extract(ExtractionInfo* ex, const z3::expr& ctx) const
-{
-    auto v = ex->evalConsFunc("UnionItem", ctx);
-    assert(v.is_bv());
-        
-    auto idx = ex->bvToNumber(v);
-    auto uval = ex->evalConsFunc(this->opts[idx], ex->stepContext(ctx, 0));
-    return ex->typemap.find(this->opts[idx])->second->extract(ex, uval);
-}
 
-std::optional<std::string> UnionType::consprint(const ConvInfo& cinfo, json j) const
+std::optional<z3::expr> UnionType::toz3arg(ParseInfo& pinfo, json j, z3::context& c) const
 {
     for(size_t i = 0; i < this->opts.size(); ++i)
     {
-        auto pexpr = cinfo.typemap.find(this->opts[i])->second->consprint(cinfo, j);
+        auto ttype = dynamic_cast<const IGroundedType*>(pinfo.apimodule->typemap.find(this->opts[i])->second);
+        auto pexpr = ttype->toz3arg(pinfo, j, c);
+        if(pexpr.has_value())
+        {
+            if(this->iskey)
+            {
+                if(ttype->name == "NSCore::None")
+                {
+                    return std::make_optional(c.constant("BKey@none", c.uninterpreted_sort("BKey")));
+                }
+                else
+                {
+                    auto boxobjfunc = c.function(ttype->boxfunc.c_str(), getZ3SortFor(pinfo.apimodule, ttype, c), c.uninterpreted_sort("bsq_keyobject"));
+                    auto boxkeyfunc = c.function("BKey@box", c.uninterpreted_sort("TypeTag"), c.uninterpreted_sort("bsq_keyobject"), c.uninterpreted_sort("BKey"));
+                    
+                    auto ttag = c.constant(ttype->smttypetag.c_str(), c.uninterpreted_sort("TypeTag"));
+                    return std::make_optional(boxkeyfunc(ttag, boxobjfunc(pexpr.value())));
+                }
+            }
+            else
+            {
+                if(ttype->name == "NSCore::None")
+                {
+                    return std::make_optional(c.constant("BTerm@none", c.uninterpreted_sort("BTerm")));
+                }
+                else if(ttype->iskey)
+                {
+                    auto boxobjfunc = c.function(ttype->boxfunc.c_str(), getZ3SortFor(pinfo.apimodule, ttype, c), c.uninterpreted_sort("bsq_keyobject"));
+                    auto boxkeyfunc = c.function("BKey@box", c.uninterpreted_sort("TypeTag"), c.uninterpreted_sort("bsq_keyobject"), c.uninterpreted_sort("BKey"));
+                    auto boxkeytermfunc = c.function("BTerm@keybox",c.uninterpreted_sort("BKey"), c.uninterpreted_sort("BTerm"));
+                    
+                    auto ttag = c.constant(ttype->smttypetag.c_str(), c.uninterpreted_sort("TypeTag"));
+                    return std::make_optional(boxkeytermfunc(boxkeyfunc(ttag, boxobjfunc(pexpr.value()))));
+                }
+                else
+                {
+                    auto boxobjfunc = c.function(ttype->boxfunc.c_str(), getZ3SortFor(pinfo.apimodule, ttype, c), c.uninterpreted_sort("bsq_object"));
+                    auto boxtermfunc = c.function("BTerm@box", c.uninterpreted_sort("TypeTag"), c.uninterpreted_sort("bsq_object"), c.uninterpreted_sort("BTerm"));
+                    
+                    auto ttag = c.constant(ttype->smttypetag.c_str(), c.uninterpreted_sort("TypeTag"));
+                    return std::make_optional(boxtermfunc(ttag, boxobjfunc(pexpr.value())));
+                }
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<std::string> UnionType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
+{
+    for(size_t i = 0; i < this->opts.size(); ++i)
+    {
+        auto ttype = dynamic_cast<const IGroundedType*>(pinfo.apimodule->typemap.find(this->opts[i])->second);
+        auto pexpr = ttype->tobsqarg(pinfo, j, indent);
         if(pexpr.has_value())
         {
             return pexpr;
@@ -2065,17 +2411,54 @@ std::optional<std::string> UnionType::consprint(const ConvInfo& cinfo, json j) c
     return std::nullopt;
 }
 
-std::optional<z3::expr> UnionType::parseJSON(ParseInfo* pinfo, json j) const
+json UnionType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
-     for(size_t i = 0; i < this->opts.size(); ++i)
+    auto bef = ex.getArgContextConstructor(m, "UnionChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
+    auto choice = ex.bvToCardinality(m, bef(ctx));
+
+    auto ttype = dynamic_cast<const IGroundedType*>(ex.apimodule->typemap.find(this->opts[choice])->second);
+    return ttype->argextract(ex, ctx, m);
+}
+
+json UnionType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+{
+    z3::context& c = m.ctx();
+
+    auto getkeytagfunc = c.function("GetTypeTag@BKey", c.uninterpreted_sort("BKey"), c.uninterpreted_sort("TypeTag"));
+    auto gettermtagfunc = c.function("GetTypeTag@BTerm", c.uninterpreted_sort("BTerm"), c.uninterpreted_sort("TypeTag"));
+
+    std::string tag = m.eval(this->iskey ? getkeytagfunc(res) : gettermtagfunc(res), true).to_string();
+    const IGroundedType* ttype = dynamic_cast<const IGroundedType*>(std::find_if(ex.apimodule->typemap.cbegin(), ex.apimodule->typemap.cend(), [&tag](const std::pair<std::string, const IType*>& entry) {
+        auto gtype = dynamic_cast<const IGroundedType*>(entry.second);
+        return gtype != nullptr && gtype->smttypetag == tag;
+    })->second);
+
+    if(this->iskey)
     {
-        auto pexpr = pinfo->typemap.find(this->opts[i])->second->parseJSON(pinfo, j);
-        if(pexpr.has_value())
+        auto unboxkeyfunc = c.function("BKey_value", c.uninterpreted_sort("BKey"), c.uninterpreted_sort("bsq_keyobject"));
+        auto unboxobjfunc = c.function(ttype->unboxfunc.c_str(), c.uninterpreted_sort("bsq_keyobject"), getZ3SortFor(ex.apimodule, ttype, c));
+                    
+        auto vval = m.eval(unboxobjfunc(unboxkeyfunc(res)), true);
+        return ttype->resextract(ex, vval, m);
+    }
+    else
+    {
+        if(ttype->iskey)
         {
-            auto boxhops = std::make_pair(this->opts[i], this->name);
-            return std::make_optional(pinfo->boxfuncs[boxhops].value()(pexpr.value()));
+            auto unboxtermfunc = c.function("BTerm_keyvalue", c.uninterpreted_sort("BTerm"), c.uninterpreted_sort("BKey"));
+            auto unboxkeyfunc = c.function("BKey_value", c.uninterpreted_sort("BKey"), c.uninterpreted_sort("bsq_keyobject"));
+            auto unboxobjfunc = c.function(ttype->unboxfunc.c_str(), c.uninterpreted_sort("bsq_keyobject"), getZ3SortFor(ex.apimodule, ttype, c));
+
+            auto vval = m.eval(unboxobjfunc(unboxkeyfunc(unboxtermfunc(res))), true);
+            return ttype->resextract(ex, vval, m);
+        }
+        else
+        {
+            auto unboxtermfunc = c.function("BTerm_termvalue", c.uninterpreted_sort("BTerm"), c.uninterpreted_sort("bsq_object"));
+            auto unboxobjfunc = c.function(ttype->unboxfunc.c_str(), c.uninterpreted_sort("bsq_object"), getZ3SortFor(ex.apimodule, ttype, c));
+                    
+            auto vval = m.eval(unboxobjfunc(unboxtermfunc(res)), true);
+            return ttype->resextract(ex, vval, m);
         }
     }
-
-    return std::nullopt;
 }
