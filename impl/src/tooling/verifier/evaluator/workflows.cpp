@@ -17,7 +17,7 @@
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string signame)
+json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string signame, bool bsqon)
 {
     z3::context c;
     z3::solver s(c);
@@ -50,6 +50,9 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string si
     }
     else
     {
+        z3::expr_vector chks(c);
+        ParseInfo pinfo(apimodule, chks);
+
         auto m = s.get_model();
 
         json argv = json::array();
@@ -60,7 +63,15 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string si
             auto ctx = einfo.extendContext(m, rootctx, i);
             auto jarg = argtype->resextract(einfo, ctx, m);
 
-            argv.push_back(jarg);
+            if(!bsqon)
+            {
+                argv.push_back(jarg);
+            }
+            else
+            {
+                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg, "");
+                argv.push_back(bsqarg.value());
+            }
         }
 
         return {
@@ -79,7 +90,7 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string si
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string signame, json jin)
+json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string signame, json jin, bool bsqon)
 {
     z3::context c;
     z3::solver s(c);
@@ -130,6 +141,13 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string sig
         
         auto resexpr = c.constant("_@smtres@", getZ3SortFor(apimodule, (*sig)->resType, c));
         auto eres = (*sig)->resType->resextract(einfo, resexpr, m);
+        
+        if(bsqon)
+        {
+            std::optional<std::string> bsqarg = (*sig)->resType->tobsqarg(pinfo, eres, "");
+            eres = bsqarg.value();
+        }
+
         return {
             {"result", "output"},
             {"time", delta_ms},
@@ -147,7 +165,7 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string sig
 //  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
 //  Timeout a and return the JSON payload -- {result: "unknown", time: number}
 
-json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string signame, json jout)
+json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string signame, json jout, bool bsqon)
 {
     z3::context c;
     z3::solver s(c);
@@ -199,7 +217,15 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string sign
             auto ctx = einfo.extendContext(m, rootctx, i);
             auto jarg = argtype->resextract(einfo, ctx, m);
 
-            argv.push_back(jarg);
+            if(!bsqon)
+            {
+                argv.push_back(jarg);
+            }
+            else
+            {
+                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg, "");
+                argv.push_back(bsqarg.value());
+            }
         }
 
         return {
@@ -253,7 +279,7 @@ int main(int argc, char** argv)
             std::string smt2decl = payload["smt2decl"].get<std::string>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowValidate(smt2decl, apimodule, payload["signame"].get<std::string>());
+            json result = workflowValidate(smt2decl, apimodule, payload["signame"].get<std::string>(), bsqon);
             
             std::cout << result << std::endl;
         }
@@ -272,7 +298,7 @@ int main(int argc, char** argv)
             std::string smt2decl = payload["smt2decl"].get<std::string>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowCompute(smt2decl, apimodule, payload["signame"].get<std::string>(), payload["jin"]);
+            json result = workflowCompute(smt2decl, apimodule, payload["signame"].get<std::string>(), payload["jin"], bsqon);
             
             std::cout << result << std::endl;
         }
@@ -291,7 +317,7 @@ int main(int argc, char** argv)
             std::string smt2decl = payload["smt2decl"].get<std::string>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowInvert(smt2decl, apimodule, payload["signame"].get<std::string>(), payload["jout"]);
+            json result = workflowInvert(smt2decl, apimodule, payload["signame"].get<std::string>(), payload["jout"], bsqon);
             
             std::cout << result << std::endl;
         }

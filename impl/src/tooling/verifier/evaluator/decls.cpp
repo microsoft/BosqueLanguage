@@ -2493,11 +2493,14 @@ InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, con
 APIModule* APIModule::jparse(json j)
 {
     std::map<std::string, const IType*> typemap;
-    xxxx;
     auto jtypemap = j["typemap"];
-    std::transform(jtypemap.cbegin(), jtypemap.cend(), std::back_inserter(siglist), [&typemap](const json& jv) {
-        return InvokeSignature::jparse(jv, typemap);
-    });
+    for (json::iterator iter = jtypemap.begin(); iter != jtypemap.end(); ++iter) 
+    {
+        auto name = iter.key();
+        auto val = IType::jparse(iter.value());
+
+        typemap[name] = val;
+    }
 
     std::vector<InvokeSignature*> siglist;
     auto jsiglist = j["siglist"];
