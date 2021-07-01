@@ -734,7 +734,7 @@ public:
 
     const std::vector<std::string> smtaccessors;
 
-    RecordType(std::string name, bool iskey, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string consfunc, bool isvalue, std::vector<std::string> props, std::vector<std::string> entries, std::vector<std::string> smtaccessors) : IGroundedType(name, iskey, smtname, smttypetag, boxfunc, unboxfunc), consfunc(consfunc), isvalue(isvalue), props(props), ttypes(ttypes), smtaccessors(smtaccessors) {;}
+    RecordType(std::string name, bool iskey, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string consfunc, bool isvalue, std::vector<std::string> props, std::vector<std::string> ttypes, std::vector<std::string> smtaccessors) : IGroundedType(name, iskey, smtname, smttypetag, boxfunc, unboxfunc), consfunc(consfunc), isvalue(isvalue), props(props), ttypes(ttypes), smtaccessors(smtaccessors) {;}
     virtual ~RecordType() {;}
 
     static RecordType* jparse(json j);
@@ -773,10 +773,11 @@ public:
 class EnumType : public IGroundedType
 {
 public:
+    const std::string underlying;
     const std::string smttagfunc;
-    const std::vector<std::pair<std::string, std::string>> enummap; //map from full enum names to the SMT constructor function names
+    const std::vector<std::pair<std::string, std::string>> enuminvs; //map from full enum names to the invoke values
 
-    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string smttagfunc, std::vector<std::pair<std::string, std::string>> enummap) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), smttagfunc(smttagfunc), enummap(enummap) {;}
+    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string underlying, std::string smttagfunc, std::vector<std::pair<std::string, std::string>> enumvalues) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), underlying(underlying), smttagfunc(smttagfunc), enuminvs(enuminvs) {;}
     virtual ~EnumType() {;}
 
     static EnumType* jparse(json j);

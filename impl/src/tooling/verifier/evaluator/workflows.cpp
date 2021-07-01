@@ -236,6 +236,7 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string sign
     }
 }
 
+
 json getPayload(int argc, char** argv, int argidx)
 {
     try
@@ -243,12 +244,12 @@ json getPayload(int argc, char** argv, int argidx)
         json payload;
         if(argc == argidx + 1)
         {
-            payload << std::cin;
+            std::cin >> payload;
         }
         else
         {
             std::ifstream infile(argv[argidx + 1]);
-            payload << infile;
+            infile >> payload;
         }
 
         return payload;

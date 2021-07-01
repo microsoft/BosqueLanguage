@@ -137,6 +137,36 @@ const BSQType* jsonLoadTypedNumberType(boost::json::value v)
     }
 }
 
+const BSQType* jsonLoadEnumType(boost::json::value v)
+{
+    auto underlying = Environment::g_typenameToIDMap[jsonGetAsString(v, "underlying")];
+
+    std::vector<std::pair<std::string, uint32_t>> enuminvs;
+    std::transform(v.as_object().at("enuminvs").as_array().cbegin(), v.as_object().at("enuminvs").as_array().cend(), std::back_inserter(enuminvs), [](boost::json::value arg) {
+        return std::make_pair(jsonGetAsString(arg, "enum"), jsonGetAsUInt<uint32_t>(arg, "offset"));
+    });
+
+    switch(underlying)
+    {
+    case BSQ_TYPE_ID_BOOL:
+        return new BSQEnumType(j_tkey(v), j_name(v), BSQType::g_typeBool, enuminvs); 
+    case BSQ_TYPE_ID_NAT:
+        return new BSQEnumType(j_tkey(v), j_name(v), BSQType::g_typeNat, enuminvs); 
+    case BSQ_TYPE_ID_INT:
+        return new BSQEnumType(j_tkey(v), j_name(v), BSQType::g_typeInt, enuminvs);
+    case BSQ_TYPE_ID_BIGNAT:
+        return new BSQEnumType(j_tkey(v), j_name(v), BSQType::g_typeBigNat, enuminvs);
+    case BSQ_TYPE_ID_BIGINT:
+        return new BSQEnumType(j_tkey(v), j_name(v), BSQType::g_typeBigInt, enuminvs);
+    case BSQ_TYPE_ID_STRING:
+        return new BSQEnumType(j_tkey(v), j_name(v), BSQType::g_typeRational, enuminvs);
+    default: {
+        assert(false);
+        return nullptr;
+    }
+    }
+}
+
 const BSQType* jsonLoadListType(boost::json::value v)
 {
     BSQTypeID etype = Environment::g_typenameToIDMap[jsonGetAsString(v, "etype")];
@@ -366,7 +396,8 @@ void jsonLoadBSQTypeDecl(boost::json::value v)
     case ICPPParseTag::TypedNumberTag:
         ttype = jsonLoadTypedNumberType(v);
         break;
-    case xxxx:
+    case ICPPParseTag::EnumTag:
+        ttype = jsonLoadEnumType(v);
         break;
     case ICPPParseTag::ListTag:
         ttype = jsonLoadListType(v);

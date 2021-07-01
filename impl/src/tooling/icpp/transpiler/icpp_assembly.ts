@@ -88,6 +88,7 @@ enum ICPPParseTag
     RecordTag,
     EntityTag,
     EphemeralListTag,
+    EnumTag,
     InlineUnionTag,
     RefUnionTag
 }
@@ -527,6 +528,13 @@ class ICPPAssembly
                             //         the funky v field -- we probably want to add some extra access (and maybe constructor) magic too 
                             //
                             return edecl.jemitTypedNumber(edecl.extradata as MIRResolvedTypeKey, edecl.extradata as MIRResolvedTypeKey);
+                        }
+                        case ICPPParseTag.EnumTag: {
+                            //
+                            //TODO: we need to switch this to encode the underlying and primitive types in the type decl really -- not as
+                            //         the funky v field -- we probably want to add some extra access (and maybe constructor) magic too 
+                            //
+                            return edecl.jemitEnum(edecl.extradata as MIRResolvedTypeKey, edecl.extradata as MIRResolvedTypeKey);
                         }
                         case ICPPParseTag.VectorTag: {
                             const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;

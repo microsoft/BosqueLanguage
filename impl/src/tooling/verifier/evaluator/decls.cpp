@@ -2318,20 +2318,15 @@ json ListType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m)
     return jres;
 }
 
-
 EnumType* EnumType::jparse(json j)
 {
-    std::vector<std::pair<std::string, std::string>> enummap;
-    auto jenummap = j["enummap"];
-    for (json::iterator iter = jenummap.begin(); iter != jenummap.end(); ++iter) 
-    {
-        auto name = iter.key();
-        auto val = iter.value().get<std::string>();
+    std::vector<std::pair<std::string, std::string>> enuminvs;
+    auto jenuminvs = j["enuminvs"];
+    std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enuminvs), [](const json& jv) {
+        return std::make_pair(jv["enum"].get<std::string>(), jv["inv"].get<std::string>());
+    });
 
-        enummap.push_back(std::make_pair(name, val));
-    }
-
-    return new EnumType(j["name"].get<std::string>(), j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), j["smttagfunc"].get<std::string>(), enummap);
+    return new EnumType(j["name"].get<std::string>(), j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), j["underlying"].get<std::string>(), j["smttagfunc"].get<std::string>(), enuminvs);
 }
 
 json EnumType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2343,10 +2338,10 @@ json EnumType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     }
     else
     {
-        std::uniform_int_distribution<size_t> distribution(0, this->enummap.size() - 1);
+        std::uniform_int_distribution<size_t> distribution(0, this->enuminvs.size() - 1);
         auto opt = distribution(rnd);
 
-        res = this->enummap[opt].first;
+        res = this->enuminvs[opt].first;
 
         finfo.addReuseForType(this->name, res);
         return res;
@@ -2361,11 +2356,11 @@ std::optional<z3::expr> EnumType::toz3arg(ParseInfo& pinfo, json j, z3::context&
     }
     
     auto ename = j.get<std::string>();
-    auto ii = std::find_if(this->enummap.cbegin(), this->enummap.cend(), [&ename](const std::pair<std::string, std::string>& entry) {
+    auto ii = std::find_if(this->enuminvs.cbegin(), this->enuminvs.cend(), [&ename](const std::pair<std::string, std::string>& entry) {
         return entry.first == ename;
     });
 
-    if(ii == this->enummap.cend())
+    if(ii == this->enuminvs.cend())
     {
         return std::nullopt;
     }
@@ -2388,7 +2383,7 @@ json EnumType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m)
     auto bef = ex.getArgContextConstructor(m, "EnumChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
     auto choice = ex.bvToCardinality(m, bef(ctx));
 
-    return this->enummap[choice].first;
+    return ex.apimodule->typemap.find(this->underlying)->second->argextract(ex, ctx, m);
 }
 
 json EnumType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const

@@ -4250,8 +4250,6 @@ class Parser {
                 return [ename, dvalue];
             })[0];
             
-            const valuefield = new MemberFieldDecl(sinfo, this.m_penv.getCurrentFile(), ["private"], "v", oftype, undefined);
-
             const provides = [
                 [new NominalTypeSignature("NSCore", ["Some"]), undefined],
                 [new NominalTypeSignature("NSCore", ["KeyType"]), undefined], 
@@ -4262,11 +4260,17 @@ class Parser {
             //TODO: maybe want to make this parsable too!
             //
 
+            const fparam = new FunctionParameter("v", oftype, false, undefined, undefined, undefined);
+        
+            const createbody = new BodyImplementation(`s_create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "enum_create");
+            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [fparam], undefined, undefined, etype, [], [], false, false, new Set<string>(), createbody, [], []);
+            const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_create", createdecl);
+
             const invariants: InvariantDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
-            const staticFunctions: StaticFunctionDecl[] = [];
+            const staticFunctions: StaticFunctionDecl[] = [create];
             const staticOperators: StaticOperatorDecl[] = [];
-            const memberFields: MemberFieldDecl[] = [valuefield];
+            const memberFields: MemberFieldDecl[] = [];
             const memberMethods: MemberMethodDecl[] = [];
     
             if(this.testAndConsumeTokenIf("&")) {
@@ -4294,10 +4298,7 @@ class Parser {
                 }
 
                 const exp = enums[i][1] !== undefined ? (enums[i][1] as ConstantExpressionValue).exp : new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
-                const parg = new PositionalArgument(undefined, false, exp);
-
-                xxxx;
-                const enminit = new ConstructorPrimaryExpression(sinfo, true, etype, new Arguments([parg]));
+                const enminit = new CallStaticFunctionOrOperatorExpression(sinfo, etype, "s_create", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, exp)]), "std");
                 const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
                 staticMembers.push(enm);
             }

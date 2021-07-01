@@ -168,6 +168,18 @@ class ICPPTypeEmitter {
             //
             ptag = ICPPParseTag.TypedNumberTag;
 
+            xxxx;
+            const tdecl = this.assembly.entityDecls.get(tt.tkey) as MIREntityTypeDecl;
+            const mf = tdecl.fields.find((ff) => ff.fname == "v") as MIRFieldDecl;
+            extradata = mf.declaredType;
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
+            //
+            //TODO: this is odd... we want to handle general typedecl that are of API types as well somehow so we need to adjust this a bit
+            //
+            ptag = ICPPParseTag.EnumTag;
+
+            xxxx;
             const tdecl = this.assembly.entityDecls.get(tt.tkey) as MIREntityTypeDecl;
             const mf = tdecl.fields.find((ff) => ff.fname == "v") as MIRFieldDecl;
             extradata = mf.declaredType;

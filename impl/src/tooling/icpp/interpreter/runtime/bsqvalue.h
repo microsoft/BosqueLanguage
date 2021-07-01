@@ -947,11 +947,12 @@ void enumGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLo
 class BSQEnumType : public BSQStructType
 {
 public:
-    const std::vector<std::pair<std::string, std::string>> consmap;
+    const BSQType* underlying;
+    const std::vector<std::pair<std::string, uint32_t>> enuminvs; //map from full enum names to the constant storage location
 
-    BSQEnumType(BSQTypeID tid, std::string name, const BSQType* underlying, std::vector<std::pair<std::string, std::string>> consmap)
-    : BSQStructType(tid, underlying->allocinfo.inlinedatasize, underlying->allocinfo.inlinedmask, underlying->fpkeycmp, enumDisplay_impl, name, {enumJSONParse_impl, enumGenerateRandom_impl}),
-    consmap(consmap)
+    BSQEnumType(BSQTypeID tid, std::string name, const BSQType* underlying, std::vector<std::pair<std::string, BSQInvokeID>> consmap)
+    : BSQStructType(tid, underlying->allocinfo.inlinedatasize, underlying->allocinfo.inlinedmask, {}, underlying->fpkeycmp, enumDisplay_impl, name, {enumJSONParse_impl, enumGenerateRandom_impl}),
+    enuminvs(enuminvs)
     {;}
 
     virtual ~BSQEnumType() {;}

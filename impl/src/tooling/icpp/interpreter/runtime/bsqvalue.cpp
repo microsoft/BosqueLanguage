@@ -1487,3 +1487,37 @@ void entityTypedNumberGenerateRandom_impl(const BSQType* btype, RandGenerator& r
     auto utype = BSQType::g_typetable[dynamic_cast<const BSQTypedNumberTypeAbstract*>(btype)->underlying];
     return utype->consops.fpGenerateRandom(utype, rnd, sl);
 }
+
+
+std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    auto underlying = dynamic_cast<const BSQEnumType*>(btype)->underlying;
+    return "(" + btype->name + ")" + underlying->fpDisplay(underlying, data);
+}
+
+bool enumJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+{
+    if(!jv.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto ename = jv.as_string();
+
+        auto etype = dynamic_cast<const BSQEnumType*>(btype);
+        auto cpos = std::find_if(etype->enuminvs.cbegin(), etype->enuminvs.cend(), [&ename](const std::pair<std::string, uint32_t>& entry) {
+            entry.first == ename;
+        })->second;
+    
+        etype->underlying->storeValue(sl, Environment::g_constantbuffer + cpos);
+        return true;
+    }
+}
+
+void enumGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
+{
+    //This is going away soon!!!
+    assert(false);
+}
+
