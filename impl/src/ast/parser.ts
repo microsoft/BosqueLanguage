@@ -4296,6 +4296,7 @@ class Parser {
                 const exp = enums[i][1] !== undefined ? (enums[i][1] as ConstantExpressionValue).exp : new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
                 const parg = new PositionalArgument(undefined, false, exp);
 
+                xxxx;
                 const enminit = new ConstructorPrimaryExpression(sinfo, true, etype, new Arguments([parg]));
                 const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
                 staticMembers.push(enm);

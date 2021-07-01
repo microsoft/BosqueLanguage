@@ -342,6 +342,7 @@ enum class ICPPParseTag
     RecordTag,
     EntityTag,
     EphemeralListTag,
+    EnumTag,
     InlineUnionTag,
     RefUnionTag
 };
@@ -364,6 +365,8 @@ void jsonLoadBSQTypeDecl(boost::json::value v)
         break;
     case ICPPParseTag::TypedNumberTag:
         ttype = jsonLoadTypedNumberType(v);
+        break;
+    case xxxx:
         break;
     case ICPPParseTag::ListTag:
         ttype = jsonLoadListType(v);

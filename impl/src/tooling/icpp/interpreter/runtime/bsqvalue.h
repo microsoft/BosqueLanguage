@@ -919,7 +919,7 @@ template <typename T>
 class BSQTypedNumberType : public BSQRegisterType<T>, public BSQTypedNumberTypeAbstract
 {
 public:
-   BSQTypedNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
+    BSQTypedNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
     : BSQRegisterType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl, entityTypedNumberGenerateRandom_impl}), 
     BSQTypedNumberTypeAbstract(underlying)
     {;}
@@ -931,12 +931,30 @@ template <typename T>
 class BSQTypedBigNumberType : public BSQBigNumType<T>, public BSQTypedNumberTypeAbstract
 {
 public:
-   BSQTypedBigNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
+    BSQTypedBigNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
     : BSQBigNumType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl, entityTypedNumberGenerateRandom_impl}), 
     BSQTypedNumberTypeAbstract(underlying)
     {;}
 
     virtual ~BSQTypedBigNumberType() {;}
+};
+
+std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+bool enumJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
+void enumGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+
+class BSQEnumType : public BSQStructType
+{
+public:
+    const std::vector<std::pair<std::string, std::string>> consmap;
+
+    BSQEnumType(BSQTypeID tid, std::string name, const BSQType* underlying, std::vector<std::pair<std::string, std::string>> consmap)
+    : BSQStructType(tid, underlying->allocinfo.inlinedatasize, underlying->allocinfo.inlinedmask, underlying->fpkeycmp, enumDisplay_impl, name, {enumJSONParse_impl, enumGenerateRandom_impl}),
+    consmap(consmap)
+    {;}
+
+    virtual ~BSQEnumType() {;}
 };
 
 //
