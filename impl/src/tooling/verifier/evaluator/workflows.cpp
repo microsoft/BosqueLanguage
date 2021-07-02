@@ -23,7 +23,7 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string si
     z3::solver s(c);
     s.from_string(smt2decl.c_str());
 
-    ExtractionInfo einfo(apimodule, "_@smtres@");
+    ExtractionInfo einfo(apimodule, "_@smtres@_value");
 
     //check the formula
     auto start = std::chrono::system_clock::now();
@@ -129,10 +129,10 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string sig
     }
     else
     {
-        ExtractionInfo einfo(apimodule, "_@smtres@");
+        ExtractionInfo einfo(apimodule, "_@smtres@_value");
         auto m = s.get_model();
         
-        auto resexpr = c.constant("_@smtres@", getZ3SortFor(apimodule, apimodule->api->resType, c));
+        auto resexpr = c.constant("_@smtres@_value", getZ3SortFor(apimodule, apimodule->api->resType, c));
         auto eres = apimodule->api->resType->resextract(einfo, resexpr, m);
         
         if(bsqon)
@@ -167,7 +167,7 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string sign
     z3::expr_vector chks(c);
     ParseInfo pinfo(apimodule, chks);
   
-    auto resvar = c.constant("_@smtres@", getZ3SortFor(apimodule, apimodule->api->resType, c));
+    auto resvar = c.constant("_@smtres@_value", getZ3SortFor(apimodule, apimodule->api->resType, c));
     auto resval = apimodule->api->resType->toz3arg(pinfo, jout, c).value();
     s.add(resvar == resval);
 
@@ -195,7 +195,7 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string sign
     }
     else
     {
-        ExtractionInfo einfo(apimodule, "_@smtres@");
+        ExtractionInfo einfo(apimodule, "_@smtres@_value");
         auto m = s.get_model();
 
         json argv = json::array();
