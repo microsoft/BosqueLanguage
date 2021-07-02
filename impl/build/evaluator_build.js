@@ -21,7 +21,7 @@ let outfile = "";
 let z3lib = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O1 -g -Wall -Wno-reorder-ctor -std=c++17";
+    ccflags = "-O1 -g -Wall -Wno-reorder-ctor -std=c++17 -arch x86_64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
     outfile = "-o " + outbase + "/chkworkflow";

@@ -778,7 +778,7 @@ public:
     const std::string smtselectfunc;
     const std::vector<std::pair<std::string, std::string>> enuminvs; //map from full enum names to the invoke values
 
-    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string underlying, std::string smttagfunc, std::string smtselectfunc, std::vector<std::pair<std::string, std::string>> enumvalues) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), underlying(underlying), smttagfunc(smttagfunc), smtselectfunc(smtselectfunc), enuminvs(enuminvs) {;}
+    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string underlying, std::string smttagfunc, std::string smtselectfunc, std::vector<std::pair<std::string, std::string>> enuminvs) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), underlying(underlying), smttagfunc(smttagfunc), smtselectfunc(smtselectfunc), enuminvs(enuminvs) {;}
     virtual ~EnumType() {;}
 
     static EnumType* jparse(json j);
@@ -822,7 +822,7 @@ public:
     const std::vector<std::string> smtargnames;
     const std::vector<const IType*> argtypes;
     
-    InvokeSignature(std::string name, const IType* resType, std::vector<std::string> argnames, std::vector<std::string> smtargnames, std::vector<const IType*> argTypes): name(name), resType(resType), argnames(argnames), smtargnames(smtargnames), argtypes(argtypes) {;}
+    InvokeSignature(std::string name, const IType* resType, std::vector<std::string> argnames, std::vector<std::string> smtargnames, std::vector<const IType*> argtypes): name(name), resType(resType), argnames(argnames), smtargnames(smtargnames), argtypes(argtypes) {;}
 
     static InvokeSignature* jparse(json j, const std::map<std::string, const IType*>& typemap);
 };

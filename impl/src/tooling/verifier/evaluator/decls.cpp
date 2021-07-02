@@ -534,7 +534,7 @@ std::string generateRandomChar(RandGenerator& rnd)
     }
     else if(cval == printascii + nullchar)
     {
-        data.append('\0');
+        data.append({ '\0' });
     }
     else
     {
