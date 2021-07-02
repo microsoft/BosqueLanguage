@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRFieldKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
@@ -57,6 +57,42 @@ class SMTTypeEmitter {
 
     isUniqueType(tt: MIRType): boolean {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
+    }
+
+    private getSMTTypeForEntity(tt: MIREntityTypeDecl): SMTType {
+        if(tt.specialDecls.has(MIRSpecialTypeCategory.StringOfDecl)) {
+            return new SMTType("BString");
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
+            return new SMTType("BString");
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric) || tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclDecl)) {
+            const dkind = (tt.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[])[0].tkind;
+
+            return this.getSMTTypeFor(this.getMIRType(dkind));
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
+            const dkind = (tt.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[])[0].tkind;
+
+            return this.getSMTTypeFor(this.getMIRType(dkind));
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.BufferDecl)) {
+            //
+            //TODO: implement this representation in the C++ interpreter etc.
+            //
+            assert(false, "Buffer is not implemented yet");
+            return new SMTType(this.mangle(tt.tkey));
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataBufferDecl)) {
+            //
+            //TODO: implement this representation in the C++ interpreter etc.
+            //
+            assert(false, "Buffer is not implemented yet");
+            return new SMTType(this.mangle(tt.tkey));
+        }
+        else {
+            return new SMTType(this.mangle(tt.tkey));
+        }
     }
 
     getSMTTypeFor(tt: MIRType): SMTType {
@@ -121,7 +157,7 @@ class SMTTypeEmitter {
             return new SMTType(this.mangle(tt.trkey));
         }
         else if(this.isUniqueEntityType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
+            return this.getSMTTypeForEntity(this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl);
         }
         else if (this.isUniqueEphemeralType(tt)) {
             return new SMTType(this.mangle(tt.trkey));
@@ -193,24 +229,12 @@ class SMTTypeEmitter {
             return `TypeTag_${this.mangle(tt.trkey)}`;
         }
         else {
-            //
-            //TODO: want to handle the case of stringof, datastring, and typednumber -- should just use the underlying type and repr directly -- type safety ensures we won't use inapropriately
-            //
-
             assert(this.isUniqueEntityType(tt), "Should not be other options")
             return `TypeTag_${this.mangle(tt.trkey)}`;
         }
     }
 
     getSMTConstructorName(tt: MIRType): { cons: string, box: string, bfield: string } {
-        assert(!(this.isType(tt, "NSCore::None") || this.isType(tt, "NSCore::Bool") 
-            || this.isType(tt, "NSCore::Int") || this.isType(tt, "NSCore::Nat") || this.isType(tt, "NSCore::BigInt") || this.isType(tt, "NSCore::BigNat") 
-            || this.isType(tt, "NSCore::Float") || this.isType(tt, "NSCore::Decimal") || this.isType(tt, "NSCore::Rational")
-            || this.isType(tt, "NSCore::StringPos") || this.isType(tt, "NSCore::String") || this.isType(tt, "NSCore::ByteBuffer")
-            || this.isType(tt, "NSCore::ISOTime") || this.isType(tt, "NSCore::LogicalTime") || this.isType(tt, "NSCore::UUID") || this.isType(tt, "NSCore::ContentHash")
-            || this.isType(tt, "NSCore::Regex")), "Special types should be constructed in special ways");
-
-
         const kfix = this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType")) ? "bsqkey_" : "bsqobject_"
         if (this.isUniqueTupleType(tt)) {
             return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };

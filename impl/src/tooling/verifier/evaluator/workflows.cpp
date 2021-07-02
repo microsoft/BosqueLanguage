@@ -24,9 +24,6 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string si
     s.from_string(smt2decl.c_str());
 
     ExtractionInfo einfo(apimodule, "_@smtres@");
-    auto sig = std::find_if(apimodule->siglist.cbegin(), apimodule->siglist.cend(), [&signame](const InvokeSignature* sig) {
-        return sig->name == signame;
-    });
 
     //check the formula
     auto start = std::chrono::system_clock::now();
@@ -57,9 +54,9 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string si
 
         json argv = json::array();
         auto rootctx = einfo.genInitialContext(m);
-        for(size_t i = 0; i < (*sig)->argtypes.size(); ++i)
+        for(size_t i = 0; i < apimodule->api->argtypes.size(); ++i)
         {
-            auto argtype = (*sig)->argtypes[i];
+            auto argtype = apimodule->api->argtypes[i];
             auto ctx = einfo.extendContext(m, rootctx, i);
             auto jarg = argtype->resextract(einfo, ctx, m);
 
@@ -99,14 +96,10 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string sig
     z3::expr_vector chks(c);
     ParseInfo pinfo(apimodule, chks);
 
-    auto sig = std::find_if(apimodule->siglist.cbegin(), apimodule->siglist.cend(), [&signame](const InvokeSignature* sig) {
-        return sig->name == signame;
-    });
-
-    for(size_t i = 0; i < (*sig)->smtargnames.size(); ++i)
+    for(size_t i = 0; i < apimodule->api->smtargnames.size(); ++i)
     {
-        auto argname = (*sig)->smtargnames[i];
-        auto argtype = (*sig)->argtypes[i];
+        auto argname = apimodule->api->smtargnames[i];
+        auto argtype = apimodule->api->argtypes[i];
         
         auto argvar = c.constant(argname.c_str(), getZ3SortFor(apimodule, argtype, c));
         auto argval = argtype->toz3arg(pinfo, jin[i], c).value();
@@ -139,12 +132,12 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string sig
         ExtractionInfo einfo(apimodule, "_@smtres@");
         auto m = s.get_model();
         
-        auto resexpr = c.constant("_@smtres@", getZ3SortFor(apimodule, (*sig)->resType, c));
-        auto eres = (*sig)->resType->resextract(einfo, resexpr, m);
+        auto resexpr = c.constant("_@smtres@", getZ3SortFor(apimodule, apimodule->api->resType, c));
+        auto eres = apimodule->api->resType->resextract(einfo, resexpr, m);
         
         if(bsqon)
         {
-            std::optional<std::string> bsqarg = (*sig)->resType->tobsqarg(pinfo, eres, "");
+            std::optional<std::string> bsqarg = apimodule->api->resType->tobsqarg(pinfo, eres, "");
             eres = bsqarg.value();
         }
 
@@ -173,13 +166,9 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string sign
 
     z3::expr_vector chks(c);
     ParseInfo pinfo(apimodule, chks);
-
-    auto sig = std::find_if(apimodule->siglist.cbegin(), apimodule->siglist.cend(), [&signame](const InvokeSignature* sig) {
-        return sig->name == signame;
-    });
   
-    auto resvar = c.constant("_@smtres@", getZ3SortFor(apimodule, (*sig)->resType, c));
-    auto resval = (*sig)->resType->toz3arg(pinfo, jout, c).value();
+    auto resvar = c.constant("_@smtres@", getZ3SortFor(apimodule, apimodule->api->resType, c));
+    auto resval = apimodule->api->resType->toz3arg(pinfo, jout, c).value();
     s.add(resvar == resval);
 
     s.add(pinfo.chks);
@@ -211,9 +200,9 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string sign
 
         json argv = json::array();
         auto rootctx = einfo.genInitialContext(m);
-        for(size_t i = 0; i < (*sig)->argtypes.size(); ++i)
+        for(size_t i = 0; i < apimodule->api->argtypes.size(); ++i)
         {
-            auto argtype = (*sig)->argtypes[i];
+            auto argtype = apimodule->api->argtypes[i];
             auto ctx = einfo.extendContext(m, rootctx, i);
             auto jarg = argtype->resextract(einfo, ctx, m);
 

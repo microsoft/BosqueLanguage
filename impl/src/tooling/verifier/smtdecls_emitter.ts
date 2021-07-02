@@ -203,6 +203,13 @@ class SMTEmitter {
         assert(false);
     }
 
+    private generateAPITypeConstructorFunction_Enum(tt: MIRType, havocfuncs: Set<String>) {
+        //
+        //TODO: not implemented yet -- generate a select function in the parser and then call that here with a havoc nat
+        //
+        assert(false);
+    }
+
     private processConstructorGenInfo(cgen: SMTConstructorGenCode, constructors: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[]) {
         cgen.uf.forEach((uf) => {
             if(this.assembly.uninterpfunctions.find((f) => SMTFunctionUninterpreted.areDuplicates(f, uf)) === undefined) {
@@ -394,7 +401,9 @@ class SMTEmitter {
             })
         };
 
-        const smtdecl = new SMTEntityDecl(iskey, isapi, smttype.name, ttag, consdecl, consfuncs.box, consfuncs.bfield);
+        const skipcons: boolean = [MIRSpecialTypeCategory.StringOfDecl, MIRSpecialTypeCategory.DataStringDecl, MIRSpecialTypeCategory.EnumTypeDecl].some((sdecl) => edecl.specialDecls.has(sdecl))
+
+        const smtdecl = new SMTEntityDecl(iskey, isapi, smttype.name, ttag, skipcons ? undefined : consdecl, consfuncs.box, consfuncs.bfield);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -452,7 +461,7 @@ class SMTEmitter {
                 this.generateAPITypeConstructorFunction_Map(tt, havocfuncs);
             }
             else if(edecl.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
-                xxxx;
+                this.generateAPITypeConstructorFunction_Enum(tt, havocfuncs);
             }
             else {
                 //Don't need to do anything
@@ -499,7 +508,6 @@ class SMTEmitter {
             }
         }
 
-        xxxx;
         ["NSCore::None", "NSCore::Bool", "NSCore::Int", "NSCore::Nat", "NSCore::BigInt", "NSCore::BigNat", "NSCore::Float", "NSCore::Decimal", "NSCore::Rational", "NSCore::StringPos", "NSCore::String", "NSCore::ByteBuffer", "NSCore::ISOTime", "NSCore::LogicalTime", "NSCore::UUID", "NSCore::ContentHash", "NSCore::Regex"]
             .forEach((ptype) => {
                 const rtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(ptype));
@@ -706,7 +714,13 @@ class SMTEmitter {
             const smtname = this.temitter.mangle(cdecl.gkey);
             const consf = this.temitter.mangle(cdecl.value);
             const ctype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(cdecl.declaredType));
-            this.assembly.constantDecls.push(new SMTConstantDecl(smtname, ctype, consf));
+
+            let optenumname: [string, string] | undefined = undefined;
+            if(cdecl.attributes.includes("enum")) {
+                optenumname = [cdecl.enclosingDecl as string, cdecl.cname];
+            }
+
+            this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf));
         });
 
         this.assembly.maskSizes = this.bemitter.maskSizes;

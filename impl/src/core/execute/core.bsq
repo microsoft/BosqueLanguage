@@ -349,7 +349,7 @@ concept Record provides Some {
 }
 
 //<summary>Result type.</summary>
-struct concept Result<T, E=Any> provides Some {
+struct concept Result<T, E=None> provides Some {
     struct entity Ok provides Result<T, E> {
         field value: T;
 

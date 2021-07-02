@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion, ICPPParseTag } from "./icpp_assembly";
@@ -168,21 +168,25 @@ class ICPPTypeEmitter {
             //
             ptag = ICPPParseTag.TypedNumberTag;
 
-            xxxx;
-            const tdecl = this.assembly.entityDecls.get(tt.tkey) as MIREntityTypeDecl;
-            const mf = tdecl.fields.find((ff) => ff.fname == "v") as MIRFieldDecl;
-            extradata = mf.declaredType;
+            extradata = (tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
         }
         else if(tt.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
-            //
-            //TODO: this is odd... we want to handle general typedecl that are of API types as well somehow so we need to adjust this a bit
-            //
             ptag = ICPPParseTag.EnumTag;
 
-            xxxx;
-            const tdecl = this.assembly.entityDecls.get(tt.tkey) as MIREntityTypeDecl;
-            const mf = tdecl.fields.find((ff) => ff.fname == "v") as MIRFieldDecl;
-            extradata = mf.declaredType;
+            const ttdecl = this.assembly.entityDecls.get(tt.tkey) as MIREntityTypeDecl;
+            extradata = (ttdecl.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[])[0].tkind;
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.BufferDecl)) {
+            //
+            //TODO: implement this representation in the C++ interpreter etc.
+            //
+            assert(false, "Buffer is not implemented yet");
+        }
+        else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataBufferDecl)) {
+            //
+            //TODO: implement this representation in the C++ interpreter etc.
+            //
+            assert(false, "Buffer is not implemented yet");
         }
         else if(tt.specialDecls.has(MIRSpecialTypeCategory.VectorTypeDecl)) {
             ptag = ICPPParseTag.VectorTag;
@@ -234,7 +238,7 @@ class ICPPTypeEmitter {
         const iskey = this.assembly.subtypeOf(this.getMIRType(tt.tkey), this.getMIRType("NSCore::KeyType"));
         return tt.attributes.includes("struct") 
             ? ICPPTypeEntity.createByValueEntity(ptag, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets, iskey, extradata)
-            : ICPPTypeEntity.createByRefEntity(ptag, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets, iskey, extradata)
+            : ICPPTypeEntity.createByRefEntity(ptag, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets, iskey, extradata);
     }
 
     private getICPPTypeForEphemeralList(tt: MIREphemeralListType): ICPPTypeEphemeralList {

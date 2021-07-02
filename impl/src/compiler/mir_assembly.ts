@@ -40,16 +40,21 @@ class MIRConstantDecl {
     readonly cname: string;
     readonly gkey: MIRGlobalKey;
 
+    readonly attributes: string[];
+
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
     readonly declaredType: MIRResolvedTypeKey;
     readonly value: MIRInvokeKey;
 
-    constructor(enclosingDecl: MIRResolvedTypeKey | undefined, cname: string, valuekey: MIRInvokeKey, sinfo: SourceInfo, srcFile: string, declaredType: MIRResolvedTypeKey, gkey: MIRGlobalKey) {
+    constructor(enclosingDecl: MIRResolvedTypeKey | undefined, attributes: string[], cname: string, valuekey: MIRInvokeKey, sinfo: SourceInfo, srcFile: string, declaredType: MIRResolvedTypeKey, gkey: MIRGlobalKey) {
         this.enclosingDecl = enclosingDecl;
         this.cname = cname;
         this.gkey = gkey;
+
+        this.attributes = attributes;
+
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
@@ -58,11 +63,11 @@ class MIRConstantDecl {
     }
 
     jemit(): object {
-        return { enclosingDecl: this.enclosingDecl, cname: this.cname, gkey: this.gkey, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, declaredType: this.declaredType, value: this.value };
+        return { enclosingDecl: this.enclosingDecl, attributes: this.attributes, cname: this.cname, gkey: this.gkey, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, declaredType: this.declaredType, value: this.value };
     }
 
     static jparse(jobj: any): MIRConstantDecl {
-        return new MIRConstantDecl(jobj.enclosingDecl, jobj.cname, jobj.gkey, jparsesinfo(jobj.sinfo), jobj.file, jobj.declaredType, jobj.value);
+        return new MIRConstantDecl(jobj.enclosingDecl, jobj.attributes, jobj.cname, jobj.gkey, jparsesinfo(jobj.sinfo), jobj.file, jobj.declaredType, jobj.value);
     }
 }
 

@@ -2326,7 +2326,7 @@ EnumType* EnumType::jparse(json j)
         return std::make_pair(jv["enum"].get<std::string>(), jv["inv"].get<std::string>());
     });
 
-    return new EnumType(j["name"].get<std::string>(), j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), j["underlying"].get<std::string>(), j["smttagfunc"].get<std::string>(), enuminvs);
+    return new EnumType(j["name"].get<std::string>(), j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), j["underlying"].get<std::string>(), j["smttagfunc"].get<std::string>(), j["smtselectfunc"].get<std::string>(), enuminvs);
 }
 
 json EnumType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2380,10 +2380,14 @@ std::optional<std::string> EnumType::tobsqarg(const ParseInfo& pinfo, json j, co
 
 json EnumType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
 {
-    auto bef = ex.getArgContextConstructor(m, "EnumChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
-    auto choice = ex.bvToCardinality(m, bef(ctx));
+    //auto bef = ex.getArgContextConstructor(m, "EnumChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
+    //auto choice = ex.bvToCardinality(m, bef(ctx));
 
-    return ex.apimodule->typemap.find(this->underlying)->second->argextract(ex, ctx, m);
+    //
+    //TODO: call the select func
+    //
+
+    return nullptr;
 }
 
 json EnumType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
@@ -2580,16 +2584,12 @@ APIModule* APIModule::jparse(json j)
         typemap[name] = val;
     }
 
-    std::vector<InvokeSignature*> siglist;
-    auto jsiglist = j["siglist"];
-    std::transform(jsiglist.cbegin(), jsiglist.cend(), std::back_inserter(siglist), [&typemap](const json& jv) {
-        return InvokeSignature::jparse(jv, typemap);
-    });
+    InvokeSignature* apisig = InvokeSignature::jparse(j["apisig"], typemap);
 
     std::map<std::string, std::vector<std::pair<std::string, json>>> constants;
     //
     //TODO: load constants
     //
 
-    return new APIModule(typemap, siglist, j["bv_width"].get<size_t>(), constants);
+    return new APIModule(typemap, apisig, j["bv_width"].get<size_t>(), constants);
 }

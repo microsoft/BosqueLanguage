@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { BSQRegex } from "../../ast/bsqregex";
+import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
 type SMT2FileInfo = {
@@ -129,11 +130,11 @@ class SMTEntityDecl {
     readonly smtname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] };
+    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined;
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, isapitype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, isapitype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
         this.isapitype = isapitype;
 
@@ -233,12 +234,14 @@ class SMTEphemeralListDecl {
 
 class SMTConstantDecl {
     readonly gkey: string;
+    readonly optenumname: [MIRResolvedTypeKey, string] | undefined;
     readonly ctype: SMTType;
 
     readonly consf: string;
 
-    constructor(gkey: string, ctype: SMTType, consf: string) {
+    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: SMTType, consf: string) {
         this.gkey = gkey;
+        this.optenumname = optenumname;
         this.ctype = ctype;
 
         this.consf = consf;
@@ -575,8 +578,8 @@ class SMTAssembly {
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((kt) => {
                 return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
+                    decl: kt.consf !== undefined ? `(${kt.smtname} 0)` : undefined,
+                    consf:  kt.consf !== undefined ? `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )` : undefined,
                     boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
                 };
             });
@@ -584,11 +587,11 @@ class SMTAssembly {
         const termtypeinfo = this.entityDecls
             .filter((et) => !et.iskeytype)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((kt) => {
+            .map((tt) => {
                 return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
+                    decl: tt.consf !== undefined ? `(${tt.smtname} 0)` : undefined,
+                    consf: tt.consf !== undefined ? `( (${tt.consf.cname} ${tt.consf.cargs.map((te) => `(${te.fname} ${te.ftype.name})`).join(" ")}) )` : undefined,
+                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
             });
 
@@ -752,11 +755,11 @@ class SMTAssembly {
             STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 16)))" : "(define-sort BString () String)"),
             KEY_TUPLE_INFO: { decls: keytupleinfo.map((kti) => kti.decl), constructors: keytupleinfo.map((kti) => kti.consf), boxing: keytupleinfo.map((kti) => kti.boxf) },
             KEY_RECORD_INFO: { decls: keyrecordinfo.map((kti) => kti.decl), constructors: keyrecordinfo.map((kti) => kti.consf), boxing: keyrecordinfo.map((kti) => kti.boxf) },
-            KEY_TYPE_INFO: { decls: keytypeinfo.map((kti) => kti.decl), constructors: keytypeinfo.map((kti) => kti.consf), boxing: keytypeinfo.map((kti) => kti.boxf) },
+            KEY_TYPE_INFO: { decls: keytypeinfo.filter((kti) => kti.decl !== undefined).map((kti) => kti.decl as string), constructors: keytypeinfo.filter((kti) => kti.consf !== undefined).map((kti) => kti.consf as string), boxing: keytypeinfo.map((kti) => kti.boxf) },
             TUPLE_INFO: { decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), boxing: termtupleinfo.map((kti) => kti.boxf) },
             RECORD_INFO: { decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), boxing: termrecordinfo.map((kti) => kti.boxf) },
             TYPE_COLLECTION_INTERNAL_INFO: { decls: generalcollectioninternaldecls.map((kti) => kti.decl), constructors: generalcollectioninternaldecls.map((kti) => kti.consf) },
-            TYPE_INFO: { decls: termtypeinfo.map((kti) => kti.decl), constructors: termtypeinfo.map((kti) => kti.consf), boxing: termtypeinfo.map((kti) => kti.boxf) },
+            TYPE_INFO: { decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), boxing: termtypeinfo.map((tti) => tti.boxf) },
             EPHEMERAL_DECLS: { decls: etypeinfo.map((kti) => kti.decl), constructors: etypeinfo.map((kti) => kti.consf) },
             RESULT_INFO: { decls: rtypeinfo.map((kti) => kti.decl), constructors: rtypeinfo.map((kti) => kti.consf) },
             MASK_INFO: { decls: maskinfo.map((mi) => mi.decl), constructors: maskinfo.map((mi) => mi.consf) },

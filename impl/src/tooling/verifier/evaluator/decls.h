@@ -775,9 +775,10 @@ class EnumType : public IGroundedType
 public:
     const std::string underlying;
     const std::string smttagfunc;
+    const std::string smtselectfunc;
     const std::vector<std::pair<std::string, std::string>> enuminvs; //map from full enum names to the invoke values
 
-    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string underlying, std::string smttagfunc, std::vector<std::pair<std::string, std::string>> enumvalues) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), underlying(underlying), smttagfunc(smttagfunc), enuminvs(enuminvs) {;}
+    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string underlying, std::string smttagfunc, std::string smtselectfunc, std::vector<std::pair<std::string, std::string>> enumvalues) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), underlying(underlying), smttagfunc(smttagfunc), smtselectfunc(smtselectfunc), enuminvs(enuminvs) {;}
     virtual ~EnumType() {;}
 
     static EnumType* jparse(json j);
@@ -830,13 +831,13 @@ class APIModule
 {
 public:
     const std::map<std::string, const IType*> typemap;
-    const std::vector<InvokeSignature*> siglist;
+    const InvokeSignature* api;
 
     const size_t bv_width;
     const std::map<std::string, std::vector<std::pair<std::string, json>>> constants;
 
-    APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> siglist, size_t bv_width, std::map<std::string, std::vector<std::pair<std::string, json>>> constants)
-    : typemap(typemap), siglist(siglist), bv_width(bv_width), constants(constants)
+    APIModule(std::map<std::string, const IType*> typemap, InvokeSignature* api, size_t bv_width, std::map<std::string, std::vector<std::pair<std::string, json>>> constants)
+    : typemap(typemap), api(api), bv_width(bv_width), constants(constants)
     {
         ;
     }
@@ -848,10 +849,7 @@ public:
             delete iter->second;
         }
 
-        for(auto iter = this->siglist.begin(); iter != this->siglist.end(); ++iter)
-        {
-            delete *iter;
-        }
+        delete this->api;
     }
 
     static APIModule* jparse(json j);

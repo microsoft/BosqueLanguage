@@ -4299,7 +4299,7 @@ class Parser {
 
                 const exp = enums[i][1] !== undefined ? (enums[i][1] as ConstantExpressionValue).exp : new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
                 const enminit = new CallStaticFunctionOrOperatorExpression(sinfo, etype, "s_create", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, exp)]), "std");
-                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
+                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["enum"], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
                 staticMembers.push(enm);
             }
         
