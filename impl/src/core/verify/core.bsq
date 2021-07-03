@@ -45,7 +45,7 @@ mixed concept PODType provides APIType {
 
 //<summary>Type to unify Buffers and APITypes at top level for checking</summary>
 mixed concept APIValue provides Any {
-    function generate<T grounded APIValue>() T # apivalue_generate
+    function generate<T grounded APIValue>(): T # apivalue_generate
 }
 
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
@@ -243,7 +243,7 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
 }
 
 //<summary>Primitive safe string value.</summary>
-_internal grounded struct entity StringOf<T where validator> provides Some, KeyType, PODType, APIType {
+__internal grounded struct entity StringOf<T where validator> provides Some, KeyType, PODType, APIType {
     __safe private function s_string(s: StringOf<T>): String # stringof_string
     __safe private function s_from(s: String): StringOf<T> # stringof_from
 
@@ -259,7 +259,7 @@ _internal grounded struct entity StringOf<T where validator> provides Some, KeyT
 }
 
 //<summary>Primitive DataString value.</summary>
-_internal grounded struct entity DataString<T where parsable> provides Some, APIValue {
+__internal grounded struct entity DataString<T where parsable> provides Some, APIValue {
     __safe private function s_string(s: StringOf<T>): String # stringof_string
     __safe private function s_from(s: String): StringOf<T> # stringof_from
 
@@ -292,7 +292,7 @@ enum BufferCompression {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-_internal entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
+__internal entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
     //private field format: BufferFormat;
     //private field encoding: BufferEncoding;
     //private field compression: BufferCompression;
@@ -300,7 +300,7 @@ _internal entity Buffer<T where grounded PODType | APIType> provides Some, APIVa
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-_internal entity DataBuffer<T where parsable> provides Some, APIValue {
+__internal entity DataBuffer<T where parsable> provides Some, APIValue {
     //private field format: BufferFormat;
     //private field encoding: BufferEncoding;
     //private field compression: BufferCompression;

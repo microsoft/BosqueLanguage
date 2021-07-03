@@ -200,11 +200,11 @@
 )
 
 (define-fun bsqkey_bigint@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (bvslt (bsqkey_bigint_value k1) (bsqkey_bigint_value k2))
+  (< (bsqkey_bigint_value k1) (bsqkey_bigint_value k2))
 )
 
 (define-fun bsqkey_bignat@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (bvult (bsqkey_bignat_value k1) (bsqkey_bignat_value k2))
+  (< (bsqkey_bignat_value k1) (bsqkey_bignat_value k2))
 )
 
 (define-fun bsqkey_string@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool

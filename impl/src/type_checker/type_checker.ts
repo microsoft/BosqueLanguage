@@ -6371,7 +6371,7 @@ class TypeChecker {
                     specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType).trkey }];
                 }
                 else if (tdecl.specialDecls.has(SpecialTypeCategory.EnumTypeDecl)) {
-                    const etype = (tdecl.staticFunctions.find((vv) => vv.name === "s_create") as StaticFunctionDecl).invoke.resultType;
+                    const etype = (tdecl.staticFunctions.find((vv) => vv.name === "s_create") as StaticFunctionDecl).invoke.params[0].type;
                     const retype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, etype, binds);
                     specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(retype).trkey }];
                 }

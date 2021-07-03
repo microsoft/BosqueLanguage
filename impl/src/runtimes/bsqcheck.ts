@@ -20,46 +20,48 @@ function parseLocation(location: string): { file: string, line: number, pos: num
     }
 }
 
-const mode = process.argv[1];
+const mode = process.argv[2];
+const args = process.argv.slice(3);
+
 
 if(mode === "--output") {
-    const into = process.argv[2];
-    process.stdout.write(`Writing SMT file to ${into}`);
-
-    const mode = process.argv[3];
-    if(mode !== "check" && mode !== "evaluate" && mode !== "invert") {
+    const smtmode = args[0];
+    if(smtmode !== "check" && smtmode !== "evaluate" && smtmode !== "invert") {
         process.stdout.write("Valid mode options are check | evaluate | invert\n");
         process.exit(1);
     }
 
-    const smtonly = process.argv[4] === "--smt";
+    const smtonly = args[1] === "--smt";
 
-    const location = parseLocation(process.argv[smtonly ? 5 : 4]);
+    const location = parseLocation(args[smtonly ? 2 : 1]);
     if(location === undefined) {
         process.stdout.write("Location should be of the form file.bsq@line#pos\n");
         process.exit(1);
     }
 
-    const files = process.argv.slice(5);
+    const files = args.slice(smtonly ? 3 : 2);
 
-    workflowEmitToFile(into, files, mode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
+    const into = files[0].substr(0, files[0].length - 3) + (smtonly ? "smt2" : "json");
+    process.stdout.write(`Writing SMT file to ${into}`);
+
+    workflowEmitToFile(into, files, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
 }
 else if(mode === "--chksingle") {
-    const location = parseLocation(process.argv[2]);
+    const location = parseLocation(args[0]);
     if(location === undefined) {
         process.stderr.write("Location should be of the form file.bsq@line#pos\n");
         process.exit(1);
     }
 
-    const files = process.argv.slice(3);
+    const files = args.slice(1);
 
     const res = workflowBSQSingle(true, files, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main");
     process.stdout.write(res);
 }
 else if(mode === "--chk") {
-    const printprocess = (process.argv[2] === "--verbose");
-    const quiet = (process.argv[2] === "--quiet");
-    const files = process.argv.slice((printprocess || quiet) ? 3 : 2);
+    const printprocess = (args[0] === "--verbose");
+    const quiet = (args[0] === "--quiet");
+    const files = args.slice((printprocess || quiet) ? 1 : 0);
 
     const errors = workflowGetErrors(files, DEFAULT_VOPTS, "NSMain::main");
     if(errors === undefined) {
@@ -146,7 +148,7 @@ else if(mode === "--chk") {
     }
 }
 else if(mode === "--evaluate") {
-    const files = process.argv.slice(2);
+    const files = args;
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -179,7 +181,7 @@ else if(mode === "--evaluate") {
     });
 }
 else if(mode === "--invert") {
-    const files = process.argv.slice(2);
+    const files = args;
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -212,7 +214,7 @@ else if(mode === "--invert") {
     });
 }
 else {
-    const files = process.argv.slice(2);
+    const files = args;
     const errors = workflowGetErrors(files, DEFAULT_VOPTS, "NSMain::main");
     if(errors === undefined) {
         process.stderr.write("Failed to load error lines\n");
