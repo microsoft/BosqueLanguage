@@ -32,7 +32,9 @@ if(mode === "--output") {
         process.exit(1);
     }
 
-    const location = parseLocation(process.argv[4]);
+    const smtonly = process.argv[4] === "--smt";
+
+    const location = parseLocation(process.argv[smtonly ? 5 : 4]);
     if(location === undefined) {
         process.stdout.write("Location should be of the form file.bsq@line#pos\n");
         process.exit(1);
@@ -40,7 +42,7 @@ if(mode === "--output") {
 
     const files = process.argv.slice(5);
 
-    workflowEmitToFile(into, files, mode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main")
+    workflowEmitToFile(into, files, mode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
 }
 else if(mode === "--chksingle") {
     const location = parseLocation(process.argv[2]);
@@ -122,7 +124,7 @@ else if(mode === "--chk") {
         }
     }
 
-    if(ecount !== 0) {
+    if(fcount !== 0) {
         process.stdout.write(chalk.red(`Failed on ${ecount} error(s)!\n`));
     }
 

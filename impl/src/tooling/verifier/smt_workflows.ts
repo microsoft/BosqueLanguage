@@ -83,15 +83,6 @@ function generateSMTPayload(masm: MIRAssembly, mode: "check" | "evaluate" | "inv
     }
 }
 
-function emitSMT2File(cfile: string, into: string) {
-    try {
-        FS.writeFileSync(into, cfile);
-    }
-    catch (fex) {
-        process.stderr.write(chalk.red(`Failed to write file -- ${fex}\n`));
-    }
-}
-
 function runVEvaluator(cpayload: object, workflow: "check" | "eval" | "invert", bson: boolean): string {
     try {
         return execSync(`${exepath} ${bson ? " --bson" : ""} --${workflow}`, { input: JSON.stringify(cpayload) }).toString().trim();
@@ -118,7 +109,7 @@ function workflowGetErrors(files: string[], vopts: VerifierOptions, entrypoint: 
     }
 }
 
-function workflowEmitToFile(into: string, files: string[], mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey) {
+function workflowEmitToFile(into: string, files: string[], mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, smtonly: boolean) {
     try {
         const { masm, errors } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
@@ -129,7 +120,7 @@ function workflowEmitToFile(into: string, files: string[], mode: "check" | "eval
         else {    
             const res = generateSMTPayload(masm, mode, timeout, vopts, errorTrgtPos, entrypoint);
             if(res !== undefined) {
-                emitSMT2File(res.smt2decl, into);
+                FS.writeFileSync(into, smtonly ? res.smt2decl : JSON.stringify(res, undefined, 2));
             }
         }
     } catch(e) {
