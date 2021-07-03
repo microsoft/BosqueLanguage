@@ -1543,7 +1543,7 @@ DataStringType* DataStringType::jparse(json j)
     auto isvalue = j["isvalue"].get<bool>();
 
     std::string smtinvcall = j["smtinvcall"].get<std::string>();
-    std::string cppinvcall = j["smtinvcall"].get<std::string>();
+    std::string cppinvcall = j["cppinvcall"].get<std::string>();
 
     return new DataStringType(name, j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>(), oftype, isvalue, smtinvcall, cppinvcall);
 }
@@ -2404,8 +2404,6 @@ UnionType* UnionType::jparse(json j)
     auto iskey = j["iskey"].get<bool>();
 
     auto smtname = j["smtname"].get<std::string>();
-    auto smttypefunc = j["smttypefunc"].get<std::string>();
-    auto smtunboxfunc = j["smtunboxfunc"].get<std::string>();
 
     std::vector<std::string> opts;
     auto jopts = j["opts"];
@@ -2413,7 +2411,7 @@ UnionType* UnionType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new UnionType(name, iskey, smtname, opts, smttypefunc, smtunboxfunc);
+    return new UnionType(name, iskey, smtname, opts);
 }
 
 json UnionType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2563,13 +2561,13 @@ InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, con
         return jv.get<std::string>();
     });
 
-    std::vector<const IType*> argTypes;
-    auto jargTypes = j["argTypes"];
-    std::transform(jargTypes.cbegin(), jargTypes.cend(), std::back_inserter(argTypes), [&typemap](const json& jv) {
+    std::vector<const IType*> argtypes;
+    auto jargtypes = j["argtypes"];
+    std::transform(jargtypes.cbegin(), jargtypes.cend(), std::back_inserter(argtypes), [&typemap](const json& jv) {
         return typemap.find(jv.get<std::string>())->second;
     });
 
-    return new InvokeSignature(name, resType, argnames, smtargnames, argTypes);
+    return new InvokeSignature(name, resType, argnames, smtargnames, argtypes);
 }
 
 APIModule* APIModule::jparse(json j)

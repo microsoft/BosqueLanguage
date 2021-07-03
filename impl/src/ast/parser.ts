@@ -4263,7 +4263,7 @@ class Parser {
             const fparam = new FunctionParameter("v", oftype, false, undefined, undefined, undefined);
         
             const createbody = new BodyImplementation(`s_create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "enum_create");
-            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [fparam], undefined, undefined, etype, [], [], false, false, new Set<string>(), createbody, [], []);
+            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, etype, [], [], false, false, new Set<string>(), createbody, [], []);
             const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_create", createdecl);
 
             const invariants: InvariantDecl[] = [];
@@ -4303,9 +4303,6 @@ class Parser {
                 staticMembers.push(enm);
             }
         
-            //
-            //TODO: generate function to get "name" of enum here
-            //
             const ennamebody = new BodyImplementation(`name_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
                 new BlockStatement(sinfo, [
                     new AssertStatement(sinfo, new LiteralBoolExpression(sinfo, false), "debug"),
@@ -4402,11 +4399,11 @@ class Parser {
         const fparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
         
         const createbody = new BodyImplementation(`create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_create");
-        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [fparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), createbody, [], []);
+        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), createbody, [], []);
         const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "create", createdecl);
 
         const valuebuiltinbody = new BodyImplementation(`s_value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_value");
-        const valuebuiltindecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebuiltinbody, [], []);
+        const valuebuiltindecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebuiltinbody, [], []);
         const valuebuiltin = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_value", valuebuiltindecl);
 
         const valuebody = new BodyImplementation(`value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),

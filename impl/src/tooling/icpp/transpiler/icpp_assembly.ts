@@ -539,7 +539,7 @@ class ICPPAssembly
                             return edecl.jemitTypedNumber(edecl.extradata as MIRResolvedTypeKey, edecl.extradata as MIRResolvedTypeKey);
                         }
                         case ICPPParseTag.EnumTag: {
-                            const ddcls = this.constdecls.filter((cdcl) => cdcl.optenumname !== undefined && cdcl.optenumname[0] == tdecl.tkey);
+                            const ddcls = this.constdecls.filter((cdcl) => cdcl.optenumname !== undefined && cdcl.optenumname[0] === tdecl.tkey);
                             const enuminvs = ddcls.map((ddcl) => [`${(ddcl.optenumname as [string, string])[0]}::${(ddcl.optenumname as [string, string])[1]}`, ddcl.storageOffset] as [string, number]);
                             return edecl.jemitEnum(edecl.extradata as MIRResolvedTypeKey, enuminvs);
                         }

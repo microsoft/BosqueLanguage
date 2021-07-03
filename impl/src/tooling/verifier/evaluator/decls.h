@@ -796,10 +796,8 @@ class UnionType : public IType
 {
 public:
     const std::vector<std::string> opts;
-    const std::string smttypefunc;
-    const std::string smtunboxfunc;
 
-    UnionType(std::string name, bool iskey, std::string smtname, std::vector<std::string> opts, std::string smttypefunc, std::string smtunboxfunc) : IType(name, iskey, smtname), opts(opts), smttypefunc(smttypefunc), smtunboxfunc(smtunboxfunc) {;}
+    UnionType(std::string name, bool iskey, std::string smtname, std::vector<std::string> opts) : IType(name, iskey, smtname), opts(opts) {;}
     virtual ~UnionType() {;}
 
     static UnionType* jparse(json j);

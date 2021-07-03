@@ -13,42 +13,35 @@ import chalk from "chalk";
 import { MIRAssembly, PackageConfig } from "../compiler/mir_assembly";
 import { MIREmitter } from "../compiler/mir_emitter";
 import { SMTAssembly } from "../tooling/verifier/smt_assembly";
-import { SMTEmitter } from "../tooling/verifier/smtdecls_emitter";
+import { Payload, SMTEmitter } from "../tooling/verifier/smtdecls_emitter";
 import { VerifierOptions } from "../tooling/verifier/smt_exp";
 import { MIRInvokeKey } from "../compiler/mir_ops";
 
-let platpathz3: string | undefined = undefined;
-if (process.platform === "win32") {
-    platpathz3 = "build/tools/win/z3.exe";
-}
-else if (process.platform === "linux") {
-    platpathz3 = "build/tools/linux/z3";
-}
-else {
-    platpathz3 = "build/tools/macos/z3";
-}
-
-let platpathcvc4: string | undefined = undefined;
-if (process.platform === "win32") {
-    platpathcvc4 = "build/tools/win/cvc4.exe";
-}
-else if (process.platform === "linux") {
-    platpathcvc4 = "build/tools/linux/cvc4";
-}
-else {
-    platpathcvc4 = "build/tools/macos/cvc4";
-}
-
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
+const smtlib_path = Path.join(bosque_dir, "bin/core/verify");
+const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
+const exepath = Path.normalize(Path.join(bosque_dir, "/build/out/chkworkflow" + (process.platform === "win32" ? ".exe" : "")));
+
+const timeout = 5000;
+const smtruntime = FS.readFileSync(smtruntime_path).toString();
+
+const vopts = {
+    ISize: 5,
+    BigXMode: "Int",
+    OverflowEnabled: false,
+    FPOpt: "Real",
+    StringOpt: "ASCII",
+    SimpleQuantifierMode: false,
+    SpecializeSmallModelGen: false
+} as VerifierOptions;
 
 function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean): MIRAssembly {
     let code: { relativePath: string, contents: string }[] = [];
     try {
-        const coredir = Path.join(bosque_dir, "bin/core/verify");
-        const corefiles = FS.readdirSync(coredir);
+        const corefiles = FS.readdirSync(smtlib_path);
 
         for (let i = 0; i < corefiles.length; ++i) {
-            const cfpath = Path.join(coredir, corefiles[i]);
+            const cfpath = Path.join(smtlib_path, corefiles[i]);
             code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
         }
  
@@ -87,85 +80,13 @@ function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean)
     return masm as MIRAssembly;
 }
 
-function generateSMTAssemblyForValidate(masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey, errorTrgtPos: { file: string, line: number, pos: number }): SMTAssembly | undefined {
-    let res: SMTAssembly | undefined = undefined;
+function generateSMTPayload(masm: MIRAssembly, mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload {
     try {
-        res = SMTEmitter.generateSMTAssemblyForValidate(masm, vopts, errorTrgtPos, entrypoint);
+        return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, errorTrgtPos, entrypoint);
     } catch(e) {
         process.stdout.write(chalk.red(`SMT generate error -- ${e}\n`));
         process.exit(1);
     }
-    return res;
-}
-
-function buildSMT2file(smtasm: SMTAssembly, timeout: number, mode: "Refute" | "Generate"): string {
-    const sfileinfo = smtasm.generateSMT2AssemblyInfo(mode);
-
-    function joinWithIndent(data: string[], indent: string): string {
-        if (data.length === 0) {
-            return ";;NO DATA;;"
-        }
-        else {
-            return data.map((d, i) => (i === 0 ? "" : indent) + d).join("\n");
-        }
-    }
-
-    let contents = "";
-    try {
-        const smt_runtime = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
-        const lsrc = FS.readFileSync(smt_runtime).toString();
-        contents = lsrc
-            .replace(";;TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.TYPE_TAG_DECLS, "      "))
-            .replace(";;ABSTRACT_TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.ABSTRACT_TYPE_TAG_DECLS, "      "))
-            .replace(";;INDEX_TAG_DECLS;;", joinWithIndent(sfileinfo.INDEX_TAG_DECLS, "      "))
-            .replace(";;PROPERTY_TAG_DECLS;;", joinWithIndent(sfileinfo.PROPERTY_TAG_DECLS, "      "))
-            .replace(";;SUBTYPE_DECLS;;", joinWithIndent(sfileinfo.SUBTYPE_DECLS, ""))
-            .replace(";;TUPLE_HAS_INDEX_DECLS;;", joinWithIndent(sfileinfo.TUPLE_HAS_INDEX_DECLS, ""))
-            .replace(";;RECORD_HAS_PROPERTY_DECLS;;", joinWithIndent(sfileinfo.RECORD_HAS_PROPERTY_DECLS, ""))
-            .replace(";;KEY_TYPE_TAG_RANK;;", joinWithIndent(sfileinfo.KEY_TYPE_TAG_RANK, ""))
-            .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
-            .replace(";;BFLOATPOINT_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BFLOATPOINT_TYPE_ALIAS, ""))
-            .replace(";;STRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS + "\n")
-            .replace(";;BINTEGRAL_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
-            .replace(";;BFLOATPOINT_CONSTANTS;;", joinWithIndent(sfileinfo.BFLOATPOINT_CONSTANTS, ""))
-            .replace(";;KEY_TUPLE_DECLS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.decls, "      "))
-            .replace(";;KEY_RECORD_DECLS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.decls, "      "))
-            .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))
-            .replace(";;KEY_TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.constructors, "    "))
-            .replace(";;KEY_RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.constructors, "    "))
-            .replace(";;KEY_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.constructors, "    "))
-            .replace(";;KEY_TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.boxing, "      "))
-            .replace(";;KEY_RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.boxing, "      "))
-            .replace(";;KEY_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.boxing, "      "))
-            .replace(";;TUPLE_DECLS;;", joinWithIndent(sfileinfo.TUPLE_INFO.decls, "    "))
-            .replace(";;RECORD_DECLS;;", joinWithIndent(sfileinfo.RECORD_INFO.decls, "    "))
-            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_DECLS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.decls, "    "))
-            .replace(";;TYPE_DECLS;;", joinWithIndent(sfileinfo.TYPE_INFO.decls, "    "))
-            .replace(";;TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TUPLE_INFO.constructors, "    "))
-            .replace(";;RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.RECORD_INFO.constructors, "    "))
-            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.constructors, "    "))
-            .replace(";;TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_INFO.constructors, "    "))
-            .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
-            .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
-            .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
-            .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
-            .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
-            .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))
-            .replace(";;MASK_DECLS;;", joinWithIndent(sfileinfo.MASK_INFO.decls, "      "))
-            .replace(";;RESULTS;;", joinWithIndent(sfileinfo.RESULT_INFO.constructors, "    "))
-            .replace(";;MASKS;;", joinWithIndent(sfileinfo.MASK_INFO.constructors, "    "))
-            .replace(";;GLOBAL_DECLS;;", joinWithIndent(sfileinfo.GLOBAL_DECLS, ""))
-            .replace(";;UF_DECLS;;", joinWithIndent(sfileinfo.UF_DECLS, "\n"))
-            .replace(";;FUNCTION_DECLS;;", joinWithIndent(sfileinfo.FUNCTION_DECLS, "\n"))
-            .replace(";;GLOBAL_DEFINITIONS;;", joinWithIndent(sfileinfo.GLOBAL_DEFINITIONS, ""))
-            .replace(";;ACTION;;", joinWithIndent(sfileinfo.ACTION, ""));
-    }
-    catch (ex) {
-        process.stderr.write(chalk.red(`Error -- ${ex}\n`));
-        process.exit(1);
-    }
-
-    return contents;
 }
 
 function emitSMT2File(cfile: string, into: string) {
@@ -178,26 +99,54 @@ function emitSMT2File(cfile: string, into: string) {
     }
 }
 
-function runSMT2File(cfile: string, mode: "Refute" | "Generate") {
-    process.stdout.write(`Running ${Commander.prover} on SMT encoding...\n`);
-    const res = execSync(`${smtpath} ${smtargs}`, { input: cfile }).toString().trim();
-    process.stdout.write(`done!\n\n`);
+function runVEvaluator(cpayload: Payload, workflow: "check" | "eval" | "invert", bson: boolean): string {
+    try {
+        return execSync(`${exepath} ${bson ? " --bson" : ""} --${workflow}`, { input: JSON.stringify(cpayload) }).toString().trim();
+    }
+    catch(ex) {
+        return JSON.stringify({result: "error", info: `${ex}`});
+    }
+}
 
-    if (mode === "Refute") {
-        if (res === "unsat") {
-            process.stdout.write(chalk.green("Verified error is not possible!\n"));
-        }
-        else if (res === "sat") {
-            process.stdout.write(chalk.red("Error can occour -- run in generate mode to attempt failing input generation!\n"));
-        }
-        else {
-            process.stdout.write("Solver timeout :(\n");
-        }
+function workflowGetErrors(masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey) {
+    try {
+        const allErrors = SMTEmitter.generateSMTAssemblyAllErrors(masm, vopts, entrypoint);
+        process.stdout.write("Possible error lines:\n")
+        process.stdout.write(JSON.stringify(allErrors, undefined, 2) + "\n")
+    } catch(e) {
+        process.stdout.write(chalk.red(`SMT generate error -- ${e}\n`));
+        process.exit(1);
     }
-    else {
-        //process.stdout.write(`Emitting raw SMTLIB model...\n`);
-        process.stdout.write(res + "\n\n");
-    }
+}
+
+function workflowEmitToFile(into: string, masm: MIRAssembly, mode: "check" | "evaluate" | "invert", vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey) {
+    const res = generateSMTPayload(masm, mode, timeout, vopts, errorTrgtPos, entrypoint);
+    emitSMT2File(res.smt2decl, into)
+}
+
+function workflowBSQSingle(bson: boolean, masm: MIRAssembly, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey) {
+    const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+    const veval = runVEvaluator(res, "check", bson);
+    
+    process.stdout.write(veval);
+}
+
+function workflowBSQCheck() {
+    
+}
+
+function workflowEvaluateSingle(bson: boolean, masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey) {
+    const res = generateSMTPayload(masm, "check", timeout, vopts, { file: "[NO FILE]", line: -1, pos: -1 }, entrypoint);
+    const veval = runVEvaluator(res, "check", bson);
+    
+    process.stdout.write(veval);
+}
+
+function workflowInvertSingle(bson: boolean, masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey) {
+    const res = generateSMTPayload(masm, "check", timeout, vopts, { file: "[NO FILE]", line: -1, pos: -1 }, entrypoint);
+    const veval = runVEvaluator(res, "check", bson);
+    
+    process.stdout.write(veval);
 }
 
 Commander
@@ -210,19 +159,7 @@ Commander
 
 Commander.parse(process.argv);
 
-const smtpath = Path.normalize(Path.join(bosque_dir, Commander.prover === "z3" ? platpathz3 : platpathcvc4));
-const smtargs = (Commander.prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi-all --tlimit=1000";
 
-const timeout = 10000;
-const vopts = {
-    ISize: 5,
-    BigXMode: "BV",
-    OverflowEnabled: false,
-    FPOpt: "Real",
-    StringOpt: "ASCII",
-    SimpleQuantifierMode: false,
-    SpecializeSmallModelGen: false
-} as VerifierOptions;
 
 if (Commander.args.length === 0) {
     process.stdout.write(chalk.red("Error -- Please specify at least one source file and target line as arguments\n"));

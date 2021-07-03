@@ -17,10 +17,16 @@
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string signame, bool bsqon)
+json workflowValidate(std::string smt2decl, APIModule* apimodule, unsigned timeout, bool bsqon)
 {
     z3::context c;
     z3::solver s(c);
+
+    z3::params p(c);
+    p.set(":timeout", timeout);
+    //TODO: it would be nice to set a more specifc logic here (than the ALL from the smtfile)
+    s.set(p);
+
     s.from_string(smt2decl.c_str());
 
     ExtractionInfo einfo(apimodule, "_@smtres@_value");
@@ -87,10 +93,16 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, std::string si
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string signame, json jin, bool bsqon)
+json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsigned timeout, bool bsqon)
 {
     z3::context c;
     z3::solver s(c);
+
+    z3::params p(c);
+    p.set(":timeout", timeout);
+    //TODO: it would be nice to set a more specifc logic here (than the ALL from the smtfile)
+    s.set(p);
+
     s.from_string(smt2decl.c_str());
 
     z3::expr_vector chks(c);
@@ -158,10 +170,16 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, std::string sig
 //  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
 //  Timeout a and return the JSON payload -- {result: "unknown", time: number}
 
-json workflowInvert(std::string smt2decl, APIModule* apimodule, std::string signame, json jout, bool bsqon)
+json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsigned timeout, bool bsqon)
 {
     z3::context c;
     z3::solver s(c);
+
+    z3::params p(c);
+    p.set(":timeout", timeout);
+    //TODO: it would be nice to set a more specifc logic here (than the ALL from the smtfile)
+    s.set(p);
+
     s.from_string(smt2decl.c_str());
 
     z3::expr_vector chks(c);
@@ -267,9 +285,10 @@ int main(int argc, char** argv)
         try
         {
             std::string smt2decl = payload["smt2decl"].get<std::string>();
+            unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowValidate(smt2decl, apimodule, payload["signame"].get<std::string>(), bsqon);
+            json result = workflowValidate(smt2decl, apimodule, timeout, bsqon);
             
             std::cout << result << std::endl;
         }
@@ -286,9 +305,10 @@ int main(int argc, char** argv)
         try
         {
             std::string smt2decl = payload["smt2decl"].get<std::string>();
+            unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowCompute(smt2decl, apimodule, payload["signame"].get<std::string>(), payload["jin"], bsqon);
+            json result = workflowCompute(smt2decl, apimodule, payload["jin"], timeout, bsqon);
             
             std::cout << result << std::endl;
         }
@@ -305,9 +325,10 @@ int main(int argc, char** argv)
         try
         {
             std::string smt2decl = payload["smt2decl"].get<std::string>();
+            unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowInvert(smt2decl, apimodule, payload["signame"].get<std::string>(), payload["jout"], bsqon);
+            json result = workflowInvert(smt2decl, apimodule, payload["jout"], timeout, bsqon);
             
             std::cout << result << std::endl;
         }

@@ -37,6 +37,19 @@ const BuiltinEntityDeclNames = [
     "ISequence"
 ];
 
+type APIModuleInfo = {
+    apitypes: object[],
+    signature: object,
+    bvwidth: number,
+    constants: object[]
+};
+
+type Payload = {
+    smt2decl: string, 
+    timeout: number, 
+    apimodule: APIModuleInfo
+};
+
 class SMTEmitter {
     readonly temitter: SMTTypeEmitter;
     readonly bemitter: SMTBodyEmitter;
@@ -731,8 +744,14 @@ class SMTEmitter {
 
         let iexp: SMTExp | undefined = undefined;
         let argchk: SMTExp[] | undefined = undefined;
+        let iserrorcheck: SMTExp | undefined = undefined;
+        let isvaluecheck: SMTExp | undefined = undefined;
+        let fgetvalue: SMTExp | undefined = this.temitter.generateResultGetSuccess(restype, new SMTConst("_@smtres@"));
         if(issafe) {
             iexp = this.temitter.generateResultTypeConstructorSuccess(restype, new SMTCallSimple(smtcall, callargs));
+
+            iserrorcheck = new SMTConst("false");
+            isvaluecheck = new SMTConst("true");
         }
         else {
             iexp = new SMTCallGeneral(smtcall, callargs);
@@ -754,6 +773,9 @@ class SMTEmitter {
                     }
                 });
             }
+
+            iserrorcheck = this.temitter.generateResultIsErrorTest(restype, new SMTConst("_@smtres@"));
+            isvaluecheck = this.temitter.generateResultIsSuccessTest(restype, new SMTConst("_@smtres@"));
         }
         
         this.bemitter.requiredUFConsts.forEach((ctype) => {
@@ -761,11 +783,44 @@ class SMTEmitter {
             this.assembly.uninterpfunctions.push(ufcc);
         });
 
-        this.assembly.model = new SMTModelState(iargs, argchk, this.temitter.generateResultType(restype), iexp);
+        this.assembly.model = new SMTModelState(iargs, argchk, this.temitter.generateResultType(restype), iexp, iserrorcheck, isvaluecheck, this.temitter.getSMTTypeFor(restype), fgetvalue);
         this.assembly.allErrors = this.bemitter.allErrors;
     }
 
-    static generateSMTAssemblyForValidate(assembly: MIRAssembly, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): SMTAssembly {
+    private generateAPIModule(entrypoint: MIRInvokeDecl, bvwidth: number, constants: object[]): APIModuleInfo {
+        const apitype = this.temitter.assembly.typeMap.get("NSCore::APIType") as MIRType;
+
+        const mirapitypes = [...this.temitter.assembly.typeMap].filter((tme) => this.temitter.assembly.subtypeOf(tme[1], apitype) && (tme[1].options.length > 1 || !(tme[1].options[0] instanceof MIRConceptType)))
+        const apiout = mirapitypes.map((tme) => this.temitter.getAPITypeFor(tme[1]));
+
+        let argnames: string[] = [];
+        let smtargnames: string[] = [];
+        let argtypes: string[] = [];
+        for(let i = 0; i < entrypoint.params.length; ++i)
+        {
+            const param = entrypoint.params[i];
+            argnames.push(param.name);
+            smtargnames.push(this.temitter.mangle(param.name));
+            argtypes.push(param.type);
+        }
+
+        const signature = {
+            name: entrypoint.name,
+            resType: entrypoint.resultType,
+            argnames: argnames,
+            smtargnames: smtargnames,
+            argtypes: argtypes
+        };
+
+        return {
+            apitypes: apiout,
+            signature: signature,
+            bvwidth: bvwidth,
+            constants: constants
+        }
+    }
+
+    static generateSMTPayload(assembly: MIRAssembly, mode: "check" | "evaluate" | "invert",  timeout: number, runtime: string, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload {
         const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
         const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, errorTrgtPos);
 
@@ -778,18 +833,33 @@ class SMTEmitter {
 
         ////////////
         const mirep = assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl;
-        const restype = temitter.getMIRType(mirep.resultType);
+        
+        //
+        //TODO: compute constants info here...
+        //
+        const constants: object[] = [];
 
-        const eqerrexp = new SMTCallSimple("=", [new SMTVar("_@smtres@"), smtemit.temitter.generateResultTypeConstructorError(restype, new SMTConst("ErrorID_Target"))]);
-        smtemit.assembly.modes = {
-            refute: eqerrexp,
-            generate: eqerrexp
-        };
+        const apiinfo = smtemit.generateAPIModule(mirep, vopts.ISize, constants);
+        const smtinfo = smtemit.assembly.buildSMT2file(mode, runtime);
 
-        return smtemit.assembly;
+        return {smt2decl: smtinfo, timeout: timeout, apimodule: apiinfo};
+    }
+
+    static generateSMTAssemblyAllErrors(assembly: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
+        const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
+        const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, {file: "[]", line: -1, pos: -1});
+
+        const temitter = new SMTTypeEmitter(assembly, vopts);
+        const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, {file: "[]", line: -1, pos: -1});
+        const smtassembly = new SMTAssembly(vopts, temitter.mangle(entrypoint));
+
+        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
+        smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
+
+        return smtemit.assembly.allErrors;
     }
 }
 
 export {
-    SMTEmitter
+    SMTEmitter, APIModuleInfo, Payload
 };
