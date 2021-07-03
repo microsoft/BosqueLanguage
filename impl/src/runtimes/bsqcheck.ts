@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+import chalk from "chalk";
 import *  as readline from "readline";
 
 import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle } from "../tooling/verifier/smt_workflows";
@@ -54,34 +55,92 @@ else if(mode === "--chksingle") {
     process.stdout.write(res);
 }
 else if(mode === "--chk") {
-    const files = process.argv.slice(2);
+    const printprocess = (process.argv[2] === "--verbose");
+    const quiet = (process.argv[2] === "--quiet");
+    const files = process.argv.slice((printprocess || quiet) ? 3 : 2);
+
     const errors = workflowGetErrors(files, DEFAULT_VOPTS, "NSMain::main");
     if(errors === undefined) {
         process.stdout.write("Failed to load error lines\n");
         process.exit(1);
     }
 
+    if(errors.length === 0) {
+        process.stdout.write(chalk.green("No errors are possible in this program!"));
+        process.exit(0);
+    }
+
+    process.stdout.write(chalk.bold(`Analyzing ${errors.length} possible error(s) in program...\n`));
+
     //
     //TODO: we probably want to make this a process parallel process
     //
+    let icount = 0;
+    let wcount = 0;
+    let pcount = 0;
+    let ecount = 0;
+    let fcount = 0;
+    let witnesslist: any[] = [];
     for(let i = 0; i < errors.length; ++i) {
-        process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}...\n`);
-        const res = workflowBSQCheck(true, files, DEFAULT_TIMEOUT, errors[i], "NSMain::main", true);
-        const jres = JSON.parse(res);
+        if(!quiet) {
+            process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}...\n`);
+        }
 
-        if(jres["result"] === "infeasible") {
-            process.stdout.write(`Proved infeasible in ${jres["time"]} millis!\n`);
+        const jres = workflowBSQCheck(true, files, DEFAULT_TIMEOUT, errors[i], "NSMain::main", true);
+
+        if(jres === undefined) {
+            if(!quiet) {
+                process.stdout.write(`Failed with internal errors :(\n`);
+            }
+            fcount++;
         }
-        else if(jres["result"] === "witness") {
-            process.stdout.write(`Generated witness input in ${jres["time"]} millis!\n`);
-            process.stdout.write(jres["input"] + "\n");
+        else if(jres.result === "infeasible") {
+            if(!quiet) {
+                process.stdout.write(`Proved infeasible in ${jres.time}s!\n`);
+            }
+            icount++;
         }
-        else if(jres["result"] === "timeout") {
-            process.stdout.write(`Solver timeout :(\n`);
+        else if(jres.result === "witness") {
+            if(!quiet) {
+                process.stdout.write(`Generated witness input in ${jres.time}s!\n`);
+                process.stdout.write(`${jres.input}\n`);
+            }
+            wcount++;
+            witnesslist.push(jres.input);
+        }
+        else if(jres.result === "partial") {
+            if(!quiet) {
+                process.stdout.write(`Proved infeasible on limited space.\n`);
+            }
+            pcount++;
         }
         else {
-            process.stdout.write(`Failed with -- ${jres}`);
+            if(!quiet) {
+                process.stdout.write(`Exhausted resource bounds without finding failures.\n`);
+            }
+            ecount++;
         }
+    }
+
+    if(ecount !== 0) {
+        process.stdout.write(chalk.red(`Failed on ${ecount} error(s)!\n`));
+    }
+
+    if(icount !== 0) {
+        process.stdout.write(chalk.green(`Proved ${ecount} error(s) are infeasible on all executions!\n`));
+    }
+
+    if(wcount !== 0) {
+        process.stdout.write(chalk.magenta(`Found failing inputs for ${wcount} error(s)!\n`));
+        process.stdout.write(JSON.stringify(witnesslist, undefined, 2) + "\n");
+    }
+
+    if(pcount !== 0) {
+        process.stdout.write(chalk.blue(`Proved ${ecount} error(s) are infeasible on a subset of excutions (and found no failing inputs)!\n`));
+    }
+
+    if(ecount !== 0) {
+        process.stdout.write(chalk.blue(`Exhausted search on ${ecount} error(s) are and found no failing inputs.\n`));
     }
 }
 else if(mode === "--evaluate") {
