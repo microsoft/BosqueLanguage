@@ -3,220 +3,161 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import * as FS from "fs";
-import * as Path from "path";
-import { execSync } from "child_process";
+import *  as readline from "readline";
 
-import * as Commander from "commander";
-import chalk from "chalk";
+import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle } from "../tooling/verifier/smt_workflows";
 
-import { MIRAssembly, PackageConfig } from "../compiler/mir_assembly";
-import { MIREmitter } from "../compiler/mir_emitter";
-import { SMTAssembly } from "../tooling/verifier/smt_assembly";
-import { Payload, SMTEmitter } from "../tooling/verifier/smtdecls_emitter";
-import { VerifierOptions } from "../tooling/verifier/smt_exp";
-import { MIRInvokeKey } from "../compiler/mir_ops";
-
-const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
-const smtlib_path = Path.join(bosque_dir, "bin/core/verify");
-const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
-const exepath = Path.normalize(Path.join(bosque_dir, "/build/out/chkworkflow" + (process.platform === "win32" ? ".exe" : "")));
-
-const timeout = 5000;
-const smtruntime = FS.readFileSync(smtruntime_path).toString();
-
-const vopts = {
-    ISize: 5,
-    BigXMode: "Int",
-    OverflowEnabled: false,
-    FPOpt: "Real",
-    StringOpt: "ASCII",
-    SimpleQuantifierMode: false,
-    SpecializeSmallModelGen: false
-} as VerifierOptions;
-
-function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean): MIRAssembly {
-    let code: { relativePath: string, contents: string }[] = [];
+function parseLocation(location: string): { file: string, line: number, pos: number } | undefined {
     try {
-        const corefiles = FS.readdirSync(smtlib_path);
-
-        for (let i = 0; i < corefiles.length; ++i) {
-            const cfpath = Path.join(smtlib_path, corefiles[i]);
-            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
-        }
- 
-        for (let i = 0; i < files.length; ++i) {
-            const realpath = Path.resolve(files[i]);
-            const file = { relativePath: realpath, contents: FS.readFileSync(realpath).toString() };
-            code.push(file);
-        }
+        const errfile = location.slice(0, location.indexOf("@"));
+        const errline = Number.parseInt(location.slice(location.indexOf("@") + 1, location.indexOf("#")));
+        const errpos = Number.parseInt(location.slice(location.indexOf("#") + 1));
+        return { file: errfile, line: errline, pos: errpos };
     }
     catch (ex) {
-        process.stdout.write(`Read failed with exception -- ${ex}\n`);
+        return undefined;
+    }
+}
+
+const mode = process.argv[1];
+
+if(mode === "--output") {
+    const into = process.argv[2];
+    process.stdout.write(`Writing SMT file to ${into}`);
+
+    const mode = process.argv[3];
+    if(mode !== "check" && mode !== "evaluate" && mode !== "invert") {
+        process.stdout.write("Valid mode options are check | evaluate | invert\n");
         process.exit(1);
     }
 
-    let namespace = "NSMain";
-    let entryfunc = "main";
-    const cpos = entrypoint.indexOf("::");
-    if(cpos === -1) {
-        entryfunc = entrypoint;
-    }
-    else {
-        namespace = entrypoint.slice(0, cpos);
-        entryfunc = entrypoint.slice(cpos + 2);
-    }
-
-    const macros = dosmallopts ? ["SMALL_MODEL_PATH"] : [];
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
-    if (errors.length !== 0) {
-        for (let i = 0; i < errors.length; ++i) {
-            process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
-        }
-
+    const location = parseLocation(process.argv[4]);
+    if(location === undefined) {
+        process.stdout.write("Location should be of the form file.bsq@line#pos\n");
         process.exit(1);
     }
 
-    return masm as MIRAssembly;
-}
+    const files = process.argv.slice(5);
 
-function generateSMTPayload(masm: MIRAssembly, mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload {
-    try {
-        return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, errorTrgtPos, entrypoint);
-    } catch(e) {
-        process.stdout.write(chalk.red(`SMT generate error -- ${e}\n`));
+    workflowEmitToFile(into, files, mode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main")
+}
+else if(mode === "--chksingle") {
+    const location = parseLocation(process.argv[2]);
+    if(location === undefined) {
+        process.stderr.write("Location should be of the form file.bsq@line#pos\n");
         process.exit(1);
     }
-}
 
-function emitSMT2File(cfile: string, into: string) {
-    try {
-        process.stdout.write(`Writing SMT output to "${into}..."\n`)
-        FS.writeFileSync(Commander.output, cfile);
-    }
-    catch (fex) {
-        process.stderr.write(chalk.red(`Failed to write file -- ${fex}\n`));
-    }
-}
+    const files = process.argv.slice(3);
 
-function runVEvaluator(cpayload: Payload, workflow: "check" | "eval" | "invert", bson: boolean): string {
-    try {
-        return execSync(`${exepath} ${bson ? " --bson" : ""} --${workflow}`, { input: JSON.stringify(cpayload) }).toString().trim();
-    }
-    catch(ex) {
-        return JSON.stringify({result: "error", info: `${ex}`});
-    }
+    const res = workflowBSQSingle(true, files, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main");
+    process.stdout.write(res);
 }
-
-function workflowGetErrors(masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey) {
-    try {
-        const allErrors = SMTEmitter.generateSMTAssemblyAllErrors(masm, vopts, entrypoint);
-        process.stdout.write("Possible error lines:\n")
-        process.stdout.write(JSON.stringify(allErrors, undefined, 2) + "\n")
-    } catch(e) {
-        process.stdout.write(chalk.red(`SMT generate error -- ${e}\n`));
+else if(mode === "--chk") {
+    const files = process.argv.slice(2);
+    const errors = workflowGetErrors(files, DEFAULT_VOPTS, "NSMain::main");
+    if(errors === undefined) {
+        process.stdout.write("Failed to load error lines\n");
         process.exit(1);
     }
-}
 
-function workflowEmitToFile(into: string, masm: MIRAssembly, mode: "check" | "evaluate" | "invert", vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey) {
-    const res = generateSMTPayload(masm, mode, timeout, vopts, errorTrgtPos, entrypoint);
-    emitSMT2File(res.smt2decl, into)
-}
+    //
+    //TODO: we probably want to make this a process parallel process
+    //
+    for(let i = 0; i < errors.length; ++i) {
+        process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}...\n`);
+        const res = workflowBSQCheck(true, files, DEFAULT_TIMEOUT, errors[i], "NSMain::main", true);
+        const jres = JSON.parse(res);
 
-function workflowBSQSingle(bson: boolean, masm: MIRAssembly, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey) {
-    const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
-    const veval = runVEvaluator(res, "check", bson);
-    
-    process.stdout.write(veval);
-}
-
-function workflowBSQCheck() {
-    
-}
-
-function workflowEvaluateSingle(bson: boolean, masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey) {
-    const res = generateSMTPayload(masm, "check", timeout, vopts, { file: "[NO FILE]", line: -1, pos: -1 }, entrypoint);
-    const veval = runVEvaluator(res, "check", bson);
-    
-    process.stdout.write(veval);
-}
-
-function workflowInvertSingle(bson: boolean, masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey) {
-    const res = generateSMTPayload(masm, "check", timeout, vopts, { file: "[NO FILE]", line: -1, pos: -1 }, entrypoint);
-    const veval = runVEvaluator(res, "check", bson);
-    
-    process.stdout.write(veval);
-}
-
-Commander
-    .option("-l --location [location]", "Location (file.bsq@line#pos) with error of interest")
-    .option("-e --entrypoint [entrypoint]", "Entrypoint to symbolically test", "NSMain::main")
-    .option("-m --mode [mode]", "Mode to run (errorlocs | refute | generate)", "refute")
-    .option("-s --small", "Enable small model optimizations in generate mode")
-    .option("-o --output [file]", "Output the model to a given file")
-    .option("-p --prover [prover]", "Prover to use (z3 | cvc4)", "z3");
-
-Commander.parse(process.argv);
-
-
-
-if (Commander.args.length === 0) {
-    process.stdout.write(chalk.red("Error -- Please specify at least one source file and target line as arguments\n"));
-    process.exit(1);
-}
-
-if(Commander.mode !== "errorlocs" && Commander.mode !== "refute" && Commander.mode !== "generate") {
-    process.stdout.write(chalk.red("Error -- Valid modes are \"errorlocs\", \"refute\", and \"generate\"\n"));
-    process.exit(1);
-}
-
-process.stdout.write(`Processing Bosque sources in:\n${Commander.args.join("\n")}\n...Using entrypoint ${Commander.entrypoint}...\n`);
-const massembly = generateMASM(Commander.args, Commander.entrypoint, Commander.small !== undefined);
-
-if(Commander.mode === "errorlocs" || Commander.location === undefined) {
-    const sasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, {file: "[]", line: -1, pos: -1});
-    if(sasm !== undefined) {
-        process.stdout.write("Possible error lines:\n")
-        process.stdout.write(JSON.stringify(sasm.allErrors, undefined, 2) + "\n")
-
-        if (Commander.output) {
-            const smfc = buildSMT2file(sasm, timeout, "Refute");
-            emitSMT2File(smfc, Commander.output);
+        if(jres["result"] === "infeasible") {
+            process.stdout.write(`Proved infeasible in ${jres["time"]} millis!\n`);
+        }
+        else if(jres["result"] === "witness") {
+            process.stdout.write(`Generated witness input in ${jres["time"]} millis!\n`);
+            process.stdout.write(jres["input"] + "\n");
+        }
+        else if(jres["result"] === "timeout") {
+            process.stdout.write(`Solver timeout :(\n`);
+        }
+        else {
+            process.stdout.write(`Failed with -- ${jres}`);
         }
     }
-    process.exit(0);
 }
+else if(mode === "--evaluate") {
+    const files = process.argv.slice(2);
+    let rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
 
-let errlocation = { file: "[]", line: -1, pos: -1 };
-if (Commander.location !== undefined) {
-    const errfile = Commander.location.slice(0, Commander.location.indexOf("@"));
-    const errline = Number.parseInt(Commander.location.slice(Commander.location.indexOf("@") + 1, Commander.location.indexOf("#")));
-    const errpos = Number.parseInt(Commander.location.slice(Commander.location.indexOf("#") + 1));
-    errlocation = { file: errfile, line: errline, pos: errpos };
+    rl.question(">> ", (input) => {
+        try {
+            const jinput = JSON.parse(input) as any[];
+
+            const res = workflowEvaluateSingle(true, files, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
+            const jres = JSON.parse(res);
+
+            if (jres["result"] === "infeasible") {
+                process.stdout.write(`No valid (non error) result exists for this input!\n`);
+            }
+            else if (jres["result"] === "output") {
+                process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
+                process.stdout.write(jres["output"] + "\n");
+            }
+            else if (jres["result"] === "timeout") {
+                process.stdout.write(`Solver timeout :(\n`);
+            }
+            else {
+                process.stdout.write(`Failed with -- ${jres}`);
+            }
+        }
+        catch (ex) {
+            process.stderr.write(`Failure ${ex}\n`)
+        }
+    });
 }
+else if(mode === "--invert") {
+    const files = process.argv.slice(2);
+    let rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
 
-setImmediate(() => {
-    try {
-        const smtasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, errlocation);
-        if (smtasm === undefined) {
-            process.stdout.write(chalk.red("Error -- Failed to generate SMTLIB code\n"));
-            process.exit(1);
+    rl.question(">> ", (input) => {
+        try {
+            const joutput = JSON.parse(input);
+
+            const res = workflowInvertSingle(true, files, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
+            const jres = JSON.parse(res);
+
+            if (jres["result"] === "infeasible") {
+                process.stdout.write(`No valid (non error) input exists for this input!\n`);
+            }
+            else if (jres["result"] === "witness") {
+                process.stdout.write(`Generated candidate input in ${jres["time"]} millis!\n`);
+                process.stdout.write(jres["input"] + "\n");
+            }
+            else if (jres["result"] === "timeout") {
+                process.stdout.write(`Solver timeout :(\n`);
+            }
+            else {
+                process.stdout.write(`Failed with -- ${jres}`);
+            }
         }
-
-        if(smtasm.allErrors.findIndex((ee) => ee.file === errlocation.file && ee.pos === errlocation.pos) === -1) {
-            process.stdout.write(chalk.red("Error -- No error associated with given position\n"));
-            process.exit(1);
+        catch (ex) {
+            process.stderr.write(`Failure ${ex}\n`)
         }
-
-        const smfc = buildSMT2file(smtasm as SMTAssembly, timeout, Commander.mode === "refute" ? "Refute" : "Generate");
-        if (Commander.output) {
-            emitSMT2File(smfc, Commander.output);
-        }
-
-        runSMT2File(smfc, Commander.mode === "refute" ? "Refute" : "Generate");
+    });
+}
+else {
+    const files = process.argv.slice(2);
+    const errors = workflowGetErrors(files, DEFAULT_VOPTS, "NSMain::main");
+    if(errors === undefined) {
+        process.stderr.write("Failed to load error lines\n");
+        process.exit(1);
     }
-    catch (ex) {
-        process.stderr.write(chalk.red(`Error -- ${ex}\n`));
-    }
-});
+
+    process.stdout.write("Possible Errors:\n");
+    process.stdout.write(JSON.stringify(errors, undefined, 2) + "\n");
+}
