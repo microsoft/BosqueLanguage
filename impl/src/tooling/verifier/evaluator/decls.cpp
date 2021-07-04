@@ -113,7 +113,7 @@ z3::expr ExtractionInfo::genInitialContext(const z3::model& m) const
     auto seqsort = m.ctx().seq_sort(bvsort);
     auto consf = m.ctx().function("Ctx@MakeStep", bvsort, seqsort);
 
-    auto ii = m.ctx().bv_val((uint64_t)0, bvsort);
+    auto ii = m.ctx().bv_val((uint64_t)0, this->apimodule->bv_width);
     return consf(ii);
 }
 
@@ -123,7 +123,7 @@ z3::expr ExtractionInfo::extendContext(const z3::model& m, const z3::expr& ctx, 
     auto seqsort = m.ctx().seq_sort(bvsort);
     auto consf = m.ctx().function("Ctx@MakeStep", bvsort, seqsort);
 
-    auto ii = m.ctx().bv_val((uint64_t)i, bvsort);
+    auto ii = m.ctx().bv_val((uint64_t)i, this->apimodule->bv_width);
     return z3::concat(ctx, consf(ii));
 }
 
@@ -1835,8 +1835,7 @@ json LogicalTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::mo
 
 UUIDType* UUIDType::jparse(json j)
 {
-    assert(false);
-    return nullptr;
+    return new UUIDType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json UUIDType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1871,8 +1870,7 @@ json UUIDType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m)
 
 ContentHashType* ContentHashType::jparse(json j)
 {
-    assert(false);
-    return nullptr;
+    return new ContentHashType(j["smtname"].get<std::string>(), j["smttypetag"].get<std::string>(), j["boxfunc"].get<std::string>(), j["unboxfunc"].get<std::string>());
 }
 
 json ContentHashType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2573,13 +2571,11 @@ InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, con
 APIModule* APIModule::jparse(json j)
 {
     std::map<std::string, const IType*> typemap;
-    auto jtypemap = j["typemap"];
-    for (json::iterator iter = jtypemap.begin(); iter != jtypemap.end(); ++iter) 
+    auto japitypes = j["apitypes"];
+    for (size_t i = 0; i < japitypes.size(); ++i)
     {
-        auto name = iter.key();
-        auto val = IType::jparse(iter.value());
-
-        typemap[name] = val;
+        auto val = IType::jparse(japitypes[i]);
+        typemap[val->name] = val;
     }
 
     InvokeSignature* apisig = InvokeSignature::jparse(j["apisig"], typemap);
@@ -2589,5 +2585,5 @@ APIModule* APIModule::jparse(json j)
     //TODO: load constants
     //
 
-    return new APIModule(typemap, apisig, j["bv_width"].get<size_t>(), constants);
+    return new APIModule(typemap, apisig, j["bvwidth"].get<size_t>(), constants);
 }

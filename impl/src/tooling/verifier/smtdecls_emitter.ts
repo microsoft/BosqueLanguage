@@ -39,7 +39,7 @@ const BuiltinEntityDeclNames = [
 
 type APIModuleInfo = {
     apitypes: object[],
-    signature: object,
+    apisig: object,
     bvwidth: number,
     constants: object[]
 };
@@ -814,7 +814,7 @@ class SMTEmitter {
 
         return {
             apitypes: apiout,
-            signature: signature,
+            apisig: signature,
             bvwidth: bvwidth,
             constants: constants
         }

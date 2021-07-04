@@ -140,7 +140,9 @@ public:
     const std::regex re_numberinof;
 
     ParseInfo(const APIModule* apimodule, z3::expr_vector chks): apimodule(apimodule), chks(chks),
-    re_numberinon("^(+)?(0|[1-9][0-9]*)$"), re_numberinoi("^(+|-)?(0|[1-9][0-9]*)$"), re_numberinof("^(+|-)?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$")
+    re_numberinon("^[+]?(0|[1-9][0-9]*)$"), 
+    re_numberinoi("^[-+]?(0|[1-9][0-9]*)$"), 
+    re_numberinof("^[-+]?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$")
     {
         ;
     }

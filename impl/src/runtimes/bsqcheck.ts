@@ -4,7 +4,8 @@
 //-------------------------------------------------------------------------------------------------------
 
 import chalk from "chalk";
-import *  as readline from "readline";
+import * as readline from "readline";
+import * as path from "path"; 
 
 import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle } from "../tooling/verifier/smt_workflows";
 
@@ -23,7 +24,6 @@ function parseLocation(location: string): { file: string, line: number, pos: num
 const mode = process.argv[2];
 const args = process.argv.slice(3);
 
-
 if(mode === "--output") {
     const smtmode = args[0];
     if(smtmode !== "check" && smtmode !== "evaluate" && smtmode !== "invert") {
@@ -41,12 +41,13 @@ if(mode === "--output") {
 
     const files = args.slice(smtonly ? 3 : 2);
 
-    const into = files[0].substr(0, files[0].length - 3) + (smtonly ? "smt2" : "json");
-    process.stdout.write(`Writing SMT file to ${into}`);
+    const fparse = path.parse(files[0]);
+    const into = path.join(fparse.dir, fparse.name + (smtonly ? ".smt2" : ".json"));
+    process.stdout.write(`Writing SMT file to ${into}\n`);
 
     workflowEmitToFile(into, files, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
 }
-else if(mode === "--chksingle") {
+else if(mode === "--checksingle") {
     const location = parseLocation(args[0]);
     if(location === undefined) {
         process.stderr.write("Location should be of the form file.bsq@line#pos\n");
@@ -55,10 +56,10 @@ else if(mode === "--chksingle") {
 
     const files = args.slice(1);
 
-    const res = workflowBSQSingle(true, files, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main");
-    process.stdout.write(res);
+    const res = workflowBSQSingle(false, files, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main");
+    process.stdout.write(res + "\n");
 }
-else if(mode === "--chk") {
+else if(mode === "--check") {
     const printprocess = (args[0] === "--verbose");
     const quiet = (args[0] === "--quiet");
     const files = args.slice((printprocess || quiet) ? 1 : 0);
@@ -90,7 +91,7 @@ else if(mode === "--chk") {
             process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}...\n`);
         }
 
-        const jres = workflowBSQCheck(true, files, DEFAULT_TIMEOUT, errors[i], "NSMain::main", true);
+        const jres = workflowBSQCheck(false, files, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
 
         if(jres === undefined) {
             if(!quiet) {
@@ -127,11 +128,11 @@ else if(mode === "--chk") {
     }
 
     if(fcount !== 0) {
-        process.stdout.write(chalk.red(`Failed on ${ecount} error(s)!\n`));
+        process.stdout.write(chalk.red(`Failed on ${fcount} error(s)!\n`));
     }
 
     if(icount !== 0) {
-        process.stdout.write(chalk.green(`Proved ${ecount} error(s) are infeasible on all executions!\n`));
+        process.stdout.write(chalk.green(`Proved ${icount} error(s) infeasible on all executions!\n`));
     }
 
     if(wcount !== 0) {
@@ -140,11 +141,11 @@ else if(mode === "--chk") {
     }
 
     if(pcount !== 0) {
-        process.stdout.write(chalk.blue(`Proved ${ecount} error(s) are infeasible on a subset of excutions (and found no failing inputs)!\n`));
+        process.stdout.write(chalk.blue(`Proved ${pcount} error(s) infeasible on a subset of excutions (and found no failing inputs)!\n`));
     }
 
     if(ecount !== 0) {
-        process.stdout.write(chalk.blue(`Exhausted search on ${ecount} error(s) are and found no failing inputs.\n`));
+        process.stdout.write(chalk.blue(`Exhausted search on ${ecount} error(s) and found no failing inputs.\n`));
     }
 }
 else if(mode === "--evaluate") {
@@ -158,7 +159,7 @@ else if(mode === "--evaluate") {
         try {
             const jinput = JSON.parse(input) as any[];
 
-            const res = workflowEvaluateSingle(true, files, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
+            const res = workflowEvaluateSingle(false, files, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
             const jres = JSON.parse(res);
 
             if (jres["result"] === "infeasible") {
@@ -191,7 +192,7 @@ else if(mode === "--invert") {
         try {
             const joutput = JSON.parse(input);
 
-            const res = workflowInvertSingle(true, files, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
+            const res = workflowInvertSingle(false, files, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
             const jres = JSON.parse(res);
 
             if (jres["result"] === "infeasible") {

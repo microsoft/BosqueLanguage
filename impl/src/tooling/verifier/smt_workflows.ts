@@ -18,7 +18,7 @@ import { MIRInvokeKey } from "../../compiler/mir_ops";
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
 const smtlib_path = Path.join(bosque_dir, "bin/core/verify");
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
-const exepath = Path.normalize(Path.join(bosque_dir, "/build/out/chkworkflow" + (process.platform === "win32" ? ".exe" : "")));
+const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chkworkflow" + (process.platform === "win32" ? ".exe" : "")));
 
 const smtruntime = FS.readFileSync(smtruntime_path).toString();
 
@@ -85,7 +85,8 @@ function generateSMTPayload(masm: MIRAssembly, mode: "check" | "evaluate" | "inv
 
 function runVEvaluator(cpayload: object, workflow: "check" | "eval" | "invert", bson: boolean): string {
     try {
-        return execSync(`${exepath} ${bson ? " --bson" : ""} --${workflow}`, { input: JSON.stringify(cpayload) }).toString().trim();
+        const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
+        return execSync(cmd, { input: JSON.stringify(cpayload, undefined, 2) }).toString().trim();
     }
     catch(ex) {
         return JSON.stringify({result: "error", info: `${ex}`});

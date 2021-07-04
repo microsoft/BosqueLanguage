@@ -64,7 +64,7 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, unsigned timeo
         {
             auto argtype = apimodule->api->argtypes[i];
             auto ctx = einfo.extendContext(m, rootctx, i);
-            auto jarg = argtype->resextract(einfo, ctx, m);
+            auto jarg = argtype->argextract(einfo, ctx, m);
 
             if(!bsqon)
             {
