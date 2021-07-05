@@ -5,6 +5,7 @@
 
 import * as FS from "fs";
 import * as Path from "path";
+import { execSync } from "child_process";
 
 import { MIRAssembly, PackageConfig } from "../compiler/mir_assembly";
 import { MIREmitter } from "../compiler/mir_emitter";
@@ -12,14 +13,12 @@ import { ICPPAssembly, TranspilerOptions } from "../tooling/icpp/transpiler/icpp
 import { MIRInvokeKey } from "../compiler/mir_ops";
 import { ICPPEmitter } from "../tooling/icpp/transpiler/icppdecls_emitter";
 
-import * as Commander from "commander";
 import chalk from "chalk";
-import { stdout } from "process";
-
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
+const exepath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : "")));
 
-function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean): MIRAssembly {
+function generateMASM(files: string[], entrypoint: string): MIRAssembly {
     let code: { relativePath: string, contents: string }[] = [];
     try {
         const coredir = Path.join(bosque_dir, "bin/core/execute");
@@ -79,49 +78,54 @@ function generateICPPAssembly(masm: MIRAssembly, topts: TranspilerOptions, entry
 function emitICPPFile(cfile: string, into: string) {
     try {
         process.stdout.write(`Writing bytecode output to "${into}..."\n`)
-        FS.writeFileSync(Commander.output, cfile);
+        FS.writeFileSync(into, cfile);
     }
     catch (fex) {
         process.stderr.write(chalk.red(`Failed to write file -- ${fex}\n`));
     }
 }
 
-Commander
-    .option("-e --entrypoint [entrypoint]", "Entrypoint to execute from", "NSMain::main")
-    .option("-o --output [file]", "Output the model to a given file");
+function runICPPFile(icppjson: string): string {
+    try {
+        process.stdout.write(`Running code..."\n`)
 
-Commander.parse(process.argv);
+        const cmd = `${exepath} --stream`;
+        return execSync(cmd, { input: icppjson }).toString().trim();
+    }
+    catch(ex) {
+        return JSON.stringify({result: "error", info: `${ex}`});
+    }
+}
+
+
+const mode = process.argv[2];
+const args = process.argv.slice(mode === "--output" ? 4 : 3);
 
 const topts = {
 } as TranspilerOptions;
 
-if (Commander.args.length === 0) {
+
+if (args.length === 0) {
     process.stdout.write(chalk.red("Error -- Please specify at least one source file and target line as arguments\n"));
     process.exit(1);
 }
 
-process.stdout.write(`Processing Bosque sources in:\n${Commander.args.join("\n")}\n...Using entrypoint ${Commander.entrypoint}...\n`);
-const massembly = generateMASM(Commander.args, Commander.entrypoint, Commander.small !== undefined);
+process.stdout.write(`Processing Bosque sources in:\n${args.join("\n")}\n...\n`);
+const massembly = generateMASM(args, "NSMain::main");
+const icppasm = generateICPPAssembly(massembly, topts, "NSMain::main");
+        
+if (icppasm === undefined) {
+    process.stdout.write(chalk.red("Error -- Failed to generate bytecode\n"));
+    process.exit(1);
+}
 
-setImmediate(() => {
-    try {
-        const icppasm = generateICPPAssembly(massembly, topts, Commander.entrypoint);
-        if (icppasm === undefined) {
-            process.stdout.write(chalk.red("Error -- Failed to generate bytecode\n"));
-            process.exit(1);
-        }
+const icppjson = JSON.stringify(icppasm.jsonEmit(), undefined, "  ");
 
-        const icppjson = JSON.stringify(icppasm.jsonEmit(), undefined, "  ");
+if (mode === "--output") {
+    emitICPPFile(icppjson, process.argv[3]);
+}
+else {
+    const output = runICPPFile(icppjson);
+    process.stdout.write(output + "\n");
+}
 
-        if (Commander.output) {
-            emitICPPFile(icppjson, Commander.output);
-        }
-        else {
-            stdout.write(icppjson);
-            stdout.write("\n");
-        }
-    }
-    catch (ex) {
-        process.stderr.write(chalk.red(`Error -- ${ex}\n`));
-    }
-});

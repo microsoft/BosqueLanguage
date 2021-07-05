@@ -142,7 +142,8 @@ const BSQType* jsonLoadEnumType(boost::json::value v)
     auto underlying = Environment::g_typenameToIDMap[jsonGetAsString(v, "underlying")];
 
     std::vector<std::pair<std::string, uint32_t>> enuminvs;
-    std::transform(v.as_object().at("enuminvs").as_array().cbegin(), v.as_object().at("enuminvs").as_array().cend(), std::back_inserter(enuminvs), [](boost::json::value arg) {
+    auto jenuminvs = v.as_object().at("enuminvs").as_array(); 
+    std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enuminvs), [](boost::json::value arg) {
         return std::make_pair(jsonGetAsString(arg, "enum"), jsonGetAsUInt<uint32_t>(arg, "offset"));
     });
 

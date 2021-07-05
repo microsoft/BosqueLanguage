@@ -40,7 +40,7 @@ else {
 const command = `${compiler} ${ccflags}${includes} ${outfile} ${cppfiles.join(" ")}${taillinks}`;
 
 fsx.ensureDirSync(outbase);
-fsx.emptyDirSync(outbase);
+fsx.removeSync(outfile);
 
 console.log(command);
 

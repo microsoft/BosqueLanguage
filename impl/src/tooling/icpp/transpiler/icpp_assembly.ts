@@ -224,8 +224,8 @@ class ICPPTypeEntity extends ICPPType {
         return {...this.jemitType([]), underlying: underlying, primitive: primitive};
     }
 
-    jemitEnum(underlying: MIRResolvedTypeKey, enumvinvs: [string, number][]): object {
-        return {...this.jemitType([]), underlying: underlying, enumvinvs: enumvinvs};
+    jemitEnum(underlying: MIRResolvedTypeKey, enuminvs: [string, number][]): object {
+        return {...this.jemitType([]), underlying: underlying, enuminvs: enuminvs};
     }
 
     jemitVector(etype: MIRResolvedTypeKey, esize: number, emask: RefMask): object {

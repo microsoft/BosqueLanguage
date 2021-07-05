@@ -1507,7 +1507,7 @@ bool enumJSONParse_impl(const BSQType* btype, const boost::json::value& jv, Stor
 
         auto etype = dynamic_cast<const BSQEnumType*>(btype);
         auto cpos = std::find_if(etype->enuminvs.cbegin(), etype->enuminvs.cend(), [&ename](const std::pair<std::string, uint32_t>& entry) {
-            entry.first == ename;
+            return entry.first == ename;
         })->second;
     
         etype->underlying->storeValue(sl, Environment::g_constantbuffer + cpos);

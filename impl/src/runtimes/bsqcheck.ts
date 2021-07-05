@@ -5,7 +5,7 @@
 
 import chalk from "chalk";
 import * as readline from "readline";
-import * as path from "path"; 
+import * as path from "path";
 
 import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle } from "../tooling/verifier/smt_workflows";
 
