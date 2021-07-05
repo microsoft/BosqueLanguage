@@ -196,7 +196,7 @@ else if(mode === "--invert") {
             const jres = JSON.parse(res);
 
             if (jres["result"] === "infeasible") {
-                process.stdout.write(`No valid (non error) input exists for this input!\n`);
+                process.stdout.write(`No valid (non error) input exists for this output!\n`);
             }
             else if (jres["result"] === "witness") {
                 process.stdout.write(`Generated candidate input in ${jres["time"]} millis!\n`);

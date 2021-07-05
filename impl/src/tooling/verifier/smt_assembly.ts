@@ -706,6 +706,8 @@ class SMTAssembly {
 
             action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
             action.push(`(declare-const _@smtres@_value ${this.model.valuetype.name})`);
+
+            action.push(`(assert (= _@smtres@_value ${this.model.fgetvalue.emitSMT2(undefined)}))`);
         }
 
         let foutput: string[] = [];
