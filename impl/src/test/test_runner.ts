@@ -38,7 +38,12 @@ abstract class IndividualTestInfo {
             }
         }
         else if(restriction === "check") {
-            if((this instanceof IndividualRefuteTestInfo) || (this instanceof IndividualReachableTestInfo)) {
+            if((this instanceof IndividualRefuteTestInfo) || (this instanceof IndividualWitnessTestInfo)) {
+                tests.push(this);
+            }
+        }
+        else if(restriction === "evaluate") {
+            if((this instanceof IndividualEvaluateTestInfo)) {
                 tests.push(this);
             }
         }
@@ -111,7 +116,7 @@ class IndividualRefuteTestInfo extends IndividualTestInfo {
     }
 }
 
-class IndividualReachableTestInfo extends IndividualTestInfo {
+class IndividualWitnessTestInfo extends IndividualTestInfo {
     readonly line: number;
 
     private static ctemplate = 
@@ -131,19 +136,19 @@ class IndividualReachableTestInfo extends IndividualTestInfo {
         this.line = line;
     }
 
-    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualReachableTestInfo {
-        const rcode = IndividualReachableTestInfo.ctemplate
+    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualWitnessTestInfo {
+        const rcode = IndividualWitnessTestInfo.ctemplate
             .replace("%%SIG%%", sig)
             .replace("%%ACTION%%", action)
             .replace("%%CODE%%", code);
 
-        return new IndividualReachableTestInfo(name, fullname, rcode, 4, extraSrc);
+        return new IndividualWitnessTestInfo(name, fullname, rcode, 4, extraSrc);
     }
 }
 
-class IndividualICPPTestInfo extends IndividualTestInfo {
+class IndividualEvaluateTestInfo extends IndividualTestInfo {
     readonly jargs: any[];
-    readonly expected: string | null;
+    readonly expected: any; //null is infeasible
 
     private static ctemplate = 
 "namespace NSMain;\n\
@@ -155,14 +160,45 @@ class IndividualICPPTestInfo extends IndividualTestInfo {
 %%CODE%%\n\
 ";
 
-    constructor(name: string, fullname: string, code: string, jargs: any[], expected: string | null, extraSrc: string | undefined) {
+    constructor(name: string, fullname: string, code: string, jargs: any[], expected: any, extraSrc: string | undefined) {
         super(name, fullname, code, extraSrc);
 
         this.jargs = jargs;
         this.expected = expected;
     }
 
-    static create(name: string, fullname: string, sig: string, action: string, code: string, jargs: any[], expected: string | null, extraSrc: string | undefined): IndividualICPPTestInfo {
+    static create(name: string, fullname: string, sig: string, action: string, code: string, jargs: any[], expected: any, extraSrc: string | undefined): IndividualEvaluateTestInfo {
+        const rcode = IndividualEvaluateTestInfo.ctemplate
+            .replace("%%SIG%%", sig)
+            .replace("%%ACTION%%", action)
+            .replace("%%CODE%%", code);
+
+        return new IndividualEvaluateTestInfo(name, fullname, rcode, jargs, expected, extraSrc);
+    }
+}
+
+class IndividualICPPTestInfo extends IndividualTestInfo {
+    readonly jargs: any[];
+    readonly expected: any; //null is exception
+
+    private static ctemplate = 
+"namespace NSMain;\n\
+\n\
+%%SIG%% {\n\
+    return %%ACTION%%;\n\
+}\n\
+\n\
+%%CODE%%\n\
+";
+
+    constructor(name: string, fullname: string, code: string, jargs: any[], expected: any, extraSrc: string | undefined) {
+        super(name, fullname, code, extraSrc);
+
+        this.jargs = jargs;
+        this.expected = expected;
+    }
+
+    static create(name: string, fullname: string, sig: string, action: string, code: string, jargs: any[], expected: any, extraSrc: string | undefined): IndividualICPPTestInfo {
         const rcode = IndividualICPPTestInfo.ctemplate
             .replace("%%SIG%%", sig)
             .replace("%%ACTION%%", action)
@@ -179,8 +215,9 @@ type APITestGroupJSON = {
     code: string,
     typechk: string[],
     refutes: string[],
-    reachables: string[],
-    icpp: [string, any[], string | null]
+    witness: string[],
+    evaluate: [string, any[], any],
+    icpp: [string, any[], any]
 };
 
 class APITestGroup {
