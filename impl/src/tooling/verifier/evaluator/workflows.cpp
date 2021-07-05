@@ -340,7 +340,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        printf("Unknown usage [--bsqon] (--check|--eval|--invert) [file.json]");
+        printf("Unknown usage [--bsqon] (--check|--eval|--invert) [file.json]\n");
     }
 
     return 0;
