@@ -233,9 +233,11 @@ class APITestGroup {
         const groupname = `${scopename}.${spec.test}`;
         const compiles = (spec.typechk || []).map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
         const refutes = (spec.refutes || []).map((tt, i) => IndividualRefuteTestInfo.create(`refute#${i}`, `${groupname}.refute#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const reachables = (spec.reachables || []).map((tt, i) => IndividualReachableTestInfo.create(`reach#${i}`, `${groupname}.reach#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const icppruns = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, (tt as [string, any[], string | null])[0], spec.code, (tt as [string, any[], string | null])[1], (tt as [string, any[], string | null])[2], spec.src || undefined));
-        return new APITestGroup(groupname, [...compiles, ...refutes, ...reachables, ...icppruns]);
+        const witness = (spec.witness || []).map((tt, i) => IndividualWitnessTestInfo.create(`witness#${i}`, `${groupname}.witness#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
+        const evaluate = (spec.evaluate || []).map((tt, i) => IndividualEvaluateTestInfo.create(`evaluate#${i}`, `${groupname}.evaluate#${i}`, spec.sig, (tt as [string, any[], any])[0], spec.code, (tt as [string, any[], any])[1], (tt as [string, any[], any])[2], spec.src || undefined));
+        const icpp = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, (tt as [string, any[], any])[0], spec.code, (tt as [string, any[], any])[1], (tt as [string, any[], any])[2], spec.src || undefined));
+
+        return new APITestGroup(groupname, [...compiles, ...refutes, ...witness, ...evaluate, ...icpp]);
     }
 
     generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
@@ -522,7 +524,7 @@ class TestRunner {
                 const tinfo = runCompilerTest(this.smt_assets.corefiles, code);
                 this.testCompleteActionInline(tt, tinfo.result, tinfo.start, tinfo.end, tinfo.info);
             }
-            else if ((tt instanceof IndividualRefuteTestInfo) || (tt instanceof IndividualReachableTestInfo)) {
+            else if (tt instanceof IndividualRefuteTestInfo) {
                 const mode = tt instanceof IndividualRefuteTestInfo ? "Refute" : "Reach";
 
                 let code = tt.code;
@@ -533,11 +535,17 @@ class TestRunner {
                 const handler = this.generateTestResultCallback(tt);
                 this.queued.push(tt.fullname);
                 try {
-                    enqueueSMTTest(mode, [], this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
+                    enqueueSMTTestRefute(mode, [], this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
                 }
                 catch (ex) {
                     handler("error", new Date(), new Date(), `${ex}`);
                 }
+            }
+            else if (tt instanceof IndividualWitnessTestInfo) {
+                xxx;
+            }
+            else if(tt instanceof IndividualEvaluateTestInfo) {
+                xxxx;
             }
             else if(tt instanceof IndividualICPPTestInfo) {
                 let code = tt.code;
