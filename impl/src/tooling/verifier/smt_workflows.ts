@@ -11,9 +11,11 @@ import chalk from "chalk";
 
 import { MIRAssembly, PackageConfig } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";
-import { Payload, SMTEmitter } from "../../tooling/verifier/smtdecls_emitter";
-import { VerifierOptions } from "../../tooling/verifier/smt_exp";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
+
+import { Payload, SMTEmitter } from "./smtdecls_emitter";
+import { VerifierOptions } from "./smt_exp";
+
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
 const smtlib_path = Path.join(bosque_dir, "bin/core/verify");

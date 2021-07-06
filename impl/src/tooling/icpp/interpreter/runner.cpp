@@ -424,7 +424,6 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
     if(argc == 2 && std::string(argv[1]) == std::string("--stream"))
     {
         mode = "stream";
-        input = std::string(argv[2]);
     }
     else if(argc == 3)
     {
