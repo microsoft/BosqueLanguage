@@ -5,7 +5,7 @@
 
 import * as FS from "fs";
 import * as Path from "path";
-import { execSync } from "child_process";
+import { exec } from "child_process";
 
 import { MIRAssembly, PackageConfig } from "../../../compiler/mir_assembly";
 import { MIREmitter } from "../../../compiler/mir_emitter";
@@ -13,6 +13,7 @@ import { MIRInvokeKey } from "../../../compiler/mir_ops";
 
 import { ICPPAssembly, TranspilerOptions } from "./icpp_assembly";
 import { ICPPEmitter } from "./icppdecls_emitter";
+import { CodeFileInfo } from "../../../ast/parser";
 
 import chalk from "chalk";
 
@@ -22,27 +23,43 @@ const exepath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp
 const DEFAULT_TOPTS = {
 } as TranspilerOptions;
 
-function generateMASM(files: string[], entrypoint: string): MIRAssembly {
-    let code: { relativePath: string, contents: string }[] = [];
+function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
     try {
-        const coredir = Path.join(bosque_dir, "bin/core/execute");
-        const corefiles = FS.readdirSync(coredir);
+        let code: CodeFileInfo[] = [];
 
-        for (let i = 0; i < corefiles.length; ++i) {
-            const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
-        }
- 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            const file = { relativePath: realpath, contents: FS.readFileSync(realpath).toString() };
-            code.push(file);
+            code.push({ fpath: realpath, contents: FS.readFileSync(realpath).toString() });
         }
+
+        return code;
     }
     catch (ex) {
-        process.stdout.write(`Read failed with exception -- ${ex}\n`);
-        process.exit(1);
+        return undefined;
     }
+}
+
+function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
+    try {
+        let code: CodeFileInfo[] = [];
+
+        const coredir = Path.join(bosque_dir, "bin/core/execute");
+        const corefiles = FS.readdirSync(coredir);
+        for (let i = 0; i < corefiles.length; ++i) {
+            const cfpath = Path.join(coredir, corefiles[i]);
+            code.push({ fpath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+        }
+
+        return code;
+    }
+    catch (ex) {
+        return undefined;
+    }
+}
+
+function generateMASM(usercode: CodeFileInfo[], entrypoint: string): MIRAssembly {
+    const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
+    const code = [...corecode, ...usercode];
 
     let namespace = "NSMain";
     let entryfunc = "main";
@@ -89,18 +106,26 @@ function emitICPPFile(cfile: string, into: string): boolean {
     }
 }
 
-function runICPPFile(icppjson: string): string | undefined {
+function runICPPFile(icppjson: {code: object, args: any[]}, cb: (result: string | undefined) => void) {
     try {
         const cmd = `${exepath} --stream`;
-        return execSync(cmd, { input: icppjson }).toString().trim();
+
+        const proc = exec(cmd, (err, stdout, stderr) => {
+            cb(stdout.toString().trim());
+        });
+
+        proc.stdin.setDefaultEncoding('utf-8');
+        proc.stdin.write(JSON.stringify(icppjson, undefined, 2));
+        proc.stdin.write("\n");
+        proc.stdin.end()
     }
     catch(ex) {
-        return undefined;
+        cb(undefined);
     }
 }
 
-function workflowEmitICPPFile(into: string, files: string[], topts: TranspilerOptions, entrypoint: MIRInvokeKey): boolean {
-    const massembly = generateMASM(files, entrypoint);
+function workflowEmitICPPFile(into: string, usercode: CodeFileInfo[], topts: TranspilerOptions, entrypoint: MIRInvokeKey): boolean {
+    const massembly = generateMASM(usercode, entrypoint);
     const icppasm = generateICPPAssembly(massembly, topts, "NSMain::main");
             
     if (icppasm === undefined) {
@@ -111,19 +136,18 @@ function workflowEmitICPPFile(into: string, files: string[], topts: TranspilerOp
     return emitICPPFile(icppjson, into);
 }
 
-function workflowRunICPPFile(args: any[], files: string[], topts: TranspilerOptions, entrypoint: MIRInvokeKey): string | undefined {
-    const massembly = generateMASM(files, entrypoint);
+function workflowRunICPPFile(args: any[], usercode: CodeFileInfo[], topts: TranspilerOptions, entrypoint: MIRInvokeKey, cb: (result: string | undefined) => void) {
+    const massembly = generateMASM(usercode, entrypoint);
     const icppasm = generateICPPAssembly(massembly, topts, "NSMain::main");
             
     if (icppasm === undefined) {
         return undefined;
     }
 
-    const icppjson = JSON.stringify({code: icppasm.jsonEmit(), args: args}, undefined, 2);
-    return runICPPFile(icppjson);
+    return runICPPFile({code: icppasm.jsonEmit(), args: args}, cb);
 }
 
 export {
     DEFAULT_TOPTS,
-    workflowEmitICPPFile, workflowRunICPPFile
+    workflowLoadUserSrc, workflowEmitICPPFile, workflowRunICPPFile
 };

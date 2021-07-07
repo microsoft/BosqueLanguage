@@ -1180,18 +1180,18 @@ class MIREmitter {
         return key;
     }
 
-    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { relativePath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
+    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { fpath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new Assembly();
         let p = new Parser(assembly);
         try {
             for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass1(srcFiles[i].relativePath, srcFiles[i].contents, macrodefs);
+                p.parseCompilationUnitPass1(srcFiles[i].fpath, srcFiles[i].contents, macrodefs);
             }
 
             for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass2(srcFiles[i].relativePath, srcFiles[i].contents, macrodefs);
+                p.parseCompilationUnitPass2(srcFiles[i].fpath, srcFiles[i].contents, macrodefs);
             }
         }
         catch (ex) {
@@ -1206,9 +1206,9 @@ class MIREmitter {
         ////////////////
         //Compute the assembly hash and initialize representations
         const hash = Crypto.createHash("sha512");
-        const data = [...srcFiles].sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+        const data = [...srcFiles].sort((a, b) => a.fpath.localeCompare(b.fpath));
         data.forEach((sf) => {
-            hash.update(sf.relativePath);
+            hash.update(sf.fpath);
             hash.update(sf.contents);
         });
 

@@ -250,6 +250,11 @@ class SourceInfo {
     }
 }
 
+type CodeFileInfo = { 
+    fpath: string, 
+    contents: string 
+};
+
 function unescapeLiteralString(str: string): string {
     let rs = str
         .replace(/\\0/g, "\0")
@@ -4767,6 +4772,6 @@ class Parser {
 }
 
 export { 
-    SourceInfo, ParseError, Parser,
+    CodeFileInfo, SourceInfo, ParseError, Parser,
     unescapeLiteralString
 };

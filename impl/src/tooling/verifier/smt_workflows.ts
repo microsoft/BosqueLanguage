@@ -5,7 +5,7 @@
 
 import * as FS from "fs";
 import * as Path from "path";
-import { execSync } from "child_process";
+import { exec, execSync } from "child_process";
 
 import chalk from "chalk";
 
@@ -15,10 +15,10 @@ import { MIRInvokeKey } from "../../compiler/mir_ops";
 
 import { Payload, SMTEmitter } from "./smtdecls_emitter";
 import { VerifierOptions } from "./smt_exp";
+import { CodeFileInfo } from "../../ast/parser";
 
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
-const smtlib_path = Path.join(bosque_dir, "bin/core/verify");
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
 const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chkworkflow" + (process.platform === "win32" ? ".exe" : "")));
 
@@ -41,25 +41,43 @@ type CheckerResult = "infeasible" | "witness" | "timeout";
 //ocrresponds to 1a, 1b, 2a, 2b in paper
 type ChkWorkflowOutcome = "infeasible" | "witness" | "partial" | "exhaustive";
 
-function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean): { masm: MIRAssembly | undefined, errors: string[] } {
-    let code: { relativePath: string, contents: string }[] = [];
+function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
     try {
-        const corefiles = FS.readdirSync(smtlib_path);
+        let code: CodeFileInfo[] = [];
 
-        for (let i = 0; i < corefiles.length; ++i) {
-            const cfpath = Path.join(smtlib_path, corefiles[i]);
-            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
-        }
- 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            const file = { relativePath: realpath, contents: FS.readFileSync(realpath).toString() };
-            code.push(file);
+            code.push({ fpath: realpath, contents: FS.readFileSync(realpath).toString() });
         }
+
+        return code;
     }
     catch (ex) {
-        return { masm: undefined, errors: ["Failed to load code"] };
+        return undefined;
     }
+}
+
+function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
+    try {
+        let code: CodeFileInfo[] = [];
+
+        const coredir = Path.join(bosque_dir, "bin/core/verify");
+        const corefiles = FS.readdirSync(coredir);
+        for (let i = 0; i < corefiles.length; ++i) {
+            const cfpath = Path.join(coredir, corefiles[i]);
+            code.push({ fpath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+        }
+
+        return code;
+    }
+    catch (ex) {
+        return undefined;
+    }
+}
+
+function generateMASM(usercode: CodeFileInfo[], entrypoint: string, dosmallopts: boolean): { masm: MIRAssembly | undefined, errors: string[] } {
+    const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
+    const code = [...corecode, ...usercode];
 
     let namespace = "NSMain";
     let entryfunc = "main";
@@ -95,9 +113,26 @@ function runVEvaluator(cpayload: object, workflow: "check" | "eval" | "invert", 
     }
 }
 
-function workflowGetErrors(files: string[], vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] | undefined {
+function runVEvaluatorAsync(cpayload: object, workflow: "check" | "eval" | "invert", bson: boolean, cb: (result: string) => void) {
     try {
-        const { masm, errors } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
+        const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
+        const proc = exec(cmd, (err, stdout, stderr) => {
+            cb(stdout.toString().trim());
+        });
+
+        proc.stdin.setDefaultEncoding('utf-8');
+        proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
+        proc.stdin.write("\n");
+        proc.stdin.end();
+    }
+    catch(ex) {
+        cb(JSON.stringify({result: "error", info: `${ex}`}));
+    }
+}
+
+function workflowGetErrors(usercode: CodeFileInfo[], vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] | undefined {
+    try {
+        const { masm, errors } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
             process.stderr.write(JSON.stringify(errors, undefined, 2));
@@ -112,9 +147,9 @@ function workflowGetErrors(files: string[], vopts: VerifierOptions, entrypoint: 
     }
 }
 
-function workflowEmitToFile(into: string, files: string[], mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, smtonly: boolean) {
+function workflowEmitToFile(into: string, usercode: CodeFileInfo[], mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, smtonly: boolean) {
     try {
-        const { masm, errors } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm, errors } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
             process.stderr.write(JSON.stringify(errors, undefined, 2));
@@ -132,26 +167,27 @@ function workflowEmitToFile(into: string, files: string[], mode: "check" | "eval
     }
 }
 
-function workflowBSQSingle(bson: boolean, files: string[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): string {
+function workflowBSQSingle(bson: boolean, usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
-            return JSON.stringify({result: "error", info: "compile errors"});
+            cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {    
             const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
             if(res === undefined) {
-                return JSON.stringify({result: "error", info: "payload generation error"});
+                cb(JSON.stringify({result: "error", info: "payload generation error"}));
+                return;
             }
 
-            return runVEvaluator(res, "check", bson);
+            runVEvaluatorAsync(res, "check", bson, cb);
         }
     } catch(e) {
-        return JSON.stringify({result: "error", info: `${e}`});
+        cb(JSON.stringify({result: "error", info: `${e}`}));
     }
 }
 
-function wfCheckSmall(bson: boolean, files: string[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+function wfCheckSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
     //
     //TODO: should compute min viable BV size here
     //
@@ -167,7 +203,7 @@ function wfCheckSmall(bson: boolean, files: string[], timeout: number, errorTrgt
         }
 
         try {
-            const { masm } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
+            const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
             if(masm === undefined) {
                 if(printprogress) {
                     process.stderr.write(`    compile errors\n`);
@@ -233,7 +269,7 @@ function wfCheckSmall(bson: boolean, files: string[], timeout: number, errorTrgt
     return {result: "infeasible", time: (end - start) / 1000};
 }
 
-function wfCheckLarge(bson: boolean, files: string[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+function wfCheckLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
     let vopts = {...DEFAULT_VOPTS};
     vopts.ISize = 64;
 
@@ -244,7 +280,7 @@ function wfCheckLarge(bson: boolean, files: string[], timeout: number, errorTrgt
     }
 
     try {
-        const { masm } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
         if (masm === undefined) {
             if (printprogress) {
                 process.stderr.write(`    compile errors\n`);
@@ -307,14 +343,14 @@ function wfCheckLarge(bson: boolean, files: string[], timeout: number, errorTrgt
     }
 }
 
-function workflowBSQCheck(bson: boolean, files: string[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: ChkWorkflowOutcome, time: number, input?: any} | undefined {
+function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: ChkWorkflowOutcome, time: number, input?: any} | undefined {
     if(printprogress) {
         process.stderr.write(`  Checking error at ${errorTrgtPos.file}@${errorTrgtPos.line}...\n`);
     }
 
     const start = Date.now();
 
-    const smr = wfCheckSmall(bson, files, timeout, errorTrgtPos, entrypoint, printprogress);
+    const smr = wfCheckSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
     if(smr === undefined) {
         if(printprogress) {
             process.stderr.write(`  blocked on small model checking -- moving on :(\n`);
@@ -330,7 +366,7 @@ function workflowBSQCheck(bson: boolean, files: string[], timeout: number, error
         return {result: "witness", time: (end - start) / 1000, input: smr.input};
     }
 
-    const lmr = wfCheckLarge(bson, files, timeout, errorTrgtPos, entrypoint, printprogress);
+    const lmr = wfCheckLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
     if(lmr === undefined) {
         if(printprogress) {
             process.stderr.write(`  blocked on large model checking -- no result :(\n`);
@@ -341,7 +377,14 @@ function workflowBSQCheck(bson: boolean, files: string[], timeout: number, error
     const end = Date.now();
     const elapsed = (end - start) / 1000;
 
-    if(lmr.result === "infeasible") {
+    if(lmr.result === "witness") {
+        if(printprogress) {
+            process.stderr.write(`  witness input generation successful (1b)!\n`);
+        }
+        const end = Date.now();
+        return {result: "witness", time: (end - start) / 1000, input: lmr.input};
+    }
+    else if(lmr.result === "infeasible") {
         if(printprogress) {
             process.stderr.write(`  infeasible on all inputs (1a)!\n`);
         }
@@ -363,45 +406,48 @@ function workflowBSQCheck(bson: boolean, files: string[], timeout: number, error
     }
 }
 
-function workflowEvaluateSingle(bson: boolean, files: string[], jin: any[], vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey): string {
+function workflowEvaluateSingle(bson: boolean, usercode: CodeFileInfo[], jin: any[], vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
-            return JSON.stringify({result: "error", info: "compile errors"});
+            cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {    
             const res = generateSMTPayload(masm, "evaluate", timeout, vopts, { file: "[NO FILE]", line: -1, pos: -1 }, entrypoint);
             if(res === undefined) {
-                return JSON.stringify({result: "error", info: "payload generation error"});
+                cb(JSON.stringify({result: "error", info: "payload generation error"}));
+                return;
             }
 
-            return runVEvaluator({...res, jin: jin}, "eval", bson);
+            runVEvaluatorAsync({...res, jin: jin}, "eval", bson, cb);
         }
     } catch(e) {
-        return JSON.stringify({result: "error", info: `${e}`});
+        cb(JSON.stringify({result: "error", info: `${e}`}));
     }
 }
 
-function workflowInvertSingle(bson: boolean, files: string[], jout: any, vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey): string {
+function workflowInvertSingle(bson: boolean, usercode: CodeFileInfo[], jout: any, vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(files, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
-            return JSON.stringify({result: "error", info: "compile errors"});
+            cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {    
             const res = generateSMTPayload(masm, "invert", timeout, vopts, { file: "[NO FILE]", line: -1, pos: -1 }, entrypoint);
             if(res === undefined) {
-                return JSON.stringify({result: "error", info: "payload generation error"});
+                cb(JSON.stringify({result: "error", info: "payload generation error"}));
+                return;
             }
 
-            return runVEvaluator({...res, jout: jout}, "invert", bson);
+            runVEvaluatorAsync({...res, jout: jout}, "invert", bson, cb);
         }
     } catch(e) {
-        return JSON.stringify({result: "error", info: `${e}`});
+        cb(JSON.stringify({result: "error", info: `${e}`}));
     }
 }
 
 export {
+    workflowLoadUserSrc,
     workflowGetErrors, workflowEmitToFile, workflowBSQSingle, workflowBSQCheck, workflowEvaluateSingle, workflowInvertSingle,
     ChkWorkflowOutcome,
     DEFAULT_TIMEOUT, DEFAULT_VOPTS

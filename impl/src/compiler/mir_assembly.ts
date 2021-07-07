@@ -590,7 +590,7 @@ class PackageConfig {
 
 class MIRAssembly {
     readonly package: PackageConfig;
-    readonly srcFiles: { relativePath: string, contents: string }[];
+    readonly srcFiles: { fpath: string, contents: string }[];
     readonly srcHash: string;
 
     readonly literalRegexs: BSQRegex[] = [];
@@ -808,7 +808,7 @@ class MIRAssembly {
         return res;
     }
 
-    constructor(pckge: PackageConfig, srcFiles: { relativePath: string, contents: string }[], srcHash: string) {
+    constructor(pckge: PackageConfig, srcFiles: { fpath: string, contents: string }[], srcHash: string) {
         this.package = pckge;
         this.srcFiles = srcFiles;
         this.srcHash = srcHash;

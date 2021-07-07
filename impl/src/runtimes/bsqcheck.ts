@@ -7,7 +7,7 @@ import chalk from "chalk";
 import * as readline from "readline";
 import * as path from "path";
 
-import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle } from "../tooling/verifier/smt_workflows";
+import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
 
 function parseLocation(location: string): { file: string, line: number, pos: number } | undefined {
     try {
@@ -40,12 +40,17 @@ if(mode === "--output") {
     }
 
     const files = args.slice(smtonly ? 3 : 2);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
 
     const fparse = path.parse(files[0]);
     const into = path.join(fparse.dir, fparse.name + (smtonly ? ".smt2" : ".json"));
     process.stdout.write(`Writing SMT file to ${into}\n`);
 
-    workflowEmitToFile(into, files, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
+    workflowEmitToFile(into, usercode, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
 }
 else if(mode === "--checksingle") {
     const location = parseLocation(args[0]);
@@ -55,16 +60,27 @@ else if(mode === "--checksingle") {
     }
 
     const files = args.slice(1);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
 
-    const res = workflowBSQSingle(false, files, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main");
-    process.stdout.write(res + "\n");
+    workflowBSQSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+        process.stdout.write(res + "\n");
+    });
 }
 else if(mode === "--check") {
     const printprocess = (args[0] === "--verbose");
     const quiet = (args[0] === "--quiet");
     const files = args.slice((printprocess || quiet) ? 1 : 0);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
 
-    const errors = workflowGetErrors(files, DEFAULT_VOPTS, "NSMain::main");
+    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
     if(errors === undefined) {
         process.stdout.write("Failed to load error lines\n");
         process.exit(1);
@@ -91,7 +107,7 @@ else if(mode === "--check") {
             process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}...\n`);
         }
 
-        const jres = workflowBSQCheck(false, files, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
+        const jres = workflowBSQCheck(false, usercode, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
 
         if(jres === undefined) {
             if(!quiet) {
@@ -150,6 +166,12 @@ else if(mode === "--check") {
 }
 else if(mode === "--evaluate") {
     const files = args;
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -158,23 +180,28 @@ else if(mode === "--evaluate") {
     rl.question(">> ", (input) => {
         try {
             const jinput = JSON.parse(input) as any[];
+            workflowEvaluateSingle(false, usercode, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+                try {
+                    const jres = JSON.parse(res);
 
-            const res = workflowEvaluateSingle(false, files, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
-            const jres = JSON.parse(res);
-
-            if (jres["result"] === "infeasible") {
-                process.stdout.write(`No valid (non error) result exists for this input!\n`);
-            }
-            else if (jres["result"] === "output") {
-                process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
-                process.stdout.write(jres["output"] + "\n");
-            }
-            else if (jres["result"] === "timeout") {
-                process.stdout.write(`Solver timeout :(\n`);
-            }
-            else {
-                process.stdout.write(`Failed with -- ${jres}`);
-            }
+                    if (jres["result"] === "infeasible") {
+                        process.stdout.write(`No valid (non error) result exists for this input!\n`);
+                    }
+                    else if (jres["result"] === "output") {
+                        process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
+                        process.stdout.write(jres["output"] + "\n");
+                    }
+                    else if (jres["result"] === "timeout") {
+                        process.stdout.write(`Solver timeout :(\n`);
+                    }
+                    else {
+                        process.stdout.write(`Failed with -- ${jres}`);
+                    }
+                }
+                catch (ex) {
+                    process.stderr.write(`Failure ${ex}\n`)
+                }
+            });
         }
         catch (ex) {
             process.stderr.write(`Failure ${ex}\n`)
@@ -183,6 +210,12 @@ else if(mode === "--evaluate") {
 }
 else if(mode === "--invert") {
     const files = args;
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -191,23 +224,28 @@ else if(mode === "--invert") {
     rl.question(">> ", (input) => {
         try {
             const joutput = JSON.parse(input);
+            workflowInvertSingle(false, usercode, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+                try {
+                    const jres = JSON.parse(res);
 
-            const res = workflowInvertSingle(false, files, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main");
-            const jres = JSON.parse(res);
-
-            if (jres["result"] === "infeasible") {
-                process.stdout.write(`No valid (non error) input exists for this output!\n`);
-            }
-            else if (jres["result"] === "witness") {
-                process.stdout.write(`Generated candidate input in ${jres["time"]} millis!\n`);
-                process.stdout.write(jres["input"] + "\n");
-            }
-            else if (jres["result"] === "timeout") {
-                process.stdout.write(`Solver timeout :(\n`);
-            }
-            else {
-                process.stdout.write(`Failed with -- ${jres}`);
-            }
+                    if (jres["result"] === "infeasible") {
+                        process.stdout.write(`No valid (non error) input exists for this output!\n`);
+                    }
+                    else if (jres["result"] === "witness") {
+                        process.stdout.write(`Generated candidate input in ${jres["time"]} millis!\n`);
+                        process.stdout.write(jres["input"] + "\n");
+                    }
+                    else if (jres["result"] === "timeout") {
+                        process.stdout.write(`Solver timeout :(\n`);
+                    }
+                    else {
+                        process.stdout.write(`Failed with -- ${jres}`);
+                    }
+                }
+                catch (ex) {
+                    process.stderr.write(`Failure ${ex}\n`)
+                }
+            });
         }
         catch (ex) {
             process.stderr.write(`Failure ${ex}\n`)
@@ -216,7 +254,13 @@ else if(mode === "--invert") {
 }
 else {
     const files = args;
-    const errors = workflowGetErrors(files, DEFAULT_VOPTS, "NSMain::main");
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
+    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
     if(errors === undefined) {
         process.stderr.write("Failed to load error lines\n");
         process.exit(1);
