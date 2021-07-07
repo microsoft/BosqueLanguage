@@ -6,7 +6,7 @@
 import chalk from "chalk";
 import * as readline from "readline";
 
-import { DEFAULT_TOPTS, workflowEmitICPPFile, workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
+import { DEFAULT_TOPTS, workflowLoadUserSrc, workflowEmitICPPFile, workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
 
 const mode = process.argv[2];
 const args = process.argv.slice(mode === "--output" ? 4 : 3);
@@ -16,11 +16,17 @@ if (args.length === 0) {
     process.exit(1);
 }
 
+const usercode = workflowLoadUserSrc(args);
+if(usercode === undefined) {
+    process.stdout.write("Could not load code files\n");
+    process.exit(1);
+}
+
 process.stdout.write(`Processing Bosque sources in:\n${args.join("\n")}\n...\n`);
 
 if (mode === "--output") {
     process.stdout.write(`Processing and writing IR to ${process.argv[3]}...\n`);
-    const ok = workflowEmitICPPFile(process.argv[3], args, DEFAULT_TOPTS, "NSMain::main");
+    const ok = workflowEmitICPPFile(process.argv[3], usercode, DEFAULT_TOPTS, "NSMain::main");
     if(ok) {
         process.stdout.write("done");
     }
@@ -29,7 +35,6 @@ if (mode === "--output") {
     }
 }
 else {
-    const files = args;
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -41,14 +46,14 @@ else {
 
             process.stdout.write(`Evaluating...\n`);
 
-            const res = workflowRunICPPFile(jargs, files, DEFAULT_TOPTS, "NSMain::main");
-            
-            if (res !== undefined) {
-                process.stdout.write(`${res}\n`);
-            }
-            else {
-                process.stdout.write(`failure\n`);
-            }
+            workflowRunICPPFile(jargs, usercode, DEFAULT_TOPTS, "NSMain::main", (result: string | undefined) => {
+                if (result !== undefined) {
+                    process.stdout.write(`${result}\n`);
+                }
+                else {
+                    process.stdout.write(`failure\n`);
+                }
+            });
         }
         catch (ex) {
             process.stderr.write(`Failure ${ex}\n`)

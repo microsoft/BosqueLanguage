@@ -3,25 +3,17 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, PackageConfig } from "../compiler/mir_assembly";
-import { MIREmitter } from "../compiler/mir_emitter";
+import { DEFAULT_VOPTS, workflowGetErrors } from "../tooling/verifier/smt_workflows";
 
 
-function generateMASM(corefiles: {relativePath: string, contents: string}[], testsrc: string): [MIRAssembly | undefined, string[]] {
-    const code: { relativePath: string, contents: string }[] = [...corefiles, { relativePath: "test.bsq", contents: testsrc }];
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", [], {namespace: "NSMain", names: ["main"]}, true, code);
-
-    return [masm, errors];
-}
-
-
-function runCompilerTest(corefiles: {relativePath: string, contents: string}[], testsrc: string): { result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string } {
+function runCompilerTest(testsrc: string): { result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string } {
     const start = new Date();
+    const codeinfo = [{fpath: "test.bsq", contents: testsrc}];
     try {
-        const [masm] = generateMASM(corefiles, testsrc);
+        const allerrors = workflowGetErrors(codeinfo, DEFAULT_VOPTS, "NSMain::main");
 
         return {
-            result: masm === undefined ? "pass" : "fail",
+            result: allerrors === undefined ? "pass" : "fail",
             start: start,
             end: new Date()
         }

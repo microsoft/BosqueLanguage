@@ -10,9 +10,9 @@ import * as Path from "path";
 import * as Commander from "commander";
 import chalk from "chalk";
 
-import { enqueueSMTTest, smtlib_path, smtruntime_path } from "./smt_runner";
+import { enqueueSMTTestEvaluate, enqueueSMTTestRefute, enqueueSMTTestWitness } from "./smt_runner";
 import { runCompilerTest } from "./compile_runner";
-import { enqueueICPPTest, icpplib_path } from "./icpp_runner";
+import { enqueueICPPTest } from "./icpp_runner";
 
 const testroot = Path.normalize(Path.join(__dirname, "tests"));
 
@@ -148,7 +148,7 @@ class IndividualWitnessTestInfo extends IndividualTestInfo {
 
 class IndividualEvaluateTestInfo extends IndividualTestInfo {
     readonly jargs: any[];
-    readonly expected: any; //null is infeasible
+    readonly expected: any; //undefined is infeasible
 
     private static ctemplate = 
 "namespace NSMain;\n\
@@ -179,7 +179,7 @@ class IndividualEvaluateTestInfo extends IndividualTestInfo {
 
 class IndividualICPPTestInfo extends IndividualTestInfo {
     readonly jargs: any[];
-    readonly expected: any; //null is exception
+    readonly expected: string | undefined; //undefined is exception
 
     private static ctemplate = 
 "namespace NSMain;\n\
@@ -191,14 +191,14 @@ class IndividualICPPTestInfo extends IndividualTestInfo {
 %%CODE%%\n\
 ";
 
-    constructor(name: string, fullname: string, code: string, jargs: any[], expected: any, extraSrc: string | undefined) {
+    constructor(name: string, fullname: string, code: string, jargs: any[], expected: string | undefined, extraSrc: string | undefined) {
         super(name, fullname, code, extraSrc);
 
         this.jargs = jargs;
         this.expected = expected;
     }
 
-    static create(name: string, fullname: string, sig: string, action: string, code: string, jargs: any[], expected: any, extraSrc: string | undefined): IndividualICPPTestInfo {
+    static create(name: string, fullname: string, sig: string, action: string, code: string, jargs: any[], expected: string | undefined, extraSrc: string | undefined): IndividualICPPTestInfo {
         const rcode = IndividualICPPTestInfo.ctemplate
             .replace("%%SIG%%", sig)
             .replace("%%ACTION%%", action)
@@ -377,21 +377,10 @@ function loadTestSuite(): TestSuite {
 }
 
 type SMTTestAssets = {
-    corefiles: {relativePath: string, contents: string}[],
-    runtime: string,
     extras: Map<string, string>
 };
 
 function loadSMTTestAssets(suite: TestSuite): SMTTestAssets {
-    const smtruntime = FS.readFileSync(smtruntime_path, "utf8");
-
-    let code: { relativePath: string, contents: string }[] = [];
-    const corefiles = FS.readdirSync(smtlib_path);
-    for (let i = 0; i < corefiles.length; ++i) {
-        const cfpath = Path.join(smtlib_path, corefiles[i]);
-        code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath, "utf8") });
-    }
-
     let extras = new Map<string, string>();
     for(let i = 0; i < suite.tests.length; ++i) {
         const tf = suite.tests[i];
@@ -410,25 +399,15 @@ function loadSMTTestAssets(suite: TestSuite): SMTTestAssets {
     }
 
     return {
-        corefiles: code,
-        runtime: smtruntime,
         extras: extras
     };
 }
 
 type ICPPTestAssets = {
-    corefiles: {relativePath: string, contents: string}[],
     extras: Map<string, string>
 };
 
 function loadICPPTestAssets(suite: TestSuite): ICPPTestAssets {
-    let code: { relativePath: string, contents: string }[] = [];
-    const corefiles = FS.readdirSync(icpplib_path);
-    for (let i = 0; i < corefiles.length; ++i) {
-        const cfpath = Path.join(icpplib_path, corefiles[i]);
-        code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath, "utf8") });
-    }
-
     let extras = new Map<string, string>();
     for(let i = 0; i < suite.tests.length; ++i) {
         const tf = suite.tests[i];
@@ -447,7 +426,6 @@ function loadICPPTestAssets(suite: TestSuite): ICPPTestAssets {
     }
 
     return {
-        corefiles: code,
         extras: extras
     };
 }
@@ -521,12 +499,10 @@ class TestRunner {
                     code = code + "\n\n" + this.smt_assets.extras.get(tt.extraSrc) as string;
                 }
 
-                const tinfo = runCompilerTest(this.smt_assets.corefiles, code);
+                const tinfo = runCompilerTest(code);
                 this.testCompleteActionInline(tt, tinfo.result, tinfo.start, tinfo.end, tinfo.info);
             }
             else if (tt instanceof IndividualRefuteTestInfo) {
-                const mode = tt instanceof IndividualRefuteTestInfo ? "Refute" : "Reach";
-
                 let code = tt.code;
                 if(tt.extraSrc !== undefined) {
                     code = code + "\n\n" + this.smt_assets.extras.get(tt.extraSrc) as string;
@@ -535,17 +511,41 @@ class TestRunner {
                 const handler = this.generateTestResultCallback(tt);
                 this.queued.push(tt.fullname);
                 try {
-                    enqueueSMTTestRefute(mode, [], this.smt_assets.corefiles, this.smt_assets.runtime, code, tt.line, handler);
+                    enqueueSMTTestRefute(code, tt.line, handler);
                 }
                 catch (ex) {
                     handler("error", new Date(), new Date(), `${ex}`);
                 }
             }
             else if (tt instanceof IndividualWitnessTestInfo) {
-                xxx;
+                let code = tt.code;
+                if(tt.extraSrc !== undefined) {
+                    code = code + "\n\n" + this.smt_assets.extras.get(tt.extraSrc) as string;
+                }
+
+                const handler = this.generateTestResultCallback(tt);
+                this.queued.push(tt.fullname);
+                try {
+                    enqueueSMTTestWitness(code, tt.line, handler);
+                }
+                catch (ex) {
+                    handler("error", new Date(), new Date(), `${ex}`);
+                }
             }
             else if(tt instanceof IndividualEvaluateTestInfo) {
-                xxxx;
+                let code = tt.code;
+                if(tt.extraSrc !== undefined) {
+                    code = code + "\n\n" + this.smt_assets.extras.get(tt.extraSrc) as string;
+                }
+
+                const handler = this.generateTestResultCallback(tt);
+                this.queued.push(tt.fullname);
+                try {
+                    enqueueSMTTestEvaluate(code, tt.jargs, tt.expected, handler);
+                }
+                catch (ex) {
+                    handler("error", new Date(), new Date(), `${ex}`);
+                }
             }
             else if(tt instanceof IndividualICPPTestInfo) {
                 let code = tt.code;
@@ -556,7 +556,7 @@ class TestRunner {
                 const handler = this.generateTestResultCallback(tt);
                 this.queued.push(tt.fullname);
                 try {
-                    enqueueICPPTest([], this.icpp_assets.corefiles, code, tt.jargs, tt.expected, handler);
+                    enqueueICPPTest(code, tt.jargs, tt.expected, handler);
                 }
                 catch (ex) {
                     handler("error", new Date(), new Date(), `${ex}`);
