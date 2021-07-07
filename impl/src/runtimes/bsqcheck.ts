@@ -197,14 +197,18 @@ else if(mode === "--evaluate") {
                     else {
                         process.stdout.write(`Failed with -- ${jres}`);
                     }
+
+                    process.exit(0);
                 }
                 catch (ex) {
-                    process.stderr.write(`Failure ${ex}\n`)
+                    process.stderr.write(`Failure ${ex}\n`);
+                    process.exit(1);
                 }
             });
         }
         catch (ex) {
-            process.stderr.write(`Failure ${ex}\n`)
+            process.stderr.write(`Failure ${ex}\n`);
+            process.exit(1);
         }
     });
 }
@@ -241,14 +245,18 @@ else if(mode === "--invert") {
                     else {
                         process.stdout.write(`Failed with -- ${jres}`);
                     }
+
+                    process.exit(0);
                 }
                 catch (ex) {
-                    process.stderr.write(`Failure ${ex}\n`)
+                    process.stderr.write(`Failure ${ex}\n`);
+                    process.exit(1);
                 }
             });
         }
         catch (ex) {
-            process.stderr.write(`Failure ${ex}\n`)
+            process.stderr.write(`Failure ${ex}\n`);
+            process.exit(1);
         }
     });
 }

@@ -201,7 +201,9 @@ json ExtractionInfo::evalToSignedNumber(const z3::model& m, const z3::expr& e) c
         std::string sstr(nstr.cbegin() + 2, nstr.cend());
         uint64_t res = std::stoull(sstr, nullptr, nstr[1] == 'b' ? 2 : 16);
 
-        int64_t rres = (int64_t)((~res) + 1);
+        auto sbits = (64 - this->apimodule->bv_width);
+        int64_t rres = ((int64_t)(res << sbits)) >> sbits;
+        
         if(JSON_MIN_SAFE_NUMBER <= rres && rres <= JSON_MAX_SAFE_NUMBER)
         {
             return rres;

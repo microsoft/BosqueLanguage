@@ -17,7 +17,7 @@ import { CodeFileInfo } from "../../../ast/parser";
 
 import chalk from "chalk";
 
-const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
+const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../../"));
 const exepath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : "")));
 
 const DEFAULT_TOPTS = {

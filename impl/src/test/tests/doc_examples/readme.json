@@ -4,148 +4,133 @@
         {
             "test": "addchk",
             "src": null,
-            "sig": "function main(x: Nat, y: Nat): Bool",
+            "sig": "function main(x: Nat, y: Nat): Nat",
             "code": "function add2(x: Nat, y: Nat): Nat { return x + y; }",
             "typechk": [
                 "add2(x, 0i) == x",
                 "add2(x, 0f) == x"
             ],
-            "refutes": [
-                "add2(x, y) >= 0n",
-                "add2(x, 0) == x",
-                "add2(0, y) == y",
-                "add2(2, 3) == 5n",
-                "add2(x=2, y=3) == 5n",
-                "add2(y=2, 5) == 7n"
+            "infeasible": [
+                {
+                    "action": "add2(x, 0)",
+                    "check": "res == x"
+                },
+                {
+                    "action": "add2(0, y)",
+                    "check": "res == y"
+                },
+                {
+                    "action": "add2(x=2, y=3)",
+                    "check": "res == 5n"
+                },
+                {
+                    "action": "add2(y=2, 5)",
+                    "check": "res == 7n"
+                }
             ],
-            "reachables": [
-                "add2(1, 2) == 3n",
-                "add2(x, y) == 3n",
-                "add2(x=x, 1) == 3n",
-                "add2(y=y, 1) == 3n"
-            ]
-        },
-        {
-            "test": "addex",
-            "src": null,
-            "sig": "function main(x: Nat, y: Nat): Nat",
-            "code": "",
+            "witness": [
+                {
+                    "action": "add2(0, y)",
+                    "check": "res != 3n"
+                },
+                {
+                    "action": "add2(x, y)",
+                    "check": "res != 3n"
+                },
+                {
+                    "action": "add2(x=x, 0)",
+                    "check": "res != 3n"
+                },
+                {
+                    "action": "add2(y=y, 1)",
+                    "check": "res != 7n"
+                }
+            ], 
+            "evaluates": [
+                {
+                    "action": "add2(x, y)",
+                    "args": [2, 3],
+                    "result": 5
+                }
+            ],
             "icpp": [
-                ["x + y", [2, 3], "5n"]
-            ]
-        },
-        {
-            "test": "allPositive",
-            "src": null,
-            "sig": "function main(x: Int): Bool",
-            "code": "function allPositive(...args: List<Int>): Bool { return args.allOf(pred(x) => x >= 0i); }",
-            "typechk": [
-            ],
-            "refutes": [
-                "allPositive()",
-                "allPositive(1, 4, 3)",
-                "!allPositive(0, -3)",
-                "x < 0i || allPositive(0, x)"
-            ],
-            "reachables": [
-                "allPositive(0, x)",
-                "!allPositive(0, x)"
-            ]
-        },
-        {
-            "test": "allPositiveCapture",
-            "src": null,
-            "sig": "function main(x: Int): Bool",
-            "code": "function allPositive(v: Int, ...args: List<Int>): Bool { return args.allOf(pred(x) => x >= v); }",
-            "typechk": [
-            ],
-            "refutes": [
-                "allPositive(0i)"
-            ],
-            "reachables": [
-                "allPositive(0i, 2, x)"
+                {
+                    "action": "add2(2, 3)",
+                    "args": [2, 3],
+                    "result": "5n"
+                }
             ]
         },
         {
             "test": "sign",
             "src": null,
-            "sig": "function main(x: Int): Bool",
+            "sig": "function main(x: Int): Int",
             "code": "function sign(x?: Int=0i): Int { var y: Int; if(x == 0i) { y = 0i; } else { y = (x > 0i) ? 1i : -1i; } return y; }",
             "typechk": [
                 "sign() == 0n",
                 "sign(3n) == 0i"
             ],
-            "refutes": [
-                "sign() == 0i",
-                "sign(4i) == 1i",
-                "sign(-4i) == -1i",
-                "sign(x) <= 1i"
+            "infeasible": [
+                {
+                    "action": "sign()",
+                    "check": "res == 0i"
+                },
+                {
+                    "action": "sign(4i)",
+                    "check": "res == 1i"
+                },
+                {
+                    "action": "sign(-4i)",
+                    "check": "res == -1i"
+                },
+                {
+                    "action": "sign(x)",
+                    "check": "res <= 1i"
+                }
             ],
-            "reachables": [
-                "sign(x) == 1i",
-                "sign(x) == 0i"
-            ]
-        },
-        {
-            "test": "recordtuple",
-            "src": null,
-            "sig": "function main(x: Int): Bool",
-            "code": "function doit(tup: #[Int, Bool], rec: #{f: String, g: Int}): Int { return tup.0 + rec.g; }",
-            "typechk": [
-                "doit(#[1n], #{f=\"yes\", g=0i}) == 1i",
-                "doit(#[1n, true], #{g=0i}) == 1i",
-                "doit(#[1n, true], #{f=\"yes\", g=0i}) == 1i",
-                "doit(#[1i, true], #{f=true, g=0i}) == 1i",
-                "doit(@[1i, true], #{f=\"yes\", g=0i}) == 0i",
-                "doit(#[1i, true], @{f=\"yes\", g=0i}) == 0i"
+            "witness": [
+                {
+                    "action": "sign(x)",
+                    "check": "res != 1i"
+                },
+                {
+                    "action": "sign(x)",
+                    "check": "res != 0i"
+                }
             ],
-            "refutes": [
-                "doit(#[1i, true], #{f=\"yes\", g=0i}) == 1i",
-                "doit(#[0, true], #{f=\"yes\", g=1}) == 1i",
-                "(x > 4i) | (doit(#[x, true], #{f=\"yes\", g=x}) == 2i * x)"
+            "evaluates": [
+                {
+                    "action": "sign(x)",
+                    "args": [2],
+                    "result": 1
+                },
+                {
+                    "action": "sign(x)",
+                    "args": [0],
+                    "result": 0
+                },
+                {
+                    "action": "sign(x)",
+                    "args": [-5],
+                    "result": -1
+                }
             ],
-            "reachables": [
-                "doit(#[x, true], #{f=\"yes\", g=x}) == x",
-                "x < 4i & doit(#[x, true], #{f=\"yes\", g=x + 1i}) == 5i"
-            ]
-        },
-        {
-            "test": "invariants",
-            "src": "doc_examples/data_invariants.txt",
-            "sig": "function main(x: String): Bool",
-            "code": "",
-            "typechk": [
-                "NamedGreeting@{}.sayHello() === \"[type error]\""
-            ],
-            "refutes": [
-                "GenericGreeting@{}.sayHello() === \"hello world\"",
-                "GenericGreeting::instance.sayHello() === \"hello world\"",
-                "NamedGreeting@{name=\"bob\"}.sayHello() === \"hello bob\""
-            ],
-            "reachables": [
-                "NamedGreeting@{name=x}.sayHello() === \"hello bob\""
-            ]
-        },
-        {
-            "test": "validators",
-            "src": "doc_examples/validators.txt",
-            "sig": "function main(s: String): Bool",
-            "code": "",
-            "typechk": [
-                "is3pt(\"12\")",
-                "is3pt('98052' of ZipcodeUS)",
-                "is3pt('3' of CSSpt)"
-            ],
-            "refutes": [
-                "ZipcodeUS::accepts(\"98052-0000\")",
-                "ZipcodeUS::accepts(\"98052\")",
-                "is3pt('3pt' of CSSpt)"
-            ],
-            "reachables": [
-                "!ZipcodeUS::accepts(\"98052-\")",
-                "ZipcodeUS::accepts(s)",
-                "!ZipcodeUS::accepts(s)",
-                "is3pt(StringOf<CSSpt>::from(s))"
+            "icpp": [
+                {
+                    "action": "sign(x)",
+                    "args": [2],
+                    "result": "1i"
+                },
+                {
+                    "action": "sign(x)",
+                    "args": [0],
+                    "result": "0i"
+                },
+                {
+                    "action": "sign(x)",
+                    "args": [-5],
+                    "result": "-1i"
+                }
             ]
         }
     ]

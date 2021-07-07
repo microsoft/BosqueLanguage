@@ -11,7 +11,6 @@ function enqueueICPPTest(testsrc: string, jargs: any[], expected: string | undef
 
     workflowRunICPPFile(jargs, codeinfo, DEFAULT_TOPTS, "NSMain::main", (result: string | undefined) => {
         const end = new Date();
-
         try {
             if(result === undefined) {
                 if(expected === undefined) {

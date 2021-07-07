@@ -38,12 +38,17 @@ abstract class IndividualTestInfo {
             }
         }
         else if(restriction === "check") {
-            if((this instanceof IndividualRefuteTestInfo) || (this instanceof IndividualWitnessTestInfo)) {
+            if((this instanceof IndividualInfeasibleTestInfo) || (this instanceof IndividualWitnessTestInfo)) {
                 tests.push(this);
             }
         }
         else if(restriction === "evaluate") {
             if((this instanceof IndividualEvaluateTestInfo)) {
+                tests.push(this);
+            }
+        }
+        else if(restriction === "smt") {
+            if((this instanceof IndividualInfeasibleTestInfo) || (this instanceof IndividualWitnessTestInfo) || (this instanceof IndividualEvaluateTestInfo)) {
                 tests.push(this);
             }
         }
@@ -86,15 +91,16 @@ class IndividualCompileWarnTest extends IndividualTestInfo {
     }
 }
 
-class IndividualRefuteTestInfo extends IndividualTestInfo {
+class IndividualInfeasibleTestInfo extends IndividualTestInfo {
     readonly line: number;
 
     private static ctemplate = 
 "namespace NSMain;\n\
 \n\
 %%SIG%% {\n\
-    assert %%ACTION%%;\n\
-    return true;\n\
+    let res = %%ACTION%%;\n\
+    assert %%CHECK%%;\n\
+    return res;\n\
 }\n\
 \n\
 %%CODE%%\n\
@@ -106,13 +112,14 @@ class IndividualRefuteTestInfo extends IndividualTestInfo {
         this.line = line;
     }
 
-    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualRefuteTestInfo {
-        const rcode = IndividualRefuteTestInfo.ctemplate
+    static create(name: string, fullname: string, sig: string, action: string, check: string, code: string, extraSrc: string | undefined): IndividualInfeasibleTestInfo {
+        const rcode = IndividualInfeasibleTestInfo.ctemplate
             .replace("%%SIG%%", sig)
             .replace("%%ACTION%%", action)
+            .replace("%%CHECK%%", check)
             .replace("%%CODE%%", code);
 
-        return new IndividualRefuteTestInfo(name, fullname, rcode, 4, extraSrc);
+        return new IndividualInfeasibleTestInfo(name, fullname, rcode, 5, extraSrc);
     }
 }
 
@@ -123,8 +130,9 @@ class IndividualWitnessTestInfo extends IndividualTestInfo {
 "namespace NSMain;\n\
 \n\
 %%SIG%% {\n\
-    assert !(%%ACTION%%);\n\
-    return true;\n\
+    let res = %%ACTION%%;\n\
+    assert %%CHECK%%;\n\
+    return res;\n\
 }\n\
 \n\
 %%CODE%%\n\
@@ -136,13 +144,14 @@ class IndividualWitnessTestInfo extends IndividualTestInfo {
         this.line = line;
     }
 
-    static create(name: string, fullname: string, sig: string, action: string, code: string, extraSrc: string | undefined): IndividualWitnessTestInfo {
+    static create(name: string, fullname: string, sig: string, action: string, check: string, code: string, extraSrc: string | undefined): IndividualWitnessTestInfo {
         const rcode = IndividualWitnessTestInfo.ctemplate
             .replace("%%SIG%%", sig)
             .replace("%%ACTION%%", action)
+            .replace("%%CHECK%%", check)
             .replace("%%CODE%%", code);
 
-        return new IndividualWitnessTestInfo(name, fullname, rcode, 4, extraSrc);
+        return new IndividualWitnessTestInfo(name, fullname, rcode, 5, extraSrc);
     }
 }
 
@@ -208,16 +217,27 @@ class IndividualICPPTestInfo extends IndividualTestInfo {
     }
 }
 
+type APICheckTestBundle = {
+    action: string,
+    check: string
+};
+
+type APIExecTestBundle = {
+    action: string,
+    args: any[],
+    result: any
+};
+
 type APITestGroupJSON = {
     test: string,
     src: string | null,
     sig: string,
     code: string,
     typechk: string[],
-    refutes: string[],
-    witness: string[],
-    evaluate: [string, any[], any],
-    icpp: [string, any[], any]
+    infeasible: APICheckTestBundle[],
+    witness: APICheckTestBundle[],
+    evaluates: APIExecTestBundle[],
+    icpp: APIExecTestBundle[]
 };
 
 class APITestGroup {
@@ -232,12 +252,12 @@ class APITestGroup {
     static create(scopename: string, spec: APITestGroupJSON): APITestGroup {
         const groupname = `${scopename}.${spec.test}`;
         const compiles = (spec.typechk || []).map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const refutes = (spec.refutes || []).map((tt, i) => IndividualRefuteTestInfo.create(`refute#${i}`, `${groupname}.refute#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const witness = (spec.witness || []).map((tt, i) => IndividualWitnessTestInfo.create(`witness#${i}`, `${groupname}.witness#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
-        const evaluate = (spec.evaluate || []).map((tt, i) => IndividualEvaluateTestInfo.create(`evaluate#${i}`, `${groupname}.evaluate#${i}`, spec.sig, (tt as [string, any[], any])[0], spec.code, (tt as [string, any[], any])[1], (tt as [string, any[], any])[2], spec.src || undefined));
-        const icpp = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, (tt as [string, any[], any])[0], spec.code, (tt as [string, any[], any])[1], (tt as [string, any[], any])[2], spec.src || undefined));
+        const infeasible = (spec.infeasible || []).map((tt, i) => IndividualInfeasibleTestInfo.create(`infeasible#${i}`, `${groupname}.infeasible#${i}`, spec.sig, tt.action, tt.check, spec.code, spec.src || undefined));
+        const witness = (spec.witness || []).map((tt, i) => IndividualWitnessTestInfo.create(`witness#${i}`, `${groupname}.witness#${i}`, spec.sig, tt.action, tt.check, spec.code, spec.src || undefined));
+        const evaluate = (spec.evaluates || []).map((tt, i) => IndividualEvaluateTestInfo.create(`evaluate#${i}`, `${groupname}.evaluate#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
+        const icpp = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
 
-        return new APITestGroup(groupname, [...compiles, ...refutes, ...witness, ...evaluate, ...icpp]);
+        return new APITestGroup(groupname, [...compiles, ...infeasible, ...witness, ...evaluate, ...icpp]);
     }
 
     generateTestPlan(restriction: string, tests: IndividualTestInfo[]) {
@@ -356,21 +376,21 @@ class TestRunResults {
 }
 
 function loadTestSuite(): TestSuite {
-    const tdirs = FS.readdirSync(testroot);
+    const tdirs = FS.readdirSync(testroot, {withFileTypes: true}).filter((de) => de.isDirectory());
 
     let tfa: TestFolder[] = [];
     for(let i = 0; i < tdirs.length; ++i) {
-        const dpath = Path.join(testroot, tdirs[i]);
+        const dpath = Path.join(testroot, tdirs[i].name);
         const tfiles = FS.readdirSync(dpath).filter((fp) => fp.endsWith(".json"));
 
         let ctgs: CategoryTestGroup[] = [];
         for (let j = 0; j < tfiles.length; ++j) {
             const fpath = Path.join(dpath, tfiles[j]);
             const fcontents = JSON.parse(FS.readFileSync(fpath, "utf8")) as CategoryTestGroupJSON;
-            ctgs.push(CategoryTestGroup.create(`${tdirs[i]}.${tfiles[j].replace(".json", "")}`, fcontents));
+            ctgs.push(CategoryTestGroup.create(`${tdirs[i].name}.${tfiles[j].replace(".json", "")}`, fcontents));
         }
 
-        tfa.push(new TestFolder(dpath, tdirs[i], ctgs));
+        tfa.push(new TestFolder(dpath, tdirs[i].name, ctgs));
     }
 
     return new TestSuite(tfa);
@@ -502,7 +522,7 @@ class TestRunner {
                 const tinfo = runCompilerTest(code);
                 this.testCompleteActionInline(tt, tinfo.result, tinfo.start, tinfo.end, tinfo.info);
             }
-            else if (tt instanceof IndividualRefuteTestInfo) {
+            else if (tt instanceof IndividualInfeasibleTestInfo) {
                 let code = tt.code;
                 if(tt.extraSrc !== undefined) {
                     code = code + "\n\n" + this.smt_assets.extras.get(tt.extraSrc) as string;
