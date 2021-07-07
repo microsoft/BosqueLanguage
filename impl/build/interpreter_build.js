@@ -25,7 +25,7 @@ if(process.platform === "darwin") {
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17 -arch x86_64";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17";
     includes = " -I /usr/local/boost_1_76_0";
     outfile = "-o " + outbase + "/icpp";
 }
