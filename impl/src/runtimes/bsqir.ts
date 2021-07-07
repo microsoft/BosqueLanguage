@@ -28,7 +28,7 @@ if (mode === "--output") {
     process.stdout.write(`Processing and writing IR to ${process.argv[3]}...\n`);
     const ok = workflowEmitICPPFile(process.argv[3], usercode, DEFAULT_TOPTS, "NSMain::main");
     if(ok) {
-        process.stdout.write("done");
+        process.stdout.write("done\n");
     }
     else {
         process.stdout.write(chalk.red("failed to generate IR"));
@@ -53,10 +53,13 @@ else {
                 else {
                     process.stdout.write(`failure\n`);
                 }
+
+                process.exit(0);
             });
         }
         catch (ex) {
-            process.stderr.write(`Failure ${ex}\n`)
+            process.stderr.write(`Failure ${ex}\n`);
+            process.exit(1);
         }
     });
 }

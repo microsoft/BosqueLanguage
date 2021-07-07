@@ -19,13 +19,13 @@ let outfile = "";
 let taillinks = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17 -arch x86_64";
     includes = " -I /usr/local/boost_1_76_0";
     outfile = "-o " + outbase + "/icpp";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17 -arch x86_64";
     includes = " -I /usr/local/boost_1_76_0";
     outfile = "-o " + outbase + "/icpp";
 }

@@ -40,7 +40,7 @@ SourceInfo jsonParse_SourceInfo(boost::json::value val)
 
 BSQGuard jsonParse_BSQGuard(boost::json::value val)
 {
-    return BSQGuard{ jsonGetAsUInt<uint32_t>(val, "gmaskoffset"), jsonGetAsInt<int32_t>(val, "gindex"), jsonGetAsInt<int32_t>(val, "gvaroffset") };
+    return BSQGuard{ jsonGetAsInt<int32_t>(val, "gmaskoffset"), jsonGetAsInt<int32_t>(val, "gindex"), jsonGetAsInt<int32_t>(val, "gvaroffset") };
 }
 
 BSQStatementGuard jsonParse_BSQStatementGuard(boost::json::value val)
@@ -154,7 +154,7 @@ NoneInitUnionOp* NoneInitUnionOp::jparse(boost::json::value v)
 
 StoreConstantMaskValueOp* StoreConstantMaskValueOp::jparse(boost::json::value v)
 {
-    return new StoreConstantMaskValueOp(j_sinfo(v), jsonGetAsUInt<uint32_t>(v, "gmaskoffset"), jsonGetAsInt<int32_t>(v, "gindex"), jsonGetAsBool(v, "flag"));
+    return new StoreConstantMaskValueOp(j_sinfo(v), jsonGetAsInt<int32_t>(v, "gmaskoffset"), jsonGetAsInt<int32_t>(v, "gindex"), jsonGetAsBool(v, "flag"));
 }
 
 DirectAssignOp* DirectAssignOp::jparse(boost::json::value v)

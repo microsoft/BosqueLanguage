@@ -225,7 +225,7 @@ SourceInfo jsonParse_SourceInfo(boost::json::value val);
 
 struct BSQGuard
 {
-    uint32_t gmaskoffset; 
+    int32_t gmaskoffset; 
     int32_t gindex;
 
     int32_t gvaroffset; //-1 if this is a mask offset otherwise this is the local var offset
@@ -332,11 +332,11 @@ public:
 class StoreConstantMaskValueOp : public InterpOp
 {
 public:
-    const uint32_t gmaskoffset; 
+    const int32_t gmaskoffset; 
     const int32_t gindex;
     const bool flag;
 
-    StoreConstantMaskValueOp(SourceInfo sinfo, uint32_t gmaskoffset, int32_t gindex, bool flag) : InterpOp(sinfo, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
+    StoreConstantMaskValueOp(SourceInfo sinfo, int32_t gmaskoffset, int32_t gindex, bool flag) : InterpOp(sinfo, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
     virtual ~StoreConstantMaskValueOp() {;}
 
     static StoreConstantMaskValueOp* jparse(boost::json::value v);

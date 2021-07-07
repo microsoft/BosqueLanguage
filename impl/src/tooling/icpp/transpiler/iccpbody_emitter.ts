@@ -429,10 +429,10 @@ class ICPPBodyEmitter {
         else {
             const mg = gg as MIRMaskGuard;
             if(mg.gmask === "#maskparam#") {
-                return ICPPOpEmitter.genMaskGuard(-1, mg.gindex);
+                return ICPPOpEmitter.genMaskGuard(mg.gindex, -1);
             }
             else {
-                return ICPPOpEmitter.genMaskGuard(this.maskMap.get(mg.gmask) as number, mg.gindex);
+                return ICPPOpEmitter.genMaskGuard(mg.gindex, this.maskMap.get(mg.gmask) as number);
             }
         }
     }
@@ -496,11 +496,12 @@ class ICPPBodyEmitter {
 
         minfo.occupied = true;
         minfo.name = op.name;
+        this.maskMap.set(op.name, minfo.offset);
     }
 
-    processSetConstantGuardFlag(op: MIRSetConstantGuardFlag) {
+    processSetConstantGuardFlag(op: MIRSetConstantGuardFlag): ICPPOp {
         const minfo = this.masklayout.find((mloc) => mloc.name === op.name) as {offset: number, occupied: boolean, name: string, size: number};
-        ICPPOpEmitter.genStoreConstantMaskValueOp(op.sinfo, minfo.offset, op.position, op.flag);
+        return ICPPOpEmitter.genStoreConstantMaskValueOp(op.sinfo, minfo.offset, op.position, op.flag);
     }
 
     processConvertValue(op: MIRConvertValue): ICPPOp {
@@ -1107,8 +1108,7 @@ class ICPPBodyEmitter {
                 return undefined;
             }
             case MIROpTag.MIRSetConstantGuardFlag: {
-                this.processSetConstantGuardFlag(op as MIRSetConstantGuardFlag);
-                return undefined;
+                return this.processSetConstantGuardFlag(op as MIRSetConstantGuardFlag);
             }
             case MIROpTag.MIRConvertValue: {
                 return this.processConvertValue(op as MIRConvertValue);

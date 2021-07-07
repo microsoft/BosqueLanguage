@@ -181,7 +181,7 @@ private:
     {
         if(gmaskoffset < 0)
         {
-            return this->cframe->argmask + (-gmaskoffset);
+            return this->cframe->argmask;
         }
         else
         {
@@ -214,7 +214,6 @@ private:
         oftype->storeValue(this->evalTargetVar(trgt), this->evalArgument(arg));
     }
 
-    
     inline bool tryProcessGuardStmt(TargetVar trgt, const BSQType* trgttype, const BSQStatementGuard& sguard)
     {
         auto gval = this->evalGuardStmt(sguard.guard);
@@ -225,7 +224,7 @@ private:
             this->evalStoreAltValueForGuardStmt(trgt, sguard.defaultvar, trgttype);
         }
 
-        return dodefault;
+        return !dodefault;
     }
 
     void evalDeadFlowOp();

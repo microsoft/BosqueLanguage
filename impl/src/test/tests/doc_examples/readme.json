@@ -122,6 +122,11 @@
                     "result": "1i"
                 },
                 {
+                    "action": "sign()",
+                    "args": [0],
+                    "result": "0i"
+                },
+                {
                     "action": "sign(x)",
                     "args": [0],
                     "result": "0i"
