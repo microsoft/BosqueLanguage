@@ -70,8 +70,7 @@ class IndividualCompileWarnTest extends IndividualTestInfo {
 "namespace NSMain;\n\
 \n\
 %%SIG%% {\n\
-    assert %%ACTION%%;\n\
-    return true;\n\
+    return %%ACTION%%;\n\
 }\n\
 \n\
 %%CODE%%\n\
