@@ -17,7 +17,6 @@ import { Payload, SMTEmitter } from "./smtdecls_emitter";
 import { VerifierOptions } from "./smt_exp";
 import { CodeFileInfo } from "../../ast/parser";
 
-
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
 const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chkworkflow" + (process.platform === "win32" ? ".exe" : "")));
