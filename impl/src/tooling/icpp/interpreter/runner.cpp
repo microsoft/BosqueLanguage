@@ -421,7 +421,7 @@ void fuzz(Evaluator& runner, RandGenerator& rnd, const std::string& main)
 
 void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std::string& input)
 {
-    if(argc == 2 && std::string(argv[1]) == std::string("stream"))
+    if(argc == 2 && std::string(argv[1]) == std::string("--stream"))
     {
         mode = "stream";
     }
@@ -431,13 +431,13 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
         prog = std::string(argv[1]);
         input = std::string(argv[2]);
     }
-    else if(argc == 4 && std::string(argv[1]) == std::string("fuzz"))
+    else if(argc == 4 && std::string(argv[1]) == std::string("--fuzz"))
     {
         mode = "fuzz";
         prog = std::string(argv[2]);
         input = std::string(argv[3]);
     }
-    else if(argc == 4 && std::string(argv[1]) == std::string("run"))
+    else if(argc == 4 && std::string(argv[1]) == std::string("--run"))
     {
         mode = "run";
         prog = std::string(argv[2]);
@@ -445,8 +445,8 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
     }
     else
     {
-        fprintf(stderr, "Usage: icpp [run] bytecode.bsqir args[]\n");
-        fprintf(stderr, "Usage: icpp fuzz bytecode.bsqir\n");
+        fprintf(stderr, "Usage: icpp [--run] bytecode.bsqir args[]\n");
+        fprintf(stderr, "Usage: icpp --fuzz bytecode.bsqir\n");
         fflush(stderr);
         exit(1);
     }

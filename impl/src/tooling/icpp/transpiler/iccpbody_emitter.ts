@@ -88,7 +88,7 @@ class ICPPBodyEmitter {
             return trgt;
         }
         else {
-            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.scalarStackSize };
+            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.mixedStackSize };
 
             this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
             this.mixedStackMap.set(vname, this.mixedStackSize);
@@ -102,7 +102,7 @@ class ICPPBodyEmitter {
         if (oftype.allocinfo.isScalarOnlyInline()) {
             const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
 
-            const vname =  `@scalar_scratch_${this.scalarStackLayout.length}`;
+            const vname = `@scalar_scratch_${this.scalarStackLayout.length}`;
             this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
             this.scalarStackMap.set(vname, this.scalarStackSize);
             this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
@@ -110,7 +110,7 @@ class ICPPBodyEmitter {
             return [trgt, ICPPOpEmitter.genLocalScalarArgument(trgt.offset)];
         }
         else {
-            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.scalarStackSize };
+            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.mixedStackSize };
 
             const vname = `@mixed_scratch_${this.mixedStackLayout.length}`;
             this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
@@ -119,6 +119,19 @@ class ICPPBodyEmitter {
 
 
             return [trgt, ICPPOpEmitter.genLocalMixedArgument(trgt.offset)];
+        }
+    }
+
+    private generateStorageLocationForPhi(vname: MIRRegisterArgument, oftype: string) {
+        this.trgtToICPPTargetLocation(vname, oftype);
+    }
+
+    private getStorageTargetForPhi(vname: MIRRegisterArgument): TargetVar {
+        if(this.scalarStackMap.has(vname.nameID)) {
+            return { kind: ArgumentTag.LocalScalar, offset: this.scalarStackMap.get(vname.nameID) as number };
+        }
+        else {
+            return { kind: ArgumentTag.LocalMixed, offset:  this.mixedStackMap.get(vname.nameID) as number };
         }
     }
 
@@ -416,10 +429,10 @@ class ICPPBodyEmitter {
         else {
             const mg = gg as MIRMaskGuard;
             if(mg.gmask === "#maskparam#") {
-                return ICPPOpEmitter.genMaskGuard(-1, mg.gindex);
+                return ICPPOpEmitter.genMaskGuard(mg.gindex, -1);
             }
             else {
-                return ICPPOpEmitter.genMaskGuard(this.maskMap.get(mg.gmask) as number, mg.gindex);
+                return ICPPOpEmitter.genMaskGuard(mg.gindex, this.maskMap.get(mg.gmask) as number);
             }
         }
     }
@@ -483,11 +496,12 @@ class ICPPBodyEmitter {
 
         minfo.occupied = true;
         minfo.name = op.name;
+        this.maskMap.set(op.name, minfo.offset);
     }
 
-    processSetConstantGuardFlag(op: MIRSetConstantGuardFlag) {
+    processSetConstantGuardFlag(op: MIRSetConstantGuardFlag): ICPPOp {
         const minfo = this.masklayout.find((mloc) => mloc.name === op.name) as {offset: number, occupied: boolean, name: string, size: number};
-        ICPPOpEmitter.genStoreConstantMaskValueOp(op.sinfo, minfo.offset, op.position, op.flag);
+        return ICPPOpEmitter.genStoreConstantMaskValueOp(op.sinfo, minfo.offset, op.position, op.flag);
     }
 
     processConvertValue(op: MIRConvertValue): ICPPOp {
@@ -1094,8 +1108,7 @@ class ICPPBodyEmitter {
                 return undefined;
             }
             case MIROpTag.MIRSetConstantGuardFlag: {
-                this.processSetConstantGuardFlag(op as MIRSetConstantGuardFlag);
-                return undefined;
+                return this.processSetConstantGuardFlag(op as MIRSetConstantGuardFlag);
             }
             case MIROpTag.MIRConvertValue: {
                 return this.processConvertValue(op as MIRConvertValue);
@@ -1496,6 +1509,15 @@ class ICPPBodyEmitter {
         //Generate basic logic
         blocks.forEach((bb) => {
             let ii = Math.max(0, bb.ops.findIndex((op) => !(op instanceof MIRPhi)));
+
+            if(ii !== 0) { 
+                //create stack locations for each of the phi vars
+                for(let i = 0; i < ii; ++i) {
+                    const phi = bb.ops[i] as MIRPhi;
+                    this.generateStorageLocationForPhi(phi.trgt, phi.layouttype);
+                }
+            }
+
             let done = false;
             let icpp: ICPPOp[] = [];
             while (!done && ii < bb.ops.length) {
@@ -1520,7 +1542,7 @@ class ICPPBodyEmitter {
             const ii = Math.max(0, bb.ops.findIndex((op) => !(op instanceof MIRPhi)));
             for(let i = 0; i < ii; ++i) {
                 const phi = bb.ops[i] as MIRPhi;
-                const icpptrgt = this.trgtToICPPTargetLocation(phi.trgt, phi.layouttype);
+                const icpptrgt = this.getStorageTargetForPhi(phi.trgt);
 
                 phi.src.forEach((arg, bfrom) => {
                     let insblock = icppblocks.get(bfrom) as ICPPOp[];

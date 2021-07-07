@@ -7,7 +7,7 @@ const fsx = require("fs-extra");
 const path = require("path");
 const proc = require('child_process');
 
-const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/icpp/interpreter/"));
+const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/icpp/interpreter"));
 const cppfiles = [rootsrc, path.join(rootsrc, "assembly"), path.join(rootsrc, "core"), path.join(rootsrc, "runtime")].map((pp) => pp + "/*.cpp");
 
 const outbase = path.normalize(path.join(__dirname, "output"));
@@ -19,13 +19,13 @@ let outfile = "";
 let taillinks = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O1 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17 -arch x86_64";
     includes = " -I /usr/local/boost_1_76_0";
     outfile = "-o " + outbase + "/icpp";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = "-O1 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -Wno-reorder-ctor -std=c++17";
     includes = " -I /usr/local/boost_1_76_0";
     outfile = "-o " + outbase + "/icpp";
 }
@@ -40,7 +40,7 @@ else {
 const command = `${compiler} ${ccflags}${includes} ${outfile} ${cppfiles.join(" ")}${taillinks}`;
 
 fsx.ensureDirSync(outbase);
-fsx.emptyDirSync(outbase);
+fsx.removeSync(outfile);
 
 console.log(command);
 

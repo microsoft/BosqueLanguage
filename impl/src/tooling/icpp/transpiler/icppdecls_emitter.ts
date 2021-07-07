@@ -137,7 +137,14 @@ class ICPPEmitter {
         this.assembly.constantDecls.forEach((cdecl) => {
             const decltype = this.temitter.getICPPTypeData(this.temitter.getMIRType(cdecl.declaredType));
             const offset = this.bemitter.constMap.get(cdecl.gkey) as number;
-            new ICPPConstDecl(cdecl.gkey, offset, cdecl.value, decltype);
+
+            let optenumname: [string, string] | undefined = undefined;
+            if(cdecl.attributes.includes("enum")) {
+                optenumname = [cdecl.enclosingDecl as string, cdecl.cname];
+            }
+
+            const icppdecl = new ICPPConstDecl(cdecl.gkey, optenumname, offset, cdecl.value, decltype);
+            this.icppasm.constdecls.push(icppdecl);
 
             this.icppasm.cbuffsize += decltype.allocinfo.inlinedatasize;
             this.icppasm.cmask += decltype.allocinfo.inlinedmask;

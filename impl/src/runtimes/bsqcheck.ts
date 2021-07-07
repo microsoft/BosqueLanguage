@@ -3,283 +3,277 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import * as FS from "fs";
-import * as Path from "path";
-import { execSync } from "child_process";
-
-import * as Commander from "commander";
 import chalk from "chalk";
+import * as readline from "readline";
+import * as path from "path";
 
-import { MIRAssembly, PackageConfig } from "../compiler/mir_assembly";
-import { MIREmitter } from "../compiler/mir_emitter";
-import { SMTAssembly } from "../tooling/verifier/smt_assembly";
-import { SMTEmitter } from "../tooling/verifier/smtdecls_emitter";
-import { VerifierOptions } from "../tooling/verifier/smt_exp";
-import { MIRInvokeKey } from "../compiler/mir_ops";
+import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
 
-let platpathz3: string | undefined = undefined;
-if (process.platform === "win32") {
-    platpathz3 = "build/tools/win/z3.exe";
-}
-else if (process.platform === "linux") {
-    platpathz3 = "build/tools/linux/z3";
-}
-else {
-    platpathz3 = "build/tools/macos/z3";
-}
-
-let platpathcvc4: string | undefined = undefined;
-if (process.platform === "win32") {
-    platpathcvc4 = "build/tools/win/cvc4.exe";
-}
-else if (process.platform === "linux") {
-    platpathcvc4 = "build/tools/linux/cvc4";
-}
-else {
-    platpathcvc4 = "build/tools/macos/cvc4";
-}
-
-const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../"));
-
-function generateMASM(files: string[], entrypoint: string, dosmallopts: boolean): MIRAssembly {
-    let code: { relativePath: string, contents: string }[] = [];
+function parseLocation(location: string): { file: string, line: number, pos: number } | undefined {
     try {
-        const coredir = Path.join(bosque_dir, "bin/core/verify");
-        const corefiles = FS.readdirSync(coredir);
-
-        for (let i = 0; i < corefiles.length; ++i) {
-            const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ relativePath: cfpath, contents: FS.readFileSync(cfpath).toString() });
-        }
- 
-        for (let i = 0; i < files.length; ++i) {
-            const realpath = Path.resolve(files[i]);
-            const file = { relativePath: realpath, contents: FS.readFileSync(realpath).toString() };
-            code.push(file);
-        }
+        const errfile = location.slice(0, location.indexOf("@"));
+        const errline = Number.parseInt(location.slice(location.indexOf("@") + 1, location.indexOf("#")));
+        const errpos = Number.parseInt(location.slice(location.indexOf("#") + 1));
+        return { file: errfile, line: errline, pos: errpos };
     }
     catch (ex) {
-        process.stdout.write(`Read failed with exception -- ${ex}\n`);
+        return undefined;
+    }
+}
+
+const mode = process.argv[2];
+const args = process.argv.slice(3);
+
+if(mode === "--output") {
+    const smtmode = args[0];
+    if(smtmode !== "check" && smtmode !== "evaluate" && smtmode !== "invert") {
+        process.stdout.write("Valid mode options are check | evaluate | invert\n");
         process.exit(1);
     }
 
-    let namespace = "NSMain";
-    let entryfunc = "main";
-    const cpos = entrypoint.indexOf("::");
-    if(cpos === -1) {
-        entryfunc = entrypoint;
-    }
-    else {
-        namespace = entrypoint.slice(0, cpos);
-        entryfunc = entrypoint.slice(cpos + 2);
+    const smtonly = args[1] === "--smt";
+
+    const location = parseLocation(args[smtonly ? 2 : 1]);
+    if(location === undefined) {
+        process.stdout.write("Location should be of the form file.bsq@line#pos\n");
+        process.exit(1);
     }
 
-    const macros = dosmallopts ? ["SMALL_MODEL_PATH"] : [];
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
-    if (errors.length !== 0) {
-        for (let i = 0; i < errors.length; ++i) {
-            process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
+    const files = args.slice(smtonly ? 3 : 2);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
+    const fparse = path.parse(files[0]);
+    const into = path.join(fparse.dir, fparse.name + (smtonly ? ".smt2" : ".json"));
+    process.stdout.write(`Writing SMT file to ${into}\n`);
+
+    workflowEmitToFile(into, usercode, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
+}
+else if(mode === "--checksingle") {
+    const location = parseLocation(args[0]);
+    if(location === undefined) {
+        process.stderr.write("Location should be of the form file.bsq@line#pos\n");
+        process.exit(1);
+    }
+
+    const files = args.slice(1);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
+    workflowBSQSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+        process.stdout.write(res + "\n");
+    });
+}
+else if(mode === "--check") {
+    const printprocess = (args[0] === "--verbose");
+    const quiet = (args[0] === "--quiet");
+    const files = args.slice((printprocess || quiet) ? 1 : 0);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
+    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
+    if(errors === undefined) {
+        process.stdout.write("Failed to load error lines\n");
+        process.exit(1);
+    }
+
+    if(errors.length === 0) {
+        process.stdout.write(chalk.green("No errors are possible in this program!"));
+        process.exit(0);
+    }
+
+    process.stdout.write(chalk.bold(`Analyzing ${errors.length} possible error(s) in program...\n`));
+
+    //
+    //TODO: we probably want to make this a process parallel process
+    //
+    let icount = 0;
+    let wcount = 0;
+    let pcount = 0;
+    let ecount = 0;
+    let fcount = 0;
+    let witnesslist: any[] = [];
+    for(let i = 0; i < errors.length; ++i) {
+        if(!quiet) {
+            process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}...\n`);
         }
 
-        process.exit(1);
-    }
+        const jres = workflowBSQCheck(false, usercode, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
 
-    return masm as MIRAssembly;
-}
-
-function generateSMTAssemblyForValidate(masm: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey, errorTrgtPos: { file: string, line: number, pos: number }): SMTAssembly | undefined {
-    let res: SMTAssembly | undefined = undefined;
-    try {
-        res = SMTEmitter.generateSMTAssemblyForValidate(masm, vopts, errorTrgtPos, entrypoint);
-    } catch(e) {
-        process.stdout.write(chalk.red(`SMT generate error -- ${e}\n`));
-        process.exit(1);
-    }
-    return res;
-}
-
-function buildSMT2file(smtasm: SMTAssembly, timeout: number, mode: "Refute" | "Generate"): string {
-    const sfileinfo = smtasm.generateSMT2AssemblyInfo(mode);
-
-    function joinWithIndent(data: string[], indent: string): string {
-        if (data.length === 0) {
-            return ";;NO DATA;;"
+        if(jres === undefined) {
+            if(!quiet) {
+                process.stdout.write(`Failed with internal errors :(\n`);
+            }
+            fcount++;
+        }
+        else if(jres.result === "infeasible") {
+            if(!quiet) {
+                process.stdout.write(`Proved infeasible in ${jres.time}s!\n`);
+            }
+            icount++;
+        }
+        else if(jres.result === "witness") {
+            if(!quiet) {
+                process.stdout.write(`Generated witness input in ${jres.time}s!\n`);
+                process.stdout.write(`${jres.input}\n`);
+            }
+            wcount++;
+            witnesslist.push(jres.input);
+        }
+        else if(jres.result === "partial") {
+            if(!quiet) {
+                process.stdout.write(`Proved infeasible on limited space.\n`);
+            }
+            pcount++;
         }
         else {
-            return data.map((d, i) => (i === 0 ? "" : indent) + d).join("\n");
+            if(!quiet) {
+                process.stdout.write(`Exhausted resource bounds without finding failures.\n`);
+            }
+            ecount++;
         }
     }
 
-    let contents = "";
-    try {
-        const smt_runtime = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
-        const lsrc = FS.readFileSync(smt_runtime).toString();
-        contents = lsrc
-            .replace(";;TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.TYPE_TAG_DECLS, "      "))
-            .replace(";;ABSTRACT_TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.ABSTRACT_TYPE_TAG_DECLS, "      "))
-            .replace(";;INDEX_TAG_DECLS;;", joinWithIndent(sfileinfo.INDEX_TAG_DECLS, "      "))
-            .replace(";;PROPERTY_TAG_DECLS;;", joinWithIndent(sfileinfo.PROPERTY_TAG_DECLS, "      "))
-            .replace(";;SUBTYPE_DECLS;;", joinWithIndent(sfileinfo.SUBTYPE_DECLS, ""))
-            .replace(";;TUPLE_HAS_INDEX_DECLS;;", joinWithIndent(sfileinfo.TUPLE_HAS_INDEX_DECLS, ""))
-            .replace(";;RECORD_HAS_PROPERTY_DECLS;;", joinWithIndent(sfileinfo.RECORD_HAS_PROPERTY_DECLS, ""))
-            .replace(";;KEY_TYPE_TAG_RANK;;", joinWithIndent(sfileinfo.KEY_TYPE_TAG_RANK, ""))
-            .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
-            .replace(";;BFLOATPOINT_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BFLOATPOINT_TYPE_ALIAS, ""))
-            .replace(";;STRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS + "\n")
-            .replace(";;BINTEGRAL_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
-            .replace(";;BFLOATPOINT_CONSTANTS;;", joinWithIndent(sfileinfo.BFLOATPOINT_CONSTANTS, ""))
-            .replace(";;KEY_TUPLE_DECLS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.decls, "      "))
-            .replace(";;KEY_RECORD_DECLS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.decls, "      "))
-            .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))
-            .replace(";;KEY_TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.constructors, "    "))
-            .replace(";;KEY_RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.constructors, "    "))
-            .replace(";;KEY_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.constructors, "    "))
-            .replace(";;KEY_TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.boxing, "      "))
-            .replace(";;KEY_RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.boxing, "      "))
-            .replace(";;KEY_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.boxing, "      "))
-            .replace(";;TUPLE_DECLS;;", joinWithIndent(sfileinfo.TUPLE_INFO.decls, "    "))
-            .replace(";;RECORD_DECLS;;", joinWithIndent(sfileinfo.RECORD_INFO.decls, "    "))
-            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_DECLS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.decls, "    "))
-            .replace(";;TYPE_DECLS;;", joinWithIndent(sfileinfo.TYPE_INFO.decls, "    "))
-            .replace(";;TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TUPLE_INFO.constructors, "    "))
-            .replace(";;RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.RECORD_INFO.constructors, "    "))
-            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.constructors, "    "))
-            .replace(";;TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_INFO.constructors, "    "))
-            .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
-            .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
-            .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
-            .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
-            .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
-            .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))
-            .replace(";;MASK_DECLS;;", joinWithIndent(sfileinfo.MASK_INFO.decls, "      "))
-            .replace(";;RESULTS;;", joinWithIndent(sfileinfo.RESULT_INFO.constructors, "    "))
-            .replace(";;MASKS;;", joinWithIndent(sfileinfo.MASK_INFO.constructors, "    "))
-            .replace(";;GLOBAL_DECLS;;", joinWithIndent(sfileinfo.GLOBAL_DECLS, ""))
-            .replace(";;UF_DECLS;;", joinWithIndent(sfileinfo.UF_DECLS, "\n"))
-            .replace(";;FUNCTION_DECLS;;", joinWithIndent(sfileinfo.FUNCTION_DECLS, "\n"))
-            .replace(";;GLOBAL_DEFINITIONS;;", joinWithIndent(sfileinfo.GLOBAL_DEFINITIONS, ""))
-            .replace(";;ACTION;;", joinWithIndent(sfileinfo.ACTION, ""));
+    if(fcount !== 0) {
+        process.stdout.write(chalk.red(`Failed on ${fcount} error(s)!\n`));
     }
-    catch (ex) {
-        process.stderr.write(chalk.red(`Error -- ${ex}\n`));
+
+    if(icount !== 0) {
+        process.stdout.write(chalk.green(`Proved ${icount} error(s) infeasible on all executions!\n`));
+    }
+
+    if(wcount !== 0) {
+        process.stdout.write(chalk.magenta(`Found failing inputs for ${wcount} error(s)!\n`));
+        process.stdout.write(JSON.stringify(witnesslist, undefined, 2) + "\n");
+    }
+
+    if(pcount !== 0) {
+        process.stdout.write(chalk.blue(`Proved ${pcount} error(s) infeasible on a subset of excutions (and found no failing inputs)!\n`));
+    }
+
+    if(ecount !== 0) {
+        process.stdout.write(chalk.blue(`Exhausted search on ${ecount} error(s) and found no failing inputs.\n`));
+    }
+}
+else if(mode === "--evaluate") {
+    const files = args;
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
         process.exit(1);
     }
 
-    return contents;
-}
+    let rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
 
-function emitSMT2File(cfile: string, into: string) {
-    try {
-        process.stdout.write(`Writing SMT output to "${into}..."\n`)
-        FS.writeFileSync(Commander.output, cfile);
-    }
-    catch (fex) {
-        process.stderr.write(chalk.red(`Failed to write file -- ${fex}\n`));
-    }
-}
+    rl.question(">> ", (input) => {
+        try {
+            const jinput = JSON.parse(input) as any[];
+            workflowEvaluateSingle(false, usercode, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+                try {
+                    const jres = JSON.parse(res);
 
-function runSMT2File(cfile: string, mode: "Refute" | "Generate") {
-    process.stdout.write(`Running ${Commander.prover} on SMT encoding...\n`);
-    const res = execSync(`${smtpath} ${smtargs}`, { input: cfile }).toString().trim();
-    process.stdout.write(`done!\n\n`);
+                    if (jres["result"] === "infeasible") {
+                        process.stdout.write(`No valid (non error) result exists for this input!\n`);
+                    }
+                    else if (jres["result"] === "output") {
+                        process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
+                        process.stdout.write(jres["output"] + "\n");
+                    }
+                    else if (jres["result"] === "timeout") {
+                        process.stdout.write(`Solver timeout :(\n`);
+                    }
+                    else {
+                        process.stdout.write(`Failed with -- ${jres}`);
+                    }
 
-    if (mode === "Refute") {
-        if (res === "unsat") {
-            process.stdout.write(chalk.green("Verified error is not possible!\n"));
+                    process.exit(0);
+                }
+                catch (ex) {
+                    process.stderr.write(`Failure ${ex}\n`);
+                    process.exit(1);
+                }
+            });
         }
-        else if (res === "sat") {
-            process.stdout.write(chalk.red("Error can occour -- run in generate mode to attempt failing input generation!\n"));
-        }
-        else {
-            process.stdout.write("Solver timeout :(\n");
-        }
-    }
-    else {
-        //process.stdout.write(`Emitting raw SMTLIB model...\n`);
-        process.stdout.write(res + "\n\n");
-    }
-}
-
-Commander
-    .option("-l --location [location]", "Location (file.bsq@line#pos) with error of interest")
-    .option("-e --entrypoint [entrypoint]", "Entrypoint to symbolically test", "NSMain::main")
-    .option("-m --mode [mode]", "Mode to run (errorlocs | refute | generate)", "refute")
-    .option("-s --small", "Enable small model optimizations in generate mode")
-    .option("-o --output [file]", "Output the model to a given file")
-    .option("-p --prover [prover]", "Prover to use (z3 | cvc4)", "z3");
-
-Commander.parse(process.argv);
-
-const smtpath = Path.normalize(Path.join(bosque_dir, Commander.prover === "z3" ? platpathz3 : platpathcvc4));
-const smtargs = (Commander.prover === "z3") ? "-smt2 -in" : "--lang=smt2 --cegqi-all --tlimit=1000";
-
-const timeout = 10000;
-const vopts = {
-    ISize: 5,
-    BigXMode: "BV",
-    OverflowEnabled: false,
-    FPOpt: "Real",
-    StringOpt: "ASCII",
-    SimpleQuantifierMode: false,
-    SpecializeSmallModelGen: false
-} as VerifierOptions;
-
-if (Commander.args.length === 0) {
-    process.stdout.write(chalk.red("Error -- Please specify at least one source file and target line as arguments\n"));
-    process.exit(1);
-}
-
-if(Commander.mode !== "errorlocs" && Commander.mode !== "refute" && Commander.mode !== "generate") {
-    process.stdout.write(chalk.red("Error -- Valid modes are \"errorlocs\", \"refute\", and \"generate\"\n"));
-    process.exit(1);
-}
-
-process.stdout.write(`Processing Bosque sources in:\n${Commander.args.join("\n")}\n...Using entrypoint ${Commander.entrypoint}...\n`);
-const massembly = generateMASM(Commander.args, Commander.entrypoint, Commander.small !== undefined);
-
-if(Commander.mode === "errorlocs" || Commander.location === undefined) {
-    const sasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, {file: "[]", line: -1, pos: -1});
-    if(sasm !== undefined) {
-        process.stdout.write("Possible error lines:\n")
-        process.stdout.write(JSON.stringify(sasm.allErrors, undefined, 2) + "\n")
-
-        if (Commander.output) {
-            const smfc = buildSMT2file(sasm, timeout, "Refute");
-            emitSMT2File(smfc, Commander.output);
-        }
-    }
-    process.exit(0);
-}
-
-let errlocation = { file: "[]", line: -1, pos: -1 };
-if (Commander.location !== undefined) {
-    const errfile = Commander.location.slice(0, Commander.location.indexOf("@"));
-    const errline = Number.parseInt(Commander.location.slice(Commander.location.indexOf("@") + 1, Commander.location.indexOf("#")));
-    const errpos = Number.parseInt(Commander.location.slice(Commander.location.indexOf("#") + 1));
-    errlocation = { file: errfile, line: errline, pos: errpos };
-}
-
-setImmediate(() => {
-    try {
-        const smtasm = generateSMTAssemblyForValidate(massembly, vopts, Commander.entrypoint, errlocation);
-        if (smtasm === undefined) {
-            process.stdout.write(chalk.red("Error -- Failed to generate SMTLIB code\n"));
+        catch (ex) {
+            process.stderr.write(`Failure ${ex}\n`);
             process.exit(1);
         }
+    });
+}
+else if(mode === "--invert") {
+    const files = args;
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
 
-        if(smtasm.allErrors.findIndex((ee) => ee.file === errlocation.file && ee.pos === errlocation.pos) === -1) {
-            process.stdout.write(chalk.red("Error -- No error associated with given position\n"));
+    let rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    rl.question(">> ", (input) => {
+        try {
+            const joutput = JSON.parse(input);
+            workflowInvertSingle(false, usercode, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+                try {
+                    const jres = JSON.parse(res);
+
+                    if (jres["result"] === "infeasible") {
+                        process.stdout.write(`No valid (non error) input exists for this output!\n`);
+                    }
+                    else if (jres["result"] === "witness") {
+                        process.stdout.write(`Generated candidate input in ${jres["time"]} millis!\n`);
+                        process.stdout.write(jres["input"] + "\n");
+                    }
+                    else if (jres["result"] === "timeout") {
+                        process.stdout.write(`Solver timeout :(\n`);
+                    }
+                    else {
+                        process.stdout.write(`Failed with -- ${jres}`);
+                    }
+
+                    process.exit(0);
+                }
+                catch (ex) {
+                    process.stderr.write(`Failure ${ex}\n`);
+                    process.exit(1);
+                }
+            });
+        }
+        catch (ex) {
+            process.stderr.write(`Failure ${ex}\n`);
             process.exit(1);
         }
-
-        const smfc = buildSMT2file(smtasm as SMTAssembly, timeout, Commander.mode === "refute" ? "Refute" : "Generate");
-        if (Commander.output) {
-            emitSMT2File(smfc, Commander.output);
-        }
-
-        runSMT2File(smfc, Commander.mode === "refute" ? "Refute" : "Generate");
+    });
+}
+else {
+    const files = args;
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
     }
-    catch (ex) {
-        process.stderr.write(chalk.red(`Error -- ${ex}\n`));
+
+    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
+    if(errors === undefined) {
+        process.stderr.write("Failed to load error lines\n");
+        process.exit(1);
     }
-});
+
+    process.stdout.write("Possible Errors:\n");
+    process.stdout.write(JSON.stringify(errors, undefined, 2) + "\n");
+}

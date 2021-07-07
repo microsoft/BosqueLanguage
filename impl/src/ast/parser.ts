@@ -250,6 +250,11 @@ class SourceInfo {
     }
 }
 
+type CodeFileInfo = { 
+    fpath: string, 
+    contents: string 
+};
+
 function unescapeLiteralString(str: string): string {
     let rs = str
         .replace(/\\0/g, "\0")
@@ -4250,8 +4255,6 @@ class Parser {
                 return [ename, dvalue];
             })[0];
             
-            const valuefield = new MemberFieldDecl(sinfo, this.m_penv.getCurrentFile(), ["private"], "v", oftype, undefined);
-
             const provides = [
                 [new NominalTypeSignature("NSCore", ["Some"]), undefined],
                 [new NominalTypeSignature("NSCore", ["KeyType"]), undefined], 
@@ -4262,11 +4265,17 @@ class Parser {
             //TODO: maybe want to make this parsable too!
             //
 
+            const fparam = new FunctionParameter("v", oftype, false, undefined, undefined, undefined);
+        
+            const createbody = new BodyImplementation(`s_create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "enum_create");
+            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, etype, [], [], false, false, new Set<string>(), createbody, [], []);
+            const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_create", createdecl);
+
             const invariants: InvariantDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
-            const staticFunctions: StaticFunctionDecl[] = [];
+            const staticFunctions: StaticFunctionDecl[] = [create];
             const staticOperators: StaticOperatorDecl[] = [];
-            const memberFields: MemberFieldDecl[] = [valuefield];
+            const memberFields: MemberFieldDecl[] = [];
             const memberMethods: MemberMethodDecl[] = [];
     
             if(this.testAndConsumeTokenIf("&")) {
@@ -4294,13 +4303,24 @@ class Parser {
                 }
 
                 const exp = enums[i][1] !== undefined ? (enums[i][1] as ConstantExpressionValue).exp : new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
-                const parg = new PositionalArgument(undefined, false, exp);
-
-                const enminit = new ConstructorPrimaryExpression(sinfo, true, etype, new Arguments([parg]));
-                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
+                const enminit = new CallStaticFunctionOrOperatorExpression(sinfo, etype, "s_create", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, exp)]), "std");
+                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["enum"], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
                 staticMembers.push(enm);
             }
         
+            const ennamebody = new BodyImplementation(`name_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
+                new BlockStatement(sinfo, [
+                    new AssertStatement(sinfo, new LiteralBoolExpression(sinfo, false), "debug"),
+                    new ReturnStatement(sinfo, [new LiteralStringExpression(sinfo, "[INFEASIBLE]")])
+                ])
+            );
+
+            const eparam = new FunctionParameter("self", etype, false, undefined, undefined, undefined);
+            const ennameinv = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [eparam], undefined, undefined, this.m_penv.SpecialStringSignature, [], [], false, false, new Set<string>(), ennamebody, [], []);
+            const enname = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "nameof", ennameinv);
+                
+            staticFunctions.push(enname);
+
             if (currentDecl.checkDeclNameClash(currentDecl.ns, ename)) {
                 this.raiseError(line, "Collision between object and other names");
             }
@@ -4318,7 +4338,7 @@ class Parser {
         const line = this.getCurrentLine();
 
         //[attr] typedecl NAME = Type (& {...} | ;)
-        const attributes = ["struct", ...this.parseAttributes()];
+        const attributes = ["_internal", "struct", ...this.parseAttributes()];
 
         const sinfo = this.getCurrentSrcInfo();
        
@@ -4335,39 +4355,29 @@ class Parser {
         this.ensureAndConsumeToken("=");
         const idval = this.parseTypeSignature(false);
 
-        const valuefield = new MemberFieldDecl(sinfo, this.m_penv.getCurrentFile(), ["private"], "v", idval, undefined);
-
-        const cparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
-        const cbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
-            new BlockStatement(sinfo, [
-                new ReturnStatement(sinfo, [
-                    new ConstructorPrimaryExpression(sinfo, true, itype, new Arguments([new PositionalArgument(undefined, false, new AccessVariableExpression(sinfo, "v"))]))
-                ])
-            ])
-        );
-        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["inline"], "no", [], undefined, [cparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), cbody, [], []);
-        const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "create", createdecl);
-
-        const vbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
-            new PostfixOp(sinfo, new AccessVariableExpression(sinfo, "this"), [new PostfixAccessFromName(sinfo, false, undefined, "v")])
-        );
-        const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["inline"], "no", [], undefined, [], undefined, undefined, idval, [], [], false, false, new Set<string>(), vbody, [], []);
-        const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
-
         let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][]
         provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
         provides.push([new NominalTypeSignature("NSCore", ["APIType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, new NominalTypeSignature("NSCore", ["APIType"]))])]);
 
         //
+        //TODO: this is a bit broken and really only works for 1-level numeric types -- needs to be cleaned up
+        //
+
+        //
         //TODO: maybe want to make this parsable too!
+        //
+
+        //
+        //TODO: this should work for other API/Key types as well -- we need to cleanup to make that work + the handling of invariants and the struct/entity bit too
+        //      maybe for tuples/records we let the underlying . accessors work automagically
         //
 
         const invariants: InvariantDecl[] = [];
         const staticMembers: StaticMemberDecl[] = [];
-        const staticFunctions: StaticFunctionDecl[] = [create];
+        const staticFunctions: StaticFunctionDecl[] = [];
         const staticOperators: StaticOperatorDecl[] = [];
-        const memberFields: MemberFieldDecl[] = [valuefield];
-        const memberMethods: MemberMethodDecl[] = [value];
+        const memberFields: MemberFieldDecl[] = [];
+        const memberMethods: MemberMethodDecl[] = [];
 
         if(this.testAndConsumeTokenIf("&")) {
             this.setRecover(this.scanCodeParens());
@@ -4389,6 +4399,27 @@ class Parser {
         else {
             this.ensureAndConsumeToken(";");
         }
+
+        const vparam = new FunctionParameter("self", itype, false, undefined, undefined, undefined);
+        const fparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
+        
+        const createbody = new BodyImplementation(`create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_create");
+        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), createbody, [], []);
+        const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "create", createdecl);
+
+        const valuebuiltinbody = new BodyImplementation(`s_value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_value");
+        const valuebuiltindecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebuiltinbody, [], []);
+        const valuebuiltin = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_value", valuebuiltindecl);
+
+        const valuebody = new BodyImplementation(`value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
+            new CallStaticFunctionOrOperatorExpression(sinfo, itype, "s_value", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, new AccessVariableExpression(sinfo, "self"))]), "std")
+        );
+        const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebody, [], []);
+        const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
+
+        staticFunctions.push(create);
+        staticFunctions.push(valuebuiltin);
+        memberMethods.push(value);
 
         let categories = [SpecialTypeCategory.TypeDeclDecl, SpecialTypeCategory.GroundedTypeDecl];
         if(OOPTypeDecl.attributeSetContains("numeric", attributes)) {
@@ -4741,6 +4772,6 @@ class Parser {
 }
 
 export { 
-    SourceInfo, ParseError, Parser,
+    CodeFileInfo, SourceInfo, ParseError, Parser,
     unescapeLiteralString
 };

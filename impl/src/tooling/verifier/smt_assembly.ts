@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { BSQRegex } from "../../ast/bsqregex";
+import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
 type SMT2FileInfo = {
@@ -129,11 +130,11 @@ class SMTEntityDecl {
     readonly smtname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] };
+    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined;
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, isapitype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, isapitype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
         this.isapitype = isapitype;
 
@@ -233,12 +234,14 @@ class SMTEphemeralListDecl {
 
 class SMTConstantDecl {
     readonly gkey: string;
+    readonly optenumname: [MIRResolvedTypeKey, string] | undefined;
     readonly ctype: SMTType;
 
     readonly consf: string;
 
-    constructor(gkey: string, ctype: SMTType, consf: string) {
+    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: SMTType, consf: string) {
         this.gkey = gkey;
+        this.optenumname = optenumname;
         this.ctype = ctype;
 
         this.consf = consf;
@@ -251,11 +254,21 @@ class SMTModelState {
     readonly checktype: SMTType;
     readonly fcheck: SMTExp;
 
-    constructor(arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], argchk: SMTExp[] | undefined, checktype: SMTType, echeck: SMTExp) {
+    readonly iserrorcheck: SMTExp;
+    readonly isvaluecheck: SMTExp;
+    readonly valuetype: SMTType;
+    readonly fgetvalue: SMTExp;
+
+    constructor(arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], argchk: SMTExp[] | undefined, checktype: SMTType, echeck: SMTExp, iserrorcheck: SMTExp, isvaluecheck: SMTExp, valuetype: SMTType, fgetvalue: SMTExp) {
         this.arginits = arginits;
         this.argchk = argchk;
         this.checktype = checktype;
         this.fcheck = echeck;
+
+        this.iserrorcheck = iserrorcheck;
+        this.isvaluecheck = isvaluecheck;
+        this.valuetype = valuetype;
+        this.fgetvalue = fgetvalue;
     }
 }
 
@@ -337,12 +350,7 @@ class SMTAssembly {
 
     entrypoint: string;
     havocfuncs: Set<string> = new Set<string>();
-    model: SMTModelState = new SMTModelState([], undefined, new SMTType("[UNINIT]"), new SMTConst("bsq_none@literal"));
-
-    modes: { refute: SMTExp, generate: SMTExp } = { 
-        refute: new SMTConst("bsq_none@literal"), 
-        generate: new SMTConst("bsq_none@literal")
-    };
+    model: SMTModelState = new SMTModelState([], undefined, new SMTType("[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"), new SMTType("[UNINIT_VTYPE]"), new SMTConst("[UNINIT_VGET]"));
 
     constructor(vopts: VerifierOptions, entrypoint: string) {
         this.vopts = vopts;
@@ -437,7 +445,7 @@ class SMTAssembly {
         return bbn.toString();
     }
 
-    generateSMT2AssemblyInfo(mode: "Refute" | "Reach" | "Generate"): SMT2FileInfo {
+    generateSMT2AssemblyInfo(mode: "check" | "evaluate" | "invert"): SMT2FileInfo {
         const subtypeasserts = this.subtypeRelation.map((tc) => tc.value ? `(assert (SubtypeOf@ ${tc.ttype} ${tc.atype}))` : `(assert (not (SubtypeOf@ ${tc.ttype} ${tc.atype})))`).sort();
         const indexasserts = this.hasIndexRelation.map((hi) => hi.value ? `(assert (HasIndex@ ${hi.idxtag} ${hi.atype}))` : `(assert (not (HasIndex@ ${hi.idxtag} ${hi.atype})))`).sort();
         const propertyasserts = this.hasPropertyRelation.map((hp) => hp.value ? `(assert (HasProperty@ ${hp.pnametag} ${hp.atype}))` : `(assert (not (HasProperty@ ${hp.pnametag} ${hp.atype})))`).sort();
@@ -575,8 +583,8 @@ class SMTAssembly {
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((kt) => {
                 return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
+                    decl: kt.consf !== undefined ? `(${kt.smtname} 0)` : undefined,
+                    consf:  kt.consf !== undefined ? `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )` : undefined,
                     boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
                 };
             });
@@ -584,11 +592,11 @@ class SMTAssembly {
         const termtypeinfo = this.entityDecls
             .filter((et) => !et.iskeytype)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((kt) => {
+            .map((tt) => {
                 return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
+                    decl: tt.consf !== undefined ? `(${tt.smtname} 0)` : undefined,
+                    consf: tt.consf !== undefined ? `( (${tt.consf.cname} ${tt.consf.cargs.map((te) => `(${te.fname} ${te.ftype.name})`).join(" ")}) )` : undefined,
+                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
             });
 
@@ -664,10 +672,13 @@ class SMTAssembly {
         let action: string[] = [];
         this.model.arginits.map((iarg) => {
             action.push(`(declare-const ${iarg.vname} ${iarg.vtype.name})`);
-            action.push(`(assert (= ${iarg.vname} ${iarg.vinit.emitSMT2(undefined)}))`);
 
-            if(iarg.vchk !== undefined) {
-                action.push(`(assert ${iarg.vchk.emitSMT2(undefined)})`);
+            if(mode !== "evaluate") {
+                action.push(`(assert (= ${iarg.vname} ${iarg.vinit.emitSMT2(undefined)}))`);
+
+                if(iarg.vchk !== undefined) {
+                    action.push(`(assert ${iarg.vchk.emitSMT2(undefined)})`);
+                }
             }
         });
 
@@ -675,27 +686,28 @@ class SMTAssembly {
             action.push(...this.model.argchk.map((chk) => `(assert ${chk.emitSMT2(undefined)})`));
         }
 
-        if (mode === "Refute") {
+        if (mode === "check") {
             action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
             action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
 
-            action.push(`(assert ${this.modes.refute.emitSMT2(undefined)})`);
-            action.push("(check-sat)");
+            action.push(`(assert ${this.model.iserrorcheck.emitSMT2(undefined)})`);
         }
-        else if (mode === "Reach") {
+        else if (mode === "evaluate") {
             action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
             action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
 
-            action.push(`(assert ${this.modes.generate.emitSMT2(undefined)})`);
-            action.push("(check-sat)");
+            action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
+            action.push(`(declare-const _@smtres@_value ${this.model.valuetype.name})`);
+            action.push(`(assert (= _@smtres@_value ${this.model.fgetvalue.emitSMT2(undefined)}))`);
         }
         else {
             action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
             action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
 
-            action.push(`(assert ${this.modes.generate.emitSMT2(undefined)})`);
-            action.push("(check-sat)");
-            //action.push("(get-model)");
+            action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
+            action.push(`(declare-const _@smtres@_value ${this.model.valuetype.name})`);
+
+            action.push(`(assert (= _@smtres@_value ${this.model.fgetvalue.emitSMT2(undefined)}))`);
         }
 
         let foutput: string[] = [];
@@ -752,11 +764,11 @@ class SMTAssembly {
             STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 16)))" : "(define-sort BString () String)"),
             KEY_TUPLE_INFO: { decls: keytupleinfo.map((kti) => kti.decl), constructors: keytupleinfo.map((kti) => kti.consf), boxing: keytupleinfo.map((kti) => kti.boxf) },
             KEY_RECORD_INFO: { decls: keyrecordinfo.map((kti) => kti.decl), constructors: keyrecordinfo.map((kti) => kti.consf), boxing: keyrecordinfo.map((kti) => kti.boxf) },
-            KEY_TYPE_INFO: { decls: keytypeinfo.map((kti) => kti.decl), constructors: keytypeinfo.map((kti) => kti.consf), boxing: keytypeinfo.map((kti) => kti.boxf) },
+            KEY_TYPE_INFO: { decls: keytypeinfo.filter((kti) => kti.decl !== undefined).map((kti) => kti.decl as string), constructors: keytypeinfo.filter((kti) => kti.consf !== undefined).map((kti) => kti.consf as string), boxing: keytypeinfo.map((kti) => kti.boxf) },
             TUPLE_INFO: { decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), boxing: termtupleinfo.map((kti) => kti.boxf) },
             RECORD_INFO: { decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), boxing: termrecordinfo.map((kti) => kti.boxf) },
             TYPE_COLLECTION_INTERNAL_INFO: { decls: generalcollectioninternaldecls.map((kti) => kti.decl), constructors: generalcollectioninternaldecls.map((kti) => kti.consf) },
-            TYPE_INFO: { decls: termtypeinfo.map((kti) => kti.decl), constructors: termtypeinfo.map((kti) => kti.consf), boxing: termtypeinfo.map((kti) => kti.boxf) },
+            TYPE_INFO: { decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), boxing: termtypeinfo.map((tti) => tti.boxf) },
             EPHEMERAL_DECLS: { decls: etypeinfo.map((kti) => kti.decl), constructors: etypeinfo.map((kti) => kti.consf) },
             RESULT_INFO: { decls: rtypeinfo.map((kti) => kti.decl), constructors: rtypeinfo.map((kti) => kti.consf) },
             MASK_INFO: { decls: maskinfo.map((mi) => mi.decl), constructors: maskinfo.map((mi) => mi.consf) },
@@ -766,6 +778,67 @@ class SMTAssembly {
             GLOBAL_DEFINITIONS: gdefs,
             ACTION: action
         };
+    }
+
+    buildSMT2file(mode: "check" | "evaluate" | "invert", smtruntime: string): string {
+        const sfileinfo = this.generateSMT2AssemblyInfo(mode);
+    
+        function joinWithIndent(data: string[], indent: string): string {
+            if (data.length === 0) {
+                return ";;NO DATA;;"
+            }
+            else {
+                return data.map((d, i) => (i === 0 ? "" : indent) + d).join("\n");
+            }
+        }
+    
+        const contents = smtruntime
+            .replace(";;TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.TYPE_TAG_DECLS, "      "))
+            .replace(";;ABSTRACT_TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.ABSTRACT_TYPE_TAG_DECLS, "      "))
+            .replace(";;INDEX_TAG_DECLS;;", joinWithIndent(sfileinfo.INDEX_TAG_DECLS, "      "))
+            .replace(";;PROPERTY_TAG_DECLS;;", joinWithIndent(sfileinfo.PROPERTY_TAG_DECLS, "      "))
+            .replace(";;SUBTYPE_DECLS;;", joinWithIndent(sfileinfo.SUBTYPE_DECLS, ""))
+            .replace(";;TUPLE_HAS_INDEX_DECLS;;", joinWithIndent(sfileinfo.TUPLE_HAS_INDEX_DECLS, ""))
+            .replace(";;RECORD_HAS_PROPERTY_DECLS;;", joinWithIndent(sfileinfo.RECORD_HAS_PROPERTY_DECLS, ""))
+            .replace(";;KEY_TYPE_TAG_RANK;;", joinWithIndent(sfileinfo.KEY_TYPE_TAG_RANK, ""))
+            .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
+            .replace(";;BFLOATPOINT_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BFLOATPOINT_TYPE_ALIAS, ""))
+            .replace(";;STRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS + "\n")
+            .replace(";;BINTEGRAL_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
+            .replace(";;BFLOATPOINT_CONSTANTS;;", joinWithIndent(sfileinfo.BFLOATPOINT_CONSTANTS, ""))
+            .replace(";;KEY_TUPLE_DECLS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.decls, "      "))
+            .replace(";;KEY_RECORD_DECLS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.decls, "      "))
+            .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))
+            .replace(";;KEY_TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.constructors, "    "))
+            .replace(";;KEY_RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.constructors, "    "))
+            .replace(";;KEY_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.constructors, "    "))
+            .replace(";;KEY_TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.boxing, "      "))
+            .replace(";;KEY_RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.boxing, "      "))
+            .replace(";;KEY_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.boxing, "      "))
+            .replace(";;TUPLE_DECLS;;", joinWithIndent(sfileinfo.TUPLE_INFO.decls, "    "))
+            .replace(";;RECORD_DECLS;;", joinWithIndent(sfileinfo.RECORD_INFO.decls, "    "))
+            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_DECLS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.decls, "    "))
+            .replace(";;TYPE_DECLS;;", joinWithIndent(sfileinfo.TYPE_INFO.decls, "    "))
+            .replace(";;TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TUPLE_INFO.constructors, "    "))
+            .replace(";;RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.RECORD_INFO.constructors, "    "))
+            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.constructors, "    "))
+            .replace(";;TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_INFO.constructors, "    "))
+            .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
+            .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
+            .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
+            .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
+            .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
+            .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))
+            .replace(";;MASK_DECLS;;", joinWithIndent(sfileinfo.MASK_INFO.decls, "      "))
+            .replace(";;RESULTS;;", joinWithIndent(sfileinfo.RESULT_INFO.constructors, "    "))
+            .replace(";;MASKS;;", joinWithIndent(sfileinfo.MASK_INFO.constructors, "    "))
+            .replace(";;GLOBAL_DECLS;;", joinWithIndent(sfileinfo.GLOBAL_DECLS, ""))
+            .replace(";;UF_DECLS;;", joinWithIndent(sfileinfo.UF_DECLS, "\n"))
+            .replace(";;FUNCTION_DECLS;;", joinWithIndent(sfileinfo.FUNCTION_DECLS, "\n"))
+            .replace(";;GLOBAL_DEFINITIONS;;", joinWithIndent(sfileinfo.GLOBAL_DEFINITIONS, ""))
+            .replace(";;ACTION;;", joinWithIndent(sfileinfo.ACTION, ""));
+    
+        return contents;
     }
 }
 

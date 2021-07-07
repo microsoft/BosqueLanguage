@@ -6053,7 +6053,7 @@ class TypeChecker {
                         this.m_emitter.masm.invokeDecls.set(ikey, idecl as MIRInvokeBodyDecl);
 
                         const dtype = this.m_emitter.registerResolvedTypeReference(ddecltype);
-                        const mirglobal = new MIRConstantDecl(enclosingType, iname, ikey, decl.sourceLocation, decl.srcFile, dtype.trkey, gkey);
+                        const mirglobal = new MIRConstantDecl(enclosingType, [], iname, ikey, decl.sourceLocation, decl.srcFile, dtype.trkey, gkey);
 
                         this.m_emitter.masm.constantDecls.set(gkey, mirglobal);
                     }
@@ -6098,7 +6098,7 @@ class TypeChecker {
                     this.m_emitter.masm.invokeDecls.set(ikey, idecl as MIRInvokeBodyDecl);
 
                     const dtype = this.m_emitter.registerResolvedTypeReference(ptype);
-                    const mirglobal = new MIRConstantDecl(undefined, iname, ikey, cexp.exp.sinfo, srcFile, dtype.trkey, gkey);
+                    const mirglobal = new MIRConstantDecl(undefined, [], iname, ikey, cexp.exp.sinfo, srcFile, dtype.trkey, gkey);
 
                     this.m_emitter.masm.constantDecls.set(gkey, mirglobal);
 
@@ -6366,6 +6366,14 @@ class TypeChecker {
                 let specialTemplateInfo: { tname: string, tkind: MIRResolvedTypeKey }[] | undefined = undefined;
                 if (tdecl.specialDecls.has(SpecialTypeCategory.StringOfDecl) || tdecl.specialDecls.has(SpecialTypeCategory.DataStringDecl)) {
                     specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType).trkey }];
+                }
+                else if (tdecl.specialDecls.has(SpecialTypeCategory.BufferDecl) || tdecl.specialDecls.has(SpecialTypeCategory.DataBufferDecl)) {
+                    specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType).trkey }];
+                }
+                else if (tdecl.specialDecls.has(SpecialTypeCategory.EnumTypeDecl)) {
+                    const etype = (tdecl.staticFunctions.find((vv) => vv.name === "s_create") as StaticFunctionDecl).invoke.params[0].type;
+                    const retype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, etype, binds);
+                    specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(retype).trkey }];
                 }
                 else if (tdecl.specialDecls.has(SpecialTypeCategory.VectorTypeDecl) || tdecl.specialDecls.has(SpecialTypeCategory.ListTypeDecl)) {
                     specialTemplateInfo = [{ tname: "T", tkind: this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType).trkey }];
@@ -6712,7 +6720,7 @@ class TypeChecker {
             this.m_emitter.masm.invokeDecls.set(ikey, idecl as MIRInvokeBodyDecl);
 
             const dtype = this.m_emitter.registerResolvedTypeReference(ddecltype);
-            const mirconst = new MIRConstantDecl(containingType !== undefined ? containingType[0].trkey : undefined, name, ikey, cexp.exp.sinfo, srcFile, dtype.trkey, gkey);
+            const mirconst = new MIRConstantDecl(containingType !== undefined ? containingType[0].trkey : undefined, attribs, name, ikey, cexp.exp.sinfo, srcFile, dtype.trkey, gkey);
 
             this.m_emitter.masm.constantDecls.set(gkey, mirconst);
         }

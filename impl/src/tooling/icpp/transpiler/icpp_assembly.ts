@@ -88,6 +88,7 @@ enum ICPPParseTag
     RecordTag,
     EntityTag,
     EphemeralListTag,
+    EnumTag,
     InlineUnionTag,
     RefUnionTag
 }
@@ -212,15 +213,19 @@ class ICPPTypeEntity extends ICPPType {
     }
 
     jemitStringOf(validator: MIRResolvedTypeKey): object {
-        return {...this.jemitType([]), validator: validator, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+        return {...this.jemitType([]), validator: validator};
     }
 
     jemitDataString(chkinv: MIRInvokeKey): object {
-        return {...this.jemitType([]), chkinv: chkinv, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+        return {...this.jemitType([]), chkinv: chkinv};
     }
 
     jemitTypedNumber(underlying: MIRResolvedTypeKey, primitive: MIRResolvedTypeKey): object {
-        return {...this.jemitType([]), underlying: underlying, primitive: primitive, fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+        return {...this.jemitType([]), underlying: underlying, primitive: primitive};
+    }
+
+    jemitEnum(underlying: MIRResolvedTypeKey, enuminvs: [string, number][]): object {
+        return {...this.jemitType([]), underlying: underlying, enuminvs: enuminvs};
     }
 
     jemitVector(etype: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
@@ -422,12 +427,14 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl
 class ICPPConstDecl 
 {
     readonly gkey: MIRGlobalKey;
+    readonly optenumname: [MIRResolvedTypeKey, string] | undefined;
     readonly storageOffset: number;
     readonly valueInvoke: MIRInvokeKey;
     readonly ctype: ICPPType;
 
-    constructor(gkey: MIRGlobalKey, storageOffset: number, valueInvoke: MIRInvokeKey, ctype: ICPPType) {
+    constructor(gkey: MIRGlobalKey, optenumname: [MIRResolvedTypeKey, string] | undefined, storageOffset: number, valueInvoke: MIRInvokeKey, ctype: ICPPType) {
         this.gkey = gkey;
+        this.optenumname = optenumname;
         this.storageOffset = storageOffset;
         this.valueInvoke = valueInvoke;
         this.ctype = ctype;
@@ -515,18 +522,26 @@ class ICPPAssembly
                     const edecl = tdecl as ICPPTypeEntity;
 
                     switch(edecl.ptag) {
-                        case ICPPParseTag.ValidatorTag:
+                        case ICPPParseTag.ValidatorTag: {
                             return edecl.jemitValidator((edecl.extradata as BSQRegex).jemit());
-                        case ICPPParseTag.StringOfTag:
+                        }
+                        case ICPPParseTag.StringOfTag: {
                             return edecl.jemitStringOf(edecl.extradata as MIRResolvedTypeKey);
-                        case ICPPParseTag.DataStringTag:
+                        }
+                        case ICPPParseTag.DataStringTag: {
                             return edecl.jemitDataString(edecl.extradata as MIRResolvedTypeKey);
+                        }
                         case ICPPParseTag.TypedNumberTag: {
                             //
                             //TODO: we need to switch this to encode the underlying and primitive types in the type decl really -- not as
                             //         the funky v field -- we probably want to add some extra access (and maybe constructor) magic too 
                             //
                             return edecl.jemitTypedNumber(edecl.extradata as MIRResolvedTypeKey, edecl.extradata as MIRResolvedTypeKey);
+                        }
+                        case ICPPParseTag.EnumTag: {
+                            const ddcls = this.constdecls.filter((cdcl) => cdcl.optenumname !== undefined && cdcl.optenumname[0] === tdecl.tkey);
+                            const enuminvs = ddcls.map((ddcl) => [`${(ddcl.optenumname as [string, string])[0]}::${(ddcl.optenumname as [string, string])[1]}`, ddcl.storageOffset] as [string, number]);
+                            return edecl.jemitEnum(edecl.extradata as MIRResolvedTypeKey, enuminvs);
                         }
                         case ICPPParseTag.VectorTag: {
                             const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;

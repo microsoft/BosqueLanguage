@@ -17,7 +17,7 @@ class RequiredListConstructors {
     havoc: boolean = false;
 
     fill: boolean = false;
-    literalk: Set<number> = new Set<number>();
+    literalk: Set<number> = new Set<number>([1, 2, 3]);
     filter: Map<string, MIRPCode> = new Map<string, MIRPCode>();
     map: Map<string, [MIRPCode, MIRType, MIRType]> = new Map<string, [MIRPCode, MIRType, MIRType]>();
 }
