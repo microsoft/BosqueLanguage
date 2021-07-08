@@ -133,6 +133,7 @@ class ICPPTypeEmitter {
         let size = 0;
         let mask: RefMask = "";
 
+        xxxx; //We need to do a getICPPTypeData_Shallow here otherwise we have problems with recursive types
         const icppentries = tt.fields.map((f) => this.getICPPTypeData(this.getMIRType(f.declaredType)));
         for(let i = 0; i < icppentries.length; ++i) {
             fieldnames.push(tt.fields[i].name);

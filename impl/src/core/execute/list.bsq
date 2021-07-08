@@ -13,4 +13,569 @@ concept ListOf provides Object {
 }
 
 __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODType, APIType when T APIType {
+    private function s_size(l: List<T>): Nat # list_size
+    private function s_empty(l: List<T>): Bool # list_empty
+    private function s_unsafe_get(l: List<T>, i: Nat): T # list_unsafe_get
+
+    private function s_fill<T>(k: Nat, val: T): List<T> # list_fill
+
+    private function s_concat2(l1: List<T>, l2: List<T>): List<T> # list_concat2
+
+    private recursive? function s_hasPredCheck(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool # list_haspredcheck
+    private recursive? function s_hasPredCheck_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool # list_haspredcheck_idx
+
+    private recursive? function s_findIndexOf(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat # list_findindexof
+    private recursive? function s_findIndexOfLast(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat # list_findindexoflast
+
+    private recursive? function s_findIndexOf_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_findindexof_idx
+    private recursive? function s_findIndexOfLast_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_findindexoflast_idx
+
+    private recursive? function s_filter(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> # list_filter
+    private recursive? function s_filter_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_filter_idx
+
+    private function s_filterToType<U>(l: List<T>): List<U> # list_filtertotype
+    private function s_castToType<U>(l: List<T>): List<U> # list_casttotype
+
+    private function s_slice(l: List<T>, start: Nat, end: Nat): List<U> # list_slice
+
+    private recursive? function s_map<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<T> # list_map
+    private recursive? function s_map_Idx<U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<T> # list_map_idx
+
+    private function s_rangeInBounds(l: List<T>, start: Nat, end: Nat): Bool {
+        return start <= end & end <= List<T>::s_size(l); 
+    }
+
+    ////
+    //Public interface
+    ////
+
+    function fill(k: Nat, val: T): List<T> {
+        if(k == 0n) {
+            return List<T>@{};
+        }
+        else {
+            return List<T>::s_fill(k, val);
+        }
+    }
+
+    //TODO: when overloading is working better then make this a single concat with overloads
+    function concat(l1: List<T>, l2: List<T>): List<T> {
+        return List<T>::s_concat2(l1, l2);
+    }
+
+    method size(): Nat {
+        return List<T>::s_size(this);
+    }
+
+    method empty(): Bool {
+        return List<T>::s_empty(this);
+    }
+
+    method front(): T 
+        requires release !List<T>::s_empty(this);
+    {
+        return List<T>::s_unsafe_get(this, 0n);
+    }
+
+    method frontOrNone(): T? {
+        if(List<T>::s_empty(this)) {
+            return none;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, 0n);
+        }
+    }
+
+    method frontOrDefault(d: T): T {
+        if(List<T>::s_empty(this)) {
+            return d;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, 0n);
+        }
+    }
+
+    method frontTry(out? res: T): Bool {
+        if(!List<T>::s_empty(this)) {
+            res = List<T>::s_unsafe_get(this, 0n);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    method back(): T 
+        requires release !List<T>::s_empty(this);
+    {
+        return List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1n);
+    }
+
+    method backOrNone(): T? {
+        if(List<T>::s_empty(this)) {
+            return none;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1n);
+        }
+    }
+
+    method backOrDefault(d: T): T {
+        if(List<T>::s_empty(this)){
+            return d;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1n);
+        }
+    }
+
+    method backTry(out? res: T): Bool {
+        if(!List<T>::s_empty(this)) {
+            res = List<T>::s_unsafe_get(this, List<T>::s_size(this) - 1n);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    method get(i: Nat): T 
+        requires release i < List<T>::s_size(this);
+    {
+        return List<T>::s_unsafe_get(this, i);
+    }
+
+    method getOrNone(i: Nat): T? {
+        if(i < List<T>::s_size(this)) {
+            return List<T>::s_unsafe_get(this, i);
+        }
+        else {
+            return none;
+        }
+    }
+
+    method getOrDefault(i: Nat, d: T): T {
+        if(i < List<T>::s_size(this)) {
+            return List<T>::s_unsafe_get(this, i);
+        }
+        else {
+            return d;
+        }
+    }
+
+    method getTry(i: Nat, out? res: T): Bool {
+        if(i < List<T>::s_size(this)) {
+            res = List<T>::s_unsafe_get(this, i);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    recursive? method allOf(p: recursive? pred(_: T) -> Bool): Bool {
+        return !List<T>::s_hasPredCheck[recursive?](this, pred !p);
+    }
+
+    recursive? method allOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        return !List<T>::s_hasPredCheck[recursive?](this, pred !p);
+    }
+
+    recursive? method noneOf(p: recursive? pred(_: T) -> Bool): Bool {
+        return !List<T>::s_hasPredCheck[recursive?](this, p);
+    }
+
+    recursive? method noneOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        return !List<T>::s_hasPredCheck[recursive?](this, p);
+    }
+
+    recursive? method someOf(p: recursive? pred(_: T) -> Bool): Bool {
+        return List<T>::s_hasPredCheck[recursive?](this, p);
+    }
+
+    recursive? method someOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        return List<T>::s_hasPredCheck[recursive?](this, p);
+    }
+
+    recursive? method find(p: recursive? pred(_: T) -> Bool): T {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return List<T>::s_unsafe_get(this, idx);
+    }
+
+    recursive? method find(p: recursive? pred(_: T, _: Nat) -> Bool): T {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return List<T>::s_unsafe_get(this, idx);
+    }
+
+    recursive? method findOrNone(p: recursive? pred(_: T) -> Bool): T? {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findOrDefault(d: T, p: recursive? pred(_: T) -> Bool): T {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findOrDefault(d: T, p: recursive? pred(_: T, _: Nat) -> Bool): T {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = List<T>::s_unsafe_get(this, idx);
+            return true;
+        }
+    }
+
+    recursive? method findTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = List<T>::s_unsafe_get(this, idx);
+            return true;
+        }
+    }
+
+    recursive? method findLast(p: recursive? pred(_: T) -> Bool): T {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return List<T>::s_unsafe_get(this, idx);
+    }
+
+    recursive? method findLast(p: recursive? pred(_: T, _: Nat) -> Bool): T {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return List<T>::s_unsafe_get(this, idx);
+    }
+
+    recursive? method findLastOrNone(p: recursive? pred(_: T) -> Bool): T? {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findLastOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findLastOrDefault(d: T, p: recursive? pred(_: T) -> Bool): T {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findLastOrDefault(d: T, p: recursive? pred(_: T, _: Nat) -> Bool): T {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return List<T>::s_unsafe_get(this, idx);
+        }
+    }
+
+    recursive? method findLastTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = List<T>::s_unsafe_get(this, idx);
+            return true;
+        }
+    }
+
+    recursive? method findLastTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = List<T>::s_unsafe_get(this, idx);
+            return true;
+        }
+    }
+
+    recursive? method findIndexOf(p: recursive? pred(_: T) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return idx;
+    }
+
+    recursive? method findIndexOf(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return idx;
+    }
+
+    recursive? method findIndexOfOrNone(p: recursive? pred(_: T) -> Bool): Nat? {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfOrDefault(d: Nat, p: recursive? pred(_: T) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfOrDefault(d: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfTry(out? res: Nat, p: recursive? pred(_: T) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOf[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = idx;
+            return true;
+        }
+    }
+
+    recursive? method findIndexOfTry(out? res: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = idx;
+            return true;
+        }
+    }
+
+    recursive? method findIndexOfLast(p: recursive? pred(_: T) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return idx;
+    }
+
+    recursive? method findIndexOfLast(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        check idx != List<T>::s_size(this);
+        return idx;
+    }
+
+    recursive? method findIndexOfLastOrNone(p: recursive? pred(_: T) -> Bool): Nat? {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfLastOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return none;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfLastOrDefault(d: Nat, p: recursive? pred(_: T) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfLastOrDefault(d: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return d;
+        }
+        else {
+            return idx;
+        }
+    }
+
+    recursive? method findIndexOfLastTry(out? res: Nat, p: recursive? pred(_: T) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOfLast[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = idx;
+            return true;
+        }
+    }
+
+    recursive? method findIndexOfLastTry(out? res: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        let idx = List<T>::s_findIndexOfLast_Idx[recursive?](this, p);
+        if(idx == List<T>::s_size(this)) {
+            return false;
+        }
+        else {
+            res = idx;
+            return true;
+        }
+    }
+
+    recursive? method filter(p: recursive? pred(_: T) -> Bool): List<T> {
+        return List<T>::s_filter[recursive?](this, p);
+    }
+
+    recursive? method filter(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        return List<T>::s_filter_Idx[recursive?](this, p);
+    }
+
+    method filterToType<U>(): List<U> {
+        return List<T>::s_filterToTypetype<U>(this);
+    }
+
+    method castToType<U>(): List<U> {
+        return List<T>::s_castToType<U>(this);
+    }
+
+    method slice(start?: Nat=0n, end?: Nat=List<T>::s_size(this)): List<T> 
+        requires release List<T>::s_rangeInBounds(this, start, end);
+    {
+        return List<T>::s_slice(this, s, e);
+    }
+
+    method removeFirst(k: Nat): List<T> 
+        requires release k <= List<T>::s_size(this);
+    {
+        return List<T>::s_slice(this, k, List<T>::s_size(this));
+    }
+
+    method removeLast(k: Nat): List<T> 
+        requires release k <= List<T>::s_size(this);
+    {
+        return List<T>::s_slice(this, 0n, List<T>::s_size(this) - k);
+    }
+
+    recursive? method takeWhile(p: recursive? pred(_: T) -> Bool): List<T>  {
+        let lpos = List<T>::s_findIndexOf[recursive?](this, pred !p);
+        return List<T>::s_slice(this, 0n, lpos);
+    }
+
+    recursive? method takeWhile(p: recursive? pred(_: T, _: Nat) -> Bool): List<T>  {
+        let lpos = List<T>::s_findIndexOf_Idx[recursive?](this, pred !p);
+        return List<T>::s_slice(this, 0n, lpos);
+    }
+
+    recursive? method discardWhile(p: recursive? pred(_: T) -> Bool): List<T> {
+        let lpos = List<T>::s_findIndexOf[recursive?](this, pred !p);
+        return List<T>::s_slice(this, lpos, end - lpos);
+    }
+
+    recursive? method discardWhile(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        let lpos = List<T>::s_findIndexO_Idx[recursive?](this, pred !p);
+        return List<T>::s_slice(this, lpos, end - lpos);
+    }
+
+    recursive? method takeUntil(p: recursive? pred(_: T) -> Bool): List<T> {
+        let lpos = List<T>::s_findIndexOf[recursive?](this, p);
+        return List<T>::s_slice(this, lpos, end - lpos);
+    }
+
+    recursive? method takeUntil(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        let lpos = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        return List<T>::s_slice(this, lpos, end - lpos);
+    }
+
+    recursive? method discardUntil(p: recursive? pred(_: T) -> Bool): List<T>  {
+        let lpos = List<T>::s_findIndexOf[recursive?](this, p);
+        return List<T>::s_slice(this, lpos, end - lpos);
+    }
+
+    recursive? method discardUntil(p: recursive? pred(_: T, _: Nat) -> Bool): List<T>  {
+        let lpos = List<T>::s_findIndexOf_Idx[recursive?](this, p);
+        return List<T>::s_slice(this, lpos, end - lpos);
+    }
+
+    recursive? method map<U=?>(f: recursive? fn(_: T) -> U): List<U>  {
+        return List<T>::s_map<U>[recursive?](this, f);
+    }
+
+    method append(l: List<T>): List<T> {
+        return List<T>::s_concat2(this, l);
+    }
+
+    method prepend(l: List<T>): List<T> {
+        return List<T>::s_concat2(l, this);
+    }
 }

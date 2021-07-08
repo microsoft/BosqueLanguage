@@ -20,6 +20,26 @@ std::map<std::string, BSQVirtualInvokeID> Environment::g_vinvokenameToIDMap;
 
 std::map<std::string, BSQPrimitiveImplTag> Environment::g_primitiveinvokenameToIDMap = {
     {"validator_accepts", BSQPrimitiveImplTag::validator_accepts},
+
     {"string_empty", BSQPrimitiveImplTag::string_empty},
-    {"string_append", BSQPrimitiveImplTag::string_append}
+    {"string_append", BSQPrimitiveImplTag::string_append},
+
+    {"list_size", BSQPrimitiveImplTag::list_size},
+    {"list_empty", BSQPrimitiveImplTag::list_empty},
+    {"list_unsafe_get", BSQPrimitiveImplTag::list_unsafe_get},
+    {"list_fill", BSQPrimitiveImplTag::list_fill},
+    {"list_concat2", BSQPrimitiveImplTag::list_concat2},
+    {"list_haspredcheck", BSQPrimitiveImplTag::list_haspredcheck},
+    {"list_haspredcheck_idx", BSQPrimitiveImplTag::list_haspredcheck_idx},
+    {"list_findindexof", BSQPrimitiveImplTag::list_findindexof},
+    {"list_findindexoflast", BSQPrimitiveImplTag::list_findindexoflast},
+    {"list_findindexof_idx", BSQPrimitiveImplTag::list_findindexof_idx},
+    {"list_findindexoflast_idx", BSQPrimitiveImplTag::list_findindexoflast_idx},
+    {"list_filter", BSQPrimitiveImplTag::list_filter},
+    {"list_filter_idx", BSQPrimitiveImplTag::list_filter_idx},
+    {"list_filtertotype", BSQPrimitiveImplTag::list_filtertotype},
+    {"list_casttotype", BSQPrimitiveImplTag::list_casttotype},
+    {"list_slice", BSQPrimitiveImplTag::list_slice},
+    {"list_map", BSQPrimitiveImplTag::list_map},
+    {"list_map_idx", BSQPrimitiveImplTag::list_map_idx}
 };

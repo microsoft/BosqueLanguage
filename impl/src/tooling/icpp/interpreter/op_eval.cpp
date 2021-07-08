@@ -1961,6 +1961,69 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, Storag
     case BSQPrimitiveImplTag::string_append:
         assert(false);
         break;
+
+    case BSQPrimitiveImplTag::list_size: {
+        BSQNat length = dynamic_cast<const BSQListType*>(invk->enclosingtype)->getLength(SLPTR_LOAD_CONTENTS_AS(BSQList, this->cframe->argsbase[0]));
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, length);
+        break;
+    }
+    case BSQPrimitiveImplTag::list_empty: {
+        BSQBool empty = dynamic_cast<const BSQListType*>(invk->enclosingtype)->getLength(SLPTR_LOAD_CONTENTS_AS(BSQList, this->cframe->argsbase[0])) == 0;
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, empty);
+        break;
+    }
+    case BSQPrimitiveImplTag::list_unsafe_get: {
+        auto idx = SLPTR_LOAD_CONTENTS_AS(BSQNat, this->cframe->argsbase[1]);
+        dynamic_cast<const BSQListType*>(invk->enclosingtype)->getValueAtPosition(this->cframe->argsbase[0], idx);
+        break;
+    }
+    case BSQPrimitiveImplTag::list_fill:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_concat2:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_haspredcheck: {
+        assert(false);
+        break;
+    }
+    case BSQPrimitiveImplTag::list_haspredcheck_idx:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_findindexof:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_findindexoflast:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_findindexof_idx:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_findindexoflast_idx:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_filter:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_filter_idx:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_filtertotype:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_casttotype:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_slice:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_map:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_map_idx:
+        assert(false);
+        break;
+
     default:
         assert(false);
         break;

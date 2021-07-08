@@ -544,8 +544,8 @@ class ICPPAssembly
                             return edecl.jemitEnum(edecl.extradata as MIRResolvedTypeKey, enuminvs);
                         }
                         case ICPPParseTag.VectorTag: {
-                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
-                            return edecl.jemitVector(oftype.tkey, oftype.allocinfo.inlinedatasize, oftype.allocinfo.inlinedmask);
+                            xxxx; //Data should be all the needed info!!
+                            return edecl.jemitVector(edecl.extradata as MIRResolvedTypeKey);
                         }
                         case ICPPParseTag.ListTag: {
                             const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;

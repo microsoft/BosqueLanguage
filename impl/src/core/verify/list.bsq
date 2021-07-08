@@ -406,12 +406,8 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     }
 
     //TODO: when overloading is working better then make this a single concat with overloads
-    function concat2(l1: List<T>, l2: List<T>): List<T> {
+    function concat(l1: List<T>, l2: List<T>): List<T> {
         return List<T>::s_concat2_Helper(l1, l2);
-    }
-
-    function concat3(l1: List<T>, l2: List<T>, l3: List<T>): List<T> {
-        return List<T>::s_concat2_Helper(l1, List<T>::s_concat2_Helper(l2, l3));
     }
 
     method size(): Nat {

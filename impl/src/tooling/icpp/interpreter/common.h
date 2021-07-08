@@ -237,7 +237,28 @@ typedef uint32_t BSQConstantID;
 enum class BSQPrimitiveImplTag
 {
     Invalid = 0x0,
+
     validator_accepts,
+
     string_empty,
-    string_append
+    string_append,
+
+    list_size,
+    list_empty,
+    list_unsafe_get,
+    list_fill,
+    list_concat2,
+    list_haspredcheck,
+    list_haspredcheck_idx,
+    list_findindexof,
+    list_findindexoflast,
+    list_findindexof_idx,
+    list_findindexoflast_idx,
+    list_filter,
+    list_filter_idx,
+    list_filtertotype,
+    list_casttotype,
+    list_slice,
+    list_map,
+    list_map_idx
 };

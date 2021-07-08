@@ -190,7 +190,7 @@ function wfCheckSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, 
     //
     //TODO: should compute min viable BV size here
     //
-    const BV_SIZES = [3, 5, 8, 16];
+    const BV_SIZES = [5, 8, 16];
     let vopts = {...DEFAULT_VOPTS};
 
     const start = Date.now();
