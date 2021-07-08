@@ -142,8 +142,8 @@ size_t ExtractionInfo::intToCardinality(const z3::model& m, const z3::expr& iv) 
 
 json ExtractionInfo::evalToBool(const z3::model& m, const z3::expr& e) const
 {
-    auto bstr = m.eval(e, true).to_string();
-    return bstr == "true";
+    auto bbval = m.eval(e, true).to_string();
+    return bbval == "true";
 }
 
 json ExtractionInfo::evalToUnsignedNumber(const z3::model& m, const z3::expr& e) const
