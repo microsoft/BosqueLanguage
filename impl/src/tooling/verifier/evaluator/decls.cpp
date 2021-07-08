@@ -140,10 +140,43 @@ size_t ExtractionInfo::intToCardinality(const z3::model& m, const z3::expr& iv) 
     return std::stoull(nstr);
 }
 
-json ExtractionInfo::evalToBool(const z3::model& m, const z3::expr& e) const
+json ExtractionInfo::evalToBool(z3::solver& s, const z3::model& m, const z3::expr& e) const
 {
-    auto bbval = m.eval(e, true).to_string();
-    return bbval == "true";
+    auto bbval = m.eval(e, true);
+    auto strval = bbval.to_string();
+    if(strval == "true") 
+    {
+        return true;
+    }
+    else if(strval == "false")
+    {
+        return false;
+    }
+    else
+    {
+        s.push();
+
+        //Note: we are assuming an excluded middle here -- probably ok but just fyi
+        z3::expr_vector chks(s.ctx());
+        chks.push_back(e);
+        auto rr = s.check(chks);
+
+        s.pop();
+        
+        //Remember our result for later
+        if(rr == z3::check_result::sat) {
+            s.add(e == s.ctx().constant("true", s.ctx().bool_sort()));
+            return true;
+        }
+        else if(rr == z3::check_result::unsat) {
+            s.add(e == s.ctx().constant("false", s.ctx().bool_sort()));
+            return false;
+        }
+        else {
+            //TODO: we may need to handle the case where we are timing out :(
+            assert(false);
+        }
+    }
 }
 
 json ExtractionInfo::evalToUnsignedNumber(const z3::model& m, const z3::expr& e) const
@@ -889,12 +922,12 @@ std::optional<std::string> NoneType::tobsqarg(const ParseInfo& pinfo, json j, co
     }
 }
 
-json NoneType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json NoneType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     return nullptr;
 }
 
-json NoneType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json NoneType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     return nullptr;
 }
@@ -934,16 +967,16 @@ std::optional<std::string> BoolType::tobsqarg(const ParseInfo& pinfo, json j, co
     }
 }
 
-json BoolType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json BoolType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BBool@UFCons_API", m.ctx().bool_sort());
-    return ex.evalToBool(m, bef(ctx));
+    return ex.evalToBool(s, m, bef(ctx));
 }
 
-json BoolType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json BoolType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().bool_sort());
-    return ex.evalToBool(m, ref);
+    return ex.evalToBool(s, m, ref);
 }
 
 NatType* NatType::jparse(json j)
@@ -990,13 +1023,13 @@ std::optional<std::string> NatType::tobsqarg(const ParseInfo& pinfo, json j, con
     return std::make_optional(std::to_string(nval.value()) + "n");
 }
 
-json NatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json NatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BNat@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
     return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
-json NatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json NatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().bv_sort(ex.apimodule->bv_width));
     return ex.evalToUnsignedNumber(m, ref);
@@ -1046,13 +1079,13 @@ std::optional<std::string> IntType::tobsqarg(const ParseInfo& pinfo, json j, con
     return std::make_optional(std::to_string(nval.value()) + "i");
 }
 
-json IntType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json IntType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BInt@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
     return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
-json IntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json IntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().bv_sort(ex.apimodule->bv_width));
     return ex.evalToSignedNumber(m, ref);
@@ -1102,13 +1135,13 @@ std::optional<std::string> BigNatType::tobsqarg(const ParseInfo& pinfo, json j, 
     return std::make_optional(nval.value() + "N");
 }
 
-json BigNatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json BigNatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BBigNat@UFCons_API", m.ctx().int_sort());
     return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
-json BigNatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json BigNatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().int_sort());
     return ex.evalToUnsignedNumber(m, ref);
@@ -1158,13 +1191,13 @@ std::optional<std::string> BigIntType::tobsqarg(const ParseInfo& pinfo, json j, 
     return std::make_optional(nval.value() + "I");
 }
 
-json BigIntType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json BigIntType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BBigInt@UFCons_API", m.ctx().int_sort());
     return ex.evalToSignedNumber(m, bef(ctx));
 }
 
-json BigIntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json BigIntType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().int_sort());
     return ex.evalToSignedNumber(m, ref);
@@ -1229,13 +1262,13 @@ std::optional<std::string> RationalType::tobsqarg(const ParseInfo& pinfo, json j
     return (num.has_value() && denom.has_value()) ? std::make_optional(num.value() + "/" + denom.value() + "R") : std::nullopt;
 }
 
-json RationalType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json RationalType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
 }
 
-json RationalType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json RationalType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
@@ -1285,13 +1318,13 @@ std::optional<std::string> FloatType::tobsqarg(const ParseInfo& pinfo, json j, c
     return fval.value() + "f";
 }
 
-json FloatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json FloatType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BFloat@UFCons_API", m.ctx().real_sort());
     return ex.evalToRealNumber(m, bef(ctx));
 }
 
-json FloatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json FloatType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().real_sort());
     return ex.evalToRealNumber(m, ref);
@@ -1341,13 +1374,13 @@ std::optional<std::string> DecimalType::tobsqarg(const ParseInfo& pinfo, json j,
     return fval.value() + "d";
 }
 
-json DecimalType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json DecimalType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BDecimal@UFCons_API", m.ctx().real_sort());
     return ex.evalToDecimalNumber(m, bef(ctx));
 }
 
-json DecimalType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json DecimalType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().real_sort());
     return ex.evalToDecimalNumber(m, ref);
@@ -1401,13 +1434,13 @@ std::optional<std::string> StringType::tobsqarg(const ParseInfo& pinfo, json j, 
     return "\"" + j.get<std::string>() + "\"";
 }
 
-json StringType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json StringType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().real_sort());
     return ex.evalToString(m, bef(ctx));
 }
 
-json StringType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json StringType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().string_sort());
     return ex.evalToString(m, ref);
@@ -1462,13 +1495,13 @@ std::optional<std::string> StringOfType::tobsqarg(const ParseInfo& pinfo, json j
     return "\'" + j.get<std::string>() + "\'" + " of " + this->name;
 }
 
-json StringOfType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json StringOfType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().string_sort());
     return ex.evalToString(m, bef(ctx));
 }
 
-json StringOfType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json StringOfType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().string_sort());
     return ex.evalToString(m, ref);
@@ -1528,14 +1561,14 @@ std::optional<std::string> NumberOfType::tobsqarg(const ParseInfo& pinfo, json j
     return pstr.value() + " of " + this->name;
 }
 
-json NumberOfType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json NumberOfType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
-    return ex.apimodule->typemap.find(this->primitive)->second->argextract(ex, ctx, m);
+    return ex.apimodule->typemap.find(this->primitive)->second->argextract(ex, ctx, s, m);
 }
 
-json NumberOfType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json NumberOfType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
-    return ex.apimodule->typemap.find(this->primitive)->second->resextract(ex, res, m);
+    return ex.apimodule->typemap.find(this->primitive)->second->resextract(ex, res, s, m);
 }
 
 DataStringType* DataStringType::jparse(json j)
@@ -1594,13 +1627,13 @@ std::optional<std::string> DataStringType::tobsqarg(const ParseInfo& pinfo, json
     return "\'" + j.get<std::string>() + "\'" + (this->isvalue ? "#" : "@") + this->name;
 }
 
-json DataStringType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json DataStringType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().string_sort());
     return ex.evalToString(m, bef(ctx));
 }
 
-json DataStringType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json DataStringType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().string_sort());
     return ex.evalToString(m, ref);
@@ -1630,13 +1663,13 @@ std::optional<std::string> ByteBufferType::tobsqarg(const ParseInfo& pinfo, json
     return std::nullopt;
 }
 
-json ByteBufferType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json ByteBufferType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
 }
 
-json ByteBufferType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json ByteBufferType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
@@ -1666,13 +1699,13 @@ std::optional<std::string> BufferType::tobsqarg(const ParseInfo& pinfo, json j, 
     return std::nullopt;
 }
 
-json BufferType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json BufferType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
 }
 
-json BufferType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json BufferType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
@@ -1702,13 +1735,13 @@ std::optional<std::string> DataBufferType::tobsqarg(const ParseInfo& pinfo, json
     return std::nullopt;
 }
 
-json DataBufferType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json DataBufferType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
 }
 
-json DataBufferType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json DataBufferType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
@@ -1747,7 +1780,7 @@ std::optional<std::string> ISOTimeType::tobsqarg(const ParseInfo& pinfo, json j,
     return j.get<std::string>();
 }
 
-json ISOTimeType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json ISOTimeType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BISOTime@UFCons_API", m.ctx().int_sort());
 
@@ -1763,7 +1796,7 @@ json ISOTimeType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model&
     return std::string(mbuff, curr);
 }
 
-json ISOTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json ISOTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().int_sort());
 
@@ -1823,13 +1856,13 @@ std::optional<std::string> LogicalTimeType::tobsqarg(const ParseInfo& pinfo, jso
     return std::make_optional(nval.value() + "T");
 }
 
-json LogicalTimeType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json LogicalTimeType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "BLogicalTime@UFCons_API", m.ctx().int_sort());
     return ex.evalToUnsignedNumber(m, bef(ctx));
 }
 
-json LogicalTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json LogicalTimeType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), m.ctx().int_sort());
     return ex.evalToUnsignedNumber(m, ref);
@@ -1858,13 +1891,13 @@ std::optional<std::string> UUIDType::tobsqarg(const ParseInfo& pinfo, json j, co
     return std::nullopt;
 }
 
-json UUIDType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json UUIDType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
 }
 
-json UUIDType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json UUIDType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
@@ -1893,13 +1926,13 @@ std::optional<std::string> ContentHashType::tobsqarg(const ParseInfo& pinfo, jso
     return std::nullopt;
 }
 
-json ContentHashType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json ContentHashType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
 }
 
-json ContentHashType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json ContentHashType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
@@ -2006,7 +2039,7 @@ std::optional<std::string> TupleType::tobsqarg(const ParseInfo& pinfo, json j, c
     }
 }
 
-json TupleType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json TupleType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::array();
     for(size_t i = 0; i < this->ttypes.size(); ++i)
@@ -2015,12 +2048,12 @@ json TupleType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m
         auto idxval = ex.extendContext(m, ctx, i);
 
         auto ttype = ex.apimodule->typemap.find(tt)->second;
-        jres.push_back(ttype->argextract(ex, idxval, m));
+        jres.push_back(ttype->argextract(ex, idxval, s, m));
     }
     return jres;
 }
 
-json TupleType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json TupleType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto jres = json::array();
     for(size_t i = 0; i < this->ttypes.size(); ++i)
@@ -2030,7 +2063,7 @@ json TupleType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m
 
         auto access = ex.callfunc(this->smtaccessors[i], res, this, ttype, m.ctx());
         auto ival = m.eval(access, true);
-        jres.push_back(ttype->resextract(ex, ival, m));
+        jres.push_back(ttype->resextract(ex, ival, s, m));
     }
     return jres;
 }
@@ -2143,7 +2176,7 @@ std::optional<std::string> RecordType::tobsqarg(const ParseInfo& pinfo, json j, 
     }
 }
 
-json RecordType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json RecordType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::object();
     for(size_t i = 0; i < this->props.size(); ++i)
@@ -2152,12 +2185,12 @@ json RecordType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& 
         auto idxval = ex.extendContext(m, ctx, i);
 
         auto ttype = ex.apimodule->typemap.find(tt)->second;
-        jres[this->props[i]] = ttype->argextract(ex, idxval, m);
+        jres[this->props[i]] = ttype->argextract(ex, idxval, s, m);
     }
     return jres;
 }
 
-json RecordType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json RecordType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto jres = json::object();
     for(size_t i = 0; i < this->props.size(); ++i)
@@ -2167,7 +2200,7 @@ json RecordType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& 
 
         auto access = ex.callfunc(this->smtaccessors[i], res, this, ttype, m.ctx());
         auto ival = m.eval(access, true);
-        jres[this->props[i]] = ttype->resextract(ex, ival, m);
+        jres[this->props[i]] = ttype->resextract(ex, ival, s, m);
     }
     return jres;
 }
@@ -2284,7 +2317,7 @@ std::optional<std::string> ListType::tobsqarg(const ParseInfo& pinfo, json j, co
     }
 }
 
-json ListType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json ListType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::array();
 
@@ -2296,12 +2329,12 @@ json ListType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m)
     for(size_t i = 0; i < lenval; ++i)
     {
         auto idxval = ex.extendContext(m, ctx, i);
-        jres.push_back(ttype->argextract(ex, idxval, m));
+        jres.push_back(ttype->argextract(ex, idxval, s, m));
     }
     return jres;
 }
 
-json ListType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json ListType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto lef = ex.callfunc(this->smtsizefunc, res, this, ex.apimodule->typemap.find("NSCore::Nat")->second, m.ctx());
     auto lenval = ex.bvToCardinality(m, m.eval(lef, true));
@@ -2313,7 +2346,7 @@ json ListType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m)
     {
         auto access = ex.callfunc(this->smtgetfunc, res, this, ttype, m.ctx());
         auto ival = m.eval(access, true);
-        jres.push_back(ttype->resextract(ex, ival, m));
+        jres.push_back(ttype->resextract(ex, ival, s, m));
     }
     return jres;
 }
@@ -2378,7 +2411,7 @@ std::optional<std::string> EnumType::tobsqarg(const ParseInfo& pinfo, json j, co
     return j.get<std::string>();
 }
 
-json EnumType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json EnumType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     //auto bef = ex.getArgContextConstructor(m, "EnumChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
     //auto choice = ex.bvToCardinality(m, bef(ctx));
@@ -2387,10 +2420,11 @@ json EnumType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m)
     //TODO: call the select func
     //
 
+    assert(false);
     return nullptr;
 }
 
-json EnumType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json EnumType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     auto ref = m.ctx().constant(ex.resvar.c_str(), getZ3SortFor(ex.apimodule, this, m.ctx()));
     auto enumconst = ex.callfunc(this->smttagfunc.c_str(), ref, this, ex.apimodule->typemap.find("NSCore::String")->second, m.ctx()).to_string();
@@ -2492,16 +2526,16 @@ std::optional<std::string> UnionType::tobsqarg(const ParseInfo& pinfo, json j, c
     return std::nullopt;
 }
 
-json UnionType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const
+json UnionType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = ex.getArgContextConstructor(m, "UnionChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
     auto choice = ex.bvToCardinality(m, bef(ctx));
 
     auto ttype = dynamic_cast<const IGroundedType*>(ex.apimodule->typemap.find(this->opts[choice])->second);
-    return ttype->argextract(ex, ctx, m);
+    return ttype->argextract(ex, ctx, s, m);
 }
 
-json UnionType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const
+json UnionType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const
 {
     z3::context& c = m.ctx();
 
@@ -2520,7 +2554,7 @@ json UnionType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m
         auto unboxobjfunc = c.function(ttype->unboxfunc.c_str(), c.uninterpreted_sort("bsq_keyobject"), getZ3SortFor(ex.apimodule, ttype, c));
                     
         auto vval = m.eval(unboxobjfunc(unboxkeyfunc(res)), true);
-        return ttype->resextract(ex, vval, m);
+        return ttype->resextract(ex, vval, s, m);
     }
     else
     {
@@ -2531,7 +2565,7 @@ json UnionType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m
             auto unboxobjfunc = c.function(ttype->unboxfunc.c_str(), c.uninterpreted_sort("bsq_keyobject"), getZ3SortFor(ex.apimodule, ttype, c));
 
             auto vval = m.eval(unboxobjfunc(unboxkeyfunc(unboxtermfunc(res))), true);
-            return ttype->resextract(ex, vval, m);
+            return ttype->resextract(ex, vval, s, m);
         }
         else
         {
@@ -2539,7 +2573,7 @@ json UnionType::resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m
             auto unboxobjfunc = c.function(ttype->unboxfunc.c_str(), c.uninterpreted_sort("bsq_object"), getZ3SortFor(ex.apimodule, ttype, c));
                     
             auto vval = m.eval(unboxobjfunc(unboxtermfunc(res)), true);
-            return ttype->resextract(ex, vval, m);
+            return ttype->resextract(ex, vval, s, m);
         }
     }
 }
