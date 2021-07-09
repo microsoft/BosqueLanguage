@@ -34,6 +34,35 @@ enum ICPPTypeKind
 
 type RefMask = string;
 
+class ICPPTypeSizeInfoSimple {
+    readonly inlinedatasize: number; //number of bytes needed in storage location for this (includes type tag for inline union -- is the size of a pointer for ref -- and word size for BSQBool)
+    readonly assigndatasize: number; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
+
+    readonly inlinedmask: RefMask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must traverse full object
+
+    constructor(inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask) {
+        this.inlinedatasize = inlinedatasize;
+        this.assigndatasize = assigndatasize;
+        this.inlinedmask = inlinedmask;
+    }
+
+    isScalarOnlyInline(): boolean {
+        return /1*/.test(this.inlinedmask);
+    }
+
+    static createByRegisterTypeInfo(inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
+        return new ICPPTypeSizeInfoSimple(inlinedatasize, assigndatasize, inlinedmask);
+    }
+
+    static createByValueTypeInfo(inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
+        return new ICPPTypeSizeInfoSimple(inlinedatasize, inlinedatasize, inlinedmask);
+    }
+
+    static createByRefTypeInfo(): ICPPTypeSizeInfoSimple {
+        return new ICPPTypeSizeInfoSimple(ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2");
+    }
+}
+
 class ICPPTypeSizeInfo {
     readonly heapsize: number;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
     readonly inlinedatasize: number; //number of bytes needed in storage location for this (includes type tag for inline union -- is the size of a pointer for ref -- and word size for BSQBool)
@@ -237,22 +266,22 @@ class ICPPTypeEntity extends ICPPType {
         return {...this.jemitType([]), etype: etype, esize: esize, emask: emask};
     }
 
-    jemitStack(t: MIRResolvedTypeKey): object {
+    jemitStack(t: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
         assert(false);
         return (undefined as any) as object;
     }
 
-    jemitQueue(t: MIRResolvedTypeKey): object {
+    jemitQueue(t: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
         assert(false);
         return (undefined as any) as object;
     }
 
-    jemitSet(t: MIRResolvedTypeKey): object {
+    jemitSet(t: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
         assert(false);
         return (undefined as any) as object;
     }
 
-    jemitMap(k: MIRResolvedTypeKey, v: MIRResolvedTypeKey): object {
+    jemitMap(k: MIRResolvedTypeKey, kesize: number, kemask: RefMask, v: MIRResolvedTypeKey, vesize: number, vemask: RefMask): object {
         assert(false);
         return (undefined as any) as object;
     }
@@ -544,29 +573,36 @@ class ICPPAssembly
                             return edecl.jemitEnum(edecl.extradata as MIRResolvedTypeKey, enuminvs);
                         }
                         case ICPPParseTag.VectorTag: {
-                            xxxx; //Data should be all the needed info!!
-                            return edecl.jemitVector(edecl.extradata as MIRResolvedTypeKey);
+                            const oftype = edecl.extradata[0] as MIRResolvedTypeKey;
+                            const sdata = edecl.extradata[1] as ICPPTypeSizeInfoSimple;
+                            return edecl.jemitVector(oftype, sdata.inlinedatasize, sdata.inlinedmask);
                         }
                         case ICPPParseTag.ListTag: {
-                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
-                            return edecl.jemitList(oftype.tkey, oftype.allocinfo.inlinedatasize, oftype.allocinfo.inlinedmask);
+                            const oftype = edecl.extradata[0] as MIRResolvedTypeKey;
+                            const sdata = edecl.extradata[1] as ICPPTypeSizeInfoSimple;
+                            return edecl.jemitList(oftype, sdata.inlinedatasize, sdata.inlinedmask);
                         }
                         case ICPPParseTag.StackTag: {
-                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
-                            return edecl.jemitStack(oftype.tkey);
+                            const oftype = edecl.extradata[0] as MIRResolvedTypeKey;
+                            const sdata = edecl.extradata[1] as ICPPTypeSizeInfoSimple;
+                            return edecl.jemitStack(oftype, sdata.inlinedatasize, sdata.inlinedmask);
                         }
                         case ICPPParseTag.QueueTag: {
-                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
-                            return edecl.jemitQueue(oftype.tkey);
+                            const oftype = edecl.extradata[0] as MIRResolvedTypeKey;
+                            const sdata = edecl.extradata[1] as ICPPTypeSizeInfoSimple;
+                            return edecl.jemitQueue(oftype, sdata.inlinedatasize, sdata.inlinedmask);
                         }
                         case ICPPParseTag.SetTag: {
-                            const oftype = this.typedecls.find((oft) => oft.tkey === edecl.extradata as MIRResolvedTypeKey) as ICPPType;
-                            return edecl.jemitSet(oftype.tkey);
+                            const oftype = edecl.extradata[0] as MIRResolvedTypeKey;
+                            const sdata = edecl.extradata[1] as ICPPTypeSizeInfoSimple;
+                            return edecl.jemitSet(oftype, sdata.inlinedatasize, sdata.inlinedmask);
                         }
                         case ICPPParseTag.MapTag: {
-                            const ktype = this.typedecls.find((oft) => oft.tkey === edecl.extradata[0] as MIRResolvedTypeKey) as ICPPType;
-                            const vtype = this.typedecls.find((oft) => oft.tkey === edecl.extradata[1] as MIRResolvedTypeKey) as ICPPType;
-                            return edecl.jemitMap(ktype.tkey, vtype.tkey);
+                            const keyoftype = edecl.extradata[0][0] as MIRResolvedTypeKey;
+                            const keysdata = edecl.extradata[0][1] as ICPPTypeSizeInfoSimple;
+                            const valoftype = edecl.extradata[1][0] as MIRResolvedTypeKey;
+                            const valsdata = edecl.extradata[1][1] as ICPPTypeSizeInfoSimple;
+                            return edecl.jemitMap(keyoftype, keysdata.inlinedatasize, keysdata.inlinedmask, valoftype, valsdata.inlinedatasize, valsdata.inlinedmask);
                         }
                         default:
                             return edecl.jemitEntity(vtbl.vtable);
@@ -589,7 +625,7 @@ class ICPPAssembly
 
 export {
     TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_SIZE, ICPPParseTag,
-    ICPPTypeKind, ICPPTypeSizeInfo, RefMask,
+    ICPPTypeKind, ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask,
     ICPPType, ICPPTypeRegister, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeInlineUnion, ICPPTypeRefUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
     ICPPConstDecl,
