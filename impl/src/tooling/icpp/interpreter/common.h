@@ -20,7 +20,6 @@
 
 #define MI_SMALL_SIZE_MAX 2048
 
-
 inline void* mi_zalloc(size_t bytes)
 {
     void* res = malloc(bytes);

@@ -216,5 +216,7 @@ public:
 
     BSQList concat2(StorageLocationPtr s1, StorageLocationPtr s2) const;
     BSQList slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos) const;
+
+    void hasPredCheck(StorageLocationPtr l, StorageLocationPtr vv, StorageLocationPtr resultsl, const std::function<void(const std::vector<StorageLocationPtr>&, StorageLocationPtr)>& fn) const;
 };
 

@@ -347,14 +347,13 @@ private:
 
     void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
     void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);
-
-public:
     void evaluateOpCode(const InterpOp* op);
 
     void evaluateOpCodeBlocks();
     void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
+    void invokePCode(BSQPCodeOperator& pc, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
 
     void invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
     void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots);
@@ -362,18 +361,7 @@ public:
 
     void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype);
 
+public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     void invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
-};
-
-class BSQPCodeOperator
-{
-public:
-    const BSQInvokeDecl* call;
-    const std::vector<StorageLocationPtr> cargs;
-    StorageLocationPtr resultsl;
-
-    BSQPCodeOperator(const BSQInvokeDecl* call, StorageLocationPtr resultsl) : call(call), cargs(), resultsl(resultsl) {;}
-
-    void invokePCode(Evaluator* ev, const std::vector<StorageLocationPtr>& args);
 };
