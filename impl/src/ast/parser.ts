@@ -3576,6 +3576,7 @@ class Parser {
                 ? this.parseListOf("(", ")", ",", () => {
                     this.ensureToken(TokenStrings.Identifier);
                     const vname = this.consumeTokenAndGetValue();
+                    this.ensureAndConsumeToken(":");
                     const vtype = this.parseTypeSignature(true);
 
                     return { vname: vname, vtype: vtype };
@@ -3586,6 +3587,7 @@ class Parser {
                 ? this.parseListOf("(", ")", ",", () => {
                     this.ensureToken(TokenStrings.Identifier);
                     const vname = this.consumeTokenAndGetValue();
+                    this.ensureAndConsumeToken(":");
                     const vtype = this.parseTypeSignature(true);
 
                     return { vname: vname, vtype: vtype };

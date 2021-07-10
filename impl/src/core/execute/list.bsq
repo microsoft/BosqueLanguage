@@ -21,8 +21,8 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     private function s_concat2(l1: List<T>, l2: List<T>): List<T> # list_concat2
 
-    private recursive? function s_hasPredCheck(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool # list_haspredcheck
-    private recursive? function s_hasPredCheck_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool # list_haspredcheck_idx
+    private recursive? function s_hasPredCheck(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool # () (vv: T) list_haspredcheck
+    private recursive? function s_hasPredCheck_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool # () (vv: T) list_haspredcheck_idx
 
     private recursive? function s_findIndexOf(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat # list_findindexof
     private recursive? function s_findIndexOfLast(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat # list_findindexoflast

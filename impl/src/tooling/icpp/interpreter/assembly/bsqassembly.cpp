@@ -508,7 +508,7 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
        enclosingtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "enclosingtype")]];
     }
 
-    BSQPrimitiveImplTag implkey = Environment::g_primitiveinvokenameToIDMap[jsonGetAsString(v, "implkey")];
+    BSQPrimitiveImplTag implkey = Environment::g_primitiveinvokenameToIDMap[jsonGetAsString(v, "implkeyname")];
     
     std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap;
     std::for_each(v.as_object().at("scalaroffsetMap").as_array().cbegin(), v.as_object().at("scalaroffsetMap").as_array().cend(), [&scalaroffsetMap](boost::json::value so) {
@@ -536,7 +536,7 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
     std::for_each(v.as_object().at("binds").as_array().cbegin(), v.as_object().at("binds").as_array().cend(), [&binds](boost::json::value b) {
         auto name = jsonGetAsString(b, "name");
 
-        auto tstr = std::string(b.as_object().at("ttype").as_array().at(1).as_string().c_str());
+        auto tstr = jsonGetAsString(b, "ttype");
         auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
 
         binds[name] = otype;
@@ -545,10 +545,12 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
     std::map<std::string, BSQPCode*> pcodes;
     std::for_each(v.as_object().at("pcodes").as_array().cbegin(), v.as_object().at("pcodes").as_array().cend(), [&pcodes](boost::json::value pcode) {
         auto name = jsonGetAsString(pcode, "name");
-        auto code = Environment::g_invokenameToIDMap[jsonGetAsString(pcode, "code")];
+
+        auto pc = pcode.at("pc").as_object();
+        auto code = Environment::g_invokenameToIDMap[jsonGetAsString(pc, "code")];
 
         std::vector<Argument> cargs;
-        std::transform(pcode.as_object().at("cargs").as_array().cbegin(), pcode.as_object().at("cargs").as_array().cend(), std::back_inserter(cargs), [](boost::json::value carg) {
+        std::transform(pc.at("cargs").as_array().cbegin(), pc.at("cargs").as_array().cend(), std::back_inserter(cargs), [](boost::json::value carg) {
             return Argument{(ArgumentTag)carg.as_object().at("kind").as_int64(), (uint32_t)carg.as_object().at("location").as_int64()}; 
         });
 
