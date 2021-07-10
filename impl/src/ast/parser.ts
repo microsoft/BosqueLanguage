@@ -3570,7 +3570,6 @@ class Parser {
     private parseBody(bodyid: string, file: string): {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]} {
         if (this.testToken("#")) {
             this.consumeToken();
-            this.ensureToken(TokenStrings.Identifier);
 
             const scalarslots = this.testToken("(")
                 ? this.parseListOf("(", ")", ",", () => {
@@ -3594,6 +3593,7 @@ class Parser {
                 })[0]
                 : [];
 
+            this.ensureToken(TokenStrings.Identifier);
             return { impl: new BodyImplementation(bodyid, file, this.consumeTokenAndGetValue()), optscalarslots: scalarslots, optmixedslots: mixedslots};
         }
         else if(this.testToken("=")) {

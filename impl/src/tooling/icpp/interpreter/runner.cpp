@@ -52,42 +52,32 @@ bool loadJSONFromFile(const std::string& filename, boost::json::value& jval)
 
 void initialize(size_t typecount, size_t cbuffsize, const RefMask cmask)
 {
-    BSQType::g_typetable = (const BSQType**)malloc((BSQ_TYPE_ID_BUILTIN_MAX + typecount) * sizeof(const BSQType*));
-    BSQType::g_typetable[BSQ_TYPE_ID_NONE] = BSQType::g_typeNone;
-    BSQType::g_typetable[BSQ_TYPE_ID_BOOL] = BSQType::g_typeBool;
-    BSQType::g_typetable[BSQ_TYPE_ID_NAT] = BSQType::g_typeNat;
-    BSQType::g_typetable[BSQ_TYPE_ID_INT] = BSQType::g_typeInt;
-    BSQType::g_typetable[BSQ_TYPE_ID_BIGNAT] = BSQType::g_typeBigNat;
-    BSQType::g_typetable[BSQ_TYPE_ID_BIGINT] = BSQType::g_typeBigInt;
-    BSQType::g_typetable[BSQ_TYPE_ID_FLOAT] = BSQType::g_typeFloat;
-    BSQType::g_typetable[BSQ_TYPE_ID_DECIMAL] = BSQType::g_typeDecimal;
-    BSQType::g_typetable[BSQ_TYPE_ID_RATIONAL] = BSQType::g_typeRational;
-    BSQType::g_typetable[BSQ_TYPE_ID_STRINGITERATOR] = BSQType::g_typeStringPos;
-    BSQType::g_typetable[BSQ_TYPE_ID_STRING] = BSQType::g_typeString;
-    BSQType::g_typetable[BSQ_TYPE_ID_BYTEBUFFER] = BSQType::g_typeByteBuffer;
-    BSQType::g_typetable[BSQ_TYPE_ID_ISOTIME] = BSQType::g_typeISOTime;
-    BSQType::g_typetable[BSQ_TYPE_ID_LOGICALTIME] = BSQType::g_typeLogicalTime;
-    BSQType::g_typetable[BSQ_TYPE_ID_UUID] = BSQType::g_typeUUID;
-    BSQType::g_typetable[BSQ_TYPE_ID_CONTENTHASH] = BSQType::g_typeContentHash;
-    BSQType::g_typetable[BSQ_TYPE_ID_REGEX] = BSQType::g_typeRegex;
+    Environment::g_typenameToIDMap["NSCore::None"] = {BSQ_TYPE_ID_NONE, BSQType::g_typeNone};
+    Environment::g_typenameToIDMap["NSCore::Bool"] = {BSQ_TYPE_ID_BOOL, BSQType::g_typeBool};
+    Environment::g_typenameToIDMap["NSCore::Nat"] = {BSQ_TYPE_ID_NAT, BSQType::g_typeNat};
+    Environment::g_typenameToIDMap["NSCore::Int"] = {BSQ_TYPE_ID_INT, BSQType::g_typeInt};
+    Environment::g_typenameToIDMap["NSCore::BigNat"] = {BSQ_TYPE_ID_BIGNAT, BSQType::g_typeBigNat};
+    Environment::g_typenameToIDMap["NSCore::BigInt"] = {BSQ_TYPE_ID_BIGINT, BSQType::g_typeBigInt};
+    Environment::g_typenameToIDMap["NSCore::Float"] = {BSQ_TYPE_ID_FLOAT, BSQType::g_typeFloat};
+    Environment::g_typenameToIDMap["NSCore::Decimal"] = {BSQ_TYPE_ID_DECIMAL, BSQType::g_typeDecimal};
+    Environment::g_typenameToIDMap["NSCore::Rational"] = {BSQ_TYPE_ID_RATIONAL, BSQType::g_typeRational};
+    Environment::g_typenameToIDMap["NSCore::StringPos"] = {BSQ_TYPE_ID_STRINGITERATOR, BSQType::g_typeStringPos};
+    Environment::g_typenameToIDMap["NSCore::String"] = {BSQ_TYPE_ID_STRING, BSQType::g_typeString};
+    Environment::g_typenameToIDMap["NSCore::ByteBuffer"] = {BSQ_TYPE_ID_BYTEBUFFER, BSQType::g_typeByteBuffer};
+    Environment::g_typenameToIDMap["NSCore::ISOTime"] = {BSQ_TYPE_ID_ISOTIME, BSQType::g_typeISOTime};
+    Environment::g_typenameToIDMap["NSCore::LogicalTime"] = {BSQ_TYPE_ID_LOGICALTIME, BSQType::g_typeLogicalTime};
+    Environment::g_typenameToIDMap["NSCore::UUID"] = {BSQ_TYPE_ID_UUID, BSQType::g_typeUUID};
+    Environment::g_typenameToIDMap["NSCore::ContentHash"] = {BSQ_TYPE_ID_CONTENTHASH, BSQType::g_typeContentHash};
+    Environment::g_typenameToIDMap["NSCore::Regex"] = {BSQ_TYPE_ID_REGEX, BSQType::g_typeRegex};
 
-    Environment::g_typenameToIDMap["NSCore::None"] = BSQ_TYPE_ID_NONE;
-    Environment::g_typenameToIDMap["NSCore::Bool"] = BSQ_TYPE_ID_BOOL;
-    Environment::g_typenameToIDMap["NSCore::Nat"] = BSQ_TYPE_ID_NAT;
-    Environment::g_typenameToIDMap["NSCore::Int"] = BSQ_TYPE_ID_INT;
-    Environment::g_typenameToIDMap["NSCore::BigNat"] = BSQ_TYPE_ID_BIGNAT;
-    Environment::g_typenameToIDMap["NSCore::BigInt"] = BSQ_TYPE_ID_BIGINT;
-    Environment::g_typenameToIDMap["NSCore::Float"] = BSQ_TYPE_ID_FLOAT;
-    Environment::g_typenameToIDMap["NSCore::Decimal"] = BSQ_TYPE_ID_DECIMAL;
-    Environment::g_typenameToIDMap["NSCore::Rational"] = BSQ_TYPE_ID_RATIONAL;
-    Environment::g_typenameToIDMap["NSCore::StringPos"] = BSQ_TYPE_ID_STRINGITERATOR;
-    Environment::g_typenameToIDMap["NSCore::String"] = BSQ_TYPE_ID_STRING;
-    Environment::g_typenameToIDMap["NSCore::ByteBuffer"] = BSQ_TYPE_ID_BYTEBUFFER;
-    Environment::g_typenameToIDMap["NSCore::ISOTime"] = BSQ_TYPE_ID_ISOTIME;
-    Environment::g_typenameToIDMap["NSCore::LogicalTime"] = BSQ_TYPE_ID_LOGICALTIME;
-    Environment::g_typenameToIDMap["NSCore::UUID"] = BSQ_TYPE_ID_UUID;
-    Environment::g_typenameToIDMap["NSCore::ContentHash"] = BSQ_TYPE_ID_CONTENTHASH;
-    Environment::g_typenameToIDMap["NSCore::Regex"] = BSQ_TYPE_ID_REGEX;
+    Environment::g_typenameToIDMap["[STR_K16]"] = {BSQ_TYPE_ID_STRINGREPR_K16, BSQType::g_typeStringKRepr16};
+    Environment::g_typenameToIDMap["[STR_K32]"] = {BSQ_TYPE_ID_STRINGREPR_K32, BSQType::g_typeStringKRepr32};
+    Environment::g_typenameToIDMap["[STR_K64]"] = {BSQ_TYPE_ID_STRINGREPR_K64, BSQType::g_typeStringKRepr64};
+    Environment::g_typenameToIDMap["[STR_K96]"] = {BSQ_TYPE_ID_STRINGREPR_K96, BSQType::g_typeStringKRepr96};
+    Environment::g_typenameToIDMap["[STR_K128]"] = {BSQ_TYPE_ID_STRINGREPR_K128, BSQType::g_typeStringKRepr128};
+    Environment::g_typenameToIDMap["[STR_K256]"] = {BSQ_TYPE_ID_STRINGREPR_K256, BSQType::g_typeStringKRepr256};
+    Environment::g_typenameToIDMap["[STR_SLICE]"] = {BSQ_TYPE_ID_STRINGREPR_SLICE, BSQType::g_typeStringSliceRepr};
+    Environment::g_typenameToIDMap["[STR_CONCAT]"] = {BSQ_TYPE_ID_STRINGREPR_CONCAT, BSQType::g_typeStringConcatRepr};
 
     Environment::g_constantbuffer = (uint8_t*)malloc(cbuffsize);
     GC_MEM_ZERO(Environment::g_constantbuffer, cbuffsize);
@@ -156,7 +146,7 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
         else if(sstr.size() <= 256)
         {
             auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
-                return cc.first >= sstr.size();
+                return cc.first > sstr.size();
             });
             s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
             BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
@@ -202,13 +192,12 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
     
     ////
     //Get all of our name to map ids setup
-    auto bultintypecount = Environment::g_typenameToIDMap.size();
     auto tnlist = jv.as_object().at("typenames").as_array();
-    std::for_each(tnlist.cbegin(), tnlist.cend(), [bultintypecount](boost::json::value tname) {
+    std::for_each(tnlist.cbegin(), tnlist.cend(), [](boost::json::value tname) {
         auto tstr = std::string(tname.as_string().c_str());
         if(Environment::g_typenameToIDMap.find(tstr) == Environment::g_typenameToIDMap.cend())
         {
-            Environment::g_typenameToIDMap[tstr] = (Environment::g_typenameToIDMap.size() + BSQ_TYPE_ID_BUILTIN_MAX) - bultintypecount;
+            Environment::g_typenameToIDMap[tstr] = {Environment::g_typenameToIDMap.size(), nullptr};
         }
     });
     
@@ -243,6 +232,11 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
     auto tdlist = jv.as_object().at("typedecls").as_array();
     std::for_each(tdlist.cbegin(), tdlist.cend(), [](boost::json::value tdecl) {
         jsonLoadBSQTypeDecl(tdecl);
+    });
+
+    BSQType::g_typetable = (const BSQType**)mi_zalloc(Environment::g_typenameToIDMap.size() * sizeof(const BSQType*));
+    std::for_each(Environment::g_typenameToIDMap.cbegin(), Environment::g_typenameToIDMap.cend(), [](const std::pair<BSQTypeID, const BSQType*>& entry) {
+        BSQType::g_typetable[entry.first] = entry.second;
     });
 
     ////

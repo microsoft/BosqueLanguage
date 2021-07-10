@@ -24,7 +24,7 @@ public:
     static std::vector<BSQInvokeDecl*> g_invokes;
 
     //helpers for parsing -- map strings to decls
-    static std::map<std::string, BSQTypeID> g_typenameToIDMap;
+    static std::map<std::string, std::pair<BSQTypeID, const BSQType*>> g_typenameToIDMap;
     static std::map<std::string, RefMask> g_stringmaskToDeclMap;
     static std::map<std::string, BSQRecordPropertyID> g_propertynameToIDMap;
     static std::map<std::string, BSQFieldID> g_fieldnameToIDMap;

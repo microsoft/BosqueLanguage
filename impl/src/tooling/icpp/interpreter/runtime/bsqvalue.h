@@ -300,8 +300,8 @@ class BSQStringReprType : public BSQRefType
 public:
     static uint64_t getKReprSizeFor(uint64_t v);
 
-    BSQStringReprType(uint64_t allocsize, RefMask heapmask, std::string name):
-        BSQRefType(BSQ_TYPE_ID_STRINGREPR, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityStringReprDisplay_impl, name, {nullptr, nullptr}) 
+    BSQStringReprType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name):
+        BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityStringReprDisplay_impl, name, {nullptr, nullptr}) 
     {;}
 
     virtual ~BSQStringReprType() {;}
@@ -314,8 +314,8 @@ public:
 class BSQStringKReprTypeAbstract : public BSQStringReprType
 {
 public:
-    BSQStringKReprTypeAbstract(uint64_t allocsize, std::string name) 
-    : BSQStringReprType(allocsize, nullptr, name) 
+    BSQStringKReprTypeAbstract(BSQTypeID tid, uint64_t allocsize, std::string name) 
+    : BSQStringReprType(tid, allocsize, nullptr, name) 
     {;}
 
     virtual ~BSQStringKReprTypeAbstract() {;}
@@ -345,7 +345,7 @@ template <uint64_t k>
 class BSQStringKReprType : public BSQStringKReprTypeAbstract
 {
 public:
-    BSQStringKReprType(): BSQStringKReprTypeAbstract(k, "[Internal::StringKRepr]") 
+    BSQStringKReprType(BSQTypeID tid): BSQStringKReprTypeAbstract(tid, k, "[Internal::StringKRepr]") 
     {;}
 
     virtual ~BSQStringKReprType() {;}
@@ -361,7 +361,7 @@ struct BSQStringSliceRepr
 class BSQStringSliceReprType : public BSQStringReprType
 {
 public:
-    BSQStringSliceReprType(): BSQStringReprType(sizeof(BSQStringSliceRepr), "211", "[Internal::StringSliceRepr]") 
+    BSQStringSliceReprType(): BSQStringReprType(BSQ_TYPE_ID_STRINGREPR_SLICE, sizeof(BSQStringSliceRepr), "211", "[Internal::StringSliceRepr]") 
     {;}
 
     virtual ~BSQStringSliceReprType() {;}
@@ -386,7 +386,7 @@ struct BSQStringConcatRepr
 class BSQStringConcatReprType : public BSQStringReprType
 {
 public:
-    BSQStringConcatReprType(): BSQStringReprType(sizeof(BSQStringConcatRepr), "22", "[Internal::StringConcatRepr]") 
+    BSQStringConcatReprType(): BSQStringReprType(BSQ_TYPE_ID_STRINGREPR_SLICE, sizeof(BSQStringConcatRepr), "22", "[Internal::StringConcatRepr]") 
     {;}
 
     virtual ~BSQStringConcatReprType() {;}

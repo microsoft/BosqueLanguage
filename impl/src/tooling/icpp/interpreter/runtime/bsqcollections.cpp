@@ -24,6 +24,8 @@ bool iteratorIsValid(const BSQListReprIterator* iter)
 
 void initializeListIterPosition(BSQListReprIterator* iter, int64_t pos)
 {
+    auto mmtype = GET_TYPE_META_DATA(iter->lroot);
+
     auto ssize = (int64_t)GET_TYPE_META_DATA_AS(BSQListReprType, iter->lroot)->getLength(iter->lroot);
     if((pos == ssize) | (ssize == 0))
     {
