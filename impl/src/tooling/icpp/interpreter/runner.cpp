@@ -197,7 +197,7 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
         auto tstr = std::string(tname.as_string().c_str());
         if(Environment::g_typenameToIDMap.find(tstr) == Environment::g_typenameToIDMap.cend())
         {
-            Environment::g_typenameToIDMap[tstr] = {Environment::g_typenameToIDMap.size(), nullptr};
+            Environment::g_typenameToIDMap[tstr] = {(BSQTypeID)Environment::g_typenameToIDMap.size(), nullptr};
         }
     });
     
@@ -235,8 +235,8 @@ std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
     });
 
     BSQType::g_typetable = (const BSQType**)mi_zalloc(Environment::g_typenameToIDMap.size() * sizeof(const BSQType*));
-    std::for_each(Environment::g_typenameToIDMap.cbegin(), Environment::g_typenameToIDMap.cend(), [](const std::pair<BSQTypeID, const BSQType*>& entry) {
-        BSQType::g_typetable[entry.first] = entry.second;
+    std::for_each(Environment::g_typenameToIDMap.cbegin(), Environment::g_typenameToIDMap.cend(), [](const std::pair<std::string, std::pair<BSQTypeID, const BSQType*>>& entry) {
+        BSQType::g_typetable[entry.second.first] = entry.second.second;
     });
 
     ////

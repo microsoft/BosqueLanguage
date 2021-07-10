@@ -175,28 +175,34 @@ const BSQType* jsonLoadListType(boost::json::value v)
     uint64_t esize = jsonGetAsUInt<uint64_t>(v, "esize");
     RefMask emask = jsonLoadRefMask(v.as_object().at("emask"));
 
-    BSQListFlatKType<4>* list4 = new BSQListFlatKType<4>(j_name(v) + "_cons4", esize, emask);
-    BSQListFlatKType<8>* list8 = new BSQListFlatKType<8>(j_name(v) + "_cons8", esize, emask);
-    BSQListFlatKType<12>* list12 = new BSQListFlatKType<12>(j_name(v) + "_cons12", esize, emask);
-    BSQListFlatKType<16>* list16 = new BSQListFlatKType<16>(j_name(v) + "_cons16", esize, emask);
-    BSQListFlatKType<24>* list24 = new BSQListFlatKType<24>(j_name(v) + "_cons24", esize, emask);
-    BSQListFlatKType<32>* list32 = new BSQListFlatKType<32>(j_name(v) + "_cons32", esize, emask);
-    BSQListFlatKType<40>* list40 = new BSQListFlatKType<40>(j_name(v) + "_cons40", esize, emask);
+    BSQListFlatKType<4>* list4 = new BSQListFlatKType<4>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons4", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list4->name + std::string("]")] = {list4->tid, list4};
 
-    BSQListSliceType* slice = new BSQListSliceType(j_name(v) + "_consslice");
-    BSQListConcatType* concat = new BSQListConcatType(j_name(v) + "_consconcat");
+    BSQListFlatKType<8>* list8 = new BSQListFlatKType<8>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons8", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list8->name + std::string("]")] = {list8->tid, list8};
+
+    BSQListFlatKType<12>* list12 = new BSQListFlatKType<12>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons12", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list12->name + std::string("]")] = {list12->tid, list12};
+
+    BSQListFlatKType<16>* list16 = new BSQListFlatKType<16>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons16", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list16->name + std::string("]")] = {list16->tid, list16};
+
+    BSQListFlatKType<24>* list24 = new BSQListFlatKType<24>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons24", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list24->name + std::string("]")] = {list24->tid, list24};
+
+    BSQListFlatKType<32>* list32 = new BSQListFlatKType<32>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons32", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list32->name + std::string("]")] = {list32->tid, list32};
+
+    BSQListFlatKType<40>* list40 = new BSQListFlatKType<40>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons40", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list40->name + std::string("]")] = {list40->tid, list40};
+
+    BSQListSliceType* slice = new BSQListSliceType((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_consslice");
+    Environment::g_typenameToIDMap[std::string("[") + slice->name + std::string("]")] = {slice->tid, slice};
+
+    BSQListConcatType* concat = new BSQListConcatType((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_consconcat");
+    Environment::g_typenameToIDMap[std::string("[") + concat->name + std::string("]")] = {concat->tid, concat};
 
     BSQListType* ltype = new BSQListType(j_tkey(v), j_name(v), esize, etype);
-
-    Environment::g_typenameToIDMap[std::string("[") + list4->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), list4};
-    Environment::g_typenameToIDMap[std::string("[") + list8->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), list8};
-    Environment::g_typenameToIDMap[std::string("[") + list12->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), list12};
-    Environment::g_typenameToIDMap[std::string("[") + list16->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), list16};
-    Environment::g_typenameToIDMap[std::string("[") + list24->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), list24};
-    Environment::g_typenameToIDMap[std::string("[") + list32->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), list32};
-    Environment::g_typenameToIDMap[std::string("[") + list40->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), list40};
-    Environment::g_typenameToIDMap[std::string("[") + slice->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), slice};
-    Environment::g_typenameToIDMap[std::string("[") + concat->name + std::string("]")] = {Environment::g_typenameToIDMap.size(), concat};
 
     BSQListType::g_listTypeMap[j_tkey(v)] = ListTypeConstructorInfo{
         ltype, 
@@ -223,7 +229,7 @@ const BSQType* jsonLoadTupleType(boost::json::value v)
     auto ttlist = v.as_object().at("ttypes").as_array();
     std::transform(ttlist.cbegin(), ttlist.cend(), std::back_inserter(ttypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> idxoffsets;
@@ -262,7 +268,7 @@ const BSQType* jsonLoadRecordType(boost::json::value v)
     auto ptlist = v.as_object().at("propertytypes").as_array();
     std::transform(ptlist.cbegin(), ptlist.cend(), std::back_inserter(propertytypes), [](boost::json::value rtype) {
         auto tstr = std::string(rtype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> propertyoffsets;
@@ -301,7 +307,7 @@ const BSQType* jsonLoadEntityType(boost::json::value v)
     auto ftlist = v.as_object().at("fieldtypes").as_array();
     std::transform(ftlist.cbegin(), ftlist.cend(), std::back_inserter(fieldtypes), [](boost::json::value rtype) {
         auto tstr = std::string(rtype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> fieldoffsets;
@@ -328,7 +334,7 @@ const BSQType* jsonLoadEphemeralListType(boost::json::value v)
     auto etlist = v.as_object().at("etypes").as_array();
     std::transform(etlist.cbegin(), etlist.cend(), std::back_inserter(etypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> idxoffsets;
@@ -348,7 +354,7 @@ const BSQType* jsonLoadInlineUnionType(boost::json::value v)
     auto stlist = v.as_object().at("subtypes").as_array();
     std::transform(stlist.cbegin(), stlist.cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     return new BSQUnionInlineType(j_tkey(v), allocinfo.inlinedatasize, allocinfo.inlinedmask, j_name(v), subtypes);
@@ -360,7 +366,7 @@ const BSQType* jsonLoadRefUnionType(boost::json::value v)
     auto stlist = v.as_object().at("subtypes").as_array();
     std::transform(stlist.cbegin(), stlist.cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     return new BSQUnionRefType(j_tkey(v), j_name(v), subtypes);
