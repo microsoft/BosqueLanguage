@@ -37,6 +37,7 @@ private:
     static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
 
 #ifdef BSQ_DEBUG_BUILD
+    template <bool isbultin>
     inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->cpos++;
@@ -50,13 +51,18 @@ private:
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
-        cf->cpos = cf->ops->cbegin();
-        cf->epos = cf->ops->cend();
-        cf->dbg_line = (*cf->cpos)->sinfo.line;
+
+        if constexpr(!isbultin) 
+        {
+            cf->cpos = cf->ops->cbegin();
+            cf->epos = cf->ops->cend();
+            cf->dbg_line = (*cf->cpos)->sinfo.line;
+        }
 
         this->cframe = Evaluator::g_callstack + this->cpos;
     }
 #else
+    template <bool isbultin>
     inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
@@ -67,8 +73,12 @@ private:
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
-        cf->cpos = cf->ops->cbegin();
-        cf->epos = cf->ops->cend();
+
+        if constexpr(!isbultin) 
+        {
+            cf->cpos = cf->ops->cbegin();
+            cf->epos = cf->ops->cend();
+        }
 
         this->cframe = Evaluator::g_callstack + this->cpos;
     }
@@ -337,16 +347,16 @@ private:
 
     void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
     void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);
-
     void evaluateOpCode(const InterpOp* op);
 
     void evaluateOpCodeBlocks();
     void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
-
+    
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
+    void invokePCode(BSQPCodeOperator& pc, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
 
-    void invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, const std::vector<Argument>& args, BSQBool* optmask);
-    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, const std::vector<Argument>& args);
+    void invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
+    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots);
     void invokePostlude();
 
     void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype);

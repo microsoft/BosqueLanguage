@@ -36,8 +36,8 @@ std::string entityListReprDisplay_impl(const BSQType* btype, StorageLocationPtr 
 class BSQListReprType : public BSQRefType
 {
 public:
-    BSQListReprType(uint64_t allocsize, RefMask heapmask, std::string name):
-        BSQRefType(BSQ_TYPE_ID_LISTREPR, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityListReprDisplay_impl, name, {nullptr, nullptr})
+    BSQListReprType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name):
+        BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityListReprDisplay_impl, name, {nullptr, nullptr})
     {;}
 
     virtual ~BSQListReprType() {;}
@@ -59,14 +59,14 @@ struct BSQListFlatK
 class BSQListFlatKTypeAbstract : public BSQListReprType
 {
 public:
-    BSQListFlatKTypeAbstract(uint64_t allocsize, RefMask heapmask, std::string name): BSQListReprType(allocsize, heapmask, name) {;}
+    BSQListFlatKTypeAbstract(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name): BSQListReprType(tid, allocsize, heapmask, name) {;}
 
     virtual ~BSQListFlatKTypeAbstract() {;}
 
     inline static void initializeCountInfo(void* data, uint32_t ecount, uint32_t esize)
     {
         *((uint32_t*)data) = ecount * esize;
-        *((uint32_t*)((uint8_t*)data) + sizeof(uint32_t)) = ecount;
+        *((uint32_t*)(((uint8_t*)data) + sizeof(uint32_t))) = ecount;
     }
 
     inline static uint64_t getStorageBytesCount(void* data)
@@ -111,7 +111,7 @@ template<uint16_t k>
 class BSQListFlatKType : public BSQListFlatKTypeAbstract
 {
 public:
-    BSQListFlatKType(std::string name, uint64_t esize, RefMask heapmask): BSQListFlatKTypeAbstract(sizeof(BSQListFlatK<k>) + (k * esize), heapmask, name) {;}
+    BSQListFlatKType(BSQTypeID tid, std::string name, uint64_t esize, RefMask heapmask): BSQListFlatKTypeAbstract(tid, sizeof(BSQListFlatK<k>) + (k * esize), heapmask, name) {;}
 
     virtual ~BSQListFlatKType() {;}
 };
@@ -126,7 +126,7 @@ struct BSQListSlice
 class BSQListSliceType : public BSQListReprType
 {
 public:
-    BSQListSliceType(std::string name): BSQListReprType(sizeof(BSQListSlice), "2", name) {;}
+    BSQListSliceType(BSQTypeID tid, std::string name): BSQListReprType(tid, sizeof(BSQListSlice), "2", name) {;}
     virtual ~BSQListSliceType() {;}
 
     uint64_t getLength(void* data) const override final;
@@ -145,7 +145,7 @@ struct BSQListConcat
 class BSQListConcatType : public BSQListReprType
 {
 public:
-    BSQListConcatType(std::string name): BSQListReprType(sizeof(BSQListConcat), "22", name) {;}
+    BSQListConcatType(BSQTypeID tid, std::string name): BSQListReprType(tid, sizeof(BSQListConcat), "22", name) {;}
     virtual ~BSQListConcatType() {;}
 
     uint64_t getLength(void* data) const override final;
@@ -216,5 +216,7 @@ public:
 
     BSQList concat2(StorageLocationPtr s1, StorageLocationPtr s2) const;
     BSQList slice(StorageLocationPtr str, uint64_t startpos, uint64_t endpos) const;
+
+    void hasPredCheck(StorageLocationPtr l, StorageLocationPtr vv, StorageLocationPtr resultsl, const std::function<void(const std::vector<StorageLocationPtr>&, StorageLocationPtr)>& fn) const;
 };
 

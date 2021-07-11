@@ -92,6 +92,16 @@ public:
     ~BSQPCode() {;}
 };
 
+class BSQPCodeOperator
+{
+public:
+    const BSQInvokeDecl* call;
+    const std::vector<StorageLocationPtr> cargs;
+
+    BSQPCodeOperator(const BSQInvokeDecl* call) : call(call), cargs() {;}
+    ~BSQPCodeOperator() {;}
+};
+
 class BSQInvokePrimitiveDecl : public BSQInvokeDecl 
 {
 public:

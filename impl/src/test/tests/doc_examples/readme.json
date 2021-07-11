@@ -62,6 +62,71 @@
             ]
         },
         {
+            "test": "allPositive",
+            "src": null,
+            "sig": "function main(x: Int): Bool",
+            "code": "function allPositive(...args: List<Int>): Bool { return args.allOf(pred(x) => x >= 0i); }",
+            "typechk": [
+            ],
+            "infeasible": [
+                {
+                    "action": "allPositive()",
+                    "check": "res"
+                },
+                {
+                    "action": "allPositive(1, 4, 3)",
+                    "check": "res"
+                },
+                {
+                    "action": "allPositive(0, -3)",
+                    "check": "!res"
+                },
+                {
+                    "action": "allPositive(0, x)",
+                    "check": "x < 0i || res"
+                }
+            ],
+            "witness": [
+                {
+                    "action": "allPositive(0, x)",
+                    "check": "res"
+                },
+                {
+                    "action": "allPositive(0, x)",
+                    "check": "!res"
+                }
+            ],
+            "evaluates": [
+                {
+                    "action": "allPositive(0, x, 5)",
+                    "args": [2],
+                    "result": true
+                },
+                {
+                    "action": "allPositive(x, 7, 7)",
+                    "args": [-1],
+                    "result": false
+                }
+            ],
+            "icpp": [
+                {
+                    "action": "allPositive()",
+                    "args": [2],
+                    "result": "true"
+                },
+                {
+                    "action": "allPositive(0, x, 5)",
+                    "args": [2],
+                    "result": "true"
+                },
+                {
+                    "action": "allPositive(0, x, 2)",
+                    "args": [-1],
+                    "result": "false"
+                }
+            ]
+        },
+        {
             "test": "sign",
             "src": null,
             "sig": "function main(x: Int): Int",

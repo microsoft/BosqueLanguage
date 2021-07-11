@@ -199,12 +199,8 @@ __internal grounded struct entity String provides Some, KeyType, PODType, APITyp
     __assume_safe private function s_concat2(s1: String, s2: String): String # string_append
     __assume_safe private function s_slice(s: String, start: StringPos, end: StringPos): String # string_slice
     
-    function concat2(s1: String, s2: String): String {
+    function concat(s1: String, s2: String): String {
         return String::s_concat2(s1, s2);
-    }
-
-    function concat3(s1: String, s2: String, s3: String): String {
-        return String::s_concat2(s1, String::s_concat2(s2, s3));
     }
 
     method empty(): Bool {

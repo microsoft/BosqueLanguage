@@ -1875,6 +1875,7 @@ class SMTBodyEmitter {
             //https://github.com/Z3Prover/z3/blob/master/src/api/api_bv.cpp
             //https://github.com/Z3Prover/z3/issues/574
             //https://github.com/Z3Prover/z3/blob/518296dbc10267d4a4b8589212feaeefca800022/src/ast/bv_decl_plugin.cpp
+            //https://github.com/Z3Prover/z3/discussions/5138
 
             return NOT_IMPLEMENTED("Overflow Checked Arith");
         }

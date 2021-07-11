@@ -1645,8 +1645,8 @@ class ICPPBodyEmitter {
         let mixedmap: Map<string, [number, MIRResolvedTypeKey]> = new Map<string, [number, MIRResolvedTypeKey]>();
         let mpoffset: number = 0;
         let mmask = "";
-        for(let i = 0; i < idecl.scalarslotsinfo.length; ++i) {
-            const slot = idecl.scalarslotsinfo[i];
+        for(let i = 0; i < idecl.mixedslotsinfo.length; ++i) {
+            const slot = idecl.mixedslotsinfo[i];
             const mtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(slot.vtype));
             mixedmap.set(slot.vname, [mpoffset, slot.vtype]);
             mpoffset += mtype.allocinfo.inlinedatasize;

@@ -18,12 +18,12 @@ const BSQType* BSQType::g_typeFloat = new BSQFloatType();
 const BSQType* BSQType::g_typeDecimal = new BSQDecimalType();
 const BSQType* BSQType::g_typeRational = new BSQRationalType();
 
-const BSQType* BSQType::g_typeStringKRepr16 = new BSQStringKReprType<16>();
-const BSQType* BSQType::g_typeStringKRepr32 = new BSQStringKReprType<32>(); 
-const BSQType* BSQType::g_typeStringKRepr64 = new BSQStringKReprType<64>();
-const BSQType* BSQType::g_typeStringKRepr96 = new BSQStringKReprType<96>();
-const BSQType* BSQType::g_typeStringKRepr128 = new BSQStringKReprType<128>();
-const BSQType* BSQType::g_typeStringKRepr256 = new BSQStringKReprType<256>();
+const BSQType* BSQType::g_typeStringKRepr16 = new BSQStringKReprType<16>(BSQ_TYPE_ID_STRINGREPR_K16);
+const BSQType* BSQType::g_typeStringKRepr32 = new BSQStringKReprType<32>(BSQ_TYPE_ID_STRINGREPR_K32); 
+const BSQType* BSQType::g_typeStringKRepr64 = new BSQStringKReprType<64>(BSQ_TYPE_ID_STRINGREPR_K64);
+const BSQType* BSQType::g_typeStringKRepr96 = new BSQStringKReprType<96>(BSQ_TYPE_ID_STRINGREPR_K96);
+const BSQType* BSQType::g_typeStringKRepr128 = new BSQStringKReprType<128>(BSQ_TYPE_ID_STRINGREPR_K128);
+const BSQType* BSQType::g_typeStringKRepr256 = new BSQStringKReprType<256>(BSQ_TYPE_ID_STRINGREPR_K256);
 const std::pair<size_t, const BSQType*> BSQType::g_typeStringKCons[6] = {std::make_pair((size_t)16, BSQType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQType::g_typeStringKRepr128), std::make_pair((size_t)256, BSQType::g_typeStringKRepr256) };
 
 const BSQType* BSQType::g_typeStringConcatRepr = new BSQStringConcatReprType();
@@ -698,7 +698,7 @@ bool entityStringJSONParse_impl(const BSQType* btype, const boost::json::value& 
         else if(sstr.size() <= 256)
         {
             auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
-                return cc.first >= sstr.size();
+                return cc.first > sstr.size();
             });
             s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
             BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
@@ -739,7 +739,7 @@ void entityStringGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, S
     else
     {
         auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&data](const std::pair<size_t, const BSQType*>& cc) {
-            return cc.first >= data.size();
+            return cc.first > data.size();
         });
         s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
         BSQ_MEM_COPY(s.u_data, data.c_str(), size);
@@ -1398,7 +1398,7 @@ bool entityStringOfJSONParse_impl(const BSQType* btype, const boost::json::value
         else if(sstr.size() <= 256)
         {
             auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
-                return cc.first >= sstr.size();
+                return cc.first > sstr.size();
             });
             s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
             BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
@@ -1436,7 +1436,7 @@ void entityStringOfGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd,
     else
     {
         auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
-            return cc.first >= sstr.size();
+            return cc.first > sstr.size();
         });
 
         s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);

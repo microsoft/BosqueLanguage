@@ -44,7 +44,7 @@ BSQTypeSizeInfo jsonLoadTypeSizeInfo(boost::json::value val)
 BSQTypeID j_tkey(boost::json::value v)
 {
     auto tstr = jsonGetAsString(v, "tkey");
-    return Environment::g_typenameToIDMap[tstr];
+    return Environment::g_typenameToIDMap[tstr].first;
 }
 
 std::string j_name(boost::json::value v)
@@ -90,7 +90,7 @@ const BSQType* jsonLoadValidatorType(boost::json::value v)
 const BSQType* jsonLoadStringOfType(boost::json::value v)
 {
     auto vname = jsonGetAsString(v, "validator");
-    auto vtid = Environment::g_typenameToIDMap[vname];
+    auto vtid = Environment::g_typenameToIDMap[vname].first;
 
     return new BSQStringOfType(j_tkey(v), j_name(v), vtid);
 }
@@ -105,8 +105,8 @@ const BSQType* jsonLoadDataStringType(boost::json::value v)
 
 const BSQType* jsonLoadTypedNumberType(boost::json::value v)
 {
-    auto primitive = Environment::g_typenameToIDMap[jsonGetAsString(v, "primitive")];
-    auto underlying = Environment::g_typenameToIDMap[jsonGetAsString(v, "underlying")];
+    auto primitive = Environment::g_typenameToIDMap[jsonGetAsString(v, "primitive")].first;
+    auto underlying = Environment::g_typenameToIDMap[jsonGetAsString(v, "underlying")].first;
 
     switch(primitive)
     {
@@ -139,7 +139,7 @@ const BSQType* jsonLoadTypedNumberType(boost::json::value v)
 
 const BSQType* jsonLoadEnumType(boost::json::value v)
 {
-    auto underlying = Environment::g_typenameToIDMap[jsonGetAsString(v, "underlying")];
+    auto underlying = Environment::g_typenameToIDMap[jsonGetAsString(v, "underlying")].first;
 
     std::vector<std::pair<std::string, uint32_t>> enuminvs;
     auto jenuminvs = v.as_object().at("enuminvs").as_array(); 
@@ -170,21 +170,37 @@ const BSQType* jsonLoadEnumType(boost::json::value v)
 
 const BSQType* jsonLoadListType(boost::json::value v)
 {
-    BSQTypeID etype = Environment::g_typenameToIDMap[jsonGetAsString(v, "etype")];
+    BSQTypeID etype = Environment::g_typenameToIDMap[jsonGetAsString(v, "etype")].first;
 
     uint64_t esize = jsonGetAsUInt<uint64_t>(v, "esize");
     RefMask emask = jsonLoadRefMask(v.as_object().at("emask"));
 
-    BSQListFlatKType<4>* list4 = new BSQListFlatKType<4>(j_name(v) + "_cons4", esize, emask);
-    BSQListFlatKType<8>* list8 = new BSQListFlatKType<8>(j_name(v) + "_cons8", esize, emask);
-    BSQListFlatKType<12>* list12 = new BSQListFlatKType<12>(j_name(v) + "_cons12", esize, emask);
-    BSQListFlatKType<16>* list16 = new BSQListFlatKType<16>(j_name(v) + "_cons16", esize, emask);
-    BSQListFlatKType<24>* list24 = new BSQListFlatKType<24>(j_name(v) + "_cons24", esize, emask);
-    BSQListFlatKType<32>* list32 = new BSQListFlatKType<32>(j_name(v) + "_cons32", esize, emask);
-    BSQListFlatKType<40>* list40 = new BSQListFlatKType<40>(j_name(v) + "_cons40", esize, emask);
+    BSQListFlatKType<4>* list4 = new BSQListFlatKType<4>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons4", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list4->name + std::string("]")] = {list4->tid, list4};
 
-    BSQListSliceType* slice = new BSQListSliceType(j_name(v) + "_consslice");
-    BSQListConcatType* concat = new BSQListConcatType(j_name(v) + "_consconcat");
+    BSQListFlatKType<8>* list8 = new BSQListFlatKType<8>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons8", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list8->name + std::string("]")] = {list8->tid, list8};
+
+    BSQListFlatKType<12>* list12 = new BSQListFlatKType<12>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons12", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list12->name + std::string("]")] = {list12->tid, list12};
+
+    BSQListFlatKType<16>* list16 = new BSQListFlatKType<16>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons16", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list16->name + std::string("]")] = {list16->tid, list16};
+
+    BSQListFlatKType<24>* list24 = new BSQListFlatKType<24>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons24", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list24->name + std::string("]")] = {list24->tid, list24};
+
+    BSQListFlatKType<32>* list32 = new BSQListFlatKType<32>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons32", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list32->name + std::string("]")] = {list32->tid, list32};
+
+    BSQListFlatKType<40>* list40 = new BSQListFlatKType<40>((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_cons40", esize, emask);
+    Environment::g_typenameToIDMap[std::string("[") + list40->name + std::string("]")] = {list40->tid, list40};
+
+    BSQListSliceType* slice = new BSQListSliceType((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_consslice");
+    Environment::g_typenameToIDMap[std::string("[") + slice->name + std::string("]")] = {slice->tid, slice};
+
+    BSQListConcatType* concat = new BSQListConcatType((BSQTypeID)Environment::g_typenameToIDMap.size(), j_name(v) + "_consconcat");
+    Environment::g_typenameToIDMap[std::string("[") + concat->name + std::string("]")] = {concat->tid, concat};
 
     BSQListType* ltype = new BSQListType(j_tkey(v), j_name(v), esize, etype);
 
@@ -213,7 +229,7 @@ const BSQType* jsonLoadTupleType(boost::json::value v)
     auto ttlist = v.as_object().at("ttypes").as_array();
     std::transform(ttlist.cbegin(), ttlist.cend(), std::back_inserter(ttypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> idxoffsets;
@@ -252,7 +268,7 @@ const BSQType* jsonLoadRecordType(boost::json::value v)
     auto ptlist = v.as_object().at("propertytypes").as_array();
     std::transform(ptlist.cbegin(), ptlist.cend(), std::back_inserter(propertytypes), [](boost::json::value rtype) {
         auto tstr = std::string(rtype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> propertyoffsets;
@@ -291,7 +307,7 @@ const BSQType* jsonLoadEntityType(boost::json::value v)
     auto ftlist = v.as_object().at("fieldtypes").as_array();
     std::transform(ftlist.cbegin(), ftlist.cend(), std::back_inserter(fieldtypes), [](boost::json::value rtype) {
         auto tstr = std::string(rtype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> fieldoffsets;
@@ -318,7 +334,7 @@ const BSQType* jsonLoadEphemeralListType(boost::json::value v)
     auto etlist = v.as_object().at("etypes").as_array();
     std::transform(etlist.cbegin(), etlist.cend(), std::back_inserter(etypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     std::vector<size_t> idxoffsets;
@@ -338,7 +354,7 @@ const BSQType* jsonLoadInlineUnionType(boost::json::value v)
     auto stlist = v.as_object().at("subtypes").as_array();
     std::transform(stlist.cbegin(), stlist.cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     return new BSQUnionInlineType(j_tkey(v), allocinfo.inlinedatasize, allocinfo.inlinedmask, j_name(v), subtypes);
@@ -350,7 +366,7 @@ const BSQType* jsonLoadRefUnionType(boost::json::value v)
     auto stlist = v.as_object().at("subtypes").as_array();
     std::transform(stlist.cbegin(), stlist.cend(), std::back_inserter(subtypes), [](boost::json::value ttype) {
         auto tstr = std::string(ttype.as_string().c_str());
-        return Environment::g_typenameToIDMap[tstr];
+        return Environment::g_typenameToIDMap[tstr].first;
     });
 
     return new BSQUnionRefType(j_tkey(v), j_name(v), subtypes);
@@ -426,13 +442,13 @@ void jsonLoadBSQTypeDecl(boost::json::value v)
         break;
     }
 
-    BSQType::g_typetable[ttype->tid] = ttype;
+    Environment::g_typenameToIDMap[ttype->name].second = ttype;
 }
 
 void jsonLoadBSQLiteralDecl(boost::json::value v, size_t& storageOffset, const BSQType*& gtype, std::string& lval)
 {
     storageOffset = jsonGetAsUInt<size_t>(v, "offset");
-    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "storage")]];
+    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "storage")].first];
     lval = jsonGetAsString(v, "value");
 }
 
@@ -440,7 +456,7 @@ void jsonLoadBSQConstantDecl(boost::json::value v, size_t& storageOffset, BSQInv
 {
     storageOffset = jsonGetAsUInt<size_t>(v, "storageOffset");
     ikey = Environment::g_invokenameToIDMap[jsonGetAsString(v, "valueInvoke")];
-    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "ctype")]];
+    gtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "ctype")].first];
 }
 
 void BSQInvokeDecl::jsonLoad(boost::json::value v)
@@ -467,11 +483,11 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(boost::json::value v)
     std::vector<BSQFunctionParameter> params;
     std::transform(v.as_object().at("params").as_array().cbegin(), v.as_object().at("params").as_array().cend(), std::back_inserter(params), [](boost::json::value param) {
         auto tstr =  jsonGetAsString(param, "ptype");
-        auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
+        auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr].first];
 
         return BSQFunctionParameter{j_name(param), ptype};
     });
-    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "resultType")]];
+    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "resultType")].first];
 
     Argument resultArg = {(ArgumentTag)v.as_object().at("resultArg").as_object().at("kind").as_int64(), (uint32_t)v.as_object().at("resultArg").as_object().at("location").as_int64()}; 
     const RefMask mask = jsonLoadRefMask(v.as_object().at("mixedStackMask"));
@@ -494,21 +510,21 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
     std::vector<BSQFunctionParameter> params;
     std::transform(v.as_object().at("params").as_array().cbegin(), v.as_object().at("params").as_array().cend(), std::back_inserter(params), [](boost::json::value param) {
         auto tstr = jsonGetAsString(param, "ptype");
-        auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
+        auto ptype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr].first];
 
         return BSQFunctionParameter{j_name(param), ptype};
     });
-    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "resultType")]];
+    auto rtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "resultType")].first];
 
     const RefMask mask = jsonLoadRefMask(v.as_object().at("mixedStackMask"));
 
     const BSQType* enclosingtype = nullptr;
     if(v.as_object().at("enclosingtype").is_string())
     {
-       enclosingtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "enclosingtype")]];
+       enclosingtype = BSQType::g_typetable[Environment::g_typenameToIDMap[jsonGetAsString(v, "enclosingtype")].first];
     }
 
-    BSQPrimitiveImplTag implkey = Environment::g_primitiveinvokenameToIDMap[jsonGetAsString(v, "implkey")];
+    BSQPrimitiveImplTag implkey = Environment::g_primitiveinvokenameToIDMap[jsonGetAsString(v, "implkeyname")];
     
     std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap;
     std::for_each(v.as_object().at("scalaroffsetMap").as_array().cbegin(), v.as_object().at("scalaroffsetMap").as_array().cend(), [&scalaroffsetMap](boost::json::value so) {
@@ -516,7 +532,7 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
         auto offset = (uint32_t)so.as_object().at("info").as_array().at(0).as_int64();
 
         auto tstr = std::string(so.as_object().at("info").as_array().at(1).as_string().c_str());
-        auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
+        auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr].first];
 
         scalaroffsetMap[name] = {offset, otype};
     });
@@ -527,7 +543,7 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
         auto offset = (uint32_t)mo.as_object().at("info").as_array().at(0).as_int64();
 
         auto tstr = std::string(mo.as_object().at("info").as_array().at(1).as_string().c_str());
-        auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
+        auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr].first];
 
         mixedoffsetMap[name] = {offset, otype};
     });
@@ -536,8 +552,8 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
     std::for_each(v.as_object().at("binds").as_array().cbegin(), v.as_object().at("binds").as_array().cend(), [&binds](boost::json::value b) {
         auto name = jsonGetAsString(b, "name");
 
-        auto tstr = std::string(b.as_object().at("ttype").as_array().at(1).as_string().c_str());
-        auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr]];
+        auto tstr = jsonGetAsString(b, "ttype");
+        auto otype = BSQType::g_typetable[Environment::g_typenameToIDMap[tstr].first];
 
         binds[name] = otype;
     });
@@ -545,10 +561,12 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(boost::json::value v)
     std::map<std::string, BSQPCode*> pcodes;
     std::for_each(v.as_object().at("pcodes").as_array().cbegin(), v.as_object().at("pcodes").as_array().cend(), [&pcodes](boost::json::value pcode) {
         auto name = jsonGetAsString(pcode, "name");
-        auto code = Environment::g_invokenameToIDMap[jsonGetAsString(pcode, "code")];
+
+        auto pc = pcode.at("pc").as_object();
+        auto code = Environment::g_invokenameToIDMap[jsonGetAsString(pc, "code")];
 
         std::vector<Argument> cargs;
-        std::transform(pcode.as_object().at("cargs").as_array().cbegin(), pcode.as_object().at("cargs").as_array().cend(), std::back_inserter(cargs), [](boost::json::value carg) {
+        std::transform(pc.at("cargs").as_array().cbegin(), pc.at("cargs").as_array().cend(), std::back_inserter(cargs), [](boost::json::value carg) {
             return Argument{(ArgumentTag)carg.as_object().at("kind").as_int64(), (uint32_t)carg.as_object().at("location").as_int64()}; 
         });
 

@@ -614,8 +614,16 @@ class TestRunner {
 ////
 //Application
 
+let paralleldefault = 4;
+if(process.platform === "win32") {
+    //
+    //TODO: see a super weird EPIPE error if we run in parallel on win32 -- so just run serial as a workaround for now
+    //
+    paralleldefault = 1;
+}
+
 Commander
-    .option("-m --parallel [parallel]", "Number of parallel tests to run simultaniously", 4)
+    .option("-m --parallel [parallel]", "Number of parallel tests to run simultaniously", paralleldefault)
     .option("-r --restriction [spec]", "Limit the test run to a specific set of tests", "*")
     //
     //TODO: maybe want to run only SMT or only compiler tests too

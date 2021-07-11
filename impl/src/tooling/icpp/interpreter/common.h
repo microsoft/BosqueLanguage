@@ -20,7 +20,6 @@
 
 #define MI_SMALL_SIZE_MAX 2048
 
-
 inline void* mi_zalloc(size_t bytes)
 {
     void* res = malloc(bytes);
@@ -122,7 +121,7 @@ typedef uint64_t GC_META_DATA_WORD;
 #define GC_MASK_RC(W) (W & GC_RC_MASK)
 #define GC_EXTRACT_MARK(W) (W & GC_MARK_BIT)
 #define GC_MASK_MARK(W) (W & GC_MARK_MASK)
-#define GC_EXTRACT_TYPEID(W) (W & 0x7FFFFF)
+#define GC_EXTRACT_TYPEID(W) (W & GC_TYPE_ID_MASK)
 
 #define GC_GET_META_DATA_ADDR(M) ((GC_META_DATA_WORD*)((uint8_t*)M - sizeof(GC_META_DATA_WORD)))
 #define GC_LOAD_META_DATA_WORD(ADDR) (*((GC_META_DATA_WORD*)ADDR))
@@ -229,15 +228,40 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_CONTENTHASH 15
 #define BSQ_TYPE_ID_REGEX 16
 
-#define BSQ_TYPE_ID_STRINGREPR 30
-#define BSQ_TYPE_ID_LISTREPR 30
-
-#define BSQ_TYPE_ID_BUILTIN_MAX 100
+#define BSQ_TYPE_ID_STRINGREPR_K16 17
+#define BSQ_TYPE_ID_STRINGREPR_K32 18
+#define BSQ_TYPE_ID_STRINGREPR_K64 19
+#define BSQ_TYPE_ID_STRINGREPR_K96 20
+#define BSQ_TYPE_ID_STRINGREPR_K128 21
+#define BSQ_TYPE_ID_STRINGREPR_K256 22
+#define BSQ_TYPE_ID_STRINGREPR_SLICE 23
+#define BSQ_TYPE_ID_STRINGREPR_CONCAT 24
 
 enum class BSQPrimitiveImplTag
 {
     Invalid = 0x0,
+
     validator_accepts,
+
     string_empty,
-    string_append
+    string_append,
+
+    list_size,
+    list_empty,
+    list_unsafe_get,
+    list_fill,
+    list_concat2,
+    list_haspredcheck,
+    list_haspredcheck_idx,
+    list_findindexof,
+    list_findindexoflast,
+    list_findindexof_idx,
+    list_findindexoflast_idx,
+    list_filter,
+    list_filter_idx,
+    list_filtertotype,
+    list_casttotype,
+    list_slice,
+    list_map,
+    list_map_idx
 };

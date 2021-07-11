@@ -195,7 +195,7 @@ else if(mode === "--evaluate") {
                         process.stdout.write(`Solver timeout :(\n`);
                     }
                     else {
-                        process.stdout.write(`Failed with -- ${jres}`);
+                        process.stdout.write(`Failed with -- ${JSON.stringify(jres)}`);
                     }
 
                     process.exit(0);

@@ -115,7 +115,7 @@ public:
     size_t bvToCardinality(const z3::model& m, const z3::expr& bv) const;
     size_t intToCardinality(const z3::model& m, const z3::expr& iv) const;
 
-    json evalToBool(const z3::model& m, const z3::expr& e) const;
+    json evalToBool(z3::solver& s, const z3::model& m, const z3::expr& e) const;
 
     json evalToUnsignedNumber(const z3::model& m, const z3::expr& e) const;
     json evalToSignedNumber(const z3::model& m, const z3::expr& e) const;
@@ -333,8 +333,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const = 0;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const = 0;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const = 0;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const = 0;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const = 0;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const = 0;
 };
 
 class IGroundedType : public IType
@@ -361,8 +361,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class BoolType : public IGroundedType
@@ -378,8 +378,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class NatType : public IGroundedType
@@ -395,8 +395,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class IntType : public IGroundedType
@@ -412,8 +412,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class BigNatType : public IGroundedType
@@ -429,8 +429,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class BigIntType : public IGroundedType
@@ -446,8 +446,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class RationalType : public IGroundedType
@@ -463,8 +463,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class FloatType : public IGroundedType
@@ -480,8 +480,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class DecimalType : public IGroundedType
@@ -497,8 +497,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class StringType : public IGroundedType
@@ -514,8 +514,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class StringOfType : public IGroundedType
@@ -534,8 +534,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class NumberOfType : public IGroundedType
@@ -557,8 +557,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class DataStringType : public IGroundedType
@@ -580,8 +580,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class ByteBufferType : public IGroundedType
@@ -597,8 +597,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class BufferType : public IGroundedType
@@ -614,8 +614,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class DataBufferType : public IGroundedType
@@ -631,8 +631,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class ISOTimeType : public IGroundedType
@@ -648,8 +648,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class LogicalTimeType : public IGroundedType
@@ -665,8 +665,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class UUIDType : public IGroundedType
@@ -682,8 +682,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class ContentHashType : public IGroundedType
@@ -699,8 +699,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class TupleType : public IGroundedType
@@ -722,8 +722,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class RecordType : public IGroundedType
@@ -746,8 +746,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class ListType : public IGroundedType
@@ -768,8 +768,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class EnumType : public IGroundedType
@@ -790,8 +790,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class UnionType : public IType
@@ -809,8 +809,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::model& m) const override final;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::model& m) const override final;
+    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const override final;
 };
 
 class InvokeSignature

@@ -35,7 +35,9 @@ class ICPPEmitter {
         const allinvokes = new Set([...assembly.invokeDecls, ...assembly.primitiveInvokeDecls]
             .filter((iiv) => !(iiv[1] instanceof MIRInvokePrimitiveDecl) || (iiv[1] as MIRInvokePrimitiveDecl).implkey !== "default")
             .map((iiv) => iiv[0]));
-        const allvinvokes = new Set(...(([] as MIRVirtualMethodKey[]).concat(...[...assembly.entityDecls].map((edcl) => [...edcl[1].vcallMap].map((ee) => ee[0])))));
+
+        const vcallarray = [...assembly.entityDecls].map((edcl) => [...edcl[1].vcallMap].map((ee) => ee[0]));
+        const allvinvokes = new Set(...(([] as MIRVirtualMethodKey[]).concat(...vcallarray)));
 
         return new ICPPAssembly(decltypes.length, alltypenames, [...allproperties].sort(), [...allfields].sort(), [...allinvokes].sort(), [...allvinvokes].sort(), entrypoint);
     }

@@ -6773,8 +6773,10 @@ class TypeChecker {
 
             this.m_emitter.masm.invokeDecls.set(mkey, invinfo as MIRInvokeBodyDecl);
 
-            const tkey = MIRKeyGenerator.generateTypeKey(this.resolveOOTypeFromDecls(enclosingDecl[1], enclosingDecl[2]));
-            (this.m_emitter.masm.entityDecls.get(tkey) as MIREntityTypeDecl).vcallMap.set(vkey, mkey);
+            if(mdecl.invoke.attributes.includes("override") || mdecl.invoke.attributes.includes("virtual")) {
+                const tkey = MIRKeyGenerator.generateTypeKey(this.resolveOOTypeFromDecls(enclosingDecl[1], enclosingDecl[2]));
+                (this.m_emitter.masm.entityDecls.get(tkey) as MIREntityTypeDecl).vcallMap.set(vkey, mkey);
+            }
         }
         catch (ex) {
             this.m_emitter.setEmitEnabled(false);

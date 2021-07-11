@@ -484,3 +484,31 @@ BSQList BSQListType::slice(StorageLocationPtr l, uint64_t startpos, uint64_t end
         return BSQList{res, dist};
     }
 }
+
+void BSQListType::hasPredCheck(StorageLocationPtr l, StorageLocationPtr vv, StorageLocationPtr resultsl, const std::function<void(const std::vector<StorageLocationPtr>&, StorageLocationPtr)>& fn) const
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, BSQFALSE);
+
+    if(!BSQListType::empty(SLPTR_LOAD_CONTENTS_AS(BSQList, l)))
+    {
+        BSQListReprIterator iter;
+        this->initializeIteratorBegin(&iter, l);
+        registerIteratorGCRoots(&iter);
+
+        std::vector<StorageLocationPtr> argv = {vv};
+        BSQBool rr = BSQFALSE;
+        while(iteratorIsValid(&iter))
+        {
+            iteratorGetElement(&iter, vv);
+            fn(argv, &rr);
+            if(rr) {
+                SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, BSQTRUE);
+                break;
+            }
+
+            incrementListIterator(&iter);
+        }
+
+        releaseIteratorGCRoots();
+    }
+}
