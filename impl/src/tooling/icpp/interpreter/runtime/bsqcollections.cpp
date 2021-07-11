@@ -24,8 +24,6 @@ bool iteratorIsValid(const BSQListReprIterator* iter)
 
 void initializeListIterPosition(BSQListReprIterator* iter, int64_t pos)
 {
-    auto mmtype = GET_TYPE_META_DATA(iter->lroot);
-
     auto ssize = (int64_t)GET_TYPE_META_DATA_AS(BSQListReprType, iter->lroot)->getLength(iter->lroot);
     if((pos == ssize) | (ssize == 0))
     {
@@ -504,7 +502,7 @@ void BSQListType::hasPredCheck(StorageLocationPtr l, StorageLocationPtr vv, Stor
             iteratorGetElement(&iter, vv);
             fn(argv, &rr);
             if(rr) {
-                SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, BSQFALSE);
+                SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, BSQTRUE);
                 break;
             }
 

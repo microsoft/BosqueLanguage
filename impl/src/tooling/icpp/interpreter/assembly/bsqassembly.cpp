@@ -442,7 +442,7 @@ void jsonLoadBSQTypeDecl(boost::json::value v)
         break;
     }
 
-    BSQType::g_typetable[ttype->tid] = ttype;
+    Environment::g_typenameToIDMap[ttype->name].second = ttype;
 }
 
 void jsonLoadBSQLiteralDecl(boost::json::value v, size_t& storageOffset, const BSQType*& gtype, std::string& lval)

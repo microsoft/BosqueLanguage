@@ -66,7 +66,7 @@ public:
     inline static void initializeCountInfo(void* data, uint32_t ecount, uint32_t esize)
     {
         *((uint32_t*)data) = ecount * esize;
-        *((uint32_t*)((uint8_t*)data) + sizeof(uint32_t)) = ecount;
+        *((uint32_t*)(((uint8_t*)data) + sizeof(uint32_t))) = ecount;
     }
 
     inline static uint64_t getStorageBytesCount(void* data)
