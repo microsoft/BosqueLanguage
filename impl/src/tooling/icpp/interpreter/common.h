@@ -15,6 +15,9 @@
 #include <string>
 #include <regex>
 
+#include "json.hpp"
+typedef nlohmann::json json;
+
 //TODO: mimalloc
 //#include <mimalloc.h>
 

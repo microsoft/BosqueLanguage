@@ -160,21 +160,28 @@ int tupleRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageL
     return 0;
 }
 
-bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {
     auto tupinfo = dynamic_cast<const BSQTupleInfo*>(btype);
-
     auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-    const boost::json::array& jtuple = jv.as_array();
+
+    if(!j.is_array() || tupinfo->ttypes.size() != j.size())
+    {
+        return false;
+    }
 
     if(btype->tkind == BSQTypeKind::Struct)
     {
         for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
         {
-            assert(i < jtuple.size());
+            assert(i < j.size());
 
             auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            etype->consops.fpJSONParse(etype, jtuple.at(i), &vbuff);
+            bool ok = etype->consops.fpJSONParse(etype, j[i], &vbuff);
+            if(!ok)
+            {
+                return false;
+            }
 
             etype->storeValue(SLPTR_INDEX_DATAPTR(sl, tupinfo->idxoffsets[i]), &vbuff);
         }
@@ -187,10 +194,14 @@ bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, Sto
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
         for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
         {
-            assert(i < jtuple.size());
+            assert(i < j.size());
 
             auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            etype->consops.fpJSONParse(etype, jtuple.at(i), &vbuff);
+            bool ok = etype->consops.fpJSONParse(etype, j[i], &vbuff);
+            if(!ok)
+            {
+                return false;
+            }
 
             BSQType::g_typetable[tupinfo->ttypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), tupinfo->idxoffsets[i]), &vbuff);
         }
@@ -199,39 +210,6 @@ bool tupleJSONParse_impl(const BSQType* btype, const boost::json::value& jv, Sto
     }
 
     return true;
-}
-
-void tupleGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
-{
-    auto tupinfo = dynamic_cast<const BSQTupleInfo*>(btype);
-
-    auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-    if(btype->tkind == BSQTypeKind::Struct)
-    {
-        for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
-
-            etype->storeValue(SLPTR_INDEX_DATAPTR(sl, tupinfo->idxoffsets[i]), &vbuff);
-        }
-    }
-    else
-    {
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
-        Allocator::GlobalAllocator.pushRoot(&tt);
-
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-        for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
-            
-            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), tupinfo->idxoffsets[i]), &vbuff);
-        }
-
-        Allocator::GlobalAllocator.popRoot();
-    }
 }
 
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -297,12 +275,15 @@ int recordRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
     return 0;
 }
 
-bool recordJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+bool recordJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {
     auto recinfo = dynamic_cast<const BSQRecordInfo*>(btype);
-
     auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-    const boost::json::object& jrecord = jv.as_object();
+
+    if(!j.is_object() || recinfo->rtypes.size() != j.size())
+    {
+        return false;
+    }
 
     if(btype->tkind == BSQTypeKind::Struct)
     {
@@ -311,8 +292,11 @@ bool recordJSONParse_impl(const BSQType* btype, const boost::json::value& jv, St
             auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
             auto pname = BSQType::g_propertymap[recinfo->properties[i]];
 
-            assert(jrecord.contains(pname));
-            etype->consops.fpJSONParse(etype, jrecord.at(pname), &vbuff);
+            bool ok = etype->consops.fpJSONParse(etype, j[pname], &vbuff);
+            if(!ok)
+            {
+                return false;
+            }
 
             etype->storeValue(SLPTR_INDEX_DATAPTR(sl, recinfo->propertyoffsets[i]), &vbuff);
         }
@@ -328,8 +312,11 @@ bool recordJSONParse_impl(const BSQType* btype, const boost::json::value& jv, St
             auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
             auto pname = BSQType::g_propertymap[recinfo->properties[i]];
 
-            assert(jrecord.contains(pname));
-            etype->consops.fpJSONParse(etype, jrecord.at(pname), &vbuff);
+            bool ok = etype->consops.fpJSONParse(etype, j[pname], &vbuff);
+            if(!ok)
+            {
+                return false;
+            }
 
             etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), recinfo->propertyoffsets[i]), &vbuff);
         }
@@ -338,42 +325,6 @@ bool recordJSONParse_impl(const BSQType* btype, const boost::json::value& jv, St
     }
 
     return true;
-}
-
-void recordGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
-{
-    auto recinfo = dynamic_cast<const BSQRecordInfo*>(btype);
-
-    auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-
-    if(btype->tkind == BSQTypeKind::Struct)
-    {
-        for(size_t i = 0; i < recinfo->properties.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertymap[recinfo->properties[i]];
-            etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
-
-            etype->storeValue(SLPTR_INDEX_DATAPTR(sl, recinfo->propertyoffsets[i]), &vbuff);
-        }
-    }
-    else
-    {
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
-        Allocator::GlobalAllocator.pushRoot(&tt);
-
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-        for(size_t i = 0; i < recinfo->properties.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertymap[recinfo->properties[i]];
-            etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
-
-            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), recinfo->propertyoffsets[i]), &vbuff);
-        }
-
-        Allocator::GlobalAllocator.popRoot();
-    }
 }
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
