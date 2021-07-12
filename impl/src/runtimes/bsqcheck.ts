@@ -104,7 +104,7 @@ else if(mode === "--check") {
     let witnesslist: any[] = [];
     for(let i = 0; i < errors.length; ++i) {
         if(!quiet) {
-            process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}...\n`);
+            process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}#${errors[i].pos}...\n`);
         }
 
         const jres = workflowBSQCheck(false, usercode, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);

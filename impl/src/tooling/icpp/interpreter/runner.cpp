@@ -285,7 +285,8 @@ bool parseJSONArgs(const boost::json::value args, const std::vector<BSQFunctionP
     for(size_t i = 0; i < params.size(); ++i)
     {
         StorageLocationPtr trgt = (argsroot + pposmap.at(i));
-        bool ok = params[i].ptype->consops.fpJSONParse(params[i].ptype, args.as_array().at(i), trgt);
+        auto pptype = params[i].ptype;
+        bool ok = pptype->consops.fpJSONParse(pptype, args.as_array().at(i), trgt);
         if(!ok)
         {
             return false;

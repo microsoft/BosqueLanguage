@@ -244,17 +244,25 @@ int entityBigNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
 
 bool entityBigNatJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
-    if(!jv.is_string())
-    {
-        return false;
+    if(jv.is_uint64() || jv.is_string())
+    { 
+        if(jv.is_uint64())
+        {
+            BSQBigNat bn = jv.as_uint64();
+            dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, bn);
+
+            return true;
+        }
+        else
+        {
+            auto sstr = jv.as_string();
+            BSQBigNat bn(sstr.subview(1, sstr.size() - 2));
+            dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, bn);
+            return true;
+        }
     }
-    else
-    {
-        auto sstr = jv.as_string();
-        BSQBigNat bn(sstr.subview(1, sstr.size() - 2));
-        dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, bn);
-        return true;
-    }
+
+    return false;
 }
 
 void entityBigNatGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
@@ -286,17 +294,25 @@ int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
 
 bool entityBigIntJSONParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
 {
-    if(!jv.is_string())
-    {
-        return false;
+    if(jv.is_int64() || jv.is_string())
+    { 
+        if(jv.is_int64())
+        {
+            BSQBigNat bn = jv.as_int64();
+            dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, bn);
+
+            return true;
+        }
+        else
+        {
+            auto sstr = jv.as_string();
+            BSQBigNat bn(sstr.subview(1, sstr.size() - 2));
+            dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, bn);
+            return true;
+        }
     }
-    else
-    {
-        auto sstr = jv.as_string();
-        BSQBigInt bn(sstr.subview(1, sstr.size() - 2));
-        dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, bn);
-        return true;
-    }
+
+    return false;
 }
 
 void entityBigIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
