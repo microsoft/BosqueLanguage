@@ -38,44 +38,6 @@ const BSQType* BSQType::g_typeUUID = new BSQUUIDType();
 const BSQType* BSQType::g_typeContentHash = new BSQContentHashType();
 const BSQType* BSQType::g_typeRegex = new BSQRegexType();
 
-std::string generateRandomChar(RandGenerator& rnd)
-{
-    char small_char[] = {' ', '!', '0', '1', '4', 'a', 'i', 'Q', 'Z', ':', '_', '(', ')',  };
-    uint8_t small_unic[] = {/*£*/ 194, 163, /*µ*/ 194, 181};
-    uint8_t emoji[] = {/*🌵*/ 240, 159, 140, 181};
-    auto ulimc = Environment::g_small_model_gen ? (sizeof(small_char) + (sizeof(small_unic) / 2) + 1) : 94;
-    std::uniform_int_distribution<uint32_t> chardist(0, ulimc);
-
-    std::string data;
-    if(!Environment::g_small_model_gen)
-    {
-        data.append({ (char)(32 + chardist(rnd)) });
-    }
-    else
-    {
-        auto choice = chardist(rnd);
-        if(choice < sizeof(small_char))
-        {
-            data.append({ (char)small_char[choice] });
-        }
-        else
-        {
-            if(choice < ulimc - (sizeof(emoji) / 4))
-            {
-                choice = choice - sizeof(small_char);
-                data.append({ (char)small_unic[choice], (char)small_unic[choice + 1] });
-            }
-            else
-            {
-                choice = choice - (sizeof(small_char) + (sizeof(small_unic) / 2)); 
-                data.append({ (char)emoji[choice], (char)emoji[choice + 1],  (char)emoji[choice + 2],  (char)emoji[choice + 3] });
-            }
-        }
-    }
-
-    return data;
-}
-
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return "none";
@@ -216,7 +178,7 @@ bool entityIntJSONParse_impl(const BSQType* btype, const boost::json::value& jv,
 
 void entityIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
 {
-    auto llim = Environment::g_small_model_gen ? -10 : std::numeric_limits<BSQInt>::min();
+    auto llim = Environment::g_small_model_gen ? -10 : std::numeric_limits<BSQInt>::lowest();
     auto ulim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQInt>::max();
     
     std::uniform_int_distribution<BSQInt> distribution(llim, ulim);
@@ -317,7 +279,7 @@ bool entityBigIntJSONParse_impl(const BSQType* btype, const boost::json::value& 
 
 void entityBigIntGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
 {
-    auto llim = Environment::g_small_model_gen ? -10 : std::numeric_limits<BSQInt>::min();
+    auto llim = Environment::g_small_model_gen ? -10 : std::numeric_limits<BSQInt>::lowest();
     auto ulim = Environment::g_small_model_gen ? 10 : std::numeric_limits<BSQInt>::max();
     
     std::uniform_int_distribution<BSQInt> distribution(llim, ulim);

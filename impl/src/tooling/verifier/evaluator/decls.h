@@ -112,18 +112,28 @@ public:
     z3::expr genInitialContext(const z3::model& m) const;
     z3::expr extendContext(const z3::model& m, const z3::expr& ctx, size_t i) const;
 
-    size_t bvToCardinality(const z3::model& m, const z3::expr& bv) const;
-    size_t intToCardinality(const z3::model& m, const z3::expr& iv) const;
+    std::optional<bool> expBoolAsBool(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
-    json evalToBool(z3::solver& s, const z3::model& m, const z3::expr& e) const;
+    std::optional<uint64_t> expBVAsUInt(z3::solver& s, z3::model& m, const z3::expr& e) const;
+    std::optional<int64_t> expBVAsInt(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
-    json evalToUnsignedNumber(const z3::model& m, const z3::expr& e) const;
-    json evalToSignedNumber(const z3::model& m, const z3::expr& e) const;
+    std::optional<std::string> expIntAsUInt(z3::solver& s, z3::model& m, const z3::expr& e) const;
+    std::optional<std::string> expIntAsInt(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
-    json evalToRealNumber(const z3::model& m, const z3::expr& e) const;
-    json evalToDecimalNumber(const z3::model& m, const z3::expr& e) const;
+    std::optional<std::string> evalRealAsFP(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
-    json evalToString(const z3::model& m, const z3::expr& e) const;
+    std::optional<size_t> bvToCardinality(z3::solver& s, z3::model& m, const z3::expr& bv) const;
+    std::optional<size_t> intToCardinality(z3::solver& s, z3::model& m, const z3::expr& iv) const;
+
+    std::optional<json> evalToBool(z3::solver& s, z3::model& m, const z3::expr& e) const;
+
+    std::optional<json> evalToUnsignedNumber(z3::solver& s, z3::model& m, const z3::expr& e) const;
+    std::optional<json> evalToSignedNumber(z3::solver& s, z3::model& m, const z3::expr& e) const;
+
+    std::optional<json> evalToRealNumber(z3::solver& s, z3::model& m, const z3::expr& e) const;
+    std::optional<json> evalToDecimalNumber(z3::solver& s, z3::model& m, const z3::expr& e) const;
+
+    std::optional<json> evalToString(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
     z3::expr callfunc(std::string fname, const z3::expr_vector& args, const std::vector<const IType*>& argtypes, const IType* restype, z3::context& c) const;
     z3::expr callfunc(std::string fname, const z3::expr& arg, const IType* argtype, const IType* restype, z3::context& c) const;
@@ -135,14 +145,7 @@ public:
     const APIModule* apimodule;
     z3::expr_vector chks;
 
-    const std::regex re_numberinon;
-    const std::regex re_numberinoi;
-    const std::regex re_numberinof;
-
-    ParseInfo(const APIModule* apimodule, z3::expr_vector chks): apimodule(apimodule), chks(chks),
-    re_numberinon("^[+]?(0|[1-9][0-9]*)$"), 
-    re_numberinoi("^[-+]?(0|[1-9][0-9]*)$"), 
-    re_numberinof("^[-+]?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$")
+    ParseInfo(const APIModule* apimodule, z3::expr_vector chks): apimodule(apimodule), chks(chks)
     {
         ;
     }
@@ -333,8 +336,8 @@ public:
     virtual std::optional<z3::expr> toz3arg(ParseInfo& pinfo, json j, z3::context& c) const = 0;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const = 0;
 
-    virtual json argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const = 0;
-    virtual json resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const = 0;
+    virtual std::optional<json> argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const = 0;
+    virtual std::optional<json> resextract(ExtractionInfo& ex, const z3::expr& res, z3::solver& s, z3::model& m) const = 0;
 };
 
 class IGroundedType : public IType
