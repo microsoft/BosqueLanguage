@@ -7,610 +7,595 @@
 #include "../core/bsqmemory.h"
 #include "../runtime/environment.h"
 
-boost::json::value jsonGet(boost::json::value val, const char* prop)
+Argument jsonParse_Argument(json j)
 {
-    assert(val.is_object());
-    return val.as_object().at(prop);
+    return Argument{ j["kind"].get<ArgumentTag>(), j["location"].get<uint32_t>() };
 }
 
-bool jsonGetAsBool(boost::json::value val, const char* prop)
+TargetVar jsonParse_TargetVar(json j)
 {
-    return jsonGet(val, prop).as_bool();
+    return TargetVar{ j["kind"].get<ArgumentTag>(), j["offset"].get<uint32_t>() };
 }
 
-std::string jsonGetAsString(boost::json::value val, const char* prop)
+SourceInfo jsonParse_SourceInfo(json j)
 {
-    return std::string(jsonGet(val, prop).as_string().c_str());
+    return SourceInfo{ j["line"].get<uint32_t>(), j["column"].get<uint32_t>() };
 }
 
-Argument jsonParse_Argument(boost::json::value val)
+BSQGuard jsonParse_BSQGuard(json j)
 {
-    return Argument{ jsonGetAsTag<ArgumentTag>(val, "kind"), jsonGetAsUInt<uint32_t>(val, "location") };
+    return BSQGuard{ j["gmaskoffset"].get<int32_t>(), j["gindex"].get<int32_t>(), j["gvaroffset"].get<int32_t>() };
 }
 
-TargetVar jsonParse_TargetVar(boost::json::value val)
+BSQStatementGuard jsonParse_BSQStatementGuard(json j)
 {
-    return TargetVar{ jsonGetAsInt<ArgumentTag>(val, "kind"), jsonGetAsUInt<uint32_t>(val, "offset") };
+    return BSQStatementGuard{ jsonParse_BSQGuard(j["guard"]), jsonParse_Argument(j["defaultvar"]), j["usedefaulton"].get<bool>(), j["enabled"].get<bool>() };
 }
 
-SourceInfo jsonParse_SourceInfo(boost::json::value val)
+const BSQType* jsonParse_BSQType(json j)
 {
-    return SourceInfo{ jsonGetAsUInt<uint32_t>(val, "line"), jsonGetAsUInt<uint32_t>(val, "column") };
-}
-
-BSQGuard jsonParse_BSQGuard(boost::json::value val)
-{
-    return BSQGuard{ jsonGetAsInt<int32_t>(val, "gmaskoffset"), jsonGetAsInt<int32_t>(val, "gindex"), jsonGetAsInt<int32_t>(val, "gvaroffset") };
-}
-
-BSQStatementGuard jsonParse_BSQStatementGuard(boost::json::value val)
-{
-    return BSQStatementGuard{ jsonParse_BSQGuard(jsonGet(val, "guard")), jsonParse_Argument(jsonGet(val, "defaultvar")), jsonGetAsBool(val, "usedefaulton"), jsonGetAsBool(val, "enabled") };
-}
-
-const BSQType* jsonParse_BSQType(boost::json::value val)
-{
-    auto tname = std::string(val.as_string().c_str());
+    auto tname = j.get<std::string>();
     auto tid = Environment::g_typenameToIDMap[tname].first;
     return BSQType::g_typetable[tid];
 }
 
-BSQRecordPropertyID jsonParse_BSQRecordPropertyID(boost::json::value val)
+BSQRecordPropertyID jsonParse_BSQRecordPropertyID(json j)
 {
-    auto tname = std::string(val.as_string().c_str());
+    auto tname = j.get<std::string>();
     return Environment::g_propertynameToIDMap[tname];
 }
 
-BSQFieldID jsonParse_BSQFieldID(boost::json::value val)
+BSQFieldID jsonParse_BSQFieldID(json j)
 {
-    auto tname = std::string(val.as_string().c_str());
+    auto tname = j.get<std::string>();
     return Environment::g_fieldnameToIDMap[tname];
 }
 
-SourceInfo j_sinfo(boost::json::value val)
+SourceInfo j_sinfo(json j)
 {
-    return jsonParse_SourceInfo(jsonGet(val, "sinfo"));
+    return jsonParse_SourceInfo(j["sinfo"]);
 }
 
-TargetVar j_trgt(boost::json::value val)
+TargetVar j_trgt(json j)
 {
-    return jsonParse_TargetVar(jsonGet(val, "trgt"));
+    return jsonParse_TargetVar(j["trgt"]);
 }
 
-Argument j_arg(boost::json::value val)
+Argument j_arg(json j)
 {
-    return jsonParse_Argument(jsonGet(val, "arg"));
+    return jsonParse_Argument(j["arg"]);
 }
 
-const BSQType* j_oftype(boost::json::value val)
+const BSQType* j_oftype(json j)
 {
-    return jsonParse_BSQType(jsonGet(val, "oftype"));
+    return jsonParse_BSQType(j["oftype"]);
 }
 
-const BSQType* j_argtype(boost::json::value val)
+const BSQType* j_argtype(json j)
 {
-    return jsonParse_BSQType(jsonGet(val, "argtype"));
+    return jsonParse_BSQType(j["argtype"]);
 }
 
-const BSQType* j_layouttype(boost::json::value val)
+const BSQType* j_layouttype(json j)
 {
-    return jsonParse_BSQType(jsonGet(val, "layouttype"));
+    return jsonParse_BSQType(j["layouttype"]);
 }
 
-const BSQType* j_flowtype(boost::json::value val)
+const BSQType* j_flowtype(json j)
 {
-    return jsonParse_BSQType(jsonGet(val, "flowtype"));
+    return jsonParse_BSQType(j["flowtype"]);
 }
 
-const BSQType* j_intotype(boost::json::value val)
+const BSQType* j_intotype(json j)
 {
-    return jsonParse_BSQType(jsonGet(val, "intotype"));
+    return jsonParse_BSQType(j["intotype"]);
 }
 
-const BSQType* j_trgttype(boost::json::value val)
+const BSQType* j_trgttype(json j)
 {
-    return jsonParse_BSQType(jsonGet(val, "trgttype"));
+    return jsonParse_BSQType(j["trgttype"]);
 }
 
-BSQGuard j_guard(boost::json::value v)
+BSQGuard j_guard(json j)
 {
-    return jsonParse_BSQGuard(jsonGet(v, "guard"));
+    return jsonParse_BSQGuard(j["guard"]);
 }
 
-BSQStatementGuard j_sguard(boost::json::value v)
+BSQStatementGuard j_sguard(json j)
 {
-    return jsonParse_BSQStatementGuard(jsonGet(v, "sguard"));
+    return jsonParse_BSQStatementGuard(j["sguard"]);
 }
 
-DeadFlowOp* DeadFlowOp::jparse(boost::json::value v)
+DeadFlowOp* DeadFlowOp::jparse(json v)
 {
     return new DeadFlowOp(j_sinfo(v));
 }
 
-AbortOp* AbortOp::jparse(boost::json::value v)
+AbortOp* AbortOp::jparse(json v)
 {
-    return new AbortOp(j_sinfo(v), jsonGetAsString(v, "msg"));
+    return new AbortOp(j_sinfo(v), v["msg"].get<std::string>());
 }
 
-AssertOp* AssertOp::jparse(boost::json::value v)
+AssertOp* AssertOp::jparse(json v)
 {
-    return new AssertOp(j_sinfo(v), j_arg(v), jsonGetAsString(v, "msg"));
+    return new AssertOp(j_sinfo(v), j_arg(v), v["msg"].get<std::string>());
 }
 
-DebugOp* DebugOp::jparse(boost::json::value v)
+DebugOp* DebugOp::jparse(json v)
 {
     return new DebugOp(j_sinfo(v), j_arg(v), j_argtype(v));
 }
 
-LoadUnintVariableValueOp* LoadUnintVariableValueOp::jparse(boost::json::value v)
+LoadUnintVariableValueOp* LoadUnintVariableValueOp::jparse(json v)
 {
     return new LoadUnintVariableValueOp(j_sinfo(v), j_trgt(v), j_oftype(v));
 }
 
-NoneInitUnionOp* NoneInitUnionOp::jparse(boost::json::value v)
+NoneInitUnionOp* NoneInitUnionOp::jparse(json v)
 {
     return new NoneInitUnionOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)));
 }
 
-StoreConstantMaskValueOp* StoreConstantMaskValueOp::jparse(boost::json::value v)
+StoreConstantMaskValueOp* StoreConstantMaskValueOp::jparse(json v)
 {
-    return new StoreConstantMaskValueOp(j_sinfo(v), jsonGetAsInt<int32_t>(v, "gmaskoffset"), jsonGetAsInt<int32_t>(v, "gindex"), jsonGetAsBool(v, "flag"));
+    return new StoreConstantMaskValueOp(j_sinfo(v), v["gmaskoffset"].get<int32_t>(), v["gindex"].get<int32_t>(), v["flag"].get<bool>());
 }
 
-DirectAssignOp* DirectAssignOp::jparse(boost::json::value v)
+DirectAssignOp* DirectAssignOp::jparse(json v)
 {
-    return new DirectAssignOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonGetAsUInt<uint32_t>(v, "size"), j_sguard(v));
+    return new DirectAssignOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), v["size"].get<uint32_t>(), j_sguard(v));
 }
 
-BoxOp* BoxOp::jparse(boost::json::value v)
+BoxOp* BoxOp::jparse(json v)
 {
-    return new BoxOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "fromtype")), j_sguard(v));
+    return new BoxOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(v["fromtype"]), j_sguard(v));
 }
 
-ExtractOp* ExtractOp::jparse(boost::json::value v)
+ExtractOp* ExtractOp::jparse(json v)
 {
-    return new ExtractOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "fromtype")), j_sguard(v));
+    return new ExtractOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(v["fromtype"]), j_sguard(v));
 }
 
-LoadConstOp* LoadConstOp::jparse(boost::json::value v)
+LoadConstOp* LoadConstOp::jparse(json v)
 {
     return new LoadConstOp(j_sinfo(v), j_trgt(v), j_arg(v), j_oftype(v));
 }
 
-TupleHasIndexOp* TupleHasIndexOp::jparse(boost::json::value v)
+TupleHasIndexOp* TupleHasIndexOp::jparse(json v)
 {
-    return new TupleHasIndexOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonGetAsUInt<BSQTupleIndex>(v, "idx"));
+    return new TupleHasIndexOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), v["idx"].get<BSQTupleIndex>());
 }
 
-RecordHasPropertyOp* RecordHasPropertyOp::jparse(boost::json::value v)
+RecordHasPropertyOp* RecordHasPropertyOp::jparse(json v)
 {
-    return new RecordHasPropertyOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")));
+    return new RecordHasPropertyOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(v["propId"]));
 }
 
-LoadTupleIndexDirectOp* LoadTupleIndexDirectOp::jparse(boost::json::value v)
+LoadTupleIndexDirectOp* LoadTupleIndexDirectOp::jparse(json v)
 {
-    return new LoadTupleIndexDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonGetAsUInt<BSQTupleIndex>(v, "idx"));
+    return new LoadTupleIndexDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), v["slotoffset"].get<uint32_t>(), v["idx"].get<BSQTupleIndex>());
 }
 
-LoadTupleIndexVirtualOp* LoadTupleIndexVirtualOp::jparse(boost::json::value v)
+LoadTupleIndexVirtualOp* LoadTupleIndexVirtualOp::jparse(json v)
 {
-    return new LoadTupleIndexVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonGetAsUInt<BSQTupleIndex>(v, "idx"));
+    return new LoadTupleIndexVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), v["idx"].get<BSQTupleIndex>());
 }
 
-LoadTupleIndexSetGuardDirectOp* LoadTupleIndexSetGuardDirectOp::jparse(boost::json::value v)
+LoadTupleIndexSetGuardDirectOp* LoadTupleIndexSetGuardDirectOp::jparse(json v)
 {
-    return new LoadTupleIndexSetGuardDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonGetAsUInt<BSQTupleIndex>(v, "idx"), j_guard(v));
+    return new LoadTupleIndexSetGuardDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), v["slotoffset"].get<uint32_t>(), v["idx"].get<BSQTupleIndex>(), j_guard(v));
 }
 
-LoadTupleIndexSetGuardVirtualOp* LoadTupleIndexSetGuardVirtualOp::jparse(boost::json::value v)
+LoadTupleIndexSetGuardVirtualOp* LoadTupleIndexSetGuardVirtualOp::jparse(json v)
 {
-    return new LoadTupleIndexSetGuardVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonGetAsUInt<BSQTupleIndex>(v, "idx"), j_guard(v));
+    return new LoadTupleIndexSetGuardVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), v["idx"].get<BSQTupleIndex>(), j_guard(v));
 }
 
-LoadRecordPropertyDirectOp* LoadRecordPropertyDirectOp::jparse(boost::json::value v)
+LoadRecordPropertyDirectOp* LoadRecordPropertyDirectOp::jparse(json v)
 {
-    return new LoadRecordPropertyDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")));
+    return new LoadRecordPropertyDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), v["slotoffset"].get<uint32_t>(), jsonParse_BSQRecordPropertyID(v["propId"]));
 }
 
-LoadRecordPropertyVirtualOp* LoadRecordPropertyVirtualOp::jparse(boost::json::value v)
+LoadRecordPropertyVirtualOp* LoadRecordPropertyVirtualOp::jparse(json v)
 {
-    return new LoadRecordPropertyVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")));
+    return new LoadRecordPropertyVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(v["propId"]));
 }
 
-LoadRecordPropertySetGuardDirectOp* LoadRecordPropertySetGuardDirectOp::jparse(boost::json::value v)
+LoadRecordPropertySetGuardDirectOp* LoadRecordPropertySetGuardDirectOp::jparse(json v)
 {
-    return new LoadRecordPropertySetGuardDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")), j_guard(v));
+    return new LoadRecordPropertySetGuardDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), v["slotoffset"].get<uint32_t>(), jsonParse_BSQRecordPropertyID(v["propId"]), j_guard(v));
 }
 
-LoadRecordPropertySetGuardVirtualOp* LoadRecordPropertySetGuardVirtualOp::jparse(boost::json::value v)
+LoadRecordPropertySetGuardVirtualOp* LoadRecordPropertySetGuardVirtualOp::jparse(json v)
 {
-    return new LoadRecordPropertySetGuardVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(jsonGet(v, "propId")), j_guard(v));
+    return new LoadRecordPropertySetGuardVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQRecordPropertyID(v["propId"]), j_guard(v));
 }
 
-LoadEntityFieldDirectOp* LoadEntityFieldDirectOp::jparse(boost::json::value v)
+LoadEntityFieldDirectOp* LoadEntityFieldDirectOp::jparse(json v)
 {
-    return new LoadEntityFieldDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonParse_BSQFieldID(jsonGet(v, "fieldId")));
+    return new LoadEntityFieldDirectOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), v["slotoffset"].get<uint32_t>(), jsonParse_BSQFieldID(v["fieldId"]));
 }
 
-LoadEntityFieldVirtualOp* LoadEntityFieldVirtualOp::jparse(boost::json::value v)
+LoadEntityFieldVirtualOp* LoadEntityFieldVirtualOp::jparse(json v)
 {
-    return new LoadEntityFieldVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQFieldID(jsonGet(v, "fieldId")));
+    return new LoadEntityFieldVirtualOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(j_layouttype(v)), jsonParse_BSQFieldID(v["fieldId"]));
 }
 
-ProjectTupleOp* ProjectTupleOp::jparse(boost::json::value v)
+ProjectTupleOp* ProjectTupleOp::jparse(json v)
 {
     std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs;
-    auto idxl = v.as_object().at("idxs").as_array();
+    auto idxl = v["idxs"];
     for(size_t i = 0; i < idxl.size(); ++i)
     {
-        auto vv = idxl[i].as_array();
-        idxs.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_int64(), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2])));
+        auto vv = idxl[i];
+        idxs.push_back(std::make_tuple(vv[0].get<BSQTupleIndex>(), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2])));
     }
 
     return new ProjectTupleOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), idxs);
 }
 
-ProjectRecordOp* ProjectRecordOp::jparse(boost::json::value v)
+ProjectRecordOp* ProjectRecordOp::jparse(json v)
 {
     std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props;
-    auto propl = v.as_object().at("props").as_array();
+    auto propl = v["props"];
     for(size_t i = 0; i < props.size(); ++i)
     {
-        auto vv = propl[i].as_array();
-        props.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (BSQTupleIndex)vv[1].as_int64(), jsonParse_BSQType(vv[2])));
+        auto vv = propl[i];
+        props.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2])));
     }
 
     return new ProjectRecordOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), props);
 }
 
-ProjectEntityOp* ProjectEntityOp::jparse(boost::json::value v)
+ProjectEntityOp* ProjectEntityOp::jparse(json v)
 {
     std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields;
-    auto fieldl = v.as_object().at("fields").as_array();
+    auto fieldl = v["fields"];
     for(size_t i = 0; i < fields.size(); ++i)
     {
-        auto vv = fieldl[i].as_array();
-        fields.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (BSQTupleIndex)vv[1].as_int64(), jsonParse_BSQType(vv[2])));
+        auto vv = fieldl[i];
+        fields.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2])));
     }
 
     return new ProjectEntityOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), j_layouttype(v), j_flowtype(v), fields);
 }
 
-UpdateTupleOp* UpdateTupleOp::jparse(boost::json::value v)
+UpdateTupleOp* UpdateTupleOp::jparse(json v)
 {
     std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates;
-    auto updatel = v.as_object().at("updates").as_array();
+    auto updatel = v["updates"];
     for(size_t i = 0; i < updatel.size(); ++i)
     {
-        auto vv = updatel[i].as_array();
-        updates.push_back(std::make_tuple((BSQTupleIndex)vv[0].as_int64(), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+        auto vv = updatel[i];
+        updates.push_back(std::make_tuple(vv[0].get<BSQTupleIndex>(), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
     }
 
     return new UpdateTupleOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
 }
 
-UpdateRecordOp* UpdateRecordOp::jparse(boost::json::value v)
+UpdateRecordOp* UpdateRecordOp::jparse(json v)
 {
     std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates;
-    auto updatel = v.as_object().at("updates").as_array();
+    auto updatel = v["updates"];
     for(size_t i = 0; i < updatel.size(); ++i)
     {
-        auto vv = updatel[i].as_array();
-        updates.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+        auto vv = updatel[i];
+        updates.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
     }
 
     return new UpdateRecordOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
 }
 
-UpdateEntityOp* UpdateEntityOp::jparse(boost::json::value v)
+UpdateEntityOp* UpdateEntityOp::jparse(json v)
 {
     std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates;
-    auto updatel = v.as_object().at("updates").as_array();
+    auto updatel = v["updates"];
     for(size_t i = 0; i < updatel.size(); ++i)
     {
-        auto vv = updatel[i].as_array();
-        updates.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), (uint32_t)vv[1].as_int64(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
+        auto vv = updatel[i];
+        updates.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2]), jsonParse_Argument(vv[3])));
     }
 
     return new UpdateEntityOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), j_layouttype(v), j_flowtype(v), updates);
 }
 
-LoadFromEpehmeralListOp* LoadFromEpehmeralListOp::jparse(boost::json::value v)
+LoadFromEpehmeralListOp* LoadFromEpehmeralListOp::jparse(json v)
 {
-    return new LoadFromEpehmeralListOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), jsonGetAsUInt<uint32_t>(v, "slotoffset"), jsonGetAsUInt<uint32_t>(v, "index"));
+    return new LoadFromEpehmeralListOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), v["slotoffset"].get<uint32_t>(), v["index"].get<uint32_t>());
 }
 
-MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(boost::json::value v)
+MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(json v)
 {
     std::vector<TargetVar> trgts;
-    std::transform(v.as_object().at("trgts").as_array().cbegin(), v.as_object().at("trgts").as_array().cend(), std::back_inserter(trgts), [](boost::json::value tv) {
+    auto jtrgts = v["trgts"];
+    std::transform(jtrgts.cbegin(), jtrgts.cend(), std::back_inserter(trgts), [](json tv) {
         return jsonParse_TargetVar(tv);
     });
 
     std::vector<const BSQType*> trgttypes;
-    std::transform(v.as_object().at("trgttypes").as_array().cbegin(), v.as_object().at("trgttypes").as_array().cend(), std::back_inserter(trgttypes), [](boost::json::value tt) {
+    std::transform(v.as_object().at("trgttypes").as_array().cbegin(), v.as_object().at("trgttypes").as_array().cend(), std::back_inserter(trgttypes), [](json tt) {
         return jsonParse_BSQType(tt);
     });
 
     std::vector<uint32_t> slotoffsets;
-    std::transform(v.as_object().at("slotoffsets").as_array().cbegin(), v.as_object().at("slotoffsets").as_array().cend(), std::back_inserter(slotoffsets), [](boost::json::value so) {
+    std::transform(v.as_object().at("slotoffsets").as_array().cbegin(), v.as_object().at("slotoffsets").as_array().cend(), std::back_inserter(slotoffsets), [](json so) {
         return (uint32_t)so.as_int64();
     });
 
     std::vector<uint32_t> indexs;
-    std::transform(v.as_object().at("indexs").as_array().cbegin(), v.as_object().at("indexs").as_array().cend(), std::back_inserter(indexs), [](boost::json::value idx) {
+    std::transform(v.as_object().at("indexs").as_array().cbegin(), v.as_object().at("indexs").as_array().cend(), std::back_inserter(indexs), [](json idx) {
         return (uint32_t)idx.as_int64();
     });
 
     return new MultiLoadFromEpehmeralListOp(j_sinfo(v), trgts, trgttypes, j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), slotoffsets, indexs);
 }
 
-SliceEphemeralListOp* SliceEphemeralListOp::jparse(boost::json::value v)
+SliceEphemeralListOp* SliceEphemeralListOp::jparse(json v)
 {
     return new SliceEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), jsonGetAsUInt<uint32_t>(v, "slotoffsetend"), jsonGetAsUInt<uint32_t>(v, "indexend"));
 }
 
-InvokeFixedFunctionOp* InvokeFixedFunctionOp::jparse(boost::json::value v)
+InvokeFixedFunctionOp* InvokeFixedFunctionOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new InvokeFixedFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_invokenameToIDMap[jsonGetAsString(v, "invokeId")], args, j_sguard(v), jsonGetAsInt<int32_t>(v, "optmaskoffset"));
 }
 
-InvokeVirtualFunctionOp* InvokeVirtualFunctionOp::jparse(boost::json::value v)
+InvokeVirtualFunctionOp* InvokeVirtualFunctionOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[jsonGetAsString(v, "invokeId")], jsonParse_BSQType(jsonGet(v, "rcvrlayouttype")), args, jsonGetAsInt<int32_t>(v, "optmaskoffset"));
 }
 
-InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(boost::json::value v)
+InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[jsonGetAsString(v, "invokeId")], args);
 }
 
-ConstructorTupleOp* ConstructorTupleOp::jparse(boost::json::value v)
+ConstructorTupleOp* ConstructorTupleOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new ConstructorTupleOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
 
-ConstructorTupleFromEphemeralListOp* ConstructorTupleFromEphemeralListOp::jparse(boost::json::value v)
+ConstructorTupleFromEphemeralListOp* ConstructorTupleFromEphemeralListOp::jparse(json v)
 {
     return new ConstructorTupleFromEphemeralListOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)));
 }
 
-ConstructorRecordOp* ConstructorRecordOp::jparse(boost::json::value v)
+ConstructorRecordOp* ConstructorRecordOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new ConstructorRecordOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
 
-ConstructorRecordFromEphemeralListOp* ConstructorRecordFromEphemeralListOp::jparse(boost::json::value v)
+ConstructorRecordFromEphemeralListOp* ConstructorRecordFromEphemeralListOp::jparse(json v)
 {
     std::vector<uint32_t> proppositions;
-    std::transform(v.as_object().at("proppositions").as_array().cbegin(), v.as_object().at("proppositions").as_array().cend(), std::back_inserter(proppositions), [](boost::json::value pos) {
+    std::transform(v.as_object().at("proppositions").as_array().cbegin(), v.as_object().at("proppositions").as_array().cend(), std::back_inserter(proppositions), [](json pos) {
         return (uint32_t)pos.as_int64();
     });
 
     return new ConstructorRecordFromEphemeralListOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), proppositions);
 }
 
-EphemeralListExtendOp* EphemeralListExtendOp::jparse(boost::json::value v)
+EphemeralListExtendOp* EphemeralListExtendOp::jparse(json v)
 {
     std::vector<Argument> ext;
-    std::transform(v.as_object().at("ext").as_array().cbegin(), v.as_object().at("ext").as_array().cend(), std::back_inserter(ext), [](boost::json::value ee) {
+    std::transform(v.as_object().at("ext").as_array().cbegin(), v.as_object().at("ext").as_array().cend(), std::back_inserter(ext), [](json ee) {
         return jsonParse_Argument(ee);
     });
 
     return new EphemeralListExtendOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(jsonParse_BSQType(jsonGet(v, "resultType"))), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), ext);
 }
 
-ConstructorEphemeralListOp* ConstructorEphemeralListOp::jparse(boost::json::value v)
+ConstructorEphemeralListOp* ConstructorEphemeralListOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new ConstructorEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_oftype(v)), args);
 }
 
-ConstructorPrimaryCollectionEmptyOp* ConstructorPrimaryCollectionEmptyOp::jparse(boost::json::value v)
+ConstructorPrimaryCollectionEmptyOp* ConstructorPrimaryCollectionEmptyOp::jparse(json v)
 {
     return new ConstructorPrimaryCollectionEmptyOp(j_sinfo(v), j_trgt(v), j_oftype(v));
 }
 
-ConstructorPrimaryCollectionSingletonsOp* ConstructorPrimaryCollectionSingletonsOp::jparse(boost::json::value v)
+ConstructorPrimaryCollectionSingletonsOp* ConstructorPrimaryCollectionSingletonsOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new ConstructorPrimaryCollectionSingletonsOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
-ConstructorPrimaryCollectionCopiesOp* ConstructorPrimaryCollectionCopiesOp::jparse(boost::json::value v)
+ConstructorPrimaryCollectionCopiesOp* ConstructorPrimaryCollectionCopiesOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new ConstructorPrimaryCollectionCopiesOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
 
-ConstructorPrimaryCollectionMixedOp* ConstructorPrimaryCollectionMixedOp::jparse(boost::json::value v)
+ConstructorPrimaryCollectionMixedOp* ConstructorPrimaryCollectionMixedOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new ConstructorPrimaryCollectionMixedOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
 
-PrefixNotOp* PrefixNotOp::jparse(boost::json::value v)
+PrefixNotOp* PrefixNotOp::jparse(json v)
 {
     return new PrefixNotOp(j_sinfo(v), j_trgt(v), j_arg(v));
 }
 
-AllTrueOp* AllTrueOp::jparse(boost::json::value v)
+AllTrueOp* AllTrueOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new AllTrueOp(j_sinfo(v), j_trgt(v), args);
 }
 
-SomeTrueOp* SomeTrueOp::jparse(boost::json::value v)
+SomeTrueOp* SomeTrueOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new SomeTrueOp(j_sinfo(v), j_trgt(v), args);
 }
 
-BinKeyEqFastOp* BinKeyEqFastOp::jparse(boost::json::value v)
+BinKeyEqFastOp* BinKeyEqFastOp::jparse(json v)
 {
     return new BinKeyEqFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_Argument(jsonGet(v, "argr"))); 
 }
     
-BinKeyEqStaticOp* BinKeyEqStaticOp::jparse(boost::json::value v)
+BinKeyEqStaticOp* BinKeyEqStaticOp::jparse(json v)
 {
     return new BinKeyEqStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
 }
 
-BinKeyEqVirtualOp* BinKeyEqVirtualOp::jparse(boost::json::value v)
+BinKeyEqVirtualOp* BinKeyEqVirtualOp::jparse(json v)
 {
     return new BinKeyEqVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
 }
 
-BinKeyLessFastOp* BinKeyLessFastOp::jparse(boost::json::value v)
+BinKeyLessFastOp* BinKeyLessFastOp::jparse(json v)
 {
     return new BinKeyLessFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_Argument(jsonGet(v, "argr"))); 
 }
     
-BinKeyLessStaticOp* BinKeyLessStaticOp::jparse(boost::json::value v)
+BinKeyLessStaticOp* BinKeyLessStaticOp::jparse(json v)
 {
     return new BinKeyLessStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
 }
 
-BinKeyLessVirtualOp* BinKeyLessVirtualOp::jparse(boost::json::value v)
+BinKeyLessVirtualOp* BinKeyLessVirtualOp::jparse(json v)
 {
     return new BinKeyLessVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
 }
 
-TypeIsNoneOp* TypeIsNoneOp::jparse(boost::json::value v)
+TypeIsNoneOp* TypeIsNoneOp::jparse(json v)
 {
     return new TypeIsNoneOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
 }
 
-TypeIsSomeOp* TypeIsSomeOp::jparse(boost::json::value v)
+TypeIsSomeOp* TypeIsSomeOp::jparse(json v)
 {
     return new TypeIsSomeOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
 }
 
-TypeTagIsOp* TypeTagIsOp::jparse(boost::json::value v)
+TypeTagIsOp* TypeTagIsOp::jparse(json v)
 {
     return new TypeTagIsOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
 }
 
-TypeTagSubtypeOfOp* TypeTagSubtypeOfOp::jparse(boost::json::value v)
+TypeTagSubtypeOfOp* TypeTagSubtypeOfOp::jparse(json v)
 {
     return new TypeTagSubtypeOfOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
 }
 
-JumpOp* JumpOp::jparse(boost::json::value v)
+JumpOp* JumpOp::jparse(json v)
 {
     return new JumpOp(j_sinfo(v), jsonGetAsUInt<uint32_t>(v, "offset"), jsonGetAsString(v, "label"));
 }
 
-JumpCondOp* JumpCondOp::jparse(boost::json::value v)
+JumpCondOp* JumpCondOp::jparse(json v)
 {
     return new JumpCondOp(j_sinfo(v), j_arg(v), jsonGetAsUInt<uint32_t>(v, "toffset"), jsonGetAsUInt<uint32_t>(v, "foffset"), jsonGetAsString(v, "tlabel"), jsonGetAsString(v, "flabel"));
 }
 
-JumpNoneOp* JumpNoneOp::jparse(boost::json::value v)
+JumpNoneOp* JumpNoneOp::jparse(json v)
 {
     return new JumpNoneOp(j_sinfo(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), jsonGetAsUInt<uint32_t>(v, "noffset"), jsonGetAsUInt<uint32_t>(v, "soffset"), jsonGetAsString(v, "nlabel"), jsonGetAsString(v, "slabel"));
 }
 
-RegisterAssignOp* RegisterAssignOp::jparse(boost::json::value v)
+RegisterAssignOp* RegisterAssignOp::jparse(json v)
 {
     return new RegisterAssignOp(j_sinfo(v), j_trgt(v), j_arg(v), j_oftype(v), j_sguard(v));
 }
 
-ReturnAssignOp* ReturnAssignOp::jparse(boost::json::value v)
+ReturnAssignOp* ReturnAssignOp::jparse(json v)
 {
     return new ReturnAssignOp(j_sinfo(v), j_trgt(v), j_arg(v), j_oftype(v));
 }
 
-ReturnAssignOfConsOp* ReturnAssignOfConsOp::jparse(boost::json::value v)
+ReturnAssignOfConsOp* ReturnAssignOfConsOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](boost::json::value arg) {
+    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
         return jsonParse_Argument(arg);
     });
 
     return new ReturnAssignOfConsOp(j_sinfo(v), j_trgt(v), args, j_oftype(v));
 }
 
-VarLifetimeStartOp* VarLifetimeStartOp::jparse(boost::json::value v)
+VarLifetimeStartOp* VarLifetimeStartOp::jparse(json v)
 {
     return new VarLifetimeStartOp(j_sinfo(v), jsonParse_Argument(jsonGet(v, "homelocation")), j_oftype(v), jsonGetAsString(v, "name"));
 }
 
-VarLifetimeEndOp* VarLifetimeEndOp::jparse(boost::json::value v)
+VarLifetimeEndOp* VarLifetimeEndOp::jparse(json v)
 {
     return new VarLifetimeEndOp(j_sinfo(v), jsonGetAsString(v, "name"));
 }
 
 template <OpCodeTag tag>
-PrimitiveNegateOperatorOp<tag>* PrimitiveNegateOperatorOp<tag>::jparse(boost::json::value v)
+PrimitiveNegateOperatorOp<tag>* PrimitiveNegateOperatorOp<tag>::jparse(json v)
 {
     return new PrimitiveNegateOperatorOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v));
 }
 
 template <OpCodeTag tag>
-PrimitiveBinaryOperatorOp<tag>* PrimitiveBinaryOperatorOp<tag>::jparse(boost::json::value v)
+PrimitiveBinaryOperatorOp<tag>* PrimitiveBinaryOperatorOp<tag>::jparse(json v)
 {
     return new PrimitiveBinaryOperatorOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
 }
 
 template <OpCodeTag tag>
-PrimitiveBinaryCompareOp<tag>* PrimitiveBinaryCompareOp<tag>::jparse(boost::json::value v)
+PrimitiveBinaryCompareOp<tag>* PrimitiveBinaryCompareOp<tag>::jparse(json v)
 {
     return new PrimitiveBinaryCompareOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
 }
 
 
-InterpOp* InterpOp::jparse(boost::json::value v)
+InterpOp* InterpOp::jparse(json v)
 {
-    auto tag = jsonGetAsTag<OpCodeTag>(v, "tag");
+    auto tag = v["tag"].get<OpCodeTag>();
 
     switch(tag)
     {

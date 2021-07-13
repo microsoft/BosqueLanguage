@@ -183,21 +183,21 @@ struct Argument
     ArgumentTag kind;
     uint32_t location;
 };
-Argument jsonParse_Argument(json val);
+Argument jsonParse_Argument(json j);
 
 struct TargetVar
 {
     ArgumentTag kind;
     uint32_t offset;
 };
-TargetVar jsonParse_TargetVar(json val);
+TargetVar jsonParse_TargetVar(json j);
 
 struct SourceInfo
 {
     uint32_t line;
     uint32_t column;
 };
-SourceInfo jsonParse_SourceInfo(json val);
+SourceInfo jsonParse_SourceInfo(json j);
 
 struct BSQGuard
 {
@@ -206,7 +206,7 @@ struct BSQGuard
 
     int32_t gvaroffset; //-1 if this is a mask offset otherwise this is the local var offset
 };
-BSQGuard jsonParse_BSQGuard(json val);
+BSQGuard jsonParse_BSQGuard(json j);
 
 struct BSQStatementGuard
 {
@@ -215,13 +215,12 @@ struct BSQStatementGuard
     bool usedefaulton;
     bool enabled; //true if this statment guard is active and should be used
 };
-BSQStatementGuard jsonParse_BSQStatementGuard(json val);
+BSQStatementGuard jsonParse_BSQStatementGuard(json j);
 
-
-const BSQType* jsonParse_BSQType(json val);
-BSQRecordPropertyID jsonParse_BSQRecordPropertyID(json val);
-BSQFieldID jsonParse_BSQFieldID(json val);
-SourceInfo j_sinfo(json val);
+const BSQType* jsonParse_BSQType(json j);
+BSQRecordPropertyID jsonParse_BSQRecordPropertyID(json j);
+BSQFieldID jsonParse_BSQFieldID(json j);
+SourceInfo j_sinfo(json j);
 
 class InterpOp
 {

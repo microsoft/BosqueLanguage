@@ -528,6 +528,40 @@ public:
 };
 
 ////
+//ByteBuffer
+struct BSQBuffer
+{
+    BSQByteBuffer* data;
+};
+
+std::string entityBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQBufferType : public BSQRefType
+{
+public:
+    BSQBufferType(): BSQRefType(BSQ_TYPE_ID_BUFFER, sizeof(BSQBuffer), "2", {}, EMPTY_KEY_CMP, entityBufferDisplay_impl, "NSCore::Buffer", {nullptr}) {;}
+
+    virtual ~BSQBufferType() {;}
+};
+
+////
+//ByteBuffer
+struct BSQDataBuffer
+{
+    BSQByteBuffer* data;
+};
+
+std::string entityDataBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQDataBufferType : public BSQRefType
+{
+public:
+    BSQDataBufferType(): BSQRefType(BSQ_TYPE_ID_DATABUFFER, sizeof(BSQDataBuffer), "2", {}, EMPTY_KEY_CMP, entityDataBufferDisplay_impl, "NSCore::DataBuffer", {nullptr}) {;}
+
+    virtual ~BSQDataBufferType() {;}
+};
+
+////
 //ISOTime
 typedef uint64_t BSQISOTime;
 
