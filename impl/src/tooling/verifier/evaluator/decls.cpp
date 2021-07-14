@@ -69,7 +69,7 @@ uint64_t computeBVMaxUnSigned(uint64_t bits)
     }
 }
 
-template <typename T>
+template <typename T, bool bvsigned>
 std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, T min, T max)
 {
     auto bbval = m.eval(e, true);
@@ -85,7 +85,14 @@ std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3
         s.push();
 
         z3::expr_vector chks(s.ctx());
-        chks.push_back(e < s.ctx().bv_val(imidstr.c_str(), this->apimodule->bv_width));
+        if constexpr (bvsigned)
+        {
+            chks.push_back(z3::slt(e, s.ctx().bv_val(imidstr.c_str(), apimodule->bv_width)));
+        }
+        else
+        {
+            chks.push_back(z3::ult(e, s.ctx().bv_val(imidstr.c_str(), apimodule->bv_width)));
+        }
         auto rr = s.check(chks);
 
         s.pop();
@@ -343,7 +350,7 @@ std::optional<uint64_t> ExtractionInfo::expBVAsUInt(z3::solver& s, z3::model& m,
     }
     else
     {
-        auto uval = bvBinSearch<uint64_t>(this->apimodule, s, m, e, 0, computeBVMaxUnSigned(this->apimodule->bv_width));
+        auto uval = bvBinSearch<uint64_t, false>(this->apimodule, s, m, e, 0, computeBVMaxUnSigned(this->apimodule->bv_width));
         if(!uval.has_value())
         {
             return std::nullopt;
@@ -374,24 +381,30 @@ std::optional<int64_t> ExtractionInfo::expBVAsInt(z3::solver& s, z3::model& m, c
         auto bits = strval.substr(2);
         auto ival = std::stoll(bits, nullptr, 2);
         
-        auto istr = std::to_string(ival);
+        auto sbits = (64 - this->apimodule->bv_width);
+        int64_t rres = ((int64_t)(ival << sbits)) >> sbits;
+
+        auto istr = std::to_string(rres);
         s.add(e == s.ctx().bv_val(istr.c_str(), this->apimodule->bv_width));
 
-        return std::make_optional(ival);
+        return std::make_optional(rres);
     }
     else if(std::regex_match(strval, re_bv_hex))
     {
         auto bits = strval.substr(2);
         auto ival = std::stoll(bits, nullptr, 16);
         
-        auto istr = std::to_string(ival);
+        auto sbits = (64 - this->apimodule->bv_width);
+        int64_t rres = ((int64_t)(ival << sbits)) >> sbits;
+
+        auto istr = std::to_string(rres);
         s.add(e == s.ctx().bv_val(istr.c_str(), this->apimodule->bv_width));
 
-        return std::make_optional(ival);
+        return std::make_optional(rres);
     }
     else
     {
-        auto ival = bvBinSearch<int64_t>(this->apimodule, s, m, e, computeBVMinSigned(this->apimodule->bv_width), computeBVMaxSigned(this->apimodule->bv_width));
+        auto ival = bvBinSearch<int64_t, true>(this->apimodule, s, m, e, computeBVMinSigned(this->apimodule->bv_width), computeBVMaxSigned(this->apimodule->bv_width));
         if(!ival.has_value())
         {
             return std::nullopt;
@@ -557,7 +570,7 @@ std::optional<json> ExtractionInfo::evalToUnsignedNumber(z3::solver& s, z3::mode
             }  
             else
             {
-                nstr;
+                return nstr;
             }
         }
         catch(...)
@@ -605,7 +618,7 @@ std::optional<json> ExtractionInfo::evalToSignedNumber(z3::solver& s, z3::model&
             }  
             else
             {
-                nstr;
+                return nstr;
             }
         }
         catch(...)

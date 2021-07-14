@@ -5,26 +5,43 @@
 
 #include "op_eval.h"
 
-#include <boost/safe_numerics/checked_default.hpp>
+//
+//TODO: win32 add checked arith
+//
 //https://github.com/dcleblanc/SafeInt
 
-///Big Macro for generating code for primitive checked negate operations
-#define PrimitiveNegateOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATOR, ERROR) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
-auto res = OPERATOR(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->arg))); \
-BSQ_LANGUAGE_ASSERT(!res.exception(), THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
+#ifdef _WIN32
+#define PrimitiveNegateOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, ERROR) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
+REPRTYPE res; -(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->arg))); \
 \
-SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), static_cast<REPRTYPE>(res));
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
+
+//Big Macro for generating code for primitive checked binary operations
+#define PrimitiveBinaryOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATORW, OPERATORP, ERROR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
+REPRTYPE res = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)) OPERATORW SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
+\
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
+#else
+///Big Macro for generating code for primitive checked negate operations
+#define PrimitiveNegateOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, ERROR) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
+REPRTYPE res; \
+bool err = __builtin_mul_overflow(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->arg)), -1, &res); \
+BSQ_LANGUAGE_ASSERT(!err, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
+\
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
+
+//Big Macro for generating code for primitive checked binary operations
+#define PrimitiveBinaryOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATORW, OPERATORP, ERROR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
+REPRTYPE res; \
+bool err = OPERATORP(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)), SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)), &res); \
+BSQ_LANGUAGE_ASSERT(!err, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
+\
+SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
+#endif
 
 //Big Macro for generating code for primitive un-checked negate operations
 #define PrimitiveNegateOperatorMacroSafe(THIS, OP, TAG, REPRTYPE) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), -SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->arg)));
-
-//Big Macro for generating code for primitive checked binary operations
-#define PrimitiveBinaryOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATOR, ERROR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
-auto res = OPERATOR(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)), SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg))); \
-BSQ_LANGUAGE_ASSERT(!res.exception(), THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
-\
-SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), static_cast<REPRTYPE>(res));
 
 //Big Macro for generating code for primitive checked rhsarg is non-zero binary operations
 #define PrimitiveBinaryOperatorMacroCheckedDiv(THIS, OP, TAG, REPRTYPE) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
@@ -49,7 +66,6 @@ REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg));
 \
 BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "NaN cannot be ordered"); \
 BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
-BSQ_LANGUAGE_ASSERT(rarg != 0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by 0"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
 EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
@@ -1438,7 +1454,7 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
 #endif
     case OpCodeTag::NegateIntOp:
     {
-        PrimitiveNegateOperatorMacroChecked(this, op, OpCodeTag::NegateDecimalOp, BSQInt, boost::safe_numerics::checked::minus<BSQInt>, "Int negation overflow/underflow");
+        PrimitiveNegateOperatorMacroChecked(this, op, OpCodeTag::NegateDecimalOp, BSQInt, "Int negation overflow/underflow");
         break;
     }
     case OpCodeTag::NegateBigIntOp:
@@ -1463,12 +1479,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::AddNatOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddNatOp, BSQNat, boost::safe_numerics::checked::add<BSQNat>, "Nat addition overflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddNatOp, BSQNat, +, __builtin_add_overflow, "Nat addition overflow")
         break;
     }
     case OpCodeTag::AddIntOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddIntOp, BSQInt, boost::safe_numerics::checked::add<BSQInt>, "Int addition overflow/underflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::AddIntOp, BSQInt, +, __builtin_add_overflow, "Int addition overflow/underflow")
         break;
     }
     case OpCodeTag::AddBigNatOp:
@@ -1498,12 +1514,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::SubNatOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubNatOp, BSQNat, boost::safe_numerics::checked::subtract<BSQNat>, "Nat subtraction overflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubNatOp, BSQNat, -, __builtin_sub_overflow, "Nat subtraction overflow")
         break;
     }
     case OpCodeTag::SubIntOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubIntOp, BSQInt, boost::safe_numerics::checked::subtract<BSQInt>, "Int subtraction overflow/underflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::SubIntOp, BSQInt, -, __builtin_sub_overflow, "Int subtraction overflow/underflow")
         break;
     }
     case OpCodeTag::SubBigNatOp:
@@ -1533,12 +1549,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::MultNatOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultNatOp, BSQNat, boost::safe_numerics::checked::multiply<BSQNat>, "Nat multiplication overflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultNatOp, BSQNat, *, __builtin_mul_overflow, "Nat multiplication overflow")
         break;
     }
     case OpCodeTag::MultIntOp:
     {
-        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultIntOp, BSQInt, boost::safe_numerics::checked::multiply<BSQInt>, "Int multiplication underflow/overflow")
+        PrimitiveBinaryOperatorMacroChecked(this, op, OpCodeTag::MultIntOp, BSQInt, *, __builtin_mul_overflow, "Int multiplication underflow/overflow")
         break;
     }
     case OpCodeTag::MultBigNatOp:
@@ -1678,12 +1694,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::LtFloatOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, <)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtFloatOp, BSQFloat, std::isnan, std::isinf, <)
         break;
     }
     case OpCodeTag::LtDecimalOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, <)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtDecimalOp, BSQDecimal, std::isnan, std::isinf, <)
         break;
     }
     case OpCodeTag::GtNatOp:
@@ -1713,12 +1729,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::GtFloatOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, >)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtFloatOp, BSQFloat, std::isnan, std::isinf, >)
         break;
     }
     case OpCodeTag::GtDecimalOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, >)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtDecimalOp, BSQDecimal, std::isnan, std::isinf, >)
         break;
     }
     case OpCodeTag::LeNatOp:
@@ -1748,12 +1764,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::LeFloatOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, <=)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeFloatOp, BSQFloat, std::isnan, std::isinf, <=)
         break;
     }
     case OpCodeTag::LeDecimalOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, <=)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeDecimalOp, BSQDecimal, std::isnan, std::isinf, <=)
         break;
     }
     case OpCodeTag::GeNatOp:
@@ -1783,12 +1799,12 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::GeFloatOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeFloatOp, BSQFloat, boost::math::isnan, boost::math::isinf, >=)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeFloatOp, BSQFloat, std::isnan, std::isinf, >=)
         break;
     }
     case OpCodeTag::GeDecimalOp:
     {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeDecimalOp, BSQDecimal, boost::math::isnan, boost::math::isinf, >=)
+        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeDecimalOp, BSQDecimal, std::isnan, std::isinf, >=)
         break;
     }
     case OpCodeTag::EqStrPosOp:

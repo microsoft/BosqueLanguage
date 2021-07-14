@@ -572,13 +572,13 @@ PrimitiveNegateOperatorOp<tag>* PrimitiveNegateOperatorOp<tag>::jparse(json v)
 template <OpCodeTag tag>
 PrimitiveBinaryOperatorOp<tag>* PrimitiveBinaryOperatorOp<tag>::jparse(json v)
 {
-    return new PrimitiveBinaryOperatorOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
+    return new PrimitiveBinaryOperatorOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["larg"]), jsonParse_Argument(v["rarg"]));
 }
 
 template <OpCodeTag tag>
 PrimitiveBinaryCompareOp<tag>* PrimitiveBinaryCompareOp<tag>::jparse(json v)
 {
-    return new PrimitiveBinaryCompareOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "larg")), jsonParse_Argument(jsonGet(v, "rarg")));
+    return new PrimitiveBinaryCompareOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["larg"]), jsonParse_Argument(v["rarg"]));
 }
 
 

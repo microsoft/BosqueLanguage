@@ -39,7 +39,7 @@ else {
     outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\icpp.exe\"";
 }
 
-const command = `${compiler} ${ccflags}${includes} ${outfile} ${cppfiles.join(" ")}`;
+const command = `${compiler} ${ccflags} ${includes} ${outfile} ${cppfiles.join(" ")}`;
 
 fsx.ensureDirSync(outbase);
 fsx.removeSync(outfile);

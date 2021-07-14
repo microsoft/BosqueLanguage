@@ -328,6 +328,7 @@ bool entityBigNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr
     }
 
     dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, std::stoull(bnval.value()));
+    return true;
 }
 
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -358,6 +359,7 @@ bool entityBigIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr
     }
 
     dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, std::stoll(bival.value()));
+    return true;
 }
 
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -1114,6 +1116,15 @@ bool entityContentHashJSONParse_impl(const BSQType* btype, json j, StorageLocati
 {
     assert(false);
     return false;
+}
+
+BSQRegex bsqRegexJSONParse_impl(json j)
+{
+    auto restr = j["restr"].get<std::string>();
+    auto isAnchorStart = j["isAnchorStart"].get<bool>();
+    auto isAnchorEnd = j["isAnchorEnd"].get<bool>();
+
+    return BSQRegex{restr, std::regex{restr}, isAnchorStart, isAnchorEnd};
 }
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)

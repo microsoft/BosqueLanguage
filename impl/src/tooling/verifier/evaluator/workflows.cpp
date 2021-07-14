@@ -66,13 +66,21 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, unsigned timeo
             auto ctx = einfo.extendContext(m, rootctx, i);
             auto jarg = argtype->argextract(einfo, ctx, s, m);
 
+            if(!jarg.has_value())
+            {
+                return {
+                    {"result", "error"},
+                    {"info", "Could not extract arg"}
+                };
+            }
+
             if(!bsqon)
             {
-                argv.push_back(jarg);
+                argv.push_back(jarg.value());
             }
             else
             {
-                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg, "");
+                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg.value(), "");
                 argv.push_back(bsqarg.value());
             }
         }
@@ -147,16 +155,24 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
         auto resexpr = c.constant("_@smtres@_value", getZ3SortFor(apimodule, apimodule->api->resType, c));
         auto eres = apimodule->api->resType->resextract(einfo, resexpr, s, m);
         
-        if(bsqon)
+        if(bsqon && eres.has_value())
         {
-            std::optional<std::string> bsqarg = apimodule->api->resType->tobsqarg(pinfo, eres, "");
+            std::optional<std::string> bsqarg = apimodule->api->resType->tobsqarg(pinfo, eres.value(), "");
             eres = bsqarg.value();
+        }
+
+        if(!eres.has_value())
+        {
+            return {
+                {"result", "error"},
+                {"info", "Could not extract result"}
+            };
         }
 
         return {
             {"result", "output"},
             {"time", delta_ms},
-            {"output", eres}
+            {"output", eres.value()}
         };
     }
 }
@@ -169,6 +185,7 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
 //  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
 //  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
 //  Timeout a and return the JSON payload -- {result: "unknown", time: number}
+//  Main should also handle exceptions and -- {result: "error", info: string}
 
 json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsigned timeout, bool bsqon)
 {
@@ -224,13 +241,21 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsig
             auto ctx = einfo.extendContext(m, rootctx, i);
             auto jarg = argtype->resextract(einfo, ctx, s, m);
 
+            if(!jarg.has_value())
+            {
+                return {
+                    {"result", "error"},
+                    {"info", "Could not extract arg"}
+                };
+            }
+
             if(!bsqon)
             {
-                argv.push_back(jarg);
+                argv.push_back(jarg.value());
             }
             else
             {
-                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg, "");
+                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg.value(), "");
                 argv.push_back(bsqarg.value());
             }
         }
