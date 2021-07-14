@@ -37,7 +37,7 @@ class BSQListReprType : public BSQRefType
 {
 public:
     BSQListReprType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name):
-        BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityListReprDisplay_impl, name, {nullptr, nullptr})
+        BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityListReprDisplay_impl, name, {nullptr})
     {;}
 
     virtual ~BSQListReprType() {;}
@@ -181,8 +181,7 @@ struct ListTypeConstructorInfo
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl);
-void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl);
+bool entityListParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQListType : public BSQStructType
 {
@@ -192,7 +191,7 @@ public:
     const uint64_t esize;
     const BSQTypeID etype;
 
-    BSQListType(BSQTypeID tid, std::string name, uint64_t esize, BSQTypeID etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_CMP, entityListDisplay_impl, name, {entityListParse_impl, entityListGenerateRandom_impl}), esize(esize), etype(etype)
+    BSQListType(BSQTypeID tid, std::string name, uint64_t esize, BSQTypeID etype): BSQStructType(tid, sizeof(BSQList), "21", {}, EMPTY_KEY_CMP, entityListDisplay_impl, name, {entityListParse_impl}), esize(esize), etype(etype)
     {
         static_assert(sizeof(BSQList) == 16);
     }

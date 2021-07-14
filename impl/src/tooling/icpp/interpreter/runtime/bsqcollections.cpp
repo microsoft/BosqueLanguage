@@ -251,9 +251,9 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
     }
 }
 
-bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, StorageLocationPtr sl)
+bool entityListParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {
-    if(!jv.is_array())
+    if(!j.is_array())
     {
         return false;
     }
@@ -263,14 +263,13 @@ bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, St
     const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
 
     auto vbuff = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
-    const boost::json::array& jlist = jv.as_array();
 
     //
     //TODO: we need to handle this
     //
-    assert(jlist.size() <= 40);
+    assert(j.size() <= 40);
 
-    auto ct = jlist.size();
+    auto ct = j.size();
     if(ct == 0)
     {
         ltype->storeValue(sl, (StorageLocationPtr)&bsqemptylist);
@@ -286,59 +285,19 @@ bool entityListParse_impl(const BSQType* btype, const boost::json::value& jv, St
         Allocator::GlobalAllocator.pushRoot(&tt);
 
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-        for (size_t i = 0; i < jlist.size(); ++i)
+        for (size_t i = 0; i < j.size(); ++i)
         {
-            etype->consops.fpJSONParse(etype, jlist.at(i), &vbuff);
+            etype->consops.fpJSONParse(etype, j[i], &vbuff);
             etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
         }
 
-        BSQList ll = {tt, jlist.size()};
+        BSQList ll = {tt, j.size()};
         ltype->storeValue(sl, &ll);
 
         Allocator::GlobalAllocator.popRoot();
     }
 
     return true;
-}
-
-void entityListGenerateRandom_impl(const BSQType* btype, RandGenerator& rnd, StorageLocationPtr sl)
-{
-    auto ltype = dynamic_cast<const BSQListType*>(btype);
-    auto etype = BSQType::g_typetable[ltype->etype];
-    const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
-
-    auto vbuff = BSQ_STACK_SPACE_ALLOC(etype->allocinfo.inlinedatasize);
-    
-    auto lim = Environment::g_small_model_gen ? 3 : 40;
-    std::uniform_int_distribution<size_t> sizedist(0, lim);
-
-    auto ct = sizedist(rnd);
-    if(ct == 0)
-    {
-        ltype->storeValue(sl, (StorageLocationPtr)&bsqemptylist);
-    }
-    else
-    {
-        const BSQListFlatKTypeAbstract* fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQListFlatKTypeAbstract*>& pp) {
-            return ct <= pp.first;
-        })->second;
-
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(fltype);
-        fltype->initializeCountInfo(tt, ct, ltype->esize);
-        Allocator::GlobalAllocator.pushRoot(&tt);
-
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-        for (size_t i = 0; i < ct; ++i)
-        {
-            etype->consops.fpGenerateRandom(etype, rnd, &vbuff);
-            etype->storeValue(SLPTR_INDEX_DATAPTR(fltype->getDataBytes(tt), i * ltype->esize), &vbuff);
-        }
-
-        BSQList ll = {tt, ct};
-        ltype->storeValue(sl, &ll);
-
-        Allocator::GlobalAllocator.popRoot();
-    }
 }
 
 std::map<BSQTypeID, ListTypeConstructorInfo> BSQListType::g_listTypeMap;

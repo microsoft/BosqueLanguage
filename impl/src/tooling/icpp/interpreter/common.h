@@ -12,8 +12,12 @@
 #include <cstdint>
 #include <math.h>
 
+#include <optional>
 #include <string>
 #include <regex>
+
+#include "json.hpp"
+typedef nlohmann::json json;
 
 //TODO: mimalloc
 //#include <mimalloc.h>
@@ -90,10 +94,10 @@ inline void mi_free(void* mem)
 #define BSQ_MAX_BIG_ALLOC_COUNT 500
 
 //Allocation routines
-#ifdef __APPLE__
-#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
-#else
+#ifdef _WIN32
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
+#else
+#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
 #endif
 
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_zalloc(SIZE)
@@ -222,20 +226,22 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_STRINGITERATOR 9
 #define BSQ_TYPE_ID_STRING 10
 #define BSQ_TYPE_ID_BYTEBUFFER 11
-#define BSQ_TYPE_ID_ISOTIME 12
-#define BSQ_TYPE_ID_LOGICALTIME 13
-#define BSQ_TYPE_ID_UUID 14
-#define BSQ_TYPE_ID_CONTENTHASH 15
-#define BSQ_TYPE_ID_REGEX 16
+#define BSQ_TYPE_ID_BUFFER 12
+#define BSQ_TYPE_ID_DATABUFFER 13
+#define BSQ_TYPE_ID_ISOTIME 14
+#define BSQ_TYPE_ID_LOGICALTIME 15
+#define BSQ_TYPE_ID_UUID 16
+#define BSQ_TYPE_ID_CONTENTHASH 17
+#define BSQ_TYPE_ID_REGEX 18
 
-#define BSQ_TYPE_ID_STRINGREPR_K16 17
-#define BSQ_TYPE_ID_STRINGREPR_K32 18
-#define BSQ_TYPE_ID_STRINGREPR_K64 19
-#define BSQ_TYPE_ID_STRINGREPR_K96 20
-#define BSQ_TYPE_ID_STRINGREPR_K128 21
-#define BSQ_TYPE_ID_STRINGREPR_K256 22
-#define BSQ_TYPE_ID_STRINGREPR_SLICE 23
-#define BSQ_TYPE_ID_STRINGREPR_CONCAT 24
+#define BSQ_TYPE_ID_STRINGREPR_K16 19
+#define BSQ_TYPE_ID_STRINGREPR_K32 20
+#define BSQ_TYPE_ID_STRINGREPR_K64 21
+#define BSQ_TYPE_ID_STRINGREPR_K96 22
+#define BSQ_TYPE_ID_STRINGREPR_K128 23
+#define BSQ_TYPE_ID_STRINGREPR_K256 24
+#define BSQ_TYPE_ID_STRINGREPR_SLICE 25
+#define BSQ_TYPE_ID_STRINGREPR_CONCAT 26
 
 enum class BSQPrimitiveImplTag
 {

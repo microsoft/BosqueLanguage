@@ -9,10 +9,10 @@
 #include "bsqtype.h"
 #include "bsqop.h"
 
-void jsonLoadBSQTypeDecl(boost::json::value v);
+void jsonLoadBSQTypeDecl(json v);
 
-void jsonLoadBSQLiteralDecl(boost::json::value v, size_t& storageOffset, const BSQType*& gtype, std::string& lval);
-void jsonLoadBSQConstantDecl(boost::json::value v, size_t& storageOffset, BSQInvokeID& ikey, const BSQType*& gtype);
+void jsonLoadBSQLiteralDecl(json v, size_t& storageOffset, const BSQType*& gtype, std::string& lval);
+void jsonLoadBSQConstantDecl(json v, size_t& storageOffset, BSQInvokeID& ikey, const BSQType*& gtype);
 
 class BSQFunctionParameter 
 {
@@ -52,7 +52,7 @@ public:
 
     virtual bool isPrimitive() const = 0;
 
-    static void jsonLoad(boost::json::value v);
+    static void jsonLoad(json v);
 };
 
 class BSQInvokeBodyDecl : public BSQInvokeDecl 
@@ -79,7 +79,7 @@ public:
         return false;
     }
 
-    static BSQInvokeBodyDecl* jsonLoad(boost::json::value v);
+    static BSQInvokeBodyDecl* jsonLoad(json v);
 };
 
 class BSQPCode
@@ -124,5 +124,5 @@ public:
         return true;
     }
 
-    static BSQInvokePrimitiveDecl* jsonLoad(boost::json::value v);
+    static BSQInvokePrimitiveDecl* jsonLoad(json v);
 };

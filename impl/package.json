@@ -24,8 +24,7 @@
         "icppbuild": "node ./build/interpreter_build.js",
         "testsmt": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/evaluator_build.js && node ./bin/test/test_runner.js --restriction smt",
         "testicpp": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/interpreter_build.js && node ./bin/test/test_runner.js --restriction execute",
-        "testfull": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/evaluator_build.js && node ./build/interpreter_build.js && node ./bin/test/test_runner.js",
-        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/evaluator_build.js && node ./bin/test/test_runner.js --restriction smt"
+        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/evaluator_build.js && node ./build/interpreter_build.js && node ./bin/test/test_runner.js"
     },
     "files": [
         "bin/*"
