@@ -94,10 +94,10 @@ inline void mi_free(void* mem)
 #define BSQ_MAX_BIG_ALLOC_COUNT 500
 
 //Allocation routines
-#ifdef __APPLE__
-#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
-#else
+#ifdef _WIN32
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
+#else
+#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
 #endif
 
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_zalloc(SIZE)
