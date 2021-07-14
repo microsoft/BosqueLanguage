@@ -1861,7 +1861,7 @@ std::optional<std::string> StringType::tobsqarg(const ParseInfo& pinfo, json j, 
 
 std::optional<json> StringType::argextract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
-    auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().real_sort());
+    auto bef = ex.getArgContextConstructor(m, "BString@UFCons_API", m.ctx().string_sort());
     return ex.evalToString(s, m, bef(ctx));
 }
 

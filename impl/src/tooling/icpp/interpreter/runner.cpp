@@ -148,6 +148,7 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
         }
 
         dynamic_cast<const BSQStringType*>(BSQType::g_typeString)->storeValueDirect(sl, s);
+        break;
     }
     case BSQ_TYPE_ID_REGEX: {
         assert(false);

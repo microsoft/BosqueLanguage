@@ -87,7 +87,7 @@ else if(mode === "--check") {
     }
 
     if(errors.length === 0) {
-        process.stdout.write(chalk.green("No errors are possible in this program!"));
+        process.stdout.write(chalk.green("No errors are possible in this program!\n"));
         process.exit(0);
     }
 

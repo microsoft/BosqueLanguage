@@ -229,7 +229,7 @@ struct BSQInlineString
 
     inline static BSQInlineString create(const uint8_t* chars, uint64_t len)
     {
-        BSQInlineString istr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (uint8_t)len};
+        BSQInlineString istr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (uint8_t)len};
         assert(IS_INLINE_STRING(&istr));
 
         std::copy(chars, chars + len, istr.utf8bytes);
@@ -389,7 +389,10 @@ struct BSQStringIterator
     int16_t cpos;
     int16_t minpos;
     int16_t maxpos;
+    int16_t statusflag;
 };
+constexpr int16_t g_validIterFlag = 0;
+constexpr int16_t g_invalidIterFlag = 1;
 
 std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
