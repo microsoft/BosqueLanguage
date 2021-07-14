@@ -569,7 +569,7 @@ std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, Stor
 
 bool iteratorIsValid(const BSQStringIterator* iter)
 {
-    return iter->cbuff != nullptr;
+    return iter->statusflag != g_invalidIterFlag;
 }
 
 bool iteratorLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2)
@@ -584,6 +584,8 @@ bool iteratorEqual(const BSQStringIterator* iter1, const BSQStringIterator* iter
 
 uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter)
 {
+    assert(iteratorIsValid(iter));
+
     if(IS_INLINE_STRING(&iter->str))
     {
         return *(BSQInlineString::utf8Bytes(iter->str.u_inlineString) + iter->cpos);
@@ -600,6 +602,7 @@ void initializeStringIterPosition(BSQStringIterator* iter, int64_t pos)
     if((pos == -1) | (pos == ssize) | (ssize == 0))
     {
         iter->cbuff = nullptr;
+        iter->statusflag = g_invalidIterFlag;
     }
     else
     {
@@ -614,6 +617,7 @@ void initializeStringIterPosition(BSQStringIterator* iter, int64_t pos)
         {
             GET_TYPE_META_DATA_AS(BSQStringReprType, iter->str.u_data)->initializeIterPosition(iter, iter->str.u_data, pos);
         }
+        iter->statusflag = g_validIterFlag;
     }
 }
 
@@ -674,6 +678,8 @@ void incrementStringIterator_codePoint(BSQStringIterator* iter)
 
 void decrementStringIterator_codePoint(BSQStringIterator* iter)
 {
+    assert(iteratorIsValid(iter));
+
     decrementStringIterator_utf8byte(iter);
     if(iter->strpos != -1)
     {
@@ -721,7 +727,7 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
         incrementStringIterator_utf8byte(&iter);
     }
 
-    return res;
+    return "\"" + res + "\"";
 }
 
 int entityStringKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -763,6 +769,7 @@ bool entityStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr
             assert(false);
         }
         
+        dynamic_cast<const BSQStringType*>(BSQType::g_typeString)->storeValueDirect(sl, s);
         return true;
     }
 }
