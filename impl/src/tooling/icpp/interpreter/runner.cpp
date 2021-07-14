@@ -9,45 +9,35 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/json/src.hpp>
-//https://github.com/nlohmann/json
-
-bool loadJSONFromStdIn(const std::string& filename, boost::json::value& jval, boost::json::value& jargs)
+std::optional<json> getIRFromStdIn()
 {
-    std::vector<char> contents;
-    std::string line;
-    while(getline(std::cin, line))
+    try
     {
-        std::copy(line.cbegin(), line.cend(), std::back_inserter(contents));
-        line.clear();
+        json payload;
+        std::cin >> payload;
+
+        return std::make_optional(payload);
     }
-
-    auto jv = boost::json::parse(std::string(contents.cbegin(), contents.cend()));
-    jval = jv.as_object().at("code");
-    jargs = jv.as_object().at("args");
-
-    return true;
+    catch(...)
+    {
+        return std::nullopt;
+    }
 }
 
-bool loadJSONFromFile(const std::string& filename, boost::json::value& jval)
+std::optional<json> getIRFromFile(const std::string& file)
 {
-    std::vector<char> contents;
-    std::ifstream file(filename);
-    if(!file.is_open())
+    try
     {
-        return false;
-    }
+        json payload;
+        std::ifstream infile(file);
+        infile >> payload;
 
-    std::string line;
-    while(getline(file, line))
+        return std::make_optional(payload);
+    }
+    catch(const std::exception& e)
     {
-        std::copy(line.cbegin(), line.cend(), std::back_inserter(contents));
-        line.clear();
+        return std::nullopt;
     }
-    file.close();
-
-    jval = boost::json::parse(std::string(contents.cbegin(), contents.cend()));
-    return true;
 }
 
 void initialize(size_t typecount, size_t cbuffsize, const RefMask cmask)
@@ -107,13 +97,11 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
         break;
     }
     case BSQ_TYPE_ID_BIGNAT: {
-        BSQBigNat bn(lval.substr(0, lval.size() - 1));
-        dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, bn);
+        dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, std::stoull(lval.substr(0, lval.size() - 1)));
         break;
     }
     case BSQ_TYPE_ID_BIGINT: {
-        BSQBigInt bi(lval.substr(0, lval.size() - 1));
-        dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, bi);
+        dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, std::stoll(lval.substr(0, lval.size() - 1)));
         break;
     }
     case BSQ_TYPE_ID_FLOAT: {
@@ -177,7 +165,7 @@ void initializeConst(Evaluator& runner, size_t storageOffset, BSQInvokeID ikey, 
     runner.invokeGlobalCons(ccall, Environment::g_constantbuffer + storageOffset, gtype, ccall->resultArg);
 }
 
-std::string loadAssembly(const boost::json::value jv, Evaluator& runner)
+std::string loadAssembly(json j, Evaluator& runner)
 {
     ////
     //Initialize builtin stuff
@@ -280,7 +268,7 @@ BSQInvokeBodyDecl* resolveInvokeForMainName(const std::string& main)
     return dynamic_cast<BSQInvokeBodyDecl*>(Environment::g_invokes[Environment::g_invokenameToIDMap[main]]);
 }
 
-bool parseJSONArgs(const boost::json::value args, const std::vector<BSQFunctionParameter>& params, uint8_t* argsroot, const std::map<size_t, size_t>& pposmap, std::vector<StorageLocationPtr>& argslocs)
+bool parseJSONArgs(json args, const std::vector<BSQFunctionParameter>& params, uint8_t* argsroot, const std::map<size_t, size_t>& pposmap, std::vector<StorageLocationPtr>& argslocs)
 {
     for(size_t i = 0; i < params.size(); ++i)
     {
@@ -295,17 +283,6 @@ bool parseJSONArgs(const boost::json::value args, const std::vector<BSQFunctionP
         argslocs.push_back(trgt);
     }
     return true;
-}
-
-void genRandomArgs(RandGenerator& rnd, const std::vector<BSQFunctionParameter>& params, uint8_t* argsroot, const std::map<size_t, size_t>& pposmap, std::vector<StorageLocationPtr>& argslocs)
-{
-    for(size_t i = 0; i < params.size(); ++i)
-    {
-        StorageLocationPtr trgt = (argsroot + pposmap.at(i));
-        params[i].ptype->consops.fpGenerateRandom(params[i].ptype, rnd, trgt);
-
-        argslocs.push_back(trgt);
-    }
 }
 
 bool run(Evaluator& runner, const std::string& main, const boost::json::value& args, std::string& res)

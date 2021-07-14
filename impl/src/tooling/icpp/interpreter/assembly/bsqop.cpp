@@ -106,6 +106,14 @@ BSQStatementGuard j_sguard(json j)
     return jsonParse_BSQStatementGuard(j["sguard"]);
 }
 
+void j_args(json j, std::vector<Argument>& args)
+{
+    auto jargs = j["args"];
+    std::transform(jargs.cbegin(), jargs.cend(), std::back_inserter(args), [](json arg) {
+        return jsonParse_Argument(arg);
+    });
+}
+
 DeadFlowOp* DeadFlowOp::jparse(json v)
 {
     return new DeadFlowOp(j_sinfo(v));
@@ -313,18 +321,21 @@ MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(json v)
     });
 
     std::vector<const BSQType*> trgttypes;
-    std::transform(v.as_object().at("trgttypes").as_array().cbegin(), v.as_object().at("trgttypes").as_array().cend(), std::back_inserter(trgttypes), [](json tt) {
+    auto jtrgttypes = v["trgttypes"];
+    std::transform(jtrgttypes.cbegin(), jtrgttypes.cend(), std::back_inserter(trgttypes), [](json tt) {
         return jsonParse_BSQType(tt);
     });
 
     std::vector<uint32_t> slotoffsets;
-    std::transform(v.as_object().at("slotoffsets").as_array().cbegin(), v.as_object().at("slotoffsets").as_array().cend(), std::back_inserter(slotoffsets), [](json so) {
-        return (uint32_t)so.as_int64();
+    auto jslotoffsets = v["slotoffsets"];
+    std::transform(jslotoffsets.cbegin(), jslotoffsets.cend(), std::back_inserter(slotoffsets), [](json so) {
+        return so.get<uint32_t>();
     });
 
     std::vector<uint32_t> indexs;
-    std::transform(v.as_object().at("indexs").as_array().cbegin(), v.as_object().at("indexs").as_array().cend(), std::back_inserter(indexs), [](json idx) {
-        return (uint32_t)idx.as_int64();
+    auto jindexs = v["indexs"];
+    std::transform(jindexs.cbegin(), jindexs.cend(), std::back_inserter(indexs), [](json idx) {
+        return idx.get<uint32_t>();
     });
 
     return new MultiLoadFromEpehmeralListOp(j_sinfo(v), trgts, trgttypes, j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), slotoffsets, indexs);
@@ -332,45 +343,37 @@ MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(json v)
 
 SliceEphemeralListOp* SliceEphemeralListOp::jparse(json v)
 {
-    return new SliceEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), jsonGetAsUInt<uint32_t>(v, "slotoffsetend"), jsonGetAsUInt<uint32_t>(v, "indexend"));
+    return new SliceEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), v["slotoffsetend"].get<uint32_t>(), v["indexend"].get<uint32_t>());
 }
 
 InvokeFixedFunctionOp* InvokeFixedFunctionOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
-    return new InvokeFixedFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_invokenameToIDMap[jsonGetAsString(v, "invokeId")], args, j_sguard(v), jsonGetAsInt<int32_t>(v, "optmaskoffset"));
+    return new InvokeFixedFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_invokenameToIDMap[v["invokeId"].get<std::string>()], args, j_sguard(v), v["optmaskoffset"].get<int32_t>());
 }
 
 InvokeVirtualFunctionOp* InvokeVirtualFunctionOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
-    return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[jsonGetAsString(v, "invokeId")], jsonParse_BSQType(jsonGet(v, "rcvrlayouttype")), args, jsonGetAsInt<int32_t>(v, "optmaskoffset"));
+    return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[v["invokeId"].get<std::string>()], jsonParse_BSQType(v["rcvrlayouttype"]), args, v["optmaskoffset"].get<int32_t>());
 }
 
 InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
-    return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[jsonGetAsString(v, "invokeId")], args);
+    return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[v["invokeId"].get<std::string>()], args);
 }
 
 ConstructorTupleOp* ConstructorTupleOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new ConstructorTupleOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
@@ -383,9 +386,7 @@ ConstructorTupleFromEphemeralListOp* ConstructorTupleFromEphemeralListOp::jparse
 ConstructorRecordOp* ConstructorRecordOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new ConstructorRecordOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
@@ -393,8 +394,9 @@ ConstructorRecordOp* ConstructorRecordOp::jparse(json v)
 ConstructorRecordFromEphemeralListOp* ConstructorRecordFromEphemeralListOp::jparse(json v)
 {
     std::vector<uint32_t> proppositions;
-    std::transform(v.as_object().at("proppositions").as_array().cbegin(), v.as_object().at("proppositions").as_array().cend(), std::back_inserter(proppositions), [](json pos) {
-        return (uint32_t)pos.as_int64();
+    auto jproppositions = v["proppositions"];
+    std::transform(jproppositions.cbegin(), jproppositions.cend(), std::back_inserter(proppositions), [](json pos) {
+        return pos.get<uint32_t>();
     });
 
     return new ConstructorRecordFromEphemeralListOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), proppositions);
@@ -403,19 +405,18 @@ ConstructorRecordFromEphemeralListOp* ConstructorRecordFromEphemeralListOp::jpar
 EphemeralListExtendOp* EphemeralListExtendOp::jparse(json v)
 {
     std::vector<Argument> ext;
-    std::transform(v.as_object().at("ext").as_array().cbegin(), v.as_object().at("ext").as_array().cend(), std::back_inserter(ext), [](json ee) {
+    auto jext = v["ext"];
+    std::transform(jext.cbegin(), jext.cend(), std::back_inserter(ext), [](json ee) {
         return jsonParse_Argument(ee);
     });
 
-    return new EphemeralListExtendOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(jsonParse_BSQType(jsonGet(v, "resultType"))), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), ext);
+    return new EphemeralListExtendOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(jsonParse_BSQType(v["resultType"])), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), ext);
 }
 
 ConstructorEphemeralListOp* ConstructorEphemeralListOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new ConstructorEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_oftype(v)), args);
 }
@@ -428,18 +429,14 @@ ConstructorPrimaryCollectionEmptyOp* ConstructorPrimaryCollectionEmptyOp::jparse
 ConstructorPrimaryCollectionSingletonsOp* ConstructorPrimaryCollectionSingletonsOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new ConstructorPrimaryCollectionSingletonsOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
 ConstructorPrimaryCollectionCopiesOp* ConstructorPrimaryCollectionCopiesOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new ConstructorPrimaryCollectionCopiesOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
@@ -447,9 +444,7 @@ ConstructorPrimaryCollectionCopiesOp* ConstructorPrimaryCollectionCopiesOp::jpar
 ConstructorPrimaryCollectionMixedOp* ConstructorPrimaryCollectionMixedOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new ConstructorPrimaryCollectionMixedOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
 }
@@ -462,9 +457,7 @@ PrefixNotOp* PrefixNotOp::jparse(json v)
 AllTrueOp* AllTrueOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new AllTrueOp(j_sinfo(v), j_trgt(v), args);
 }
@@ -472,76 +465,74 @@ AllTrueOp* AllTrueOp::jparse(json v)
 SomeTrueOp* SomeTrueOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new SomeTrueOp(j_sinfo(v), j_trgt(v), args);
 }
 
 BinKeyEqFastOp* BinKeyEqFastOp::jparse(json v)
 {
-    return new BinKeyEqFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_Argument(jsonGet(v, "argr"))); 
+    return new BinKeyEqFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_Argument(v["argr"])); 
 }
     
 BinKeyEqStaticOp* BinKeyEqStaticOp::jparse(json v)
 {
-    return new BinKeyEqStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+    return new BinKeyEqStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
 }
 
 BinKeyEqVirtualOp* BinKeyEqVirtualOp::jparse(json v)
 {
-    return new BinKeyEqVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+    return new BinKeyEqVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
 }
 
 BinKeyLessFastOp* BinKeyLessFastOp::jparse(json v)
 {
-    return new BinKeyLessFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_Argument(jsonGet(v, "argr"))); 
+    return new BinKeyLessFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_Argument(v["argr"])); 
 }
     
 BinKeyLessStaticOp* BinKeyLessStaticOp::jparse(json v)
 {
-    return new BinKeyLessStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+    return new BinKeyLessStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
 }
 
 BinKeyLessVirtualOp* BinKeyLessVirtualOp::jparse(json v)
 {
-    return new BinKeyLessVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(jsonGet(v, "argl")), jsonParse_BSQType(jsonGet(v, "argllayout")), jsonParse_Argument(jsonGet(v, "argr")), jsonParse_BSQType(jsonGet(v, "argrlayout"))); 
+    return new BinKeyLessVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
 }
 
 TypeIsNoneOp* TypeIsNoneOp::jparse(json v)
 {
-    return new TypeIsNoneOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+    return new TypeIsNoneOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
 }
 
 TypeIsSomeOp* TypeIsSomeOp::jparse(json v)
 {
-    return new TypeIsSomeOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+    return new TypeIsSomeOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
 }
 
 TypeTagIsOp* TypeTagIsOp::jparse(json v)
 {
-    return new TypeTagIsOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+    return new TypeTagIsOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
 }
 
 TypeTagSubtypeOfOp* TypeTagSubtypeOfOp::jparse(json v)
 {
-    return new TypeTagSubtypeOfOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), j_sguard(v));
+    return new TypeTagSubtypeOfOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
 }
 
 JumpOp* JumpOp::jparse(json v)
 {
-    return new JumpOp(j_sinfo(v), jsonGetAsUInt<uint32_t>(v, "offset"), jsonGetAsString(v, "label"));
+    return new JumpOp(j_sinfo(v), v["offset"].get<uint32_t>(), v["label"].get<std::string>());
 }
 
 JumpCondOp* JumpCondOp::jparse(json v)
 {
-    return new JumpCondOp(j_sinfo(v), j_arg(v), jsonGetAsUInt<uint32_t>(v, "toffset"), jsonGetAsUInt<uint32_t>(v, "foffset"), jsonGetAsString(v, "tlabel"), jsonGetAsString(v, "flabel"));
+    return new JumpCondOp(j_sinfo(v), j_arg(v), v["toffset"].get<uint32_t>(), v["foffset"].get<uint32_t>(), v["tlabel"].get<std::string>(), v["flabel"].get<std::string>());
 }
 
 JumpNoneOp* JumpNoneOp::jparse(json v)
 {
-    return new JumpNoneOp(j_sinfo(v), j_arg(v), jsonParse_BSQType(jsonGet(v, "arglayout")), jsonGetAsUInt<uint32_t>(v, "noffset"), jsonGetAsUInt<uint32_t>(v, "soffset"), jsonGetAsString(v, "nlabel"), jsonGetAsString(v, "slabel"));
+    return new JumpNoneOp(j_sinfo(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), v["noffset"].get<uint32_t>(), v["soffset"].get<uint32_t>(), v["nlabel"].get<std::string>(), v["slabel"].get<std::string>());
 }
 
 RegisterAssignOp* RegisterAssignOp::jparse(json v)
@@ -557,21 +548,19 @@ ReturnAssignOp* ReturnAssignOp::jparse(json v)
 ReturnAssignOfConsOp* ReturnAssignOfConsOp::jparse(json v)
 {
     std::vector<Argument> args;
-    std::transform(v.as_object().at("args").as_array().cbegin(), v.as_object().at("args").as_array().cend(), std::back_inserter(args), [](json arg) {
-        return jsonParse_Argument(arg);
-    });
+    j_args(v, args);
 
     return new ReturnAssignOfConsOp(j_sinfo(v), j_trgt(v), args, j_oftype(v));
 }
 
 VarLifetimeStartOp* VarLifetimeStartOp::jparse(json v)
 {
-    return new VarLifetimeStartOp(j_sinfo(v), jsonParse_Argument(jsonGet(v, "homelocation")), j_oftype(v), jsonGetAsString(v, "name"));
+    return new VarLifetimeStartOp(j_sinfo(v), jsonParse_Argument(v["homelocation"]), j_oftype(v), v["name"].get<std::string>());
 }
 
 VarLifetimeEndOp* VarLifetimeEndOp::jparse(json v)
 {
-    return new VarLifetimeEndOp(j_sinfo(v), jsonGetAsString(v, "name"));
+    return new VarLifetimeEndOp(j_sinfo(v), v["name"].get<std::string>());
 }
 
 template <OpCodeTag tag>
