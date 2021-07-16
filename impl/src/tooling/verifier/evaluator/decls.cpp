@@ -76,7 +76,22 @@ std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3
     auto bbval = m.eval(e, true);
     auto strval = bbval.to_string();
 
-    xxx; //TODO: copts
+    for(size_t i = 0; i < copts.size(); ++i)
+    {
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        std::string iistr = std::to_string(copts[i]);
+        chks.push_back(e == s.ctx().bv_val(iistr.c_str(), apimodule->bv_width));
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            return std::make_optional(copts[i]);
+        }
+    }
 
     T imin = min;
     T imax = max;
@@ -123,7 +138,22 @@ std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z
     auto bbval = m.eval(e, true);
     auto strval = bbval.to_string();
 
-    xxx; //TODO copts
+    for(size_t i = 0; i < copts.size(); ++i)
+    {
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        std::string iistr = std::to_string(copts[i]);
+        chks.push_back(e == s.ctx().int_val(iistr.c_str()));
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            return std::make_optional(copts[i]);
+        }
+    }
 
     T imin = min;
     T imax = max;
@@ -157,10 +187,59 @@ std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z
     return std::make_optional(imin);
 }
 
-std::optional<double> intBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, const std::vector<double>& copts)
+std::optional<double> realBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, const std::vector<double>& copts)
 {
-    //Double bin search here + bin search fixes above
-    xxxx;
+    auto bbval = m.eval(e, true);
+    auto strval = bbval.to_string();
+
+    for(size_t i = 0; i < copts.size(); ++i)
+    {
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        std::string rrstr = std::to_string(copts[i]);
+        chks.push_back(e == s.ctx().real_val(rrstr.c_str()));
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            return std::make_optional(copts[i]);
+        }
+    }
+
+    double epsilon = 0.000000001;
+    double rmin = std::numeric_limits<float>::lowest();
+    double rmax = std::numeric_limits<float>::max();
+    while(epsilon < (rmax - rmin))
+    {
+        double rmid = (rmax + rmin) / 2.0;
+        auto rmidstr = std::to_string(rmid);
+
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        chks.push_back(e < s.ctx().real_val(rmidstr.c_str()));
+        auto rr = s.check(chks);
+
+        s.pop();
+        
+        if(rr == z3::check_result::sat) 
+        {
+            rmax = rmid;
+        }
+        else if(rr == z3::check_result::unsat) 
+        {
+            rmin = rmid;
+        }
+        else
+        {
+            return std::nullopt;
+        }
+    }
+
+    return std::make_optional(rmin);
 }
 
 z3::expr genInitialContextArg(const APIModule* apimodule, z3::context& c)
@@ -260,7 +339,7 @@ std::optional<uint64_t> ExtractionInfo::expBVAsUInt(z3::solver& s, z3::model& m,
     }
     else
     {
-        auto uval = bvBinSearch<uint64_t, false>(this->apimodule, s, m, e, 0, computeBVMaxUnSigned(this->apimodule->bv_width));
+        auto uval = bvBinSearch<uint64_t, false>(this->apimodule, s, m, e, 0, computeBVMaxUnSigned(this->apimodule->bv_width), {0, 1, 3});
         if(!uval.has_value())
         {
             return std::nullopt;
@@ -314,7 +393,7 @@ std::optional<int64_t> ExtractionInfo::expBVAsInt(z3::solver& s, z3::model& m, c
     }
     else
     {
-        auto ival = bvBinSearch<int64_t, true>(this->apimodule, s, m, e, computeBVMinSigned(this->apimodule->bv_width), computeBVMaxSigned(this->apimodule->bv_width));
+        auto ival = bvBinSearch<int64_t, true>(this->apimodule, s, m, e, computeBVMinSigned(this->apimodule->bv_width), computeBVMaxSigned(this->apimodule->bv_width), {0, 1, 3, -1, -3});
         if(!ival.has_value())
         {
             return std::nullopt;
@@ -340,26 +419,27 @@ std::optional<std::string> ExtractionInfo::expIntAsUInt(z3::solver& s, z3::model
     auto strval = bbval.to_string();
 
     std::cmatch match;
-    if(std::regex_match(strval, re_numberino_n))
+    if(std::regex_match(strval, re_numberino_f))
     {
-        s.add(e == s.ctx().int_val(strval.c_str()));
+        s.add(e == s.ctx().real_val(strval.c_str()));
 
         return std::make_optional(strval);
     }
+    else if(std::regex_match(strval, re_fpdiverino))
+    {
+        xxxx;
+    }
     else
     {
-        //
-        //TODO: we are limited here to 64 bit ints -- need to extend to a true big int search when we have the library support 
-        //
-        auto uval = intBinSearch<uint64_t>(this->apimodule, s, m, e, 0, std::numeric_limits<uint64_t>::max());
-        if(!uval.has_value())
+        auto rval = realBinSearch(this->apimodule, s, m, e, {0.0, 1.0, 3.0, -1.0, -3.0});
+        if(!rval.has_value())
         {
             assert(false);
             return std::nullopt;
         }
 
-        auto ustr = std::to_string(uval.value());
-        s.add(e == s.ctx().int_val(ustr.c_str()));
+        auto rstr = std::to_string(rval.value());
+        s.add(e == s.ctx().real_val(rstr.c_str()));
 
         auto refinechk = s.check();
         if(refinechk != z3::check_result::sat)
@@ -368,7 +448,7 @@ std::optional<std::string> ExtractionInfo::expIntAsUInt(z3::solver& s, z3::model
         }
         m = s.get_model();
 
-        return std::make_optional(ustr);
+        return std::make_optional(rstr);
     }
 }
 
