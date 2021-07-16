@@ -10,7 +10,8 @@
 
 static std::regex re_numberino_n("^[+]?(0|[1-9][0-9]*)$");
 static std::regex re_numberino_i("^[-+]?(0|[1-9][0-9]*)$");
-static std::regex re_numberino_f("^[-+]?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
+static std::regex re_numberino_f("^[-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
+static std::regex re_fpdiverino("^[(]\\/\\s([-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?)\\s([-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?)[)]$");
 
 static std::regex re_bv_binary("^#b([0|1]+)$");
 static std::regex re_bv_hex("^#x([0-9a-f]+)$");
@@ -70,10 +71,12 @@ uint64_t computeBVMaxUnSigned(uint64_t bits)
 }
 
 template <typename T, bool bvsigned>
-std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, T min, T max)
+std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, T min, T max, const std::vector<T>& copts)
 {
     auto bbval = m.eval(e, true);
     auto strval = bbval.to_string();
+
+    xxx; //TODO: copts
 
     T imin = min;
     T imax = max;
@@ -115,10 +118,12 @@ std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3
 }
 
 template <typename T>
-std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, T min, T max)
+std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, T min, T max, const std::vector<T>& copts)
 {
     auto bbval = m.eval(e, true);
     auto strval = bbval.to_string();
+
+    xxx; //TODO copts
 
     T imin = min;
     T imax = max;
@@ -152,123 +157,28 @@ std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z
     return std::make_optional(imin);
 }
 
-bool typenameMatches(const IType* tt, const char* prefix)
+std::optional<double> intBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, const std::vector<double>& copts)
 {
-    auto plen = strlen(prefix);
-    return tt->name.size() >= plen && std::equal(prefix, prefix + plen, tt->name.cbegin());
+    //Double bin search here + bin search fixes above
+    xxxx;
 }
 
-z3::sort getZ3SortFor(const APIModule* apimodule, const IType* tt, z3::context& c)
+z3::expr genInitialContextArg(const APIModule* apimodule, z3::context& c)
 {
-    if(tt->name == "NSCore::None")
-    {
-        return c.uninterpreted_sort("bsq_none");
-    }
-    else if(tt->name == "NSCore::Bool")
-    {
-        return c.bool_sort();
-    }
-    else if(tt->name == "NSCore::Nat")
-    {
-        return c.bv_sort(apimodule->bv_width);
-    }
-    else if(tt->name == "NSCore::Int")
-    {
-        return c.bv_sort(apimodule->bv_width);
-    }
-    else if(tt->name == "NSCore::BigNat")
-    {
-        return c.int_sort();
-    }
-    else if(tt->name == "NSCore::BigInt")
-    {
-        return c.int_sort();
-    }
-    else if(tt->name == "NSCore::Rational")
-    {
-        return c.real_sort();
-    }
-    else if(tt->name == "NSCore::Float")
-    {
-        return c.real_sort();
-    }
-    else if(tt->name == "NSCore::Decimal")
-    {
-        return c.real_sort();
-    }
-    else if(tt->name == "NSCore::String")
-    {
-        return c.string_sort();
-    }
-    else if(tt->name == "NSCore::ISOTime")
-    {
-        return c.int_sort();
-    }
-    else if(tt->name == "NSCore::LogicalTime")
-    {
-        return c.int_sort();
-    }
-    else if(tt->name == "NSCore::UUID")
-    {
-        return c.int_sort();
-    }
-    else if(tt->name == "NSCore::ContentHash")
-    {
-        return c.int_sort();
-    }
-    else if(typenameMatches(tt, "NSCore::StringOf") || typenameMatches(tt, "NSCore::DataString"))
-    {
-        return c.string_sort();
-    }
-    else if(typenameMatches(tt, "NSCore::NumberOf"))
-    {
-        return getZ3SortFor(apimodule, apimodule->typemap.find(dynamic_cast<const NumberOfType*>(tt)->primitive)->second, c);
-    }
-    else if(typenameMatches(tt, "NSCore::ByteBuffer") || typenameMatches(tt, "NSCore::Buffer") || typenameMatches(tt, "NSCore::DataBuffer"))
-    {
-        z3::sort bv8sort = c.bv_sort(8);
-        return c.seq_sort(bv8sort);
-    }
-    else
-    {
-        return c.uninterpreted_sort(tt->smtname.c_str());
-    }
+    auto ii = c.bv_val((uint64_t)0, apimodule->bv_width);
+    return ii.unit();
 }
 
-z3::func_decl ExtractionInfo::getArgContextConstructor(const z3::model& m, const char* fname, const z3::sort& ressort) const
+z3::expr genInitialContextResult(const APIModule* apimodule, z3::context& c)
 {
-    auto ctxsort = this->getArgContextTokenSort(m);
-    auto argconsf = m.ctx().function(fname, ctxsort, ressort);
-
-    return argconsf;
+    auto ii = c.bv_val((uint64_t)1, apimodule->bv_width);
+    return ii.unit();
 }
 
-z3::sort ExtractionInfo::getArgContextTokenSort(const z3::model& m) const
+z3::expr extendContext(const APIModule* apimodule, z3::context& c, const z3::expr& ctx, size_t i)
 {
-    auto bvsort = m.ctx().bv_sort(this->apimodule->bv_width);
-    auto seqsort = m.ctx().seq_sort(bvsort);
-
-    return seqsort;
-}
-
-z3::expr ExtractionInfo::genInitialContext(const z3::model& m) const
-{
-    auto bvsort = m.ctx().bv_sort(this->apimodule->bv_width);
-    auto seqsort = m.ctx().seq_sort(bvsort);
-    auto consf = m.ctx().function("Ctx@MakeStep", bvsort, seqsort);
-
-    auto ii = m.ctx().bv_val((uint64_t)0, this->apimodule->bv_width);
-    return consf(ii);
-}
-
-z3::expr ExtractionInfo::extendContext(const z3::model& m, const z3::expr& ctx, size_t i) const
-{
-    auto bvsort = m.ctx().bv_sort(this->apimodule->bv_width);
-    auto seqsort = m.ctx().seq_sort(bvsort);
-    auto consf = m.ctx().function("Ctx@MakeStep", bvsort, seqsort);
-
-    auto ii = m.ctx().bv_val((uint64_t)i, this->apimodule->bv_width);
-    return z3::concat(ctx, consf(ii));
+    auto ii = c.bv_val((uint64_t)i, apimodule->bv_width);
+    return z3::concat(ctx, ii.unit());
 }
 
 std::optional<bool> ExtractionInfo::expBoolAsBool(z3::solver& s, z3::model& m, const z3::expr& e) const
@@ -512,6 +422,7 @@ std::optional<std::string> ExtractionInfo::evalRealAsFP(z3::solver& s, z3::model
 
         return std::make_optional(sstr);
     }
+    else if 
     else
     {
         //TODO: we need to do bin search for FP values as well

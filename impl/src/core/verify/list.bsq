@@ -329,7 +329,7 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
             //TODO: here special case for small model
             if(List<T>::s_hasPredCheck_Core[recursive?](sl, count, p)) {
-                if(s_hasPredCheck_Core[recursive?](sl, count, pred !p)) {
+                if(List<T>::s_hasPredCheck_Core[recursive?](sl, count, pred !p)) {
                     let isq = List<T>::s_computeISequence[recursive?](sl, count, p);
                     return List<T>::s_filter_Constructor[recursive?](sl, isq, count, p);
                 }

@@ -57,8 +57,6 @@ enum class TypeTag
     UnionTag
 };
 
-z3::sort getZ3SortFor(const APIModule* apimodule, const IType* tt, z3::context& c);
-
 struct NumericFuzzLimits
 {
     uint16_t nat_max;
@@ -99,6 +97,10 @@ public:
     FuzzInfo(const APIModule* apimodule, NumericFuzzLimits limits) : limits(limits) {;}
 };
 
+z3::expr genInitialContextArg(const APIModule* apimodule, z3::context& c);
+z3::expr genInitialContextResult(const APIModule* apimodule, z3::context& c);
+z3::expr extendContext(const APIModule* apimodule, z3::context& c, const z3::expr& ctx, size_t i);
+
 class ExtractionInfo
 {
 public:
@@ -106,11 +108,6 @@ public:
     const std::string resvar;
 
     ExtractionInfo(const APIModule* apimodule, std::string resvar): apimodule(apimodule), resvar(resvar) {;}
-
-    z3::func_decl getArgContextConstructor(const z3::model& m, const char* fname, const z3::sort& ressort) const;
-    z3::sort getArgContextTokenSort(const z3::model& m) const;
-    z3::expr genInitialContext(const z3::model& m) const;
-    z3::expr extendContext(const z3::model& m, const z3::expr& ctx, size_t i) const;
 
     std::optional<bool> expBoolAsBool(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
@@ -134,9 +131,6 @@ public:
     std::optional<json> evalToDecimalNumber(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
     std::optional<json> evalToString(z3::solver& s, z3::model& m, const z3::expr& e) const;
-
-    z3::expr callfunc(std::string fname, const z3::expr_vector& args, const std::vector<const IType*>& argtypes, const IType* restype, z3::context& c) const;
-    z3::expr callfunc(std::string fname, const z3::expr& arg, const IType* argtype, const IType* restype, z3::context& c) const;
 };
 
 class ParseInfo
@@ -158,9 +152,6 @@ public:
 
     std::optional<std::string> parseToRealNumber(json j) const;
     std::optional<std::string> parseToDecimalNumber(json j) const;
-
-    z3::expr callfunc(std::string fname, const z3::expr_vector& args, const std::vector<const IType*>& argtypes, const IType* restype, z3::context& c) const;
-    z3::expr callfunc(std::string fname, const z3::expr& arg, const IType* argtype, const IType* restype, z3::context& c) const;
 };
 
 ////

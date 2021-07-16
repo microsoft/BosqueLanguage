@@ -322,10 +322,6 @@
 (declare-fun EnumChoice@UFCons_API ((Seq BNat)) BNat)
 (declare-fun UnionChoice@UFCons_API ((Seq BNat)) BNat)
 
-(define-fun Ctx@MakeStep ((i BNat)) (Seq BNat)
-  (seq.unit i)
-)
-
 ;;GLOBAL_DECLS;;
 
 ;;UF_DECLS;;
