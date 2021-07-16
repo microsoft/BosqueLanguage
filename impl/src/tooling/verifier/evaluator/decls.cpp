@@ -427,15 +427,15 @@ std::optional<std::string> ExtractionInfo::expIntAsUInt(z3::solver& s, z3::model
     }
     else
     {
-        auto ival = intBinSearch(this->apimodule, s, m, e, {0.0, 1.0, 3.0, -1.0, -3.0});
+        auto ival = intBinSearch<uint64_t>(this->apimodule, s, m, e, 0, std::numeric_limits<int64_t>::max(), {0, 1, 3});
         if(!ival.has_value())
         {
             assert(false);
             return std::nullopt;
         }
 
-        auto rstr = std::to_string(rval.value());
-        s.add(e == s.ctx().real_val(rstr.c_str()));
+        auto istr = std::to_string(ival.value());
+        s.add(e == s.ctx().int_val(istr.c_str()));
 
         auto refinechk = s.check();
         if(refinechk != z3::check_result::sat)
@@ -444,7 +444,7 @@ std::optional<std::string> ExtractionInfo::expIntAsUInt(z3::solver& s, z3::model
         }
         m = s.get_model();
 
-        return std::make_optional(rstr);
+        return std::make_optional(istr);
     }
 }
 
@@ -465,7 +465,7 @@ std::optional<std::string> ExtractionInfo::expIntAsInt(z3::solver& s, z3::model&
         //
         //TODO: we are limited here to 64 bit ints -- need to extend to a true big int search when we have the library support 
         //
-        auto ival = intBinSearch<int64_t>(this->apimodule, s, m, e, std::numeric_limits<int64_t>::lowest(), std::numeric_limits<int64_t>::max());
+        auto ival = intBinSearch<int64_t>(this->apimodule, s, m, e, std::numeric_limits<int64_t>::lowest(), std::numeric_limits<int64_t>::max(), {0, 1, 3, -1, -3});
         if(!ival.has_value())
         {
             assert(false);
@@ -498,13 +498,31 @@ std::optional<std::string> ExtractionInfo::evalRealAsFP(z3::solver& s, z3::model
 
         return std::make_optional(sstr);
     }
-    else if 
+    else if(std::regex_match(sstr, re_fpdiverino))
+    {
+        xxxx;
+    }
     else
     {
-        //TODO: we need to do bin search for FP values as well
-        assert(false);
+        auto rval = realBinSearch(this->apimodule, s, m, e, {0.0, 1.0, 3.0, -1.0, -3.0});
+        if(!rval.has_value())
+        {
+            assert(false);
+            return std::nullopt;
+        }
 
-        return std::nullopt;
+        auto rstr = std::to_string(rval.value());
+        s.add(e == s.ctx().real_val(rstr.c_str()));
+
+        auto refinechk = s.check();
+        if(refinechk != z3::check_result::sat)
+        {
+            return std::nullopt;
+        }
+        m = s.get_model();
+
+        return std::make_optional(rstr);
+    }
     }
 }
 
