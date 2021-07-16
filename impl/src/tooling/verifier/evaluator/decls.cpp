@@ -419,20 +419,16 @@ std::optional<std::string> ExtractionInfo::expIntAsUInt(z3::solver& s, z3::model
     auto strval = bbval.to_string();
 
     std::cmatch match;
-    if(std::regex_match(strval, re_numberino_f))
+    if(std::regex_match(strval, re_numberino_n))
     {
         s.add(e == s.ctx().real_val(strval.c_str()));
 
         return std::make_optional(strval);
     }
-    else if(std::regex_match(strval, re_fpdiverino))
-    {
-        xxxx;
-    }
     else
     {
-        auto rval = realBinSearch(this->apimodule, s, m, e, {0.0, 1.0, 3.0, -1.0, -3.0});
-        if(!rval.has_value())
+        auto ival = intBinSearch(this->apimodule, s, m, e, {0.0, 1.0, 3.0, -1.0, -3.0});
+        if(!ival.has_value())
         {
             assert(false);
             return std::nullopt;
