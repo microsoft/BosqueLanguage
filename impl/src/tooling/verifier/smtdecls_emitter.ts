@@ -547,6 +547,7 @@ class SMTEmitter {
         const mirep = assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl;
         
         const iargs = mirep.params.map((param, i) => {
+            xxxx;
             if(mode !== "evaluate") {
                 const mirptype = this.temitter.getMIRType(param.type);
                 const vname = this.temitter.mangle(param.name);
@@ -569,6 +570,8 @@ class SMTEmitter {
         if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === rtype.name) === undefined) {
             this.assembly.resultTypes.push(({ hasFlag: false, rtname: mirep.resultType, ctype: rtype }));
         }
+
+        xxxx; //havoc setup for result as well
 
         assembly.entityDecls.forEach((edcl) => {
             const mirtype = this.temitter.getMIRType(edcl.tkey);

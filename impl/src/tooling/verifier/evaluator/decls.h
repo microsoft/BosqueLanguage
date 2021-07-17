@@ -317,11 +317,9 @@ class IType
 {
 public:
     const std::string name;
-
-    const bool iskey;
     const std::string smtname;
 
-    IType(std::string name, bool iskey, std::string smtname) : name(name), iskey(iskey), smtname(smtname) {;}
+    IType(std::string name, std::string smtname) : name(name), smtname(smtname) {;}
     virtual ~IType() {;}
 
     static IType* jparse(json j);
@@ -337,18 +335,14 @@ public:
 class IGroundedType : public IType
 {
 public:
-    const std::string smttypetag;
-    const std::string boxfunc;
-    const std::string unboxfunc;
-
-    IGroundedType(std::string name, bool iskey, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc): IType(name, iskey, smtname), smttypetag(smttypetag), boxfunc(boxfunc), unboxfunc(unboxfunc) {;}
+    IGroundedType(std::string name, std::string smtname): IType(name, smtname) {;}
     virtual ~IGroundedType() {;}
 };
 
 class NoneType : public IGroundedType
 {
 public:
-    NoneType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::None", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    NoneType(std::string smtname) : IGroundedType("NSCore::None", smtname) {;}
     virtual ~NoneType() {;}
 
     static NoneType* jparse(json j);
@@ -364,7 +358,7 @@ public:
 class BoolType : public IGroundedType
 {
 public:
-    BoolType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::Bool", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    BoolType(std::string smtname) : IGroundedType("NSCore::Bool", smtname) {;}
     virtual ~BoolType() {;}
 
     static BoolType* jparse(json j);
@@ -380,7 +374,7 @@ public:
 class NatType : public IGroundedType
 {
 public:
-    NatType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::Nat", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    NatType(std::string smtname) : IGroundedType("NSCore::Nat", smtname) {;}
     virtual ~NatType() {;}
 
     static NatType* jparse(json j);
@@ -396,7 +390,7 @@ public:
 class IntType : public IGroundedType
 {
 public:
-    IntType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::Int", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    IntType(std::string smtname) : IGroundedType("NSCore::Int", smtname) {;}
     virtual ~IntType() {;}
 
     static IntType* jparse(json j);
@@ -412,7 +406,7 @@ public:
 class BigNatType : public IGroundedType
 {
 public:
-    BigNatType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::BigNat", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    BigNatType(std::string smtname) : IGroundedType("NSCore::BigNat", smtname) {;}
     virtual ~BigNatType() {;}
 
     static BigNatType* jparse(json j);
@@ -428,7 +422,7 @@ public:
 class BigIntType : public IGroundedType
 {
 public:
-    BigIntType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::BigInt", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    BigIntType(std::string smtname) : IGroundedType("NSCore::BigInt", smtname) {;}
     virtual ~BigIntType() {;}
 
     static BigIntType* jparse(json j);
@@ -444,7 +438,7 @@ public:
 class RationalType : public IGroundedType
 {
 public:
-    RationalType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::Rational", false, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    RationalType(std::string smtname) : IGroundedType("NSCore::Rational", smtname) {;}
     virtual ~RationalType() {;}
 
     static RationalType* jparse(json j);
@@ -460,7 +454,7 @@ public:
 class FloatType : public IGroundedType
 {
 public:
-    FloatType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::Float", false, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    FloatType(std::string smtname) : IGroundedType("NSCore::Float", smtname) {;}
     virtual ~FloatType() {;}
 
     static FloatType* jparse(json j);
@@ -476,7 +470,7 @@ public:
 class DecimalType : public IGroundedType
 {
 public:
-    DecimalType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::Decimal", false, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    DecimalType(std::string smtname) : IGroundedType("NSCore::Decimal", smtname) {;}
     virtual ~DecimalType() {;}
 
     static DecimalType* jparse(json j);
@@ -492,7 +486,7 @@ public:
 class StringType : public IGroundedType
 {
 public:
-    StringType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::String", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    StringType(std::string smtname) : IGroundedType("NSCore::String", smtname) {;}
     virtual ~StringType() {;}
 
     static StringType* jparse(json j);
@@ -511,7 +505,7 @@ public:
     const std::string validator;
     const BSQRegex* re_validate;
 
-    StringOfType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string validator, const BSQRegex* re_validate) : IGroundedType(name, true, smtname, smttypetag, boxfunc, unboxfunc), validator(validator), re_validate(re_validate) {;}
+    StringOfType(std::string name, std::string smtname, std::string validator, const BSQRegex* re_validate) : IGroundedType(name, smtname), validator(validator), re_validate(re_validate) {;}
     virtual ~StringOfType() {;}
 
     static StringOfType* jparse(json j);
@@ -530,10 +524,7 @@ public:
     const std::string primitive;
     const std::string oftype; //either another numberof or a primitive
 
-    std::optional<std::string> smtinvcall;
-    std::optional<std::string> cppinvcall;
-
-    NumberOfType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string primitive, std::string oftype, std::optional<std::string> smtinvcall, std::optional<std::string> cppinvcall) : IGroundedType(name, true, smtname, smttypetag, boxfunc, unboxfunc), primitive(primitive), oftype(oftype), smtinvcall(smtinvcall), cppinvcall(cppinvcall) {;}
+    NumberOfType(std::string name, std::string smtname, std::string primitive, std::string oftype) : IGroundedType(name, smtname), primitive(primitive), oftype(oftype) {;}
     virtual ~NumberOfType() {;}
 
     static NumberOfType* jparse(json j);
@@ -552,10 +543,7 @@ public:
     const std::string oftype;
     const bool isvalue;
 
-    std::string smtinvcall;
-    std::string cppinvcall;
-
-    DataStringType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string oftype, bool isvalue, std::string smtinvcall, std::string cppinvcall) : IGroundedType(name, true, smtname, smttypetag, boxfunc, unboxfunc), oftype(oftype), isvalue(isvalue), smtinvcall(smtinvcall), cppinvcall(cppinvcall) {;}
+    DataStringType(std::string name, std::string smtname, std::string oftype, bool isvalue) : IGroundedType(name, smtname), oftype(oftype), isvalue(isvalue) {;}
     virtual ~DataStringType() {;}
 
     static DataStringType* jparse(json j);
@@ -571,7 +559,7 @@ public:
 class ByteBufferType : public IGroundedType
 {
 public:
-    ByteBufferType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::ByteBuffer", false, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    ByteBufferType(std::string smtname) : IGroundedType("NSCore::ByteBuffer", smtname) {;}
     virtual ~ByteBufferType() {;}
 
     static ByteBufferType* jparse(json j);
@@ -587,7 +575,7 @@ public:
 class BufferType : public IGroundedType
 {
 public:
-    BufferType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    BufferType(std::string name, std::string smtname) : IGroundedType(name, smtname) {;}
     virtual ~BufferType() {;}
 
     static BufferType* jparse(json j);
@@ -603,7 +591,7 @@ public:
 class DataBufferType : public IGroundedType
 {
 public:
-    DataBufferType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    DataBufferType(std::string name, std::string smtname) : IGroundedType(name, smtname) {;}
     virtual ~DataBufferType() {;}
 
     static DataBufferType* jparse(json j);
@@ -619,7 +607,7 @@ public:
 class ISOTimeType : public IGroundedType
 {
 public:
-    ISOTimeType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::ISOTime", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    ISOTimeType(std::string smtname) : IGroundedType("NSCore::ISOTime", smtname) {;}
     virtual ~ISOTimeType() {;}
 
     static ISOTimeType* jparse(json j);
@@ -635,7 +623,7 @@ public:
 class LogicalTimeType : public IGroundedType
 {
 public:
-    LogicalTimeType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::LogicalTime", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    LogicalTimeType(std::string smtname) : IGroundedType("NSCore::LogicalTime", smtname) {;}
     virtual ~LogicalTimeType() {;}
 
     static LogicalTimeType* jparse(json j);
@@ -651,7 +639,7 @@ public:
 class UUIDType : public IGroundedType
 {
 public:
-    UUIDType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::UUID", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    UUIDType(std::string smtname) : IGroundedType("NSCore::UUID", smtname) {;}
     virtual ~UUIDType() {;}
 
     static UUIDType* jparse(json j);
@@ -667,7 +655,7 @@ public:
 class ContentHashType : public IGroundedType
 {
 public:
-    ContentHashType(std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc) : IGroundedType("NSCore::ContentHash", true, smtname, smttypetag, boxfunc, unboxfunc) {;}
+    ContentHashType(std::string smtname) : IGroundedType("NSCore::ContentHash", smtname) {;}
     virtual ~ContentHashType() {;}
 
     static ContentHashType* jparse(json j);
@@ -683,13 +671,10 @@ public:
 class TupleType : public IGroundedType
 {
 public:
-    const std::string consfunc;
     const bool isvalue;
     const std::vector<std::string> ttypes;
 
-    const std::vector<std::string> smtaccessors;
-
-    TupleType(std::string name, bool iskey, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string consfunc, bool isvalue, std::vector<std::string> ttypes, std::vector<std::string> smtaccessors) : IGroundedType(name, iskey, smtname, smttypetag, boxfunc, unboxfunc), consfunc(consfunc), isvalue(isvalue), ttypes(ttypes), smtaccessors(smtaccessors) {;}
+    TupleType(std::string name, std::string smtname, bool isvalue, std::vector<std::string> ttypes) : IGroundedType(name, smtname), isvalue(isvalue), ttypes(ttypes) {;}
     virtual ~TupleType() {;}
 
     static TupleType* jparse(json j);
@@ -705,14 +690,11 @@ public:
 class RecordType : public IGroundedType
 {
 public:
-    const std::string consfunc;
     const bool isvalue;
     const std::vector<std::string> props;
     const std::vector<std::string> ttypes;
 
-    const std::vector<std::string> smtaccessors;
-
-    RecordType(std::string name, bool iskey, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string consfunc, bool isvalue, std::vector<std::string> props, std::vector<std::string> ttypes, std::vector<std::string> smtaccessors) : IGroundedType(name, iskey, smtname, smttypetag, boxfunc, unboxfunc), consfunc(consfunc), isvalue(isvalue), props(props), ttypes(ttypes), smtaccessors(smtaccessors) {;}
+    RecordType(std::string name, std::string smtname, bool isvalue, std::vector<std::string> props, std::vector<std::string> ttypes) : IGroundedType(name, smtname), isvalue(isvalue), props(props), ttypes(ttypes) {;}
     virtual ~RecordType() {;}
 
     static RecordType* jparse(json j);
@@ -729,11 +711,8 @@ class ListType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::vector<std::string> smtconsfunc_k;
-    const std::string smtsizefunc;
-    const std::string smtgetfunc;
 
-    ListType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string oftype, std::vector<std::string> smtconsfunc_k, std::string smtsizefunc, std::string smtgetfunc) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), oftype(oftype), smtconsfunc_k(smtconsfunc_k), smtsizefunc(smtsizefunc), smtgetfunc(smtgetfunc) {;}
+    ListType(std::string name, std::string smtname, std::string oftype) : IGroundedType(name, smtname), oftype(oftype) {;}
     virtual ~ListType() {;}
 
     static ListType* jparse(json j);
@@ -750,11 +729,9 @@ class EnumType : public IGroundedType
 {
 public:
     const std::string underlying;
-    const std::string smttagfunc;
-    const std::string smtselectfunc;
-    const std::vector<std::pair<std::string, std::string>> enuminvs; //map from full enum names to the invoke values
+    const std::vector<std::string> enuminvs; //list of full enum names
 
-    EnumType(std::string name, std::string smtname, std::string smttypetag, std::string boxfunc, std::string unboxfunc, std::string underlying, std::string smttagfunc, std::string smtselectfunc, std::vector<std::pair<std::string, std::string>> enuminvs) : IGroundedType(name, false, smtname, smttypetag, boxfunc, unboxfunc), underlying(underlying), smttagfunc(smttagfunc), smtselectfunc(smtselectfunc), enuminvs(enuminvs) {;}
+    EnumType(std::string name, std::string smtname, std::string underlying, std::vector<std::string> enuminvs) : IGroundedType(name, smtname), underlying(underlying), enuminvs(enuminvs) {;}
     virtual ~EnumType() {;}
 
     static EnumType* jparse(json j);
@@ -772,7 +749,7 @@ class UnionType : public IType
 public:
     const std::vector<std::string> opts;
 
-    UnionType(std::string name, bool iskey, std::string smtname, std::vector<std::string> opts) : IType(name, iskey, smtname), opts(opts) {;}
+    UnionType(std::string name, std::string smtname, std::vector<std::string> opts) : IType(name, smtname), opts(opts) {;}
     virtual ~UnionType() {;}
 
     static UnionType* jparse(json j);

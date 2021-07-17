@@ -680,14 +680,17 @@ class SMTTypeEmitter {
     }
 
     private getJSONApiBase(tt: MIRType): {name: string, smtname: string} {
+        xxxx;
         return {name: tt.trkey, smtname: this.getSMTTypeFor(tt).name};
     }
 
     private getJSONApiStd(tt: MIRType): {name: string, smtname: string, smttypetag: string} {
+        xxxx;
         return {...this.getJSONApiBase(tt), smttypetag: this.getSMTTypeTag(tt)};
     }
 
     getAPITypeFor(tt: MIRType): object {
+        xxxx;
         if (this.isType(tt, "NSCore::None")) {
             return {tag: APIEmitTypeTag.NoneTag, ...this.getJSONApiStd(tt), boxfunc: "[SPECIAL_BOX]", unboxfunc: "[SPECIAL_UNBOX]"};
         }
