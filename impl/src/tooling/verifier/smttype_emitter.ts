@@ -641,9 +641,6 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "NSCore::Decimal")) {
             return ["BDecimal@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            return ["BRational@UFCons_API", false];
-        }
         else if (this.isType(tt, "NSCore::ISOTime")) {
             return ["BISOTime@UFCons_API", false];
         }

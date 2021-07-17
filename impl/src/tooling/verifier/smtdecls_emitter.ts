@@ -458,6 +458,10 @@ class SMTEmitter {
             if (edecl.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric)) {
                 this.generateAPITypeConstructorFunction_TypedNumber(tt, havocfuncs);
             }
+            else if (this.temitter.isType(tt, "NSCore::Rational")) {
+                //TODO: this needs to construct num/denom explicitly
+                assert(false);
+            }
             else if (this.temitter.isType(tt, "NSCore::String")) {
                 this.generateAPITypeConstructorFunction_String(havocfuncs);
             }
