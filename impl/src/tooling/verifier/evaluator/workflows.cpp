@@ -29,7 +29,7 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, unsigned timeo
 
     s.from_string(smt2decl.c_str());
 
-    ExtractionInfo einfo(apimodule, "_@smtres@_value");
+    ExtractionInfo einfo(apimodule);
 
     //check the formula
     auto start = std::chrono::system_clock::now();
@@ -54,17 +54,17 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, unsigned timeo
     else
     {
         z3::expr_vector chks(c);
-        ParseInfo pinfo(apimodule, chks);
+        ParseInfo pinfo(apimodule, &chks);
 
         auto m = s.get_model();
 
         json argv = json::array();
-        auto rootctx = einfo.genInitialContext(m);
+        auto rootctx = genInitialContextArg(apimodule, c);
         for(size_t i = 0; i < apimodule->api->argtypes.size(); ++i)
         {
             auto argtype = apimodule->api->argtypes[i];
-            auto ctx = einfo.extendContext(m, rootctx, i);
-            auto jarg = argtype->argextract(einfo, ctx, s, m);
+            auto ctx = extendContext(apimodule, c, rootctx, i);
+            auto jarg = argtype->z3extract(einfo, ctx, s, m);
 
             if(!jarg.has_value())
             {
@@ -114,18 +114,26 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
     s.from_string(smt2decl.c_str());
 
     z3::expr_vector chks(c);
-    ParseInfo pinfo(apimodule, chks);
+    ParseInfo pinfo(apimodule, &chks);
 
-    for(size_t i = 0; i < apimodule->api->smtargnames.size(); ++i)
+    auto rootctx = genInitialContextArg(apimodule, c);
+    for(size_t i = 0; i < apimodule->api->argtypes.size(); ++i)
     {
-        auto argname = apimodule->api->smtargnames[i];
         auto argtype = apimodule->api->argtypes[i];
-        
-        auto argvar = c.constant(argname.c_str(), getZ3SortFor(apimodule, argtype, c));
-        auto argval = argtype->toz3arg(pinfo, jin[i], c).value();
-        s.add(argvar == argval);
+        auto ctx = extendContext(apimodule, c, rootctx, i);
+        auto ok = argtype->toz3arg(pinfo, jin[i], ctx, c);
+        if(!ok) {
+            return {
+                {"result", "error"},
+                {"info", "Could not initialize arg values"}
+            };
+        }
     }
-    s.add(pinfo.chks);
+
+    for(auto iter = pinfo.chks.top()->begin(); iter != pinfo.chks.top()->end(); ++iter)
+    {
+        s.add(*iter);
+    }
 
     //check the formula
     auto start = std::chrono::system_clock::now();
@@ -149,15 +157,15 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
     }
     else
     {
-        ExtractionInfo einfo(apimodule, "_@smtres@_value");
+        ExtractionInfo einfo(apimodule);
         auto m = s.get_model();
         
-        auto resexpr = c.constant("_@smtres@_value", getZ3SortFor(apimodule, apimodule->api->resType, c));
-        auto eres = apimodule->api->resType->resextract(einfo, resexpr, s, m);
+        auto resctx = genInitialContextResult(apimodule, c);
+        auto eres = apimodule->api->restype->z3extract(einfo, resctx, s, m);
         
         if(bsqon && eres.has_value())
         {
-            std::optional<std::string> bsqarg = apimodule->api->resType->tobsqarg(pinfo, eres.value(), "");
+            std::optional<std::string> bsqarg = apimodule->api->restype->tobsqarg(pinfo, eres.value(), "");
             eres = bsqarg.value();
         }
 
@@ -200,8 +208,10 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsig
     s.from_string(smt2decl.c_str());
 
     z3::expr_vector chks(c);
-    ParseInfo pinfo(apimodule, chks);
+    ParseInfo pinfo(apimodule, &chks);
   
+    auto resctx = genInitialContextResult(apimodule, c);
+    xxx;
     auto resvar = c.constant("_@smtres@_value", getZ3SortFor(apimodule, apimodule->api->resType, c));
     auto resval = apimodule->api->resType->toz3arg(pinfo, jout, c).value();
     s.add(resvar == resval);
@@ -230,16 +240,16 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsig
     }
     else
     {
-        ExtractionInfo einfo(apimodule, "_@smtres@_value");
+        ExtractionInfo einfo(apimodule);
         auto m = s.get_model();
 
         json argv = json::array();
-        auto rootctx = einfo.genInitialContext(m);
+        auto rootctx = genInitialContextArg(apimodule, c);
         for(size_t i = 0; i < apimodule->api->argtypes.size(); ++i)
         {
             auto argtype = apimodule->api->argtypes[i];
-            auto ctx = einfo.extendContext(m, rootctx, i);
-            auto jarg = argtype->resextract(einfo, ctx, s, m);
+            auto ctx = extendContext(apimodule, c, rootctx, i);
+            auto jarg = argtype->z3extract(einfo, ctx, s, m);
 
             if(!jarg.has_value())
             {

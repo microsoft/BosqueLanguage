@@ -2725,17 +2725,11 @@ std::optional<json> UnionType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
 InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, const IType*>& typemap)
 {
     auto name = j["name"].get<std::string>();
-    auto resType = typemap.find(j["resType"].get<std::string>())->second;
+    auto restype = typemap.find(j["restype"].get<std::string>())->second;
 
     std::vector<std::string> argnames;
     auto jargnames = j["argnames"];
     std::transform(jargnames.cbegin(), jargnames.cend(), std::back_inserter(argnames), [](const json& jv) {
-        return jv.get<std::string>();
-    });
-
-    std::vector<std::string> smtargnames;
-    auto jsmtargnames = j["smtargnames"];
-    std::transform(jsmtargnames.cbegin(), jsmtargnames.cend(), std::back_inserter(smtargnames), [](const json& jv) {
         return jv.get<std::string>();
     });
 
@@ -2745,7 +2739,7 @@ InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, con
         return typemap.find(jv.get<std::string>())->second;
     });
 
-    return new InvokeSignature(name, resType, argnames, smtargnames, argtypes);
+    return new InvokeSignature(name, restype, argnames, argtypes);
 }
 
 APIModule* APIModule::jparse(json j)

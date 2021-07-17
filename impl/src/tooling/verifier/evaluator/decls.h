@@ -107,9 +107,8 @@ class ExtractionInfo
 {
 public:
     const APIModule* apimodule;
-    const std::string resvar;
 
-    ExtractionInfo(const APIModule* apimodule, std::string resvar): apimodule(apimodule), resvar(resvar) {;}
+    ExtractionInfo(const APIModule* apimodule): apimodule(apimodule) {;}
 
     std::optional<bool> expBoolAsBool(z3::solver& s, z3::model& m, const z3::expr& e) const;
 
@@ -766,12 +765,11 @@ class InvokeSignature
 {
 public:
     const std::string name;
-    const IType* resType;
+    const IType* restype;
     const std::vector<std::string> argnames;
-    const std::vector<std::string> smtargnames;
     const std::vector<const IType*> argtypes;
     
-    InvokeSignature(std::string name, const IType* resType, std::vector<std::string> argnames, std::vector<std::string> smtargnames, std::vector<const IType*> argtypes): name(name), resType(resType), argnames(argnames), smtargnames(smtargnames), argtypes(argtypes) {;}
+    InvokeSignature(std::string name, const IType* restype, std::vector<std::string> argnames, std::vector<const IType*> argtypes): name(name), restype(restype), argnames(argnames), argtypes(argtypes) {;}
 
     static InvokeSignature* jparse(json j, const std::map<std::string, const IType*>& typemap);
 };
