@@ -211,12 +211,19 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsig
     ParseInfo pinfo(apimodule, &chks);
   
     auto resctx = genInitialContextResult(apimodule, c);
-    xxx;
-    auto resvar = c.constant("_@smtres@_value", getZ3SortFor(apimodule, apimodule->api->resType, c));
-    auto resval = apimodule->api->resType->toz3arg(pinfo, jout, c).value();
-    s.add(resvar == resval);
+    auto resok = apimodule->api->restype->toz3arg(pinfo, jout, resctx, c);
+    if(!resok)
+    {
+        return {
+                {"result", "error"},
+                {"info", "Could not initialize result"}
+            };
+    }
 
-    s.add(pinfo.chks);
+    for(auto iter = pinfo.chks.top()->begin(); iter != pinfo.chks.top()->end(); ++iter)
+    {
+        s.add(*iter);
+    }
 
     //check the formula
     auto start = std::chrono::system_clock::now();

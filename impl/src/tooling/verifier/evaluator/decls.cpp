@@ -1273,7 +1273,7 @@ IType* IType::jparse(json j)
 
 NoneType* NoneType::jparse(json j)
 {
-    return new NoneType(j["smtname"].get<std::string>());
+    return new NoneType();
 }
 
 json NoneType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1305,7 +1305,7 @@ std::optional<json> NoneType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
 
 BoolType* BoolType::jparse(json j)
 {
-    return new BoolType(j["smtname"].get<std::string>());
+    return new BoolType();
 }
 
 json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1347,7 +1347,7 @@ std::optional<json> BoolType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
 
 NatType* NatType::jparse(json j)
 {
-    return new NatType(j["smtname"].get<std::string>());
+    return new NatType();
 }
 
 json NatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1400,7 +1400,7 @@ std::optional<json> NatType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, 
 
 IntType* IntType::jparse(json j)
 {
-    return new IntType(j["smtname"].get<std::string>());
+    return new IntType();
 }
 
 json IntType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1453,7 +1453,7 @@ std::optional<json> IntType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, 
 
 BigNatType* BigNatType::jparse(json j)
 {
-    return new BigNatType(j["smtname"].get<std::string>());
+    return new BigNatType();
 }
 
 json BigNatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1506,7 +1506,7 @@ std::optional<json> BigNatType::z3extract(ExtractionInfo& ex, const z3::expr& ct
 
 BigIntType* BigIntType::jparse(json j)
 {
-    return new BigIntType(j["smtname"].get<std::string>());
+    return new BigIntType();
 }
 
 json BigIntType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1559,7 +1559,7 @@ std::optional<json> BigIntType::z3extract(ExtractionInfo& ex, const z3::expr& ct
 
 RationalType* RationalType::jparse(json j)
 {
-    return new RationalType(j["smtname"].get<std::string>());
+    return new RationalType();
 }
 
 json RationalType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1625,7 +1625,7 @@ std::optional<json> RationalType::z3extract(ExtractionInfo& ex, const z3::expr& 
 
 FloatType* FloatType::jparse(json j)
 {
-    return new FloatType(j["smtname"].get<std::string>());
+    return new FloatType();
 }
 
 json FloatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1678,7 +1678,7 @@ std::optional<json> FloatType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
 
 DecimalType* DecimalType::jparse(json j)
 {
-    return new DecimalType(j["smtname"].get<std::string>());
+    return new DecimalType();
 }
 
 json DecimalType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1731,7 +1731,7 @@ std::optional<json> DecimalType::z3extract(ExtractionInfo& ex, const z3::expr& c
 
 StringType* StringType::jparse(json j)
 {
-    return new StringType(j["smtname"].get<std::string>());
+    return new StringType();
 }
 
 json StringType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1792,7 +1792,7 @@ StringOfType* StringOfType::jparse(json j)
     auto validator = j["validator"].get<std::string>();
     auto re_validate = BSQRegex::parse(j["re_validate"]);
 
-    return new StringOfType(name, j["smtname"].get<std::string>(), validator, re_validate);
+    return new StringOfType(name, validator, re_validate);
 }
 
 json StringOfType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1844,7 +1844,7 @@ NumberOfType* NumberOfType::jparse(json j)
     auto primitive = j["primitive"].get<std::string>();
     auto oftype = j["oftype"].get<std::string>();
     
-    return new NumberOfType(name, j["smtname"].get<std::string>(), primitive, oftype);
+    return new NumberOfType(name, primitive, oftype);
 }
 
 json NumberOfType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -1892,7 +1892,7 @@ DataStringType* DataStringType::jparse(json j)
     auto oftype = j["oftype"].get<std::string>();
     auto isvalue = j["isvalue"].get<bool>();
 
-    return new DataStringType(name, j["smtname"].get<std::string>(), oftype, isvalue);
+    return new DataStringType(name, oftype, isvalue);
 }
 
 json DataStringType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2033,7 +2033,7 @@ std::optional<json> DataBufferType::z3extract(ExtractionInfo& ex, const z3::expr
 
 ISOTimeType* ISOTimeType::jparse(json j)
 {
-    return new ISOTimeType(j["smtname"].get<std::string>());
+    return new ISOTimeType();
 }
 
 json ISOTimeType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2088,7 +2088,7 @@ std::optional<json> ISOTimeType::z3extract(ExtractionInfo& ex, const z3::expr& c
 
 LogicalTimeType* LogicalTimeType::jparse(json j)
 {
-    return new LogicalTimeType(j["smtname"].get<std::string>());
+    return new LogicalTimeType();
 }
 
 json LogicalTimeType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2141,7 +2141,7 @@ std::optional<json> LogicalTimeType::z3extract(ExtractionInfo& ex, const z3::exp
 
 UUIDType* UUIDType::jparse(json j)
 {
-    return new UUIDType(j["smtname"].get<std::string>());
+    return new UUIDType();
 }
 
 json UUIDType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2170,7 +2170,7 @@ std::optional<json> UUIDType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
 
 ContentHashType* ContentHashType::jparse(json j)
 {
-    return new ContentHashType(j["smtname"].get<std::string>());
+    return new ContentHashType();
 }
 
 json ContentHashType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2200,7 +2200,6 @@ std::optional<json> ContentHashType::z3extract(ExtractionInfo& ex, const z3::exp
 TupleType* TupleType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto smtname = j["smtname"].get<std::string>();
     auto isvalue = j["isvalue"].get<bool>();
 
     std::vector<std::string> ttypes;
@@ -2209,7 +2208,7 @@ TupleType* TupleType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new TupleType(name, smtname, isvalue, ttypes);
+    return new TupleType(name, isvalue, ttypes);
 }
 
 json TupleType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2309,7 +2308,6 @@ std::optional<json> TupleType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
 RecordType* RecordType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto smtname = j["smtname"].get<std::string>();
     auto isvalue = j["isvalue"].get<bool>();
 
     std::vector<std::string> props;
@@ -2324,7 +2322,7 @@ RecordType* RecordType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new RecordType(name, smtname, isvalue, props, ttypes);
+    return new RecordType(name, isvalue, props, ttypes);
 }
 
 json RecordType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2441,11 +2439,9 @@ std::optional<json> RecordType::z3extract(ExtractionInfo& ex, const z3::expr& ct
 ListType* ListType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto smtname = j["smtname"].get<std::string>();
-
     auto oftype = j["oftype"].get<std::string>();
 
-    return new ListType(name, smtname, oftype);
+    return new ListType(name, oftype);
 }
 
 json ListType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2563,7 +2559,7 @@ EnumType* EnumType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new EnumType(j["name"].get<std::string>(), j["smtname"].get<std::string>(), j["underlying"].get<std::string>(), enuminvs);
+    return new EnumType(j["name"].get<std::string>(), j["underlying"].get<std::string>(), enuminvs);
 }
 
 json EnumType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
@@ -2637,7 +2633,6 @@ std::optional<json> EnumType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
 UnionType* UnionType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto smtname = j["smtname"].get<std::string>();
 
     std::vector<std::string> opts;
     auto jopts = j["opts"];
@@ -2645,7 +2640,7 @@ UnionType* UnionType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new UnionType(name, smtname, opts);
+    return new UnionType(name, opts);
 }
 
 json UnionType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const

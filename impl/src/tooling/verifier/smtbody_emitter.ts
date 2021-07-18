@@ -2587,6 +2587,9 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, this.lopsManager.generateListSizeCall(new SMTVar(args[0].vname), args[0].vtype));
             }
             case "list_empty": {
+                //
+                //TODO: can this be checking == with the empty list?
+                //
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("=", [new SMTConst("BNat@zero"), this.lopsManager.generateListSizeCall(new SMTVar(args[0].vname), args[0].vtype)]));
             }
             case "list_unsafe_get": {

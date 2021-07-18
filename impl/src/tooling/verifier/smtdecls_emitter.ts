@@ -71,7 +71,7 @@ class SMTEmitter {
         const mftype = this.temitter.getMIRType(mf.declaredType);
 
         this.walkAndGenerateHavocType(mftype, havocfuncs);
-        const bcreate = this.temitter.generateHavocConstructorCall(mftype, new SMTVar("path"), new SMTConst("BNat@zero"));
+        const bcreate = this.temitter.generateHavocConstructorCall(mftype, new SMTVar("path"), new SMTConst(`(_ bv${0} ${this.assembly.vopts.ISize})`));
         havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
         if (!this.bemitter.isSafeConstructorInvoke(tt)) {
             this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: new SMTType("(Seq BNat)") }], this.temitter.generateResultType(tt), bcreate));
@@ -108,7 +108,7 @@ class SMTEmitter {
 
     private generateAPITypeConstructorFunction_ValidatedString(tt: MIRType, havocfuncs: Set<String>) {
         this.walkAndGenerateHavocType(this.temitter.getMIRType("NSCore::String"), havocfuncs);
-        const bcreate = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType("NSCore::String"), new SMTVar("path"), new SMTConst("BNat@zero"));
+        const bcreate = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType("NSCore::String"), new SMTVar("path"), new SMTConst(`(_ bv${0} ${this.assembly.vopts.ISize})`));
 
         const ttdecl = this.bemitter.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
         const ctype = ((ttdecl.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[]).find((tke) => tke.tname === "T") as { tname: string, tkind: MIRResolvedTypeKey }).tkind;
@@ -489,7 +489,7 @@ class SMTEmitter {
         }
     }
 
-    private initializeSMTAssembly(assembly: MIRAssembly, mode: "check" | "evaluate" | "invert", entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
+    private initializeSMTAssembly(assembly: MIRAssembly, entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
         const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
         const cginfo = constructCallGraphInfo([entrypoint, ...cinits], assembly);
         const rcg = [...cginfo.topologicalOrder].reverse();
@@ -547,22 +547,13 @@ class SMTEmitter {
         const mirep = assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl;
         
         const iargs = mirep.params.map((param, i) => {
-            xxxx;
-            if(mode !== "evaluate") {
-                const mirptype = this.temitter.getMIRType(param.type);
-                const vname = this.temitter.mangle(param.name);
+            const mirptype = this.temitter.getMIRType(param.type);
+            const vname = this.temitter.mangle(param.name);
 
-                this.walkAndGenerateHavocType(mirptype, this.assembly.havocfuncs);
-                const vexp = this.temitter.generateHavocConstructorCall(mirptype, new SMTCallSimple("Ctx@MakeStep", [new SMTConst("BNat@zero")]), new SMTConst(`(_ bv${i} ${this.assembly.vopts.ISize})`));
+            this.walkAndGenerateHavocType(mirptype, this.assembly.havocfuncs);
+            const vexp = this.temitter.generateHavocConstructorCall(mirptype, new SMTCallSimple("seq.unit", [new SMTConst(`(_ bv${0} ${this.assembly.vopts.ISize})`)]), new SMTConst(`(_ bv${i} ${this.assembly.vopts.ISize})`));
 
-                return { vname: vname, vtype: this.temitter.generateResultType(mirptype), vinit: vexp, vchk: this.temitter.generateResultIsSuccessTest(mirptype, new SMTVar(vname)), callexp: this.temitter.generateResultGetSuccess(mirptype, new SMTVar(vname)) };
-            }
-            else {
-                const mirptype = this.temitter.getMIRType(param.type);
-                const vname = this.temitter.mangle(param.name);
-
-                return { vname: vname, vtype: this.temitter.getSMTTypeFor(mirptype), vinit: new SMTConst("[UNUSED EVALUATE]"), vchk: undefined, callexp: new SMTVar(vname) };
-            }
+            return { vname: vname, vtype: this.temitter.generateResultType(mirptype), vinit: vexp, vchk: this.temitter.generateResultIsSuccessTest(mirptype, new SMTVar(vname)), callexp: this.temitter.generateResultGetSuccess(mirptype, new SMTVar(vname)) };
         });
 
         const restype = this.temitter.getMIRType(mirep.resultType);
@@ -571,7 +562,9 @@ class SMTEmitter {
             this.assembly.resultTypes.push(({ hasFlag: false, rtname: mirep.resultType, ctype: rtype }));
         }
 
-        xxxx; //havoc setup for result as well
+        this.walkAndGenerateHavocType(restype, this.assembly.havocfuncs);
+        const resvexp = this.temitter.generateHavocConstructorCall(restype, new SMTConst("(as seq.empty (Seq BNat))"), new SMTConst(`(_ bv${0} ${this.assembly.vopts.ISize})`));
+        const rarg = { vname: "_@smtres@_arg", vtype: this.temitter.generateResultType(restype), vinit: resvexp, vchk: this.temitter.generateResultIsSuccessTest(restype, new SMTVar("_@smtres@_arg")), callexp: this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@_arg")) };
 
         assembly.entityDecls.forEach((edcl) => {
             const mirtype = this.temitter.getMIRType(edcl.tkey);
@@ -761,7 +754,6 @@ class SMTEmitter {
         let argchk: SMTExp[] | undefined = undefined;
         let iserrorcheck: SMTExp | undefined = undefined;
         let isvaluecheck: SMTExp | undefined = undefined;
-        let fgetvalue: SMTExp | undefined = this.temitter.generateResultGetSuccess(restype, new SMTConst("_@smtres@"));
         if(issafe) {
             iexp = this.temitter.generateResultTypeConstructorSuccess(restype, new SMTCallSimple(smtcall, callargs));
 
@@ -798,7 +790,7 @@ class SMTEmitter {
             this.assembly.uninterpfunctions.push(ufcc);
         });
 
-        this.assembly.model = new SMTModelState(iargs, argchk, this.temitter.generateResultType(restype), iexp, iserrorcheck, isvaluecheck, this.temitter.getSMTTypeFor(restype), fgetvalue);
+        this.assembly.model = new SMTModelState(iargs, rarg, argchk, this.temitter.generateResultType(restype), iexp, iserrorcheck, isvaluecheck);
         this.assembly.allErrors = this.bemitter.allErrors;
     }
 
@@ -844,7 +836,7 @@ class SMTEmitter {
         const smtassembly = new SMTAssembly(vopts, temitter.mangle(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
-        smtemit.initializeSMTAssembly(assembly, mode, entrypoint, callsafety);
+        smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
 
         ////////////
         const mirep = assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl;
@@ -869,7 +861,7 @@ class SMTEmitter {
         const smtassembly = new SMTAssembly(vopts, temitter.mangle(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
-        smtemit.initializeSMTAssembly(assembly, "check", entrypoint, callsafety);
+        smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
 
         return smtemit.assembly.allErrors;
     }

@@ -250,25 +250,23 @@ class SMTConstantDecl {
 
 class SMTModelState {
     readonly arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[];
+    readonly resinit: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp };
     readonly argchk: SMTExp[] | undefined;
     readonly checktype: SMTType;
     readonly fcheck: SMTExp;
 
     readonly iserrorcheck: SMTExp;
     readonly isvaluecheck: SMTExp;
-    readonly valuetype: SMTType;
-    readonly fgetvalue: SMTExp;
 
-    constructor(arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], argchk: SMTExp[] | undefined, checktype: SMTType, echeck: SMTExp, iserrorcheck: SMTExp, isvaluecheck: SMTExp, valuetype: SMTType, fgetvalue: SMTExp) {
+    constructor(arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }, argchk: SMTExp[] | undefined, checktype: SMTType, echeck: SMTExp, iserrorcheck: SMTExp, isvaluecheck: SMTExp) {
         this.arginits = arginits;
+        this.resinit = resinit;
         this.argchk = argchk;
         this.checktype = checktype;
         this.fcheck = echeck;
 
         this.iserrorcheck = iserrorcheck;
         this.isvaluecheck = isvaluecheck;
-        this.valuetype = valuetype;
-        this.fgetvalue = fgetvalue;
     }
 }
 
@@ -350,7 +348,7 @@ class SMTAssembly {
 
     entrypoint: string;
     havocfuncs: Set<string> = new Set<string>();
-    model: SMTModelState = new SMTModelState([], undefined, new SMTType("[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"), new SMTType("[UNINIT_VTYPE]"), new SMTConst("[UNINIT_VGET]"));
+    model: SMTModelState = new SMTModelState([], { vname: "[EMPTY]", vtype: new SMTType("[UNINIT_VTYPE]"), vinit: new SMTConst("[UNINT_VINIT]"), vchk: undefined, callexp: new SMTConst("[UNINT_CALLEXP]") }, undefined, new SMTType("[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"));
 
     constructor(vopts: VerifierOptions, entrypoint: string) {
         this.vopts = vopts;
@@ -673,12 +671,10 @@ class SMTAssembly {
         this.model.arginits.map((iarg) => {
             action.push(`(declare-const ${iarg.vname} ${iarg.vtype.name})`);
 
-            if(mode !== "evaluate") {
-                action.push(`(assert (= ${iarg.vname} ${iarg.vinit.emitSMT2(undefined)}))`);
+            action.push(`(assert (= ${iarg.vname} ${iarg.vinit.emitSMT2(undefined)}))`);
 
-                if(iarg.vchk !== undefined) {
-                    action.push(`(assert ${iarg.vchk.emitSMT2(undefined)})`);
-                }
+            if(iarg.vchk !== undefined) {
+                action.push(`(assert ${iarg.vchk.emitSMT2(undefined)})`);
             }
         });
 
@@ -686,28 +682,25 @@ class SMTAssembly {
             action.push(...this.model.argchk.map((chk) => `(assert ${chk.emitSMT2(undefined)})`));
         }
 
-        if (mode === "check") {
-            action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
-            action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
+        action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
+        action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
+        
+        action.push(`(declare-const ${this.model.resinit.vname} ${this.model.resinit.vtype.name})`);
+        action.push(`(assert (= ${this.model.resinit.vname} ${this.model.resinit.vinit.emitSMT2(undefined)}))`);
+        if(this.model.resinit.vchk !== undefined) {
+            action.push(`(assert ${this.model.resinit.vchk.emitSMT2(undefined)})`);
+        }
 
+        if (mode === "check") {
             action.push(`(assert ${this.model.iserrorcheck.emitSMT2(undefined)})`);
         }
         else if (mode === "evaluate") {
-            action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
-            action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
-
             action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
-            action.push(`(declare-const _@smtres@_value ${this.model.valuetype.name})`);
-            action.push(`(assert (= _@smtres@_value ${this.model.fgetvalue.emitSMT2(undefined)}))`);
+            action.push(`(assert (= ${this.model.resinit.vname} _@smtres@))`);
         }
         else {
-            action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
-            action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
-
             action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
-            action.push(`(declare-const _@smtres@_value ${this.model.valuetype.name})`);
-
-            action.push(`(assert (= _@smtres@_value ${this.model.fgetvalue.emitSMT2(undefined)}))`);
+            action.push(`(assert (= ${this.model.resinit.vname} _@smtres@))`);
         }
 
         let foutput: string[] = [];
