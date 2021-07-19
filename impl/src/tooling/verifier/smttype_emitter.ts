@@ -740,7 +740,7 @@ class SMTTypeEmitter {
             return {tag: APIEmitTypeTag.TupleTag, name: tt.trkey, isvalue: tdecl.isvalue, ttypes: ttypes};
         }
         else if(this.isUniqueRecordType(tt)) {
-            const rdecl = this.assembly.tupleDecls.get(tt.trkey) as MIRRecordType;
+            const rdecl = this.assembly.recordDecls.get(tt.trkey) as MIRRecordType;
 
             let props: string[] = [];
             let ttypes: string[] = [];

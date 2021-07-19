@@ -137,6 +137,44 @@ class SMTEmitter {
         this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: new SMTType("(Seq BNat)") }], this.temitter.generateResultType(tt), fbody));
     }
 
+    private generateAPITypeConstructorFunction_Union(tt: MIRType, havocfuncs: Set<String>) {
+        for(let i = 0; i < tt.options.length; ++i) {
+            this.walkAndGenerateHavocType(this.temitter.getMIRType(tt.options[i].trkey), havocfuncs);
+        }
+
+        const bselect = new SMTCallSimple("UnionChoice@UFCons_API", [new SMTVar("path")]);
+        let ccv = new SMTVar("cc");
+
+        let bexp: SMTExp = this.temitter.generateErrorResultAssert(tt);
+        for(let i = 0; i < tt.options.length; ++i) {
+            let ofidx = tt.options.length - (i + 1);
+            let oftt = this.temitter.getMIRType(tt.options[ofidx].trkey);
+
+            const cc = this.temitter.generateHavocConstructorCall(oftt, new SMTVar("path"), new SMTConst(`(_ bv${i} ${this.bemitter.vopts.ISize})`));
+            const ccvar = this.bemitter.generateTempName();
+            const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(oftt);
+
+            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
+            const access = this.temitter.generateResultGetSuccess(oftt, new SMTVar(ccvar));
+
+            bexp = new SMTIf(
+                new SMTCallSimple("=", [ccv, new SMTConst(`(_ bv${ofidx} ${this.assembly.vopts.ISize})`)]),
+                new SMTLet(ccvar, cc,
+                    new SMTIf(
+                        chkfun,
+                        this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(access, oftt, tt)),
+                        this.temitter.generateErrorResultAssert(tt)
+                    )
+                ),
+                bexp
+            );
+        }
+
+        let fbody: SMTExp = new SMTLet("cc", bselect, bexp);
+        havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
+        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: new SMTType("(Seq BNat)") }], this.temitter.generateResultType(tt), fbody));
+    }
+
     private generateAPITypeConstructorFunction_Tuple(tt: MIRType, havocfuncs: Set<String>) {
         const ttuple = tt.options[0] as MIRTupleType;
 
@@ -144,7 +182,9 @@ class SMTEmitter {
             this.walkAndGenerateHavocType(ee.type, havocfuncs);
             const cc = this.temitter.generateHavocConstructorCall(ee.type, new SMTVar("path"), new SMTConst(`(_ bv${i} ${this.bemitter.vopts.ISize})`));
             const ccvar = this.bemitter.generateTempName();
-            const chkfun = this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
+            const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(ee.type);
+
+            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
             const access = this.temitter.generateResultGetSuccess(ee.type, new SMTVar(ccvar));
 
             return { ccvar: ccvar, cc: cc, chk: chkfun, access: access };
@@ -153,8 +193,8 @@ class SMTEmitter {
         const fbody = new SMTLetMulti(
             ctors.map((ctor) => { return { vname: ctor.ccvar, value: ctor.cc }; }),
             new SMTIf(
-                new SMTCallSimple("and", ctors.filter((ctor) => ctor.chk !== undefined).map((ctor) => ctor.chk as SMTExp)),
-                new SMTCallSimple(this.temitter.getSMTConstructorName(tt).cons, ctors.map((ctor) => ctor.access)),
+                (ttuple.entries.length !== 0 ? new SMTCallSimple("and", ctors.filter((ctor) => ctor.chk !== undefined).map((ctor) => ctor.chk as SMTExp)) : new SMTConst("true")),
+                this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallSimple(this.temitter.getSMTConstructorName(tt).cons, ctors.map((ctor) => ctor.access))),
                 this.temitter.generateErrorResultAssert(tt)
             )
         );
@@ -170,7 +210,9 @@ class SMTEmitter {
             this.walkAndGenerateHavocType(ee.type, havocfuncs);
             const cc = this.temitter.generateHavocConstructorCall(ee.type, new SMTVar("path"), new SMTConst(`(_ bv${i} ${this.bemitter.vopts.ISize})`));
             const ccvar = this.bemitter.generateTempName();
-            const chkfun = this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
+            const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(ee.type);
+
+            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
             const access = this.temitter.generateResultGetSuccess(ee.type, new SMTVar(ccvar));
 
             return { pname: ee.name, ccvar: ccvar, cc: cc, chk: chkfun, access: access };
@@ -179,8 +221,8 @@ class SMTEmitter {
         const fbody = new SMTLetMulti(
             ctors.map((ctor) => { return { vname: ctor.ccvar, value: ctor.cc }; }),
             new SMTIf(
-                new SMTCallSimple("and", ctors.filter((ctor) => ctor.chk !== undefined).map((ctor) => ctor.chk as SMTExp)),
-                new SMTCallSimple(this.temitter.getSMTConstructorName(tt).cons, ctors.map((ctor) => ctor.access)),
+                (trecord.entries.length !== 0 ? new SMTCallSimple("and", ctors.filter((ctor) => ctor.chk !== undefined).map((ctor) => ctor.chk as SMTExp)) : new SMTConst("true")),
+                this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallSimple(this.temitter.getSMTConstructorName(tt).cons, ctors.map((ctor) => ctor.access))),
                 this.temitter.generateErrorResultAssert(tt)
             )
         );
@@ -440,10 +482,11 @@ class SMTEmitter {
     }
 
     private walkAndGenerateHavocType(tt: MIRType, havocfuncs: Set<String>) {
-        assert(tt.options.length === 1)
-
         if (this.temitter.isKnownSafeHavocConstructorType(tt)) {
             //Don't need to do anything
+        }
+        else if (tt.options.length !== 1) {
+            this.generateAPITypeConstructorFunction_Union(tt, havocfuncs);
         }
         else if (this.temitter.isUniqueTupleType(tt)) {
             this.generateAPITypeConstructorFunction_Tuple(tt, havocfuncs);
