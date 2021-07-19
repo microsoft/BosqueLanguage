@@ -35,10 +35,16 @@ const DEFAULT_VOPTS = {
     SpecializeSmallModelGen: false
 } as VerifierOptions;
 
-type CheckerResult = "infeasible" | "witness" | "timeout";
+type CheckerResult = "infeasible" | "witness" | "possible" | "timeout";
 
 //ocrresponds to 1a, 1b, 2a, 2b in paper
 type ChkWorkflowOutcome = "infeasible" | "witness" | "partial" | "exhaustive";
+
+enum AssemblyFlavor
+{
+    RecuriveImpl,
+    UFOverApproximate
+}
 
 function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
     try {
@@ -74,7 +80,7 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASM(usercode: CodeFileInfo[], entrypoint: string, dosmallopts: boolean): { masm: MIRAssembly | undefined, errors: string[] } {
+function generateMASM(usercode: CodeFileInfo[], entrypoint: string, asmflavor: AssemblyFlavor, dosmallopts: boolean): { masm: MIRAssembly | undefined, errors: string[] } {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
     const code = [...corecode, ...usercode];
 
@@ -89,7 +95,16 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string, dosmallopts:
         entryfunc = entrypoint.slice(cpos + 2);
     }
 
-    const macros = dosmallopts ? ["SMALL_MODEL_PATH"] : [];
+    let macros: string[] = [];
+    if(asmflavor === AssemblyFlavor.UFOverApproximate)
+    {
+        macros.push("UF_APPROX");
+    }
+    if(dosmallopts)
+    {
+        macros.push("SMALL_MODEL_PATH");
+    }
+
     return MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
 }
 
@@ -112,7 +127,7 @@ function runVEvaluator(cpayload: object, workflow: "check" | "eval" | "invert", 
     }
 }
 
-function runVEvaluatorAsync(cpayload: object, workflow: "check" | "eval" | "invert", bson: boolean, cb: (result: string) => void) {
+function runVEvaluatorAsync(cpayload: object, workflow: "infeasible" | "witness" | "eval" | "invert", bson: boolean, cb: (result: string) => void) {
     try {
         const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
         const proc = exec(cmd, (err, stdout, stderr) => {
@@ -131,7 +146,7 @@ function runVEvaluatorAsync(cpayload: object, workflow: "check" | "eval" | "inve
 
 function workflowGetErrors(usercode: CodeFileInfo[], vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] | undefined {
     try {
-        const { masm, errors } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm, errors } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
             process.stderr.write(JSON.stringify(errors, undefined, 2));
@@ -146,9 +161,9 @@ function workflowGetErrors(usercode: CodeFileInfo[], vopts: VerifierOptions, ent
     }
 }
 
-function workflowEmitToFile(into: string, usercode: CodeFileInfo[], mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, smtonly: boolean) {
+function workflowEmitToFile(into: string, usercode: CodeFileInfo[], asmflavor: AssemblyFlavor, mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, smtonly: boolean) {
     try {
-        const { masm, errors } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm, errors } = generateMASM(usercode, entrypoint, asmflavor, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
             process.stderr.write(JSON.stringify(errors, undefined, 2));
@@ -166,9 +181,9 @@ function workflowEmitToFile(into: string, usercode: CodeFileInfo[], mode: "check
     }
 }
 
-function workflowBSQSingle(bson: boolean, usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
+function workflowBSQInfeasibleSingle(bson: boolean, usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
@@ -179,14 +194,34 @@ function workflowBSQSingle(bson: boolean, usercode: CodeFileInfo[], vopts: Verif
                 return;
             }
 
-            runVEvaluatorAsync(res, "check", bson, cb);
+            runVEvaluatorAsync(res, "infeasible", bson, cb);
         }
     } catch(e) {
         cb(JSON.stringify({result: "error", info: `${e}`}));
     }
 }
 
-function wfCheckSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+function workflowBSQWitnessSingle(bson: boolean, usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
+    try {
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, vopts.SpecializeSmallModelGen);
+        if(masm === undefined) {
+            cb(JSON.stringify({result: "error", info: "compile errors"}));
+        }
+        else {    
+            const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+            if(res === undefined) {
+                cb(JSON.stringify({result: "error", info: "payload generation error"}));
+                return;
+            }
+
+            runVEvaluatorAsync(res, "witness", bson, cb);
+        }
+    } catch(e) {
+        cb(JSON.stringify({result: "error", info: `${e}`}));
+    }
+}
+
+function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
     //
     //TODO: should compute min viable BV size here
     //
@@ -198,11 +233,86 @@ function wfCheckSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, 
     for(let i = 0; i < BV_SIZES.length; ++i) {
         vopts.ISize = BV_SIZES[i];
         if(printprogress) {
-            process.stderr.write(`    Checking small (${BV_SIZES[i]}) bit width...\n`);
+            process.stderr.write(`    Checking small (${BV_SIZES[i]}) bit width unreachability...\n`);
         }
 
         try {
-            const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
+            const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, vopts.SpecializeSmallModelGen);
+            if(masm === undefined) {
+                if(printprogress) {
+                    process.stderr.write(`    compile errors\n`);
+                }
+                return undefined;
+            }
+            else {    
+                const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+                if(res === undefined) {
+                    if(printprogress) {
+                        process.stderr.write(`    payload generation errors\n`);
+                    }
+                    return undefined;
+                }
+    
+                const cres = runVEvaluator(res, "check", bson);
+                const jres = JSON.parse(cres);
+                const rr = jres["result"];
+                if(rr === "infeasible") {
+                    if(printprogress) {
+                        process.stderr.write(`    infeasible -- continuing checks...\n`);
+                    }
+                }
+                else if(rr === "possible") {
+                    if (printprogress) {
+                        process.stderr.write(`    possible -- moving on\n`);
+                    }
+
+                    const end = Date.now();
+                    return {result: "possible", time: (end - start) / 1000};
+                }
+                else if (rr === "timeout") {
+                    if(printprogress) {
+                        process.stderr.write(`    timeout -- moving on\n`);
+                    }
+                    
+                    const end = Date.now();
+                    return {result: "timeout", time: (end - start) / 1000};
+                }
+                else {
+                    if(printprogress) {
+                        process.stderr.write(`    error -- moving on\n`);
+                    }
+                    return undefined;
+                }
+            }
+        } catch(e) {
+            if(printprogress) {
+                process.stderr.write(`    failure: ${e}\n`);
+            }
+            return undefined;
+        }   
+    }
+
+    const end = Date.now();
+    return {result: "infeasible", time: (end - start) / 1000};
+}
+
+function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+    //
+    //TODO: should compute min viable BV size here
+    //
+    const BV_SIZES = [5, 8, 16];
+    let vopts = {...DEFAULT_VOPTS};
+
+    const start = Date.now();
+
+    for(let i = 0; i < BV_SIZES.length; ++i) {
+        vopts.ISize = BV_SIZES[i];
+        if(printprogress) {
+            process.stderr.write(`    Looking for small (${BV_SIZES[i]}) bit width witnesses...\n`);
+        }
+
+        try {
+            const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, vopts.SpecializeSmallModelGen);
             if(masm === undefined) {
                 if(printprogress) {
                     process.stderr.write(`    compile errors\n`);
@@ -268,18 +378,18 @@ function wfCheckSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, 
     return {result: "infeasible", time: (end - start) / 1000};
 }
 
-function wfCheckLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
+    const start = Date.now();
+
     let vopts = {...DEFAULT_VOPTS};
     vopts.ISize = 64;
 
-    const start = Date.now();
-
     if(printprogress) {
-        process.stderr.write(`    Checking large (64) bit width...\n`);
+        process.stderr.write(`    Checking full (${64}) bit width uneachability...\n`);
     }
 
     try {
-        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, vopts.SpecializeSmallModelGen);
         if (masm === undefined) {
             if (printprogress) {
                 process.stderr.write(`    compile errors\n`);
@@ -304,7 +414,75 @@ function wfCheckLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, 
                 }
 
                 const end = Date.now();
-                return {result: "infeasible", time: (end - start) / 1000};
+                return { result: "infeasible", time: (end - start) / 1000 };
+            }
+            else if (rr === "possible") {
+                if (printprogress) {
+                    process.stderr.write(`    possible\n`);
+                }
+
+                const end = Date.now();
+                return { result: "possible", time: (end - start) / 1000 };
+            }
+            else if (rr === "timeout") {
+                if (printprogress) {
+                    process.stderr.write(`    timeout\n`);
+                }
+
+                const end = Date.now();
+                return { result: "timeout", time: (end - start) / 1000 };
+            }
+            else {
+                if (printprogress) {
+                    process.stderr.write(`    error\n`);
+                }
+                return undefined;
+            }
+        }
+    } catch (e) {
+        if (printprogress) {
+            process.stderr.write(`    failure: ${e}\n`);
+        }
+        return undefined;
+    }
+}
+
+function wfWitnessLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+    const start = Date.now();
+
+    let vopts = {...DEFAULT_VOPTS};
+    vopts.ISize = 64;
+    if(printprogress) {
+        process.stderr.write(`    Looking for full (${64}) bit width witness...\n`);
+    }
+
+    try {
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, vopts.SpecializeSmallModelGen);
+        if (masm === undefined) {
+            if (printprogress) {
+                process.stderr.write(`    compile errors\n`);
+            }
+            return undefined;
+        }
+        else {
+            const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+            if (res === undefined) {
+                if (printprogress) {
+                    process.stderr.write(`    payload generation errors\n`);
+                }
+                return undefined;
+            }
+
+            const cres = runVEvaluator(res, "check", bson);
+            const jres = JSON.parse(cres);
+            const rr = jres["result"];
+            if (rr === "infeasible") {
+                if (printprogress) {
+                    process.stderr.write(`    infeasible\n`);
+                }
+
+                const end = Date.now();
+                return { result: "infeasible", time: (end - start) / 1000 };
             }
             else if (rr === "witness") {
                 const end = Date.now();
@@ -323,13 +501,15 @@ function wfCheckLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, 
             }
             else if (rr === "timeout") {
                 if (printprogress) {
-                    process.stderr.write(`    timeout -- moving on\n`);
+                    process.stderr.write(`    timeout\n`);
                 }
-                return undefined;
+
+                const end = Date.now();
+                return { result: "timeout", time: (end - start) / 1000 };
             }
             else {
                 if (printprogress) {
-                    process.stderr.write(`    error -- moving on\n`);
+                    process.stderr.write(`    error\n`);
                 }
                 return undefined;
             }
@@ -349,26 +529,36 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
 
     const start = Date.now();
 
-    const smr = wfCheckSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
-    if(smr === undefined) {
+    const smi = wfInfeasibleSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
+    if(smi === undefined) {
         if(printprogress) {
-            process.stderr.write(`  blocked on small model checking -- moving on :(\n`);
+            process.stderr.write(`  blocked on small model unreachability -- moving on :(\n`);
         }
         return undefined;
     }
 
-    if(smr.result === "witness") {
+    let smw = smi.result != "infeasible" ? wfWitnessSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
+    if(smw !== undefined && smw.result === "witness") {
         if(printprogress) {
             process.stderr.write(`  witness input generation successful (1b)!\n`);
         }
         const end = Date.now();
-        return {result: "witness", time: (end - start) / 1000, input: smr.input};
+        return {result: "witness", time: (end - start) / 1000, input: smw.input};
     }
 
-    const lmr = wfCheckLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
+    let lmw = smi.result != "infeasible" ? wfWitnessLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
+    if(lmw !== undefined && lmw.result === "witness") {
+        if(printprogress) {
+            process.stderr.write(`  witness input generation successful (1b)!\n`);
+        }
+        const end = Date.now();
+        return {result: "witness", time: (end - start) / 1000, input: lmw.input};
+    }
+
+    const lmr = wfInfeasibleLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
     if(lmr === undefined) {
         if(printprogress) {
-            process.stderr.write(`  blocked on large model checking -- no result :(\n`);
+            process.stderr.write(`  blocked on large model unreachability -- no result :(\n`);
         }
         return undefined;
     }
@@ -376,21 +566,14 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
     const end = Date.now();
     const elapsed = (end - start) / 1000;
 
-    if(lmr.result === "witness") {
-        if(printprogress) {
-            process.stderr.write(`  witness input generation successful (1b)!\n`);
-        }
-        const end = Date.now();
-        return {result: "witness", time: (end - start) / 1000, input: lmr.input};
-    }
-    else if(lmr.result === "infeasible") {
+    if(lmr.result === "infeasible") {
         if(printprogress) {
             process.stderr.write(`  infeasible on all inputs (1a)!\n`);
         }
         return {result: "infeasible", time: elapsed};
     }
     else {
-        if(smr.result === "infeasible") {
+        if(smi.result === "infeasible") {
             if(printprogress) {
                 process.stderr.write(`  infeasible on restricted inputs (2a)!\n`);
             }
@@ -407,7 +590,7 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
 
 function workflowEvaluateSingle(bson: boolean, usercode: CodeFileInfo[], jin: any[], vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
@@ -427,7 +610,7 @@ function workflowEvaluateSingle(bson: boolean, usercode: CodeFileInfo[], jin: an
 
 function workflowInvertSingle(bson: boolean, usercode: CodeFileInfo[], jout: any, vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(usercode, entrypoint, vopts.SpecializeSmallModelGen);
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
@@ -447,7 +630,7 @@ function workflowInvertSingle(bson: boolean, usercode: CodeFileInfo[], jout: any
 
 export {
     workflowLoadUserSrc,
-    workflowGetErrors, workflowEmitToFile, workflowBSQSingle, workflowBSQCheck, workflowEvaluateSingle, workflowInvertSingle,
+    workflowGetErrors, workflowEmitToFile, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowBSQCheck, workflowEvaluateSingle, workflowInvertSingle,
     ChkWorkflowOutcome,
-    DEFAULT_TIMEOUT, DEFAULT_VOPTS
+    AssemblyFlavor, DEFAULT_TIMEOUT, DEFAULT_VOPTS
 };

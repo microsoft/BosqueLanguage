@@ -8,7 +8,58 @@
 #include <fstream>
 
 ////
-//Work flow #1 -- Refute or Witness an Error
+//Work flow #1 -- Refute an Error
+//Given a smt decl + a signature that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
+//   
+//Either:
+//  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
+//  Prove sat and return the JSON payload -- {result: "possible", time: number}
+//  Solver timeout and return the JSON payload -- {result: "timeout", time: number}
+//  Main should also handle exceptions and -- {result: "error", info: string}
+
+json workflowInfeasible(std::string smt2decl, APIModule* apimodule, unsigned timeout, bool bsqon)
+{
+    z3::context c;
+    z3::solver s(c);
+
+    z3::params p(c);
+    p.set(":timeout", timeout);
+    //TODO: it would be nice to set a more specifc logic here (than the ALL from the smtfile)
+    s.set(p);
+
+    s.from_string(smt2decl.c_str());
+
+    //check the formula
+    auto start = std::chrono::system_clock::now();
+    auto res = s.check();    
+    auto end = std::chrono::system_clock::now();
+
+    auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
+    if(res == z3::check_result::unknown)
+    {
+        return {
+            {"result", "timeout"},
+            {"time", delta_ms}
+        };
+    }
+    else if(res == z3::check_result::unsat)
+    {
+        return {
+            {"result", "infeasible"},
+            {"time", delta_ms}
+        };
+    }
+    else
+    {
+        return {
+            {"result", "possible"},
+            {"time", delta_ms}
+        };
+    }
+}
+
+////
+//Work flow #2 -- Witness an Error
 //Given a smt decl + a signature that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
 //   
 //Either:
@@ -17,7 +68,7 @@
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowValidate(std::string smt2decl, APIModule* apimodule, unsigned timeout, bool bsqon)
+json workflowWitness(std::string smt2decl, APIModule* apimodule, unsigned timeout, bool bsqon)
 {
     z3::context c;
     z3::solver s(c);
@@ -94,7 +145,7 @@ json workflowValidate(std::string smt2decl, APIModule* apimodule, unsigned timeo
 }
 
 ////
-//Work flow #2 -- Compute an API result
+//Work flow #3 -- Compute an API result
 //Given a smt decl, a signature, and a JSON representation of the arg vector 
 //Either:
 //  Compute the output of the function return the JSON payload -- {result: "output" | "infeasible", time: number, output: JSON}
@@ -186,7 +237,7 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
 }
 
 ////
-//Work flow #3 -- Compute an API input
+//Work flow #4 -- Compute an API input
 //Given a smt decl that (1) havocs inputs, (2) invokes a call
 //      + a signature, smt output name, and JSON result 
 //Either:
@@ -320,7 +371,7 @@ int main(int argc, char** argv)
         argidx = 2;
     }
 
-    if(argc > argidx && std::string(argv[argidx]) == "--check")
+    if(argc > argidx && std::string(argv[argidx]) == "--infeasible")
     {
         json payload = getPayload(argc, argv, argidx);
 
@@ -330,7 +381,27 @@ int main(int argc, char** argv)
             unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowValidate(smt2decl, apimodule, timeout, bsqon);
+            json result = workflowInfeasible(smt2decl, apimodule, timeout, bsqon);
+            
+            std::cout << result << std::endl;
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << "Failed in processing... " << e.what() << std::endl;
+            exit(1);
+        }
+    }
+    if(argc > argidx && std::string(argv[argidx]) == "--witness")
+    {
+        json payload = getPayload(argc, argv, argidx);
+
+        try
+        {
+            std::string smt2decl = payload["smt2decl"].get<std::string>();
+            unsigned timeout = payload["timeout"].get<unsigned>();
+            APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
+
+            json result = workflowWitness(smt2decl, apimodule, timeout, bsqon);
             
             std::cout << result << std::endl;
         }
@@ -382,7 +453,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        printf("Unknown usage [--bsqon] (--check|--eval|--invert) [file.json]\n");
+        printf("Unknown usage [--bsqon] (--infeasible|--witness|--eval|--invert) [file.json]\n");
     }
 
     return 0;
