@@ -972,12 +972,19 @@ std::optional<std::string> ParseInfo::parseToRealNumber(json j) const
 std::optional<std::string> ParseInfo::parseToDecimalNumber(json j) const
 {
     std::optional<std::string> nval = std::nullopt;
-    if(j.is_string())
+    if(j.is_number() || j.is_string())
     { 
-        std::string sstr = j.get<std::string>();
-        if(std::regex_match(sstr, re_numberino_f))
+        if(j.is_number())
         {
-            nval = sstr;
+            nval = std::to_string(j.get<double>());
+        }
+        else
+        {
+            std::string sstr = j.get<std::string>();
+            if(std::regex_match(sstr, re_numberino_f))
+            {
+                nval = sstr;
+            }
         }
     }
 
