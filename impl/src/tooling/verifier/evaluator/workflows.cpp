@@ -391,7 +391,7 @@ int main(int argc, char** argv)
             exit(1);
         }
     }
-    if(argc > argidx && std::string(argv[argidx]) == "--witness")
+    else if(argc > argidx && std::string(argv[argidx]) == "--witness")
     {
         json payload = getPayload(argc, argv, argidx);
 

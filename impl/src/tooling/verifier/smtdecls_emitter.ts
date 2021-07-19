@@ -813,7 +813,7 @@ class SMTEmitter {
 
         const signature = {
             name: entrypoint.name,
-            resType: entrypoint.resultType,
+            restype: entrypoint.resultType,
             argnames: argnames,
             smtargnames: smtargnames,
             argtypes: argtypes

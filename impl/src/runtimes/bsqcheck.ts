@@ -48,7 +48,7 @@ if(mode === "--output") {
 
     const fparse = path.parse(files[0]);
     const into = path.join(fparse.dir, fparse.name + (smtonly ? ".smt2" : ".json"));
-    process.stdout.write(`Writing SMT file to ${into}\n`);
+    process.stdout.write(`Writing file to ${into}\n`);
 
     const asmflavor = smtmode === "unreachable" ? AssemblyFlavor.UFOverApproximate : AssemblyFlavor.RecuriveImpl;
     if(smtmode === "unreachable" || smtmode === "witness") {
@@ -147,7 +147,7 @@ else if(mode === "--check") {
         else if(jres.result === "witness") {
             if(!quiet) {
                 process.stdout.write(`Generated witness input in ${jres.time}s!\n`);
-                process.stdout.write(`${jres.input}\n`);
+                //process.stdout.write(`${jres.input}\n`);
             }
             wcount++;
             witnesslist.push(jres.input);

@@ -117,7 +117,7 @@ function generateSMTPayload(masm: MIRAssembly, mode: "check" | "evaluate" | "inv
     }
 }
 
-function runVEvaluator(cpayload: object, workflow: "check" | "eval" | "invert", bson: boolean): string {
+function runVEvaluator(cpayload: object, workflow: "infeasible" | "witness" | "eval" | "invert", bson: boolean): string {
     try {
         const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
         return execSync(cmd, { input: JSON.stringify(cpayload, undefined, 2) }).toString().trim();
@@ -253,7 +253,7 @@ function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: num
                     return undefined;
                 }
     
-                const cres = runVEvaluator(res, "check", bson);
+                const cres = runVEvaluator(res, "infeasible", bson);
                 const jres = JSON.parse(cres);
                 const rr = jres["result"];
                 if(rr === "infeasible") {
@@ -328,7 +328,7 @@ function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number
                     return undefined;
                 }
     
-                const cres = runVEvaluator(res, "check", bson);
+                const cres = runVEvaluator(res, "witness", bson);
                 const jres = JSON.parse(cres);
                 const rr = jres["result"];
                 if(rr === "infeasible") {
@@ -405,7 +405,7 @@ function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: num
                 return undefined;
             }
 
-            const cres = runVEvaluator(res, "check", bson);
+            const cres = runVEvaluator(res, "infeasible", bson);
             const jres = JSON.parse(cres);
             const rr = jres["result"];
             if (rr === "infeasible") {
@@ -473,7 +473,7 @@ function wfWitnessLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number
                 return undefined;
             }
 
-            const cres = runVEvaluator(res, "check", bson);
+            const cres = runVEvaluator(res, "witness", bson);
             const jres = JSON.parse(cres);
             const rr = jres["result"];
             if (rr === "infeasible") {

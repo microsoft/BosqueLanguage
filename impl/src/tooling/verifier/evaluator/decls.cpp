@@ -321,6 +321,127 @@ std::optional<bool> ExtractionInfo::expBoolAsBool(z3::solver& s, z3::model& m, c
     }
 }
 
+std::string hextobin(const std::string& hex)
+{
+    std::string res;
+    for(size_t i = 0; i < hex.size(); ++i)
+    {
+        switch(hex[i])
+        {
+        case '0':
+            res += "0000";
+            break;
+        case '1':
+            res += "0001";
+            break;
+        case '2':
+            res += "0010";
+            break;
+        case '3':
+            res += "0011";
+            break;
+        case '4':
+            res += "0100";
+            break;
+        case '5':
+            res += "0101";
+            break;
+        case '6':
+            res += "0110";
+            break;
+        case '7':
+            res += "0111";
+            break;
+        case '8':
+            res += "1000";
+            break;
+        case '9':
+            res += "1001";
+            break;
+        case 'a':
+            res += "1010";
+            break;
+        case 'b':
+            res += "1011";
+            break;
+        case 'c':
+            res += "1100";
+            break;
+        case 'd':
+            res += "1101";
+            break;
+        case 'e':
+            res += "1110";
+            break;
+        case 'f':
+            res += "1111";
+            break;
+        default:
+            assert(false);
+            break;
+        }
+    }
+
+    return res;
+}
+
+int64_t getsignfactor(const std::string& bits)
+{
+    return (bits[0] == '1' ? -1 : 0);
+}
+
+std::string getmagnitude(const std::string& bits)
+{
+    return bits.substr(1);
+}
+
+int64_t signValue(const std::string& bits)
+{
+    int64_t factor = getsignfactor(bits);
+    int64_t mag = std::exp2(bits.size() - 1);
+
+    return factor * mag;
+}
+
+uint64_t magnitudeValue(const std::string& bits)
+{
+    uint64_t res = bits[bits.size() - 1] == '1' ? 1 : 0;
+    uint64_t pow = 2;
+
+    for(int64_t i = bits.size() - 2; i >= 0; --i)
+    {
+        res = (bits[i] == '1' ? 1 : 0) * pow;
+        pow = pow * 2;
+    }
+
+    return res;
+}
+
+uint64_t bitsToUInt(const std::string& bits)
+{
+    return magnitudeValue(bits);
+}
+
+uint64_t hexToUInt(const std::string& hex)
+{
+    auto bits = hextobin(hex);
+    return bitsToUInt(bits);
+}
+
+int64_t bitsToInt(const std::string& bits)
+{
+    int64_t signv = signValue(bits);
+    int64_t magv = (int64_t)magnitudeValue(getmagnitude(bits));
+
+    return signv + magv;
+}
+
+int64_t hexToInt(const std::string& hex)
+{
+    auto bits = hextobin(hex);
+    return bitsToInt(bits);
+}
+
 std::optional<uint64_t> ExtractionInfo::expBVAsUInt(z3::solver& s, z3::model& m, const z3::expr& e) const
 {
     auto bbval = m.eval(e, true);
@@ -330,7 +451,7 @@ std::optional<uint64_t> ExtractionInfo::expBVAsUInt(z3::solver& s, z3::model& m,
     if(std::regex_match(strval, re_bv_binary))
     {
         auto bits = strval.substr(2);
-        auto uval = std::stoull(bits, nullptr, 2);
+        auto uval = bitsToUInt(bits);
         
         auto ustr = std::to_string(uval);
         s.add(e == s.ctx().bv_val(ustr.c_str(), this->apimodule->bv_width));
@@ -340,7 +461,7 @@ std::optional<uint64_t> ExtractionInfo::expBVAsUInt(z3::solver& s, z3::model& m,
     else if(std::regex_match(strval, re_bv_hex))
     {
         auto bits = strval.substr(2);
-        auto uval = std::stoull(bits, nullptr, 16);
+        auto uval = hexToUInt(bits);
         
         auto ustr = std::to_string(uval);
         s.add(e == s.ctx().bv_val(ustr.c_str(), this->apimodule->bv_width));
@@ -378,28 +499,22 @@ std::optional<int64_t> ExtractionInfo::expBVAsInt(z3::solver& s, z3::model& m, c
     if(std::regex_match(strval, re_bv_binary))
     {
         auto bits = strval.substr(2);
-        auto ival = std::stoll(bits, nullptr, 2);
-        
-        auto sbits = (64 - this->apimodule->bv_width);
-        int64_t rres = ((int64_t)(ival << sbits)) >> sbits;
+        auto ival = bitsToInt(bits);
 
-        auto istr = std::to_string(rres);
+        auto istr = std::to_string(ival);
         s.add(e == s.ctx().bv_val(istr.c_str(), this->apimodule->bv_width));
 
-        return std::make_optional(rres);
+        return std::make_optional(ival);
     }
     else if(std::regex_match(strval, re_bv_hex))
     {
         auto bits = strval.substr(2);
-        auto ival = std::stoll(bits, nullptr, 16);
-        
-        auto sbits = (64 - this->apimodule->bv_width);
-        int64_t rres = ((int64_t)(ival << sbits)) >> sbits;
+        auto ival = hexToInt(bits);
 
-        auto istr = std::to_string(rres);
+        auto istr = std::to_string(ival);
         s.add(e == s.ctx().bv_val(istr.c_str(), this->apimodule->bv_width));
 
-        return std::make_optional(rres);
+        return std::make_optional(ival);
     }
     else
     {
@@ -1448,7 +1563,7 @@ std::optional<std::string> IntType::tobsqarg(const ParseInfo& pinfo, json j, con
 std::optional<json> IntType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BInt@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
-    return ex.evalToUnsignedNumber(s, m, bef(ctx));
+    return ex.evalToSignedNumber(s, m, bef(ctx));
 }
 
 BigNatType* BigNatType::jparse(json j)
@@ -2601,6 +2716,8 @@ bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::contex
 
     auto lef = getArgContextConstructor(pinfo.apimodule, c, "EnumChoice@UFCons_API", c.bv_sort(pinfo.apimodule->bv_width));
     pinfo.chks.top()->push_back(lef(ctx) == c.bv_val((uint64_t)idx, pinfo.apimodule->bv_width));
+
+    return true;
 }
 
 std::optional<std::string> EnumType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
