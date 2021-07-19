@@ -410,7 +410,7 @@ uint64_t magnitudeValue(const std::string& bits)
 
     for(int64_t i = bits.size() - 2; i >= 0; --i)
     {
-        res = (bits[i] == '1' ? 1 : 0) * pow;
+        res += (bits[i] == '1' ? 1 : 0) * pow;
         pow = pow * 2;
     }
 
