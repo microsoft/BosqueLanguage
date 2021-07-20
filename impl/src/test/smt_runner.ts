@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQSingle, workflowEvaluateSingle, workflowGetErrors } from "../tooling/verifier/smt_workflows";
+import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEvaluateSingle, workflowGetErrors } from "../tooling/verifier/smt_workflows";
 
 function enqueueSMTTestRefute(testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
@@ -15,11 +15,11 @@ function enqueueSMTTestRefute(testsrc: string, trgtline: number, cb: (result: "p
         cb("error", start, new Date(), "Invalid trgt line");
     }
     else {
-        workflowBSQSingle(false, codeinfo, DEFAULT_VOPTS, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
+        workflowBSQInfeasibleSingle(false, codeinfo, DEFAULT_VOPTS, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
             const end = new Date();
             try {
                 const jres = JSON.parse(result);
-                const rkind = jres["result"] as "error" | "infeasible" | "witness" | "timeout";
+                const rkind = jres["result"] as "error" | "infeasible" | "possible" | "timeout";
 
                 if(rkind === "error") {
                     cb("error", start, end, result);    
@@ -27,7 +27,7 @@ function enqueueSMTTestRefute(testsrc: string, trgtline: number, cb: (result: "p
                 else if(rkind === "timeout") {
                     cb("unknown/timeout", start, end, result);  
                 }
-                else if(rkind === "witness") {
+                else if(rkind === "possible") {
                     cb("fail", start, end, result);
                 }
                 else {
@@ -51,7 +51,7 @@ function enqueueSMTTestWitness(testsrc: string, trgtline: number, cb: (result: "
         cb("error", start, new Date(), "Invalid trgt line");
     }
     else {
-        workflowBSQSingle(false, codeinfo, DEFAULT_VOPTS, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
+        workflowBSQWitnessSingle(false, codeinfo, DEFAULT_VOPTS, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
             const end = new Date();
             try {
                 const jres = JSON.parse(result);

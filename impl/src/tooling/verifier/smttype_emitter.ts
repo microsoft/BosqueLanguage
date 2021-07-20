@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRInvokeDecl, MIROOTypeDecl, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIROOTypeDecl, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRFieldKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
@@ -641,9 +641,6 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "NSCore::Decimal")) {
             return ["BDecimal@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            return ["BRational@UFCons_API", false];
-        }
         else if (this.isType(tt, "NSCore::ISOTime")) {
             return ["BISOTime@UFCons_API", false];
         }
@@ -670,7 +667,7 @@ class SMTTypeEmitter {
     }
 
     generateHavocConstructorPathExtend(path: SMTExp, step: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.++", [path, new SMTCallSimple("Ctx@MakeStep", [step])]);
+        return new SMTCallSimple("seq.++", [path, new SMTCallSimple("seq.unit", [step])]);
     }
 
     generateHavocConstructorCall(tt: MIRType, path: SMTExp, step: SMTExp): SMTExp {
@@ -682,87 +679,71 @@ class SMTTypeEmitter {
         }
     }
 
-    private getJSONApiBase(tt: MIRType): {name: string, smtname: string} {
-        return {name: tt.trkey, smtname: this.getSMTTypeFor(tt).name};
-    }
-
-    private getJSONApiStd(tt: MIRType): {name: string, smtname: string, smttypetag: string} {
-        return {...this.getJSONApiBase(tt), smttypetag: this.getSMTTypeTag(tt)};
-    }
-
     getAPITypeFor(tt: MIRType): object {
         if (this.isType(tt, "NSCore::None")) {
-            return {tag: APIEmitTypeTag.NoneTag, ...this.getJSONApiStd(tt), boxfunc: "[SPECIAL_BOX]", unboxfunc: "[SPECIAL_UNBOX]"};
+            return {tag: APIEmitTypeTag.NoneTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::Bool")) {
-            return {tag: APIEmitTypeTag.BoolTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_bool@box", unboxfunc: "bsqkey_bool_value"};
+            return {tag: APIEmitTypeTag.BoolTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::Int")) {
-            return {tag: APIEmitTypeTag.IntTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_int@box", unboxfunc: "bsqkey_int_value"};
+            return {tag: APIEmitTypeTag.IntTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::Nat")) {
-            return {tag: APIEmitTypeTag.NatTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_nat@box", unboxfunc: "bsqkey_nat_value"};
+            return {tag: APIEmitTypeTag.NatTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::BigInt")) {
-            return {tag: APIEmitTypeTag.BigIntTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_bigint@box", unboxfunc: "bsqkey_bigint_value"};
+            return {tag: APIEmitTypeTag.BigIntTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::BigNat")) {
-            return {tag: APIEmitTypeTag.BigNatTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_bignat@box", unboxfunc: "bsqkey_bignat_value"};
+            return {tag: APIEmitTypeTag.BigNatTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::Float")) {
-            return {tag: APIEmitTypeTag.FloatTag, ...this.getJSONApiStd(tt), boxfunc: "bsq_float@box", unboxfunc: "bsqobject_float_value"};
+            return {tag: APIEmitTypeTag.FloatTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::Decimal")) {
-            return {tag: APIEmitTypeTag.DecimalTag, ...this.getJSONApiStd(tt), boxfunc: "bsq_decimal@box", unboxfunc: "bsqobject_decimal_value"};
+            return {tag: APIEmitTypeTag.DecimalTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::Rational")) {
-            return {tag: APIEmitTypeTag.RationalTag, ...this.getJSONApiStd(tt), boxfunc: "bsq_rational@box", unboxfunc: "bsqobject_rational_value"};
+            return {tag: APIEmitTypeTag.RationalTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::String")) {
-            return {tag: APIEmitTypeTag.StringTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_string@box", unboxfunc: "bsqkey_string_value"};
+            return {tag: APIEmitTypeTag.StringTag, name: tt.trkey};
         }
         else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            return {tag: APIEmitTypeTag.ByteBufferTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_bytebuffer@box", unboxfunc: "bsqobject_bytebuffer_value"};
+            return {tag: APIEmitTypeTag.ByteBufferTag, name: tt.trkey};
         }
         else if(this.isType(tt, "NSCore::ISOTime")) {
-            return {tag: APIEmitTypeTag.ISOTag, ...this.getJSONApiStd(tt), boxfunc: "bsq_isotime@box", unboxfunc: "bsqobject_isotime_value"};
+            return {tag: APIEmitTypeTag.ISOTag, name: tt.trkey};
         }
         else if(this.isType(tt, "NSCore::LogicalTime")) {
-            return {tag: APIEmitTypeTag.LogicalTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_logicaltime@box", unboxfunc: "bsqkey_logicaltime_value"};
+            return {tag: APIEmitTypeTag.LogicalTag, name: tt.trkey};
         }
         else if(this.isType(tt, "NSCore::UUID")) {
-            return {tag: APIEmitTypeTag.UUIDTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_uuid@box", unboxfunc: "bsqkey_uuid_value"};
+            return {tag: APIEmitTypeTag.UUIDTag, name: tt.trkey};
         }
         else if(this.isType(tt, "NSCore::ContentHash")) {
-            return {tag: APIEmitTypeTag.ContentHashTag, ...this.getJSONApiStd(tt), boxfunc: "bsqkey_contenthash@box", unboxfunc: "bsqkey_contenthash_value"};
+            return {tag: APIEmitTypeTag.ContentHashTag, name: tt.trkey};
         }
         else if(this.isUniqueTupleType(tt)) {
             const tdecl = this.assembly.tupleDecls.get(tt.trkey) as MIRTupleType;
 
-            const iskey = tdecl.grounded && this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType"));
-            const bbufuncs = this.getSMTConstructorName(tt);
 
             let ttypes: string[] = [];
-            let smtaccessors: string[] = [];
             for(let i = 0; i < tdecl.entries.length; ++i)
             {
                 const mirtt = tdecl.entries[i].type;
 
                 ttypes.push(this.getSMTTypeFor(mirtt).name);
-                smtaccessors.push(this.generateTupleIndexGetFunction(tdecl, i));
             }
 
-            return {tag: APIEmitTypeTag.TupleTag, ...this.getJSONApiStd(tt), iskey: iskey, boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield, isvalue: tdecl.isvalue, ttypes: ttypes, smtaccessors: smtaccessors};
+            return {tag: APIEmitTypeTag.TupleTag, name: tt.trkey, isvalue: tdecl.isvalue, ttypes: ttypes};
         }
         else if(this.isUniqueRecordType(tt)) {
-            const rdecl = this.assembly.tupleDecls.get(tt.trkey) as MIRRecordType;
-
-            const iskey = rdecl.grounded && this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType"));
-            const bbufuncs = this.getSMTConstructorName(tt);
+            const rdecl = this.assembly.recordDecls.get(tt.trkey) as MIRRecordType;
 
             let props: string[] = [];
             let ttypes: string[] = [];
-            let smtaccessors: string[] = [];
             for(let i = 0; i < rdecl.entries.length; ++i)
             {
                 const prop = rdecl.entries[i].name;
@@ -770,14 +751,12 @@ class SMTTypeEmitter {
 
                 props.push(prop);
                 ttypes.push(this.getSMTTypeFor(mirtt).name);
-                smtaccessors.push(this.generateRecordPropertyGetFunction(rdecl, prop));
             }
 
-            return {tag: APIEmitTypeTag.RecordTag, ...this.getJSONApiStd(tt), iskey: iskey, boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield, isvalue: rdecl.isvalue, props: props, ttypes: ttypes, smtaccessors: smtaccessors};
+            return {tag: APIEmitTypeTag.RecordTag, name: tt.trkey, isvalue: rdecl.isvalue, props: props, ttypes: ttypes};
         }
         else if(this.isUniqueEntityType(tt)) {
             const edecl = this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
-            const bbufuncs = this.getSMTConstructorName(tt);
 
             if(edecl.specialDecls.has(MIRSpecialTypeCategory.StringOfDecl)) {
                 const vtype = ((edecl.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[]).find((tke) => tke.tname === "T") as { tname: string, tkind: MIRResolvedTypeKey }).tkind;
@@ -785,62 +764,44 @@ class SMTTypeEmitter {
                 const vre = this.assembly.validatorRegexs.get(vtype) as BSQRegex;
                 const lre = vre.compileToSMTValidator(this.vopts.StringOpt === "ASCII");
 
-                return {tag: APIEmitTypeTag.StringOfTag, ...this.getJSONApiStd(tt), boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield, validator: vtype, re_validate: lre};
+                return {tag: APIEmitTypeTag.StringOfTag, name: tt.trkey, validator: vtype, re_validate: lre};
             }
             else if(edecl.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric)) {
                 const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
-                //
-                //TODO: we are dropping the invariant call info here ... we need to get it here, and probably, some other places
-                //
-
-                return {tag: APIEmitTypeTag.NumberOfTag, ...this.getJSONApiStd(tt), boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield, primitive: oftype, oftype: oftype, smtinvcall: null, cppinvcall: null};
+                return {tag: APIEmitTypeTag.NumberOfTag, name: tt.trkey, primitive: oftype, oftype: oftype};
             }
             else if(edecl.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
                 const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
                 const ofdecl = (this.assembly.entityDecls.get(oftype) || this.assembly.conceptDecls.get(oftype)) as MIROOTypeDecl; 
-                const sdecl = this.assembly.invokeDecls.get(`${oftype}::parse`) as MIRInvokeDecl;
-                
                 const isvalue = ofdecl.attributes.includes("struct");
 
-                return {tag: APIEmitTypeTag.DataStringTag, ...this.getJSONApiStd(tt), boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield, oftype: oftype, isvalue: isvalue, smtinvcall: this.mangle(sdecl.key), cppinvcall: sdecl.key};
+                return {tag: APIEmitTypeTag.DataStringTag, name: tt.trkey, oftype: oftype, isvalue: isvalue};
             }
             else if(edecl.specialDecls.has(MIRSpecialTypeCategory.BufferDecl)) {
-                return {tag: APIEmitTypeTag.BufferTag, ...this.getJSONApiStd(tt), boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield};
+                return {tag: APIEmitTypeTag.BufferTag, name: tt.trkey};
             }
             else if(edecl.specialDecls.has(MIRSpecialTypeCategory.DataBufferDecl)) {
-                return {tag: APIEmitTypeTag.DataBufferTag, ...this.getJSONApiStd(tt), boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield};
+                return {tag: APIEmitTypeTag.DataBufferTag, name: tt.trkey};
             }
             else if(edecl.specialDecls.has(MIRSpecialTypeCategory.ListTypeDecl)) {
-                const ltype = this.getSMTTypeFor(tt);
                 const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
 
-                const smtsize = `${ltype.name}@size`;
-                const smtget = `_@@desop_${ltype.name}_get`;
-
-                let smtconsfunc_k: string[] = [];
-                for(let i = 1; i <= 3; ++i) {
-                    smtconsfunc_k.push(`_@@cons_${ltype.name}__${i}`);
-                }
-
-                return {tag: APIEmitTypeTag.ListTag, ...this.getJSONApiStd(tt), boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield, oftype: oftype, smtsizefunc: smtsize, smtgetfunc: smtget, smtconsfunc_k: smtconsfunc_k};
+                return {tag: APIEmitTypeTag.ListTag, name: tt.trkey, oftype: oftype};
             }
             else {
                 const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
-                const smttagfunc = this.mangle(`${tt.trkey}::nameof`);
-                const smtselectfunc = "[UNDEF_SELECT]";
                 
                 const ddcls = [...this.assembly.constantDecls].filter((cdcl) => cdcl[1].enclosingDecl !== undefined && cdcl[1].enclosingDecl === tt.trkey);
                 const enuminvs = ddcls.map((cdcl) => [cdcl[1].gkey, this.mangle(cdcl[1].value)] as [string, string]);
                             
 
-                return {tag: APIEmitTypeTag.EnumTag, ...this.getJSONApiStd(tt), boxfunc: bbufuncs.box, unboxfunc: bbufuncs.bfield, underlying: oftype, smttagfunc, smtselectfunc: smtselectfunc, enuminvs: enuminvs};
+                return {tag: APIEmitTypeTag.EnumTag, name: tt.trkey, underlying: oftype, enuminvs: enuminvs};
             }
         }
         else {
-            const smttype = this.getSMTTypeFor(tt);
-            const opts: string[] = tt.options.map((opt) => tt.trkey);
+            const opts: string[] = tt.options.map((opt) => opt.trkey);
             
-            return {tag: APIEmitTypeTag.EnumTag, ...this.getJSONApiBase(tt), iskey: smttype.isGeneralKeyType(), opts: opts};
+            return {tag: APIEmitTypeTag.UnionTag, name: tt.trkey, opts: opts};
         }
     }
 }

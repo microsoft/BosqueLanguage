@@ -7,7 +7,7 @@ import chalk from "chalk";
 import * as readline from "readline";
 import * as path from "path";
 
-import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
+import { AssemblyFlavor, DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
 
 function parseLocation(location: string): { file: string, line: number, pos: number } | undefined {
     try {
@@ -25,9 +25,9 @@ const mode = process.argv[2];
 const args = process.argv.slice(3);
 
 if(mode === "--output") {
-    const smtmode = args[0];
-    if(smtmode !== "check" && smtmode !== "evaluate" && smtmode !== "invert") {
-        process.stdout.write("Valid mode options are check | evaluate | invert\n");
+    let smtmode = args[0];
+    if(smtmode !== "unreachable" && smtmode !== "witness" && smtmode !== "evaluate" && smtmode !== "invert") {
+        process.stdout.write("Valid mode options are unreachable | witness | evaluate | invert\n");
         process.exit(1);
     }
 
@@ -48,11 +48,16 @@ if(mode === "--output") {
 
     const fparse = path.parse(files[0]);
     const into = path.join(fparse.dir, fparse.name + (smtonly ? ".smt2" : ".json"));
-    process.stdout.write(`Writing SMT file to ${into}\n`);
+    process.stdout.write(`Writing file to ${into}\n`);
 
-    workflowEmitToFile(into, usercode, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
+    const asmflavor = smtmode === "unreachable" ? AssemblyFlavor.UFOverApproximate : AssemblyFlavor.RecuriveImpl;
+    if(smtmode === "unreachable" || smtmode === "witness") {
+        smtmode = "check";
+    }
+
+    workflowEmitToFile(into, usercode, asmflavor, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
 }
-else if(mode === "--checksingle") {
+else if(mode === "--unreachable") {
     const location = parseLocation(args[0]);
     if(location === undefined) {
         process.stderr.write("Location should be of the form file.bsq@line#pos\n");
@@ -66,7 +71,25 @@ else if(mode === "--checksingle") {
         process.exit(1);
     }
 
-    workflowBSQSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQInfeasibleSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+        process.stdout.write(res + "\n");
+    });
+}
+else if(mode === "--witness") {
+    const location = parseLocation(args[0]);
+    if(location === undefined) {
+        process.stderr.write("Location should be of the form file.bsq@line#pos\n");
+        process.exit(1);
+    }
+
+    const files = args.slice(1);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
+    workflowBSQWitnessSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -124,7 +147,7 @@ else if(mode === "--check") {
         else if(jres.result === "witness") {
             if(!quiet) {
                 process.stdout.write(`Generated witness input in ${jres.time}s!\n`);
-                process.stdout.write(`${jres.input}\n`);
+                //process.stdout.write(`${jres.input}\n`);
             }
             wcount++;
             witnesslist.push(jres.input);

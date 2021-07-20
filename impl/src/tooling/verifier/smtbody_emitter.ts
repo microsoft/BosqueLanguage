@@ -1591,18 +1591,18 @@ class SMTBodyEmitter {
                 assert(mtype !== undefined, "We should generate all the component types by default??");
     
                 if(topt instanceof MIREntityType) {
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckEntity(op.arg, layout, flow, mtype), continuation);
+                    return this.generateSubtypeCheckEntity(op.arg, layout, flow, mtype);
                 }
                 else if (topt instanceof MIRConceptType) {
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckConcept(op.arg, layout, flow, mtype), continuation);
+                    return this.generateSubtypeCheckConcept(op.arg, layout, flow, mtype);
                 }
                 else if (topt instanceof MIRTupleType) {
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckTuple(op.arg, layout, flow, mtype), continuation);
+                    return this.generateSubtypeCheckTuple(op.arg, layout, flow, mtype);
                 }
                 else {
                     assert(topt instanceof MIRRecordType, "All other cases should be handled previously (e.g. dynamic subtype of ephemeral or literal types is not good here)");
 
-                    return new SMTLet(this.varToSMTName(op.trgt).vname, this.generateSubtypeCheckRecord(op.arg, layout, flow, mtype), continuation);
+                    return this.generateSubtypeCheckRecord(op.arg, layout, flow, mtype);
                 }
             })
             .filter((test) => !(test instanceof SMTConst) || test.cname !== "false");
@@ -2587,6 +2587,9 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, this.lopsManager.generateListSizeCall(new SMTVar(args[0].vname), args[0].vtype));
             }
             case "list_empty": {
+                //
+                //TODO: can this be checking == with the empty list?
+                //
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("=", [new SMTConst("BNat@zero"), this.lopsManager.generateListSizeCall(new SMTVar(args[0].vname), args[0].vtype)]));
             }
             case "list_unsafe_get": {

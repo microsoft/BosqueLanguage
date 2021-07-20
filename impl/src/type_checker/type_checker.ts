@@ -6017,9 +6017,16 @@ class TypeChecker {
     }
 
     private abortIfTooManyErrors() {
-        if (this.m_errors.length > 20) {
-            throw new Error("More than 20 errors ... halting type checker");
-        }
+        //if (this.m_errors.length > 20) {
+        //    throw new Error("More than 20 errors ... halting type checker");
+        //}
+
+        //
+        //TODO: when we don't emit bodies we return undefined from exp to body -- this can spread and result in undefined refs in some body positions
+        //      for now just abort on first error and be done to prevent this
+        //
+
+        throw new Error("Halting on type error");
     }
 
     private getCapturedTypeInfoForFields(sinfo: SourceInfo, captured: Set<string>, allfieldstypes: Map<string, ResolvedType>): Map<string, ResolvedType> {

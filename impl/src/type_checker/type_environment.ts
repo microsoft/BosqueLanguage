@@ -518,8 +518,6 @@ class TypeEnvironment {
             }
 
             const expresall = fopts.filter((opt) => opt.expressionResult !== undefined).map((opt) => opt.getExpressionResult());
-            assert(expresall.length === 0 || expresall.length === fopts.length);
-
             let expres: ExpressionReturnResult | undefined = undefined;
             if (expresall.length !== 0) {
                 const retype = ValueType.join(assembly, ...expresall.map((opt) => opt.valtype));
