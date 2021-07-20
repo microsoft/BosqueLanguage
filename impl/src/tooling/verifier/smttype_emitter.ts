@@ -799,7 +799,7 @@ class SMTTypeEmitter {
             }
         }
         else {
-            const opts: string[] = tt.options.map((opt) => tt.trkey);
+            const opts: string[] = tt.options.map((opt) => opt.trkey);
             
             return {tag: APIEmitTypeTag.UnionTag, name: tt.trkey, opts: opts};
         }
