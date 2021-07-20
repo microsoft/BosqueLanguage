@@ -801,7 +801,7 @@ class SMTTypeEmitter {
         else {
             const opts: string[] = tt.options.map((opt) => tt.trkey);
             
-            return {tag: APIEmitTypeTag.EnumTag, name: tt.trkey, opts: opts};
+            return {tag: APIEmitTypeTag.UnionTag, name: tt.trkey, opts: opts};
         }
     }
 }

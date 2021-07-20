@@ -154,7 +154,7 @@ class SMTEmitter {
             const ccvar = this.bemitter.generateTempName();
             const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(oftt);
 
-            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
+            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(oftt, new SMTVar(ccvar));
             const access = this.temitter.generateResultGetSuccess(oftt, new SMTVar(ccvar));
 
             bexp = new SMTIf(
@@ -184,7 +184,7 @@ class SMTEmitter {
             const ccvar = this.bemitter.generateTempName();
             const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(ee.type);
 
-            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
+            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(ee.type, new SMTVar(ccvar));
             const access = this.temitter.generateResultGetSuccess(ee.type, new SMTVar(ccvar));
 
             return { ccvar: ccvar, cc: cc, chk: chkfun, access: access };
@@ -212,7 +212,7 @@ class SMTEmitter {
             const ccvar = this.bemitter.generateTempName();
             const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(ee.type);
 
-            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(tt, new SMTVar(ccvar));
+            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(ee.type, new SMTVar(ccvar));
             const access = this.temitter.generateResultGetSuccess(ee.type, new SMTVar(ccvar));
 
             return { pname: ee.name, ccvar: ccvar, cc: cc, chk: chkfun, access: access };
@@ -560,21 +560,15 @@ class SMTEmitter {
                         this.assembly.uninterpfunctions.push(finfo);
                     }
                 }
-
-                const rtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(idcl.resultType));
-                if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === rtype.name) === undefined) {
-                    this.assembly.resultTypes.push(({ hasFlag: false, rtname: idcl.resultType, ctype: rtype }));
-                }
             }
         }
 
-        ["NSCore::None", "NSCore::Bool", "NSCore::Int", "NSCore::Nat", "NSCore::BigInt", "NSCore::BigNat", "NSCore::Float", "NSCore::Decimal", "NSCore::Rational", "NSCore::StringPos", "NSCore::String", "NSCore::ByteBuffer", "NSCore::ISOTime", "NSCore::LogicalTime", "NSCore::UUID", "NSCore::ContentHash", "NSCore::Regex"]
-            .forEach((ptype) => {
-                const rtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(ptype));
-                if(this.assembly.resultTypes.find((rtt) => rtt.ctype.name === rtype.name) === undefined) {
-                    this.assembly.resultTypes.push(({hasFlag: false, rtname: ptype, ctype: rtype}));
-                }
-            });
+        assembly.typeMap.forEach((tt) => {
+            const restype = this.temitter.getSMTTypeFor(tt);
+            if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === restype.name) === undefined) {
+                this.assembly.resultTypes.push(({ hasFlag: false, rtname: tt.trkey, ctype: restype }));
+            }
+        });
 
         this.bemitter.requiredLoadVirtualTupleIndex.forEach((rvlt) => this.assembly.functions.push(this.bemitter.generateLoadTupleIndexVirtual(rvlt)));
         this.bemitter.requiredLoadVirtualRecordProperty.forEach((rvlr) => this.assembly.functions.push(this.bemitter.generateLoadRecordPropertyVirtual(rvlr)));
@@ -600,11 +594,6 @@ class SMTEmitter {
         });
 
         const restype = this.temitter.getMIRType(mirep.resultType);
-        const rtype = this.temitter.getSMTTypeFor(restype);
-        if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === rtype.name) === undefined) {
-            this.assembly.resultTypes.push(({ hasFlag: false, rtname: mirep.resultType, ctype: rtype }));
-        }
-
         this.walkAndGenerateHavocType(restype, this.assembly.havocfuncs);
         const resvexp = this.temitter.generateHavocConstructorCall(restype, new SMTConst("(as seq.empty (Seq BNat))"), new SMTConst(`(_ bv${0} ${this.assembly.vopts.ISize})`));
         const rarg = { vname: "_@smtres@_arg", vtype: this.temitter.generateResultType(restype), vinit: resvexp, vchk: this.temitter.generateResultIsSuccessTest(restype, new SMTVar("_@smtres@_arg")), callexp: this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@_arg")) };
@@ -621,11 +610,6 @@ class SMTEmitter {
                 if (assembly.subtypeOf(mirtype, this.temitter.getMIRType("NSCore::KeyType"))) {
                     this.assembly.keytypeTags.push(ttag);
                 }
-            }
-
-            const restype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edcl.tkey));
-            if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === restype.name) === undefined) {
-                this.assembly.resultTypes.push(({ hasFlag: false, rtname: edcl.tkey, ctype: restype }));
             }
 
             if (edcl.specialDecls.has(MIRSpecialTypeCategory.VectorTypeDecl)) {
@@ -723,10 +707,12 @@ class SMTEmitter {
                 this.assembly.keytypeTags.push(ttag);
             }
 
-            const restype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(ttup.trkey));
-            if(this.assembly.resultTypes.find((rtt) => rtt.ctype.name === restype.name) === undefined) {
-                this.assembly.resultTypes.push(({hasFlag: false, rtname: ttup.trkey, ctype: restype}));
-            }
+            ttup.entries.filter((entry) => entry.isOptional).map((entry) => {
+                const etype = this.temitter.getSMTTypeFor(entry.type);
+                if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === etype.name) === undefined) {
+                    this.assembly.resultTypes.push(({ hasFlag: true, rtname: entry.type.trkey, ctype: etype }));
+                }
+            });
             
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
@@ -748,10 +734,12 @@ class SMTEmitter {
                 this.assembly.keytypeTags.push(ttag);
             }
             
-            const restype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(trec.trkey));
-            if(this.assembly.resultTypes.find((rtt) => rtt.ctype.name === restype.name) === undefined) {
-                this.assembly.resultTypes.push(({hasFlag: false, rtname: trec.trkey, ctype: restype}));
-            }
+            trec.entries.filter((entry) => entry.isOptional).map((entry) => {
+                const etype = this.temitter.getSMTTypeFor(entry.type);
+                if (this.assembly.resultTypes.find((rtt) => rtt.ctype.name === etype.name) === undefined) {
+                    this.assembly.resultTypes.push(({ hasFlag: true, rtname: entry.type.trkey, ctype: etype }));
+                }
+            });
 
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
