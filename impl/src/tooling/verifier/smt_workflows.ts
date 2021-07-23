@@ -149,7 +149,7 @@ function workflowGetErrors(usercode: CodeFileInfo[], vopts: VerifierOptions, ent
         const { masm, errors } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
-            process.stderr.write(JSON.stringify(errors, undefined, 2));
+            process.stderr.write(JSON.stringify(errors, undefined, 2) + "\n");
             return undefined;
         }
         else {    
@@ -166,7 +166,7 @@ function workflowEmitToFile(into: string, usercode: CodeFileInfo[], asmflavor: A
         const { masm, errors } = generateMASM(usercode, entrypoint, asmflavor, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
-            process.stderr.write(JSON.stringify(errors, undefined, 2));
+            process.stderr.write(JSON.stringify(errors, undefined, 2) + "\n");
             process.exit(1);
         }
         else {    

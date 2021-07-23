@@ -472,32 +472,32 @@ SomeTrueOp* SomeTrueOp::jparse(json v)
 
 BinKeyEqFastOp* BinKeyEqFastOp::jparse(json v)
 {
-    return new BinKeyEqFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_Argument(v["argr"])); 
+    return new BinKeyEqFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_Argument(v["argr"]), j_sguard(v)); 
 }
     
 BinKeyEqStaticOp* BinKeyEqStaticOp::jparse(json v)
 {
-    return new BinKeyEqStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
+    return new BinKeyEqStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"]), j_sguard(v)); 
 }
 
 BinKeyEqVirtualOp* BinKeyEqVirtualOp::jparse(json v)
 {
-    return new BinKeyEqVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
+    return new BinKeyEqVirtualOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"]), j_sguard(v)); 
 }
 
 BinKeyLessFastOp* BinKeyLessFastOp::jparse(json v)
 {
-    return new BinKeyLessFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_Argument(v["argr"])); 
+    return new BinKeyLessFastOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_Argument(v["argr"]), j_sguard(v)); 
 }
     
 BinKeyLessStaticOp* BinKeyLessStaticOp::jparse(json v)
 {
-    return new BinKeyLessStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
+    return new BinKeyLessStaticOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"]), j_sguard(v)); 
 }
 
 BinKeyLessVirtualOp* BinKeyLessVirtualOp::jparse(json v)
 {
-    return new BinKeyLessVirtualOp(j_sinfo(v), j_trgt(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"])); 
+    return new BinKeyLessVirtualOp(j_sinfo(v), j_trgt(v), j_oftype(v), jsonParse_Argument(v["argl"]), jsonParse_BSQType(v["argllayout"]), jsonParse_Argument(v["argr"]), jsonParse_BSQType(v["argrlayout"]), j_sguard(v)); 
 }
 
 TypeIsNoneOp* TypeIsNoneOp::jparse(json v)

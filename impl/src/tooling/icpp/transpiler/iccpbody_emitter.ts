@@ -1001,16 +1001,18 @@ class ICPPBodyEmitter {
         const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
         const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
 
+        const oftype = this.typegen.getMIRType(op.cmptype);
+        const sguard = this.generateStatmentGuardInfo(op.sguard);
         if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
             if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
-                return ICPPOpEmitter.genBinKeyEqFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs));
+                return ICPPOpEmitter.genBinKeyEqFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
             }
             else {
-                return ICPPOpEmitter.genBinKeyEqStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+                return ICPPOpEmitter.genBinKeyEqStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
             }
         }
         else {
-            return ICPPOpEmitter.genBinKeyEqVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+            return ICPPOpEmitter.genBinKeyEqVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
         }
     }
 
@@ -1021,16 +1023,18 @@ class ICPPBodyEmitter {
         const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
         const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
 
+        const oftype = this.typegen.getMIRType(op.cmptype);
+        const sguard = this.generateStatmentGuardInfo(op.sguard);
         if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
             if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
-                return ICPPOpEmitter.genBinKeyLessFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs));
+                return ICPPOpEmitter.genBinKeyLessFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
             }
             else {
-                return ICPPOpEmitter.genBinKeyLessStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), mirlhsflow.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+                return ICPPOpEmitter.genBinKeyLessStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
             }
         }
         else {
-            return ICPPOpEmitter.genBinKeyLessVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey);
+            return ICPPOpEmitter.genBinKeyLessVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
         }
     }
 

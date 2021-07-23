@@ -1543,14 +1543,20 @@ class SMTBodyEmitter {
     }
 
     processBinKeyEq(op: MIRBinKeyEq, continuation: SMTExp): SMTExp {
-        //
-        //TODO: if the layouts are equal then no need to coerce
-        //
-        const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.lhslayouttype));
-        const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.rhslayouttype));
+        let eqcmp: SMTExp = new SMTConst("false");
 
-        const eqcmp = new SMTCallSimple("=", [lhs, rhs]);
-        return new SMTLet(this.varToSMTName(op.trgt).vname, eqcmp, continuation);
+        if(op.lhslayouttype === op.rhslayouttype) {
+            eqcmp = new SMTCallSimple("=", [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+        }
+        else {
+            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.cmptype));
+            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.cmptype));
+
+            eqcmp = new SMTCallSimple("=", [lhs, rhs]);
+        }
+
+        const gop = this.generateGuardStmtCond(op.sguard, eqcmp, "NSCore::Bool");
+        return new SMTLet(this.varToSMTName(op.trgt).vname, gop, continuation);
     }
 
     processBinKeyLess(op: MIRBinKeyLess, continuation: SMTExp): SMTExp {

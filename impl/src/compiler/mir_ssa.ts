@@ -334,6 +334,7 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
             const beq = op as MIRBinKeyEq;
             beq.lhs = processSSA_Use(beq.lhs, ssastate);
             beq.rhs = processSSA_Use(beq.rhs, ssastate);
+            beq.sguard = processSSAUse_RemapStatementGuard(beq.sguard, ssastate);
             beq.trgt = convertToSSA(beq.trgt, ssastate.booltype, ssastate);
             return op;
         }
@@ -341,6 +342,7 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
             const bl = op as MIRBinKeyLess;
             bl.lhs = processSSA_Use(bl.lhs, ssastate);
             bl.rhs = processSSA_Use(bl.rhs, ssastate);
+            bl.sguard = processSSAUse_RemapStatementGuard(bl.sguard, ssastate);
             bl.trgt = convertToSSA(bl.trgt, ssastate.booltype, ssastate);
             return op;
         }

@@ -316,11 +316,22 @@ private:
     void evalAllTrueOp(const AllTrueOp* op);
     void evalSomeTrueOp(const SomeTrueOp* op);
 
+    template <bool isGuarded>
     void evalBinKeyEqFastOp(const BinKeyEqFastOp* op);
+
+    template <bool isGuarded>
     void evalBinKeyEqStaticOp(const BinKeyEqStaticOp* op);
+    
+    template <bool isGuarded>
     void evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op);
+    
+    template <bool isGuarded>
     void evalBinKeyLessFastOp(const BinKeyLessFastOp* op);
+    
+    template <bool isGuarded>
     void evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op);
+    
+    template <bool isGuarded>
     void evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op);
 
     template <bool isGuarded>

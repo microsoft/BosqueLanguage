@@ -288,12 +288,14 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
             const beq = op as MIRBinKeyEq;
             beq.lhs = propagateAssign_Remap(beq.lhs, propMap);
             beq.rhs = propagateAssign_Remap(beq.rhs, propMap);
+            beq.sguard = propagateAssign_RemapStatementGuard(beq.sguard, propMap);
             break;
         }
         case MIROpTag.MIRBinKeyLess: {
             const bl = op as MIRBinKeyLess;
             bl.lhs = propagateAssign_Remap(bl.lhs, propMap);
             bl.rhs = propagateAssign_Remap(bl.rhs, propMap);
+            bl.sguard = propagateAssign_RemapStatementGuard(bl.sguard, propMap);
             break;
         }
         case MIROpTag.MIRPrefixNotOp: {
