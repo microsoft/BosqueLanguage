@@ -897,7 +897,7 @@ class SMTBodyEmitter {
         if (this.typegen.isType(argtype, "NSCore::None")) {
             return new SMTConst("true");
         }
-        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NScore::None"), argtype)) {
+        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::None"), argtype)) {
             return new SMTConst("false");
         }
         else {
@@ -2537,6 +2537,10 @@ class SMTBodyEmitter {
                 }
 
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, accept);
+            }
+            case "apivalue_generate": {
+                const synthbody = this.typegen.generateHavocConstructorCall(mirrestype, new SMTCallSimple("seq.unit", [new SMTConst(`(_ bv${2} ${this.vopts.ISize})`)]), new SMTConst(`(_ bv${0} ${this.vopts.ISize})`));
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, synthbody);
             }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("=", [new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")]));
