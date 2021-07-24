@@ -407,11 +407,6 @@ class TypeChecker {
         if (rhsexp instanceof LiteralNoneExpression) {
             return lhs.options.some((opt) => opt.idStr === "NSCore::None") ? "rhsnone" : "falsealways";
         }
-        
-        //we want T | None === T or T === T | None so at most 3 options are ok
-        if(lhs.options.length + rhs.options.length > 3) {
-            return "err";
-        }
 
         const simplelhsopts = lhs.options.filter((opt) => opt.idStr !== "NSCore::None");
         const simplerhsopts = rhs.options.filter((opt) => opt.idStr !== "NSCore::None");
@@ -426,21 +421,16 @@ class TypeChecker {
             return lhs.options.some((opt) => opt.idStr === "NSCore::None") ? "rhsnone" : "falsealways";
         }
         else {
-            //should be 1 non-none type on each side then -- so 1 less than the orig number of types
-            if (simplelhsopts.length + simplerhsopts.length !== 2) {
+            //should be a subtype on one of the sides
+            if (!this.m_assembly.subtypeOf(lhs, rhs) && !this.m_assembly.subtypeOf(rhs, lhs)) {
                 return "err";
             }
 
-            if(lhs.options.length === 1 && rhs.options.length === 1) {
-                return lhs.options[0].idStr === rhs.options[0].idStr ? "stdkey" : "falsealways";
+            if(lhs.idStr === rhs.idStr) {
+                return "stdkey";
             }
             else {
-                if (simplelhsopts[0].idStr !== simplerhsopts[0].idStr) {
-                    return "falsealways";
-                }
-                else {
-                    return lhs.options.length === 2 ? "lhssomekey" : "rhssomekey";
-                }
+                return this.m_assembly.subtypeOf(lhs, rhs) ? "lhssomekey" : "rhssomekey";
             }
         }
     }
@@ -2547,7 +2537,7 @@ class TypeChecker {
                     const ichkreg = this.m_emitter.generateTmpRegister();
                     const mirlhstype = this.m_emitter.registerResolvedTypeReference(fsig.params[i].type as ResolvedType);
                     const mirrhstype = this.m_emitter.registerResolvedTypeReference(cltype);
-                    this.m_emitter.emitBinKeyEq(sinfo, mirlhstype, mirlhstype, cargs[argidx], mirrhstype, mirrhstype, lcreg, ichkreg);
+                    this.m_emitter.emitBinKeyEq(sinfo, mirlhstype, cargs[argidx], mirrhstype, lcreg, mirrhstype, ichkreg, undefined, mirlhstype, mirrhstype);
                     this.m_emitter.emitAssertCheck(sinfo, "Failed to match literal tag on dynamic operator invoke", ichkreg);
                 }
             }
@@ -2618,7 +2608,7 @@ class TypeChecker {
                     const ichkreg = this.m_emitter.generateTmpRegister();
                     const mirlhstype = this.m_emitter.registerResolvedTypeReference(fsig.params[i].type as ResolvedType);
                     const mirrhstype = this.m_emitter.registerResolvedTypeReference(cltype);
-                    this.m_emitter.emitBinKeyEq(sinfo, mirlhstype, mirlhstype, cargs[argidx], mirrhstype, mirrhstype, lcreg, ichkreg);
+                    this.m_emitter.emitBinKeyEq(sinfo, mirlhstype, cargs[argidx], mirrhstype, lcreg, mirrhstype, ichkreg, undefined, mirlhstype, mirrhstype);
                     this.m_emitter.emitAssertCheck(sinfo, "Failed to match literal tag on dynamic operator invoke", ichkreg);
                 }
             }
@@ -2719,10 +2709,10 @@ class TypeChecker {
             this.raiseErrorIf(exp.sinfo, !trhs.flowtype.isGroundedType(), "Invalid argument");
 
             if (exp.name === "equal") {
-                this.m_emitter.emitBinKeyEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(tlhs.layout), this.m_emitter.registerResolvedTypeReference(tlhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(trhs.layout), this.m_emitter.registerResolvedTypeReference(trhs.flowtype), rhsreg, trgt);
+                this.m_emitter.emitBinKeyEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(tlhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(trhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(ktype), trgt, undefined, this.m_emitter.registerResolvedTypeReference(tlhs.flowtype), this.m_emitter.registerResolvedTypeReference(trhs.flowtype));
             }
             else {
-                this.m_emitter.emitBinKeyLess(exp.sinfo, this.m_emitter.registerResolvedTypeReference(tlhs.layout), this.m_emitter.registerResolvedTypeReference(tlhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(trhs.layout), this.m_emitter.registerResolvedTypeReference(trhs.flowtype), rhsreg, trgt);
+                this.m_emitter.emitBinKeyLess(exp.sinfo, this.m_emitter.registerResolvedTypeReference(tlhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(trhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(ktype), trgt, undefined, this.m_emitter.registerResolvedTypeReference(tlhs.flowtype), this.m_emitter.registerResolvedTypeReference(trhs.flowtype));
             }
 
             return [env.setUniformResultExpression(this.m_assembly.getSpecialBoolType())];
@@ -3877,71 +3867,167 @@ class TypeChecker {
         return [...ntstates, ...nfstates];
     }
 
-    private checkKeyEq(env: TypeEnvironment, exp: BinKeyExpression, trgt: MIRRegisterArgument): TypeEnvironment[] {
+    private strongEQ(sinfo: SourceInfo, env: TypeEnvironment, lhsarg: Expression, rhsarg: Expression, trgt: MIRRegisterArgument): TypeEnvironment[] {
         const lhsreg = this.m_emitter.generateTmpRegister();
-        const lhs = this.checkExpression(env, exp.lhs, lhsreg, undefined);
+        const lhs = this.checkExpression(env, lhsarg, lhsreg, undefined);
         let olhs = lhs.getExpressionResult().valtype;
 
-        this.raiseErrorIf(exp.sinfo, !this.m_assembly.subtypeOf(olhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
-        this.raiseErrorIf(exp.sinfo, !olhs.flowtype.isGroundedType(), "Type must be grounded");
-
         const rhsreg = this.m_emitter.generateTmpRegister();
-        const rhs = this.checkExpression(env, exp.rhs, rhsreg, undefined);
+        const rhs = this.checkExpression(env, rhsarg, rhsreg, undefined);
         let orhs = rhs.getExpressionResult().valtype;
 
-        this.raiseErrorIf(exp.sinfo, !this.m_assembly.subtypeOf(orhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
-        this.raiseErrorIf(exp.sinfo, !orhs.flowtype.isGroundedType(), "Type must be grounded");
-
-        const action = this.checkValueEq(exp.lhs, lhs.getExpressionResult().valtype.flowtype, exp.rhs, rhs.getExpressionResult().valtype.flowtype);
-        this.raiseErrorIf(exp.sinfo, action === "err", "Compared types are not equivalent (or not unique modulo none)");
+        const action = this.checkValueEq(lhsarg, lhs.getExpressionResult().valtype.flowtype, rhsarg, rhs.getExpressionResult().valtype.flowtype);
+        this.raiseErrorIf(sinfo, action === "err", "Compared types are not equivalent (or not unique modulo none)");
 
         if(action === "truealways" || action === "falsealways") {
-            this.m_emitter.emitLoadConstBool(exp.sinfo, action === "truealways" ? true : false, trgt);
+            this.m_emitter.emitLoadConstBool(sinfo, action === "truealways" ? true : false, trgt);
             return [env.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), action === "truealways" ? FlowTypeTruthValue.True : FlowTypeTruthValue.False)];
         }
-        else if (action === "lhsnone" || action === "rhsnone") {
-            if(action === "lhsnone") {
-                this.m_emitter.emitTypeOf(exp.sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), rhsreg, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.flowtype), undefined);
-            }
-            else if (exp.rhs instanceof LiteralNoneExpression) {
-                this.m_emitter.emitTypeOf(exp.sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), lhsreg, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.flowtype), undefined);
-            }
-
-            const eevs = (action === "lhsnone") ? rhs : lhs;
-            const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [eevs]);
+        else if (action === "lhsnone") {
+            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), rhsreg, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.flowtype), undefined);
+            
+            const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [rhs]);
             return [
                 ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True))),
                 ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False)))
             ];
         }
-        else if(action === "lhssomekey" || action === "rhssomekey") {
-            if (exp.op === "===") {
-                this.m_emitter.emitBinKeyEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), this.m_emitter.registerResolvedTypeReference(olhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), this.m_emitter.registerResolvedTypeReference(orhs.flowtype), rhsreg, trgt);
-            }
-            else {
-                const treg = this.m_emitter.generateTmpRegister();
-                this.m_emitter.emitBinKeyEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), this.m_emitter.registerResolvedTypeReference(olhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), this.m_emitter.registerResolvedTypeReference(orhs.flowtype), rhsreg, treg);
-                this.m_emitter.emitPrefixNotOp(exp.sinfo, treg, trgt);
-            }
-
-            const eevs = (action === "lhssomekey") ? rhs : lhs;
-            const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [eevs]);
+        else if (action === "rhsnone") {
+            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), lhsreg, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.flowtype), undefined);
+            
+            const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [lhs]);
             return [
-                ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False))),
-                ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)))
+                ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True))),
+                ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False)))
             ];
         }
         else {
-            if (exp.op === "===") {
-                this.m_emitter.emitBinKeyEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), this.m_emitter.registerResolvedTypeReference(olhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), this.m_emitter.registerResolvedTypeReference(orhs.flowtype), rhsreg, trgt);
+            if (action === "lhssomekey") {
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(olhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !olhs.flowtype.isGroundedType(), "Type must be grounded");
+
+                const oftypereg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), rhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), this.m_emitter.registerResolvedTypeReference(orhs.flowtype), undefined);
+                
+                const sguard = new MIRStatmentGuard(new MIRArgGuard(oftypereg), "defaultonfalse", new MIRConstantFalse());
+                this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), trgt, sguard, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), this.m_emitter.registerResolvedTypeReference(orhs.flowtype));
+                
+                const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [rhs]);
+                return [
+                    ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False))),
+                    ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)))
+                ];
+            }
+            else if (action === "rhssomekey") {
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(orhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !orhs.flowtype.isGroundedType(), "Type must be grounded");
+
+                const oftypereg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(orhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(olhs.layout), this.m_emitter.registerResolvedTypeReference(olhs.flowtype), undefined);
+                
+                const sguard = new MIRStatmentGuard(new MIRArgGuard(oftypereg), "defaultonfalse", new MIRConstantFalse());
+                this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(orhs.flowtype), trgt, sguard, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), this.m_emitter.registerResolvedTypeReference(orhs.flowtype));
+
+                const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [lhs]);
+                return [
+                    ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False))),
+                    ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)))
+                ];
             }
             else {
-                const treg = this.m_emitter.generateTmpRegister();
-                this.m_emitter.emitBinKeyEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), this.m_emitter.registerResolvedTypeReference(olhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), this.m_emitter.registerResolvedTypeReference(orhs.flowtype), rhsreg, treg);
-                this.m_emitter.emitPrefixNotOp(exp.sinfo, treg, trgt);
-            }
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(olhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !olhs.flowtype.isGroundedType(), "Type must be grounded");
 
-            return [env.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)];
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(orhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !orhs.flowtype.isGroundedType(), "Type must be grounded");
+
+                this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), trgt, undefined, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), this.m_emitter.registerResolvedTypeReference(orhs.flowtype));
+
+                return [env.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)];
+            }
+        }
+    }
+
+    private strongNEQ(sinfo: SourceInfo, env: TypeEnvironment, lhsarg: Expression, rhsarg: Expression, trgt: MIRRegisterArgument): TypeEnvironment[] {
+        const lhsreg = this.m_emitter.generateTmpRegister();
+        const lhs = this.checkExpression(env, lhsarg, lhsreg, undefined);
+        let olhs = lhs.getExpressionResult().valtype;
+
+        const rhsreg = this.m_emitter.generateTmpRegister();
+        const rhs = this.checkExpression(env, rhsarg, rhsreg, undefined);
+        let orhs = rhs.getExpressionResult().valtype;
+
+        const action = this.checkValueEq(lhsarg, lhs.getExpressionResult().valtype.flowtype, rhsarg, rhs.getExpressionResult().valtype.flowtype);
+        this.raiseErrorIf(sinfo, action === "err", "Compared types are not equivalent (or not unique modulo none)");
+
+        if(action === "truealways" || action === "falsealways") {
+            this.m_emitter.emitLoadConstBool(sinfo, action === "falsealways" ? true : false, trgt);
+            return [env.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), action === "falsealways" ? FlowTypeTruthValue.True : FlowTypeTruthValue.False)];
+        }
+        else if (action === "lhsnone") {
+            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), rhsreg, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.flowtype), undefined);
+            
+            const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [rhs]);
+            return [
+                ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True))),
+                ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False)))
+            ];
+        }
+        else if (action === "rhsnone") {
+            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), lhsreg, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.flowtype), undefined);
+            
+            const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [lhs]);
+            return [
+                ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True))),
+                ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False)))
+            ];
+        }
+        else {
+            if (action === "lhssomekey") {
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(olhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !olhs.flowtype.isGroundedType(), "Type must be grounded");
+
+                const oftypereg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), rhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), this.m_emitter.registerResolvedTypeReference(orhs.flowtype), undefined);
+                
+                const sguard = new MIRStatmentGuard(new MIRArgGuard(oftypereg), "defaultonfalse", new MIRConstantFalse());
+                this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), trgt, sguard, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), this.m_emitter.registerResolvedTypeReference(orhs.flowtype));
+                
+                const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [rhs]);
+                return [
+                    ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False))),
+                    ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)))
+                ];
+            }
+            else if (action === "rhssomekey") {
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(orhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !orhs.flowtype.isGroundedType(), "Type must be grounded");
+
+                const oftypereg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(orhs.flowtype), lhsreg, this.m_emitter.registerResolvedTypeReference(olhs.layout), this.m_emitter.registerResolvedTypeReference(olhs.flowtype), undefined);
+                
+                const sguard = new MIRStatmentGuard(new MIRArgGuard(oftypereg), "defaultonfalse", new MIRConstantFalse());
+                this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(orhs.flowtype), trgt, sguard, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), this.m_emitter.registerResolvedTypeReference(orhs.flowtype));
+
+                const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [lhs]);
+                return [
+                    ...(renvs.fenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False))),
+                    ...(renvs.tenvs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)))
+                ];
+            }
+            else {
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(olhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !olhs.flowtype.isGroundedType(), "Type must be grounded");
+
+                this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(orhs.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Type must be KeyType");
+                this.raiseErrorIf(sinfo, !orhs.flowtype.isGroundedType(), "Type must be grounded");
+
+                const treg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(olhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(orhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), treg, undefined, this.m_emitter.registerResolvedTypeReference(olhs.flowtype), this.m_emitter.registerResolvedTypeReference(orhs.flowtype));
+                this.m_emitter.emitPrefixNotOp(sinfo, treg, trgt);
+
+                return [env.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.Unknown)];
+            }
         }
     }
 
@@ -4648,7 +4734,13 @@ class TypeChecker {
                     res = this.checkPrefixNotOp(env, exp as PrefixNotOp, trgt, (extraok && extraok.refok) || false);
                 }
                 else if (exp.tag === ExpressionTag.BinKeyExpression) {
-                    res = this.checkKeyEq(env, exp as BinKeyExpression, trgt);
+                    const bke = exp as BinKeyExpression;
+                    if(bke.op === "===") {
+                        res = this.strongEQ(bke.sinfo, env, bke.lhs, bke.rhs, trgt);
+                    }
+                    else {
+                        res = this.strongNEQ(bke.sinfo, env, bke.lhs, bke.rhs, trgt);
+                    }
                 }
                 else {
                     assert(exp.tag === ExpressionTag.BinLogicExpression);
@@ -4677,7 +4769,13 @@ class TypeChecker {
             return this.checkPrefixNotOp(env, exp as PrefixNotOp, trgt, (extraok && extraok.refok) || false);
         }
         else if (exp.tag === ExpressionTag.BinKeyExpression) {
-            return this.checkKeyEq(env, exp as BinKeyExpression, trgt);
+            const bke = exp as BinKeyExpression;
+            if (bke.op === "===") {
+                return this.strongEQ(bke.sinfo, env, bke.lhs, bke.rhs, trgt);
+            }
+            else {
+                return this.strongNEQ(bke.sinfo, env, bke.lhs, bke.rhs, trgt);
+            }
         }
         else if (exp.tag  === ExpressionTag.BinLogicExpression) {
             return this.checkBinLogic(env, exp as BinLogicExpression, trgt, (extraok && extraok.refok) || false);
@@ -5251,7 +5349,7 @@ class TypeChecker {
                         this.raiseErrorIf(sinfo, !chktype.flowtype.isGroundedType() || !this.m_assembly.subtypeOf(chktype.flowtype, this.m_assembly.getSpecialKeyTypeConceptType()), "Invalid constant");
                         this.raiseErrorIf(sinfo, !ttype.isGroundedType() || !this.m_assembly.subtypeOf(ttype, this.m_assembly.getSpecialKeyTypeConceptType()), "Invalid type for constant comparision");
 
-                        this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(chktype.layout), this.m_emitter.registerResolvedTypeReference(chktype.flowtype), chkreg, this.m_emitter.registerResolvedTypeReference(ttype), this.m_emitter.registerResolvedTypeReference(ttype), treg, ncr);
+                        this.m_emitter.emitBinKeyEq(sinfo, this.m_emitter.registerResolvedTypeReference(chktype.layout), chkreg, this.m_emitter.registerResolvedTypeReference(ttype), treg, this.m_emitter.registerResolvedTypeReference(chktype.flowtype), ncr, undefined, this.m_emitter.registerResolvedTypeReference(chktype.flowtype), this.m_emitter.registerResolvedTypeReference(ttype));
                     }
                 }
             }

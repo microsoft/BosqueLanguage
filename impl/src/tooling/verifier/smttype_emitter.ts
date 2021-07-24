@@ -734,7 +734,7 @@ class SMTTypeEmitter {
             {
                 const mirtt = tdecl.entries[i].type;
 
-                ttypes.push(this.getSMTTypeFor(mirtt).name);
+                ttypes.push(mirtt.trkey);
             }
 
             return {tag: APIEmitTypeTag.TupleTag, name: tt.trkey, isvalue: tdecl.isvalue, ttypes: ttypes};
@@ -750,7 +750,7 @@ class SMTTypeEmitter {
                 const mirtt = rdecl.entries[i].type;
 
                 props.push(prop);
-                ttypes.push(this.getSMTTypeFor(mirtt).name);
+                ttypes.push(mirtt.trkey);
             }
 
             return {tag: APIEmitTypeTag.RecordTag, name: tt.trkey, isvalue: rdecl.isvalue, props: props, ttypes: ttypes};

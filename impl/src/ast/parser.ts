@@ -1642,7 +1642,11 @@ class Parser {
     }
 
     private parseFollowTypeTag(): TypeSignature {
-        this.ensureAndConsumeToken("_");
+        const name = this.consumeTokenAndGetValue();
+        if(name !== "_") {
+            this.raiseError(this.getCurrentLine(), "Expected type value specifier");
+        }
+        this.consumeToken();
 
         if (this.testToken(TokenStrings.Template)) {
             return this.parseTemplateTypeReference();
@@ -1681,7 +1685,10 @@ class Parser {
         }
 
         if(constype === undefined) {
-            this.ensureAndConsumeToken("of");
+            if(this.peekTokenData() !== "_") {
+                this.raiseError(this.getCurrentLine(), "Expected typed StringOf validator or DataString constructor");
+            }
+            this.consumeToken();
         }
 
         if (this.testToken(TokenStrings.Template)) {
@@ -1869,7 +1876,7 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
 
         const exp = this.parseLiteralExpressionPrefix();
-        if (this.testToken("_")) {
+        if (this.peekTokenData() === "_") {
             const ttype = this.parseFollowTypeTag();
 
             if (exp instanceof LiteralIntegralExpression) {
@@ -2173,7 +2180,7 @@ class Parser {
             }
             
             const rops = ops.slice(cpos);
-            if (this.testToken("_")) {
+            if (this.peekTokenData() === "_") {
                 const ttype = this.parseFollowTypeTag();
 
                 if(exp instanceof LiteralIntegralExpression) {

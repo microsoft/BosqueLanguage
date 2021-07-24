@@ -2453,7 +2453,7 @@ json RecordType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     for(size_t i = 0; i < this->props.size(); ++i)
     {
         auto ttype = finfo.apimodule->typemap.find(this->ttypes[i])->second;
-        return jres[this->ttypes[i]] = ttype->fuzz(finfo, rnd);
+        return jres[this->props[i]] = ttype->fuzz(finfo, rnd);
     }
     return jres;
 }

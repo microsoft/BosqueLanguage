@@ -2068,75 +2068,89 @@ class MIRConstructorPrimaryCollectionMixed extends MIROp {
 
 class MIRBinKeyEq extends MIROp {
     trgt: MIRRegisterArgument;
+    readonly cmptype: MIRResolvedTypeKey;
     readonly lhslayouttype: MIRResolvedTypeKey;
-    readonly lhsflowtype: MIRResolvedTypeKey;
     lhs: MIRArgument;
     readonly rhslayouttype: MIRResolvedTypeKey;
-    readonly rhsflowtype: MIRResolvedTypeKey
     rhs: MIRArgument;
+    sguard: MIRStatmentGuard | undefined;
 
-    constructor(sinfo: SourceInfo, lhslayouttype: MIRResolvedTypeKey, lhsflowtype: MIRResolvedTypeKey, lhs: MIRArgument, rhslayouttype: MIRResolvedTypeKey, rhsflowtype: MIRResolvedTypeKey, rhs: MIRArgument, trgt: MIRRegisterArgument) {
+    readonly lhsflowtype: MIRResolvedTypeKey;
+    readonly rhsflowtype: MIRResolvedTypeKey;
+
+    constructor(sinfo: SourceInfo, lhslayouttype: MIRResolvedTypeKey, lhs: MIRArgument, rhslayouttype: MIRResolvedTypeKey, rhs: MIRArgument, cmptype: MIRResolvedTypeKey, trgt: MIRRegisterArgument, sguard: MIRStatmentGuard | undefined, lhsflowtype: MIRResolvedTypeKey, rhsflowtype: MIRResolvedTypeKey) {
         super(MIROpTag.MIRBinKeyEq, sinfo);
 
         this.trgt = trgt;
+        this.cmptype = cmptype;
         this.lhslayouttype = lhslayouttype;
-        this.lhsflowtype = lhsflowtype;
         this.lhs = lhs;
         this.rhslayouttype = rhslayouttype;
-        this.rhsflowtype = rhsflowtype;
         this.rhs = rhs;
+        this.sguard = sguard;
+
+        this.lhsflowtype = lhsflowtype;
+        this.rhsflowtype = rhsflowtype;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.lhs, this.rhs]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.lhs, this.rhs, ...this.sguard.getUsedVars()] : [this.lhs, this.rhs]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        return `${this.trgt.stringify()} = ${this.lhs.stringify()} Key== ${this.rhs.stringify()}`;
+        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
+        return `${this.trgt.stringify()} = ${this.lhs.stringify()} Key== ${this.rhs.stringify()}${gstring}`;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), lhslayouttype: this.lhslayouttype, lhsflowtype: this.lhsflowtype, lhs: this.lhs.jemit(), rhslayouttype: this.rhslayouttype, rhsflowtype: this.rhsflowtype, rhs: this.rhs.jemit() };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), cmptype: this.cmptype, lhslayouttype: this.lhslayouttype, lhs: this.lhs.jemit(), rhslayouttype: this.rhslayouttype, rhs: this.rhs.jemit(), sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined, lhsflowtype: this.lhsflowtype, rhsflowtype: this.rhsflowtype };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRBinKeyEq(jparsesinfo(jobj.sinfo), jobj.lhslayouttype, jobj.lhsflowtype, MIRArgument.jparse(jobj.lhs), jobj.rhslayouttype, jobj.rhsflowtype, MIRArgument.jparse(jobj.rhs), MIRRegisterArgument.jparse(jobj.trgt));
+        return new MIRBinKeyEq(jparsesinfo(jobj.sinfo), jobj.lhslayouttype, MIRArgument.jparse(jobj.lhs), jobj.rhslayouttype, MIRArgument.jparse(jobj.rhs), jobj.cmptype, MIRRegisterArgument.jparse(jobj.trgt), jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined, jobj.lhsflowtype, jobj.rhsflowtype);
     }
 }
 
 class MIRBinKeyLess extends MIROp {
     trgt: MIRRegisterArgument;
+    readonly cmptype: MIRResolvedTypeKey;
     readonly lhslayouttype: MIRResolvedTypeKey;
-    readonly lhsflowtype: MIRResolvedTypeKey;
     lhs: MIRArgument;
     readonly rhslayouttype: MIRResolvedTypeKey;
-    readonly rhsflowtype: MIRResolvedTypeKey
     rhs: MIRArgument;
+    sguard: MIRStatmentGuard | undefined;
 
-    constructor(sinfo: SourceInfo, lhslayouttype: MIRResolvedTypeKey, lhsflowtype: MIRResolvedTypeKey, lhs: MIRArgument, rhslayouttype: MIRResolvedTypeKey, rhsflowtype: MIRResolvedTypeKey, rhs: MIRArgument, trgt: MIRRegisterArgument) {
+    readonly lhsflowtype: MIRResolvedTypeKey;
+    readonly rhsflowtype: MIRResolvedTypeKey;
+
+    constructor(sinfo: SourceInfo, lhslayouttype: MIRResolvedTypeKey, lhs: MIRArgument, rhslayouttype: MIRResolvedTypeKey, rhs: MIRArgument, cmptype: MIRResolvedTypeKey, trgt: MIRRegisterArgument, sguard: MIRStatmentGuard | undefined, lhsflowtype: MIRResolvedTypeKey, rhsflowtype: MIRResolvedTypeKey) {
         super(MIROpTag.MIRBinKeyLess, sinfo);
 
         this.trgt = trgt;
+        this.cmptype = cmptype;
         this.lhslayouttype = lhslayouttype;
-        this.lhsflowtype = lhsflowtype;
         this.lhs = lhs;
         this.rhslayouttype = rhslayouttype;
-        this.rhsflowtype = rhsflowtype;
         this.rhs = rhs;
+        this.sguard = sguard;
+
+        this.lhsflowtype = lhsflowtype;
+        this.rhsflowtype = rhsflowtype;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.lhs, this.rhs]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.lhs, this.rhs, ...this.sguard.getUsedVars()] : [this.lhs, this.rhs]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        return `${this.trgt.stringify()} = ${this.lhs.stringify()} Key< ${this.rhs.stringify()}`;
+        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
+        return `${this.trgt.stringify()} = ${this.lhs.stringify()} Key< ${this.rhs.stringify()}${gstring}`;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), lhslayouttype: this.lhslayouttype, lhsflowtype: this.lhsflowtype, lhs: this.lhs.jemit(), rhslayouttype: this.rhslayouttype, rhsflowtype: this.rhsflowtype, rhs: this.rhs.jemit() };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), cmptype: this.cmptype, lhslayouttype: this.lhslayouttype, lhs: this.lhs.jemit(), rhslayouttype: this.rhslayouttype, rhs: this.rhs.jemit(), sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined, lhsflowtype: this.lhsflowtype, rhsflowtype: this.rhsflowtype };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRBinKeyLess(jparsesinfo(jobj.sinfo), jobj.lhslayouttype, jobj.lhsflowtype, MIRArgument.jparse(jobj.lhs), jobj.rhslayouttype, jobj.rhsflowtype, MIRArgument.jparse(jobj.rhs), MIRRegisterArgument.jparse(jobj.trgt));
+        return new MIRBinKeyLess(jparsesinfo(jobj.sinfo), jobj.lhslayouttype, MIRArgument.jparse(jobj.lhs), jobj.rhslayouttype, MIRArgument.jparse(jobj.rhs), jobj.cmptype, MIRRegisterArgument.jparse(jobj.trgt), jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined, jobj.lhsflowtype, jobj.rhsflowtype);
     }
 }
 

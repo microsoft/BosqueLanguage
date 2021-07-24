@@ -701,20 +701,20 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRConstructorPrimaryCollectionMixed(sinfo, tkey, args.map((arg) => [arg[0], arg[1].trkey, arg[2]]), trgt));
     }
 
-    emitBinKeyEq(sinfo: SourceInfo, lhslayouttype: MIRType, lhsflowtype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhsflowtype: MIRType, rhs: MIRArgument, trgt: MIRRegisterArgument) {
+    emitBinKeyEq(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined, lhsflowtype: MIRType, rhsflowtype: MIRType) {
         if(!this.emitEnabled) {
             return;
         }
 
-        this.m_currentBlock.push(new MIRBinKeyEq(sinfo, lhslayouttype.trkey, lhsflowtype.trkey, lhs, rhslayouttype.trkey, rhsflowtype.trkey, rhs, trgt));
+        this.m_currentBlock.push(new MIRBinKeyEq(sinfo, lhslayouttype.trkey, lhs, rhslayouttype.trkey, rhs, cmptype.trkey, trgt, guard, lhsflowtype.trkey, rhsflowtype.trkey));
     }
 
-    emitBinKeyLess(sinfo: SourceInfo, lhslayouttype: MIRType, lhsflowtype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhsflowtype: MIRType, rhs: MIRArgument, trgt: MIRRegisterArgument) {
+    emitBinKeyLess(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined, lhsflowtype: MIRType, rhsflowtype: MIRType) {
         if(!this.emitEnabled) {
             return;
         }
 
-        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.trkey, lhsflowtype.trkey, lhs, rhslayouttype.trkey, rhsflowtype.trkey, rhs, trgt));
+        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.trkey, lhs, rhslayouttype.trkey, rhs, cmptype.trkey, trgt, guard, lhsflowtype.trkey, rhsflowtype.trkey));
     }
 
     emitPrefixNotOp(sinfo: SourceInfo, arg: MIRArgument, trgt: MIRRegisterArgument) {

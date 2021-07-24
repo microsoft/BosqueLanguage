@@ -897,7 +897,7 @@ class SMTBodyEmitter {
         if (this.typegen.isType(argtype, "NSCore::None")) {
             return new SMTConst("true");
         }
-        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NScore::None"), argtype)) {
+        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NSCore::None"), argtype)) {
             return new SMTConst("false");
         }
         else {
@@ -1543,14 +1543,20 @@ class SMTBodyEmitter {
     }
 
     processBinKeyEq(op: MIRBinKeyEq, continuation: SMTExp): SMTExp {
-        //
-        //TODO: if the layouts are equal then no need to coerce
-        //
-        const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.lhslayouttype));
-        const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.rhslayouttype));
+        let eqcmp: SMTExp = new SMTConst("false");
 
-        const eqcmp = new SMTCallSimple("=", [lhs, rhs]);
-        return new SMTLet(this.varToSMTName(op.trgt).vname, eqcmp, continuation);
+        if(op.lhslayouttype === op.rhslayouttype) {
+            eqcmp = new SMTCallSimple("=", [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+        }
+        else {
+            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.cmptype));
+            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.cmptype));
+
+            eqcmp = new SMTCallSimple("=", [lhs, rhs]);
+        }
+
+        const gop = this.generateGuardStmtCond(op.sguard, eqcmp, "NSCore::Bool");
+        return new SMTLet(this.varToSMTName(op.trgt).vname, gop, continuation);
     }
 
     processBinKeyLess(op: MIRBinKeyLess, continuation: SMTExp): SMTExp {
@@ -2531,6 +2537,10 @@ class SMTBodyEmitter {
                 }
 
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, accept);
+            }
+            case "apivalue_generate": {
+                const synthbody = this.typegen.generateHavocConstructorCall(mirrestype, new SMTCallSimple("seq.unit", [new SMTConst(`(_ bv${2} ${this.vopts.ISize})`)]), new SMTConst(`(_ bv${0} ${this.vopts.ISize})`));
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, synthbody);
             }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("=", [new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")]));

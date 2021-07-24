@@ -802,12 +802,35 @@ void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), tpos != op->args.cend());
 }
 
-void Evaluator::evalBinKeyEqFastOp(const BinKeyEqFastOp* op)
+template<>
+void Evaluator::evalBinKeyEqFastOp<true>(const BinKeyEqFastOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, this->evalArgument(op->argl), this->evalArgument(op->argr)) == 0);
+    }
+}
+
+template<>
+void Evaluator::evalBinKeyEqFastOp<false>(const BinKeyEqFastOp* op)
 {
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, this->evalArgument(op->argl), this->evalArgument(op->argr)) == 0);
 }
 
-void Evaluator::evalBinKeyEqStaticOp(const BinKeyEqStaticOp* op)
+template<>
+void Evaluator::evalBinKeyEqStaticOp<true>(const BinKeyEqStaticOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+        auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) == 0);
+    }
+}
+
+template<>
+void Evaluator::evalBinKeyEqStaticOp<false>(const BinKeyEqStaticOp* op)
 {
     auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
     auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
@@ -815,7 +838,30 @@ void Evaluator::evalBinKeyEqStaticOp(const BinKeyEqStaticOp* op)
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) == 0);
 }
 
-void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
+template<>
+void Evaluator::evalBinKeyEqVirtualOp<true>(const BinKeyEqVirtualOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        auto lltype = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argl)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argl)); 
+        auto rrtype = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argr)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argr));
+
+        if(lltype->tid != rrtype->tid)
+        {
+            SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), BSQFALSE);
+        }
+        else
+        {
+            auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+            auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+            SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->fpkeycmp(lltype, lldata, rrdata) == 0);
+        }
+    }
+}
+
+template<>
+void Evaluator::evalBinKeyEqVirtualOp<false>(const BinKeyEqVirtualOp* op)
 {
     auto lltype = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argl)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argl)); 
     auto rrtype = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argr)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argr));
@@ -833,12 +879,35 @@ void Evaluator::evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op)
     }
 }
 
-void Evaluator::evalBinKeyLessFastOp(const BinKeyLessFastOp* op)
+template<>
+void Evaluator::evalBinKeyLessFastOp<true>(const BinKeyLessFastOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, this->evalArgument(op->argl), this->evalArgument(op->argr)) < 0);
+    }
+}
+
+template<>
+void Evaluator::evalBinKeyLessFastOp<false>(const BinKeyLessFastOp* op)
 {
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, this->evalArgument(op->argl), this->evalArgument(op->argr)) < 0);
 }
 
-void Evaluator::evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op)
+template<>
+void Evaluator::evalBinKeyLessStaticOp<true>(const BinKeyLessStaticOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+        auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) < 0);
+    }
+}
+
+template<>
+void Evaluator::evalBinKeyLessStaticOp<false>(const BinKeyLessStaticOp* op)
 {
     auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
     auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
@@ -846,7 +915,30 @@ void Evaluator::evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op)
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) < 0);
 }
 
-void Evaluator::evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op)
+template<>
+void Evaluator::evalBinKeyLessVirtualOp<true>(const BinKeyLessVirtualOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        auto lltype = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argl)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argl)); 
+        auto rrtype = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argr)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argr));
+
+        if(lltype->tid != rrtype->tid)
+        {
+            SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->tid < rrtype->tid);
+        }
+        else
+        {
+            auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+            auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    
+            SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), lltype->fpkeycmp(lltype, lldata, rrdata) < 0);
+        }
+    }
+}
+
+template<>
+void Evaluator::evalBinKeyLessVirtualOp<false>(const BinKeyLessVirtualOp* op)
 {
     auto lltype = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argl)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argl)); 
     auto rrtype = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argr)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argr));
@@ -869,10 +961,12 @@ inline BSQBool isNoneTest(const BSQType* tt, StorageLocationPtr chkl)
     //otherwise this should be statically checkable
     assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
 
-    if(tt->tkind == BSQTypeKind::UnionRef) {
+    if(tt->tkind == BSQTypeKind::UnionRef) 
+    {
         return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(chkl) == BSQNoneHeapValue;
     }
-    else {
+    else 
+    {
         return (SLPTR_LOAD_UNION_INLINE_TYPE(chkl)->tid == BSQ_TYPE_ID_NONE);
     }
 }
@@ -882,10 +976,12 @@ inline BSQBool checkIsNone(const BSQType* tt, StorageLocationPtr chkl)
     //otherwise this should be statically checkable
     assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
 
-    if(tt->tkind == BSQTypeKind::UnionRef) {
+    if(tt->tkind == BSQTypeKind::UnionRef) 
+    {
         return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(chkl) == BSQNoneHeapValue;
     }
-    else {
+    else 
+    {
         return (SLPTR_LOAD_UNION_INLINE_TYPE(chkl)->tid == BSQ_TYPE_ID_NONE);
     }
 }
@@ -895,10 +991,12 @@ inline BSQTypeID getTypeIDForTypeOf(const BSQType* tt, StorageLocationPtr chkl)
     //otherwise this should be statically checkable
     assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
 
-    if(tt->tkind == BSQTypeKind::UnionRef) {
+    if(tt->tkind == BSQTypeKind::UnionRef) 
+    {
         return SLPTR_LOAD_HEAP_TYPE_ANY(chkl)->tid;
     }
-    else {
+    else 
+    {
         return SLPTR_LOAD_UNION_INLINE_TYPE(chkl)->tid;
     }
 }
@@ -917,7 +1015,6 @@ void Evaluator::evalIsNoneOp<false>(const TypeIsNoneOp* op)
 {
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isNoneTest(op->arglayout, this->evalArgument(op->arg)));
 }
-
 
 template <>
 void Evaluator::evalIsSomeOp<true>(const TypeIsSomeOp* op)
@@ -1334,32 +1431,80 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     }
     case OpCodeTag::BinKeyEqFastOp:
     {
-        this->evalBinKeyEqFastOp(static_cast<const BinKeyEqFastOp*>(op));
+        auto ope = static_cast<const BinKeyEqFastOp*>(op);
+        if(ope->sguard.enabled)
+        {
+            this->evalBinKeyEqFastOp<true>(ope);
+        }
+        else
+        {
+            this->evalBinKeyEqFastOp<false>(ope);
+        }
         break;
     }
     case OpCodeTag::BinKeyEqStaticOp:
     {
-        this->evalBinKeyEqStaticOp(static_cast<const BinKeyEqStaticOp*>(op));
+        auto ope = static_cast<const BinKeyEqStaticOp*>(op);
+        if(ope->sguard.enabled)
+        {
+            this->evalBinKeyEqStaticOp<true>(ope);
+        }
+        else
+        {
+            this->evalBinKeyEqStaticOp<false>(ope);
+        }
         break;
     }
     case OpCodeTag::BinKeyEqVirtualOp:
     {
-        this->evalBinKeyEqVirtualOp(static_cast<const BinKeyEqVirtualOp*>(op));
+        auto ope = static_cast<const BinKeyEqVirtualOp*>(op);
+        if(ope->sguard.enabled)
+        {
+            this->evalBinKeyEqVirtualOp<true>(ope);
+        }
+        else
+        {
+            this->evalBinKeyEqVirtualOp<false>(ope);
+        }
         break;
     }
     case OpCodeTag::BinKeyLessFastOp:
     {
-        this->evalBinKeyLessFastOp(static_cast<const BinKeyLessFastOp*>(op));
+        auto ope = static_cast<const BinKeyLessFastOp*>(op);
+        if(ope->sguard.enabled)
+        {
+            this->evalBinKeyLessFastOp<true>(ope);
+        }
+        else
+        {
+            this->evalBinKeyLessFastOp<false>(ope);
+        }
         break;
     }
     case OpCodeTag::BinKeyLessStaticOp:
     {
-        this->evalBinKeyLessStaticOp(static_cast<const BinKeyLessStaticOp*>(op));
+        auto ope = static_cast<const BinKeyLessStaticOp*>(op);
+        if(ope->sguard.enabled)
+        {
+            this->evalBinKeyLessStaticOp<true>(ope);
+        }
+        else
+        {
+            this->evalBinKeyLessStaticOp<false>(ope);
+        }
         break;
     }
     case OpCodeTag::BinKeyLessVirtualOp:
     {
-        this->evalBinKeyLessVirtualOp(static_cast<const BinKeyLessVirtualOp*>(op));
+        auto ope = static_cast<const BinKeyLessVirtualOp*>(op);
+        if(ope->sguard.enabled)
+        {
+            this->evalBinKeyLessVirtualOp<true>(ope);
+        }
+        else
+        {
+            this->evalBinKeyLessVirtualOp<false>(ope);
+        }
         break;
     }
     case OpCodeTag::TypeIsNoneOp:
