@@ -150,7 +150,7 @@ class SMTEmitter {
             let ofidx = tt.options.length - (i + 1);
             let oftt = this.temitter.getMIRType(tt.options[ofidx].trkey);
 
-            const cc = this.temitter.generateHavocConstructorCall(oftt, new SMTVar("path"), new SMTConst(`(_ bv${i} ${this.bemitter.vopts.ISize})`));
+            const cc = this.temitter.generateHavocConstructorCall(oftt, new SMTVar("path"), new SMTConst(`(_ bv${ofidx} ${this.bemitter.vopts.ISize})`));
             const ccvar = this.bemitter.generateTempName();
             const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(oftt);
 
@@ -595,7 +595,7 @@ class SMTEmitter {
 
         const restype = this.temitter.getMIRType(mirep.resultType);
         this.walkAndGenerateHavocType(restype, this.assembly.havocfuncs);
-        const resvexp = this.temitter.generateHavocConstructorCall(restype, new SMTConst("(as seq.empty (Seq BNat))"), new SMTConst(`(_ bv${0} ${this.assembly.vopts.ISize})`));
+        const resvexp = this.temitter.generateHavocConstructorCall(restype, new SMTConst("(as seq.empty (Seq BNat))"), new SMTConst(`(_ bv${1} ${this.assembly.vopts.ISize})`));
         const rarg = { vname: "_@smtres@_arg", vtype: this.temitter.generateResultType(restype), vinit: resvexp, vchk: this.temitter.generateResultIsSuccessTest(restype, new SMTVar("_@smtres@_arg")), callexp: this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@_arg")) };
 
         assembly.entityDecls.forEach((edcl) => {
