@@ -75,6 +75,9 @@ abstract infix operator >=(a: Some, b: Some): Bool;
 
 //<summary>Primitive integer value.</summary>
 __internal grounded struct entity Int provides Some, KeyType, PODType, APIType {
+    const zero: Int = 0i;
+    const one: Int = 1i;
+    const negone: Int = -1i;
 }
 __primitive inline prefix operator +(a: Int): Int = default;
 __primitive inline prefix operator -(a: Int): Int = default;
@@ -91,6 +94,8 @@ __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 
 //<summary>Primitive natural number value.</summary>
 __internal grounded struct entity Nat provides Some, KeyType, PODType, APIType {
+    const zero: Nat = 0n;
+    const one: Nat = 1n;
 }
 __primitive inline prefix operator +(a: Nat): Nat = default;
 __primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
@@ -106,6 +111,9 @@ __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
 __internal grounded struct entity BigInt provides Some, KeyType, PODType, APIType {
+    const zero: BigInt = 0I;
+    const one: BigInt = 1I;
+    const negone: BigInt = -1I;
 }
 __primitive inline prefix operator +(a: BigInt): BigInt = default;
 __primitive inline prefix operator -(a: BigInt): BigInt = default;
@@ -122,6 +130,8 @@ __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
 __internal grounded struct entity BigNat provides Some, KeyType, PODType, APIType {
+    const zero: BigNat = 0N;
+    const one: BigNat = 1N;
 }
 __primitive inline prefix operator +(a: BigNat): BigNat = default;
 __primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
@@ -153,6 +163,9 @@ __primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
 
 //<summary>Primitive float value -- compiler flags control bitness -- defaults to 64bit.</summary>
 __internal grounded struct entity Float provides Some, PODType, APIType {
+    const zero: Float = 0.0f;
+    const one: Float = 1.0f;
+    const negone: Float = -1.0f;
 }
 __primitive inline prefix operator +(a: Float): Float = default;
 __primitive inline prefix operator -(a: Float): Float = default;
@@ -167,6 +180,9 @@ __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 
 //<summary>Primitive float decimal value.</summary>
 __internal grounded struct entity Decimal provides Some, PODType, APIType {
+    const zero: Decimal = 0.0d;
+    const one: Decmial = 1.0d;
+    const negone: Decmial = -1.0d;
 }
 __primitive inline prefix operator +(a: Decimal): Decimal = default;
 __primitive inline prefix operator -(a: Decimal): Decimal = default;

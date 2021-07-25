@@ -317,6 +317,81 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     private recursive? function s_countIf_Helper_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_countif_helper_idx
     
+
+
+
+
+
+    private function s_min_Core(l: List<T>): T # list_min_helper
+
+    private function s_min_Helper(l: List<T>): T {
+        //TODO: here special case for small model
+        //let count = List<T>::s_size(sl);
+
+        return List<T>::s_min_Core(sl);
+    }
+
+    private function s_max_Core(l: List<T>): T # list_max_helper
+
+    private function s_max_Helper(l: List<T>): T {
+        //TODO: here special case for small model
+        //let count = List<T>::s_size(sl);
+
+        return List<T>::s_max_Core(sl);
+    }
+
+#if UF_APPROX
+    private function s_sum_Core(l: List<T>): T # list_sum_helper
+
+    private function s_sum_Helper(l: List<T>): T {
+        if(List<T>::s_empty(l)) {
+            return T::zero;
+        }
+        else {
+            let count = List<T>::s_size(sl);
+            
+            if(count == 1) {
+                return List<T>::s_unsafe_get(l, 0);
+            }
+            //TODO: here special case for small model
+            else {
+                return List<T>::s_sum_Core(sl);
+            }
+        }
+    }
+#else
+    private recursive function s_sum_Core(l: List<T>, acc: T, cpos: Nat, count: Nat): T {
+        if(cpos == count) {
+            return acc;
+        }
+        else {
+            let nacc = acc + List<T>::s_unsafe_get(l, cpos);
+            return List<T>::s_sum_Core(l, nacc, cpos + 1, count);
+        }
+    }
+
+    private function s_sum_Helper(l: List<T>): T {
+        if(List<T>::s_empty(l)) {
+            return T::zero;
+        }
+        else {
+            let count = List<T>::s_size(sl);
+            
+            if(count == 1) {
+                return List<T>::s_unsafe_get(l, 0);
+            }
+            //TODO: here special case for small model
+            else {
+                return List<T>::s_sum_Core[recursive](sl, T::zero, 0, count);
+            }
+        }
+    }
+#endif
+
+
+
+
+
     private recursive? function s_filter_Constructor(l: List<T>, isq: ISequence, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_filter_helper
 
     private recursive? function s_filter_Helper(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
@@ -345,8 +420,8 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     private recursive? function s_filter_Helper_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_filter_helper_idx
     
-    private function s_filterToType_Helper<U>(l: List<T>): List<U> # list_filtertotype_helper
-    private function s_castToType_Helper<U>(l: List<T>): List<U> # list_casttotype_helper
+    private function s_filterType_Helper<U>(l: List<T>): List<U> # list_filtertype_helper
+    private function s_castType_Helper<U>(l: List<T>): List<U> # list_casttype_helper
 
     __safe private function s_slice_Constructor(l: List<T>, start: Nat, end: Nat, count: Nat): List<U> # list_slice
 
@@ -608,12 +683,57 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     }
 
     method {when T grounded KeyType} count(v: T): Int {
-        return List<T>::s_count_keytype(this, v);
+        return List<T>::s_count_KeyHelper(this, v);
     }
 
     //
     //min, max, argmin, argmax, sum, product
     //
+    method min(): T 
+        requires release !this.empty();
+    {
+        return List<T>::s_min_Helper(this);
+    }
+
+    method max(): T
+        requires release !this.empty();
+    {
+        return List<T>::s_max_Helper(this);
+    }
+
+    method minOrNone(): T? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            return List<T>::s_min_Helper(this);
+        }
+    }
+
+    method maxOrNone(): T? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            return List<T>::s_max_Helper(this);
+        }
+    }
+
+    method minTry(out? res: T): Bool
+        requires release !this.empty();
+    {
+        return List<T>::s_min_Helper(this);
+    }
+
+    method maxTry(out? res: T): Bool
+        requires release !this.empty();
+    {
+        return List<T>::s_max_Helper(this);
+    }
+
+    method sum(): T {
+        return List<T>::s_sum_Helper(this);
+    }
 
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
@@ -993,12 +1113,12 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         return List<T>::s_filter_Helper_Idx[recursive?](this, p);
     }
 
-    method filterToType<U>(): List<U> {
-        return List<T>::s_filterToTypetype_Helper<U>(this);
+    method filterType<U>(): List<U> {
+        return List<T>::s_filterType_Helper<U>(this);
     }
 
-    method castToType<U>(): List<U> {
-        return List<T>::s_castToType_Helper<U>(this);
+    method castType<U>(): List<U> {
+        return List<T>::s_castType_Helper<U>(this);
     }
 
     method slice(start?: Nat=0n, end?: Nat=List<T>::s_size(this)): List<T> 

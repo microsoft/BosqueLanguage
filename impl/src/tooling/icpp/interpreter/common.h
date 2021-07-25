@@ -265,8 +265,8 @@ enum class BSQPrimitiveImplTag
     list_findindexoflast_idx,
     list_filter,
     list_filter_idx,
-    list_filtertotype,
-    list_casttotype,
+    list_filtertype,
+    list_casttype,
     list_slice,
     list_map,
     list_map_idx

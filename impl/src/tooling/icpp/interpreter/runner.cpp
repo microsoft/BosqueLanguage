@@ -413,7 +413,7 @@ int main(int argc, char** argv)
         {
             printf("!ERROR!\n");
         }
-        printf("Elapsed time %lli...\n", (int64_t)delta_ms);
+        printf("Elapsed time %I64...\n", (int64_t)delta_ms);
 
         return 0;
     }

@@ -2220,10 +2220,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, Storag
     case BSQPrimitiveImplTag::list_filter_idx:
         assert(false);
         break;
-    case BSQPrimitiveImplTag::list_filtertotype:
+    case BSQPrimitiveImplTag::list_filtertype:
         assert(false);
         break;
-    case BSQPrimitiveImplTag::list_casttotype:
+    case BSQPrimitiveImplTag::list_casttype:
         assert(false);
         break;
     case BSQPrimitiveImplTag::list_slice:

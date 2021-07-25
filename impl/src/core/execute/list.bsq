@@ -33,8 +33,8 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     private recursive? function s_filter(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> # list_filter
     private recursive? function s_filter_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_filter_idx
 
-    private function s_filterToType<U>(l: List<T>): List<U> # list_filtertotype
-    private function s_castToType<U>(l: List<T>): List<U> # list_casttotype
+    private function s_filterType<U>(l: List<T>): List<U> # list_filtertype
+    private function s_castType<U>(l: List<T>): List<U> # list_casttype
 
     private function s_slice(l: List<T>, start: Nat, end: Nat): List<U> # list_slice
 
@@ -501,12 +501,12 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         return List<T>::s_filter_Idx[recursive?](this, p);
     }
 
-    method filterToType<U>(): List<U> {
-        return List<T>::s_filterToTypetype<U>(this);
+    method filterType<U>(): List<U> {
+        return List<T>::s_filterType<U>(this);
     }
 
-    method castToType<U>(): List<U> {
-        return List<T>::s_castToType<U>(this);
+    method castType<U>(): List<U> {
+        return List<T>::s_castType<U>(this);
     }
 
     method slice(start?: Nat=0n, end?: Nat=List<T>::s_size(this)): List<T> 
