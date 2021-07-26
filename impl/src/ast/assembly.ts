@@ -34,7 +34,8 @@ enum TemplateTermSpecialRestriction {
     Validator, //implies unique
     Struct, //modifies entity constructable
     Entity, //implies unique and constructable
-    Grounded
+    Grounded,
+    Unique
 }
 
 class TemplateTermDecl {

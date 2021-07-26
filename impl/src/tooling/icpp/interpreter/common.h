@@ -263,10 +263,11 @@ enum class BSQPrimitiveImplTag
     list_findindexoflast,
     list_findindexof_idx,
     list_findindexoflast_idx,
+    list_minidx,
+    list_maxidx,
+    list_sum,
     list_filter,
     list_filter_idx,
-    list_filtertype,
-    list_casttype,
     list_slice,
     list_map,
     list_map_idx

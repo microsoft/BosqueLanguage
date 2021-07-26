@@ -587,12 +587,20 @@ class TypeChecker {
                 }
             });
 
-            const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke);
-            const pcenv = TypeEnvironment.createInitialEnvForCall(ikey, new Map<string, ResolvedType>(cbinds), new Map<string, { pcode: PCode, captured: string[] }>(), cargs, undefined);
+            //TODO: this may capture too many types that are not strictly needed -- maybe want to parse scope track captured types like we do for captured variables
+            let bodybinds = new Map<string, ResolvedType>(cbinds);
+            env.terms.forEach((ttype, ttname) => {
+                if (!bodybinds.has(ttname)) {
+                    bodybinds.set(ttname, ttype);
+                }
+            });
 
-            if (exp.invoke.body instanceof Expression) {
+            const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke);
+            const pcenv = TypeEnvironment.createInitialEnvForCall(ikey, bodybinds, new Map<string, { pcode: PCode, captured: string[] }>(), cargs, undefined);
+
+            if ((exp.invoke.body as BodyImplementation).body instanceof Expression) {
                 const dummyreg = this.m_emitter.generateTmpRegister();
-                const evalue = this.checkExpression(pcenv, exp.invoke.body, dummyreg, undefined);
+                const evalue = this.checkExpression(pcenv, (exp.invoke.body as BodyImplementation).body as Expression, dummyreg, undefined);
                 return evalue.getExpressionResult().valtype.flowtype;
             }
             else {
@@ -685,7 +693,15 @@ class TypeChecker {
                 }
             });
 
-            this.m_emitter.registerPCode(exp.invoke, ltypetry as ResolvedFunctionType, cbinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])));
+            //TODO: this may capture too many types that are not strictly needed -- maybe want to parse scope track captured types like we do for captured variables
+            let bodybinds = new Map<string, ResolvedType>(cbinds);
+            env.terms.forEach((ttype, ttname) => {
+                if (!bodybinds.has(ttname)) {
+                    bodybinds.set(ttname, ttype);
+                }
+            });
+
+            this.m_emitter.registerPCode(exp.invoke, ltypetry as ResolvedFunctionType, bodybinds, cbinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])));
 
             return { code: exp.invoke, scope: env.scope, captured: capturedMap, ftype: ltypetry as ResolvedFunctionType };
         }
@@ -3250,7 +3266,7 @@ class TypeChecker {
                 this.m_emitter.emitAssertCheck(op.sinfo, "Failed type conversion", creg);
             }
 
-            this.m_emitter.emitRegisterStore(op.sinfo, this.emitInlineConvertIfNeeded(op.sinfo, arg, texp, astype), trgt, this.m_emitter.registerResolvedTypeReference(astype), undefined);
+            this.m_emitter.emitRegisterStore(op.sinfo, this.emitInlineConvertIfNeeded(op.sinfo, arg, new ValueType(texp.layout, astype), astype), trgt, this.m_emitter.registerResolvedTypeReference(astype), undefined);
             return tsplits.tenvs[0];
         }
     }
@@ -3795,6 +3811,14 @@ class TypeChecker {
     private checkPrefixNotOpAsCombinator(env: TypeEnvironment, exp: PrefixNotOp, cbinds: Map<string, ResolvedType>, expectedFunction: ResolvedFunctionType | undefined): PCode {
         let subpc: PCode | undefined = undefined;
         
+        //TODO: this may capture too many types that are not strictly needed -- maybe want to parse scope track captured types like we do for captured variables
+        let bodybinds = new Map<string, ResolvedType>(cbinds);
+        env.terms.forEach((ttype, ttname) => {
+            if(!bodybinds.has(ttname)) {
+                bodybinds.set(ttname, ttype);
+            }
+        });
+
         if(exp.exp instanceof AccessVariableExpression) {
             subpc = (env.pcodes.get(exp.exp.name) as { pcode: PCode, captured: string[] }).pcode;
         }
@@ -3834,7 +3858,7 @@ class TypeChecker {
                 }
             });
 
-            this.m_emitter.registerPCode(cexp.invoke, ltypetry as ResolvedFunctionType, cbinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])));
+            this.m_emitter.registerPCode(cexp.invoke, ltypetry as ResolvedFunctionType, bodybinds, cbinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])));
 
             subpc = { code: cexp.invoke, scope: env.scope, captured: capturedMap, ftype: ltypetry as ResolvedFunctionType };
         }
@@ -3849,7 +3873,7 @@ class TypeChecker {
         const body = new BodyImplementation(bodyid, this.m_file, nbody);
         const ninvoke = new InvokeDecl(exp.sinfo, this.m_file, [], subpc.code.recursive, [], undefined, subpc.code.params, subpc.code.optRestName, subpc.code.optRestType, this.m_assembly.getSpecialBoolType(), [], [], false, true, subpc.code.captureSet, body, [], []);
         
-        this.m_emitter.registerPCode(ninvoke, subpc.ftype, cbinds, [...subpc.captured].sort((a, b) => a[0].localeCompare(b[0])));
+        this.m_emitter.registerPCode(ninvoke, subpc.ftype, bodybinds, cbinds, [...subpc.captured].sort((a, b) => a[0].localeCompare(b[0])));
 
         return { code: ninvoke, scope: env.scope + `(${exp.sinfo.pos})`, captured: subpc.captured, ftype: subpc.ftype };
     }
@@ -6859,11 +6883,11 @@ class TypeChecker {
         }
     }
 
-    processLambdaFunction(lkey: MIRInvokeKey, invoke: InvokeDecl, sigt: ResolvedFunctionType, binds: Map<string, ResolvedType>, cargs: [string, ResolvedType][]) {
+    processLambdaFunction(lkey: MIRInvokeKey, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, binds: Map<string, ResolvedType>, cargs: [string, ResolvedType][]) {
         try {
             this.m_file = invoke.srcFile;
             const iname = `fn::${invoke.sourceLocation.line}##${invoke.sourceLocation.pos}`;
-            const invinfo = this.processPCodeInfo(iname, lkey, invoke.sourceLocation, invoke, binds, sigt, cargs);
+            const invinfo = this.processPCodeInfo(iname, lkey, invoke.sourceLocation, invoke, bodybinds, sigt, cargs);
 
             this.m_emitter.masm.invokeDecls.set(lkey, invinfo as MIRInvokeBodyDecl);
         }
