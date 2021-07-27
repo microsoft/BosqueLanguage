@@ -5,9 +5,7 @@
 
 type VerifierOptions = {
     ISize: number, //bits in the size 2-64
-    BigXMode: "BV" | "Int" | "UF", //are bignums handled as Int or just large BV
     OverflowEnabled: boolean,
-    FPOpt: "Real" | "UF",
     StringOpt: "ASCII" | "UNICODE",
 
     SimpleQuantifierMode: boolean, //Set to true for a simplified version of Filter/Count that does not enforce subset/order properties but has simpler quantifiers

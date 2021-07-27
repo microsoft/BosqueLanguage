@@ -19,7 +19,7 @@ function enqueueSMTTestRefute(testsrc: string, trgtline: number, cb: (result: "p
             const end = new Date();
             try {
                 const jres = JSON.parse(result);
-                const rkind = jres["result"] as "error" | "infeasible" | "possible" | "timeout";
+                const rkind = jres["result"] as "error" | "unreachable" | "possible" | "timeout";
 
                 if(rkind === "error") {
                     cb("error", start, end, result);    
@@ -55,7 +55,7 @@ function enqueueSMTTestWitness(testsrc: string, trgtline: number, cb: (result: "
             const end = new Date();
             try {
                 const jres = JSON.parse(result);
-                const rkind = jres["result"] as "error" | "infeasible" | "witness" | "timeout";
+                const rkind = jres["result"] as "error" | "unreachable" | "witness" | "timeout";
 
                 if(rkind === "error") {
                     cb("error", start, end, result);    
@@ -63,7 +63,7 @@ function enqueueSMTTestWitness(testsrc: string, trgtline: number, cb: (result: "
                 else if(rkind === "timeout") {
                     cb("unknown/timeout", start, end, result);  
                 }
-                else if(rkind === "infeasible") {
+                else if(rkind === "unreachable") {
                     cb("fail", start, end, result);
                 }
                 else {
@@ -86,7 +86,7 @@ function enqueueSMTTestEvaluate(testsrc: string, jin: any[], expected: any, cb: 
 
         try {
             const jres = JSON.parse(result);
-            const rkind = jres["result"] as "error" | "infeasible" | "output" | "timeout";
+            const rkind = jres["result"] as "error" | "unreachable" | "output" | "timeout";
 
             if(rkind === "error") {
                 cb("error", start, end, result);    
@@ -94,7 +94,7 @@ function enqueueSMTTestEvaluate(testsrc: string, jin: any[], expected: any, cb: 
             else if(rkind === "timeout") {
                 cb("unknown/timeout", start, end, result);  
             }
-            else if(rkind === "infeasible") {
+            else if(rkind === "unreachable") {
                 if(expected === undefined) {
                     cb("pass", start, end);
                 }

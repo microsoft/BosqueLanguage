@@ -632,26 +632,11 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "NSCore::BigInt")) {
             return ["BBigInt@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::BigNat")) {
-            return ["BBigNat@UFCons_API", false];
-        }
         else if (this.isType(tt, "NSCore::Float")) {
             return ["BFloat@UFCons_API", false];
         }
         else if (this.isType(tt, "NSCore::Decimal")) {
             return ["BDecimal@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::ISOTime")) {
-            return ["BISOTime@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::LogicalTime")) {
-            return ["BLogicalTime@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::UUID")) {
-            return ["BUUID@UFCons_API", false];
-        }
-        else if (this.isType(tt, "NSCore::ContentHash")) {
-            return ["BContentHash@UFCons_API", false];
         }
         else {
             return [`_@@cons_${this.getSMTTypeFor(tt).name}_entrypoint`, true];

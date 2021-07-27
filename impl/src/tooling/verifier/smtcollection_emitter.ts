@@ -1210,7 +1210,7 @@ class ListOpsManager {
             ufconsname = "@UFSumConsRational";
         }
         else if (ctype.trkey === "NSCore::Float") {
-            ufconsname = "@UFSumConsBigInt";
+            ufconsname = "@UFSumConsFloat";
         }
         else {
             ufconsname = "@UFSumConsDecimal";
@@ -1221,7 +1221,12 @@ class ListOpsManager {
             ufops.push(new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ovfname), [ltype], this.booltype))
         }
         
-        let ffunc: SMTExp = this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]));
+        let ffunc: SMTExp = (ctype.trkey !== "NSCore::BigNat") 
+            ? this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]))
+            : new SMTLet("@vval", new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]),
+                new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst("0")]), this.temitter.generateErrorResultAssert(ctype), this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("@vval")))
+            );
+
         if (ovfname !== undefined) {
             ffunc = new SMTIf(
                 new SMTCallSimple(this.generateDesCallName(ltype, ovfname), [new SMTVar("l")]),
@@ -1229,7 +1234,7 @@ class ListOpsManager {
                 this.temitter.generateErrorResultAssert(ctype)
             );
         }
-        
+
         return {
             if: [new SMTFunction(this.generateDesCallName(ltype, "sum"), [{ vname: "l", vtype: ltype }], undefined, 0, restype, ffunc)],
             uf: ufops

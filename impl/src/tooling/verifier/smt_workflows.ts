@@ -35,10 +35,10 @@ const DEFAULT_VOPTS = {
     SpecializeSmallModelGen: false
 } as VerifierOptions;
 
-type CheckerResult = "infeasible" | "witness" | "possible" | "timeout";
+type CheckerResult = "unreachable" | "witness" | "possible" | "timeout";
 
 //ocrresponds to 1a, 1b, 2a, 2b in paper
-type ChkWorkflowOutcome = "infeasible" | "witness" | "partial" | "exhaustive";
+type ChkWorkflowOutcome = "unreachable" | "witness" | "partial" | "exhaustive";
 
 enum AssemblyFlavor
 {
@@ -108,7 +108,7 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string, asmflavor: A
     return MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
 }
 
-function generateSMTPayload(masm: MIRAssembly, mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload | undefined {
+function generateSMTPayload(masm: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload | undefined {
     try {
         return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, errorTrgtPos, entrypoint);
     } catch(e) {
@@ -117,7 +117,7 @@ function generateSMTPayload(masm: MIRAssembly, mode: "check" | "evaluate" | "inv
     }
 }
 
-function runVEvaluator(cpayload: object, workflow: "infeasible" | "witness" | "eval" | "invert", bson: boolean): string {
+function runVEvaluator(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert", bson: boolean): string {
     try {
         const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
         return execSync(cmd, { input: JSON.stringify(cpayload, undefined, 2) }).toString().trim();
@@ -127,11 +127,16 @@ function runVEvaluator(cpayload: object, workflow: "infeasible" | "witness" | "e
     }
 }
 
-function runVEvaluatorAsync(cpayload: object, workflow: "infeasible" | "witness" | "eval" | "invert", bson: boolean, cb: (result: string) => void) {
+function runVEvaluatorAsync(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert", bson: boolean, cb: (result: string) => void) {
     try {
         const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
         const proc = exec(cmd, (err, stdout, stderr) => {
-            cb(stdout.toString().trim());
+            if(err) {
+                cb(JSON.stringify({result: "error", info: `${err}`}));
+            }
+            else {
+                cb(stdout.toString().trim());
+            }
         });
 
         proc.stdin.setDefaultEncoding('utf-8');
@@ -161,7 +166,7 @@ function workflowGetErrors(usercode: CodeFileInfo[], vopts: VerifierOptions, ent
     }
 }
 
-function workflowEmitToFile(into: string, usercode: CodeFileInfo[], asmflavor: AssemblyFlavor, mode: "check" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, smtonly: boolean) {
+function workflowEmitToFile(into: string, usercode: CodeFileInfo[], asmflavor: AssemblyFlavor, mode: "unreachable" | "witness" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, smtonly: boolean) {
     try {
         const { masm, errors } = generateMASM(usercode, entrypoint, asmflavor, vopts.SpecializeSmallModelGen);
         if(masm === undefined) {
@@ -188,13 +193,13 @@ function workflowBSQInfeasibleSingle(bson: boolean, usercode: CodeFileInfo[], vo
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {    
-            const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+            const res = generateSMTPayload(masm, "unreachable", timeout, vopts, errorTrgtPos, entrypoint);
             if(res === undefined) {
                 cb(JSON.stringify({result: "error", info: "payload generation error"}));
                 return;
             }
 
-            runVEvaluatorAsync(res, "infeasible", bson, cb);
+            runVEvaluatorAsync(res, "unreachable", bson, cb);
         }
     } catch(e) {
         cb(JSON.stringify({result: "error", info: `${e}`}));
@@ -208,7 +213,7 @@ function workflowBSQWitnessSingle(bson: boolean, usercode: CodeFileInfo[], vopts
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {    
-            const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+            const res = generateSMTPayload(masm, "witness", timeout, vopts, errorTrgtPos, entrypoint);
             if(res === undefined) {
                 cb(JSON.stringify({result: "error", info: "payload generation error"}));
                 return;
@@ -245,7 +250,7 @@ function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: num
                 return undefined;
             }
             else {    
-                const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+                const res = generateSMTPayload(masm, "unreachable", timeout, vopts, errorTrgtPos, entrypoint);
                 if(res === undefined) {
                     if(printprogress) {
                         process.stderr.write(`    payload generation errors\n`);
@@ -253,12 +258,12 @@ function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: num
                     return undefined;
                 }
     
-                const cres = runVEvaluator(res, "infeasible", bson);
+                const cres = runVEvaluator(res, "unreachable", bson);
                 const jres = JSON.parse(cres);
                 const rr = jres["result"];
-                if(rr === "infeasible") {
+                if(rr === "unreachable") {
                     if(printprogress) {
-                        process.stderr.write(`    infeasible -- continuing checks...\n`);
+                        process.stderr.write(`    unreachable -- continuing checks...\n`);
                     }
                 }
                 else if(rr === "possible") {
@@ -293,7 +298,7 @@ function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: num
     }
 
     const end = Date.now();
-    return {result: "infeasible", time: (end - start) / 1000};
+    return {result: "unreachable", time: (end - start) / 1000};
 }
 
 function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
@@ -320,7 +325,7 @@ function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number
                 return undefined;
             }
             else {    
-                const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+                const res = generateSMTPayload(masm, "witness", timeout, vopts, errorTrgtPos, entrypoint);
                 if(res === undefined) {
                     if(printprogress) {
                         process.stderr.write(`    payload generation errors\n`);
@@ -331,9 +336,9 @@ function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number
                 const cres = runVEvaluator(res, "witness", bson);
                 const jres = JSON.parse(cres);
                 const rr = jres["result"];
-                if(rr === "infeasible") {
+                if(rr === "unreachable") {
                     if(printprogress) {
-                        process.stderr.write(`    infeasible -- continuing checks...\n`);
+                        process.stderr.write(`    unreachable -- continuing checks...\n`);
                     }
                 }
                 else if(rr === "witness") {
@@ -341,7 +346,7 @@ function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number
                     const witness = jres["input"];
 
                     //
-                    //Witness may be infeasible for some reason (Float <-> Real approx), depends on NAT_MAX not being 2^64, etc.
+                    //Witness may be unreachable for some reason (Float <-> Real approx), depends on NAT_MAX not being 2^64, etc.
                     //May want to try executing it here to validate -- if it fails then we can return undefined?
                     //
 
@@ -375,7 +380,7 @@ function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number
     }
 
     const end = Date.now();
-    return {result: "infeasible", time: (end - start) / 1000};
+    return {result: "unreachable", time: (end - start) / 1000};
 }
 
 function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
@@ -397,7 +402,7 @@ function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: num
             return undefined;
         }
         else {
-            const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+            const res = generateSMTPayload(masm, "unreachable", timeout, vopts, errorTrgtPos, entrypoint);
             if (res === undefined) {
                 if (printprogress) {
                     process.stderr.write(`    payload generation errors\n`);
@@ -405,16 +410,16 @@ function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: num
                 return undefined;
             }
 
-            const cres = runVEvaluator(res, "infeasible", bson);
+            const cres = runVEvaluator(res, "unreachable", bson);
             const jres = JSON.parse(cres);
             const rr = jres["result"];
-            if (rr === "infeasible") {
+            if (rr === "unreachable") {
                 if (printprogress) {
-                    process.stderr.write(`    infeasible\n`);
+                    process.stderr.write(`    unreachable\n`);
                 }
 
                 const end = Date.now();
-                return { result: "infeasible", time: (end - start) / 1000 };
+                return { result: "unreachable", time: (end - start) / 1000 };
             }
             else if (rr === "possible") {
                 if (printprogress) {
@@ -465,7 +470,7 @@ function wfWitnessLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number
             return undefined;
         }
         else {
-            const res = generateSMTPayload(masm, "check", timeout, vopts, errorTrgtPos, entrypoint);
+            const res = generateSMTPayload(masm, "witness", timeout, vopts, errorTrgtPos, entrypoint);
             if (res === undefined) {
                 if (printprogress) {
                     process.stderr.write(`    payload generation errors\n`);
@@ -476,20 +481,20 @@ function wfWitnessLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number
             const cres = runVEvaluator(res, "witness", bson);
             const jres = JSON.parse(cres);
             const rr = jres["result"];
-            if (rr === "infeasible") {
+            if (rr === "unreachable") {
                 if (printprogress) {
-                    process.stderr.write(`    infeasible\n`);
+                    process.stderr.write(`    unreachable\n`);
                 }
 
                 const end = Date.now();
-                return { result: "infeasible", time: (end - start) / 1000 };
+                return { result: "unreachable", time: (end - start) / 1000 };
             }
             else if (rr === "witness") {
                 const end = Date.now();
                 const witness = jres["input"];
 
                 //
-                //Witness may be infeasible for some reason (Float <-> Real approx), depends on NAT_MAX not being 2^64, etc.
+                //Witness may be unreachable for some reason (Float <-> Real approx), depends on NAT_MAX not being 2^64, etc.
                 //May want to try executing it here to validate -- if it fails then we can return undefined?
                 //
 
@@ -537,7 +542,7 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
         return undefined;
     }
 
-    let smw = smi.result != "infeasible" ? wfWitnessSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
+    let smw = smi.result != "unreachable" ? wfWitnessSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
     if(smw !== undefined && smw.result === "witness") {
         if(printprogress) {
             process.stderr.write(`  witness input generation successful (1b)!\n`);
@@ -546,7 +551,7 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
         return {result: "witness", time: (end - start) / 1000, input: smw.input};
     }
 
-    let lmw = smi.result != "infeasible" ? wfWitnessLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
+    let lmw = smi.result != "unreachable" ? wfWitnessLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
     if(lmw !== undefined && lmw.result === "witness") {
         if(printprogress) {
             process.stderr.write(`  witness input generation successful (1b)!\n`);
@@ -566,16 +571,16 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
     const end = Date.now();
     const elapsed = (end - start) / 1000;
 
-    if(lmr.result === "infeasible") {
+    if(lmr.result === "unreachable") {
         if(printprogress) {
-            process.stderr.write(`  infeasible on all inputs (1a)!\n`);
+            process.stderr.write(`  unreachable on all inputs (1a)!\n`);
         }
-        return {result: "infeasible", time: elapsed};
+        return {result: "unreachable", time: elapsed};
     }
     else {
-        if(smi.result === "infeasible") {
+        if(smi.result === "unreachable") {
             if(printprogress) {
-                process.stderr.write(`  infeasible on restricted inputs (2a)!\n`);
+                process.stderr.write(`  unreachable on restricted inputs (2a)!\n`);
             }
             return {result: "partial", time: elapsed};
         }

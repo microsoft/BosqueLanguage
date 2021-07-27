@@ -72,34 +72,6 @@
 (define-sort BByteBuffer () (Seq (_ BitVec 8)))
 
 ;;
-;; Define uninterpreted functions for various kinds
-;;
-(declare-fun BBigIntCons_UF (String) BBigInt)
-(declare-fun BBigIntUnary_UF (String BBigInt) BBigInt)
-(declare-fun BBigIntBinary_UF (String BBigInt BBigInt) BBigInt)
-(declare-fun BBigIntBinaryPred_UF (String BBigInt BBigInt) Bool)
-
-(declare-fun BBigNatCons_UF (String) BBigNat)
-(declare-fun BBigNatUnary_UF (String BBigNat) BBigNat)
-(declare-fun BBigNatBinary_UF (String BBigNat BBigNat) BBigNat)
-(declare-fun BBigNatBinaryPred_UF (String BBigNat BBigNat) Bool)
-
-(declare-fun BFloatCons_UF (String) BFloat)
-(declare-fun BFloatUnary_UF (String BFloat) BFloat)
-(declare-fun BFloatBinary_UF (String BFloat BFloat) BFloat)
-(declare-fun BFloatBinaryPred_UF (String BFloat BFloat) Bool)
-
-(declare-fun BDecimalCons_UF (String) BDecimal)
-(declare-fun BDecimalUnary_UF (String BDecimal) BDecimal)
-(declare-fun BDecimalBinary_UF (String BDecimal BDecimal) BDecimal)
-(declare-fun BDecimalBinaryPred_UF (String BDecimal BDecimal) Bool)
-
-(declare-fun BRationalCons_UF (String) BRational)
-(declare-fun BRationalUnary_UF (String BRational) BRational)
-(declare-fun BRationalBinary_UF (String BRational BRational) BRational)
-(declare-fun BRationalBinaryPred_UF (String BRational BRational) Bool)
-
-;;
 ;; Define min/max/0 constants for Int/Nat/BigInt/BigNat/Float/Decimal/Rational/String representation options
 ;;
 ;;BINTEGRAL_CONSTANTS;;

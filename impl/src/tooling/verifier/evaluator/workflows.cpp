@@ -12,7 +12,7 @@
 //Given a smt decl + a signature that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
 //   
 //Either:
-//  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
+//  Prove unsat and return the JSON payload -- {result: "unreachable", time: number}
 //  Prove sat and return the JSON payload -- {result: "possible", time: number}
 //  Solver timeout and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
@@ -45,7 +45,7 @@ json workflowInfeasible(std::string smt2decl, APIModule* apimodule, unsigned tim
     else if(res == z3::check_result::unsat)
     {
         return {
-            {"result", "infeasible"},
+            {"result", "unreachable"},
             {"time", delta_ms}
         };
     }
@@ -63,7 +63,7 @@ json workflowInfeasible(std::string smt2decl, APIModule* apimodule, unsigned tim
 //Given a smt decl + a signature that (1) havocs inputs, (2) invokes a call, (3) asserts the result is the error
 //   
 //Either:
-//  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
+//  Prove unsat and return the JSON payload -- {result: "unreachable", time: number}
 //  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
@@ -98,7 +98,7 @@ json workflowWitness(std::string smt2decl, APIModule* apimodule, unsigned timeou
     else if(res == z3::check_result::unsat)
     {
         return {
-            {"result", "infeasible"},
+            {"result", "unreachable"},
             {"time", delta_ms}
         };
     }
@@ -148,7 +148,7 @@ json workflowWitness(std::string smt2decl, APIModule* apimodule, unsigned timeou
 //Work flow #3 -- Compute an API result
 //Given a smt decl, a signature, and a JSON representation of the arg vector 
 //Either:
-//  Compute the output of the function return the JSON payload -- {result: "output" | "infeasible", time: number, output: JSON}
+//  Compute the output of the function return the JSON payload -- {result: "output" | "unreachable", time: number, output: JSON}
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
@@ -202,7 +202,7 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
     else if(res == z3::check_result::unsat)
     {
         return {
-            {"result", "infeasible"},
+            {"result", "unreachable"},
             {"time", delta_ms}
         };
     }
@@ -241,7 +241,7 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
 //Given a smt decl that (1) havocs inputs, (2) invokes a call
 //      + a signature, smt output name, and JSON result 
 //Either:
-//  Prove unsat and return the JSON payload -- {result: "infeasible", time: number}
+//  Prove unsat and return the JSON payload -- {result: "unreachable", time: number}
 //  Prove sat and return the JSON payload -- {result: "witness", time: number, input: any}
 //  Timeout a and return the JSON payload -- {result: "unknown", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
@@ -292,7 +292,7 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsig
     else if(res == z3::check_result::unsat)
     {
         return {
-            {"result", "infeasible"},
+            {"result", "unreachable"},
             {"time", delta_ms}
         };
     }
@@ -371,7 +371,7 @@ int main(int argc, char** argv)
         argidx = 2;
     }
 
-    if(argc > argidx && std::string(argv[argidx]) == "--infeasible")
+    if(argc > argidx && std::string(argv[argidx]) == "--unreachable")
     {
         json payload = getPayload(argc, argv, argidx);
 
@@ -453,7 +453,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        printf("Unknown usage [--bsqon] (--infeasible|--witness|--eval|--invert) [file.json]\n");
+        printf("Unknown usage [--bsqon] (--unreachable|--witness|--eval|--invert) [file.json]\n");
     }
 
     return 0;
