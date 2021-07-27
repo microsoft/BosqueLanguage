@@ -3267,7 +3267,7 @@ class TypeChecker {
             }
 
             this.m_emitter.emitRegisterStore(op.sinfo, this.emitInlineConvertIfNeeded(op.sinfo, arg, new ValueType(texp.layout, astype), astype), trgt, this.m_emitter.registerResolvedTypeReference(astype), undefined);
-            return tsplits.tenvs[0];
+            return tsplits.tenvs[0].setResultExpression(astype, astype, undefined, undefined);
         }
     }
 
