@@ -2473,10 +2473,9 @@ class SMTBodyEmitter {
         return smtexps.get("entry") as SMTExp;
     }
 
-    generateSMTInvoke(idecl: MIRInvokeDecl, cscc: Set<string>): SMTFunction | SMTFunctionUninterpreted | undefined {
+    generateSMTInvoke(idecl: MIRInvokeDecl): SMTFunction | SMTFunctionUninterpreted | undefined {
         this.currentFile = idecl.srcFile;
         this.currentRType = this.typegen.getMIRType(idecl.resultType);
-        this.currentSCC = cscc;
 
         const args = idecl.params.map((arg) => {
             return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
@@ -2484,11 +2483,6 @@ class SMTBodyEmitter {
 
         const issafe = this.isSafeInvoke(idecl.key);
         const restype = issafe ? this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.resultType)) : this.typegen.generateResultType(this.typegen.getMIRType(idecl.resultType));
-
-        //
-        //TODO: if cscc is not empty then we should handle it -- by generating a define-rec-fun group if we want to witness gen or an uninterpreted havoc if we want to prove
-        //
-        assert(this.currentSCC.size === 0);
 
         if (idecl instanceof MIRInvokeBodyDecl) {
             const body = this.generateBlockExps(issafe, (idecl as MIRInvokeBodyDecl).body.body);

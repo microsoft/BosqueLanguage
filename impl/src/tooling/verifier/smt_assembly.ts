@@ -87,6 +87,17 @@ class SMTFunction {
             return `(${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.name})`;
         }
     }
+
+    emitSMT2_SingleDeclOnly(): string {
+        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.name})`);
+
+        if(this.maskname === undefined) {
+            return `${this.fname} (${args.join(" ")}) ${this.result.name}`;
+        }
+        else {
+            return `${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.name}`;
+        }
+    }
 }
 
 class SMTFunctionUninterpreted {
@@ -722,22 +733,36 @@ class SMTAssembly {
             }
             else {
                 let worklist = [...cscc].sort();
-
-                let decls: string[] = [];
-                let impls: string[] = [];
-                while(worklist.length !== 0) {
+                if(worklist.length === 1) {
                     const cf = worklist.pop() as string;
                     const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
 
-                    decls.push(crf.emitSMT2_DeclOnly());
-                    impls.push(crf.body.emitSMT2("  "));
-                }
+                    const decl = crf.emitSMT2_SingleDeclOnly();
+                    const impl = crf.body.emitSMT2("  ");
 
-                if(cscc !== undefined) {
-                    cscc.forEach((v) => doneset.add(v));
-                }
+                    if (cscc !== undefined) {
+                        cscc.forEach((v) => doneset.add(v));
+                    }
 
-                foutput.push(`(define-funs-rec (\n  ${decls.join("\n  ")}\n) (\n${impls.join("\n")}))`)
+                    foutput.push(`(define-fun-rec ${decl}\n ${impl}\n)`);
+                }
+                else {
+                    let decls: string[] = [];
+                    let impls: string[] = [];
+                    while (worklist.length !== 0) {
+                        const cf = worklist.pop() as string;
+                        const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
+
+                        decls.push(crf.emitSMT2_DeclOnly());
+                        impls.push(crf.body.emitSMT2("  "));
+                    }
+
+                    if (cscc !== undefined) {
+                        cscc.forEach((v) => doneset.add(v));
+                    }
+
+                    foutput.push(`(define-funs-rec (\n  ${decls.join("\n  ")}\n) (\n${impls.join("\n")}))`);
+                }
             }
         }   
 

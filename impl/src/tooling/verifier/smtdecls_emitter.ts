@@ -343,7 +343,7 @@ class SMTEmitter {
         });
 
         linfo.consops.map.forEach((minfo, code) => {
-            const cmap = this.bemitter.lopsManager.emitConstructorMap(ltype, mtype, code, minfo[0]);
+            const cmap = this.bemitter.lopsManager.emitConstructorMap(this.temitter.getSMTTypeFor(minfo[1]), mtype, code, minfo[0]);
             this.processConstructorGenInfo(cmap, constructors);
         });
             
@@ -546,14 +546,13 @@ class SMTEmitter {
             const cn = rcg[i];
             
             const cscc = cginfo.recursive.find((scc) => scc.has(cn.invoke));
-            const currentSCC = cscc || new Set<string>();
             let worklist = cscc !== undefined ? [...cscc].sort() : [cn.invoke];
 
             for (let mi = 0; mi < worklist.length; ++mi) {
                 const ikey = worklist[mi];
 
                 const idcl = (assembly.invokeDecls.get(ikey) || assembly.primitiveInvokeDecls.get(ikey)) as MIRInvokeDecl;
-                const finfo = this.bemitter.generateSMTInvoke(idcl, currentSCC);
+                const finfo = this.bemitter.generateSMTInvoke(idcl);
                 this.processVirtualInvokes();
                 this.processVirtualEntityUpdates();
 
