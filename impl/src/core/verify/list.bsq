@@ -343,14 +343,14 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
             return T::zero;
         }
         else {
-            let count = List<T>::s_size(sl);
+            let count = List<T>::s_size(l);
             
-            if(count == 1) {
+            if(count == 1n) {
                 return List<T>::s_unsafe_get(l, 0n);
             }
             //TODO: here special case for small model
             else {
-                return List<T>::s_sum_Core(sl);
+                return List<T>::s_sum_Core(l);
             }
         }
     }

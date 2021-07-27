@@ -403,6 +403,11 @@ class SMTEmitter {
             this.processDestructorGenInfo(disq);
         });
 
+        if(linfo.dops.sum) {
+            const disq = this.bemitter.lopsManager.emitDestructorSum(ltype, ctype);
+            this.processDestructorGenInfo(disq);
+        }
+
         const ttag = `TypeTag_${ltype.name}`;
         const iskey = this.temitter.assembly.subtypeOf(mtype, this.temitter.getMIRType("NSCore::KeyType"));
         const isapi = this.temitter.assembly.subtypeOf(mtype, this.temitter.getMIRType("NSCore::APIType"));

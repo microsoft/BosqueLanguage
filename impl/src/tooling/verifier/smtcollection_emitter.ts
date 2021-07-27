@@ -44,6 +44,7 @@ class RequiredListDestructors {
     findLastIndexOf: Map<string, MIRPCode> = new Map<string, MIRPCode>();
 
     countIf: Map<string, MIRPCode> = new Map<string, MIRPCode>();
+    sum: boolean = false;
 }
 
 type SMTDestructorGenCode = {
@@ -79,6 +80,7 @@ class ListOpsManager {
 
     private tmpvarctr = 0;
 
+    private booltype: SMTType;
     private nattype: SMTType;
     
     generateTempName(): string {
@@ -90,6 +92,7 @@ class ListOpsManager {
         this.temitter = temitter;
         this.safecalls = safecalls;
 
+        this.booltype = this.temitter.getSMTTypeFor(this.temitter.getMIRType("NSCore::Bool"));
         this.nattype = this.temitter.getSMTTypeFor(this.temitter.getMIRType("NSCore::Nat"));
     }
 
@@ -263,6 +266,14 @@ class ListOpsManager {
 
         ops.dops.countIf.set(code, pcode);
         return new SMTCallGeneral(op, [l, isq, count, ...this.generateCapturedArgs(pcode)]);
+    }
+
+    processSum(ltype: MIRType, l: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "sum");
+
+        ops.dops.sum = true;
+        return new SMTCallGeneral(op, [l]);
     }
 
     processFilter(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTVar, isq: SMTVar, count: SMTVar): SMTExp {
@@ -1170,6 +1181,57 @@ class ListOpsManager {
         return {
             if: [new SMTFunction(this.generateDesCallNameUsing(ltype, "countIf", code), [{ vname: "l", vtype: ltype }, { vname: "isq", vtype: new SMTType("ISequence") }, { vname: "count", vtype: this.nattype}, ...capturedparams], undefined, 0, this.temitter.generateResultType(this.temitter.getMIRType("NSCore::Nat")), ffunc)],
             uf: [new SMTFunctionUninterpreted(this.generateDesCallNameUsing(ltype, "skolem_list_size", code), ufpickargs, this.nattype)]
+        };
+    }
+
+    ////////
+    //Sum
+    emitDestructorSum(ltype: SMTType, ctype: MIRType): SMTDestructorGenCode {
+        const restype = this.temitter.generateResultType(ctype);
+
+        let ufconsname: string = "[UN_INITIALIZED]";
+        let ovfname: string | undefined = undefined;
+        if (ctype.trkey === "NSCore::Int") {
+            ufconsname = "@UFSumConsInt";
+            ovfname = "@UFSumConsIntOVF";
+        }
+        else if (ctype.trkey === "NSCore::Nat") {
+            ufconsname = "@UFSumConsNat";
+            ovfname = "@UFSumConsNatOVF";
+        }
+        else if (ctype.trkey === "NSCore::BigInt") {
+            ufconsname = "@UFSumConsBigInt";
+        }
+        else if (ctype.trkey === "NSCore::BigNat") {
+            ufconsname = "@UFSumConsBigNat";
+        }
+        else if (ctype.trkey === "NSCore::Rational") {
+            ufconsname = "@UFSumConsRational";
+        }
+        else if (ctype.trkey === "NSCore::Float") {
+            ufconsname = "@UFSumConsBigInt";
+        }
+        else {
+            ufconsname = "@UFSumConsDecimal";
+        }
+
+        let ufops = [new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ufconsname), [ltype], this.temitter.getSMTTypeFor(ctype))];
+        if(ovfname !== undefined) {
+            ufops.push(new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ovfname), [ltype], this.booltype))
+        }
+        
+        let ffunc: SMTExp = this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]));
+        if (ovfname !== undefined) {
+            ffunc = new SMTIf(
+                new SMTCallSimple(this.generateDesCallName(ltype, ovfname), [new SMTVar("l")]),
+                ffunc,
+                this.temitter.generateErrorResultAssert(ctype)
+            );
+        }
+        
+        return {
+            if: [new SMTFunction(this.generateDesCallName(ltype, "sum"), [{ vname: "l", vtype: ltype }], undefined, 0, restype, ffunc)],
+            uf: ufops
         };
     }
 

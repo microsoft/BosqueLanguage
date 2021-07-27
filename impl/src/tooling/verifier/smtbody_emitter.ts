@@ -2645,6 +2645,17 @@ class SMTBodyEmitter {
                 const fbody = this.lopsManager.processCountIf(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, isq, count); 
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
             }
+            case "list_minidx": {
+                assert(false, "NOT IMPLEMENTED list_minidx")
+            }
+            case "list_maxidx": {
+                assert(false, "NOT IMPLEMENTED list_maxidx")
+            }
+            case "list_sum": {
+                const [l] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processSum(this.typegen.getMIRType(encltypekey), l); 
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
+            }
             case "list_filter_helper": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
