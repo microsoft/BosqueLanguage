@@ -120,7 +120,7 @@ else if(mode === "--check") {
     let pcount = 0;
     let ecount = 0;
     let fcount = 0;
-    let witnesslist: any[] = [];
+    let witnesslist: {msg: string, position: string, input: any[]}[] = [];
     for(let i = 0; i < errors.length; ++i) {
         if(!quiet) {
             process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}#${errors[i].pos}...\n`);
@@ -146,7 +146,7 @@ else if(mode === "--check") {
                 //process.stdout.write(`${jres.input}\n`);
             }
             wcount++;
-            witnesslist.push(jres.input);
+            witnesslist.push({msg: errors[i].msg, position: `line ${errors[i].line} in ${errors[i].file}`, input: jres.input});
         }
         else if(jres.result === "partial") {
             if(!quiet) {
@@ -163,7 +163,7 @@ else if(mode === "--check") {
     }
 
     if(fcount !== 0) {
-        process.stdout.write(chalk.red(`Failed on ${fcount} error(s)!\n`));
+        process.stdout.write(chalk.yellow(`Failed on ${fcount} error(s)!\n`));
     }
 
     if(icount !== 0) {
@@ -171,8 +171,11 @@ else if(mode === "--check") {
     }
 
     if(wcount !== 0) {
-        process.stdout.write(chalk.magenta(`Found failing inputs for ${wcount} error(s)!\n`));
-        process.stdout.write(JSON.stringify(witnesslist, undefined, 2) + "\n");
+        process.stdout.write(chalk.red(`Found failing inputs for ${wcount} error(s)!\n`));
+        for(let i = 0; i < witnesslist.length; ++i) {
+            process.stdout.write(`${witnesslist[i].msg} -- ${witnesslist[i].position}\n`);    
+            process.stdout.write(JSON.stringify(witnesslist[i].input, undefined, 2) + "\n");
+        }
     }
 
     if(pcount !== 0) {
