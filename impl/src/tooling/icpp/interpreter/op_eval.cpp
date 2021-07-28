@@ -2214,16 +2214,19 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, Storag
     case BSQPrimitiveImplTag::list_findindexoflast_idx:
         assert(false);
         break;
+    case BSQPrimitiveImplTag::list_minidx:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_maxidx:
+        assert(false);
+        break;
+    case BSQPrimitiveImplTag::list_sum:
+        assert(false);
+        break;
     case BSQPrimitiveImplTag::list_filter:
         assert(false);
         break;
     case BSQPrimitiveImplTag::list_filter_idx:
-        assert(false);
-        break;
-    case BSQPrimitiveImplTag::list_filtertotype:
-        assert(false);
-        break;
-    case BSQPrimitiveImplTag::list_casttotype:
         assert(false);
         break;
     case BSQPrimitiveImplTag::list_slice:

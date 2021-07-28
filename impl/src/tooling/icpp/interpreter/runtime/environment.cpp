@@ -35,10 +35,11 @@ std::map<std::string, BSQPrimitiveImplTag> Environment::g_primitiveinvokenameToI
     {"list_findindexoflast", BSQPrimitiveImplTag::list_findindexoflast},
     {"list_findindexof_idx", BSQPrimitiveImplTag::list_findindexof_idx},
     {"list_findindexoflast_idx", BSQPrimitiveImplTag::list_findindexoflast_idx},
+    {"list_minidx", BSQPrimitiveImplTag::list_minidx},
+    {"list_maxidx", BSQPrimitiveImplTag::list_maxidx},
+    {"list_sum", BSQPrimitiveImplTag::list_sum},
     {"list_filter", BSQPrimitiveImplTag::list_filter},
     {"list_filter_idx", BSQPrimitiveImplTag::list_filter_idx},
-    {"list_filtertotype", BSQPrimitiveImplTag::list_filtertotype},
-    {"list_casttotype", BSQPrimitiveImplTag::list_casttotype},
     {"list_slice", BSQPrimitiveImplTag::list_slice},
     {"list_map", BSQPrimitiveImplTag::list_map},
     {"list_map_idx", BSQPrimitiveImplTag::list_map_idx}

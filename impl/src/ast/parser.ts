@@ -57,8 +57,6 @@ const KeywordStrings = [
     "type",
     "typedef",
     "typedecl",
-    "unique",
-    "numericdef",
     "validate",
     "validator",
     "var",
@@ -180,6 +178,7 @@ const AttributeStrings = [
     "numeric",
     "dynamic",
     "grounded",
+    "unique",
     "validator",
 
     "__internal",
@@ -547,7 +546,7 @@ class Lexer {
         return AttributeStrings.indexOf(str) !== -1;
     }
 
-    private static readonly _s_macroRe = /(#if[ ]+([A-Z][_A-Z0-9]*)|#else|#endif)(\r?\n)/y;
+    private static readonly _s_macroRe = /(#if[ ]+([A-Z][_A-Z0-9]*)|#else|#endif)/y;
     tryLexMacroOp(): [string, string | undefined] | undefined {
         Lexer._s_macroRe.lastIndex = this.m_cpos;
         const m = Lexer._s_macroRe.exec(this.m_input);
@@ -556,7 +555,9 @@ class Lexer {
         }
 
         const name = m[0].trim();
-        if(name === "#if") {
+        this.m_cpos += m[0].length;
+
+        if(name.slice(0, "#if".length) === "#if") {
             return ["#if", name.slice("#if".length).trim()];
         }
         else {
@@ -581,14 +582,31 @@ class Lexer {
                         macrostack.push("scan")
                     }
                     else if (macro[0] === "#else") {
-                        //stay in scan
+                        mode = "normal";
                     }
                     else {
                         mode = macrostack.pop() as "scan" | "normal";
                     }
                 }
                 else {
-                    this.m_cpos = Math.max(this.m_input.length, this.m_input.indexOf("#", this.m_cpos + 1));
+                    const nexthash = this.m_input.indexOf("#", this.m_cpos + 1);
+                    if(nexthash === -1) {
+                        //ended in dangling macro
+                        this.recordLexToken(this.m_input.length, TokenStrings.Error);
+                        this.m_cpos = this.m_input.length;
+                    }
+                    else {
+                        const skips = this.m_input.slice(this.m_cpos, nexthash);
+
+                        for (let i = 0; i < skips.length; ++i) {
+                            if (skips[i] === "\n") {
+                                this.m_cline++;
+                                this.m_linestart = this.m_cpos + i + 1;
+                            }
+                        }
+
+                        this.m_cpos = nexthash;
+                    }
                 }
             }
             else {
@@ -990,10 +1008,15 @@ class Parser {
             this.raiseError(line, "Cannot have optional and rest parameters in a function");
         }
 
+        const allTypedParams = params.every((param) => !(param[1] instanceof AutoTypeSignature));
         if (this.testAndConsumeTokenIf(":")) {
             resultInfo = this.parseResultType(false);
         }
         else {
+            if (ikind === InvokableKind.PCodePred && allTypedParams) {
+                resultInfo = new NominalTypeSignature("NSCore", ["Bool"]);
+            }
+
             if (ikind !== InvokableKind.PCodeFn && ikind !== InvokableKind.PCodePred) {
                 if(!params.some((p) => p[4])) {
                     this.raiseError(line, "Cannot have void return unless one of the params is by-ref");
@@ -3665,7 +3688,7 @@ class Parser {
                     specialConstraints.add(TemplateTermSpecialRestriction.Literal);
                 }
 
-                while (this.testToken("parsable") || this.testToken("validator") || this.testToken("grounded") || this.testToken("struct") || this.testToken("entity")) {
+                while (this.testToken("parsable") || this.testToken("validator") || this.testToken("grounded") || this.testToken("unique") || this.testToken("struct") || this.testToken("entity")) {
                     if(this.testToken("parsable")) {
                         this.consumeToken();
                         specialConstraints.add(TemplateTermSpecialRestriction.Parsable);
@@ -3677,6 +3700,10 @@ class Parser {
                     else if(this.testToken("grounded")) {
                         this.consumeToken();
                         specialConstraints.add(TemplateTermSpecialRestriction.Grounded);
+                    }
+                    else if(this.testToken("unique")) {
+                        this.consumeToken();
+                        specialConstraints.add(TemplateTermSpecialRestriction.Unique);
                     }
                     else if (this.testToken("struct")) {
                         this.consumeToken();
@@ -3706,7 +3733,7 @@ class Parser {
         //
         //TODO: we need to actually do something with this info -- how to we want to have instantiation traits working???
         //
-        while (this.testToken("parsable") || this.testToken("validator") || this.testToken("grounded") || this.testToken("struct") || this.testToken("entity")) {
+        while (this.testToken("parsable") || this.testToken("validator") || this.testToken("grounded") || this.testToken("unique") || this.testToken("struct") || this.testToken("entity")) {
             this.consumeToken();
         }
         

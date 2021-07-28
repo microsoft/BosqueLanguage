@@ -94,21 +94,21 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     private recursive? function s_safeCheckPred(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
         if(List<T>::s_empty(l)) {
-            return l;
+            return List<T>@{};
         }
         else {
             //TODO: here special case for small model
-            return List<T>::s_safeCheckPred_Core(l, List<T>::s_size(l), p);
+            return List<T>::s_safeCheckPred_Core[recursive?](l, List<T>::s_size(l), p);
         }
     }
 
     private recursive? function s_safeCheckPred_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
         if(List<T>::s_empty(l)) {
-            return l;
+            return List<T>@{};
         }
         else {
             //TODO: here special case for small model
-            return List<T>::s_safeCheckPred_Idx_Core(l, List<T>::s_size(l), p);
+            return List<T>::s_safeCheckPred_Idx_Core[recursive?](l, List<T>::s_size(l), p);
         }
     }
 
@@ -117,27 +117,27 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     private recursive? function s_safeCheckFn<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<T> {
         if(List<T>::s_empty(l)) {
-            return true;
+            return List<T>@{};
         }
         else {
             //TODO: here special case for small model
-            return List<T>::s_safeCheckFn_Core<U>(l, List<T>::s_size(l), f);
+            return List<T>::s_safeCheckFn_Core<U>[recursive?](l, List<T>::s_size(l), f);
         }
     }
 
     private recursive? function s_safeCheckFn_Idx<U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<T> {
         if(List<T>::s_empty(l)) {
-            return true;
+            return List<T>@{};
         }
         else {
             //TODO: here special case for small model
-            return List<T>::s_safeCheckFn_Idx_Core<U>(l, List<T>::s_size(l), p);
+            return List<T>::s_safeCheckFn_Idx_Core<U>[recursive?](l, List<T>::s_size(l), p);
         }
     }
 
     //Internal calls only -- assume non-empty, safe, and exists at least one satisfying
-    private recursive? function s_computeISequence(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_computeisequence
-    private recursive? function s_computeISequence_Idx(l: List<T>, count: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_computeisequence_idx
+    private recursive? function s_computeISequence(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): ISequence # list_computeisequence
+    private recursive? function s_computeISequence_Idx(l: List<T>, count: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): ISequence # list_computeisequence_idx
 
     private function {when T grounded KeyType} s_hasCheck_Core(l: List<T>, count: Nat, val: T): Bool # list_hascheck
 
@@ -317,6 +317,72 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     private recursive? function s_countIf_Helper_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_countif_helper_idx
     
+    private function s_minIdx_Core(l: List<T>): Nat # list_minidx
+
+    private function s_minIdx_Helper(l: List<T>): Nat {
+        //TODO: here special case for small model
+        //let count = List<T>::s_size(sl);
+
+        return List<T>::s_minIdx_Core(sl);
+    }
+
+    private function s_maxIdx_Core(l: List<T>): Nat # list_maxidx
+
+    private function s_maxIdx_Helper(l: List<T>): Nat {
+        //TODO: here special case for small model
+        //let count = List<T>::s_size(sl);
+
+        return List<T>::s_maxIdx_Core(sl);
+    }
+
+#if UF_APPROX
+    private function s_sum_Core(l: List<T>): T # list_sum
+
+    private function s_sum_Helper(l: List<T>): T {
+        if(List<T>::s_empty(l)) {
+            return T::zero;
+        }
+        else {
+            let count = List<T>::s_size(l);
+            
+            if(count == 1n) {
+                return List<T>::s_unsafe_get(l, 0n);
+            }
+            //TODO: here special case for small model
+            else {
+                return List<T>::s_sum_Core(l);
+            }
+        }
+    }
+#else
+    private recursive function s_sum_Core(l: List<T>, acc: T, cpos: Nat, count: Nat): T {
+        if(cpos == count) {
+            return acc;
+        }
+        else {
+            let nacc = acc + List<T>::s_unsafe_get(l, cpos);
+            return List<T>::s_sum_Core[recursive](l, nacc, cpos + 1n, count);
+        }
+    }
+
+    private function s_sum_Helper(l: List<T>): T {
+        if(List<T>::s_empty(l)) {
+            return T::zero;
+        }
+        else {
+            let count = List<T>::s_size(l);
+            
+            if(count == 1n) {
+                return List<T>::s_unsafe_get(l, 0n);
+            }
+            //TODO: here special case for small model
+            else {
+                return List<T>::s_sum_Core[recursive](l, T::zero, 0, count);
+            }
+        }
+    }
+#endif
+
     private recursive? function s_filter_Constructor(l: List<T>, isq: ISequence, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_filter_helper
 
     private recursive? function s_filter_Helper(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
@@ -344,11 +410,8 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     }
 
     private recursive? function s_filter_Helper_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_filter_helper_idx
-    
-    private function s_filterToType_Helper<U>(l: List<T>): List<U> # list_filtertotype_helper
-    private function s_castToType_Helper<U>(l: List<T>): List<U> # list_casttotype_helper
 
-    __safe private function s_slice_Constructor(l: List<T>, start: Nat, end: Nat, count: Nat): List<U> # list_slice
+    __safe private function s_slice_Constructor(l: List<T>, start: Nat, end: Nat, count: Nat): List<T> # list_slice
 
     private function s_slice_Helper(l: List<T>, start: Nat, end: Nat): List<U> {
         if(start == end) {
@@ -367,21 +430,21 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         }
     }
 
-    private recursive? function s_map_Constructor<U>(l: List<T>, count: Nat, f: recursive? fn(_: T) -> U): List<T> # list_map
+    private recursive? function s_map_Constructor<U>(l: List<T>, count: Nat, f: recursive? fn(_: T) -> U): List<U> # list_map
 
-    private recursive? function s_map_Helper<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<T> {
+    private recursive? function s_map_Helper<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> {
         if(List<T>::s_empty(l)) {
-            return List<T>@{};
+            return List<U>@{};
         }
         else {
-            let sl = List<T>::s_safeCheckFn[recursive?](l, f);
+            let sl = List<T>::s_safeCheckFn<U>[recursive?](l, f);
 
             //TODO: here special case for small model
-            return List<T>::s_map_Constructor[recursive?](sl, List<T>::s_size(sl), f);
+            return List<T>::s_map_Constructor<U>[recursive?](sl, List<T>::s_size(sl), f);
         }
     }
 
-    private recursive? function s_map_Helper_Idx<U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<T> # list_map_helper_idx
+    private recursive? function s_map_Helper_Idx<U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> # list_map_helper_idx
 
     private recursive? function s_join_Helper<U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<#[T, U]> # list_join_helper
     private recursive? function s_joinGroup_Helper<U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<#[T, List<U>]> # list_joingroup_helper
@@ -608,12 +671,71 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     }
 
     method {when T grounded KeyType} count(v: T): Int {
-        return List<T>::s_count_keytype(this, v);
+        return List<T>::s_count_KeyHelper(this, v);
     }
 
     //
     //min, max, argmin, argmax, sum, product
     //
+    method min(): T 
+        requires release !this.empty();
+    {
+        let midx = List<T>::s_minIdx_Helper(this);
+        return List<T>::s_unsafe_get(this, midx);
+    }
+
+    method max(): T
+        requires release !this.empty();
+    {
+        let midx = List<T>::s_maxIdx_Helper(this);
+        return List<T>::s_unsafe_get(this, midx);
+    }
+
+    method minOrNone(): T? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            let midx = List<T>::s_minIdx_Helper(this);
+            return List<T>::s_unsafe_get(this, midx);
+        }
+    }
+
+    method maxOrNone(): T? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            let midx = List<T>::s_maxIdx_Helper(this);
+            return List<T>::s_unsafe_get(this, midx);
+        }
+    }
+
+    method minTry(out? res: T): Bool {
+        if(this.empty()) {
+            return false;
+        }
+        else {
+            let midx = List<T>::s_minIdx_Helper(this);
+            res = List<T>::s_unsafe_get(this, midx);
+            return true;
+        }
+    }
+
+    method maxTry(out? res: T): Bool {
+        if(this.empty()) {
+            return false;
+        }
+        else {
+            let midx = List<T>::s_maxIdx_Helper(this);
+            res = List<T>::s_unsafe_get(this, midx);
+            return true;
+        }
+    }
+
+    method sum(): T {
+        return List<T>::s_sum_Helper(this);
+    }
 
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
         let idx = List<T>::s_findIndexOf_PredicateHelper[recursive?](this, p);
@@ -993,12 +1115,14 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         return List<T>::s_filter_Helper_Idx[recursive?](this, p);
     }
 
-    method filterToType<U>(): List<U> {
-        return List<T>::s_filterToTypetype_Helper<U>(this);
+    method filterType<U>(): List<U> {
+        return this.filter(pred(v: T) => v.is<U>()).map<U>(fn(v: T): U => v.as<U>());
     }
 
-    method castToType<U>(): List<U> {
-        return List<T>::s_castToType_Helper<U>(this);
+    method castType<U>(): List<U> 
+        requires release !List<T>::s_hasPredCheck(pred(v: T) => !v.is<U>());
+    {
+        return this.map<U>(fn(v: T): U => v.as<U>());
     }
 
     method slice(start?: Nat=0n, end?: Nat=List<T>::s_size(this)): List<T> 

@@ -30,16 +30,17 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
     private recursive? function s_findIndexOf_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_findindexof_idx
     private recursive? function s_findIndexOfLast_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_findindexoflast_idx
 
+    private function s_minIdx(l: List<T>): Nat # list_minidx
+    private function s_maxIdx(l: List<T>): Nat # list_maxidx
+    private function s_sum(l: List<T>): T # list_sum
+
     private recursive? function s_filter(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> # list_filter
     private recursive? function s_filter_Idx(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_filter_idx
 
-    private function s_filterToType<U>(l: List<T>): List<U> # list_filtertotype
-    private function s_castToType<U>(l: List<T>): List<U> # list_casttotype
+    private function s_slice(l: List<T>, start: Nat, end: Nat): List<T> # list_slice
 
-    private function s_slice(l: List<T>, start: Nat, end: Nat): List<U> # list_slice
-
-    private recursive? function s_map<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<T> # list_map
-    private recursive? function s_map_Idx<U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<T> # list_map_idx
+    private recursive? function s_map<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> # list_map
+    private recursive? function s_map_Idx<U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> # list_map_idx
 
     private function s_rangeInBounds(l: List<T>, start: Nat, end: Nat): Bool {
         return start <= end & end <= List<T>::s_size(l); 
@@ -195,6 +196,66 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
 
     recursive? method someOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
         return List<T>::s_hasPredCheck[recursive?](this, p);
+    }
+
+    method min(): T 
+        requires release !this.empty();
+    {
+        let midx = List<T>::s_minIdx(this);
+        return List<T>::s_unsafe_get(this, midx);
+    }
+
+    method max(): T
+        requires release !this.empty();
+    {
+        let midx = List<T>::s_maxIdx(this);
+        return List<T>::s_unsafe_get(this, midx);
+    }
+
+    method minOrNone(): T? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            let midx = List<T>::s_minIdx(this);
+            return List<T>::s_unsafe_get(this, midx);
+        }
+    }
+
+    method maxOrNone(): T? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            let midx = List<T>::s_maxIdx(this);
+            return List<T>::s_unsafe_get(this, midx);
+        }
+    }
+
+    method minTry(out? res: T): Bool {
+        if(this.empty()) {
+            return false;
+        }
+        else {
+            let midx = List<T>::s_minIdx_Helper(this);
+            res = List<T>::s_unsafe_get(this, midx);
+            return true;
+        }
+    }
+
+    method maxTry(out? res: T): Bool {
+        if(this.empty()) {
+            return false;
+        }
+        else {
+            let midx = List<T>::s_maxIdx_Helper(this);
+            res = List<T>::s_unsafe_get(this, midx);
+            return true;
+        }
+    }
+
+    method sum(): T {
+        return List<T>::s_sum(this);
     }
 
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
@@ -501,12 +562,14 @@ __internal entity List<T> provides Object, Expandoable<T>, PODType when T PODTyp
         return List<T>::s_filter_Idx[recursive?](this, p);
     }
 
-    method filterToType<U>(): List<U> {
-        return List<T>::s_filterToTypetype<U>(this);
+    method filterType<U>(): List<U> {
+        return this.filter(pred(v: T) => v.is<U>()).map<U>(fn(v: T): U => v.as<U>());
     }
 
-    method castToType<U>(): List<U> {
-        return List<T>::s_castToType<U>(this);
+    method castType<U>(): List<U> 
+        requires release !List<T>::s_hasPredCheck(pred(v: T) => !v.is<U>());
+    {
+        return this.map<U>(fn(v: T): U => v.as<U>());
     }
 
     method slice(start?: Nat=0n, end?: Nat=List<T>::s_size(this)): List<T> 

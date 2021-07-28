@@ -87,6 +87,17 @@ class SMTFunction {
             return `(${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.name})`;
         }
     }
+
+    emitSMT2_SingleDeclOnly(): string {
+        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.name})`);
+
+        if(this.maskname === undefined) {
+            return `${this.fname} (${args.join(" ")}) ${this.result.name}`;
+        }
+        else {
+            return `${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.name}`;
+        }
+    }
 }
 
 class SMTFunctionUninterpreted {
@@ -255,17 +266,17 @@ class SMTModelState {
     readonly checktype: SMTType;
     readonly fcheck: SMTExp;
 
-    readonly iserrorcheck: SMTExp;
+    readonly targeterrorcheck: SMTExp;
     readonly isvaluecheck: SMTExp;
 
-    constructor(arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }, argchk: SMTExp[] | undefined, checktype: SMTType, echeck: SMTExp, iserrorcheck: SMTExp, isvaluecheck: SMTExp) {
+    constructor(arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }, argchk: SMTExp[] | undefined, checktype: SMTType, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp) {
         this.arginits = arginits;
         this.resinit = resinit;
         this.argchk = argchk;
         this.checktype = checktype;
         this.fcheck = echeck;
 
-        this.iserrorcheck = iserrorcheck;
+        this.targeterrorcheck = targeterrorcheck;
         this.isvaluecheck = isvaluecheck;
     }
 }
@@ -443,7 +454,7 @@ class SMTAssembly {
         return bbn.toString();
     }
 
-    generateSMT2AssemblyInfo(mode: "check" | "evaluate" | "invert"): SMT2FileInfo {
+    generateSMT2AssemblyInfo(mode: "unreachable" | "witness" | "evaluate" | "invert"): SMT2FileInfo {
         const subtypeasserts = this.subtypeRelation.map((tc) => tc.value ? `(assert (SubtypeOf@ ${tc.ttype} ${tc.atype}))` : `(assert (not (SubtypeOf@ ${tc.ttype} ${tc.atype})))`).sort();
         const indexasserts = this.hasIndexRelation.map((hi) => hi.value ? `(assert (HasIndex@ ${hi.idxtag} ${hi.atype}))` : `(assert (not (HasIndex@ ${hi.idxtag} ${hi.atype})))`).sort();
         const propertyasserts = this.hasPropertyRelation.map((hp) => hp.value ? `(assert (HasProperty@ ${hp.pnametag} ${hp.atype}))` : `(assert (not (HasProperty@ ${hp.pnametag} ${hp.atype})))`).sort();
@@ -466,71 +477,31 @@ class SMTAssembly {
             `(declare-const BNat@max BNat) (assert (= BNat@max (_ bv${this.computeBVMaxUnSigned(BigInt(this.vopts.ISize))} ${this.vopts.ISize})))`
         ];
 
-        if(this.vopts.BigXMode === "Int") {
-            integral_type_alias.push("(define-sort BBigInt () Int)");
-            integral_type_alias.push("(define-sort BBigNat () Int)");
+        integral_type_alias.push("(define-sort BBigInt () Int)");
+        integral_type_alias.push("(define-sort BBigNat () Int)");
 
-            integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))`);
-            integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))`);
+        integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))`);
+        integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))`);
 
-            integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero 0))`);
-            integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one 1))`);
-        }
-        else if (this.vopts.BigXMode === "BV") {
-            integral_type_alias.push(`(define-sort BBigInt () (_ BitVec ${2 * this.vopts.ISize}))`);
-            integral_type_alias.push(`(define-sort BBigNat () (_ BitVec ${2 * this.vopts.ISize}))`);
-
-            integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero (_ bv0 ${2 * this.vopts.ISize})))`);
-            integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one (_ bv1 ${2 * this.vopts.ISize})))`);
-
-            integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero (_ bv0 ${2 * this.vopts.ISize})))`);
-            integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one (_ bv1 ${2 * this.vopts.ISize})))`);
-        }
-        else {
-            integral_type_alias.push(`(define-sort BBigInt () UBigInt)`);
-            integral_type_alias.push(`(define-sort BBigNat () UBigNat)`);
-
-            integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero (BBigIntCons_UF "0")))`);
-            integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one (BBigIntCons_UF "1")))`);
-
-            integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero (BBigNatCons_UF "0")))`);
-            integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one (BBigNatCons_UF "1")))`);
-        }
+        integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero 0))`);
+        integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one 1))`);
 
         let float_type_alias: string[] = [];
         let float_constants: string[] = [];
-        if(this.vopts.FPOpt === "Real") {
-            float_type_alias.push("(define-sort BFloat () Real)", "(define-sort BDecimal () Real)", "(define-sort BRational () Real)");
+        float_type_alias.push("(define-sort BFloat () Real)", "(define-sort BDecimal () Real)", "(define-sort BRational () Real)");
 
-            float_constants.push(`(declare-const BFloat@zero BFloat) (assert (= BFloat@zero 0.0))`);
-            float_constants.push(`(declare-const BFloat@one BFloat) (assert (= BFloat@one 1.0))`);
-            float_constants.push(`(declare-const BFloat@pi BFloat) (assert (= BFloat@pi 3.141592653589793))`);
-            float_constants.push(`(declare-const BFloat@e BFloat) (assert (= BFloat@e 2.718281828459045))`);
+        float_constants.push(`(declare-const BFloat@zero BFloat) (assert (= BFloat@zero 0.0))`);
+        float_constants.push(`(declare-const BFloat@one BFloat) (assert (= BFloat@one 1.0))`);
+        float_constants.push(`(declare-const BFloat@pi BFloat) (assert (= BFloat@pi 3.141592653589793))`);
+        float_constants.push(`(declare-const BFloat@e BFloat) (assert (= BFloat@e 2.718281828459045))`);
 
-            float_constants.push(`(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero 0.0))`);
-            float_constants.push(`(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one 1.0))`);
-            float_constants.push(`(declare-const BDecimal@pi BDecimal) (assert (= BDecimal@pi 3.141592653589793))`);
-            float_constants.push(`(declare-const BDecimal@e BDecimal) (assert (= BDecimal@e 2.718281828459045))`);
+        float_constants.push(`(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero 0.0))`);
+        float_constants.push(`(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one 1.0))`);
+        float_constants.push(`(declare-const BDecimal@pi BDecimal) (assert (= BDecimal@pi 3.141592653589793))`);
+        float_constants.push(`(declare-const BDecimal@e BDecimal) (assert (= BDecimal@e 2.718281828459045))`);
 
-            float_constants.push(`(declare-const BRational@zero BRational) (assert (= BRational@zero 0.0))`);
-            float_constants.push(`(declare-const BRational@one BRational) (assert (= BRational@one 1.0))`);
-        }
-        else {
-            float_type_alias.push("(define-sort BFloat () UFloat)", "(define-sort BDecimal () UFloat)", "(define-sort BRational () UFloat)");
-
-            float_constants.push(`(declare-const BFloat@zero BFloat) (assert (= BFloat@zero (BFloatCons_UF "0.0")))`);
-            float_constants.push(`(declare-const BFloat@one BFloat) (assert (= BFloat@one (BFloatCons_UF "1.0")))`);
-            float_constants.push(`(declare-const BFloat@pi BFloat) (assert (= BFloat@pi (BFloatCons_UF "3.141592653589793")))`);
-            float_constants.push(`(declare-const BFloat@e BFloat) (assert (= BFloat@e (BFloatCons_UF "2.718281828459045")))`);
-
-            float_constants.push(`(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero (BDecimalCons_UF "0.0")))`);
-            float_constants.push(`(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one (BDecimalCons_UF "1.0")))`);
-            float_constants.push(`(declare-const BDecimal@pi BDecimal) (assert (= BDecimal@pi (BDecimalCons_UF "3.141592653589793")))`);
-            float_constants.push(`(declare-const BDecimal@e BDecimal) (assert (= BDecimal@e (BDecimalCons_UF "2.718281828459045")))`);
-
-            float_constants.push(`(declare-const BRational@zero BRational) (assert (= BRational@zero (BRationalCons_UF "0/1")))`);
-            float_constants.push(`(declare-const BRational@one BRational) (assert (= BRational@one (BRationalCons_UF "1/1")))`);
-        }
+        float_constants.push(`(declare-const BRational@zero BRational) (assert (= BRational@zero 0.0))`);
+        float_constants.push(`(declare-const BRational@one BRational) (assert (= BRational@one 1.0))`);
         
         const keytupleinfo = this.tupleDecls
             .filter((tt) => tt.iskeytype)
@@ -684,18 +655,19 @@ class SMTAssembly {
 
         action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
         action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
-        
-        action.push(`(declare-const ${this.model.resinit.vname} ${this.model.resinit.vtype.name})`);
-        action.push(`(assert (= ${this.model.resinit.vname} ${this.model.resinit.vinit.emitSMT2(undefined)}))`);
-        if(this.model.resinit.vchk !== undefined) {
-            action.push(`(assert ${this.model.resinit.vchk.emitSMT2(undefined)})`);
-        }
 
-        if (mode === "check") {
-            action.push(`(assert ${this.model.iserrorcheck.emitSMT2(undefined)})`);
+        if (mode === "unreachable" || mode === "witness") {
+            action.push(`(assert ${this.model.targeterrorcheck.emitSMT2(undefined)})`);
         }
         else if (mode === "evaluate") {
             action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
+        
+            action.push(`(declare-const ${this.model.resinit.vname} ${this.model.resinit.vtype.name})`);
+            action.push(`(assert (= ${this.model.resinit.vname} ${this.model.resinit.vinit.emitSMT2(undefined)}))`);
+            if(this.model.resinit.vchk !== undefined) {
+                action.push(`(assert ${this.model.resinit.vchk.emitSMT2(undefined)})`);
+            }
+
             action.push(`(assert (= ${this.model.resinit.vname} _@smtres@))`);
         }
         else {
@@ -722,22 +694,36 @@ class SMTAssembly {
             }
             else {
                 let worklist = [...cscc].sort();
-
-                let decls: string[] = [];
-                let impls: string[] = [];
-                while(worklist.length !== 0) {
+                if(worklist.length === 1) {
                     const cf = worklist.pop() as string;
                     const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
 
-                    decls.push(crf.emitSMT2_DeclOnly());
-                    impls.push(crf.body.emitSMT2("  "));
-                }
+                    const decl = crf.emitSMT2_SingleDeclOnly();
+                    const impl = crf.body.emitSMT2("  ");
 
-                if(cscc !== undefined) {
-                    cscc.forEach((v) => doneset.add(v));
-                }
+                    if (cscc !== undefined) {
+                        cscc.forEach((v) => doneset.add(v));
+                    }
 
-                foutput.push(`(define-funs-rec (\n  ${decls.join("\n  ")}\n) (\n${impls.join("\n")}))`)
+                    foutput.push(`(define-fun-rec ${decl}\n ${impl}\n)`);
+                }
+                else {
+                    let decls: string[] = [];
+                    let impls: string[] = [];
+                    while (worklist.length !== 0) {
+                        const cf = worklist.pop() as string;
+                        const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
+
+                        decls.push(crf.emitSMT2_DeclOnly());
+                        impls.push(crf.body.emitSMT2("  "));
+                    }
+
+                    if (cscc !== undefined) {
+                        cscc.forEach((v) => doneset.add(v));
+                    }
+
+                    foutput.push(`(define-funs-rec (\n  ${decls.join("\n  ")}\n) (\n${impls.join("\n")}))`);
+                }
             }
         }   
 
@@ -773,7 +759,7 @@ class SMTAssembly {
         };
     }
 
-    buildSMT2file(mode: "check" | "evaluate" | "invert", smtruntime: string): string {
+    buildSMT2file(mode: "unreachable" | "witness" | "evaluate" | "invert", smtruntime: string): string {
         const sfileinfo = this.generateSMT2AssemblyInfo(mode);
     
         function joinWithIndent(data: string[], indent: string): string {

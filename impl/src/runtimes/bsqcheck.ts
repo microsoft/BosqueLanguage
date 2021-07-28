@@ -51,11 +51,7 @@ if(mode === "--output") {
     process.stdout.write(`Writing file to ${into}\n`);
 
     const asmflavor = smtmode === "unreachable" ? AssemblyFlavor.UFOverApproximate : AssemblyFlavor.RecuriveImpl;
-    if(smtmode === "unreachable" || smtmode === "witness") {
-        smtmode = "check";
-    }
-
-    workflowEmitToFile(into, usercode, asmflavor, smtmode as "check" | "evaluate" | "invert", DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
+    workflowEmitToFile(into, usercode, asmflavor, smtmode, DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
 }
 else if(mode === "--unreachable") {
     const location = parseLocation(args[0]);
@@ -138,9 +134,9 @@ else if(mode === "--check") {
             }
             fcount++;
         }
-        else if(jres.result === "infeasible") {
+        else if(jres.result === "unreachable") {
             if(!quiet) {
-                process.stdout.write(`Proved infeasible in ${jres.time}s!\n`);
+                process.stdout.write(`Proved unreachable in ${jres.time}s!\n`);
             }
             icount++;
         }
@@ -154,7 +150,7 @@ else if(mode === "--check") {
         }
         else if(jres.result === "partial") {
             if(!quiet) {
-                process.stdout.write(`Proved infeasible on limited space.\n`);
+                process.stdout.write(`Proved unreachable on limited space.\n`);
             }
             pcount++;
         }
@@ -171,7 +167,7 @@ else if(mode === "--check") {
     }
 
     if(icount !== 0) {
-        process.stdout.write(chalk.green(`Proved ${icount} error(s) infeasible on all executions!\n`));
+        process.stdout.write(chalk.green(`Proved ${icount} error(s) unreachable on all executions!\n`));
     }
 
     if(wcount !== 0) {
@@ -180,7 +176,7 @@ else if(mode === "--check") {
     }
 
     if(pcount !== 0) {
-        process.stdout.write(chalk.blue(`Proved ${pcount} error(s) infeasible on a subset of excutions (and found no failing inputs)!\n`));
+        process.stdout.write(chalk.blue(`Proved ${pcount} error(s) unreachable on a subset of excutions (and found no failing inputs)!\n`));
     }
 
     if(ecount !== 0) {
@@ -207,7 +203,7 @@ else if(mode === "--evaluate") {
                 try {
                     const jres = JSON.parse(res);
 
-                    if (jres["result"] === "infeasible") {
+                    if (jres["result"] === "unreachable") {
                         process.stdout.write(`No valid (non error) result exists for this input!\n`);
                     }
                     else if (jres["result"] === "output") {
@@ -255,7 +251,7 @@ else if(mode === "--invert") {
                 try {
                     const jres = JSON.parse(res);
 
-                    if (jres["result"] === "infeasible") {
+                    if (jres["result"] === "unreachable") {
                         process.stdout.write(`No valid (non error) input exists for this output!\n`);
                     }
                     else if (jres["result"] === "witness") {

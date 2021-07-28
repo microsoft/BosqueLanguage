@@ -70,8 +70,7 @@ uint64_t computeBVMaxUnSigned(uint64_t bits)
     }
 }
 
-template <typename T, bool bvsigned>
-std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, T min, T max, const std::vector<T>& copts)
+std::optional<uint64_t> bvBinSearchUnsigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& copts)
 {
     auto bbval = m.eval(e, true);
     auto strval = bbval.to_string();
@@ -93,24 +92,17 @@ std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3
         }
     }
 
-    T imin = min;
-    T imax = max;
+    uint64_t imin = min;
+    uint64_t imax = max;
     while(imin < imax)
     {
-        T imid = (imax / 2) + (imin / 2) + (((imax % 2) + (imin % 2)) / 2);
+        uint64_t imid = (imax / 2) + (imin / 2) + (((imax % 2) + (imin % 2)) / 2);
         auto imidstr = std::to_string(imid);
 
         s.push();
 
         z3::expr_vector chks(s.ctx());
-        if constexpr (bvsigned)
-        {
-            chks.push_back(z3::slt(e, s.ctx().bv_val(imidstr.c_str(), apimodule->bv_width)));
-        }
-        else
-        {
-            chks.push_back(z3::ult(e, s.ctx().bv_val(imidstr.c_str(), apimodule->bv_width)));
-        }
+        chks.push_back(z3::ult(e, s.ctx().bv_val(imidstr.c_str(), apimodule->bv_width)));
         auto rr = s.check(chks);
 
         s.pop();
@@ -132,8 +124,87 @@ std::optional<T> bvBinSearch(const APIModule* apimodule, z3::solver& s, const z3
     return std::make_optional(imin);
 }
 
-template <typename T>
-std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, T min, T max, const std::vector<T>& copts)
+std::optional<int64_t> bvBinSearchSigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& copts)
+{
+    auto bbval = m.eval(e, true);
+    auto strval = bbval.to_string();
+
+    for(size_t i = 0; i < copts.size(); ++i)
+    {
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        std::string iistr = std::to_string(copts[i]);
+        chks.push_back(e == s.ctx().bv_val(iistr.c_str(), apimodule->bv_width));
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            return std::make_optional(copts[i]);
+        }
+    }
+
+    int64_t imin = min;
+    int64_t imax = max;
+    while(imin < imax)
+    {
+        int64_t imid = (imax / 2) + (imin / 2) + (((imax % 2) + (imin % 2)) / 2);
+        auto imidstr = std::to_string(imid);
+
+        if (imid >= 0)
+        {
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(z3::slt(e, s.ctx().bv_val(imidstr.c_str(), apimodule->bv_width)));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                imax = imid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                imin = imid + 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }
+        else
+        {
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(z3::sgt(e, s.ctx().bv_val(imidstr.c_str(), apimodule->bv_width)));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                imin = imid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                imax = imid - 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }
+    }
+
+    return std::make_optional(imin);
+}
+
+std::optional<uint64_t> intBinSearchUnsigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& copts)
 {
     auto bbval = m.eval(e, true);
     auto strval = bbval.to_string();
@@ -155,11 +226,11 @@ std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z
         }
     }
 
-    T imin = min;
-    T imax = max;
+    uint64_t imin = min;
+    uint64_t imax = max;
     while(imin < imax)
     {
-        T imid = (imax / 2) + (imin / 2) + (((imax % 2) + (imin % 2)) / 2);
+        uint64_t imid = (imax / 2) + (imin / 2) + (((imax % 2) + (imin % 2)) / 2);
         auto imidstr = std::to_string(imid);
 
         s.push();
@@ -181,6 +252,86 @@ std::optional<T> intBinSearch(const APIModule* apimodule, z3::solver& s, const z
         else
         {
             return std::nullopt;
+        }
+    }
+
+    return std::make_optional(imin);
+}
+
+std::optional<int64_t> intBinSearchSigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& copts)
+{
+    auto bbval = m.eval(e, true);
+    auto strval = bbval.to_string();
+
+    for(size_t i = 0; i < copts.size(); ++i)
+    {
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        std::string iistr = std::to_string(copts[i]);
+        chks.push_back(e == s.ctx().int_val(iistr.c_str()));
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            return std::make_optional(copts[i]);
+        }
+    }
+
+    int64_t imin = min;
+    int64_t imax = max;
+    while(imin < imax)
+    {
+        int64_t imid = (imax / 2) + (imin / 2) + (((imax % 2) + (imin % 2)) / 2);
+        auto imidstr = std::to_string(imid);
+
+        if (imid >= 0)
+        {
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(e < s.ctx().int_val(imidstr.c_str()));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                imax = imid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                imin = imid + 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }
+        else
+        {
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(e > s.ctx().int_val(imidstr.c_str()));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                imin = imid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                imax = imid - 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
         }
     }
 
@@ -217,25 +368,51 @@ std::optional<double> realBinSearch(const APIModule* apimodule, z3::solver& s, c
         double rmid = (rmax + rmin) / 2.0;
         auto rmidstr = std::to_string(rmid);
 
-        s.push();
-
-        z3::expr_vector chks(s.ctx());
-        chks.push_back(e < s.ctx().real_val(rmidstr.c_str()));
-        auto rr = s.check(chks);
-
-        s.pop();
-        
-        if(rr == z3::check_result::sat) 
+        if (rmid >= 0.0)
         {
-            rmax = rmid;
-        }
-        else if(rr == z3::check_result::unsat) 
-        {
-            rmin = rmid;
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(e < s.ctx().real_val(rmidstr.c_str()));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                rmax = rmid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                rmin = rmid + 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
         }
         else
         {
-            return std::nullopt;
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(e > s.ctx().real_val(rmidstr.c_str()));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                rmin = rmid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                rmax = rmid - 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
         }
     }
 
@@ -470,7 +647,7 @@ std::optional<uint64_t> ExtractionInfo::expBVAsUInt(z3::solver& s, z3::model& m,
     }
     else
     {
-        auto uval = bvBinSearch<uint64_t, false>(this->apimodule, s, m, e, 0, computeBVMaxUnSigned(this->apimodule->bv_width), {0, 1, 3});
+        auto uval = bvBinSearchUnsigned(this->apimodule, s, m, e, 0, computeBVMaxUnSigned(this->apimodule->bv_width), {0, 1, 3});
         if(!uval.has_value())
         {
             return std::nullopt;
@@ -518,7 +695,7 @@ std::optional<int64_t> ExtractionInfo::expBVAsInt(z3::solver& s, z3::model& m, c
     }
     else
     {
-        auto ival = bvBinSearch<int64_t, true>(this->apimodule, s, m, e, computeBVMinSigned(this->apimodule->bv_width), computeBVMaxSigned(this->apimodule->bv_width), {0, 1, 3, -1, -3});
+        auto ival = bvBinSearchSigned(this->apimodule, s, m, e, computeBVMinSigned(this->apimodule->bv_width), computeBVMaxSigned(this->apimodule->bv_width), {0, 1, 3, -1, -3});
         if(!ival.has_value())
         {
             return std::nullopt;
@@ -552,7 +729,7 @@ std::optional<std::string> ExtractionInfo::expIntAsUInt(z3::solver& s, z3::model
     }
     else
     {
-        auto ival = intBinSearch<uint64_t>(this->apimodule, s, m, e, 0, std::numeric_limits<int64_t>::max(), {0, 1, 3});
+        auto ival = intBinSearchUnsigned(this->apimodule, s, m, e, 0, std::numeric_limits<int64_t>::max(), {0, 1, 3});
         if(!ival.has_value())
         {
             assert(false);
@@ -590,7 +767,7 @@ std::optional<std::string> ExtractionInfo::expIntAsInt(z3::solver& s, z3::model&
         //
         //TODO: we are limited here to 64 bit ints -- need to extend to a true big int search when we have the library support 
         //
-        auto ival = intBinSearch<int64_t>(this->apimodule, s, m, e, std::numeric_limits<int64_t>::lowest(), std::numeric_limits<int64_t>::max(), {0, 1, 3, -1, -3});
+        auto ival = intBinSearchSigned(this->apimodule, s, m, e, std::numeric_limits<int64_t>::lowest(), std::numeric_limits<int64_t>::max(), {0, 1, 3, -1, -3});
         if(!ival.has_value())
         {
             assert(false);
