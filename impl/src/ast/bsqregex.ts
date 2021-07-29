@@ -274,12 +274,16 @@ class BSQRegex {
         return this.re.compileToCPP();
     }
 
-    compileToSMT(ascii: boolean): string {
+    compileToSMTFull(ascii: boolean): string {
         return "[TODO]";
     }
 
     compileToSMTValidator(ascii: boolean): string {
         return this.re.compileToSMT(ascii);
+    }
+
+    compileToJsonValidator(): any {
+        return {restr: this.restr, re: this.re.compileToJsonValidator() };
     }
 
     static parse(rstr: string): BSQRegex | string {
@@ -330,6 +334,7 @@ abstract class RegexComponent {
     abstract compileToJS(): string;
     abstract compileToCPP(): string;
     abstract compileToSMT(ascii: boolean): string;
+    abstract compileToJsonValidator(): any;
 
     static jparse(obj: any): RegexComponent {
         if(typeof(obj) === "string") {
@@ -403,10 +408,15 @@ class Literal extends RegexComponent {
             return this.litval;
         }
     }
+
     compileToSMT(ascii: boolean): string  {
         assert(ascii);
 
         return `(str.to.re "${this.litval}")`;
+    }
+
+    compileToJsonValidator(): any {
+        return this.litval;
     }
 }
 
@@ -441,6 +451,10 @@ class CharRange extends RegexComponent {
         assert(ascii);
 
         return `(re.range \"${this.lb}\" \"${this.ub}\")`;
+    }
+
+    compileToJsonValidator(): any {
+        return { tag: "CharRange", lb: this.lb.charCodeAt(0), ub: this.ub.charCodeAt(0) };
     }
 }
 
@@ -489,6 +503,10 @@ class CharClass extends RegexComponent {
                 return "re.allchar";
         }
     }
+
+    compileToJsonValidator(): any {
+        return { tag: "CharClass", kind: this.kind };
+    }
 }
 
 class StarRepeat extends RegexComponent {
@@ -519,6 +537,10 @@ class StarRepeat extends RegexComponent {
     compileToSMT(ascii: boolean): string  {
         return `(re.* ${this.repeat.compileToSMT(ascii)})`;
     }
+
+    compileToJsonValidator(): any {
+        return { tag: "StarRepeat", repeat: this.repeat.compileToJsonValidator() };
+    }
 }
 
 class PlusRepeat extends RegexComponent {
@@ -548,6 +570,10 @@ class PlusRepeat extends RegexComponent {
 
     compileToSMT(ascii: boolean): string  {
         return `(re.+ ${this.repeat.compileToSMT(ascii)})`;
+    }
+
+    compileToJsonValidator(): any {
+        return { tag: "PlusRepeat", repeat: this.repeat.compileToJsonValidator() };
     }
 }
 
@@ -583,6 +609,10 @@ class RangeRepeat extends RegexComponent {
     compileToSMT(ascii: boolean): string  {
         return `(re.loop ${this.repeat.compileToSMT(ascii)} ${this.min} ${this.max})`;
     }
+
+    compileToJsonValidator(): any {
+        return { tag: "RangeRepeat", repeat: this.repeat.compileToJsonValidator(), min: this.min, max: this.max };
+    }
 }
 
 class Optional extends RegexComponent {
@@ -612,6 +642,10 @@ class Optional extends RegexComponent {
 
     compileToSMT(ascii: boolean): string  {
         return `(re.opt ${this.opt.compileToSMT(ascii)})`;
+    }
+
+    compileToJsonValidator(): any {
+        return { tag: "Optional", opt: this.opt.compileToJsonValidator() };
     }
 }
 
@@ -647,6 +681,10 @@ class Alternation extends RegexComponent {
     compileToSMT(ascii: boolean): string  {
         return `(re.union ${this.opts.map((opt) => opt.compileToSMT(ascii)).join(" ")})`;
     }
+
+    compileToJsonValidator(): any {
+        return { tag: "Alternation", opts: this.opts.map((opt) => opt.compileToJsonValidator()) };
+    }
 }
 
 class Sequence extends RegexComponent {
@@ -680,6 +718,10 @@ class Sequence extends RegexComponent {
 
     compileToSMT(ascii: boolean): string  {
         return `(re.++ ${this.elems.map((elem) => elem.compileToSMT(ascii)).join(" ")})`;
+    }
+
+    compileToJsonValidator(): any {
+        return { tag: "Sequence", elems: this.elems.map((elem) => elem.compileToJsonValidator()) };
     }
 }
 
