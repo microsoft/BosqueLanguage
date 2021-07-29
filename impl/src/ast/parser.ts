@@ -533,7 +533,13 @@ class Lexer {
             return true;
         }
         else if (Lexer.isIdentifierName(name)) {
-            this.recordLexTokenWData(this.m_cpos + name.length, TokenStrings.Identifier, name);
+            const isTypeThing = /^_[A-Z]/.test(name);
+            if (isTypeThing) {
+                this.recordLexTokenWData(this.m_cpos + 1, TokenStrings.Identifier, "_");
+            }
+            else {
+                this.recordLexTokenWData(this.m_cpos + name.length, TokenStrings.Identifier, name);
+            }
             return true;
         }
         else {

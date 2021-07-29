@@ -2413,6 +2413,12 @@ class SMTBodyEmitter {
             case "string_append": {
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
             }
+            case "stringof_string": {
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTVar(args[0].vname));
+            }
+            case "stringof_from": {
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTVar(args[0].vname));
+            }
             case "list_fill": {
                 const [count, value] = args.map((arg) => new SMTVar(arg.vname));
                 const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(encltypekey), count, value);
