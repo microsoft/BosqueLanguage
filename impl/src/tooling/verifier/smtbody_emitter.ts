@@ -820,20 +820,17 @@ class SMTBodyEmitter {
             return new SMTConst(cval.value);
         }
         else if (cval instanceof MIRConstantTypedNumber) {
-            const sctype = this.typegen.getMIRType(cval.tnkey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [this.constantToSMT(cval.value)]);
+            return this.constantToSMT(cval.value);
         }
         else if (cval instanceof MIRConstantStringOf) {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
 
-            const sctype = this.typegen.getMIRType(cval.tskey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"")]);
+            return new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"");
         }
         else if (cval instanceof MIRConstantDataString) {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
 
-            const sctype = this.typegen.getMIRType(cval.tskey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"")]);
+            return new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"");
         }
         else {
             assert(cval instanceof MIRConstantRegex);
