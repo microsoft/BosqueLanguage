@@ -747,7 +747,7 @@ class SMTTypeEmitter {
                 const vtype = ((edecl.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[]).find((tke) => tke.tname === "T") as { tname: string, tkind: MIRResolvedTypeKey }).tkind;
         
                 const vre = this.assembly.validatorRegexs.get(vtype) as BSQRegex;
-                const lre = vre.compileToJsonValidator();
+                const lre = vre.jemit();
 
                 return {tag: APIEmitTypeTag.StringOfTag, name: tt.trkey, validator: vtype, re_validate: lre};
             }

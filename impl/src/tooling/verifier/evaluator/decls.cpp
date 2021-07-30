@@ -1271,56 +1271,59 @@ std::string generateRandomChar(RandGenerator& rnd)
 
 BSQRegexOpt* BSQRegexOpt::parse(json j)
 {
-    if(j.is_string())
+    auto tag = j["tag"].get<std::string>();
+    if(tag == "Literal")
     {
         return BSQLiteralRe::parse(j);
     }
+    else if(tag == "CharClass")
+    {
+        return BSQCharClassRe::parse(j);
+    }
+    else if(tag == "CharRange")
+    {
+        return BSQCharRangeRe::parse(j);
+    }
+    else if(tag == "StarRepeat")
+    {
+        return BSQStarRepeatRe::parse(j);
+    }
+    else if(tag == "PlusRepeat")
+    {
+        return BSQPlusRepeatRe::parse(j);
+    }
+    else if(tag == "RangeRepeat")
+    {
+        return BSQRangeRepeatRe::parse(j);
+    }
+    else if(tag == "Optional")
+    {
+        return BSQOptionalRe::parse(j);
+    }
+    else if(tag == "Alternation")
+    {
+        return BSQAlternationRe::parse(j);
+    }
     else
     {
-        auto tag = j["tag"].get<std::string>();
-        if(tag == "CharClass")
-        {
-            return BSQCharClassRe::parse(j);
-        }
-        else if(tag == "CharRange")
-        {
-            return BSQCharRangeRe::parse(j);
-        }
-        else if(tag == "StarRepeat")
-        {
-            return BSQStarRepeatRe::parse(j);
-        }
-        else if(tag == "PlusRepeat")
-        {
-            return BSQPlusRepeatRe::parse(j);
-        }
-        else if(tag == "RangeRepeat")
-        {
-            return BSQRangeRepeatRe::parse(j);
-        }
-        else if(tag == "Optional")
-        {
-            return BSQOptionalRe::parse(j);
-        }
-        else if(tag == "Alternation")
-        {
-            return BSQAlternationRe::parse(j);
-        }
-        else
-        {
-            return BSQSequenceRe::parse(j);
-        }
+        return BSQSequenceRe::parse(j);
     }
 }
 
 std::string BSQLiteralRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
 {
-    return this->litval;
+    return this->escstr;
 }
 
 BSQLiteralRe* BSQLiteralRe::parse(json j)
 {
-    return new BSQLiteralRe(j.get<std::string>());
+    auto litstr = j["litstr"].get<std::string>();
+    std::vector<uint8_t> utf8;
+    std::transform(litstr.cbegin(), litstr.cend(), std::back_inserter(utf8), [](const char cc) {
+        return (uint8_t)cc;
+    });
+
+    return new BSQLiteralRe(j["restr"].get<std::string>(), j["escstr"].get<std::string>(), utf8);
 }
 
 std::string BSQCharRangeRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const

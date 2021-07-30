@@ -63,10 +63,10 @@ class RegexParser {
             }
             this.advance();
 
-            return new CharRange(lb.charCodeAt(0), ub.charCodeAt(0));
+            return new CharRange(lb.codePointAt(0) as number, ub.codePointAt(0) as number);
         }
         else {
-            res = new Literal(this.token());
+            res = new Literal(this.token(), this.token(), this.token());
             this.advance();
         }
 
@@ -86,13 +86,24 @@ class RegexParser {
                 const cc = this.token();
                 this.advance();
 
-                return new Literal(cc);
+                return new Literal(`\\${cc}`, cc, cc);
             }
-            else if(this.isToken("n") || this.isToken("t")) {
+            else if(this.isToken("n") || this.isToken("r") || this.isToken("t")) {
                 const cc = this.token();
                 this.advance();
 
-                return new Literal("\\" + cc);
+                let rc = "";
+                if(cc == "n") {
+                    rc = "\n";
+                }
+                else if(cc == "r") {
+                    rc = "\r";
+                }
+                else {
+                    rc = "\t";
+                }
+
+                return new Literal(`\\${cc}`, `\\${cc}`, rc);
             }
             else {
                 if(!this.isToken("p")) {
@@ -197,7 +208,7 @@ class RegexParser {
             }
             else {
                 const lcc = sre[sre.length - 1];
-                if(lcc instanceof Literal && rpe instanceof Literal && Literal.canMergeLiterals(lcc, rpe)) {
+                if(lcc instanceof Literal && rpe instanceof Literal) {
                     sre[sre.length - 1] = Literal.mergeLiterals(lcc, rpe);
                 }
                 else {
@@ -251,55 +262,39 @@ class RegexParser {
 
 class BSQRegex {
     readonly restr: string;
-    readonly isAnchorStart: boolean;
-    readonly isAnchorEnd: boolean;
     readonly re: RegexComponent;
 
-    constructor(restr: string, isAnchorStart: boolean, isAnchorEnd: boolean, re: RegexComponent) {
+    constructor(restr: string, re: RegexComponent) {
         this.restr = restr;
-        this.isAnchorStart = isAnchorStart;
-        this.isAnchorEnd = isAnchorEnd;
         this.re = re;
     }
 
     compileToJS(): string {
-        return (this.isAnchorStart ? "$" : "") + this.re.compileToJS() + (this.isAnchorEnd ? "^" : "");
+        return "$" + this.re.compileToJS() + "^";
     }
 
     compileToPatternToSMT(ascii: boolean): string {
         return this.re.compilePatternToSMT(ascii);
     }
 
-    static parse(rstr: string, forcetotal: boolean): BSQRegex | string {
-        const isAnchorFront = rstr.startsWith("/$");
-        let tfront = 1;
-        if(isAnchorFront) {
-            tfront++;
-        }
-
-        const isAnchorEnd = rstr.endsWith("^/");
-        let tend = 1;
-        if(isAnchorEnd) {
-            tend++;
-        }
-
-        const reparser = new RegexParser(rstr.substr(tfront, rstr.length - (tfront + tend)));
+    static parse(rstr: string): BSQRegex | string {
+        const reparser = new RegexParser(rstr.substr(1, rstr.length - 2));
         const rep = reparser.parseComponent();
-
+       
         if(typeof(rep) === "string") {
             return rep;
         }
         else {
-            return new BSQRegex(rstr, isAnchorFront || forcetotal, isAnchorEnd || forcetotal, rep);
+            return new BSQRegex(rstr, rep);
         }
     }
 
     jemit(): any {
-        return { restr: this.restr, isAnchorStart: this.isAnchorStart, isAnchorEnd: this.isAnchorEnd, re: this.re.jemit() };
+        return { restr: this.restr, re: this.re.jemit() };
     }
 
     static jparse(obj: any): BSQRegex {
-        return new BSQRegex(obj.restr, obj.isAnchorStart, obj.isAnchorEnd, RegexComponent.jparse(obj.re));
+        return new BSQRegex(obj.restr, RegexComponent.jparse(obj.re));
     }
 }
 
@@ -319,73 +314,63 @@ abstract class RegexComponent {
     abstract compilePatternToSMT(ascii: boolean): string;
 
     static jparse(obj: any): RegexComponent {
-        if(typeof(obj) === "string") {
-            return Literal.jparse(obj);
-        }
-        else {
-            const tag = obj.tag;
-            switch (tag) {
-                case "CharClass":
-                    return CharClass.jparse(obj);
-                case "CharRange":
-                    return CharRange.jparse(obj);
-                case "StarRepeat":
-                    return StarRepeat.jparse(obj);
-                case "PlusRepeat":
-                    return PlusRepeat.jparse(obj);
-                case "RangeRepeat":
-                    return RangeRepeat.jparse(obj);
-                case "Optional":
-                    return Optional.jparse(obj);
-                case "Alternation":
-                    return Alternation.jparse(obj);
-                default:
-                    return Sequence.jparse(obj);
-            }
+        const tag = obj.tag;
+        switch (tag) {
+            case "Literal":
+                return Literal.jparse(obj);
+            case "CharClass":
+                return CharClass.jparse(obj);
+            case "CharRange":
+                return CharRange.jparse(obj);
+            case "StarRepeat":
+                return StarRepeat.jparse(obj);
+            case "PlusRepeat":
+                return PlusRepeat.jparse(obj);
+            case "RangeRepeat":
+                return RangeRepeat.jparse(obj);
+            case "Optional":
+                return Optional.jparse(obj);
+            case "Alternation":
+                return Alternation.jparse(obj);
+            default:
+                return Sequence.jparse(obj);
         }
     }
 }
 
 class Literal extends RegexComponent {
-    readonly litval: string;
+    readonly restr: string;
+    readonly escstr: string;
+    readonly litstr: string;
 
-    static escapechars = ["\\", "/", ".", "*", "+", "?", "|", "(", ")", "[", "]", "{", "}", "$", "^"];
-
-    constructor(litval: string) {
+    constructor(restr: string, escstr: string, litstr: string) {
         super();
 
-        this.litval = litval;
+        this.restr = restr;
+        this.escstr = escstr;
+        this.litstr = litstr;
     }
 
     jemit(): any {
-        return this.litval;
+        return {tag: "Literal", restr: this.restr, escstr: this.escstr, litstr: this.litstr};
     }
 
     static jparse(obj: any): RegexComponent {
-        return new Literal(obj);
-    }
-
-    static canMergeLiterals(l1: Literal, l2: Literal): boolean {
-        return !Literal.escapechars.includes(l1.litval) && !Literal.escapechars.includes(l2.litval);
+        return new Literal(obj.restr, obj.escstr, obj.litstr);
     }
 
     static mergeLiterals(l1: Literal, l2: Literal): Literal {
-        return new Literal(l1.litval + l2.litval);
+        return new Literal(l1.restr + l2.restr, l1.escstr + l2.escstr, l1.litstr + l2.litstr);
     }
 
     compileToJS(): string {
-        if (Literal.escapechars.includes(this.litval)) {
-            return "\\" + this.litval;
-        }
-        else {
-            return this.litval;
-        }
+        return this.restr;
     }
 
     compilePatternToSMT(ascii: boolean): string  {
         assert(ascii);
 
-        return `(str.to.re "${this.litval}")`;
+        return `(str.to.re "${this.escstr}")`;
     }
 }
 

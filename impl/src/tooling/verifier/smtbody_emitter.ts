@@ -2388,7 +2388,7 @@ class SMTBodyEmitter {
             }
             case "validator_accepts": {
                 const bsqre = this.assembly.validatorRegexs.get(encltypekey) as BSQRegex;
-                const lre = bsqre.compileToSMTValidator(this.vopts.StringOpt === "ASCII");
+                const lre = bsqre.compileToPatternToSMT(this.vopts.StringOpt === "ASCII");
 
                 let accept: SMTExp = new SMTConst("false");
                 if (this.vopts.StringOpt === "ASCII") {
