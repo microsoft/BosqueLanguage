@@ -1132,6 +1132,254 @@ bool entityContentHashJSONParse_impl(const BSQType* btype, json j, StorageLocati
     return false;
 }
 
+BSQRegexOpt* BSQRegexOpt::parse(json j)
+{
+    if(j.is_string())
+    {
+        return BSQLiteralRe::parse(j);
+    }
+    else
+    {
+        auto tag = j["tag"].get<std::string>();
+        if(tag == "CharClass")
+        {
+            return BSQCharClassRe::parse(j);
+        }
+        else if(tag == "CharRange")
+        {
+            return BSQCharRangeRe::parse(j);
+        }
+        else if(tag == "StarRepeat")
+        {
+            return BSQStarRepeatRe::parse(j);
+        }
+        else if(tag == "PlusRepeat")
+        {
+            return BSQPlusRepeatRe::parse(j);
+        }
+        else if(tag == "RangeRepeat")
+        {
+            return BSQRangeRepeatRe::parse(j);
+        }
+        else if(tag == "Optional")
+        {
+            return BSQOptionalRe::parse(j);
+        }
+        else if(tag == "Alternation")
+        {
+            return BSQAlternationRe::parse(j);
+        }
+        else
+        {
+            return BSQSequenceRe::parse(j);
+        }
+    }
+}
+
+std::optional<int64_t> BSQLiteralRe::match(BSQStringIterator iter) const
+{
+    //
+    //TODO: unicode support and escape support
+    //
+
+    auto curr = this->litval.cbegin();
+    while(iteratorIsValid(&iter) && curr != this->litval.cend())
+    {
+        if(iteratorGetCodePoint(&iter) != (uint32_t)*curr)
+        {
+            return std::nullopt;
+        }
+
+        incrementStringIterator_codePoint(&iter);
+        curr++;
+    }
+
+    if(curr == this->litval.cend())
+    {
+        return std::make_optional(iter.strpos);
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
+
+BSQLiteralRe* BSQLiteralRe::parse(json j)
+{
+    return new BSQLiteralRe(j.get<std::string>());
+}
+
+std::optional<int64_t> BSQCharRangeRe::match(BSQStringIterator iter) const
+{
+    if(!iteratorIsValid(&iter))
+    {
+        return std::nullopt;
+    }
+    
+    auto cp = iteratorGetCodePoint(&iter);
+    if(this->low <= (uint32_t)cp && (uint32_t)cp <= this->high)
+    {
+        return std::make_optional(iter.strpos + 1);
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
+
+BSQCharRangeRe* BSQCharRangeRe::parse(json j)
+{
+    auto lb = j["lb"].get<uint64_t>();
+    auto ub = j["ub"].get<uint64_t>();
+
+    return new BSQCharRangeRe(lb, ub);
+}
+
+std::optional<int64_t> BSQCharClassRe::match(BSQStringIterator iter) const
+{
+    if(this->kind == SpecialCharKind::Wildcard)
+    {
+        return std::make_optional(iter.strpos + 1);
+    }
+    else
+    {
+        auto cp = iteratorGetCodePoint(&iter);
+        char ws_char[] = {' ', '\n', '\r', '\t' };
+        if((cp == ' ') | (cp == '\n') | (cp == '\r') | (cp == '\t'))
+        {
+            return std::make_optional(iter.strpos + 1);
+        }
+        else
+        {
+            return std::nullopt;
+        }
+    }
+}
+
+BSQCharClassRe* BSQCharClassRe::parse(json j)
+{
+    auto kind = j["kind"].get<SpecialCharKind>();
+
+    return new BSQCharClassRe(kind);
+}
+
+std::string BSQStarRepeatRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
+{
+    std::uniform_int_distribution<size_t> ctdist(0, finfo.limits.re_repeat_max);
+
+    auto ct = ctdist(rnd);
+    std::string res;
+    for(size_t i = 0; i < ct; ++i)
+    {
+        res.append(this->opt->generate(rnd, finfo));
+    }
+
+    return res;
+}
+
+BSQStarRepeatRe* BSQStarRepeatRe::parse(json j)
+{
+    auto repeat = BSQRegexOpt::parse(j["repeat"]);
+
+    return new BSQStarRepeatRe(repeat);
+}
+
+std::string BSQPlusRepeatRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
+{
+    std::uniform_int_distribution<size_t> ctdist(1, finfo.limits.re_repeat_max);
+
+    auto ct = ctdist(rnd);
+    std::string res;
+    for(size_t i = 0; i < ct; ++i)
+    {
+        res.append(this->opt->generate(rnd, finfo));
+    }
+
+    return res;
+}
+
+BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
+{
+    auto repeat = BSQRegexOpt::parse(j["repeat"]);
+
+    return new BSQPlusRepeatRe(repeat);
+}
+
+std::string BSQRangeRepeatRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
+{
+    std::uniform_int_distribution<size_t> ctdist(this->low, this->high);
+
+    auto ct = ctdist(rnd);
+    std::string res;
+    for(size_t i = 0; i < ct; ++i)
+    {
+        res.append(this->opt->generate(rnd, finfo));
+    }
+
+    return res;
+}
+
+BSQRangeRepeatRe* BSQRangeRepeatRe::parse(json j)
+{
+    auto min = j["min"].get<uint64_t>();
+    auto max = j["max"].get<uint64_t>();
+    auto repeat = BSQRegexOpt::parse(j["repeat"]);
+
+    return new BSQRangeRepeatRe(min, max, repeat);
+}
+
+std::string BSQOptionalRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
+{
+    std::uniform_int_distribution<uint32_t> ctdist(0, 1);
+
+    auto ct = ctdist(rnd);
+    if(ct == 1)
+    {
+        return this->opt->generate(rnd, finfo);
+    }
+    else
+    {
+        return "";
+    }
+}
+
+BSQOptionalRe* BSQOptionalRe::parse(json j)
+{
+    auto opt = BSQRegexOpt::parse(j["opt"]);
+
+    return new BSQOptionalRe(opt);
+}
+
+std::string BSQAlternationRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
+{
+    std::uniform_int_distribution<size_t> idxdist(0, this->opts.size() - 1);
+    auto opt = this->opts[idxdist(rnd)];
+
+    return opt->generate(rnd, finfo);   
+}
+
+BSQAlternationRe* BSQAlternationRe::parse(json j)
+{
+    std::vector<const BSQRegexOpt*> opts;
+    auto jopts = j["opts"];
+    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(opts), [](json arg) {
+        return BSQRegexOpt::parse(arg);
+    });
+
+    return new BSQAlternationRe(opts);
+}
+
+std::string BSQSequenceRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
+{
+    std::string res;
+    for(size_t i = 0; i < this->opts.size(); ++i)
+    {
+        res.append(this->opts[i]->generate(rnd, finfo));
+    }
+
+    return res;
+}
+
 BSQRegex bsqRegexJSONParse_impl(json j)
 {
     auto restr = j["restr"].get<std::string>();

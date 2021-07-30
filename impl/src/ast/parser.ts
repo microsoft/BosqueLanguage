@@ -2019,7 +2019,7 @@ class Parser {
         }
         else if (tk === TokenStrings.Regex) {
             const restr = this.consumeTokenAndGetValue(); //keep in escaped format
-            const re = BSQRegex.parse(restr);
+            const re = BSQRegex.parse(restr, false);
             if(typeof(re) === "string") {
                 this.raiseError(line, re);
             }
@@ -3871,7 +3871,7 @@ class Parser {
             const vregex = this.consumeTokenAndGetValue();
             this.consumeToken();
 
-            const re = BSQRegex.parse(vregex);
+            const re = BSQRegex.parse(vregex, true);
             if(typeof(re) === "string") {
                 this.raiseError(this.getCurrentLine(), re);
             }

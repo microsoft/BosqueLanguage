@@ -252,6 +252,9 @@ enum class BSQPrimitiveImplTag
     string_empty,
     string_append,
 
+    stringof_string,
+    stringof_from,
+
     list_size,
     list_empty,
     list_unsafe_get,

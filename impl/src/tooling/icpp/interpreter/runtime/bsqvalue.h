@@ -640,13 +640,154 @@ public:
 ////
 //Regex
 
-struct BSQRegex
+enum class SpecialCharKind 
 {
-    std::string restr;
-    std::regex cppre;
+    Wildcard = 0x0,
+    WhiteSpace
+};
+
+class BSQRegexOpt
+{
+public:
+    BSQRegexOpt() {;}
+    virtual ~BSQRegexOpt() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const = 0;
+
+    static BSQRegexOpt* parse(json j);
+};
+
+class BSQLiteralRe : public BSQRegexOpt
+{
+public:
+    const std::string litval;
+
+    BSQLiteralRe(std::string lv) : BSQRegexOpt(), litval(lv) {;}
+    virtual ~BSQLiteralRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQLiteralRe* parse(json j);
+};
+
+class BSQCharRangeRe : public BSQRegexOpt
+{
+public:
+    const uint64_t low;
+    const uint64_t high;
+
+    BSQCharRangeRe(uint64_t low, uint64_t high) : BSQRegexOpt(), low(low), high(high) {;}
+    virtual ~BSQCharRangeRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQCharRangeRe* parse(json j);
+};
+
+class BSQCharClassRe : public BSQRegexOpt
+{
+public:
+    const SpecialCharKind kind;
+
+    BSQCharClassRe(SpecialCharKind kind) : BSQRegexOpt(), kind(kind) {;}
+    virtual ~BSQCharClassRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQCharClassRe* parse(json j);
+};
+
+class BSQStarRepeatRe : public BSQRegexOpt
+{
+public:
+    const BSQRegexOpt* opt;
+
+    BSQStarRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
+    virtual ~BSQStarRepeatRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQStarRepeatRe* parse(json j);
+};
+
+class BSQPlusRepeatRe : public BSQRegexOpt
+{
+public:
+    const BSQRegexOpt* opt;
+
+    BSQPlusRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
+    virtual ~BSQPlusRepeatRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQPlusRepeatRe* parse(json j);
+};
+
+class BSQRangeRepeatRe : public BSQRegexOpt
+{
+public:
+    const uint32_t low;
+    const uint32_t high;
+    const BSQRegexOpt* opt;
+
+    BSQRangeRepeatRe(uint32_t low, uint32_t high, const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt), low(low), high(high) {;}
+    virtual ~BSQRangeRepeatRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQRangeRepeatRe* parse(json j);
+};
+
+class BSQOptionalRe : public BSQRegexOpt
+{
+public:
+    const BSQRegexOpt* opt;
+
+    BSQOptionalRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
+    virtual ~BSQOptionalRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQOptionalRe* parse(json j);
+};
+
+class BSQAlternationRe : public BSQRegexOpt
+{
+public:
+    const std::vector<const BSQRegexOpt*> opts;
+
+    BSQAlternationRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
+    virtual ~BSQAlternationRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQAlternationRe* parse(json j);
+};
+
+class BSQSequenceRe : public BSQRegexOpt
+{
+public:
+    const std::vector<const BSQRegexOpt*> opts;
+
+    BSQSequenceRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
+    virtual ~BSQSequenceRe() {;}
+
+    virtual std::optional<int64_t> match(BSQStringIterator iter) const override final;
+
+    static BSQSequenceRe* parse(json j);
+};
+
+struct BSQRegexImpl
+{
+    const std::string restr;
     bool isAnchorStart;
     bool isAnchorEnd;
+    const BSQRegexOpt* re;
+
+    static BSQRegexImpl parse(json j);
 };
+
+typedef uint64_t BSQRegex;
 
 BSQRegex bsqRegexJSONParse_impl(json j);
 
@@ -759,7 +900,6 @@ public:
         SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));
     }
 };
-
 
 std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 

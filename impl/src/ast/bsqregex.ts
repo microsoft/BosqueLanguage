@@ -63,7 +63,7 @@ class RegexParser {
             }
             this.advance();
 
-            return new CharRange(lb, ub);
+            return new CharRange(lb.charCodeAt(0), ub.charCodeAt(0));
         }
         else {
             res = new Literal(this.token());
@@ -266,27 +266,11 @@ class BSQRegex {
         return (this.isAnchorStart ? "$" : "") + this.re.compileToJS() + (this.isAnchorEnd ? "^" : "");
     }
 
-    compileToCPP(): string {
-        return "[TODO]";
+    compileToPatternToSMT(ascii: boolean): string {
+        return this.re.compilePatternToSMT(ascii);
     }
 
-    compileToCPPValidator(): string {
-        return this.re.compileToCPP();
-    }
-
-    compileToSMTFull(ascii: boolean): string {
-        return "[TODO]";
-    }
-
-    compileToSMTValidator(ascii: boolean): string {
-        return this.re.compileToSMT(ascii);
-    }
-
-    compileToJsonValidator(): any {
-        return {restr: this.restr, re: this.re.compileToJsonValidator() };
-    }
-
-    static parse(rstr: string): BSQRegex | string {
+    static parse(rstr: string, forcetotal: boolean): BSQRegex | string {
         const isAnchorFront = rstr.startsWith("/$");
         let tfront = 1;
         if(isAnchorFront) {
@@ -306,7 +290,7 @@ class BSQRegex {
             return rep;
         }
         else {
-            return new BSQRegex(rstr, isAnchorFront, isAnchorEnd, rep);
+            return new BSQRegex(rstr, isAnchorFront || forcetotal, isAnchorEnd || forcetotal, rep);
         }
     }
 
@@ -332,9 +316,7 @@ abstract class RegexComponent {
     abstract jemit(): any;
 
     abstract compileToJS(): string;
-    abstract compileToCPP(): string;
-    abstract compileToSMT(ascii: boolean): string;
-    abstract compileToJsonValidator(): any;
+    abstract compilePatternToSMT(ascii: boolean): string;
 
     static jparse(obj: any): RegexComponent {
         if(typeof(obj) === "string") {
@@ -400,31 +382,18 @@ class Literal extends RegexComponent {
         }
     }
 
-    compileToCPP(): string {
-        if (Literal.escapechars.includes(this.litval)) {
-            return "\\" + this.litval;
-        }
-        else {
-            return this.litval;
-        }
-    }
-
-    compileToSMT(ascii: boolean): string  {
+    compilePatternToSMT(ascii: boolean): string  {
         assert(ascii);
 
         return `(str.to.re "${this.litval}")`;
     }
-
-    compileToJsonValidator(): any {
-        return this.litval;
-    }
 }
 
 class CharRange extends RegexComponent {
-    readonly lb: string;
-    readonly ub: string;
+    readonly lb: number;
+    readonly ub: number;
 
-    constructor(lb: string, ub: string) {
+    constructor(lb: number, ub: number) {
         super();
 
         this.lb = lb;
@@ -443,18 +412,10 @@ class CharRange extends RegexComponent {
         return `[${this.lb}-${this.ub}]`;
     }
 
-    compileToCPP(): string {
-        return `[${this.lb}-${this.ub}]`;
-    }
-
-    compileToSMT(ascii: boolean): string  {
+    compilePatternToSMT(ascii: boolean): string  {
         assert(ascii);
 
         return `(re.range \"${this.lb}\" \"${this.ub}\")`;
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "CharRange", lb: this.lb.charCodeAt(0), ub: this.ub.charCodeAt(0) };
     }
 }
 
@@ -484,16 +445,7 @@ class CharClass extends RegexComponent {
         }
     }
 
-    compileToCPP(): string {
-        switch (this.kind) {
-            case SpecialCharKind.WhiteSpace:
-                return "\\p{Z}";
-            default:
-                return ".";
-        }
-    }
-
-    compileToSMT(ascii: boolean): string  {
+    compilePatternToSMT(ascii: boolean): string  {
         assert(ascii);
         
         switch (this.kind) {
@@ -502,10 +454,6 @@ class CharClass extends RegexComponent {
             default:
                 return "re.allchar";
         }
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "CharClass", kind: this.kind };
     }
 }
 
@@ -530,16 +478,8 @@ class StarRepeat extends RegexComponent {
         return this.repeat.useParens() ? `(${this.repeat.compileToJS()})*` : `${this.repeat.compileToJS()}*`;
     }
 
-    compileToCPP(): string {
-        return this.repeat.useParens() ? `(${this.repeat.compileToCPP()})*` : `${this.repeat.compileToCPP()}*`;
-    }
-
-    compileToSMT(ascii: boolean): string  {
-        return `(re.* ${this.repeat.compileToSMT(ascii)})`;
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "StarRepeat", repeat: this.repeat.compileToJsonValidator() };
+    compilePatternToSMT(ascii: boolean): string  {
+        return `(re.* ${this.repeat.compilePatternToSMT(ascii)})`;
     }
 }
 
@@ -564,16 +504,8 @@ class PlusRepeat extends RegexComponent {
         return this.repeat.useParens() ? `(${this.repeat.compileToJS()})+` : `${this.repeat.compileToJS()}+`;
     }
 
-    compileToCPP(): string {
-        return this.repeat.useParens() ? `(${this.repeat.compileToCPP()})+` : `${this.repeat.compileToCPP()}+`;
-    }
-
-    compileToSMT(ascii: boolean): string  {
-        return `(re.+ ${this.repeat.compileToSMT(ascii)})`;
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "PlusRepeat", repeat: this.repeat.compileToJsonValidator() };
+    compilePatternToSMT(ascii: boolean): string  {
+        return `(re.+ ${this.repeat.compilePatternToSMT(ascii)})`;
     }
 }
 
@@ -602,16 +534,8 @@ class RangeRepeat extends RegexComponent {
         return this.repeat.useParens() ? `(${this.repeat.compileToJS()}){${this.min},${this.max}}` : `${this.repeat.compileToJS()}{${this.min},${this.max}}`;
     }
 
-    compileToCPP(): string {
-        return this.repeat.useParens() ? `(${this.repeat.compileToCPP()}){${this.min},${this.max}}` : `${this.repeat.compileToCPP()}{${this.min},${this.max}}`;
-    }
-
-    compileToSMT(ascii: boolean): string  {
-        return `(re.loop ${this.repeat.compileToSMT(ascii)} ${this.min} ${this.max})`;
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "RangeRepeat", repeat: this.repeat.compileToJsonValidator(), min: this.min, max: this.max };
+    compilePatternToSMT(ascii: boolean): string  {
+        return `(re.loop ${this.repeat.compilePatternToSMT(ascii)} ${this.min} ${this.max})`;
     }
 }
 
@@ -636,16 +560,8 @@ class Optional extends RegexComponent {
         return this.opt.useParens() ? `(${this.opt.compileToJS()})?` : `${this.opt.compileToJS()}?`;
     }
 
-    compileToCPP(): string {
-        return this.opt.useParens() ? `(${this.opt.compileToCPP()})?` : `${this.opt.compileToCPP()}?`;
-    }
-
-    compileToSMT(ascii: boolean): string  {
-        return `(re.opt ${this.opt.compileToSMT(ascii)})`;
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "Optional", opt: this.opt.compileToJsonValidator() };
+    compilePatternToSMT(ascii: boolean): string  {
+        return `(re.opt ${this.opt.compilePatternToSMT(ascii)})`;
     }
 }
 
@@ -674,16 +590,8 @@ class Alternation extends RegexComponent {
         return this.opts.map((opt) => opt.compileToJS()).join("|");
     }
 
-    compileToCPP(): string {
-        return this.opts.map((opt) => opt.compileToCPP()).join("|");
-    }
-
-    compileToSMT(ascii: boolean): string  {
-        return `(re.union ${this.opts.map((opt) => opt.compileToSMT(ascii)).join(" ")})`;
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "Alternation", opts: this.opts.map((opt) => opt.compileToJsonValidator()) };
+    compilePatternToSMT(ascii: boolean): string  {
+        return `(re.union ${this.opts.map((opt) => opt.compilePatternToSMT(ascii)).join(" ")})`;
     }
 }
 
@@ -712,16 +620,8 @@ class Sequence extends RegexComponent {
         return this.elems.map((elem) => elem.compileToJS()).join("");
     }
 
-    compileToCPP(): string {
-        return this.elems.map((elem) => elem.compileToCPP()).join("");
-    }
-
-    compileToSMT(ascii: boolean): string  {
-        return `(re.++ ${this.elems.map((elem) => elem.compileToSMT(ascii)).join(" ")})`;
-    }
-
-    compileToJsonValidator(): any {
-        return { tag: "Sequence", elems: this.elems.map((elem) => elem.compileToJsonValidator()) };
+    compilePatternToSMT(ascii: boolean): string  {
+        return `(re.++ ${this.elems.map((elem) => elem.compilePatternToSMT(ascii)).join(" ")})`;
     }
 }
 

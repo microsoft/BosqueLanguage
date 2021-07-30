@@ -272,8 +272,8 @@ __internal grounded struct entity StringOf<T where validator> provides Some, Key
 
 //<summary>Primitive DataString value.</summary>
 __internal grounded struct entity DataString<T where parsable> provides Some, APIValue {
-    __safe private function s_string(s: StringOf<T>): String # stringof_string
-    __safe private function s_from(s: String): StringOf<T> # stringof_from
+    __safe private function s_string(s: StringOf<T>): String # datastring_string
+    __safe private function s_from(s: String): StringOf<T> # datastring_from
 
     method string(): String {
         return DataString<T>::s_string(this);

@@ -301,10 +301,9 @@ class BSQRegex
 {
 public:
     const std::string restr;
-    const std::regex re_exec;
     const BSQRegexOpt* re;
 
-    BSQRegex(std::string restr, const BSQRegexOpt* re): restr(restr), re_exec(restr), re(re) {;}
+    BSQRegex(std::string restr, const BSQRegexOpt* re): restr(restr), re(re) {;}
     ~BSQRegex() {;}
 
     std::string generate(RandGenerator& rnd, FuzzInfo& finfo);
