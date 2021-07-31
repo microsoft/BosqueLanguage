@@ -656,7 +656,8 @@ public:
     //TODO: this is super inefficient but for now we just want it to run on small strings and regexs-- :(
     //      We will support matchTotal, matchMin, and matchMax as API ops rather than trying to do clever greedy lazy on operators and implicit defaults things
     //
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const = 0;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const = 0;
+    virtual size_t mconsume() const = 0;
 
     static BSQRegexOpt* parse(json j);
 };
@@ -671,7 +672,8 @@ public:
     BSQLiteralRe(std::string restr, std::string escstr, std::vector<uint8_t> litstr) : BSQRegexOpt(), restr(restr), escstr(escstr), litstr(litstr) {;}
     virtual ~BSQLiteralRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQLiteralRe* parse(json j);
 };
@@ -685,7 +687,8 @@ public:
     BSQCharRangeRe(uint64_t low, uint64_t high) : BSQRegexOpt(), low(low), high(high) {;}
     virtual ~BSQCharRangeRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQCharRangeRe* parse(json j);
 };
@@ -698,7 +701,8 @@ public:
     BSQCharClassRe(SpecialCharKind kind) : BSQRegexOpt(), kind(kind) {;}
     virtual ~BSQCharClassRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQCharClassRe* parse(json j);
 };
@@ -711,7 +715,8 @@ public:
     BSQStarRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
     virtual ~BSQStarRepeatRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQStarRepeatRe* parse(json j);
 };
@@ -724,7 +729,8 @@ public:
     BSQPlusRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
     virtual ~BSQPlusRepeatRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQPlusRepeatRe* parse(json j);
 };
@@ -739,7 +745,8 @@ public:
     BSQRangeRepeatRe(uint32_t low, uint32_t high, const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt), low(low), high(high) {;}
     virtual ~BSQRangeRepeatRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQRangeRepeatRe* parse(json j);
 };
@@ -752,7 +759,8 @@ public:
     BSQOptionalRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
     virtual ~BSQOptionalRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQOptionalRe* parse(json j);
 };
@@ -765,7 +773,8 @@ public:
     BSQAlternationRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
     virtual ~BSQAlternationRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQAlternationRe* parse(json j);
 };
@@ -778,15 +787,20 @@ public:
     BSQSequenceRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
     virtual ~BSQSequenceRe() {;}
 
-    virtual std::optional<int64_t> match(BSQStringIterator iter, const std::vector<BSQRegexOpt*>& continuation) const override final;
+    virtual bool match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const override final;
+    virtual size_t mconsume() const override final;
 
     static BSQSequenceRe* parse(json j);
 };
 
-struct BSQRegex
+class BSQRegex
 {
+public:
     const std::string restr;
     const BSQRegexOpt* re;
+
+    BSQRegex(std::string restr, const BSQRegexOpt* re): restr(restr), re(re) {;}
+    ~BSQRegex() {;}
 };
 
 BSQRegex* bsqRegexJSONParse_impl(json j);

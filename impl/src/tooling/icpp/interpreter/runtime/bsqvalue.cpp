@@ -1173,63 +1173,90 @@ BSQRegexOpt* BSQRegexOpt::parse(json j)
     }
 }
 
-std::optional<int64_t> BSQLiteralRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQLiteralRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
     if(!iteratorIsValid(&iter))
     {
-        return std::nullopt;
+        return false;
     }
 
-    //
-    //TODO: unicode support and escape support
-    //
 
     auto curr = this->litstr.cbegin();
     while(iteratorIsValid(&iter) && curr != this->litstr.cend())
     {
-        if(iteratorGetCodePoint(&iter) != (uint32_t)*curr)
+        if(iteratorGetUTF8Byte(&iter) != *curr)
         {
-            return std::nullopt;
+            return false;
         }
 
-        incrementStringIterator_codePoint(&iter);
+        incrementStringIterator_utf8byte(&iter);
         curr++;
     }
 
     if(curr != this->litstr.cend())
     {
-        return std::nullopt;
+        return false;
     }
     else
     {
-        if(continuation != nullptr)
+        if(continuation.empty())
         {
-            return continuation->match()
+            return !iteratorIsValid(&iter);
+        }
+        else 
+        {
+            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
+            return continuation[0]->match(iter, ncontinue);
         }
     }
 }
 
-BSQLiteralRe* BSQLiteralRe::parse(json j)
+size_t BSQLiteralRe::mconsume() const
 {
-    return new BSQLiteralRe(j.get<std::string>());
+    return this->litstr.size();
 }
 
-std::optional<int64_t> BSQCharRangeRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+BSQLiteralRe* BSQLiteralRe::parse(json j)
+{
+    auto litstr = j["litstr"].get<std::string>();
+    std::vector<uint8_t> utf8;
+    std::transform(litstr.cbegin(), litstr.cend(), std::back_inserter(utf8), [](const char cc) {
+        return (uint8_t)cc;
+    });
+
+    return new BSQLiteralRe(j["restr"].get<std::string>(), j["escstr"].get<std::string>(), utf8);
+}
+
+bool BSQCharRangeRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
     if(!iteratorIsValid(&iter))
     {
-        return std::nullopt;
+        return false;
     }
     
     auto cp = iteratorGetCodePoint(&iter);
+    incrementStringIterator_codePoint(&iter);
     if(this->low <= (uint32_t)cp && (uint32_t)cp <= this->high)
     {
-        return std::make_optional(iter.strpos + 1);
+        if(continuation.empty())
+        {
+            return !iteratorIsValid(&iter);
+        }
+        else
+        {
+            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
+            return continuation[0]->match(iter, ncontinue);
+        }
     }
     else
     {
-        return std::nullopt;
+        return false;
     }
+}
+
+size_t BSQCharRangeRe::mconsume() const
+{
+    return 1;
 }
 
 BSQCharRangeRe* BSQCharRangeRe::parse(json j)
@@ -1240,30 +1267,53 @@ BSQCharRangeRe* BSQCharRangeRe::parse(json j)
     return new BSQCharRangeRe(lb, ub);
 }
 
-std::optional<int64_t> BSQCharClassRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQCharClassRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
     if(!iteratorIsValid(&iter))
     {
-        return std::nullopt;
+        return false;
     }
+
+    auto cp = iteratorGetCodePoint(&iter);
+    incrementStringIterator_codePoint(&iter);
 
     if(this->kind == SpecialCharKind::Wildcard)
     {
-        return std::make_optional(iter.strpos + 1);
-    }
-    else
-    {
-        auto cp = iteratorGetCodePoint(&iter);
-        char ws_char[] = {' ', '\n', '\r', '\t' };
-        if((cp == ' ') | (cp == '\n') | (cp == '\r') | (cp == '\t'))
+        if(continuation.empty())
         {
-            return std::make_optional(iter.strpos + 1);
+            return !iteratorIsValid(&iter);
         }
         else
         {
-            return std::nullopt;
+            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
+            return continuation[0]->match(iter, ncontinue);
         }
     }
+    else
+    {
+        char ws_char[] = {' ', '\n', '\r', '\t' };
+        if((cp == ' ') | (cp == '\n') | (cp == '\r') | (cp == '\t'))
+        {
+            if(continuation.empty())
+            {
+                return !iteratorIsValid(&iter);
+            }
+            else
+            {
+                std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
+                return continuation[0]->match(iter, ncontinue);
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+}
+
+size_t BSQCharClassRe::mconsume() const
+{
+    return 1;
 }
 
 BSQCharClassRe* BSQCharClassRe::parse(json j)
@@ -1273,18 +1323,44 @@ BSQCharClassRe* BSQCharClassRe::parse(json j)
     return new BSQCharClassRe(kind);
 }
 
-std::optional<int64_t> BSQStarRepeatRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQStarRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
-    std::uniform_int_distribution<size_t> ctdist(0, finfo.limits.re_repeat_max);
-
-    auto ct = ctdist(rnd);
-    std::string res;
-    for(size_t i = 0; i < ct; ++i)
+    if(continuation.empty())
     {
-        res.append(this->opt->generate(rnd, finfo));
+        if(!iteratorIsValid(&iter))
+        {
+            return true; //empty match at end 
+        }
+    }
+    else
+    {
+        std::vector<const BSQRegexOpt*> nextcontinue(continuation.cbegin() + 1, continuation.cend());
+        if(continuation[0]->match(iter, nextcontinue))
+        {
+            return true;
+        }
     }
 
-    return res;
+    auto mxiter = (BSQStringType::utf8ByteCount(iter.str) - iter.strpos) / std::max((size_t)1, this->mconsume());
+    std::vector<const BSQRegexOpt*> matchcontinue;
+    for(size_t i = 1; i < mxiter; ++i)
+    {
+        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
+        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
+
+        if(this->opt->match(iter, rcontinue))
+        {
+            return true;
+        }
+        matchcontinue.push_back(this->opt);
+    }
+        
+    return false;
+}
+
+size_t BSQStarRepeatRe::mconsume() const
+{
+    return 0;
 }
 
 BSQStarRepeatRe* BSQStarRepeatRe::parse(json j)
@@ -1294,18 +1370,28 @@ BSQStarRepeatRe* BSQStarRepeatRe::parse(json j)
     return new BSQStarRepeatRe(repeat);
 }
 
-std::optional<int64_t> BSQPlusRepeatRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQPlusRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
-    std::uniform_int_distribution<size_t> ctdist(1, finfo.limits.re_repeat_max);
-
-    auto ct = ctdist(rnd);
-    std::string res;
-    for(size_t i = 0; i < ct; ++i)
+    auto mxiter = (BSQStringType::utf8ByteCount(iter.str) - iter.strpos) / std::max((size_t)1, this->mconsume());
+    std::vector<const BSQRegexOpt*> matchcontinue;
+    for(size_t i = 1; i < mxiter; ++i)
     {
-        res.append(this->opt->generate(rnd, finfo));
-    }
+        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
+        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
 
-    return res;
+        if(this->opt->match(iter, rcontinue))
+        {
+            return true;
+        }
+        matchcontinue.push_back(this->opt);
+    }
+        
+    return false;
+}
+
+size_t BSQPlusRepeatRe::mconsume() const
+{
+    return this->opt->mconsume();
 }
 
 BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
@@ -1315,18 +1401,46 @@ BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
     return new BSQPlusRepeatRe(repeat);
 }
 
-std::optional<int64_t> BSQRangeRepeatRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQRangeRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
-    std::uniform_int_distribution<size_t> ctdist(this->low, this->high);
-
-    auto ct = ctdist(rnd);
-    std::string res;
-    for(size_t i = 0; i < ct; ++i)
+    if (this->low == 0)
     {
-        res.append(this->opt->generate(rnd, finfo));
+        if (continuation.empty())
+        {
+            if (!iteratorIsValid(&iter))
+            {
+                return true; //empty match at end
+            }
+        }
+        else
+        {
+            std::vector<const BSQRegexOpt *> nextcontinue(continuation.cbegin() + 1, continuation.cend());
+            if (continuation[0]->match(iter, nextcontinue))
+            {
+                return true;
+            }
+        }
     }
 
-    return res;
+    std::vector<const BSQRegexOpt*> matchcontinue;
+    for(size_t i = (size_t)this->low; i <= (size_t)this->high; ++i)
+    {
+        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
+        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
+
+        if(this->opt->match(iter, rcontinue))
+        {
+            return true;
+        }
+        matchcontinue.push_back(this->opt);
+    }
+        
+    return false;
+}
+
+size_t BSQRangeRepeatRe::mconsume() const
+{
+    return this->opt->mconsume() * (size_t)this->low;
 }
 
 BSQRangeRepeatRe* BSQRangeRepeatRe::parse(json j)
@@ -1338,19 +1452,30 @@ BSQRangeRepeatRe* BSQRangeRepeatRe::parse(json j)
     return new BSQRangeRepeatRe(min, max, repeat);
 }
 
-std::optional<int64_t> BSQOptionalRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQOptionalRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
-    std::uniform_int_distribution<uint32_t> ctdist(0, 1);
-
-    auto ct = ctdist(rnd);
-    if(ct == 1)
+    if(continuation.empty())
     {
-        return this->opt->generate(rnd, finfo);
+        if(!iteratorIsValid(&iter))
+        {
+            return true; //empty match at end 
+        }
     }
     else
     {
-        return "";
+        std::vector<const BSQRegexOpt*> nextcontinue(continuation.cbegin() + 1, continuation.cend());
+        if(continuation[0]->match(iter, nextcontinue))
+        {
+            return true;
+        }
     }
+
+    return this->opt->match(iter, continuation);
+}
+
+size_t BSQOptionalRe::mconsume() const
+{
+    return 0;
 }
 
 BSQOptionalRe* BSQOptionalRe::parse(json j)
@@ -1360,12 +1485,28 @@ BSQOptionalRe* BSQOptionalRe::parse(json j)
     return new BSQOptionalRe(opt);
 }
 
-std::optional<int64_t> BSQAlternationRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQAlternationRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
-    std::uniform_int_distribution<size_t> idxdist(0, this->opts.size() - 1);
-    auto opt = this->opts[idxdist(rnd)];
+    for(size_t i = 0; i < this->opts.size(); ++i)
+    {
+        if(this->opts[i]->match(iter, continuation))
+        {
+            return true;
+        }
+    }
 
-    return opt->generate(rnd, finfo);   
+    return false;
+}
+
+size_t BSQAlternationRe::mconsume() const
+{
+    std::vector<size_t> ml;
+    std::transform(this->opts.cbegin(), this->opts.cend(), std::back_inserter(ml), [](const BSQRegexOpt* opt) {
+        return opt->mconsume();
+    });
+
+    std::sort(ml.begin(), ml.end());
+    return ml[0];
 }
 
 BSQAlternationRe* BSQAlternationRe::parse(json j)
@@ -1379,24 +1520,30 @@ BSQAlternationRe* BSQAlternationRe::parse(json j)
     return new BSQAlternationRe(opts);
 }
 
-std::optional<int64_t> BSQSequenceRe::match(BSQStringIterator iter, bool endanchor, BSQRegexOpt* continuation) const
+bool BSQSequenceRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
 {
-    std::string res;
-    for(size_t i = 0; i < this->opts.size(); ++i)
-    {
-        res.append(this->opts[i]->generate(rnd, finfo));
-    }
+    std::vector<const BSQRegexOpt*> rcontinuation(this->opts.cbegin() + 1, this->opts.cend());
+    std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinuation));
 
-    return res;
+    return this->opts[0]->match(iter, rcontinuation);
+}
+
+size_t BSQAlternationRe::mconsume() const
+{
+    std::vector<size_t> ml;
+    std::transform(this->opts.cbegin(), this->opts.cend(), std::back_inserter(ml), [](const BSQRegexOpt* opt) {
+        return opt->mconsume();
+    });
+
+    return std::accumulate(ml.begin(), ml.end(), 0);
 }
 
 BSQRegex* bsqRegexJSONParse_impl(json j)
 {
     auto restr = j["restr"].get<std::string>();
-    auto isAnchorStart = j["isAnchorStart"].get<bool>();
-    auto isAnchorEnd = j["isAnchorEnd"].get<bool>();
+    auto re = BSQRegexOpt::parse(j["re"]);
 
-    return BSQRegex{restr, std::regex{restr}, isAnchorStart, isAnchorEnd};
+    return new BSQRegex(restr, re);
 }
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -1425,7 +1572,10 @@ bool entityStringOfJSONParse_impl(const BSQType* btype, json j, StorageLocationP
         std::string sstr = j.get<std::string>();
         const BSQRegex& vre = dynamic_cast<const BSQValidatorType*>(BSQType::g_typetable[dynamic_cast<const BSQStringOfType*>(btype)->validator])->re;
 
-        if(!std::regex_match(sstr, vre.cppre))
+        BSQString bstr;
+        BSQStringType:: xxxx;
+
+        if(vre.re->match())
         {
             return false;
         }
