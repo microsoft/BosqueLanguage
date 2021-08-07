@@ -819,9 +819,9 @@ std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr
 class BSQValidatorType : public BSQRegisterType<void*>
 {
 public:
-    const BSQRegex re;
+    const BSQRegex* re;
 
-    BSQValidatorType(BSQTypeID tid, std::string name, BSQRegex re): BSQRegisterType(tid, sizeof(void*), "1", EMPTY_KEY_CMP, entityValidatorDisplay_impl, name, {nullptr}), re(re) {;}
+    BSQValidatorType(BSQTypeID tid, std::string name, BSQRegex* re): BSQRegisterType(tid, sizeof(void*), "1", EMPTY_KEY_CMP, entityValidatorDisplay_impl, name, {nullptr}), re(re) {;}
     virtual ~BSQValidatorType() {;}
 };
 

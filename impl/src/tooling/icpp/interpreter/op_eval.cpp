@@ -2159,7 +2159,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, Storag
     {
     case BSQPrimitiveImplTag::validator_accepts:
         BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, this->cframe->argsbase[0]);
-        assert()
+        assert(false);
         break;
     case BSQPrimitiveImplTag::string_empty:
         assert(false);

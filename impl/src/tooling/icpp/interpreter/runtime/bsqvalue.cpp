@@ -1528,14 +1528,25 @@ bool BSQSequenceRe::match(BSQStringIterator iter, const std::vector<const BSQReg
     return this->opts[0]->match(iter, rcontinuation);
 }
 
-size_t BSQAlternationRe::mconsume() const
+size_t BSQSequenceRe::mconsume() const
 {
     std::vector<size_t> ml;
     std::transform(this->opts.cbegin(), this->opts.cend(), std::back_inserter(ml), [](const BSQRegexOpt* opt) {
         return opt->mconsume();
     });
 
-    return std::accumulate(ml.begin(), ml.end(), 0);
+    return std::accumulate(ml.begin(), ml.end(), (size_t)0);
+}
+
+BSQSequenceRe* BSQSequenceRe::parse(json j)
+{
+    std::vector<const BSQRegexOpt*> elems;
+    auto jopts = j["elems"];
+    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(elems), [](json arg) {
+        return BSQRegexOpt::parse(arg);
+    });
+
+    return new BSQSequenceRe(elems);
 }
 
 BSQRegex* bsqRegexJSONParse_impl(json j)
@@ -1569,16 +1580,11 @@ bool entityStringOfJSONParse_impl(const BSQType* btype, json j, StorageLocationP
     }
     else
     {
-        std::string sstr = j.get<std::string>();
-        const BSQRegex& vre = dynamic_cast<const BSQValidatorType*>(BSQType::g_typetable[dynamic_cast<const BSQStringOfType*>(btype)->validator])->re;
+        const BSQRegex* vre = dynamic_cast<const BSQValidatorType*>(BSQType::g_typetable[dynamic_cast<const BSQStringOfType*>(btype)->validator])->re;
 
-        BSQString bstr;
-        BSQStringType:: xxxx;
-
-        if(vre.re->match())
-        {
-            return false;
-        }
+        //
+        //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
+        //
 
         return BSQType::g_typeString->consops.fpJSONParse(BSQType::g_typeString, j, sl);
     }
@@ -1591,8 +1597,11 @@ std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPt
 
 bool entityDataStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {
-    assert(false);
-    return false;
+    //
+    //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
+    //
+
+    return BSQType::g_typeString->consops.fpJSONParse(BSQType::g_typeString, j, sl);
 }
 
 std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationPtr data)
