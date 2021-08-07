@@ -217,17 +217,17 @@ class ICPPTypeEmitter {
         }
         else if(tt.specialDecls.has(MIRSpecialTypeCategory.StringOfDecl)) {
             ptag = ICPPParseTag.StringOfTag;
+            extradata = (tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind
             const ecc = this.getICPPTypeInfoShallow(this.getMIRType("NSCore::String"));
 
-            extradata = ecc;
             size += ecc.inlinedatasize;
             mask += ecc.inlinedmask;
         }
         else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
             ptag = ICPPParseTag.DataStringTag;
+            extradata = (tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
             const ecc = this.getICPPTypeInfoShallow(this.getMIRType("NSCore::String"));
             
-            extradata = ecc;
             size += ecc.inlinedatasize;
             mask += ecc.inlinedmask;
         }
@@ -236,17 +236,18 @@ class ICPPTypeEmitter {
             //TODO: this is odd... we want to handle general typedecl that are of API types as well somehow so we need to adjust this a bit
             //
             ptag = ICPPParseTag.TypedNumberTag;
-            const ecc = this.getICPPTypeInfoShallow(this.getMIRType((tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind));
+            extradata = (tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
+            const ecc = this.getICPPTypeInfoShallow(this.getMIRType(extradata as MIRResolvedTypeKey));
             
-            extradata = ecc;
+            
             size += ecc.inlinedatasize;
             mask += ecc.inlinedmask;
         }
         else if(tt.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
             ptag = ICPPParseTag.EnumTag;
-            const ecc = this.getICPPTypeInfoShallow(this.getMIRType((tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind));
+            extradata = (tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
+            const ecc = this.getICPPTypeInfoShallow(this.getMIRType(extradata as MIRResolvedTypeKey));
             
-            extradata = ecc;
             size += ecc.inlinedatasize;
             mask += ecc.inlinedmask;
         }

@@ -24,6 +24,9 @@ std::map<std::string, BSQPrimitiveImplTag> Environment::g_primitiveinvokenameToI
     {"string_empty", BSQPrimitiveImplTag::string_empty},
     {"string_append", BSQPrimitiveImplTag::string_append},
 
+    {"stringof_string", BSQPrimitiveImplTag::stringof_string},
+    {"stringof_from", BSQPrimitiveImplTag::stringof_from},
+
     {"list_size", BSQPrimitiveImplTag::list_size},
     {"list_empty", BSQPrimitiveImplTag::list_empty},
     {"list_unsafe_get", BSQPrimitiveImplTag::list_unsafe_get},

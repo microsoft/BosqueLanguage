@@ -2157,16 +2157,23 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, Storag
 {
     switch (invk->implkey)
     {
-    case BSQPrimitiveImplTag::validator_accepts:
+    case BSQPrimitiveImplTag::validator_accepts: {
+        //BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, this->cframe->argsbase[0]);
         assert(false);
         break;
+    }
     case BSQPrimitiveImplTag::string_empty:
         assert(false);
         break;
     case BSQPrimitiveImplTag::string_append:
         assert(false);
         break;
-
+    case BSQPrimitiveImplTag::stringof_string:
+        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, SLPTR_LOAD_CONTENTS_AS(BSQString, this->cframe->argsbase[0]));
+        break;
+    case BSQPrimitiveImplTag::stringof_from:
+        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, SLPTR_LOAD_CONTENTS_AS(BSQString, this->cframe->argsbase[0]));
+        break;
     case BSQPrimitiveImplTag::list_size: {
         BSQNat length = dynamic_cast<const BSQListType*>(invk->enclosingtype)->getLength(SLPTR_LOAD_CONTENTS_AS(BSQList, this->cframe->argsbase[0]));
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, length);

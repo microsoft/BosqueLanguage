@@ -820,20 +820,17 @@ class SMTBodyEmitter {
             return new SMTConst(cval.value);
         }
         else if (cval instanceof MIRConstantTypedNumber) {
-            const sctype = this.typegen.getMIRType(cval.tnkey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [this.constantToSMT(cval.value)]);
+            return this.constantToSMT(cval.value);
         }
         else if (cval instanceof MIRConstantStringOf) {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
 
-            const sctype = this.typegen.getMIRType(cval.tskey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"")]);
+            return new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"");
         }
         else if (cval instanceof MIRConstantDataString) {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
 
-            const sctype = this.typegen.getMIRType(cval.tskey);
-            return new SMTCallSimple(this.typegen.getSMTConstructorName(sctype).cons, [new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"")]);
+            return new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"");
         }
         else {
             assert(cval instanceof MIRConstantRegex);
@@ -2391,7 +2388,7 @@ class SMTBodyEmitter {
             }
             case "validator_accepts": {
                 const bsqre = this.assembly.validatorRegexs.get(encltypekey) as BSQRegex;
-                const lre = bsqre.compileToSMTValidator(this.vopts.StringOpt === "ASCII");
+                const lre = bsqre.compileToPatternToSMT(this.vopts.StringOpt === "ASCII");
 
                 let accept: SMTExp = new SMTConst("false");
                 if (this.vopts.StringOpt === "ASCII") {
@@ -2412,6 +2409,12 @@ class SMTBodyEmitter {
             }
             case "string_append": {
                 return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
+            }
+            case "stringof_string": {
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTVar(args[0].vname));
+            }
+            case "stringof_from": {
+                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "list_fill": {
                 const [count, value] = args.map((arg) => new SMTVar(arg.vname));

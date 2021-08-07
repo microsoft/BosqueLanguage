@@ -180,9 +180,11 @@ public:
 class BSQLiteralRe : public BSQRegexOpt
 {
 public:
-    const std::string litval;
+    const std::string restr;
+    const std::string escstr;
+    const std::vector<uint8_t> litstr;
 
-    BSQLiteralRe(std::string lv) : BSQRegexOpt(), litval(lv) {;}
+    BSQLiteralRe(std::string restr, std::string escstr, std::vector<uint8_t> litstr) : BSQRegexOpt(), restr(restr), escstr(escstr), litstr(litstr) {;}
     virtual ~BSQLiteralRe() {;}
 
     virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
@@ -301,10 +303,9 @@ class BSQRegex
 {
 public:
     const std::string restr;
-    const std::regex re_exec;
     const BSQRegexOpt* re;
 
-    BSQRegex(std::string restr, const BSQRegexOpt* re): restr(restr), re_exec(restr), re(re) {;}
+    BSQRegex(std::string restr, const BSQRegexOpt* re): restr(restr), re(re) {;}
     ~BSQRegex() {;}
 
     std::string generate(RandGenerator& rnd, FuzzInfo& finfo);

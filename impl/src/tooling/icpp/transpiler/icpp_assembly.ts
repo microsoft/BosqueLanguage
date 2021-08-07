@@ -573,7 +573,7 @@ class ICPPAssembly
                         case ICPPParseTag.EnumTag: {
                             const ddcls = this.constdecls.filter((cdcl) => cdcl.optenumname !== undefined && cdcl.optenumname[0] === tdecl.tkey);
                             const enuminvs = ddcls.map((ddcl) => [`${(ddcl.optenumname as [string, string])[0]}::${(ddcl.optenumname as [string, string])[1]}`, ddcl.storageOffset] as [string, number]);
-                            return edecl.jemitEnum((edecl.extradata as ICPPTypeSizeInfoSimple).tkey, enuminvs);
+                            return edecl.jemitEnum(edecl.extradata as MIRResolvedTypeKey, enuminvs);
                         }
                         case ICPPParseTag.VectorTag: {
                             const sdata = edecl.extradata as ICPPTypeSizeInfoSimple;
