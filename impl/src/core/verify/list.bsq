@@ -18,9 +18,9 @@ __internal entity ListOperators provides Object {
     //Core accessors
     __assume_safe s_safeAs<T, U>(v: T): U # list_safeas
 
-    __safe function s_size(l: List<T>): Nat # list_size
-    __safe function s_empty(l: List<T>): Bool # list_empty
-    __assume_safe function s_safe_get(l: List<T>, i: Nat): T # list_safe_get
+    __safe function s_size<T>(l: List<T>): Nat # list_size
+    __safe function s_empty<T>(l: List<T>): Bool # list_empty
+    __assume_safe function s_safe_get<T>(l: List<T>, i: Nat): T # list_safe_get
 
     //assume non-empty
     recursive? function s_safeCheckPred_Core<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_safecheckpred
@@ -29,7 +29,14 @@ __internal entity ListOperators provides Object {
     //assume non-empty, safe, and exists at least one satisfying
     recursive? function s_computeISequence<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): ISequence # list_computeisequence
 
-    //TODO: Join sequence here -- group join is explicit map/filter
+    //TODO: need JSequence to enforce relations
+    recursive? function s_join_Helper<T, U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> # list_join_helper
+    
+    //TODO: need SSequence to enforce relations
+    recursive? function s_sort_Helper(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> # list_sort_helper
+
+    //TODO: need USequence to enforce relations
+    recursive? function s_unique_Helper(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> # list_unique_helper
 
     ////
     //Constructors 
@@ -42,7 +49,9 @@ __internal entity ListOperators provides Object {
     __assume_safe function s_concat2_Constructor(l1: List<T>, l2: List<T>, count: Nat): List<T> # list_concat2
     __assume_safe function s_slice_Constructor(l: List<T>, start: Nat, end: Nat, count: Nat): List<T> # list_slice
 
-     recursive? function s_filter_Constructor<T>(l: List<T>, isq: ISequence, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_filter_helper
+    recursive? function s_filter_Constructor<T>(l: List<T>, isq: ISequence, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_filter_helper
+
+    recursive? function s_map_Constructor<T, U>(l: List<T>, count: Nat, f: recursive? fn(_: T) -> U): List<U> # list_map
 
     ////
     //Destructors
@@ -55,7 +64,7 @@ __internal entity ListOperators provides Object {
     //In code support operations
     ////////////////
 
-    recursive? function s_safeCheckPred(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
+    recursive? function s_safeCheckPred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
         if(ListOperators::s_empty<T>(l)) {
             return List<T>@{};
         }
@@ -65,7 +74,7 @@ __internal entity ListOperators provides Object {
         }
     }
 
-    recursive? function s_safeCheckFn<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<T> {
+    recursive? function s_safeCheckFn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<T> {
         if(ListOperators::s_empty<T>(l)) {
             return List<T>@{};
         }
@@ -206,6 +215,18 @@ __internal entity ListOperators provides Object {
             }
         }
     }
+
+    recursive? function s_map_Helper<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<U>@{};
+        }
+        else {
+            let sl = ListOperators::s_safeCheckFn<T, U>[recursive?](l, f);
+
+            //TODO: here special case for small model
+            return ListOperators::s_map_Constructor<T, U>[recursive?](sl, ListOperators::s_size<T>(sl), f);
+        }
+    }
 }
 
 __internal entity ListKeyOperators provides Object {
@@ -308,17 +329,17 @@ __internal entity ListArithOperators provides Object {
         let zl = l.index();
         
         //TODO: here special case for small model
-        return ListOperators::s_maxIdx_Core<T>(sl);
+        return ListOperators::s_maxIdx_Core<T>(zl);
     }
 
-    recursive? function s_argminIdx_Helper<T, unique Some U>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
+    recursive? function s_argminIdx_Helper<T, U unique Some>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
         let zl = l.map(f).index();
         
         //TODO: here special case for small model
         return ListOperators::s_minIdx_Core<U>(zl);
     }
     
-    recursive? function s_argmaxIdx_Helper<T, unique Some U>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
+    recursive? function s_argmaxIdx_Helper<T, U unique Some>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
         let zl = l.map(f).index();
         
         //TODO: here special case for small model
@@ -415,30 +436,8 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-
-
-
-    private recursive? function s_map_Constructor<U>(l: List<T>, count: Nat, f: recursive? fn(_: T) -> U): List<U> # list_map
-
-    private recursive? function s_map_Helper<U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> {
-        if(List<T>::s_empty(l)) {
-            return List<U>@{};
-        }
-        else {
-            let sl = List<T>::s_safeCheckFn<U>[recursive?](l, f);
-
-            //TODO: here special case for small model
-            return List<T>::s_map_Constructor<U>[recursive?](sl, List<T>::s_size(sl), f);
-        }
-    }
-
-    private recursive? function s_join_Helper<U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<#[T, U]> # list_join_helper
-    private recursive? function s_joinGroup_Helper<U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<#[T, List<U>]> # list_joingroup_helper
-
-    private recursive? function s_sort_Helper(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> # list_sort_helper
-
-    private function s_rangeInBounds(l: List<T>, start: Nat, end: Nat): Bool {
-        return start <= end & end <= List<T>::s_size(l); 
+    private function s_sliceRangeInBounds(l: List<T>, start: Nat, end: Nat): Bool {
+        return start <= end & end <= ListOperators::s_size<T>(l); 
     }
 
     ////
@@ -454,46 +453,46 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    //TODO: when overloading is working better then make this a single concat with overloads
-    function concat(l1: List<T>, l2: List<T>): List<T> {
+    function concat(...ll: List<List<T>>): List<T> {
+        xxxx;
         return List<T>::s_concat2_Helper(l1, l2);
     }
 
     method size(): Nat {
-        return List<T>::s_size(this);
+        return ListOperators::s_size<T>(this);
     }
 
     method empty(): Bool {
-        return List<T>::s_empty(this);
+        return ListOperators::s_empty<T>(this);
     }
 
     method front(): T 
-        requires release !List<T>::s_empty(this);
+        requires release !ListOperators::s_empty<T>(this);
     {
         return List<T>::s_unsafe_get(this, 0n);
     }
 
     method frontOrNone(): T? {
-        if(List<T>::s_empty(this)) {
+        if(ListOperators::s_empty<T>(this)) {
             return none;
         }
         else {
-            return List<T>::s_unsafe_get(this, 0n);
+            return ListOperators::s_safe_get<T>(this, 0n);
         }
     }
 
     method frontOption(): Option<T> {
-        if(List<T>::s_empty(this)) {
+        if(ListOperators::s_empty<T>(this)) {
             return nothing;
         }
         else {
-            return List<T>::s_unsafe_get(this, 0n);
+            return ListOperators::s_safe_get<T>(this, 0n);
         }
     }
 
     method frontTry(out? res: T): Bool {
-        if(!List<T>::s_empty(this)) {
-            res = List<T>::s_unsafe_get(this, 0n);
+        if(!ListOperators::s_empty<T>(this)) {
+            res = ListOperators::s_safe_get<T>(this, 0n);
             return true;
         }
         else {
@@ -1130,7 +1129,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     method slice(start?: Nat=0n, end?: Nat=List<T>::s_size(this)): List<T> 
-        requires release List<T>::s_rangeInBounds(this, start, end);
+        requires release List<T>::s_sliceRangeInBounds(this, start, end);
     {
         return List<T>::s_slice_Helper(this, s, e);
     }
