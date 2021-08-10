@@ -298,11 +298,6 @@ class BSQRegex {
     }
 }
 
-enum SpecialCharKind {
-    Wildcard = 0x0,
-    WhiteSpace
-}
-
 abstract class RegexComponent {
     useParens(): boolean {
         return false;

@@ -11,6 +11,18 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
     __safe private function s_has_key(m: Map<K, V>, key: K): Bool # map_has_key
     __safe private function s_at_val(m: Map<K, V>, key: K): V # map_at_val
     
+    private function {when T KeyType} s_hasCheck_Core(l: List<T>, count: Nat, val: T): Bool # list_hascheck
+
+    private function {when T KeyType} s_hasCheck(l: List<T>, val: T): Bool {
+        if(List<T>::s_empty(l)) {
+            return false;
+        }
+        else {
+            //TODO: here special case for small model
+            return List<T>::s_hasCheck_Core(l, List<T>::s_size(sl), val);
+        }
+    }
+
     method size(): Nat {
         return Map<K, V>::s_size(this);
     }

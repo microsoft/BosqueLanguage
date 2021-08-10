@@ -32,14 +32,13 @@ const KeywordStrings = [
     "fn",
     "pred",
     "function",
-    "grounded",
     "if",
     "invariant",
     "let",
     "method",
     "namespace",
     "none",
-    "of",
+    "nothing",
     "ok",
     "operator",
     "parsable",
@@ -51,17 +50,16 @@ const KeywordStrings = [
     "release",
     "return",
     "requires",
+    "something",
+    "spec",
     "switch",
     "test",
     "true",
     "type",
     "typedef",
     "typedecl",
-    "validate",
-    "validator",
     "var",
     "when",
-    "where",
     "yield"
 ].sort((a, b) => { return (a.length !== b.length) ? (b.length - a.length) : a.localeCompare(b); });
 
@@ -156,7 +154,6 @@ const RightScanParens = ["]", ")", "}", "|)", "|}"];
 
 const AttributeStrings = [
     "entrypoint",
-    "struct",
     "hidden",
     "private",
     "factory",
@@ -165,29 +162,23 @@ const AttributeStrings = [
     "override",
     "recursive?",
     "recursive",
-    "parsable",
-    "validator",
     "derived",
     "lazy",
     "memoized",
-    "mixed",
     "interned",
     "inline",
     "prefix",
     "infix",
-    "numeric",
     "dynamic",
-    "grounded",
-    "unique",
-    "validator",
 
     "__internal",
     "__primitive",
     "__safe",
-    "__assume_safe"
+    "__assume_safe",
+    "__universal"
 ];
 
-const UnsafeFieldNames = ["is", "as", "isNone", "isSome", "asTry", "asOrNone", "hasProperty", "getPropertyOrNone", "getPropertyTry"]
+const UnsafeFieldNames = ["is", "as", "isNone", "isSome", "asTry", "asOrNone", "asOptional", "asResult", "hasProperty", "getPropertyOrNone", "getPropertyTry"]
 
 const TokenStrings = {
     Clear: "[CLEAR]",

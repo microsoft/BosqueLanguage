@@ -7,12 +7,20 @@
 namespace NSCore;
 
 //<summary>Special type which all values are instances of.</summary>
-mixed concept Any {
+__universal concept Any {
     method is<T>(): Bool # special_method
     method as<T>(): T # special_method
 
     method asOrNone<T>(): T? {
         return this.is<T>() ? this.as<T>() : none;
+    }
+
+    method asOption<T>(): Option<T> {
+        return this.is<T>() ? something(this.as<T>()) : nothing;
+    }
+
+    method asResult<T>(): Result<T, None> {
+        return this.is<T>() ? ok(this.as<T>()) : err(none);
     }
 
     method asTry<T>(out? v: T): Bool {
@@ -30,34 +38,35 @@ mixed concept Any {
 }
 
 //<summary>Special type for representing all non-none values.</summary>
-mixed concept Some provides Any {
+__universal concept Some provides Any {
 }
 
 //<summary>Special type for indicating a value can be used as a key in a collection.</summary>
-mixed concept KeyType provides Any {
-    function equal<T grounded KeyType>(a: T, b: T): Bool # special_method
-    function less<T grounded KeyType>(a: T, b: T): Bool # special_method
+__universal concept KeyType provides Any {
+    function equal<T KeyType>(a: T, b: T): Bool # special_method
+    function less<T KeyType>(a: T, b: T): Bool # special_method
 }
 
-//<summary>Type for indicating that a datatype is Plain-Old-Data.</summary>
-mixed concept PODType provides APIType {
+//<summary>Type for indicating that a datatype is a Validator.</summary>
+__universal concept Validator {
 }
 
-//<summary>Type to unify Buffers and APITypes at top level for checking</summary>
-mixed concept APIValue provides Any {
-    function generate<T grounded APIValue>(): T # apivalue_generate
+//<summary>Type for indicating that a datatype is parsable.</summary>
+__universal concept Parsable {
 }
 
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
-mixed concept APIType provides APIValue {
+__universal concept APIType {
+    //ONLY FOR USE IN MOCKING
+    function generate<T APIType>(): T # apitype_generate
 }
 
-//<summary>Type for representing the none-value.</summary>
-__internal grounded struct entity None provides KeyType, PODType, APIType {
+//<summary>Type for representing the none value.</summary>
+__internal entity None provides KeyType, APIType {
 }
 
 //<summary>Primitive boolean value.</summary>
-__internal grounded struct entity Bool provides Some, KeyType, PODType, APIType {
+__internal entity Bool provides Some, KeyType, APIType {
 }
 
 abstract prefix operator +(a: Some): Some;
@@ -74,10 +83,10 @@ abstract infix operator <=(a: Some, b: Some): Bool;
 abstract infix operator >=(a: Some, b: Some): Bool;
 
 //<summary>Primitive integer value.</summary>
-__internal grounded struct entity Int provides Some, KeyType, PODType, APIType {
+__internal entity Int provides Some, KeyType, APIType {
     const zero: Int = 0i;
     const one: Int = 1i;
-    const negone: Int = -1i;
+    const negativeone: Int = -1i;
 }
 __safe __primitive inline prefix operator +(a: Int): Int = default;
 __primitive inline prefix operator -(a: Int): Int = default;
@@ -93,7 +102,7 @@ __safe __primitive inline infix operator <=(a: Int, b: Int): Bool = default;
 __safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 
 //<summary>Primitive natural number value.</summary>
-__internal grounded struct entity Nat provides Some, KeyType, PODType, APIType {
+__internal entity Nat provides Some, KeyType, APIType {
     const zero: Nat = 0n;
     const one: Nat = 1n;
 }
@@ -110,10 +119,10 @@ __safe __primitive inline infix operator <=(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal grounded struct entity BigInt provides Some, KeyType, PODType, APIType {
+__internal entity BigInt provides Some, KeyType, APIType {
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
-    const negone: BigInt = -1I;
+    const negativeone: BigInt = -1I;
 }
 __safe __primitive inline prefix operator +(a: BigInt): BigInt = default;
 __safe __primitive inline prefix operator -(a: BigInt): BigInt = default;
@@ -129,7 +138,7 @@ __safe __primitive inline infix operator <=(a: BigInt, b: BigInt): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal grounded struct entity BigNat provides Some, KeyType, PODType, APIType {
+__internal entity BigNat provides Some, KeyType, APIType {
     const zero: BigNat = 0N;
     const one: BigNat = 1N;
 }
@@ -146,7 +155,7 @@ __safe __primitive inline infix operator <=(a: BigNat, b: BigNat): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
 
 //<summary>Primitive rational value.</summary>
-__internal grounded struct entity Rational provides Some, PODType, APIType {
+__internal entity Rational provides Some, APIType {
 }
 __safe __primitive inline prefix operator +(a: Rational): Rational? = default;
 __safe __primitive inline prefix operator -(a: Rational): Rational? = default;
@@ -161,11 +170,11 @@ __safe __primitive inline infix operator >(a: Rational, b: Rational): Bool = def
 __safe __primitive inline infix operator <=(a: Rational, b: Rational): Bool = default;
 __safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
 
-//<summary>Primitive float value -- compiler flags control bitness -- defaults to 64bit.</summary>
-__internal grounded struct entity Float provides Some, PODType, APIType {
+//<summary>Primitive float value defaults to 64bit.</summary>
+__internal entity Float provides Some, APIType {
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
-    const negone: Float = -1.0f;
+    const negativeone: Float = -1.0f;
 }
 __safe __primitive inline prefix operator +(a: Float): Float = default;
 __safe __primitive inline prefix operator -(a: Float): Float = default;
@@ -179,10 +188,10 @@ __safe __primitive inline infix operator <=(a: Float, b: Float): Bool = default;
 __safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 
 //<summary>Primitive float decimal value.</summary>
-__internal grounded struct entity Decimal provides Some, PODType, APIType {
+__internal entity Decimal provides Some, APIType {
     const zero: Decimal = 0.0d;
     const one: Decmial = 1.0d;
-    const negone: Decmial = -1.0d;
+    const negativeone: Decmial = -1.0d;
 }
 __safe __primitive inline prefix operator +(a: Decimal): Decimal = default;
 __safe __primitive inline prefix operator -(a: Decimal): Decimal = default;
@@ -196,7 +205,7 @@ __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = defa
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string position value.</summary>
-__internal struct entity StringPos provides Some {
+__internal StringPos provides Some {
 }
 __primitive inline infix operator <(a: StringPos, b: StringPos): Bool = default;
 __primitive inline infix operator >(a: StringPos, b: StringPos): Bool = default;
@@ -204,7 +213,7 @@ __primitive inline infix operator <=(a: StringPos, b: StringPos): Bool = default
 __primitive inline infix operator >=(a: StringPos, b: StringPos): Bool = default;
 
 //<summary>Primitive string value.</summary>
-__internal grounded entity String provides Some, KeyType, PODType, APIType {
+__internal entity String provides Some, KeyType, APIType {
     __safe private function s_empty(s: String): Bool # string_empty
 
     __safe private function s_iteratorMin(s: String): StringPos # string_iterator_min
@@ -255,7 +264,7 @@ __internal grounded entity String provides Some, KeyType, PODType, APIType {
 }
 
 //<summary>Primitive safe string value.</summary>
-__internal grounded struct entity StringOf<T where validator> provides Some, KeyType, PODType, APIType {
+__internal entity StringOf<T unique Validator> provides Some, KeyType, APIType {
     __safe private function s_string(s: StringOf<T>): String # stringof_string
     __safe private function s_from(s: String): StringOf<T> # stringof_from
 
@@ -271,9 +280,9 @@ __internal grounded struct entity StringOf<T where validator> provides Some, Key
 }
 
 //<summary>Primitive DataString value.</summary>
-__internal grounded struct entity DataString<T where parsable> provides Some, APIValue {
-    __safe private function s_string(s: StringOf<T>): String # datastring_string
-    __safe private function s_from(s: String): StringOf<T> # datastring_from
+__internal entity DataString<T unique Parsable> provides Some, KeyType, APIType {
+    __safe private function s_string(s: DataString<T>): String # datastring_string
+    __safe private function s_from(s: String): DataString<T> # datastring_from
 
     method string(): String {
         return DataString<T>::s_string(this);
@@ -304,86 +313,115 @@ enum BufferCompression {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-__internal entity Buffer<T where grounded PODType | APIType> provides Some, APIValue {
-    //private field format: BufferFormat;
-    //private field encoding: BufferEncoding;
-    //private field compression: BufferCompression;
-    //private field buf: ByteBuffer;
+entity Buffer<T APIType> provides Some, APIType {
+    private field format: BufferFormat;
+    private field encoding: BufferEncoding;
+    private field compression: BufferCompression;
+    private field buf: ByteBuffer;
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-__internal entity DataBuffer<T where parsable> provides Some, APIValue {
-    //private field format: BufferFormat;
-    //private field encoding: BufferEncoding;
-    //private field compression: BufferCompression;
-    //private field buf: ByteBuffer;
+entity DataBuffer<T unique Parsable> provides Some, APIType {
+    private field format: BufferFormat;
+    private field encoding: BufferEncoding;
+    private field compression: BufferCompression;
+    private field buf: ByteBuffer;
 }
 
 //<summary>An efficient byte buffer for data.</summary>
-__internal entity ByteBuffer provides Some, APIValue {
+__internal entity ByteBuffer provides Some, APIType {
 }
 
 //<summary>Primitive ISOTime value.</summary>
-__internal grounded struct entity ISOTime provides Some, PODType, APIType {
+__internal entity ISOTime provides Some, APIType {
 }
 
 //<summary>Primitive LogicalTime value.</summary>
-__internal grounded struct entity LogicalTime provides Some, KeyType, PODType, APIType {
+__internal entity LogicalTime provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive UUID value.</summary>
-__internal grounded entity UUID provides Some, KeyType, PODType, APIType {
+__internal entity UUID provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
-__internal grounded entity ContentHash provides Some, KeyType, PODType, APIType {
+__internal entity ContentHash provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive regex value.</summary>
 __internal entity Regex provides Some {
 }
 
+/*
 struct entity RegexMatch provides Some {
     field index: Nat;
     field length: Nat;
 
     invariant $index >= 0n & $length >= 0n;
 }
+*/
 
 //<summary>Static methods for Tuples.</summary>
-concept Tuple provides Some {
+__universal concept Tuple provides Some {
     function append(arg: Any): Tuple # special_method
 }
 
 //<summary>Static methods for Records.</summary>
-concept Record provides Some {
+__universal concept Record provides Some {
     function join(arg: Any): Record # special_method
 }
 
+//<summary>Type for representing the nothing option value.</summary>
+__internal entity Nothing provides Some, APIType {
+}
+
+//<summary>Type for representing the nothing option value.</summary>
+__internal entity Something<T> provides Some, Option<T>, APIType when T APIType {
+}
+
+concept Option<T> provides Some, APIType when T APIType {
+    method isNothing(): Bool # special_method
+    method isSomething(): Bool # special_method
+
+    method asNothing(): Nothing {
+        return this.as<Nothing>();
+    }
+
+    method asSomething(): Something<T> {
+        return this.as<Something<T>>();
+    }
+
+    method asSomethingTry(out? v: Something<T>): Bool {
+        if(this.isNothing()) {
+            return false;
+        }
+        else {
+            v = this.asSomething();
+            return true;
+        }
+    }
+
+    method data(): T {
+        return this.asSomething().value();
+    }
+
+    method dataTry(out? v: T): Bool {
+        if(this.isNothing()) {
+            return false;
+        }
+        else {
+            v = this.asSomething().value();
+            return true;
+        }
+    }
+}
+
 //<summary>Result type.</summary>
-struct concept Result<T, E=None> provides Some {
-    struct entity Ok provides Result<T, E> {
-        field value: T;
-
-        function create(value: T): Ok {
-            return Ok@{ value = value };
-        }
+concept Result<T, E=None> provides Some {
+    __internal entity Ok provides Some, Result<T, E> {
     }
 
-    struct entity Err provides Result<T, E> {
-        field info: E;
-
-        function create(info: E): Err {
-            return Err@{ info = info };
-        }
-    }
-
-    function createOk(value: T): Result<T, E> {
-        return Ok::create(value);
-    }
-
-    function createErr(info: E): Result<T, E> {
-        return Err::create(info);
+    __internal entity Err provides Result<T, E> {
     }
 
     method isOk(): Bool {
@@ -394,24 +432,24 @@ struct concept Result<T, E=None> provides Some {
         return this.is<Err>();
     }
 
-    method value(): T {
-        return this.as<Ok>().value;
+    method result(): T {
+        return this.as<Ok>().value();
     }
 
     method error(): E {
-        return this.as<Err>().info;
+        return this.as<Err>().value();
     }
 
     method convert<U=?, V=?>(): Result<U, V> {
-        return this.isOk()? Result<U, V>::createOk(this.value().as<U>()) : Result<U, V>::createErr(this.error().as<V>()); 
+        return this.isOk()? Result<U, V>::Ok@{this.value().as<U>()) : Result<U, V>::Err(this.error().as<V>()); 
     }
 }
 
 //<summary>All actual entities/concepts implicitly provide this concept.</summary>
-mixed concept Object provides Some {
+__universal concept Object provides Some {
 }
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>
-mixed concept Expandoable<T> provides Object {
+concept Expandoable<T> provides Object {
     method expand<U>(): List<U> # special_method
 }
