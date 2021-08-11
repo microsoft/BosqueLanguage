@@ -437,7 +437,7 @@ __internal entity ListKeyOperators provides Object {
         }
     }
 
-    function s_overlapsMapKV_KeyHelper<T KeyType, U>(<T KeyType>(l1: List<[T, U]>, l2: List<[T, U]>): Bool {
+    function s_overlapsMapKV_KeyHelper<T KeyType, U>(l1: List<[T, U]>, l2: List<[T, U]>): Bool {
         if(ListOperators::s_empty<[T, U]>(l1) | ListOperators::s_empty<[T, U]>(l2)) {
             return false;
         }
@@ -1786,6 +1786,10 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     //
-    //Convert to Map<K, V> and Set<T> operations
+    //TODO: ref versions of the add/remove/set operators
+    //
+
+    //
+    //TODO: Convert to Map<K, V> and Set<T> operations
     //
 }

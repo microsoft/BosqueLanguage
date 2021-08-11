@@ -6,67 +6,109 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-entity Map<K KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K APIType && V APIType {
-    private field List<[K, V]> m_entries;
+__internal entity Map<K KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K APIType && V APIType {
+    private method value(): List<[K, V]> # special_extract
+    private function from(v: List<[K, V]>): # special_inject
 
     method empty(): Bool {
-        return ListOperators::s_empty<[K, V]>(this.m_entries);
+        return ListOperators::s_empty<[K, V]>(this.value());
     }
 
     method size(): Nat {
-        return ListOperators::s_size<[K, V]>(this.m_entries);
+        return ListOperators::s_size<[K, V]>(this.value());
     }
 
     method has(key: K): Bool {
-        return ListKeyOperators::s_hasCheckMapKV<[K, V]>(this.m_entries, k);
+        return ListKeyOperators::s_hasCheckMapKV<[K, V]>(this.value(), k);
     }
 
     method get(key: K): V {
-        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.m_entries, k);
-        check idx != ListOperators::s_size<[K, V]>(this.m_entries);
+        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
+        check idx != ListOperators::s_size<[K, V]>(this.value());
         return ListOperators::s_safe_get<[K, V]>(this.m_entries, idx);
     }
 
     method getOrNone(k: K): V? {
-        xxxx;
-        return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : none;
+        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
+        if(idx == ListOperators::s_size<[K, V]>(this.value())) {
+            return none;
+        }
+        else {
+            return ListOperators::s_safe_get<[K, V]>(this.value(), idx);
+        }
     }
 
     method getOption(k: K): Option<V> {
-        xxxx;
-        return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : d;
+        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
+        if(idx == ListOperators::s_size<[K, V]>(this.value())) {
+            return nothing;
+        }
+        else {
+            return something(ListOperators::s_safe_get<[K, V]>(this.value(), idx));
+        }
     }
 
     method getTry(k: K, out? v: V): Bool {
-        xxxx;
-        if(Map<K, V>::s_has_key(this, k)) {
-            v = Map<K, V>::s_at_val(this, k);
-            return true;
+        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
+        if(idx == ListOperators::s_size<[K, V]>(this.value())) {
+            return false;
         }
         else {
-            return false;
+            v = ListOperators::s_safe_get<[K, V]>(this.value(), idx);
+            return true;
         }
     }
 
     method merge(m: Map<K, V>): Map<K, V> {
-        xxxx;
+        let overlap = ListKeyOperators::s_overlapsMapKV_KeyHelper<K, V>(this.value(), m.value());
+        if(!overlap) {
+            let am = ListOperators::s_concat2_Helper<T>(this.value(), m.value());
+            return Map<K, V>::from(am);
+        }
+        else {
+            let tl = this.value();
+            let ml = m.value();
+
+            let fm = ListOperators::s_filter_Helper<[K, V]>(ml, pred(kvp: [K, V]) => !ListKeyOperators::s_hasCheckMapKV(tl, kvp.0));
+            let am = ListOperators::s_concat2_Helper<T>(this.value(), fm);
+            
+            return Map<K, V>::from(am);
+        }
     }
 
-    method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
-
+    recursive? method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
+        let sm = ListOperators::s_filter_Helper<[K, V]>(this.value(), p);
+        return Map<K, V>::from(sm);
     }
 
-    method remap(f: recursive? fn(v: [K, V]) -> V): Map<K, V> {
-        
+    recursive? method remap(f: recursive? fn(v: [K, V]) -> V): Map<K, V> {
+        let rm = ListOperators::s_map_Helper<[K, V]>(this.value(), recursive? fn(v: [K, V]): [K, V] => [v.0, f[recursive?](v)]);
+        return Map<K, V>::from(rm);
     }
 
     method add(k: K, v: V): Map<K, V> {
+        let am = ListOperators::s_concat2_Helper<T>(this.value(), List<[K, V]>{[k, v]});
+        return Map<K, V>::from(am);
     }
 
     method set(k: K, v: V): Map<K, V> {
+        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
+        check idx != ListOperators::s_size<[K, V]>(this.value());
+
+        let sm = this.value().set(idx, [k, v]);
+        return Map<K, V>::from(sm);
     }
 
     method remove(k: K): Map<K, V> {
+        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
+        check idx != ListOperators::s_size<[K, V]>(this.value());
+
+        let rm = this.value().remove(idx);
+        return Map<K, V>::from(rm);
     }
+
+    //
+    //TODO: ref versions of the add/remove/set operators
+    //
 }
 

@@ -272,35 +272,15 @@ __internal entity String provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive safe string value.</summary>
-__internal entity StringOf<T unique Validator> provides Some, KeyType, APIType {
-    __safe private function s_string(s: StringOf<T>): String # stringof_string
-    __safe private function s_from(s: String): StringOf<T> # stringof_from
-
-    method string(): String {
-        return StringOf<T>::s_string(this);
-    }
-
-    function from(str: String): StringOf<T>
-        requires release T::accepts(str);
-    {
-        return StringOf<T>::s_from(str);
-    }
+__internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
+    method value(): String # special_extract
+    function from(str: String): StringOf<T> # special_inject
 }
 
 //<summary>Primitive DataString value.</summary>
-__internal entity DataString<T unique Parsable> provides Some, KeyType, APIType {
-    __safe private function s_string(s: DataString<T>): String # datastring_string
-    __safe private function s_from(s: String): DataString<T> # datastring_from
-
-    method string(): String {
-        return DataString<T>::s_string(this);
-    }
-
-    function from(str: String): StringOf<T>
-        requires release T::parse(str).isOk();
-    {
-        return DataString<T>::s_from(str);
-    }
+__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType {
+    method value(): String # special_extract
+    function from(str: String): # special_inject
 }
 
 enum BufferFormat {
@@ -384,7 +364,9 @@ __internal entity Nothing provides Some, APIType {
 }
 
 //<summary>Type for representing the nothing option value.</summary>
-__internal entity Something<T> provides Some, Option<T>, APIType when T APIType {
+__internal __constructable entity Something<T> provides Some, Option<T>, APIType when T APIType {
+    method value(): T # special_extract
+    function from(v: T): # special_inject
 }
 
 //<summary>Generic type for all Option<T> to inherit from.</summary>
@@ -442,10 +424,14 @@ concept Option<T> provides IOption, APIType when T APIType {
 
 //<summary>Result type.</summary>
 concept Result<T, E=None> provides Some {
-    __internal entity Ok provides Some, Result<T, E> {
+    __internal __constructable entity Ok provides Some, Result<T, E> {
+        method value(): T # special_extract
+        function from(v: T): # special_inject
     }
 
-    __internal entity Err provides Result<T, E> {
+    __internal __constructable entity Err provides Result<T, E> {
+        method value(): T # special_extract
+        function from(v: T): # special_inject
     }
 
     method isOk(): Bool {
@@ -466,10 +452,10 @@ concept Result<T, E=None> provides Some {
 
     method convert<U=?, V=?>(): Result<U, V> {
         if(this.is<Ok>()) {
-            return Result<U, V>::Ok@{this.result().as<U>());
+            return ok(this.result().as<U>());
         }
         else {
-            return Result<U, V>::Err(this.error().as<V>());
+            return err(this.error().as<V>());
         }
     }
 }
