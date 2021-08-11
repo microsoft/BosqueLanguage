@@ -414,6 +414,15 @@ concept Option<T> provides Some, APIType when T APIType {
             return true;
         }
     }
+
+    method convert<V=?>(): Option<V> {
+        if(this === nothing) {
+            return nothing;
+        }
+        else {
+            return Something<V>@{this.data().as<V>()};
+        }
+    }
 }
 
 //<summary>Result type.</summary>
@@ -441,7 +450,12 @@ concept Result<T, E=None> provides Some {
     }
 
     method convert<U=?, V=?>(): Result<U, V> {
-        return this.isOk()? Result<U, V>::Ok@{this.value().as<U>()) : Result<U, V>::Err(this.error().as<V>()); 
+        if(this.is<Ok>()) {
+            return Result<U, V>::Ok@{this.result().as<U>());
+        }
+        else {
+            return Result<U, V>::Err(this.error().as<V>());
+        }
     }
 }
 
