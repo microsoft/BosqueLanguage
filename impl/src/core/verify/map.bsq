@@ -6,50 +6,39 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, PODType when K PODType && V PODType, APIType when K APIType && V APIType {
-    __safe private function s_size(m: Map<K, V>): Nat # map_size
-    __safe private function s_has_key(m: Map<K, V>, key: K): Bool # map_has_key
-    __safe private function s_at_val(m: Map<K, V>, key: K): V # map_at_val
-    
-    private function {when T KeyType} s_hasCheck_Core(l: List<T>, count: Nat, val: T): Bool # list_hascheck
+entity Map<K KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K APIType && V APIType {
+    private field List<[K, V]> m_entries;
 
-    private function {when T KeyType} s_hasCheck(l: List<T>, val: T): Bool {
-        if(List<T>::s_empty(l)) {
-            return false;
-        }
-        else {
-            //TODO: here special case for small model
-            return List<T>::s_hasCheck_Core(l, List<T>::s_size(sl), val);
-        }
+    method empty(): Bool {
+        return ListOperators::s_empty<[K, V]>(this.m_entries);
     }
 
     method size(): Nat {
-        return Map<K, V>::s_size(this);
-    }
-
-    method empty(): Bool {
-        return Map<K, V>::s_size(this) == 0n;
+        return ListOperators::s_size<[K, V]>(this.m_entries);
     }
 
     method has(key: K): Bool {
-        return Map<K, V>::s_has_key(this, key);
+        return ListKeyOperators::s_hasCheckMapKV<[K, V]>(this.m_entries, k);
     }
 
-    method get(key: K): V 
-        requires release Map<K, V>::s_has_key(this, key);
-    {
-        return Map<K, V>::s_at_val(this, key);
+    method get(key: K): V {
+        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.m_entries, k);
+        check idx != ListOperators::s_size<[K, V]>(this.m_entries);
+        return ListOperators::s_safe_get<[K, V]>(this.m_entries, idx);
     }
 
     method getOrNone(k: K): V? {
+        xxxx;
         return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : none;
     }
 
-    method getOrDefault(k: K, d: V): V {
+    method getOption(k: K): Option<V> {
+        xxxx;
         return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : d;
     }
 
     method getTry(k: K, out? v: V): Bool {
+        xxxx;
         if(Map<K, V>::s_has_key(this, k)) {
             v = Map<K, V>::s_at_val(this, k);
             return true;
@@ -58,9 +47,26 @@ entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, POD
             return false;
         }
     }
-}
 
-entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>> {
-}
+    method merge(m: Map<K, V>): Map<K, V> {
+        xxxx;
+    }
 
+    method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
+
+    }
+
+    method remap(f: recursive? fn(v: [K, V]) -> V): Map<K, V> {
+        
+    }
+
+    method add(k: K, v: V): Map<K, V> {
+    }
+
+    method set(k: K, v: V): Map<K, V> {
+    }
+
+    method remove(k: K): Map<K, V> {
+    }
+}
 

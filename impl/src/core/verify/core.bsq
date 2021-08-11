@@ -48,17 +48,25 @@ __universal concept KeyType provides Any {
 }
 
 //<summary>Type for indicating that a datatype is a Validator.</summary>
-__universal concept Validator {
+__universal concept Validator provides Any {
 }
 
 //<summary>Type for indicating that a datatype is parsable.</summary>
-__universal concept Parsable {
+__universal concept Parsable provides Any {
 }
 
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
-__universal concept APIType {
+__universal concept APIType provides Any {
     //ONLY FOR USE IN MOCKING
     function generate<T APIType>(): T # apitype_generate
+}
+
+//<summary>Type for indicating that a datatype overrides the algebraic operators +, -, *, / along with the needed consts.</summary>
+__universal concept Algebraic provides Any {
+}
+
+//<summary>Type for indicating that a datatype overrides the algebraic operators ==, !=, <, >, <=, >=.</summary>
+__universal concept Orderable provides Any {
 }
 
 //<summary>Type for representing the none value.</summary>
@@ -83,7 +91,7 @@ abstract infix operator <=(a: Some, b: Some): Bool;
 abstract infix operator >=(a: Some, b: Some): Bool;
 
 //<summary>Primitive integer value.</summary>
-__internal entity Int provides Some, KeyType, APIType {
+__internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Int = 0i;
     const one: Int = 1i;
     const negativeone: Int = -1i;
@@ -102,7 +110,7 @@ __safe __primitive inline infix operator <=(a: Int, b: Int): Bool = default;
 __safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 
 //<summary>Primitive natural number value.</summary>
-__internal entity Nat provides Some, KeyType, APIType {
+__internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Nat = 0n;
     const one: Nat = 1n;
 }
@@ -119,7 +127,7 @@ __safe __primitive inline infix operator <=(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal entity BigInt provides Some, KeyType, APIType {
+__internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
     const negativeone: BigInt = -1I;
@@ -138,7 +146,7 @@ __safe __primitive inline infix operator <=(a: BigInt, b: BigInt): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal entity BigNat provides Some, KeyType, APIType {
+__internal __typedeclable entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigNat = 0N;
     const one: BigNat = 1N;
 }
@@ -155,7 +163,7 @@ __safe __primitive inline infix operator <=(a: BigNat, b: BigNat): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
 
 //<summary>Primitive rational value.</summary>
-__internal entity Rational provides Some, APIType {
+__internal __typedeclable entity Rational provides Some, Algebraic, Orderable, APIType {
 }
 __safe __primitive inline prefix operator +(a: Rational): Rational? = default;
 __safe __primitive inline prefix operator -(a: Rational): Rational? = default;
@@ -171,7 +179,7 @@ __safe __primitive inline infix operator <=(a: Rational, b: Rational): Bool = de
 __safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
 
 //<summary>Primitive float value defaults to 64bit.</summary>
-__internal entity Float provides Some, APIType {
+__internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIType {
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
     const negativeone: Float = -1.0f;
@@ -188,7 +196,7 @@ __safe __primitive inline infix operator <=(a: Float, b: Float): Bool = default;
 __safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 
 //<summary>Primitive float decimal value.</summary>
-__internal entity Decimal provides Some, APIType {
+__internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, APIType {
     const zero: Decimal = 0.0d;
     const one: Decmial = 1.0d;
     const negativeone: Decmial = -1.0d;
@@ -333,19 +341,19 @@ __internal entity ByteBuffer provides Some, APIType {
 }
 
 //<summary>Primitive ISOTime value.</summary>
-__internal entity ISOTime provides Some, APIType {
+__internal __typedeclable entity ISOTime provides Some, Orderable APIType {
 }
 
 //<summary>Primitive LogicalTime value.</summary>
-__internal entity LogicalTime provides Some, KeyType, APIType {
+__internal __typedeclable entity LogicalTime provides Some, Orderable, KeyType, APIType {
 }
 
 //<summary>Primitive UUID value.</summary>
-__internal entity UUID provides Some, KeyType, APIType {
+__internal __typedeclable entity UUID provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
-__internal entity ContentHash provides Some, KeyType, APIType {
+__internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive regex value.</summary>
@@ -379,10 +387,17 @@ __internal entity Nothing provides Some, APIType {
 __internal entity Something<T> provides Some, Option<T>, APIType when T APIType {
 }
 
-concept Option<T> provides Some, APIType when T APIType {
+//<summary>Generic type for all Option<T> to inherit from.</summary>
+__universal concept IOption provides Some {
+}
+
+//<summary>Type for flagging T projection from Option -- kludge that has no other purpose.</summary>
+__universal concept IOptionT provides Some {
     method isNothing(): Bool # special_method
     method isSomething(): Bool # special_method
+}
 
+concept Option<T> provides IOption, APIType when T APIType {
     method asNothing(): Nothing {
         return this.as<Nothing>();
     }

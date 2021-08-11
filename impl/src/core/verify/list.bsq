@@ -55,6 +55,7 @@ __internal entity ListOperators provides Object {
     __assume_safe function s_rangeOfNat(start: Nat, end: Nat): List<Nat> # list_rangeofnat
     __assume_safe function s_fill<T>(k: Nat, val: T): List<T> # list_fill
 
+    __assume_safe function s_zip<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> # list_zip
     __assume_safe function s_zipindex<T>(l1: List<T>, size: Nat): List<[Nat, T]> # list_zipindex
 
     __assume_safe function s_concat2_Constructor(l1: List<T>, l2: List<T>, count: Nat): List<T> # list_concat2
@@ -456,47 +457,113 @@ __internal entity ListArithOperators provides Object {
     ////////////////
 
     //assume non-empty
-    function s_minIdx_Core<T unique Some>(l: List<[Nat, T]>): Nat # list_minidx
-    function s_maxIdx_Core<T unique Some>(l: List<[Nat, T]>): Nat # list_maxidx
+    function s_minIdx_Core<T unique Orderable>(l: List<[Nat, T]>): Nat # list_minidx
+    function s_maxIdx_Core<T unique Orderable>(l: List<[Nat, T]>): Nat # list_maxidx
 
 #if UF_APPROX
-    function s_sum_Core<T unique Some>(l: List<T>): T # list_sum
+    function s_sum_Core<T unique Algebraic>(l: List<T>): T # list_sum
 #endif
 
     ////////////////
     //In code support operations
     ////////////////
 
-    function s_minIdx_Helper<T unique Some>(l: List<T>): Nat {
-        let zl = l.index();
-        
-        //TODO: here special case for small model
-        return ListOperators::s_minIdx_Core<T>(zl);
+    function s_minIdx_Helper<T unique Orderable>(l: List<T>): Nat {
+        let count = ListOperators::s_size<T>(l);
+
+        if(count == 1) {
+            return ListOperators::s_safe_get<T>(l, 0n); 
+        }
+        elif(count == 2) {
+            let a = ListOperators::s_safe_get<T>(l, 0n);
+            let b = ListOperators::s_safe_get<T>(l, 1n);
+            if(a <= b) {
+                return 0n;
+            }
+            else {
+                return 1n;
+            }
+        }
+        else {
+            //TODO: here special case for small model
+            let zl = l.index();
+            return ListOperators::s_minIdx_Core<T>(zl);
+        }
     }
     
-    function s_maxIdx_Helper<T unique Some>(l: List<T>): Nat {
-        let zl = l.index();
-        
-        //TODO: here special case for small model
-        return ListOperators::s_maxIdx_Core<T>(zl);
+    function s_maxIdx_Helper<T unique Orderable>(l: List<T>): Nat {
+        let count = ListOperators::s_size<T>(l);
+
+        if(count == 1) {
+            return ListOperators::s_safe_get<T>(l, 0n); 
+        }
+        elif(count == 2) {
+            let a = ListOperators::s_safe_get<T>(l, 0n);
+            let b = ListOperators::s_safe_get<T>(l, 1n);
+            if(a >= b) {
+                return 0n;
+            }
+            else {
+                return 1n;
+            }
+        }
+        else {
+            //TODO: here special case for small model
+            let zl = l.index();
+            return ListOperators::s_maxIdx_Core<T>(zl);
+        }
     }
 
-    recursive? function s_argminIdx_Helper<T, U unique Some>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
-        let zl = l.map(f).index();
-        
-        //TODO: here special case for small model
-        return ListOperators::s_minIdx_Core<U>(zl);
+    recursive? function s_argminIdx_Helper<T, U unique Orderable>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
+        let fl = l.map(f);
+        let count = ListOperators::s_size<T>(fl);
+
+        if(count == 1) {
+            return ListOperators::s_safe_get<T>(fl, 0n); 
+        }
+        elif(count == 2) {
+            let a = ListOperators::s_safe_get<T>(fl, 0n);
+            let b = ListOperators::s_safe_get<T>(fl, 1n);
+            if(a <= b) {
+                return 0n;
+            }
+            else {
+                return 1n;
+            }
+        }
+        else {
+            //TODO: here special case for small model
+            let zl = fl.index();
+            return ListOperators::s_minIdx_Core<U>(zl);
+        }
     }
     
-    recursive? function s_argmaxIdx_Helper<T, U unique Some>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
-        let zl = l.map(f).index();
-        
-        //TODO: here special case for small model
-        return ListOperators::s_maxIdx_Core<U>(sl);
+    recursive? function s_argmaxIdx_Helper<T, U unique Orderable>(l: List<T>, f: recursive? fn(_: T) -> U): Nat {
+         let fl = l.map(f);
+        let count = ListOperators::s_size<T>(fl);
+
+        if(count == 1) {
+            return ListOperators::s_safe_get<T>(fl, 0n); 
+        }
+        elif(count == 2) {
+            let a = ListOperators::s_safe_get<T>(fl, 0n);
+            let b = ListOperators::s_safe_get<T>(fl, 1n);
+            if(a <= b) {
+                return 0n;
+            }
+            else {
+                return 1n;
+            }
+        }
+        else {
+            //TODO: here special case for small model
+            let zl = fl.index();
+            return ListOperators::s_maxIdx_Core<U>(sl);
+        }
     }
 
 #if UF_APPROX
-    function s_sum_Helper<T unique Some>(l: List<T>): T {
+    function s_sum_Helper<T unique Algebraic>(l: List<T>): T {
         if(ListOperators::s_empty<T>(l)) {
             return T::zero;
         }
@@ -513,7 +580,7 @@ __internal entity ListArithOperators provides Object {
         }
     }
 #else
-    recursive function s_sum_Core<T unique Some>(l: List<T>, acc: T, cpos: Nat, count: Nat): T {
+    recursive function s_sum_Core<T unique Algebraic>(l: List<T>, acc: T, cpos: Nat, count: Nat): T {
         if(cpos == count) {
             return acc;
         }
@@ -523,7 +590,7 @@ __internal entity ListArithOperators provides Object {
         }
     }
 
-    function s_sum_Helper<T unique Some>(l: List<T>): T {
+    function s_sum_Helper<T unique Algebraic>(l: List<T>): T {
         if(ListOperators::s_empty<T>(l)) {
             return T::zero;
         }
@@ -740,10 +807,6 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    //method {when T grounded KeyType} toSet(): Set<T> {
-    //    return List<T>::s_toset(this);
-    //}
-
     recursive? method single(p: recursive? pred(_: T) -> Bool): T {
         let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
         let lastidx = ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
@@ -851,21 +914,21 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         return ListOperators::s_countIf_Helper<T>[recursive?](this, pred(v: T) => v === nothing);
     }
 
-    method {when T unique Some} min(): T 
+    method {when T unique Orderable} min(): T 
         requires release !this.empty();
     {
         let midx = ListArithOperators::s_minIdx_Helper<T>(this);
         return ListOperators::s_safe_get<T>(this, midx);
     }
 
-    method {when T unique Some} max(): T
+    method {when T unique Orderable} max(): T
         requires release !this.empty();
     {
         let midx = ListArithOperators::s_maxIdx_Helper<T>(this);
         return ListOperators::s_safe_get<T>(this, midx);
     }
 
-    method {when T unique Some} minOrNone(): T? {
+    method {when T unique Orderable} minOrNone(): T? {
         if(this.empty()) {
             return none;
         }
@@ -875,7 +938,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T unique Some} maxOrNone(): T? {
+    method {when T unique Orderable} maxOrNone(): T? {
         if(this.empty()) {
             return none;
         }
@@ -885,7 +948,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T unique Some} minOption(): Option<T> {
+    method {when T unique Orderable} minOption(): Option<T> {
         if(this.empty()) {
             return nothing;
         }
@@ -895,7 +958,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T unique Some} maxOrOption(): Option<T> {
+    method {when T unique Orderable} maxOrOption(): Option<T> {
         if(this.empty()) {
             return nothing;
         }
@@ -905,7 +968,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T unique Some} minTry(out? res: T): Bool {
+    method {when T unique Orderable} minTry(out? res: T): Bool {
         if(this.empty()) {
             return false;
         }
@@ -916,7 +979,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T unique Some} maxTry(out? res: T): Bool {
+    method {when T unique Orderable} maxTry(out? res: T): Bool {
         if(this.empty()) {
             return false;
         }
@@ -927,21 +990,21 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method argMin<U unique Some=?>(f: recursive? fn(_: T) -> U): T 
+    method argMin<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T 
         requires release !this.empty();
     {
         let midx = ListArithOperators::s_argminIdx_Helper<T, U>[recursive?](this, f);
         return ListOperators::s_safe_get<T>(this, midx);
     }
 
-    method argMax<U unique Some=?>(f: recursive? fn(_: T) -> U): T
+    method argMax<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T
         requires release !this.empty();
     {
         let midx = ListArithOperators::s_argmaxIdx_Helper<T, U>[recursive?](this, f);
         return ListOperators::s_safe_get<T>(this, midx);
     }
 
-    method argMinOrNone<U unique Some=?>(f: recursive? fn(_: T) -> U): T? {
+    method argMinOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
         if(this.empty()) {
             return none;
         }
@@ -951,7 +1014,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method argMaxOrNone<U unique Some=?>(f: recursive? fn(_: T) -> U): T? {
+    method argMaxOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
         if(this.empty()) {
             return none;
         }
@@ -961,7 +1024,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method argMinOption<U unique Some=?>(f: recursive? fn(_: T) -> U): Option<T> {
+    method argMinOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
         if(this.empty()) {
             return nothing;
         }
@@ -971,7 +1034,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method argMaxOrOption<U unique Some=?>(f: recursive? fn(_: T) -> U): Option<T> {
+    method argMaxOrOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
         if(this.empty()) {
             return nothing;
         }
@@ -981,7 +1044,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method argMinTry<U unique Some=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
+    method argMinTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
         if(this.empty()) {
             return false;
         }
@@ -992,7 +1055,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method argMaxTry<U unique Some=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
+    method argMaxTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
         if(this.empty()) {
             return false;
         }
@@ -1003,7 +1066,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T unique Some} sum(): T {
+    method {when T unique Algebraic} sum(): T {
         return ListArithOperators::s_sum_Helper<T>(this);
     }
 
@@ -1434,11 +1497,12 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method filter(p: recursive? pred(_: T) -> Bool): List<T> {
-        return List<T>::s_filter_Helper[recursive?](this, p);
+        return ListOperators::s_filter_Helper<T>[recursive?](this, p);
     }
 
     recursive? method filter(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
-        return List<T>::s_filter_Helper_Idx[recursive?](this, p);
+        let zl = this.index();
+        return ListOperators::s_filter_Helper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
     }
 
     method filterType<U>(): List<U> {
@@ -1449,9 +1513,8 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         return this.filter(pred(v: T) => v !== none).map<T!Some>(fn(v: T): T!Some => ListOperators::s_safeAs<T, T!Some>(v));
     }
 
-    //TODO: this is where we would like to have some unification thing (U unify T Option<U>)to get the Option<U> from the T
-    method filterSomething<U>(): List<U> {
-        return this.filter(pred(v: T) => v !== nothing).map<U>(fn(v: T): U => v.data());
+    method {when T unique IOption} filterSomething(): List<T!IOptionT> {
+        return this.filter(pred(v: T) => v !== nothing).map<T!IOptionT>(fn(v: T): U => ListOperators::s_safeAs<Option<T!IOptionT>>(v).value());
     }
 
     method castType<U>(): List<U> {
@@ -1545,8 +1608,8 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method map<U=?>(f: recursive? fn(_: T, _: Nat) -> U): List<U>  {
-        xxxx;
-        return List<T>::s_map_Helper_Idx<U>[recursive?](this, f);
+        let zl = this.index();
+        return ListOperators::s_map_Helper<[Nat, T], U>[recursive?](this, recursive? fn(v: [Nat, T]): U => f[recursive?](v.1, v.0));
     }
 
     recursive? method mapNone<U=?>(f: recursive? fn(_: T!Some) -> U): List<U>  {
@@ -1561,81 +1624,168 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method mapNone<U=?>(f: recursive? fn(_: T, _: Nat) -> U): List<U>  {
-        return List<T>::s_map_Helper_Idx<U>[recursive?](this, f);
+        let zl = this.index();
+
+        return ListOperators::s_map_Helper<[Nat, T], U>[recursive?](this, recursive? fn(v: [Nat, T]): U => {
+            let vt = v.1;
+            if(vt === none) {
+                return none;
+            }
+            else {
+                return f[recursive?](vt, v.0);
+            }
+        });
     }
 
-    //TODO: this is where we would like to have some unification thing (U unify T Option<U>)to get the Option<U> from the T
-    recursive? method mapOption<V, U=?>(f: recursive? fn(_: V) -> U): List<U>  {
+    recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT) -> U): List<U>  {
         return ListOperators::s_map_Helper<T, U>[recursive?](this, recursive? fn(v: T): U => {
             if(v === nothing) {
                 return nothing;
             }
             else {
-                return f[recursive?](v.data());
+                return f[recursive?](v.value());
             }
         });
     }
 
-    recursive? method mapOption<U=?>(f: recursive? fn(_: T, _: Nat) -> U): List<U>  {
-        return List<T>::s_map_Helper_Idx<U>[recursive?](this, f);
+    recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT, _: Nat) -> U): List<U>  {
+        let zl = this.index();
+
+        return ListOperators::s_map_Helper<[Nat, T], U>[recursive?](this, recursive? fn(v: [Nat, T]): U => {
+            let vt = v.1;
+            if(vt === nothing) {
+                return nothing;
+            }
+            else {
+                return f[recursive?](vt.value(), v.0);
+            }
+        });
     }
 
-    
-xxxx;
     method {when T KeyType} project<U=?>(m: Map<T, U>): List<U> {
-        return List<T>::s_projectWMap<U>[recursive](this, ListOperators::s_size<T>(this), List<U>@{}, 0, m); 
+        return ListOperators::s_map_Helper<T, U>(this, fn(v: T): U => {
+            return m.get(v);
+        });
     }
 
     method {when T KeyType} projectOrNone<U=?>(m: Map<T, U>): List<U?> {
-        return List<T>::s_tryProjectWMap<U>[recursive](this, ListOperators::s_size<T>(this), List<U?>@{}, 0, m);
+        return ListOperators::s_map_Helper<T, U?>(this, fn(v: T): U? => {
+            return m.getOrNone(v);
+        });
     }
 
-    method {when T KeyType} defaultProjectWithMap<U=?>(default: U, m: Map<T, U>): List<U> {
-        return List<T>::s_defaultProjectWMap<U>[recursive](this, ListOperators::s_size<T>(this), List<U>@{}, 0, m, default);
+    method {when T KeyType} projectImage<U=?>(m: Map<T, U>): List<U> {
+        return this.filter(pred(v: T) => m.has(v)).map<U>(fn(v: T): U => m.get(v));
     }
 
-    method zipIndex(): List<#[Int, T]> {
-        return List<T>::s_zipIndex[recursive](this, ListOperators::s_size<T>(this), List<#[Int, T]>@{}, 0);
+    recursive? method join<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
+        return ListOperators::s_join_Helper<T, U>[recursive?](this, ol, p);
     }
 
-    recursive? method join<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<#[T, U]> {
-        return List<T>::s_join<U>[recursive](this, ListOperators::s_size<T>(this), ol, ListOperators::s_size<T>(ol), List<#[T, U]>@{}, 0, p);
-    }
-
-    recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<#[T, List<U>]> {
-        return List<T>::s_joinGroup<U>[recursive](this, ListOperators::s_size<T>(this), ol, ListOperators::s_size<T>(ol), List<#[T, List<U>]>@{}, 0, p);
-    }
-xxxx;
-
-
-
-
-    recursive? method join<U=?>(ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<#[T, U]> {
-        return List<T>::s_join_Helper<U>[recursive?](this, ol, p);
-    }
-
-    recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<#[T, List<U>]> {
-        return List<T>::s_joinGroup_Helper<U>[recursive?](this, ol, p);
+    recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, List<U>]> {
+        return ListOperators::s_map_Helper<T, [T, List<U>]>[recursive?](this, recursive? fn(v: T): [T, List<U>] => {
+            let ul = ListOperators::s_filter_Helper<U>[recursive?](ol, pred(u: U) => p[recursive?](v, u));
+            return [v, ul];
+        });
     }
 
     method append(l: List<T>): List<T> {
-        return List<T>::s_concat2_Helper(this, l);
+        return ListOperators::s_concat2_Helper<T>(this, l);
     }
 
     method prepend(l: List<T>): List<T> {
-        return List<T>::s_concat2_Helper(l, this);
+        return ListOperators::s_concat2_Helper<T>(l, this);
     }
 
-    //recursive? method partition<K=? where KeyType>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
-    //    const plist = this.map<K>[recursive?](pf);
-    //    return List<T>::s_partition<K>(this, plist);
-    //}
+    recursive? method partition<K KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
+        let allkeys = ListOperators::s_map_Helper<T, K>[recursive?](this, pf);
+        let ukeys = ListOperators::s_unique_Helper<K>(allkeys);
+
+        let kopts = allkeys.zip(this);
+        let classes = ListOperators::s_map_Helper<K, [K, List<T>]>(ukeys, fn(k: K): [K, List<T>] => {
+            let pl = ListOperators::s_filter_Helper<[K, T]>(kopts, pred(v: [K, T]) => k === v.0);
+            let tl = ListOperators::s_map_Helper<[K, T], T>(pl, fn(vv: [K, T]): T => vv.1);
+
+            return [k, tl];
+        });
+
+        return Map<K, T>@{...classes};
+    }
 
     recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
-        return List<T>::s_sort_Helper[recursive?](this, cmp);
+        return ListOperators::s_sort_Helper<T>[recursive?](this, cmp);
+    }
+
+    method pushBack(v: T): List<T> {
+        return ListOperators::s_concat2_Helper(this, List<T>@{v});
+    }
+
+    method pushFront(v: T): List<T> {
+        return ListOperators::s_concat2_Helper(List<T>@{v}, this);
+    }
+
+    method popBack(): List<T> 
+        requires release !ListOperators::s_empty<T>(this);
+    {
+        return ListOperators::s_slice_Helper<T>(this, 0, ListOperators::s_size<T>(this) - 1);
+    }
+
+    method popFront(): List<T>
+        requires release !ListOperators::s_empty<T>(this);
+    {
+        return ListOperators::s_slice_Helper<T>(this, 1, ListOperators::s_size<T>(this));
+    }
+
+    method set(i: Nat, v: T): List<T> 
+        requires release i < ListOperators::s_size<T>(this);
+    {
+        let count = ListOperators::s_size<T>(this);
+        let vl = List<T>@{v};
+
+        if(count == 1) {
+            return vl;
+        }
+        else {
+            if(i == 0) {
+                return ListOperators::s_concat2_Helper<T>(vl, ListOperators::s_slice_Helper<T>(this, 1, count));
+            }
+            elif(i == count - 1) {
+                return ListOperators::s_concat2_Helper<T>(ListOperators::s_slice_Helper<T>(this, 0, count - 1), vl);
+            }
+            else {
+                let front = ListOperators::s_slice_Helper<T>(this, 0, i);
+                let back = ListOperators::s_slice_Helper<T>(this, i + 1, count);
+
+                return ListOperators::s_concat2_Helper<T>(ListOperators::s_concat2_Helper<T>(front, vl), back);
+            }
+        } 
+    }
+
+    method remove(i: Nat): List<T>
+        requires release i < ListOperators::s_size<T>(this);
+    {
+        let count = ListOperators::s_size<T>(this);
+
+        if(count == 1) {
+            return List<T>@{};
+        }
+        else {
+            if(i == 0) {
+                return ListOperators::s_slice_Helper<T>(this, 1, count);
+            }
+            elif(i == count - 1) {
+                return ListOperators::s_slice_Helper<T>(this, 0, count - 1);
+            }
+            else {
+                let front = ListOperators::s_slice_Helper<T>(this, 0, i);
+                let back = ListOperators::s_slice_Helper<T>(this, i + 1, count);
+
+                return ListOperators::s_concat2_Helper<T>(front), back);
+            }
+        } 
     }
 
     //
-    //Convert to Map<K, V> operations
+    //Convert to Map<K, V> and Set<T> operations
     //
 }
