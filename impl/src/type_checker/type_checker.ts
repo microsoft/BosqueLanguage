@@ -2540,6 +2540,8 @@ class TypeChecker {
                 }
                 else {
                     const lev = (opdecl.invoke.params[i].litexp as LiteralExpressionValue);
+
+                    //compileTimeReduceConstantExpression
                     const cexp = this.m_assembly.reduceLiteralValueToCanonicalForm(lev.exp, env.terms, fsig.params[i].type as ResolvedType);
                     this.raiseErrorIf(sinfo, cexp === undefined, "Invalid literal argument");
                     
@@ -2611,6 +2613,8 @@ class TypeChecker {
                 }
                 else {
                     const lev = (opdecl.invoke.params[i].litexp as LiteralExpressionValue);
+
+                    //compileTimeReduceConstantExpression
                     const cexp = this.m_assembly.reduceLiteralValueToCanonicalForm(lev.exp, env.terms, fsig.params[i].type as ResolvedType);
                     this.raiseErrorIf(sinfo, cexp === undefined, "Invalid literal argument");
                     

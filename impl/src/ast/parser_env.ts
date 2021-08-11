@@ -9,6 +9,7 @@ import { NominalTypeSignature, TypeSignature, AutoTypeSignature } from "./type_s
 class FunctionScope {
     private readonly m_rtype: TypeSignature;
     private m_captured: Set<string>;
+    private m_usedpcodes: Set<string>;
     private readonly m_ispcode: boolean;
     private readonly m_args: Set<string>;
     private m_locals: { name: string, scopedname: string, isbinder: boolean }[][];
@@ -16,6 +17,7 @@ class FunctionScope {
     constructor(args: Set<string>, rtype: TypeSignature, ispcode: boolean) {
         this.m_rtype = rtype;
         this.m_captured = new Set<string>();
+        this.m_usedpcodes = new Set<string>();
         this.m_ispcode = ispcode;
         this.m_args = args;
         this.m_locals = [];
@@ -54,6 +56,10 @@ class FunctionScope {
 
     getCaptureVars(): Set<string> {
         return this.m_captured;
+    }
+
+    getUsedPCodes(): Set<string> {
+        return this.m_usedpcodes;
     }
 
     getReturnType(): TypeSignature {

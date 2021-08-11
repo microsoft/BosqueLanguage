@@ -4,10 +4,9 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo } from "./parser";
-import { TypeSignature, TemplateTypeSignature } from "./type_signature";
+import { TypeSignature } from "./type_signature";
 import { InvokeDecl, BuildLevel } from "./assembly";
 import { BSQRegex } from "./bsqregex";
-import { PCode } from "../compiler/mir_emitter";
 
 class InvokeArgument {
     readonly value: Expression;
@@ -124,6 +123,7 @@ enum ExpressionTag {
     InvalidExpresion = "[INVALID]",
 
     LiteralNoneExpression = "LiteralNoneExpression",
+    LiteralNothingExpression = "LiteralNothingExpression",
     LiteralBoolExpression = "LiteralBoolExpression",
     LiteralNumberinoExpression = "LiteralNumberinoExpression",
     LiteralIntegralExpression = "LiteralIntegralExpression",
@@ -131,7 +131,6 @@ enum ExpressionTag {
     LiteralFloatPointExpression = "LiteralFloatExpression",
     LiteralStringExpression = "LiteralStringExpression",
     LiteralRegexExpression = "LiteralRegexExpression",
-    LiteralParamerterValueExpression = "LiteralParamerterValueExpression",
     LiteralTypedStringExpression = "LiteralTypedStringExpression",
 
     LiteralTypedNumericConstructorExpression = "LiteralTypedNumericConstructorExpression",
@@ -146,10 +145,8 @@ enum ExpressionTag {
     ConstructorTupleExpression = "ConstructorTupleExpression",
     ConstructorRecordExpression = "ConstructorRecordExpression",
     ConstructorEphemeralValueList = "ConstructorEphemeralValueList",
-    CombinatorPCodeExpression = "CombinatorPCodeExpression",
     ConstructorPCodeExpression = "ConstructorPCodeExpression",
 
-    PCodeDirectInvokeExpression = "PCodeDirectInvokeExpression",
     PCodeInvokeExpression = "PCodeInvokeExpression",
     SpecialConstructorExpression = "SpecialConstructorExpression",
     CallNamespaceFunctionOrOperatorExpression = "CallNamespaceFunctionOrOperatorExpression",
@@ -192,7 +189,7 @@ abstract class Expression {
     }
 }
 
-//This just holds an expression (for use in literal types) but not a subtype of Expression so we can distinguish as types
+//This just holds a constant expression that can be evaluated without any arguments but not a subtype of Expression so we can distinguish as types
 class LiteralExpressionValue {
     readonly exp: Expression;
 
@@ -201,8 +198,7 @@ class LiteralExpressionValue {
     }
 }
 
-
-//This just holds an expression (for use where we expect and constant -- or restricted constant expression) but not a subtype of Expression so we can distinguish as types
+//This just holds a constant expression (for use where we expect and constant -- or restricted constant expression) but not a subtype of Expression so we can distinguish as types
 class ConstantExpressionValue {
     readonly exp: Expression;
     readonly captured: Set<string>;
@@ -222,6 +218,16 @@ class InvalidExpression extends Expression {
 class LiteralNoneExpression extends Expression {
     constructor(sinfo: SourceInfo) {
         super(ExpressionTag.LiteralNoneExpression, sinfo);
+    }
+
+    isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+}
+
+class LiteralNothingExpression extends Expression {
+    constructor(sinfo: SourceInfo) {
+        super(ExpressionTag.LiteralNothingExpression, sinfo);
     }
 
     isCompileTimeInlineValue(): boolean {
@@ -322,15 +328,6 @@ class LiteralRegexExpression extends Expression {
     }
 }
 
-class LiteralParamerterValueExpression extends Expression {
-    readonly ltype: TemplateTypeSignature;
-
-    constructor(sinfo: SourceInfo, ltype: TemplateTypeSignature) {
-        super(ExpressionTag.LiteralParamerterValueExpression, sinfo);
-        this.ltype = ltype;
-    }
-}
-
 class LiteralTypedStringExpression extends Expression {
     readonly value: string;
     readonly stype: TypeSignature;
@@ -366,13 +363,11 @@ class LiteralTypedNumericConstructorExpression extends Expression {
 class LiteralTypedStringConstructorExpression extends Expression {
     readonly value: string;
     readonly stype: TypeSignature;
-    readonly isvalue: boolean;
     
-    constructor(sinfo: SourceInfo, isvalue: boolean, value: string, stype: TypeSignature) {
+    constructor(sinfo: SourceInfo, value: string, stype: TypeSignature) {
         super(ExpressionTag.LiteralTypedStringConstructorExpression, sinfo);
         this.value = value;
         this.stype = stype;
-        this.isvalue = isvalue;
     }
 }
 
@@ -408,29 +403,25 @@ class AccessVariableExpression extends Expression {
 }
 
 class ConstructorPrimaryExpression extends Expression {
-    readonly isvalue: boolean;
     readonly ctype: TypeSignature;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean, ctype: TypeSignature, args: Arguments) {
+    constructor(sinfo: SourceInfo, ctype: TypeSignature, args: Arguments) {
         super(ExpressionTag.ConstructorPrimaryExpression, sinfo);
-        this.isvalue = isvalue;
         this.ctype = ctype;
         this.args = args;
     }
 }
 
 class ConstructorPrimaryWithFactoryExpression extends Expression {
-    readonly isvalue: boolean;
     readonly ctype: TypeSignature;
     readonly factoryName: string;
     readonly terms: TemplateArguments;
     readonly rec: RecursiveAnnotation;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean,  ctype: TypeSignature, factory: string, rec: RecursiveAnnotation, terms: TemplateArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, ctype: TypeSignature, factory: string, rec: RecursiveAnnotation, terms: TemplateArguments, args: Arguments) {
         super(ExpressionTag.ConstructorPrimaryWithFactoryExpression, sinfo);
-        this.isvalue = isvalue;
         this.ctype = ctype;
         this.factoryName = factory;
         this.rec = rec;
@@ -440,23 +431,19 @@ class ConstructorPrimaryWithFactoryExpression extends Expression {
 }
 
 class ConstructorTupleExpression extends Expression {
-    readonly isvalue: boolean;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean, args: Arguments) {
+    constructor(sinfo: SourceInfo, args: Arguments) {
         super(ExpressionTag.ConstructorTupleExpression, sinfo);
-        this.isvalue = isvalue;
         this.args = args;
     }
 }
 
 class ConstructorRecordExpression extends Expression {
-    readonly isvalue: boolean;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean, args: Arguments) {
+    constructor(sinfo: SourceInfo, args: Arguments) {
         super(ExpressionTag.ConstructorRecordExpression, sinfo);
-        this.isvalue = isvalue;
         this.args = args;
     }
 }
@@ -470,15 +457,6 @@ class ConstructorEphemeralValueList extends Expression {
     }
 }
 
-class CombinatorPCodeExpression extends Expression {
-    readonly cexp: Expression;
-
-    constructor(sinfo: SourceInfo, cexp: Expression) {
-        super(ExpressionTag.CombinatorPCodeExpression, sinfo);
-        this.cexp = cexp;
-    }
-}
-
 class ConstructorPCodeExpression extends Expression {
     readonly isAuto: boolean;
     readonly invoke: InvokeDecl;
@@ -487,22 +465,6 @@ class ConstructorPCodeExpression extends Expression {
         super(ExpressionTag.ConstructorPCodeExpression, sinfo);
         this.isAuto = isAuto;
         this.invoke = invoke;
-    }
-}
-
-
-class PCodeDirectInvokeExpression extends Expression {
-    readonly pc: PCode;
-    readonly captured: string[];
-    readonly args: Expression[];
-    readonly isrefok: boolean;
-
-    constructor(sinfo: SourceInfo, pc: PCode, captured: string[], args: Expression[], isrefok: boolean) {
-        super(ExpressionTag.PCodeDirectInvokeExpression, sinfo);
-        this.pc = pc;
-        this.captured = captured;
-        this.args = args;
-        this.isrefok = isrefok;
     }
 }
 
@@ -520,13 +482,11 @@ class PCodeInvokeExpression extends Expression {
 }
 
 class SpecialConstructorExpression extends Expression {
-    readonly rtype: TypeSignature;
-    readonly rop: "ok" | "err";
+    readonly rop: "ok" | "err" | "something";
     readonly arg: Expression;
 
-    constructor(sinfo: SourceInfo, rtype: TypeSignature, rop: "ok" | "err", arg: Expression) {
-        super(ExpressionTag.SpecialConstructorExpression, sinfo); 
-        this.rtype = rtype;
+    constructor(sinfo: SourceInfo, rop: "ok" | "err" | "something", arg: Expression) {
+        super(ExpressionTag.SpecialConstructorExpression, sinfo);
         this.rop = rop;
         this.arg = arg;
     }
@@ -1235,19 +1195,19 @@ class BodyImplementation {
 export {
     InvokeArgument, NamedArgument, PositionalArgument, Arguments, TemplateArguments, RecursiveAnnotation, CondBranchEntry, IfElse,
     ExpressionTag, Expression, LiteralExpressionValue, ConstantExpressionValue, InvalidExpression,
-    LiteralNoneExpression, LiteralBoolExpression, 
+    LiteralNoneExpression, LiteralNothingExpression, LiteralBoolExpression, 
     LiteralNumberinoExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression,
-    LiteralStringExpression, LiteralRegexExpression, LiteralParamerterValueExpression, LiteralTypedStringExpression, 
+    LiteralStringExpression, LiteralRegexExpression, LiteralTypedStringExpression, 
     LiteralTypedNumericConstructorExpression, LiteralTypedStringConstructorExpression,
     AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression,
     ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorEphemeralValueList, 
-    CombinatorPCodeExpression, ConstructorPCodeExpression, SpecialConstructorExpression,
+    ConstructorPCodeExpression, SpecialConstructorExpression,
     CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression,
     OfTypeConvertExpression,
     PostfixOpTag, PostfixOperation, PostfixOp,
     PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames,
     PostfixIs, PostfixAs, PostfixHasIndex, PostfixHasProperty, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry,
-    PostfixInvoke, PCodeDirectInvokeExpression, PCodeInvokeExpression,
+    PostfixInvoke, PCodeInvokeExpression,
     PrefixNotOp, 
     BinKeyExpression, BinLogicExpression,
     MapEntryConstructorExpression,

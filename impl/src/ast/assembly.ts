@@ -4,8 +4,8 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { ResolvedType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomTypeEntry, ResolvedAtomType, ResolvedFunctionTypeParam, ResolvedFunctionType, ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedLiteralAtomType, ResolvedTemplateUnifyType } from "./resolved_type";
-import { TemplateTypeSignature, NominalTypeSignature, TypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, ParseErrorTypeSignature, AutoTypeSignature, FunctionParameter, ProjectTypeSignature, EphemeralListTypeSignature, LiteralTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
-import { Expression, BodyImplementation, LiteralBoolExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, PrefixNotOp, CallNamespaceFunctionOrOperatorExpression, LiteralTypedNumericConstructorExpression, LiteralParamerterValueExpression, ConstantExpressionValue, LiteralNumberinoExpression, LiteralTypedStringExpression } from "./body";
+import { TemplateTypeSignature, NominalTypeSignature, TypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, ParseErrorTypeSignature, AutoTypeSignature, FunctionParameter, ProjectTypeSignature, EphemeralListTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
+import { Expression, BodyImplementation, LiteralBoolExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, PrefixNotOp, CallNamespaceFunctionOrOperatorExpression, LiteralTypedNumericConstructorExpression, ConstantExpressionValue, LiteralNumberinoExpression, LiteralTypedStringExpression } from "./body";
 import { SourceInfo } from "./parser";
 
 import * as assert from "assert";
@@ -134,12 +134,13 @@ class InvokeDecl {
     readonly isPCodeFn: boolean;
     readonly isPCodePred: boolean;
     readonly captureSet: Set<string>;
+    readonly capturepcode: Set<string>;
     readonly body: BodyImplementation | undefined;
 
     readonly optscalarslots: {vname: string, vtype: TypeSignature}[]; 
     readonly optmixedslots: {vname: string, vtype: TypeSignature}[]; 
 
-    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], isPCodeFn: boolean, isPCodePred: boolean, captureSet: Set<string>, body: BodyImplementation | undefined, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]) {
+    constructor(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultType: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], isPCodeFn: boolean, isPCodePred: boolean, captureSet: Set<string>, capturedPCode: Set<string>, body: BodyImplementation | undefined, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
@@ -161,6 +162,7 @@ class InvokeDecl {
         this.isPCodeFn = isPCodeFn;
         this.isPCodePred = isPCodePred;
         this.captureSet = captureSet;
+        this.capturepcode = capturedPCode;
         this.body = body;
 
         this.optscalarslots = optscalarslots;
@@ -171,12 +173,12 @@ class InvokeDecl {
         return new FunctionTypeSignature(this.recursive, [...this.params], this.optRestName, this.optRestType, this.resultType, this.isPCodePred);
     }
 
-    static createPCodeInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, captureSet: Set<string>, body: BodyImplementation, isPCodeFn: boolean, isPCodePred: boolean) {
-        return new InvokeDecl(sinfo, srcFile, attributes, recursive, [], undefined, params, optRestName, optRestType, resultInfo, [], [], isPCodeFn, isPCodePred, captureSet, body, [], []);
+    static createPCodeInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, captureSet: Set<string>, capturedPCode: Set<string>, body: BodyImplementation, isPCodeFn: boolean, isPCodePred: boolean) {
+        return new InvokeDecl(sinfo, srcFile, attributes, recursive, [], undefined, params, optRestName, optRestType, resultInfo, [], [], isPCodeFn, isPCodePred, captureSet, capturedPCode, body, [], []);
     }
 
     static createStandardInvokeDecl(sinfo: SourceInfo, srcFile: string, attributes: string[], recursive: "yes" | "no" | "cond", terms: TemplateTermDecl[], termRestrictions: TypeConditionRestriction | undefined, params: FunctionParameter[], optRestName: string | undefined, optRestType: TypeSignature | undefined, resultInfo: TypeSignature, preconds: PreConditionDecl[], postconds: PostConditionDecl[], body: BodyImplementation | undefined, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]) {
-        return new InvokeDecl(sinfo, srcFile, attributes, recursive, terms, termRestrictions, params, optRestName, optRestType, resultInfo, preconds, postconds, false, false, new Set<string>(), body, optscalarslots, optmixedslots);
+        return new InvokeDecl(sinfo, srcFile, attributes, recursive, terms, termRestrictions, params, optRestName, optRestType, resultInfo, preconds, postconds, false, false, new Set<string>(), new Set<string>(), body, optscalarslots, optmixedslots);
     }
 }
 
@@ -636,6 +638,7 @@ class Assembly {
                 return undefined;
             }
 
+            xxxx; //no more value field!!
             const tt = (infertype.getUniqueCallTargetType().object.memberFields.find((mfd) => mfd.name === "value") as MemberFieldDecl).declaredType;
             const rtt = this.normalizeTypeOnly(tt, new Map<string, ResolvedType>());
 
@@ -677,74 +680,6 @@ class Assembly {
                 }
             }
         }
-        else if (exp instanceof LiteralParamerterValueExpression) {
-            const vv = (binds.get(exp.ltype.name) as ResolvedType).options[0] as ResolvedLiteralAtomType;
-            return vv.vexp;
-        }
-        else if (exp instanceof PrefixNotOp) {
-            const earg = this.compileTimeReduceConstantExpression(exp.exp, binds, undefined);
-            if (earg === undefined) {
-                return undefined;
-            }
-
-            if (earg instanceof LiteralBoolExpression) {
-                return new LiteralBoolExpression(exp.sinfo, !earg.value);
-            }
-            else {
-                return undefined;
-            }
-        }
-        else if (exp instanceof CallNamespaceFunctionOrOperatorExpression) {
-            if(exp.opkind !== "prefix") {
-                return undefined;
-            }
-
-            if(exp.name !== "+" && exp.name !== "-") {
-                return undefined;
-            }
-
-            const earg = this.compileTimeReduceConstantExpression(exp.args.argList[0].value, binds, infertype);
-            if (earg === undefined) {
-                return undefined;
-            }
-
-            const nsdecl = this.m_namespaceMap.get("NSCore") as NamespaceDeclaration;
-            if (earg instanceof LiteralIntegralExpression || earg instanceof LiteralFloatPointExpression || earg instanceof LiteralRationalExpression) {
-                if(exp.name === "+") {
-                    return earg;
-                }
-                else {
-                    if(earg instanceof LiteralIntegralExpression) {
-                        return new LiteralIntegralExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.itype);
-                    }
-                    else if (earg instanceof LiteralFloatPointExpression) {
-                        return new LiteralFloatPointExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.fptype);
-                    }
-                    else {
-                        return new LiteralRationalExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.rtype);
-                    }
-                }
-            }
-            else if(earg instanceof LiteralTypedNumericConstructorExpression) {
-                const opdecls = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).filter((nso) => !OOPTypeDecl.attributeSetContains("abstract", nso.invoke.attributes));
-
-                const isigs = opdecls.map((opd) => this.normalizeTypeFunction(opd.invoke.generateSig(), new Map<string, ResolvedType>()) as ResolvedFunctionType);
-                const opidx = this.tryGetUniqueStaticOperatorResolve([this.normalizeTypeOnly(earg.ntype, new Map<string, ResolvedType>())], isigs);
-                if (opidx === -1 || (opdecls[opidx].invoke.body as BodyImplementation).body !== undefined) {
-                    return undefined;
-                }
-
-                if(exp.name === "+") {
-                    return earg;
-                }
-                else {
-                    return new LiteralTypedNumericConstructorExpression(earg.sinfo, earg.value.startsWith("-") ? earg.value.slice(1) : ("-" + earg.value), earg.ntype, earg.vtype);
-                }
-            }
-            else {
-                return undefined;
-            }
-        }
         else if (exp instanceof AccessNamespaceConstantExpression) {
             if (!this.hasNamespace(exp.ns)) {
                 return undefined;
@@ -776,47 +711,6 @@ class Assembly {
         else {
             return undefined;
         }
-    }
-
-    reduceLiteralValueToCanonicalForm(exp: Expression, binds: Map<string, ResolvedType>, infertype: ResolvedType | undefined): [Expression, ResolvedType, string, boolean | number | undefined] | undefined {
-        const cexp = this.compileTimeReduceConstantExpression(exp, binds, infertype);
-        if(cexp === undefined) {
-            return undefined;
-        }
-
-        if(cexp instanceof LiteralBoolExpression) {
-            return [cexp, this.getSpecialBoolType(), `${cexp.value}`, cexp.value];
-        }
-        else if(cexp instanceof LiteralIntegralExpression) {
-            if(this.getSpecialIntType().isSameType(this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()), cexp.value, Number.parseInt(cexp.value.slice(0, cexp.value.length - 1))];
-            }
-            else if(this.getSpecialNatType().isSameType(this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>()), cexp.value, Number.parseInt(cexp.value.slice(0, cexp.value.length - 1))];
-            }
-            else {
-                return undefined;
-            }
-        }
-        else if(cexp instanceof LiteralTypedNumericConstructorExpression) {
-            if(this.getSpecialIntType().isSameType(this.normalizeTypeOnly(cexp.ntype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.vtype, new Map<string, ResolvedType>()), cexp.value, undefined];
-            }
-            else if(this.getSpecialNatType().isSameType(this.normalizeTypeOnly(cexp.ntype, new Map<string, ResolvedType>()))) {
-                return [cexp, this.normalizeTypeOnly(cexp.vtype, new Map<string, ResolvedType>()), cexp.value, undefined];
-            }
-            else {
-                return undefined;
-            }
-        }
-        else if(cexp instanceof AccessStaticFieldExpression) {
-            const stype = this.normalizeTypeOnly(cexp.stype, new Map<string, ResolvedType>());
-            return [cexp, stype, `${stype.idStr}::${cexp.name}`, undefined];
-        }
-        else {
-            return undefined;
-        }
-
     }
 
     private checkTuplesMustDisjoint(t1: ResolvedTupleAtomType, t2: ResolvedTupleAtomType): boolean {
