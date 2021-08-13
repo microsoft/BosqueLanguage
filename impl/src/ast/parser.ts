@@ -920,6 +920,13 @@ class Parser {
         const srcFile = this.m_penv.getCurrentFile();
         const line = this.getCurrentLine();
 
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === srcFile);
+        if (sfpos === -1) {
+            this.raiseError(sinfo.line, "Source name not registered");
+        }
+
+        const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
+
         let fparams: FunctionParameter[] = [];
         if (ikind === InvokableKind.Member) {
             fparams.push(new FunctionParameter("this", optSelfType as TypeSignature, false, optSelfRef, undefined, undefined));
@@ -966,7 +973,7 @@ class Parser {
                     this.raiseError(line, "Literal match parameters are only allowed on dynamic operator definitions");
                 }
 
-                litexp = this.parseLiteralExpression();
+                litexp = this.parseLiteralExpression(bodyid + `arg#${this.getCurrentSrcInfo().pos}`);
             }
 
             if(ikind === InvokableKind.DynamicOperator || ikind === InvokableKind.StaticOperator) {
@@ -1030,23 +1037,16 @@ class Parser {
                 [preconds, postconds] = this.parsePreAndPostConditions(sinfo, argNames, resultInfo);
             }
 
-            const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === srcFile);
-            if(sfpos === -1) {
-                this.raiseError(sinfo.line, "Source name not registered");
+            try {
+                this.m_penv.pushFunctionScope(new FunctionScope(argNames, resultInfo, ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred));
+                body = this.parseBody(bodyid, srcFile);
+                captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
+                capturedpcode = this.m_penv.getCurrentFunctionScope().getUsedPCodes();
+                this.m_penv.popFunctionScope();
             }
-            else {
-                const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
-                try {
-                    this.m_penv.pushFunctionScope(new FunctionScope(argNames, resultInfo, ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred));
-                    body = this.parseBody(bodyid, srcFile);
-                    captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
-                    capturedpcode = this.m_penv.getCurrentFunctionScope().getUsedPCodes();
-                    this.m_penv.popFunctionScope();
-                }
-                catch (ex) {
-                    this.m_penv.popFunctionScope();
-                    throw ex;
-                }
+            catch (ex) {
+                this.m_penv.popFunctionScope();
+                throw ex;
             }
         }
 
@@ -1664,7 +1664,7 @@ class Parser {
         }
     }
 
-    private parseLiteralExpression(): LiteralExpressionValue {
+    private parseLiteralExpression(idtag?: string): LiteralExpressionValue {
         const sinfo = this.getCurrentSrcInfo();
 
         try {
@@ -1678,7 +1678,7 @@ class Parser {
 
             this.m_penv.popFunctionScope();
 
-            return new LiteralExpressionValue(exp);
+            return new LiteralExpressionValue(exp, idtag);
         }
         catch (ex) {
             this.m_penv.popFunctionScope();
@@ -4168,7 +4168,7 @@ class Parser {
                 staticFunctions.push(from);
                 memberMethods.push(value);
 
-                attributes.push("__typedprimitive", "__internal", "__typedeclable", "__constructable");
+                attributes.push("__typedprimitive", "__internal", "__constructable");
 
                 currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
                 this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);

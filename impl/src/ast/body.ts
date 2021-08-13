@@ -208,9 +208,11 @@ abstract class Expression {
 //This just holds a constant expression that can be evaluated without any arguments but not a subtype of Expression so we can distinguish as types
 class LiteralExpressionValue {
     readonly exp: Expression;
+    readonly idtag: string | undefined;
 
-    constructor(exp: Expression) {
+    constructor(exp: Expression, idtag: string | undefined) {
         this.exp = exp;
+        this.idtag = undefined;
     }
 }
 
