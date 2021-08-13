@@ -5,7 +5,7 @@
 
 import { ResolvedType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomTypeEntry, ResolvedAtomType, ResolvedFunctionTypeParam, ResolvedFunctionType, ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedLiteralAtomType, ResolvedTemplateUnifyType } from "./resolved_type";
 import { TemplateTypeSignature, NominalTypeSignature, TypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, ParseErrorTypeSignature, AutoTypeSignature, FunctionParameter, ProjectTypeSignature, EphemeralListTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
-import { Expression, BodyImplementation, LiteralBoolExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, PrefixNotOp, CallNamespaceFunctionOrOperatorExpression, LiteralTypedNumericConstructorExpression, ConstantExpressionValue, LiteralNumberinoExpression, LiteralTypedStringExpression } from "./body";
+import { Expression, BodyImplementation, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, ConstantExpressionValue, LiteralNumberinoExpression, LiteralTypedStringExpression } from "./body";
 import { SourceInfo } from "./parser";
 
 import * as assert from "assert";

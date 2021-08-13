@@ -154,6 +154,8 @@ const LeftScanParens = ["[", "(", "{", "(|", "{|"];
 const RightScanParens = ["]", ")", "}", "|)", "|}"];
 
 const AttributeStrings = [
+    "algebraic",
+    "orderable",
     "entrypoint",
     "hidden",
     "private",
@@ -3613,12 +3615,10 @@ class Parser {
         currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(currentDecl.ns, tyname, terms, btype));
     }
 
-    private parseProvides(iscorens: boolean): [TypeSignature, TypeConditionRestriction | undefined][] {
+    private parseProvides(iscorens: boolean, endtoken: string): [TypeSignature, TypeConditionRestriction | undefined][] {
         let provides: [TypeSignature, TypeConditionRestriction | undefined][] = [];
-        if (this.testToken("provides")) {
-            this.consumeToken();
-
-            while (!this.testToken("{")) {
+        if (this.testAndConsumeTokenIf("provides")) {
+            while (!this.testToken(endtoken)) {
                 this.consumeTokenIf(",");
 
                 const pv = this.parseTypeSignature();
@@ -3828,7 +3828,7 @@ class Parser {
 
         const cname = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore");
+        const provides = this.parseProvides(currentDecl.ns === "NSCore", "{");
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -3887,7 +3887,7 @@ class Parser {
 
         const ename = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore");
+        const provides = this.parseProvides(currentDecl.ns === "NSCore", "{");
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -3968,9 +3968,16 @@ class Parser {
         const line = this.getCurrentLine();
 
         //[attr] enum NAME {...} [& {...}]
-        const attributes = ["struct", ...this.parseAttributes()];
+        const attributes = this.parseAttributes();
 
         const sinfo = this.getCurrentSrcInfo();
+
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === this.m_penv.getCurrentFile());
+        if(sfpos === -1) {
+            this.raiseError(sinfo.line, "Source name not registered");
+        }   
+        const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
+
         this.ensureAndConsumeToken("enum");
         this.ensureToken(TokenStrings.Type);
 
@@ -3984,20 +3991,9 @@ class Parser {
         try {
             this.setRecover(this.scanCodeParens());
 
-            let oftype: TypeSignature | undefined = new NominalTypeSignature("NSCore", ["Nat"]);
-            if(this.testAndConsumeTokenIf(":")) {
-                oftype = this.parseTypeSignature(false);
-            }
-
-            const enums = this.parseListOf<[string, ConstantExpressionValue | undefined]>("{", "}", ",", () => {
+            const enums = this.parseListOf<string>("{", "}", ",", () => {
                 this.ensureToken(TokenStrings.Identifier);
-                const ename = this.consumeTokenAndGetValue();
-                let dvalue: ConstantExpressionValue | undefined = undefined;
-                if (this.testAndConsumeTokenIf("=")) {
-                    dvalue = this.parseConstExpression(false);
-                }
-
-                return [ename, dvalue];
+                return this.consumeTokenAndGetValue();
             })[0];
             
             const provides = [
@@ -4006,23 +4002,31 @@ class Parser {
                 [new NominalTypeSignature("NSCore", ["APIType"]), undefined]
             ] as [TypeSignature, TypeConditionRestriction | undefined][];
 
-            //
-            //TODO: maybe want to make this parsable too!
-            //
+            const vparam = new FunctionParameter("v", this.m_penv.SpecialNatSignature, false, undefined, undefined, undefined);
 
-            const fparam = new FunctionParameter("v", oftype, false, undefined, undefined, undefined);
-        
-            const createbody = new BodyImplementation(`s_create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "enum_create");
-            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, etype, [], [], false, false, new Set<string>(), createbody, [], []);
-            const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_create", createdecl);
+            const frombody = new BodyImplementation(`${bodyid}_from`, this.m_penv.getCurrentFile(), "special_inject");
+            const fromdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, etype, [], [], false, false, new Set<string>(), new Set<string>(), frombody, [], []);
+            const from = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "from", fromdecl);
+
+            const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
+            const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, this.m_penv.SpecialNatSignature, [], [], false, false, new Set<string>(), new Set<string>(), valuebody, [], []);
+            const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
 
             const invariants: InvariantDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
-            const staticFunctions: StaticFunctionDecl[] = [create];
+            const staticFunctions: StaticFunctionDecl[] = [from];
             const staticOperators: StaticOperatorDecl[] = [];
             const memberFields: MemberFieldDecl[] = [];
-            const memberMethods: MemberMethodDecl[] = [];
+            const memberMethods: MemberMethodDecl[] = [value];
     
+            for(let i = 0; i < enums.length; ++i) {
+                const exp = new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
+                const enminit = new CallStaticFunctionOrOperatorExpression(sinfo, etype, "from", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, exp)]), "std");
+                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["__enum"], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
+                staticMembers.push(enm);
+            }
+
+
             if(this.testAndConsumeTokenIf("&")) {
                 this.setRecover(this.scanCodeParens());
                 this.ensureAndConsumeToken("{");
@@ -4037,35 +4041,6 @@ class Parser {
                 this.clearRecover();
             }
 
-            if(staticMembers.length !== 0) {
-                this.raiseError(line, "Cannot have explicit static fields on enum");
-            }
-
-            const explicitvalues = enums.some((env) => env[1] !== undefined);
-            for(let i = 0; i < enums.length; ++i) {
-                if(explicitvalues && enums[i][1] === undefined) {
-                    this.raiseError(line, "When using explicit enum values they must all be provided for every entry");
-                }
-
-                const exp = enums[i][1] !== undefined ? (enums[i][1] as ConstantExpressionValue).exp : new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
-                const enminit = new CallStaticFunctionOrOperatorExpression(sinfo, etype, "s_create", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, exp)]), "std");
-                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["enum"], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
-                staticMembers.push(enm);
-            }
-        
-            const ennamebody = new BodyImplementation(`name_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
-                new BlockStatement(sinfo, [
-                    new AssertStatement(sinfo, new LiteralBoolExpression(sinfo, false), "debug"),
-                    new ReturnStatement(sinfo, [new LiteralStringExpression(sinfo, "[INFEASIBLE]")])
-                ])
-            );
-
-            const eparam = new FunctionParameter("self", etype, false, undefined, undefined, undefined);
-            const ennameinv = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [eparam], undefined, undefined, this.m_penv.SpecialStringSignature, [], [], false, false, new Set<string>(), ennamebody, [], []);
-            const enname = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "nameof", ennameinv);
-                
-            staticFunctions.push(enname);
-
             if (currentDecl.checkDeclNameClash(currentDecl.ns, ename)) {
                 this.raiseError(line, "Collision between object and other names");
             }
@@ -4073,7 +4048,7 @@ class Parser {
             attributes.push("__enum_type", "__constructable");
 
             this.clearRecover();
-            currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, [SpecialTypeCategory.EnumTypeDecl, SpecialTypeCategory.GroundedTypeDecl], currentDecl.ns, ename, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
+            currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, ename, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
             this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
         }
         catch (ex) {
@@ -4090,7 +4065,7 @@ class Parser {
         this.ensureAndConsumeToken("typedecl");
 
         const iname = this.consumeTokenAndGetValue();
-        const terms = this.parseTermList();
+        const terms = this.parseTermDeclarations();
         if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
             this.raiseError(line, "Collision between object and other names");
         }
@@ -4140,10 +4115,16 @@ class Parser {
                 const itype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
                 const idval = this.parseTypeSignature();
 
-                let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][]
+                let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
-                provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, new NominalTypeSignature("NSCore", ["Algebraic"]))])]);
-                provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, new NominalTypeSignature("NSCore", ["Orderable"]))])]);
+                
+                if(attributes.includes("algebraic")) {
+                    provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
+                }
+
+                if(attributes.includes("orderable")) {
+                    provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
+                }
 
                 const invariants: InvariantDecl[] = [];
                 const staticMembers: StaticMemberDecl[] = [];
@@ -4180,7 +4161,7 @@ class Parser {
                 const from = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "from", fromdecl);
 
                 const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
-                const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), new Set<string>(), valuebody, [], []);
+                const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), new Set<string>(), valuebody, [], []);
                 const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
 
 
@@ -4194,17 +4175,118 @@ class Parser {
             }
         }
         else {
-            //[attr] typedecl NAME<...> [using {...}] [provides ... ] 
-            // | Foo {...}
+            //[attr] typedecl NAME<...> [using {...}] [provides ... ] of
+            // Foo {...}
             // | ...
             // [& {...}] | ;
 
-            xxx;
+            const concepttype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
 
-            if (terms.length !== 0) {
-                this.raiseError(line, "Cannot have template terms on Typed Primitive type");
+            let cusing: MemberFieldDecl[] = [];
+            if(this.testAndConsumeTokenIf("using")) {
+                let nonamectr = 0;
+                cusing = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
+                    const mfinfo = this.getCurrentSrcInfo();
+
+                    let name = `_g${nonamectr++}`;
+                    if(this.testToken(TokenStrings.Identifier)) {
+                        name = this.consumeTokenAndGetValue();
+                    }
+
+                    this.ensureAndConsumeToken(":")
+                    const ttype = this.parseTypeSignature();
+            
+                    let dvalue: ConstantExpressionValue | undefined = undefined;
+                    if (this.testAndConsumeTokenIf("=")) {
+                        dvalue = this.parseConstExpression(false);
+                    }
+    
+                    return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
+                })[0];
             }
 
+            const provides = this.parseProvides(currentDecl.ns === "NSCore", "of");
+            this.ensureAndConsumeToken("of");
+
+            const edecls: EntityTypeDecl[] = [];
+            while(!this.testToken(";") && !this.testToken("&")) {
+                if(this.testToken("|")) {
+                    this.consumeToken();
+                }
+                let esinfo = this.getCurrentSrcInfo();
+
+                this.ensureToken(TokenStrings.Type);
+                const ename = this.consumeTokenAndGetValue();
+                if (currentDecl.checkDeclNameClash(currentDecl.ns, ename)) {
+                    this.raiseError(line, "Collision between object and other names");
+                }
+
+                let musing: MemberFieldDecl[] = [];
+                if (this.testToken("{")) {
+                    let nonamectr = 0;
+                    musing = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
+                        const mfinfo = this.getCurrentSrcInfo();
+
+                        let name = `_f${nonamectr++}`;
+                        if (this.testToken(TokenStrings.Identifier)) {
+                            name = this.consumeTokenAndGetValue();
+                        }
+
+                        this.ensureAndConsumeToken(":")
+                        const ttype = this.parseTypeSignature();
+
+                        let dvalue: ConstantExpressionValue | undefined = undefined;
+                        if (this.testAndConsumeTokenIf("=")) {
+                            dvalue = this.parseConstExpression(false);
+                        }
+
+                        return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
+                    })[0];
+                }
+
+                const eprovides = [[concepttype, undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+                const edecl = new EntityTypeDecl(esinfo, this.m_penv.getCurrentFile(), ["__adt_entity_type"], currentDecl.ns, ename, terms, eprovides, [], [], [], [], musing, [], new Map<string, EntityTypeDecl>());
+                
+                edecls.push(edecl);
+                currentDecl.objects.set(ename, edecl);
+                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
+            }
+
+            const invariants: InvariantDecl[] = [];
+            const staticMembers: StaticMemberDecl[] = [];
+            const staticFunctions: StaticFunctionDecl[] = [];
+            const staticOperators: StaticOperatorDecl[] = [];
+            const memberFields: MemberFieldDecl[] = [];
+            const memberMethods: MemberMethodDecl[] = [];
+
+            if (this.testAndConsumeTokenIf("&")) {
+                this.setRecover(this.scanCodeParens());
+                this.ensureAndConsumeToken("{");
+
+                const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                const nestedEntities = new Map<string, EntityTypeDecl>();
+                this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+
+                this.ensureAndConsumeToken("}");
+
+                if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
+                    this.raiseError(line, "Collision between concept and other names");
+                }
+
+                this.clearRecover();
+            }
+            else {
+                this.ensureAndConsumeToken(";");
+            }
+
+            if(memberFields.length !== 0) {
+                this.raiseError(sinfo.line, "Cannot declare additional member fields on ADT");
+            }
+
+            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__adt_concept_type"], currentDecl.ns, iname, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, cusing, memberMethods, new Map<string, EntityTypeDecl>());
+            currentDecl.concepts.set(iname, cdecl);
+            this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + iname, cdecl);
         }
     }
 
@@ -4402,23 +4484,64 @@ class Parser {
 
                     nsdecl.declaredNames.add(ns + "::" + tname);
                 }
-                else if (this.testToken("typedecl")) {
-                    xxxx;
+                else if (this.testToken("typedecl")) {            
                     this.consumeToken();
+
                     this.ensureToken(TokenStrings.Type);
                     const tname = this.consumeTokenAndGetValue();
+
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-
-                    this.ensureAndConsumeToken("=");
-                    this.ensureAndConsumeToken(TokenStrings.Type);
-
                     nsdecl.declaredNames.add(ns + "::" + tname);
 
-                    if (this.testToken("&")) {
-                        this.ensureToken("{"); //we should be at the opening left paren 
-                        this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                    const isassigntype = this.testAndConsumeTokenIf("=");
+                    if (isassigntype) {
+                        if (!this.testToken(TokenStrings.Regex)) {
+                            if (this.testAndConsumeTokenIf("&")) {
+                                this.ensureToken("{"); //we should be at the opening left paren 
+                                this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                            }
+                        }
+                    }
+                    else {
+                        //[attr] typedecl NAME<...> [using {...}] [provides ... ] of
+                        // Foo {...}
+                        // | ...
+                        // [& {...}] | ;
+
+                        if (this.testAndConsumeTokenIf("using")) {
+                            this.ensureToken("{"); //we should be at the opening left paren 
+                            this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                        }
+
+                        this.parseProvides(false /*Doesn't matter since we arejust scanning*/, "of");
+                        this.ensureAndConsumeToken("of");
+
+                        while (!this.testToken(";") && !this.testToken("&")) {
+                            if (this.testToken("|")) {
+                                this.consumeToken();
+                            }
+
+                            this.ensureToken(TokenStrings.Type);
+                            const ename = this.consumeTokenAndGetValue();
+                            if (nsdecl.declaredNames.has(tname)) {
+                                this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
+                            }
+                            nsdecl.declaredNames.add(ns + "::" + ename);
+
+                            if (this.testToken("{")) {
+                                this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                            }
+                        }
+
+                        if (this.testAndConsumeTokenIf("&")) {
+                            this.ensureToken("{"); //we should be at the opening left paren 
+                            this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                        }
+                        else {
+                            this.ensureAndConsumeToken(";");
+                        }
                     }
                 }
                 else if (this.testToken("enum")) {
@@ -4454,7 +4577,7 @@ class Parser {
                     nsdecl.declaredNames.add(ns + "::" + tname);
 
                     this.parseTermDeclarations();
-                    this.parseProvides(ns === "NSCore");
+                    this.parseProvides(ns === "NSCore", "{");
             
                     this.ensureToken("{"); //we should be at the opening left paren 
                     this.m_cpos = this.scanCodeParens(); //scan to the closing paren
