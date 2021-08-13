@@ -28,26 +28,16 @@ function isBuildLevelEnabled(check: BuildLevel, enabled: BuildLevel): boolean {
     }
 }
 
-enum TemplateTermSpecialRestriction {
-    Literal,
-    Parsable, //implies unique
-    Validator, //implies unique
-    Struct, //modifies entity constructable
-    Entity, //implies unique and constructable
-    Grounded,
-    Unique
-}
-
 class TemplateTermDecl {
     readonly name: string;
-    readonly specialRestrictions: Set<TemplateTermSpecialRestriction>;
+    readonly isunique: boolean;
     readonly tconstraint: TypeSignature;
     readonly isInfer: boolean;
     readonly defaultType: TypeSignature | undefined;
 
-    constructor(name: string, specialRestrictions: Set<TemplateTermSpecialRestriction>, tconstraint: TypeSignature, isinfer: boolean, defaulttype: TypeSignature | undefined) {
+    constructor(name: string, isunique: boolean, tconstraint: TypeSignature, isinfer: boolean, defaulttype: TypeSignature | undefined) {
         this.name = name;
-        this.specialRestrictions = specialRestrictions;
+        this.isunique = isunique;
         this.tconstraint = tconstraint;
         this.isInfer = isinfer;
         this.defaultType = defaulttype;
@@ -56,10 +46,12 @@ class TemplateTermDecl {
 
 class TemplateTypeRestriction {
     readonly t: TypeSignature;
+    readonly isunique: boolean;
     readonly tconstraint: TypeSignature;
 
-    constructor(t: TypeSignature, tconstraint: TypeSignature) {
+    constructor(t: TypeSignature, isunique: boolean, tconstraint: TypeSignature) {
         this.t = t;
+        this.isunique = isunique;
         this.tconstraint = tconstraint;
     }
 }
@@ -308,34 +300,11 @@ class MemberMethodDecl implements OOMemberDecl {
     }
 }
 
-enum SpecialTypeCategory {
-    GroundedTypeDecl = "GroundedTypeDecl",
-    ParsableTypeDecl = "ParsableTypeDecl",
-    ValidatorTypeDecl = "ValidatorTypeDecl",
-    EnumTypeDecl = "EnumTypeDecl",
-    TypeDeclDecl = "TypeDeclDecl",
-    TypeDeclNumeric = "TypeDeclNumeric",
-    StringOfDecl = "StringOfDecl",
-    DataStringDecl = "DataStringDecl",
-    BufferDecl = "BufferDecl",
-    DataBufferDecl = "DataBufferDecl",
-    ResultDecl = "ResultDecl",
-    ResultOkDecl = "ResultOkDecl",
-    ResultErrDecl = "ResultErrDecl",
-    VectorTypeDecl = "VectorTypeDecl",
-    ListTypeDecl = "ListTypeDecl",
-    StackTypeDecl = "StackTypeDecl",
-    QueueTypeDecl = "QueueTypeDecl",
-    SetTypeDecl = "SetTypeDecl",
-    MapTypeDecl = "MapTypeDecl",
-}
-
 class OOPTypeDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
     readonly attributes: string[];
-    readonly specialDecls: Set<SpecialTypeCategory>;
     readonly ns: string;
     readonly name: string;
 
@@ -353,7 +322,7 @@ class OOPTypeDecl {
 
     readonly nestedEntityDecls: Map<string, EntityTypeDecl>;
 
-    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
+    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
         invariants: InvariantDecl[],
         staticMembers: StaticMemberDecl[], staticFunctions: StaticFunctionDecl[], staticOperators: StaticOperatorDecl[],
         memberFields: MemberFieldDecl[], memberMethods: MemberMethodDecl[],
@@ -361,7 +330,6 @@ class OOPTypeDecl {
         this.sourceLocation = sourceLocation;
         this.srcFile = srcFile;
         this.attributes = attributes;
-        this.specialDecls = new Set<SpecialTypeCategory>(specialDecls);
         this.ns = ns;
         this.name = name;
         this.terms = terms;
@@ -409,22 +377,22 @@ class OOPTypeDecl {
 }
 
 class ConceptTypeDecl extends OOPTypeDecl {
-    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
+    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
         invariants: InvariantDecl[],
         staticMembers: StaticMemberDecl[], staticFunctions: StaticFunctionDecl[], staticOperators: StaticOperatorDecl[],
         memberFields: MemberFieldDecl[], memberMethods: MemberMethodDecl[],
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
-        super(sourceLocation, srcFile, attributes, specialDecls, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
+        super(sourceLocation, srcFile, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
     }
 }
 
 class EntityTypeDecl extends OOPTypeDecl {
-    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], specialDecls: SpecialTypeCategory[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
+    constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
         invariants: InvariantDecl[],
         staticMembers: StaticMemberDecl[], staticFunctions: StaticFunctionDecl[], staticOperators: StaticOperatorDecl[],
         memberFields: MemberFieldDecl[], memberMethods: MemberMethodDecl[],
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
-        super(sourceLocation, srcFile, attributes, specialDecls, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
+        super(sourceLocation, srcFile, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
     }
 }
 
