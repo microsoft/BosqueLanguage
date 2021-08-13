@@ -1033,7 +1033,7 @@ class Parser {
                 this.raiseError(sinfo.line, "Source name not registered");
             }
             else {
-                const bodyid = `k${sfpos}_${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
+                const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
                 try {
                     this.m_penv.pushFunctionScope(new FunctionScope(argNames, resultInfo, ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred));
                     body = this.parseBody(bodyid, srcFile);
@@ -3591,7 +3591,6 @@ class Parser {
     private parseNamespaceTypedef(currentDecl: NamespaceDeclaration) {
         //typedef NAME<T...> = TypeConstraint;
 
-        const sinfo = this.getCurrentSrcInfo();
         this.ensureAndConsumeToken("typedef");
         this.ensureToken(TokenStrings.Type);
         const tyname = this.consumeTokenAndGetValue();
@@ -3608,33 +3607,10 @@ class Parser {
             this.raiseError(this.getCurrentLine(), "Missing ; on typedef");
         }
 
-        if(this.testToken(TokenStrings.Regex)) {
-            const vregex = this.consumeTokenAndGetValue();
-            this.consumeToken();
+        const btype = this.parseTypeSignature();
+        this.consumeToken();
 
-            const re = BSQRegex.parse(vregex);
-            if(typeof(re) === "string") {
-                this.raiseError(this.getCurrentLine(), re);
-            }
-
-            const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("NSCore", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
-            const param = new FunctionParameter("arg", new NominalTypeSignature("NSCore", ["String"]), false, undefined, undefined, undefined);
-            const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
-            const acceptsinvoke = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), new Set<string>(), acceptsbody, [], []);
-            const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
-            const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
-            const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type"], currentDecl.ns, tyname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
-
-            currentDecl.objects.set(tyname, validatortype);
-            this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + tyname, currentDecl.objects.get(tyname) as EntityTypeDecl);
-            this.m_penv.assembly.addValidatorRegex(currentDecl.ns + "::" + tyname, re as BSQRegex);
-        }
-        else {
-            const btype = this.parseTypeSignature();
-            this.consumeToken();
-
-            currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(currentDecl.ns, tyname, terms, btype));
-        }
+        currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(currentDecl.ns, tyname, terms, btype));
     }
 
     private parseProvides(iscorens: boolean): [TypeSignature, TypeConditionRestriction | undefined][] {
@@ -4094,6 +4070,8 @@ class Parser {
                 this.raiseError(line, "Collision between object and other names");
             }
 
+            attributes.push("__enum_type", "__constructable");
+
             this.clearRecover();
             currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, [SpecialTypeCategory.EnumTypeDecl, SpecialTypeCategory.GroundedTypeDecl], currentDecl.ns, ename, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
             this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
@@ -4105,101 +4083,129 @@ class Parser {
 
     private parseTypeDecl(currentDecl: NamespaceDeclaration) {
         const line = this.getCurrentLine();
-
-        //[attr] typedecl NAME of Type (& {...} | ;)
         const attributes = this.parseAttributes();
 
         const sinfo = this.getCurrentSrcInfo();
        
         this.ensureAndConsumeToken("typedecl");
 
-        this.ensureToken(TokenStrings.Type);
         const iname = this.consumeTokenAndGetValue();
+        const terms = this.parseTermList();
         if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
             this.raiseError(line, "Collision between object and other names");
         }
 
-        const itype = new NominalTypeSignature(currentDecl.ns, [iname]);
-        this.ensureAndConsumeToken("of");
-        if(this.testToken("{") || )
+        const isassigntype = this.testAndConsumeTokenIf("=");
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === this.m_penv.getCurrentFile());
+        if(sfpos === -1) {
+            this.raiseError(sinfo.line, "Source name not registered");
+        }
+        
+        const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
 
+        if (isassigntype) {
+            if (this.testToken(TokenStrings.Regex)) {
+                //[attr] typedecl NAME = regex;
+                if (terms.length !== 0) {
+                    this.raiseError(line, "Cannot have template terms on Validator type");
+                }
 
-        this.ensureAndConsumeToken("=");
-        const idval = this.parseTypeSignature(false);
+                const vregex = this.consumeTokenAndGetValue();
+                this.consumeToken();
 
-        let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][]
-        provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
-        provides.push([new NominalTypeSignature("NSCore", ["APIType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, new NominalTypeSignature("NSCore", ["APIType"]))])]);
+                const re = BSQRegex.parse(vregex);
+                if (typeof (re) === "string") {
+                    this.raiseError(this.getCurrentLine(), re);
+                }
 
-        //
-        //TODO: this is a bit broken and really only works for 1-level numeric types -- needs to be cleaned up
-        //
+                const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("NSCore", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
+                const param = new FunctionParameter("arg", new NominalTypeSignature("NSCore", ["String"]), false, undefined, undefined, undefined);
+                const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
+                const acceptsinvoke = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), new Set<string>(), acceptsbody, [], []);
+                const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
+                const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+                const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type"], currentDecl.ns, iname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
 
-        //
-        //TODO: maybe want to make this parsable too!
-        //
-
-        //
-        //TODO: this should work for other API/Key types as well -- we need to cleanup to make that work + the handling of invariants and the struct/entity bit too
-        //      maybe for tuples/records we let the underlying . accessors work automagically
-        //
-
-        const invariants: InvariantDecl[] = [];
-        const staticMembers: StaticMemberDecl[] = [];
-        const staticFunctions: StaticFunctionDecl[] = [];
-        const staticOperators: StaticOperatorDecl[] = [];
-        const memberFields: MemberFieldDecl[] = [];
-        const memberMethods: MemberMethodDecl[] = [];
-
-        if(this.testAndConsumeTokenIf("&")) {
-            this.setRecover(this.scanCodeParens());
-            this.ensureAndConsumeToken("{");
-
-            const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
-
-            const nestedEntities = new Map<string, EntityTypeDecl>();
-            this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
-
-            this.ensureAndConsumeToken("}");
-
-            if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
-                this.raiseError(line, "Collision between concept and other names");
+                currentDecl.objects.set(iname, validatortype);
+                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+                this.m_penv.assembly.addValidatorRegex(currentDecl.ns + "::" + iname, re as BSQRegex);
             }
+            else {
+                //[attr] typedecl NAME = PRIMITIVE [& {...}];
 
-            this.clearRecover();
+                if (terms.length !== 0) {
+                    this.raiseError(line, "Cannot have template terms on Typed Primitive type");
+                }
+
+                const itype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
+                const idval = this.parseTypeSignature();
+
+                let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][]
+                provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
+                provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, new NominalTypeSignature("NSCore", ["Algebraic"]))])]);
+                provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, new NominalTypeSignature("NSCore", ["Orderable"]))])]);
+
+                const invariants: InvariantDecl[] = [];
+                const staticMembers: StaticMemberDecl[] = [];
+                const staticFunctions: StaticFunctionDecl[] = [];
+                const staticOperators: StaticOperatorDecl[] = [];
+                const memberFields: MemberFieldDecl[] = [];
+                const memberMethods: MemberMethodDecl[] = [];
+
+                if (this.testAndConsumeTokenIf("&")) {
+                    this.setRecover(this.scanCodeParens());
+                    this.ensureAndConsumeToken("{");
+
+                    const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    const nestedEntities = new Map<string, EntityTypeDecl>();
+                    this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+
+                    this.ensureAndConsumeToken("}");
+
+                    if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
+                        this.raiseError(line, "Collision between concept and other names");
+                    }
+
+                    this.clearRecover();
+                }
+                else {
+                    this.ensureAndConsumeToken(";");
+                }
+
+                const vparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
+
+                const frombody = new BodyImplementation(`${bodyid}_from`, this.m_penv.getCurrentFile(), "special_inject");
+                const fromdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, itype, [], [], false, false, new Set<string>(), new Set<string>(), frombody, [], []);
+                const from = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "from", fromdecl);
+
+                const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
+                const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), new Set<string>(), valuebody, [], []);
+                const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
+
+
+                staticFunctions.push(from);
+                memberMethods.push(value);
+
+                attributes.push("__typedprimitive", "__internal", "__typedeclable", "__constructable");
+
+                currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
+                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+            }
         }
         else {
-            this.ensureAndConsumeToken(";");
+            //[attr] typedecl NAME<...> [using {...}] [provides ... ] 
+            // | Foo {...}
+            // | ...
+            // [& {...}] | ;
+
+            xxx;
+
+            if (terms.length !== 0) {
+                this.raiseError(line, "Cannot have template terms on Typed Primitive type");
+            }
+
         }
-
-        const vparam = new FunctionParameter("self", itype, false, undefined, undefined, undefined);
-        const fparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
-        
-        const createbody = new BodyImplementation(`create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_create");
-        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), createbody, [], []);
-        const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "create", createdecl);
-
-        const valuebuiltinbody = new BodyImplementation(`s_value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_value");
-        const valuebuiltindecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebuiltinbody, [], []);
-        const valuebuiltin = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_value", valuebuiltindecl);
-
-        const valuebody = new BodyImplementation(`value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
-            new CallStaticFunctionOrOperatorExpression(sinfo, itype, "s_value", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, new AccessVariableExpression(sinfo, "self"))]), "std")
-        );
-        const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebody, [], []);
-        const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
-
-        staticFunctions.push(create);
-        staticFunctions.push(valuebuiltin);
-        memberMethods.push(value);
-
-        let categories = [SpecialTypeCategory.TypeDeclDecl, SpecialTypeCategory.GroundedTypeDecl];
-        if(OOPTypeDecl.attributeSetContains("numeric", attributes)) {
-            categories.push(SpecialTypeCategory.TypeDeclNumeric);
-        }
-
-        currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, categories, currentDecl.ns, iname, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
-        this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
     }
 
     private parseNamespaceConst(currentDecl: NamespaceDeclaration) {
@@ -4397,6 +4403,7 @@ class Parser {
                     nsdecl.declaredNames.add(ns + "::" + tname);
                 }
                 else if (this.testToken("typedecl")) {
+                    xxxx;
                     this.consumeToken();
                     this.ensureToken(TokenStrings.Type);
                     const tname = this.consumeTokenAndGetValue();
