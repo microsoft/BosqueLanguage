@@ -45,25 +45,56 @@ class RegexParser {
         else if(this.isToken("[")) {
             this.advance();
 
-            const lb = this.token();
-            this.advance();
-
-            if(!this.isToken("-")) {
-                return "Invalid range given";
-            }
-            else {
+            const compliment = this.isToken("^")
+            if(compliment) {
                 this.advance();
             }
 
-            const ub = this.token();
-            this.advance();
+            let range: {lb: number, ub: number}[] = [];
+            while(!this.isToken("]")) {
+                const lb = this.token();
+                this.advance();
+
+                if (!this.isToken("-")) {
+                    range.push({ lb: lb.codePointAt(0) as number, ub: lb.codePointAt(0) as number });
+                }
+                else {
+                    this.advance();
+
+                    const ub = this.token();
+                    this.advance();
+
+                    range.push({ lb: lb.codePointAt(0) as number, ub: ub.codePointAt(0) as number });
+                }
+            }
 
             if(!this.isToken("]")) {
                 return "Invalid range given";
             }
             this.advance();
 
-            return new CharRange(lb.codePointAt(0) as number, ub.codePointAt(0) as number);
+            return new CharRange(compliment, range);
+        }
+        else if(this.isToken("{")) {
+            this.advance();
+
+            let fname = "";
+            while(!this.isToken("}")) {
+                fname += this.token();
+                this.advance();
+            }
+
+            if(!this.isToken("}")) {
+                return "Invalid range given";
+            }
+            this.advance();
+
+            let ccpos = fname.indexOf("::");
+
+            let ns = ccpos === -1 ? "NSCore" : fname.slice(0, ccpos);
+            let ccname = ccpos === -1 ? fname : fname.slice(ccpos + 3);
+
+            return new ConstRegexClass(ns, ccname);            
         }
         else {
             res = new Literal(this.token(), this.token(), this.token());
@@ -75,7 +106,7 @@ class RegexParser {
 
     private parseCharClassOrEscapeComponent(): RegexComponent | string {
         if(this.isToken(".")) {
-            return new CharClass(SpecialCharKind.Wildcard);
+            return new DotCharClass();
         }
         else if(this.isToken("\\")) {
             this.advance();
@@ -88,7 +119,7 @@ class RegexParser {
 
                 return new Literal(`\\${cc}`, cc, cc);
             }
-            else if(this.isToken("n") || this.isToken("r") || this.isToken("t")) {
+            else {
                 const cc = this.token();
                 this.advance();
 
@@ -104,32 +135,6 @@ class RegexParser {
                 }
 
                 return new Literal(`\\${cc}`, `\\${cc}`, rc);
-            }
-            else {
-                if(!this.isToken("p")) {
-                    return "Ill formed character class";
-                }
-                this.advance();
-                if(!this.isToken("{")) {
-                    return "Ill formed character class";
-                }
-                this.advance();
-
-                let res: RegexComponent | string = "Ill formed character class";
-                if(this.isToken("Z")) {
-                    res = new CharClass(SpecialCharKind.WhiteSpace);
-                    this.advance();
-                }
-                else {
-                    res = "Ill formed character class";
-                }
-
-                if(!this.isToken("}")) {
-                    return "Ill formed character class";
-                }
-                this.advance();
-
-                return res;
             }
         }
         else {
@@ -313,10 +318,12 @@ abstract class RegexComponent {
         switch (tag) {
             case "Literal":
                 return Literal.jparse(obj);
-            case "CharClass":
-                return CharClass.jparse(obj);
             case "CharRange":
                 return CharRange.jparse(obj);
+            case "DotCharClass":
+                return DotCharClass.jparse(obj);
+            case "ConstRegexClass":
+                return ConstRegexClass.jparse(obj);
             case "StarRepeat":
                 return StarRepeat.jparse(obj);
             case "PlusRepeat":
@@ -370,70 +377,116 @@ class Literal extends RegexComponent {
 }
 
 class CharRange extends RegexComponent {
-    readonly lb: number;
-    readonly ub: number;
+    readonly compliment: boolean;
+    readonly range: {lb: number, ub: number}[];
 
-    constructor(lb: number, ub: number) {
+    constructor(compliment: boolean, range: {lb: number, ub: number}[]) {
         super();
 
-        this.lb = lb;
-        this.ub = ub;
+        assert(range.length !== 0);
+
+        this.compliment = compliment;
+        this.range = range;
     }
 
     jemit(): any {
-        return { tag: "CharRange", lb: this.lb, ub: this.ub };
+        return { tag: "CharRange", compliment: this.compliment, range: this.range };
     }
 
     static jparse(obj: any): RegexComponent {
-        return new CharRange(obj.lb, obj.ub);
+        return new CharRange(obj.compliment, obj.range);
+    }
+
+    private static valToSStr(cc: number): string {
+        assert(cc >= 9);
+
+        if(cc === 9) {
+            return "\\t";
+        }
+        else if (cc === 10) {
+            return "\\n";
+        }
+        else if (cc === 13) {
+            return "\\r";
+        }
+        else {
+            return String.fromCodePoint(cc);
+        }
     }
 
     compileToJS(): string {
-        return `[${this.lb}-${this.ub}]`;
+        //
+        //TODO: probably need to do some escaping here as well
+        //
+        const rng = this.range.map((rr) => (rr.lb == rr.ub) ? CharRange.valToSStr(rr.lb) : `${CharRange.valToSStr(rr.lb)}-${CharRange.valToSStr(rr.ub)}`);
+        return `[${this.compliment ? "^" : ""}${rng.join("")}]`;
     }
 
     compilePatternToSMT(ascii: boolean): string  {
         assert(ascii);
-
-        return `(re.range \"${this.lb}\" \"${this.ub}\")`;
+        assert(!this.compliment);
+        //
+        //TODO: probably need to do some escaping here as well
+        //
+        const rng = this.range.map((rr) => (rr.lb == rr.ub) ? `(str.to.re "${CharRange.valToSStr(rr.lb)}")` : `(re.range "${CharRange.valToSStr(rr.lb)}" "${CharRange.valToSStr(rr.ub)}")`);
+        if(rng.length === 1) {
+            return rng[0];
+        }
+        else {
+            return `(re.union ${rng.join(" ")})`; 
+        }
     }
 }
 
-class CharClass extends RegexComponent {
-    readonly kind: SpecialCharKind;
-
-    constructor(kind: SpecialCharKind) {
+class DotCharClass extends RegexComponent {
+    constructor() {
         super();
-
-        this.kind = kind;
     }
 
     jemit(): any {
-        return { tag: "CharClass", kind: this.kind };
+        return { tag: "DotCharClass" };
     }
 
     static jparse(obj: any): RegexComponent {
-        return new CharClass(obj.kind);
+        return new DotCharClass();
     }
 
     compileToJS(): string {
-        switch (this.kind) {
-            case SpecialCharKind.WhiteSpace:
-                return "\\p{Z}";
-            default:
-                return ".";
-        }
+        return ".";
     }
 
     compilePatternToSMT(ascii: boolean): string  {
-        assert(ascii);
-        
-        switch (this.kind) {
-            case SpecialCharKind.WhiteSpace:
-                return "(re.union (str.to.re \" \") (str.to.re \"\\t\") (str.to.re \"\\n\") (str.to.re \"\\r\"))";
-            default:
-                return "re.allchar";
-        }
+        return "re.allchar";
+    }
+}
+
+class ConstRegexClass extends RegexComponent {
+    readonly ns: string;
+    readonly ccname: string;
+
+    constructor(ns: string, ccname: string) {
+        super();
+
+        this.ns = ns;
+        this.ccname = ccname;
+    }
+
+    jemit(): any {
+        return { tag: "ConstRegexClass", ns: this.ns, ccname: this.ccname };
+    }
+
+    static jparse(obj: any): RegexComponent {
+        return new ConstRegexClass(obj.ns, obj.ccname);
+    }
+
+    compileToJS(): string {
+        assert(false, `Should be replaced by const ${this.ns}::${this.ccname}`);
+        return `${this.ns}::${this.ccname}`;
+    }
+
+    compilePatternToSMT(ascii: boolean): string  {
+        assert(false, `Should be replaced by const ${this.ns}::${this.ccname}`);
+        return `${this.ns}::${this.ccname}`;
     }
 }
 
