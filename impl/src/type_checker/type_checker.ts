@@ -3,11 +3,11 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedTupleAtomTypeEntry, ResolvedRecordAtomType, ResolvedRecordAtomTypeEntry, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry, ResolvedLiteralAtomType } from "../ast/resolved_type";
-import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, SpecialTypeCategory, TemplateTermSpecialRestriction, NamespaceOperatorDecl, StaticOperatorDecl } from "../ast/assembly";
+import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedRecordAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
+import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl } from "../ast/assembly";
 import { TypeEnvironment, VarInfo, FlowTypeTruthValue, StructuredAssignmentPathStep, StructuredAssignmentCheck, ValueType } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, TupleTypeSignature, FunctionTypeSignature } from "../ast/type_signature";
-import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeDirectInvokeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralParamerterValueExpression, LiteralTypedNumericConstructorExpression, OfTypeConvertExpression, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, TemplateArguments, CombinatorPCodeExpression } from "../ast/body";
+import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, TemplateArguments } from "../ast/body";
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
@@ -47,30 +47,6 @@ type FilledLocation = {
     trgt: MIRArgument | undefined
 };
 
-function createTupleStructuredAssignmentPathStep(fromtype: ResolvedType, t: ResolvedType, ival: number): StructuredAssignmentPathStep {
-    return { fromtype: fromtype, t: t, step: "tuple", ival: ival, nval: "[empty]" };
-}
-
-function createRecordStructuredAssignmentPathStep(fromtype: ResolvedType, t: ResolvedType, nval: string): StructuredAssignmentPathStep {
-    return { fromtype: fromtype, t: t, step: "record", ival: -1, nval: nval };
-}
-
-function createEphemeralStructuredAssignmentPathStep(fromtype: ResolvedType, t: ResolvedType, ival: number): StructuredAssignmentPathStep {
-    return { fromtype: fromtype, t: t, step: "elist", ival: ival, nval: "[empty]" };
-}
-
-function createNominalStructuredAssignmentPathStep(fromtype: ResolvedType, t: ResolvedType, nval: string): StructuredAssignmentPathStep {
-    return { fromtype: fromtype, t: t, step: "nominal", ival: -1, nval: nval };
-}
-
-function createTerminalEqCheck(srctype: ResolvedType, exp: ConstantExpressionValue): StructuredAssignmentCheck {
-    return { action: "eqchk", srctype: srctype, oftype: undefined, isoptional: false, eqvalue: exp };
-}
-
-function createOfTypeCheck(srctype: ResolvedType, oftype: ResolvedType, isoptional: boolean): StructuredAssignmentCheck {
-    return { action: "typechk", srctype: srctype, oftype: oftype, isoptional: isoptional, eqvalue: undefined };
-}
-
 abstract class InitializerEvaluationAction {
     readonly deps: string[];
 
@@ -81,31 +57,37 @@ abstract class InitializerEvaluationAction {
 
 class InitializerEvaluationLiteralExpression extends InitializerEvaluationAction {
     readonly constexp: Expression;
+    readonly idtag: string | undefined;
 
-    constructor(constexp: Expression) {
+    constructor(constexp: Expression, idtag: string | undefined) {
         super([]);
         this.constexp = constexp;
+        this.idtag = idtag;
     }
 }
 
 class InitializerEvaluationConstantLoad extends InitializerEvaluationAction {
     readonly gkey: MIRGlobalKey;
+    readonly shortgkey: string;
 
-    constructor(gkey: MIRGlobalKey) {
+    constructor(gkey: MIRGlobalKey, shortgkey: string) {
         super([]);
 
         this.gkey = gkey;
+        this.shortgkey = shortgkey;
     }
 }
 
 class InitializerEvaluationCallAction extends InitializerEvaluationAction {
     readonly ikey: MIRInvokeKey;
+    readonly shortikey: string;
     readonly args: MIRArgument[];
 
-    constructor(ikey: MIRInvokeKey, args: MIRArgument[]) {
+    constructor(ikey: MIRInvokeKey, shortikey: string, args: MIRArgument[]) {
         super(args.map((arg) => arg.nameID));
 
         this.ikey = ikey;
+        this.shortikey = shortikey;
         this.args = args;
     }
 }
@@ -165,25 +147,27 @@ class TypeChecker {
         }
     }
 
-    private isConstructorTypeOfValue(ctype: ResolvedType): boolean {
-        const ootd = (ctype.options[0] as ResolvedEntityAtomType).object;
-        return OOPTypeDecl.attributeSetContains("struct", ootd.attributes);
+    private getUniqueTypeBinds(ttype: ResolvedType): Map<string, ResolvedType> {
+        assert(ttype.options.length === 1 && ((ttype.options[0] instanceof ResolvedConceptAtomType) || (ttype.options[0] instanceof ResolvedEntityAtomType)));
+
+        if(ttype.options[0] instanceof ResolvedEntityAtomType) {
+            return (ttype.options[0] as ResolvedEntityAtomType).binds;
+        }
+        else {
+            return (ttype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds;
+        }
     }
 
-    private getResultSubtypes(rtype: ResolvedType): [ResolvedType, ResolvedType] {
-        const binds = (rtype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds;
-        const okentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
-        const errentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
-
-        return [
-            ResolvedType.createSingle(ResolvedEntityAtomType.create(okentity, binds)),
-            ResolvedType.createSingle(ResolvedEntityAtomType.create(errentity, binds))
-        ];
+    private getTBind(binds: Map<string, ResolvedType>): ResolvedType {
+        return binds.get("T") as ResolvedType;
     }
 
-    private getResultBinds(rtype: ResolvedType): { T: ResolvedType, E: ResolvedType } {
-        const binds = (rtype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds;
+    private getTEBinds(binds: Map<string, ResolvedType>): { T: ResolvedType, E: ResolvedType } {
         return { T: binds.get("T") as ResolvedType, E: binds.get("E") as ResolvedType };
+    }
+
+    private getKVBinds(binds: Map<string, ResolvedType>): { K: ResolvedType, V: ResolvedType } {
+        return { K: binds.get("K") as ResolvedType, V: binds.get("V") as ResolvedType };
     }
 
     private emitInlineConvertIfNeeded<T extends MIRArgument>(sinfo: SourceInfo, src: T, srctype: ValueType, trgttype: ResolvedType): T | MIRRegisterArgument {
@@ -191,7 +175,7 @@ class TypeChecker {
             return src;
         }
 
-        this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(srctype.flowtype, trgttype), `Cannot convert type ${srctype.flowtype.idStr} into ${trgttype.idStr}`);
+        this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(srctype.flowtype, trgttype), `Cannot convert type ${srctype.flowtype.typeID} into ${trgttype.typeID}`);
 
         const mirsrclayouttype = this.m_emitter.registerResolvedTypeReference(srctype.layout);
         const mirsrcflowtype = this.m_emitter.registerResolvedTypeReference(srctype.flowtype);
@@ -208,7 +192,7 @@ class TypeChecker {
             return src;
         }
 
-        this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(srctype.flowtype, trgttype), `Cannot convert type ${srctype.flowtype.idStr} into ${trgttype.idStr}`);
+        this.raiseErrorIf(sinfo, !this.m_assembly.subtypeOf(srctype.flowtype, trgttype), `Cannot convert type ${srctype.flowtype.typeID} into ${trgttype.typeID}`);
 
         const mirsrclayouttype = this.m_emitter.registerResolvedTypeReference(srctype.layout);
         const mirsrcflowtype = this.m_emitter.registerResolvedTypeReference(srctype.flowtype);

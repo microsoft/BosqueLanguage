@@ -6,7 +6,7 @@
 import { SourceInfo, Parser } from "../ast/parser";
 import { MIRAbort, MIRAllTrue, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRBody, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeadFlow, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMultiLoadFromEpehmeralList, MIRNop, MIROp, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRRegisterAssign, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart, MIRVirtualMethodKey, MIRSomeTrue } from "./mir_ops";
 import { Assembly, BuildLevel, ConceptTypeDecl, EntityTypeDecl, InvokeDecl, MemberMethodDecl, NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, OOMemberLookupInfo, OOPTypeDecl, StaticFunctionDecl, StaticMemberDecl, StaticOperatorDecl } from "../ast/assembly";
-import { ResolvedConceptAtomType, ResolvedConceptAtomTypeEntry, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedFunctionType, ResolvedLiteralAtomType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedType } from "../ast/resolved_type";
+import { ResolvedConceptAtomType, ResolvedConceptAtomTypeEntry, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedFunctionType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedType } from "../ast/resolved_type";
 import { MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRLiteralType, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRTupleTypeEntry, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
 
 import { TypeChecker } from "../type_checker/type_checker";
@@ -19,23 +19,35 @@ import { ValueType } from "../type_checker/type_environment";
 
 import * as Crypto from "crypto";
 
+//Body id -- should be k#shortname...
+type MIRPCodeIDKey = string;
+
 type PCode = {
     code: InvokeDecl,
-    scope: MIRInvokeKey,
+    pcodeID: MIRPCodeIDKey,
     captured: Map<string, ResolvedType>,
+    usedpcode: Map<string, MIRInvokeKey>,
     ftype: ResolvedFunctionType
 };
 
+type GeneratedKeyName<T> = {
+    keyid: T,
+    shortname: string
+}
+
 class MIRKeyGenerator {
-    static computeBindsKeyInfo(binds: Map<string, ResolvedType>): string {
+    static computeBindsKeyInfo(binds: Map<string, ResolvedType>): [string, string] {
         if (binds.size === 0) {
-            return "";
+            return ["", ""];
         }
 
         let terms: string[] = [];
-        binds.forEach((v, k) => terms.push(`${k}=${v.idStr}`));
+        binds.forEach((v, k) => terms.push(`${k}=${v.typeID}`));
 
-        return `<${terms.sort().join(", ")}>`;
+        let shortterms: string[] = [];
+        binds.forEach((v, k) => terms.push(`${k}=${v.shortID}`));
+
+        return [`<${terms.sort().join(", ")}>`, `<${shortterms.sort().join(", ")}>`];
     }
 
     static computePCodeKeyInfo(pcodes: PCode[]): string {
@@ -43,42 +55,62 @@ class MIRKeyGenerator {
             return "";
         }
 
-        return "[" + pcodes.map((pc) => `${pc.code.srcFile}%${pc.code.sourceLocation.line}%${pc.code.sourceLocation.column}`).join(",") + "]";
+        return "[" + pcodes.map((pc) => `${pc.pcodeID}`).join(",") + "]";
     }
 
-    static generateTypeKey(t: ResolvedType): MIRResolvedTypeKey {
-        return t.idStr;
+    static generateTypeKey(t: ResolvedType): GeneratedKeyName<MIRResolvedTypeKey> {
+        return {keyid: t.typeID, shortname: t.shortID};
     }
 
-    static generateFieldKey(t: ResolvedType, name: string): MIRFieldKey {
-        return `${MIRKeyGenerator.generateTypeKey(t)}.${name}`;
+    static generateFieldKey(t: ResolvedType, name: string): GeneratedKeyName<MIRFieldKey> {
+        const tkey = this.generateTypeKey(t);
+        return {keyid: `${tkey.keyid}.${name}`, shortname: `${tkey.shortname}.${name}`};
     }
 
-    static generateFunctionKey(prefix: string, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): MIRInvokeKey {
-        return `${prefix}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}${MIRKeyGenerator.computePCodeKeyInfo(pcodes)}`;
+    static generateFunctionKeyWNamespace(ns: string, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], prefix?: string): GeneratedKeyName<MIRInvokeKey> {
+        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
+
+        const fname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${binfo}${pcinfo}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${shortbinfo}${pcinfo}`;
+        return {keyid: fname, shortname: shortfname};
     }
 
-    static generateMethodKey(name: string, t: MIRResolvedTypeKey, binds: Map<string, ResolvedType>, pcodes: PCode[]): MIRInvokeKey {
-        return `${t}::${name}${MIRKeyGenerator.computeBindsKeyInfo(binds)}${MIRKeyGenerator.computePCodeKeyInfo(pcodes)}`;
+    static generateFunctionKeyWType(t: ResolvedType, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], prefix?: string): GeneratedKeyName<MIRInvokeKey> {
+        const tinfo = MIRKeyGenerator.generateTypeKey(t);
+        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
+
+        const fname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}${binfo}${pcinfo}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.shortname}::${name}${shortbinfo}${pcinfo}`;
+        return {keyid: fname, shortname: shortfname};
     }
 
-    static generateVirtualMethodKey(vname: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): MIRVirtualMethodKey {
-        return `${vname}${MIRKeyGenerator.computeBindsKeyInfo(binds)}${MIRKeyGenerator.computePCodeKeyInfo(pcodes)}`;
+    static generateVirtualMethodKey(vname: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): GeneratedKeyName<MIRVirtualMethodKey> {
+        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
+
+
+        const iname = `${vname}${binfo}${pcinfo}`;
+        const shortvname =  `${vname}${shortbinfo}${pcinfo}`;
+        return {keyid: iname, shortname: shortvname};
     }
 
-    static generatePCodeKey(inv: InvokeDecl): MIRInvokeKey {
-        return `fn--${inv.srcFile}+${inv.sourceLocation.line}##${inv.sourceLocation.pos}`;
+    static generatePCodeKey(pcode: PCode): MIRInvokeKey {
+        return `${pcode.code.isPCodeFn ? "fn" : "pred"}--${pcode.pcodeID}`;
     }
 
-    static generateOperatorSignatureKey(ikey: MIRInvokeKey, isprefix: boolean, isinfix: boolean, sigkeys: string[]): string {
+    static generateOperatorSignatureKey(ikey: MIRInvokeKey, shortname: string, isprefix: boolean, isinfix: boolean, sigkeys: string[]): GeneratedKeyName<MIRInvokeKey> {
         if(isprefix) {
             ikey = ikey + "=prefix";
+            shortname = shortname + "=prefix";
         }
         if(isinfix) {
             ikey = ikey + "=infix";
+            shortname = shortname + "=infix";
         }
 
-        return ikey + `=(${sigkeys.join(", ")})`
+        return {keyid: ikey + `=(${sigkeys.join(", ")})`, shortname: shortname + `=(${sigkeys.join(", ")})`};
     }
 }
 
@@ -1074,6 +1106,7 @@ class MIREmitter {
     }
 
     registerConstExpr(srcFile: string, exp: ConstantExpressionValue, binds: Map<string, ResolvedType>, etype: ResolvedType): MIRGlobalKey {
+        xxxx; //use bodyid instead of srcfile
         const key = MIRKeyGenerator.generateFunctionKey(`cexpr@${srcFile}#${exp.exp.sinfo.pos}`, "expr", new Map<string, ResolvedType>(), []);
         const gkey = "$global_" + key;
         if (!this.emitEnabled || this.masm.constantDecls.has(gkey) || this.pendingConstExprProcessing.findIndex((cp) => cp[0] === key) !== -1) {
@@ -1349,4 +1382,4 @@ class MIREmitter {
     }
 }
 
-export { PCode, MIRKeyGenerator, MIREmitter };
+export { MIRPCodeIDKey, PCode, GeneratedKeyName, MIRKeyGenerator, MIREmitter };
