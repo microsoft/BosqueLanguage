@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { assert } from "console";
+import * as assert from "assert";
 
 class RegexParser {
     readonly restr: string;

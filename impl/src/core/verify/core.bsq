@@ -301,7 +301,7 @@ enum BufferCompression {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-entity Buffer<T APIType> provides Some, APIType {
+entity BufferOf<T APIType> provides Some, APIType {
     private field format: BufferFormat;
     private field encoding: BufferEncoding;
     private field compression: BufferCompression;
@@ -340,14 +340,12 @@ __internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
 __internal entity Regex provides Some {
 }
 
-/*
 struct entity RegexMatch provides Some {
     field index: Nat;
     field length: Nat;
 
     invariant $index >= 0n & $length >= 0n;
 }
-*/
 
 //<summary>Static methods for Tuples.</summary>
 __universal concept Tuple provides Some {

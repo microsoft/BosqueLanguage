@@ -347,6 +347,22 @@ class OOPTypeDecl {
         return ["__list_type", "__stack_type", "__queue_type", "__set_type", "__map_type"].some((otype) => OOPTypeDecl.attributeSetContains(otype, this.attributes));
     }
 
+    isInternalType(): boolean { 
+        return this.attributes.includes("__internal"); 
+    }
+    
+    isUniversalConceptType(): boolean { 
+        return this.attributes.includes("__universal"); 
+    }
+
+    isUsableAsTypeDeclBase(): boolean {
+        return this.attributes.includes("__typedeclable"); 
+    }
+
+    isSpecialConstructableEntity(): boolean {
+        return this.attributes.includes("__constructable"); 
+    }
+
     static attributeSetContains(attr: string, attrSet: string[]): boolean {
         return attrSet.indexOf(attr) !== -1;
     }
@@ -1303,25 +1319,52 @@ class Assembly {
     getSpecialContentHashType(): ResolvedType { return this.internSpecialObjectType(["ContentHash"]); }
     getSpecialRegexType(): ResolvedType { return this.internSpecialObjectType(["Regex"]); }
     getSpecialRegexMatchType(): ResolvedType { return this.internSpecialObjectType(["RegexMatch"]); }
+    getSpecialNothingType(): ResolvedType { return this.internSpecialObjectType(["Nothing"]); }
 
     getSpecialAnyConceptType(): ResolvedType { return this.internSpecialConceptType(["Any"]); }
     getSpecialSomeConceptType(): ResolvedType { return this.internSpecialConceptType(["Some"]); }
-    getSpecialKeyTypeConceptType(): ResolvedType { return this.internSpecialConceptType(["KeyType"]); }
-    getSpecialPODTypeConceptType(): ResolvedType { return this.internSpecialConceptType(["PODType"]); }
-    getSpecialAPIValueConceptType(): ResolvedType { return this.internSpecialConceptType(["APIValue"]); }
-    getSpecialAPITypeConceptType(): ResolvedType { return this.internSpecialConceptType(["APIType"]); }
 
+    getSpecialKeyTypeConceptType(): ResolvedType { return this.internSpecialConceptType(["KeyType"]); }
+    getSpecialValidatorConceptType(): ResolvedType { return this.internSpecialConceptType(["Validator"]); }
+    getSpecialParsableConceptType(): ResolvedType { return this.internSpecialConceptType(["Parsable"]); }
+    getSpecialAPITypeConceptType(): ResolvedType { return this.internSpecialConceptType(["APIType"]); }
+    getSpecialAlgebraicConceptType(): ResolvedType { return this.internSpecialConceptType(["Algebraic"]); }
+    getSpecialOrderableConceptType(): ResolvedType { return this.internSpecialConceptType(["Orderable"]); }
+
+    getSpecialTupleConceptType(): ResolvedType { return this.internSpecialConceptType(["Tuple"]); }
+    getSpecialRecordConceptType(): ResolvedType { return this.internSpecialConceptType(["Record"]); }
+
+    getSpecialIOptionConceptType(): ResolvedType { return this.internSpecialConceptType(["IOption"]); }
+    getSpecialIOptionTConceptType(): ResolvedType { return this.internSpecialConceptType(["IOptionT"]); }
     getSpecialObjectConceptType(): ResolvedType { return this.internSpecialConceptType(["Object"]); }
 
-    isExpandoableType(ty: ResolvedAtomType): boolean { return ty.idStr.startsWith("NSCore::Expandoable<"); }
+    getStringOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::StringOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getDataStringType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::DataString") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getBufferOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::BufferOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getDataBufferType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::DataBuffer") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+
+    getSomethingType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Something") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getOkType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Result::Ok") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
+    getErrType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Result::Err") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
+
+    getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getQueueType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Queue") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getSetType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Set") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Map") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+
+    getOptionConceptType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("NSCore::Option") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t))])); }
+    getResultConceptType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("NSCore::Result") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))])); }
+    
+    isExpandoableType(ty: ResolvedAtomType): boolean { return ty.typeID.startsWith("NSCore::Expandoable<"); }
 
     ensureNominalRepresentation(t: ResolvedType): ResolvedType {
         const opts = t.options.map((opt) => {
             if (opt instanceof ResolvedTupleAtomType) {
-                return ResolvedType.createSingle(this.getConceptsProvidedByTuple(opt));
+                return this.getSpecialTupleConceptType();
             }
             else if (opt instanceof ResolvedRecordAtomType) {
-                return ResolvedType.createSingle(this.getConceptsProvidedByRecord(opt));
+                return this.getSpecialRecordConceptType();
             }
             else {
                 return ResolvedType.createSingle(opt);
@@ -1450,6 +1493,8 @@ class Assembly {
     }
 
     getAllOOFieldsConstructors(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>, fmap?: { req: Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>, opt: Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]> }): { req: Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>, opt: Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]> } {
+        assert(!ooptype.isSpecialConstructableEntity(), "Needs to be handled as special case");
+
         let declfields = fmap || { req: new Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>(), opt: new Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>() };
 
         //Important to do traversal in Left->Right Topmost traversal order
@@ -1478,6 +1523,8 @@ class Assembly {
     }
 
     getAllOOFieldsLayout(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>, fmap?: Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>): Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]> {
+        assert(!ooptype.isSpecialConstructableEntity(), "Needs to be handled as special case");
+        
         let declfields = fmap || new Map<string, [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>]>();
 
         //Important to do traversal in Left->Right Topmost traversal order
@@ -1527,7 +1574,7 @@ class Assembly {
         });
 
         const ttype = ResolvedType.createSingle(ooptype instanceof EntityTypeDecl ? ResolvedEntityAtomType.create(ooptype, binds) : ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(ooptype as ConceptTypeDecl, binds)]));
-        if(declinvs.find((dd) => dd[0].idStr === ttype.idStr)) {
+        if(declinvs.find((dd) => dd[0].typeID === ttype.typeID)) {
             return declinvs;
         }
         else {
@@ -1724,7 +1771,7 @@ class Assembly {
 
                 let bindsok = true;
                 opt1.binds.forEach((v, k) => {
-                    bindsok = bindsok && opt.binds.has(k) && v.idStr === (opt.binds.get(k) as ResolvedType).idStr;
+                    bindsok = bindsok && opt.binds.has(k) && v.typeID === (opt.binds.get(k) as ResolvedType).typeID;
                 });
 
                 return bindsok;
@@ -1804,6 +1851,8 @@ class Assembly {
         const ntype = this.ensureNominalRepresentation(tt);
         const ttopts = ntype.options.map((ttopt) => {
             if(ttopt instanceof ResolvedEntityAtomType) {
+                assert(!ttopt.object.isSpecialConstructableEntity(), "Needs to be handled as special case");
+
                 return this.tryGetMemberFieldDecl(ttopt.object, ttopt.binds, fname) || this.tryGetMemberFieldDeclParent(ttopt.object, ttopt.binds, fname);
             }
             else {
@@ -2035,9 +2084,6 @@ class Assembly {
         else if (t instanceof TemplateTypeSignature) {
             return this.normalizeType_Template(t, binds);
         }
-        else if (t instanceof LiteralTypeSignature) {
-            return this.normalizeType_Literal(t, binds);
-        }
         else if (t instanceof NominalTypeSignature) {
             return this.normalizeType_Nominal(t, binds);
         }
@@ -2066,7 +2112,10 @@ class Assembly {
 
     normalizeToNominalRepresentation(t: ResolvedAtomType): ResolvedAtomType {
         if (t instanceof ResolvedTupleAtomType) {
-            return this.getSpecialSomeConceptType();
+            return this.getSpecialTupleConceptType();
+        }
+        else if (t instanceof ResolvedRecordAtomType) {
+            return this.getSpecialRecordConceptType();
         }
         else {
             return t;
@@ -2079,6 +2128,10 @@ class Assembly {
 
     restrictSome(from: ResolvedType): { tp: ResolvedType, fp: ResolvedType } {
         return this.splitTypes(from, this.getSpecialSomeConceptType());
+    }
+
+    restrictNothing(from: ResolvedType): { tp: ResolvedType, fp: ResolvedType } {
+        return this.splitTypes(from, this.getSpecialNothingType());
     }
 
     restrictT(from: ResolvedType, t: ResolvedType): { tp: ResolvedType, fp: ResolvedType } {
@@ -2095,20 +2148,20 @@ class Assembly {
     }
 
     atomSubtypeOf(t1: ResolvedAtomType, t2: ResolvedAtomType): boolean {
-        let memores = this.m_atomSubtypeRelationMemo.get(t1.idStr);
+        let memores = this.m_atomSubtypeRelationMemo.get(t1.typeID);
         if (memores === undefined) {
-            this.m_atomSubtypeRelationMemo.set(t1.idStr, new Map<string, boolean>());
-            memores = this.m_atomSubtypeRelationMemo.get(t1.idStr) as Map<string, boolean>;
+            this.m_atomSubtypeRelationMemo.set(t1.typeID, new Map<string, boolean>());
+            memores = this.m_atomSubtypeRelationMemo.get(t1.typeID) as Map<string, boolean>;
         }
 
-        let memoval = memores.get(t2.idStr);
+        let memoval = memores.get(t2.typeID);
         if (memoval !== undefined) {
             return memoval;
         }
 
         let res = false;
 
-        if (t1.idStr === t2.idStr) {
+        if (t1.typeID === t2.typeID) {
             res = true;
         }
         else if (t1 instanceof ResolvedConceptAtomType && t2 instanceof ResolvedConceptAtomType) {
@@ -2129,51 +2182,43 @@ class Assembly {
             }
         }
         else {
-            if (t1 instanceof ResolvedTupleAtomType && t2 instanceof ResolvedTupleAtomType) {
-                res = this.atomSubtypeOf_TupleTuple(t1, t2);
-            }
-            else if (t1 instanceof ResolvedRecordAtomType && t2 instanceof ResolvedRecordAtomType) {
-                res = this.atomSubtypeOf_RecordRecord(t1, t2);
-            }
-            else {
-                //fall-through
-            }
+            //fall-through
         }
 
-        memores.set(t2.idStr, res);
+        memores.set(t2.typeID, res);
         return res;
     }
 
     subtypeOf(t1: ResolvedType, t2: ResolvedType): boolean {
-        let memores = this.m_subtypeRelationMemo.get(t1.idStr);
+        let memores = this.m_subtypeRelationMemo.get(t1.typeID);
         if (memores === undefined) {
-            this.m_subtypeRelationMemo.set(t1.idStr, new Map<string, boolean>());
-            memores = this.m_subtypeRelationMemo.get(t1.idStr) as Map<string, boolean>;
+            this.m_subtypeRelationMemo.set(t1.typeID, new Map<string, boolean>());
+            memores = this.m_subtypeRelationMemo.get(t1.typeID) as Map<string, boolean>;
         }
 
-        let memoval = memores.get(t2.idStr);
+        let memoval = memores.get(t2.typeID);
         if (memoval !== undefined) {
             return memoval;
         }
 
-        const res = (t1.idStr === t2.idStr) || t1.options.every((t1opt) => t2.options.some((t2opt) => this.atomSubtypeOf(t1opt, t2opt)));
+        const res = (t1.typeID === t2.typeID) || t1.options.every((t1opt) => t2.options.some((t2opt) => this.atomSubtypeOf(t1opt, t2opt)));
 
-        memores.set(t2.idStr, res);
+        memores.set(t2.typeID, res);
         return res;
     }
  
     atomUnify(t1: ResolvedAtomType, t2: ResolvedAtomType, umap: Map<string, ResolvedType | undefined>) {
         if(t1 instanceof ResolvedTemplateUnifyType) {
-            if(umap.has(t1.idStr)) {
-                if(umap.get(t1.idStr) === undefined || (umap.get(t1.idStr) as ResolvedType).idStr === t2.idStr) {
+            if(umap.has(t1.typeID)) {
+                if(umap.get(t1.typeID) === undefined || (umap.get(t1.typeID) as ResolvedType).typeID === t2.typeID) {
                     //leave it
                 }
                 else {
-                    umap.set(t1.idStr, undefined);
+                    umap.set(t1.typeID, undefined);
                 }
             }
             else {
-                umap.set(t1.idStr, ResolvedType.createSingle(t2));
+                umap.set(t1.typeID, ResolvedType.createSingle(t2));
             }
         }
         else if(t1 instanceof ResolvedEntityAtomType && t2 instanceof ResolvedEntityAtomType) {
@@ -2197,18 +2242,18 @@ class Assembly {
         //TODO: we may want to try and strip matching types in any options -- T | None ~~ Int | None should unify T -> Int
 
         if (t1.options.length === 1 && t1.options[0] instanceof ResolvedTemplateUnifyType) {
-            if (umap.has(t1.idStr)) {
-                if (umap.get(t1.idStr) === undefined || (umap.get(t1.idStr) as ResolvedType).idStr === t2.idStr) {
+            if (umap.has(t1.typeID)) {
+                if (umap.get(t1.typeID) === undefined || (umap.get(t1.typeID) as ResolvedType).typeID === t2.typeID) {
                     //leave it
                 }
                 else {
-                    umap.set(t1.idStr, undefined);
+                    umap.set(t1.typeID, undefined);
                 }
             }
             else {
                 if (t2.options.length !== 1) {
                     //if multiple options unify with the | 
-                    umap.set(t1.idStr, t2); 
+                    umap.set(t1.typeID, t2); 
                 }
                 else {
                     //otherwise expand and try unifying with the individual type
@@ -2250,6 +2295,10 @@ class Assembly {
             return false; //need to have same pred spec
         }
 
+        if(t1.recursive !== t2.recursive) {
+            return false;
+        }
+
         if (t2.params.length !== t1.params.length) {
             return false; //need to have the same number of parameters
         }
@@ -2258,7 +2307,7 @@ class Assembly {
             return false; //should both have rest or not
         }
 
-        if (t2.optRestParamType !== undefined && t2.optRestParamType.idStr !== (t1.optRestParamType as ResolvedType).idStr) {
+        if (t2.optRestParamType !== undefined && t2.optRestParamType.typeID !== (t1.optRestParamType as ResolvedType).typeID) {
             return false; //variance
         }
 
@@ -2271,12 +2320,12 @@ class Assembly {
 
             //We want the argument types to be the same for all cases -- no clear reason to overload to more general types
             if (t2p.type instanceof ResolvedFunctionType && t1p.type instanceof ResolvedFunctionType) {
-                if (t2p.type.idStr !== t1p.type.idStr) {
+                if (t2p.type.typeID !== t1p.type.typeID) {
                     return false;
                 }
             }
             else if (t2p.type instanceof ResolvedType && t1p.type instanceof ResolvedType) {
-                if (t2p.type.idStr !== t1p.type.idStr) {
+                if (t2p.type.typeID !== t1p.type.typeID) {
                     return false;
                 }
             }
@@ -2292,7 +2341,7 @@ class Assembly {
             }
         }
 
-        if(t1.resultType.idStr !== t2.resultType.idStr) {
+        if(t1.resultType.typeID !== t2.resultType.typeID) {
             return false;
         }
 
@@ -2301,28 +2350,28 @@ class Assembly {
 
     //Only used for pcode checking
     functionSubtypeOf(t1: ResolvedFunctionType, t2: ResolvedFunctionType): boolean {
-        let memores = this.m_subtypeRelationMemo.get(t1.idStr);
+        let memores = this.m_subtypeRelationMemo.get(t1.typeID);
         if (memores === undefined) {
-            this.m_subtypeRelationMemo.set(t1.idStr, new Map<string, boolean>());
-            memores = this.m_subtypeRelationMemo.get(t1.idStr) as Map<string, boolean>;
+            this.m_subtypeRelationMemo.set(t1.typeID, new Map<string, boolean>());
+            memores = this.m_subtypeRelationMemo.get(t1.typeID) as Map<string, boolean>;
         }
 
-        let memoval = memores.get(t2.idStr);
+        let memoval = memores.get(t2.typeID);
         if (memoval !== undefined) {
             return memoval;
         }
 
         const res = this.functionSubtypeOf_helper(t1, t2);
 
-        memores.set(t2.idStr, res);
+        memores.set(t2.typeID, res);
         return res;
     }
 }
 
 export {
     BuildLevel, isBuildLevelEnabled,
-    TemplateTermSpecialRestriction, TemplateTermDecl, TemplateTypeRestriction, TypeConditionRestriction, PreConditionDecl, PostConditionDecl, InvokeDecl,
-    SpecialTypeCategory, OOMemberDecl, InvariantDecl, StaticMemberDecl, StaticFunctionDecl, StaticOperatorDecl, MemberFieldDecl, MemberMethodDecl, OOPTypeDecl, ConceptTypeDecl, EntityTypeDecl,
+    TemplateTermDecl, TemplateTypeRestriction, TypeConditionRestriction, PreConditionDecl, PostConditionDecl, InvokeDecl,
+    OOMemberDecl, InvariantDecl, StaticMemberDecl, StaticFunctionDecl, StaticOperatorDecl, MemberFieldDecl, MemberMethodDecl, OOPTypeDecl, ConceptTypeDecl, EntityTypeDecl,
     NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, NamespaceTypedef, NamespaceUsing, NamespaceDeclaration,
     OOMemberLookupInfo, Assembly
 };
