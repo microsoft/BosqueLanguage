@@ -19,14 +19,10 @@ import { ValueType } from "../type_checker/type_environment";
 
 import * as Crypto from "crypto";
 
-//Body id -- should be k#shortname...
-type MIRPCodeIDKey = string;
-
 type PCode = {
     code: InvokeDecl,
-    pcodeID: MIRPCodeIDKey,
+    ikey: MIRInvokeKey,
     captured: Map<string, ResolvedType>,
-    usedpcode: Map<string, MIRInvokeKey>,
     ftype: ResolvedFunctionType
 };
 
@@ -55,7 +51,7 @@ class MIRKeyGenerator {
             return "";
         }
 
-        return "[" + pcodes.map((pc) => `${pc.pcodeID}`).join(",") + "]";
+        return "[" + pcodes.map((pc) => `${pc.ikey}`).join(",") + "]";
     }
 
     static generateTypeKey(t: ResolvedType): GeneratedKeyName<MIRResolvedTypeKey> {
@@ -96,8 +92,8 @@ class MIRKeyGenerator {
         return {keyid: iname, shortname: shortvname};
     }
 
-    static generatePCodeKey(pcode: PCode): MIRInvokeKey {
-        return `${pcode.code.isPCodeFn ? "fn" : "pred"}--${pcode.pcodeID}`;
+    static generatePCodeKey(isPCodeFn: boolean, bodyID: string): MIRInvokeKey {
+        return `${isPCodeFn ? "fn" : "pred"}--${bodyID}`;
     }
 
     static generateOperatorSignatureKey(ikey: MIRInvokeKey, shortname: string, isprefix: boolean, isinfix: boolean, sigkeys: string[]): GeneratedKeyName<MIRInvokeKey> {
@@ -124,7 +120,7 @@ class MIREmitter {
     private readonly pendingFunctionProcessing: [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, InvokeDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
     private readonly pendingOperatorProcessing: [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, InvokeDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
     private readonly pendingOOMethodProcessing: [MIRVirtualMethodKey, MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>], MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
-    private readonly pendingPCodeProcessing: [MIRInvokeKey, InvokeDecl, ResolvedFunctionType, Map<string, ResolvedType>, Map<string, ResolvedType>, [string, ResolvedType][]][] = [];
+    private readonly pendingPCodeProcessing: [MIRInvokeKey, InvokeDecl, ResolvedFunctionType, Map<string, ResolvedType>, Map<string, ResolvedType>, [string, ResolvedType][], [string, { pcode: PCode, captured: string[] }][]][] = [];
     private readonly pendingOPVirtualProcessing: [MIRVirtualMethodKey, string | undefined, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, string, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
     private readonly entityInstantiationInfo: [MIRResolvedTypeKey, OOPTypeDecl, Map<string, ResolvedType>][] = [];
     private readonly allVInvokes: [MIRVirtualMethodKey, MIRResolvedTypeKey, ResolvedType, string, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
@@ -179,7 +175,7 @@ class MIREmitter {
     }
 
     generateCapturedVarName(name: string): string {
-        return "__c_" + name;
+        return "#c_" + name;
     }
 
     createNewBlock(pfx: string): string {
@@ -1203,14 +1199,13 @@ class MIREmitter {
         return key;
     }
 
-    registerPCode(idecl: InvokeDecl, fsig: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, binds: Map<string, ResolvedType>, cinfo: [string, ResolvedType][]): MIRInvokeKey {
-        const key = MIRKeyGenerator.generatePCodeKey(idecl);
-        if (!this.emitEnabled || this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingPCodeProcessing.findIndex((fp) => fp[0] === key) !== -1) {
-            return key;
+    registerPCode(ikey: MIRInvokeKey, idecl: InvokeDecl, fsig: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, binds: Map<string, ResolvedType>, cinfo: [string, ResolvedType][], capturedpcode: [string, { pcode: PCode, captured: string[] }][]) {
+        if (!this.emitEnabled || this.masm.invokeDecls.has(ikey) || this.masm.primitiveInvokeDecls.has(ikey) || this.pendingPCodeProcessing.findIndex((fp) => fp[0] === ikey) !== -1) {
+            return;
         }
 
-        this.pendingPCodeProcessing.push([key, idecl, fsig, bodybinds, binds, cinfo]);
-        return key;
+        this.pendingPCodeProcessing.push([ikey, idecl, fsig, bodybinds, binds, cinfo, capturedpcode]);
+        return;
     }
 
     static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { fpath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {

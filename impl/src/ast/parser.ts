@@ -698,6 +698,12 @@ class Parser {
     ////
     //Helpers
 
+    private generateBodyID(sinfo: SourceInfo, srcFile: string, etag?: string): string {
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === srcFile);
+
+        return `${this.sortedSrcFiles[sfpos].shortname}#k${sfpos}${etag !== undefined ? ("_" + etag) : ""}::${sinfo.line}@${sinfo.pos}`;
+    }
+
     private static attributeSetContains(attr: string, attribs: string[]): boolean {
         return attribs.indexOf(attr) !== -1;
     }
@@ -920,12 +926,7 @@ class Parser {
         const srcFile = this.m_penv.getCurrentFile();
         const line = this.getCurrentLine();
 
-        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === srcFile);
-        if (sfpos === -1) {
-            this.raiseError(sinfo.line, "Source name not registered");
-        }
-
-        const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
+        const bodyid = this.generateBodyID(sinfo, srcFile);
 
         let fparams: FunctionParameter[] = [];
         if (ikind === InvokableKind.Member) {
@@ -973,7 +974,8 @@ class Parser {
                     this.raiseError(line, "Literal match parameters are only allowed on dynamic operator definitions");
                 }
 
-                litexp = this.parseLiteralExpression(bodyid + `arg#${this.getCurrentSrcInfo().pos}`);
+                const litbodyid = this.generateBodyID(sinfo, srcFile);
+                litexp = this.parseLiteralExpression(litbodyid);
             }
 
             if(ikind === InvokableKind.DynamicOperator || ikind === InvokableKind.StaticOperator) {
@@ -1025,7 +1027,6 @@ class Parser {
         let postconds: PostConditionDecl[] = [];
         let body: {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]} | undefined = undefined;
         let captured = new Set<string>();
-        let capturedpcode = new Set<string>();
         if (noBody) {
             this.ensureAndConsumeToken(";");
         }
@@ -1041,7 +1042,6 @@ class Parser {
                 this.m_penv.pushFunctionScope(new FunctionScope(argNames, resultInfo, ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred));
                 body = this.parseBody(bodyid, srcFile);
                 captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
-                capturedpcode = this.m_penv.getCurrentFunctionScope().getUsedPCodes();
                 this.m_penv.popFunctionScope();
             }
             catch (ex) {
@@ -1052,14 +1052,14 @@ class Parser {
 
         if (ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred) {
             const bbody = body as {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]};
-            return InvokeDecl.createPCodeInvokeDecl(sinfo, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, capturedpcode, bbody.impl, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
+            return InvokeDecl.createPCodeInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, bbody.impl, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
         }
         else {
             if(body !== undefined) {
-                return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body.impl, body.optscalarslots, body.optmixedslots);
+                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body.impl, body.optscalarslots, body.optmixedslots);
             }
             else {
-                return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, undefined, [], []);
+                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, undefined, [], []);
             }
         }
     }
@@ -1572,10 +1572,6 @@ class Parser {
             this.m_penv.useLocalVar(v);
         });
 
-        sig.capturepcode.forEach((pcname) => {
-            this.m_penv.getCurrentFunctionScope().getUsedPCodes().add(pcname);
-        });
-
         return new ConstructorPCodeExpression(sinfo, allAuto, sig);
     }
 
@@ -1798,13 +1794,11 @@ class Parser {
                     const rec = this.parseRecursiveAnnotation();
                     const args = this.parseArguments("(", ")");
 
-                    this.m_penv.getCurrentFunctionScope().getUsedPCodes().add(istr);
                     return new PCodeInvokeExpression(sinfo, istr, rec, args);
                 }
                 else if (this.testToken("(")) {
                     const args = this.parseArguments("(", ")");
 
-                    this.m_penv.getCurrentFunctionScope().getUsedPCodes().add(istr);
                     return new PCodeInvokeExpression(sinfo, istr, "no", args);
                 }
                 else {
@@ -4004,12 +3998,14 @@ class Parser {
 
             const vparam = new FunctionParameter("v", this.m_penv.SpecialNatSignature, false, undefined, undefined, undefined);
 
+            const fromid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "from");
             const frombody = new BodyImplementation(`${bodyid}_from`, this.m_penv.getCurrentFile(), "special_inject");
-            const fromdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, etype, [], [], false, false, new Set<string>(), new Set<string>(), frombody, [], []);
+            const fromdecl = new InvokeDecl(sinfo, fromid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, etype, [], [], false, false, new Set<string>(), frombody, [], []);
             const from = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "from", fromdecl);
 
+            const valueid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "value");
             const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
-            const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, this.m_penv.SpecialNatSignature, [], [], false, false, new Set<string>(), new Set<string>(), valuebody, [], []);
+            const valuedecl = new InvokeDecl(sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, this.m_penv.SpecialNatSignature, [], [], false, false, new Set<string>(), valuebody, [], []);
             const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
 
             const invariants: InvariantDecl[] = [];
@@ -4095,8 +4091,10 @@ class Parser {
 
                 const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("NSCore", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
                 const param = new FunctionParameter("arg", new NominalTypeSignature("NSCore", ["String"]), false, undefined, undefined, undefined);
+                
+                const acceptsid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "accepts");
                 const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
-                const acceptsinvoke = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), new Set<string>(), acceptsbody, [], []);
+                const acceptsinvoke = new InvokeDecl(sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
                 const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
                 const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type"], currentDecl.ns, iname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
@@ -4156,12 +4154,14 @@ class Parser {
 
                 const vparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
 
+                const fromid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "from");
                 const frombody = new BodyImplementation(`${bodyid}_from`, this.m_penv.getCurrentFile(), "special_inject");
-                const fromdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, itype, [], [], false, false, new Set<string>(), new Set<string>(), frombody, [], []);
+                const fromdecl = new InvokeDecl(sinfo, fromid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, itype, [], [], false, false, new Set<string>(), frombody, [], []);
                 const from = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "from", fromdecl);
 
+                const valueid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "value");
                 const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
-                const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), new Set<string>(), valuebody, [], []);
+                const valuedecl = new InvokeDecl(sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), valuebody, [], []);
                 const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
 
 
