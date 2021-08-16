@@ -299,6 +299,8 @@ getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
 
 ## Tooling
 
+**Note: If you are running examples from the "Learn Bosque Programming" book please use the [LearnBosqueProgramming](https://github.com/microsoft/BosqueLanguage/tree/LearnBosqueProgramming) branch which is sync'd with the version of code used in the book.**
+
 **Symbolic Testing**
 
 Bosque provides a powerful new way to test your applications. Unit-testing is a great way to ensure that code works as expected and to prevent accidental changes to behavior when adding new features or fixing bugs. However, writing and maintaining large numbers of tests can be a tedious and time consuming task. To help with this Bosque provides a *symbolic testing* harness that augments unit-testing and provides high coverage for bugs that result in runtime failures -- arising either as builtin language errors or from failed user provided pre/post/invariant/assert conditions.
@@ -392,6 +394,8 @@ More details on the `exeGen` tool can be found in the [readme](./impl/src/runtim
 ## Using the Bosque Language
 
 The current focus of the Bosque project is core language design. As a result there is _no_ support for packaging, deployment, lifecycle management, etc.
+
+**Note: If you are running examples from the "Learn Bosque Programming" book please use the [LearnBosqueProgramming](https://github.com/microsoft/BosqueLanguage/tree/LearnBosqueProgramming) branch which is sync'd with the version of code used in the book.**
 
 ### Requirements
 
