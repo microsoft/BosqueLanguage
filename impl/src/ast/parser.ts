@@ -974,8 +974,7 @@ class Parser {
                     this.raiseError(line, "Literal match parameters are only allowed on dynamic operator definitions");
                 }
 
-                const litbodyid = this.generateBodyID(sinfo, srcFile);
-                litexp = this.parseLiteralExpression(litbodyid);
+                litexp = this.parseLiteralExpression();
             }
 
             if(ikind === InvokableKind.DynamicOperator || ikind === InvokableKind.StaticOperator) {
@@ -1660,7 +1659,7 @@ class Parser {
         }
     }
 
-    private parseLiteralExpression(idtag?: string): LiteralExpressionValue {
+    private parseLiteralExpression(): LiteralExpressionValue {
         const sinfo = this.getCurrentSrcInfo();
 
         try {
@@ -1674,7 +1673,7 @@ class Parser {
 
             this.m_penv.popFunctionScope();
 
-            return new LiteralExpressionValue(exp, idtag);
+            return new LiteralExpressionValue(exp);
         }
         catch (ex) {
             this.m_penv.popFunctionScope();

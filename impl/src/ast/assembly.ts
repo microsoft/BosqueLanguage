@@ -5,7 +5,7 @@
 
 import { ResolvedType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedAtomType, ResolvedFunctionTypeParam, ResolvedFunctionType, ResolvedConceptAtomTypeEntry, ResolvedConceptAtomType, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedTemplateUnifyType } from "./resolved_type";
 import { TemplateTypeSignature, NominalTypeSignature, TypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, ParseErrorTypeSignature, AutoTypeSignature, FunctionParameter, ProjectTypeSignature, EphemeralListTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
-import { Expression, BodyImplementation, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, ConstantExpressionValue, LiteralNumberinoExpression, LiteralTypedStringExpression, LiteralTypedPrimitiveConstructorExpression } from "./body";
+import { Expression, BodyImplementation, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, AccessStaticFieldExpression, AccessNamespaceConstantExpression, ConstantExpressionValue, LiteralNumberinoExpression, LiteralTypedStringExpression, LiteralTypedPrimitiveConstructorExpression, LiteralNoneExpression, LiteralNothingExpression, LiteralBoolExpression, LiteralStringExpression } from "./body";
 import { SourceInfo } from "./parser";
 
 import * as assert from "assert";
@@ -672,6 +672,51 @@ class Assembly {
         }
     }
 
+    reduceLiteralValueToCanonicalForm(exp: Expression, binds: Map<string, ResolvedType>, infertype: ResolvedType | undefined): [Expression, ResolvedType, string] | undefined {
+        const cexp = this.compileTimeReduceConstantExpression(exp, binds, infertype);
+        if(cexp === undefined) {
+            return undefined;
+        }
+
+        if(cexp instanceof AccessStaticFieldExpression) {
+            const stype = this.normalizeTypeOnly(cexp.stype, new Map<string, ResolvedType>());
+            return [cexp, stype, `${stype.typeID}::${cexp.name}`];
+        }
+        else {
+            assert(cexp.isLiteralValueExpression());
+
+            if (cexp instanceof LiteralNoneExpression) {
+                return [cexp, this.getSpecialNoneType(), "none"];
+            }
+            else if (cexp instanceof LiteralNothingExpression) {
+                return [cexp, this.getSpecialNothingType(), "nothing"];
+            }
+            else if (cexp instanceof LiteralBoolExpression) {
+                return [cexp, this.getSpecialBoolType(), `${cexp.value}`];
+            }
+            else if (cexp instanceof LiteralIntegralExpression) {
+                const itype = this.normalizeTypeOnly(cexp.itype, new Map<string, ResolvedType>());
+                return [cexp, itype, cexp.value];
+            }
+            else if (cexp instanceof LiteralStringExpression) {
+                return [cexp, this.getSpecialStringType(), cexp.value];
+            }
+            else if (cexp instanceof LiteralTypedStringExpression) {
+                const oftype = this.normalizeTypeOnly(cexp.stype, binds);
+                return [cexp, oftype, `${cexp.value}#${oftype.typeID}`];
+            }
+            else {
+                assert(cexp instanceof LiteralTypedPrimitiveConstructorExpression);
+                const lexp = cexp as LiteralTypedPrimitiveConstructorExpression;
+
+                const oftype = this.normalizeTypeOnly(lexp.oftype, binds);
+                const vv = lexp.value.slice(0, lexp.value.length - 1);
+
+                return [lexp, oftype, `${vv}#${oftype.typeID}`];
+            }
+        }
+    }
+
     private splitConceptTypes(ofc: ResolvedConceptAtomType, withc: ResolvedConceptAtomType): {tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined} {
         if (ofc.typeID === "NSCore::Any" && withc.typeID === "NSCore::Some") {
             return { tp: withc, fp: this.getSpecialNoneType() };
@@ -1155,7 +1200,13 @@ class Assembly {
             let ttl = this.normalizeTypeGeneral(param.type, binds);
             let llpv: string | undefined = undefined;
             if(param.litexp !== undefined) {
-                param.litexp.idtag
+                const lei = this.reduceLiteralValueToCanonicalForm(param.litexp.exp, binds, ttl as ResolvedType);
+                if(lei === undefined) {
+                    ttl = ResolvedType.createEmpty();
+                }
+                else {
+                    llpv = lei[2];
+                }
             }
 
             return new ResolvedFunctionTypeParam(param.name, ttl, param.isOptional, param.refKind, llpv);

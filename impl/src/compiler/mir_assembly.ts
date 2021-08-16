@@ -263,7 +263,7 @@ class MIRConceptTypeDecl extends MIROOTypeDecl {
     }
 }
 
-class MIREntityTypeDecl extends MIROOTypeDecl {
+abstract class MIREntityTypeDecl extends MIROOTypeDecl {
     readonly consfunc: MIRInvokeKey | undefined;
     readonly consfuncfields: MIRFieldKey[];
 
@@ -284,6 +284,51 @@ class MIREntityTypeDecl extends MIROOTypeDecl {
     }
 }
 
+class MIRObjectEntityTypeDecl extends MIROOTypeDecl {
+    readonly consfunc: MIRInvokeKey | undefined;
+    readonly consfuncfields: MIRFieldKey[];
+
+    readonly fields: MIRFieldDecl[];
+    readonly vcallMap: Map<MIRVirtualMethodKey, MIRInvokeKey> = new Map<string, MIRInvokeKey>();
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], consfunc: MIRInvokeKey | undefined, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
+        super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
+
+        this.consfunc = consfunc;
+
+        this.consfuncfields = consfuncfields;
+        this.fields = fields;
+    }
+
+    jemit(): object {
+        return { tkey: this.tkey, shortname: this.shortname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, ns: this.ns, name: this.name, terms: [...this.terms].map((t) => [t[0], t[1].jemit()]), provides: this.provides, consfunc: this.consfunc, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
+    }
+} 
+
+class MIRInternalEntityTypeDecl extends MIROOTypeDecl {
+    readonly consfunc: MIRInvokeKey | undefined;
+    readonly consfuncfields: MIRFieldKey[];
+
+    readonly fields: MIRFieldDecl[];
+    readonly vcallMap: Map<MIRVirtualMethodKey, MIRInvokeKey> = new Map<string, MIRInvokeKey>();
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], consfunc: MIRInvokeKey | undefined, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
+        super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
+
+        this.consfunc = consfunc;
+
+        this.consfuncfields = consfuncfields;
+        this.fields = fields;
+    }
+
+    jemit(): object {
+        return { tkey: this.tkey, shortname: this.shortname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, ns: this.ns, name: this.name, terms: [...this.terms].map((t) => [t[0], t[1].jemit()]), provides: this.provides, consfunc: this.consfunc, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
+    }
+} 
+
+
+
+
 abstract class MIRTypeOption {
     readonly trkey: MIRResolvedTypeKey;
 
@@ -303,8 +348,6 @@ abstract class MIRTypeOption {
                 return MIRTupleType.jparse(jobj);
             case "record":
                 return MIRRecordType.jparse(jobj);
-            case "literal":
-                return MIRLiteralType.jparse(jobj);
             default:
                 assert(jobj.kind === "ephemeral"); 
                 return MIREphemeralListType.jparse(jobj);
@@ -446,28 +489,6 @@ class MIRRecordType extends MIRTypeOption {
     }
 }
 
-class MIRLiteralType extends MIRTypeOption {
-    readonly primitiveValue: boolean | number | undefined;
-
-    private constructor(ekey: MIRResolvedTypeKey, primitiveValue: boolean | number | undefined) {
-        super(ekey);
-
-        this.primitiveValue = primitiveValue;
-    }
-
-    static create(ekey: MIRResolvedTypeKey, primitiveValue: boolean | number | undefined): MIRLiteralType {
-        return new MIRLiteralType(ekey, primitiveValue);
-    }
-
-    jemit(): object {
-        return {kind: "literal", ekey: this.trkey, primitiveValue: this.primitiveValue };
-    }
-
-    static jparse(jobj: any): MIREntityType {
-        return MIRLiteralType.create(jobj.ekey, jobj.primitiveValue);
-    }
-}
-
 class MIREphemeralListType extends MIRTypeOption {
     readonly entries: MIRType[];
 
@@ -556,8 +577,6 @@ class MIRAssembly {
     readonly recordDecls: Map<MIRResolvedTypeKey, MIRRecordType> = new Map<MIRResolvedTypeKey, MIRRecordType>();
 
     readonly ephemeralListDecls: Map<MIRResolvedTypeKey, MIREphemeralListType> = new Map<MIRResolvedTypeKey, MIREphemeralListType>();
-
-    readonly literalTypes: Map<MIRResolvedTypeKey, MIRLiteralType> = new Map<MIRResolvedTypeKey, MIRLiteralType>();
 
     readonly typeMap: Map<MIRResolvedTypeKey, MIRType> = new Map<MIRResolvedTypeKey, MIRType>();
 

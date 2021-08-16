@@ -203,16 +203,18 @@ abstract class Expression {
     isCompileTimeInlineValue(): boolean {
         return false;
     }
+
+    isLiteralValueExpression(): boolean {
+        return false;
+    }
 }
 
 //This just holds a constant expression that can be evaluated without any arguments but not a subtype of Expression so we can distinguish as types
 class LiteralExpressionValue {
     readonly exp: Expression;
-    readonly idtag: string | undefined;
 
-    constructor(exp: Expression, idtag: string | undefined) {
+    constructor(exp: Expression) {
         this.exp = exp;
-        this.idtag = undefined;
     }
 }
 
@@ -241,6 +243,10 @@ class LiteralNoneExpression extends Expression {
     isCompileTimeInlineValue(): boolean {
         return true;
     }
+
+    isLiteralValueExpression(): boolean {
+        return true;
+    }
 }
 
 class LiteralNothingExpression extends Expression {
@@ -249,6 +255,10 @@ class LiteralNothingExpression extends Expression {
     }
 
     isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
         return true;
     }
 }
@@ -262,6 +272,10 @@ class LiteralBoolExpression extends Expression {
     }
 
     isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
         return true;
     }
 }
@@ -290,6 +304,10 @@ class LiteralIntegralExpression extends Expression {
     }
 
     isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
         return true;
     }
 }
@@ -335,6 +353,10 @@ class LiteralStringExpression extends Expression {
     isCompileTimeInlineValue(): boolean {
         return true;
     }
+
+    isLiteralValueExpression(): boolean {
+        return true;
+    }
 }
 
 class LiteralRegexExpression extends Expression {
@@ -359,6 +381,10 @@ class LiteralTypedStringExpression extends Expression {
     isCompileTimeInlineValue(): boolean {
         return true;
     }
+
+    isLiteralValueExpression(): boolean {
+        return true;
+    }
 }
 
 class LiteralTypedPrimitiveConstructorExpression extends Expression {
@@ -374,6 +400,10 @@ class LiteralTypedPrimitiveConstructorExpression extends Expression {
     }
 
     isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
         return true;
     }
 }
