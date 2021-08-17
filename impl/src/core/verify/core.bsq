@@ -415,7 +415,7 @@ concept Option<T> provides IOption, APIType when T APIType {
             return nothing;
         }
         else {
-            return Something<V>@{this.data().as<V>()};
+            return something(this.data().as<V>());
         }
     }
 }
@@ -428,8 +428,8 @@ concept Result<T, E=None> provides Some {
     }
 
     __internal __constructable entity Err provides Result<T, E> {
-        method value(): T # special_extract
-        function from(v: T): # special_inject
+        method value(): E # special_extract
+        function from(v: E): # special_inject
     }
 
     method isOk(): Bool {
