@@ -299,7 +299,7 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRConvertValue(sinfo, srctypelayout.typeID, srctypeflow.typeID, intotype.typeID, src, trgt, guard));
     }
 
-    emitInject(sinfo: SourceInfo, srctypelayout: MIRType, srctypeflow: MIRType, intotype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined) {
+    emitInject(sinfo: SourceInfo, srctype: MIRType, intotype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument) {
         if(!this.emitEnabled) {
             return;
         }
@@ -307,7 +307,7 @@ class MIREmitter {
         this.m_currentBlock.push(xxxx);
     }
 
-    emitExtract(sinfo: SourceInfo, srctypelayout: MIRType, srctypeflow: MIRType, intotype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined) {
+    emitExtract(sinfo: SourceInfo, srctype: MIRType, intotype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument) {
         if(!this.emitEnabled) {
             return;
         }
@@ -344,7 +344,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRLoadConst(sinfo, bv ? new MIRConstantTrue() : new MIRConstantFalse(), this.registerResolvedTypeReference(this.assembly.getSpecialBoolType()).trkey, trgt));
+        this.m_currentBlock.push(new MIRLoadConst(sinfo, bv ? new MIRConstantTrue() : new MIRConstantFalse(), this.registerResolvedTypeReference(this.assembly.getSpecialBoolType()).typeID, trgt));
     }
 
     emitLoadConstIntegralValue(sinfo: SourceInfo, itype: MIRType, vv: string, trgt: MIRRegisterArgument) {

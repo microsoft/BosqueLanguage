@@ -43,8 +43,8 @@ __universal concept Some provides Any {
 
 //<summary>Special type for indicating a value can be used as a key in a collection.</summary>
 __universal concept KeyType provides Any {
-    function equal<T KeyType>(a: T, b: T): Bool # special_method
-    function less<T KeyType>(a: T, b: T): Bool # special_method
+    function equal<T grounded KeyType>(a: T, b: T): Bool # special_method
+    function less<T grounded KeyType>(a: T, b: T): Bool # special_method
 }
 
 //<summary>Type for indicating that a datatype is a Validator.</summary>
@@ -357,31 +357,31 @@ __universal concept Record provides Some {
     function join(arg: Any): Record # special_method
 }
 
-//<summary>Type for representing the nothing option value.</summary>
-__internal entity Nothing provides Some, APIType {
+//<summary>Generic type for all Option<T> to inherit from.</summary>
+__universal concept IOption provides Some {
+    method isNothing(): Bool # special_nothing
+    method isSomething(): Bool # special_something
+
+    method asNothing(): Nothing {
+        return this.as<Nothing>();
+    }
 }
 
 //<summary>Type for representing the nothing option value.</summary>
-__internal __constructable entity Something<T> provides Some, Option<T>, APIType when T APIType {
+__internal entity Nothing provides IOption, APIType {
+}
+
+//<summary>Type for representing the nothing option value.</summary>
+__internal __constructable entity Something<T> provides Option<T>, APIType when T APIType {
     method value(): T # special_extract
     function from(v: T): # special_inject
 }
 
-//<summary>Generic type for all Option<T> to inherit from.</summary>
-__universal concept IOption provides Some {
-}
-
 //<summary>Type for flagging T projection from Option -- kludge that has no other purpose.</summary>
 __universal concept IOptionT provides Some {
-    method isNothing(): Bool # special_method
-    method isSomething(): Bool # special_method
 }
 
 concept Option<T> provides IOption, APIType when T APIType {
-    method asNothing(): Nothing {
-        return this.as<Nothing>();
-    }
-
     method asSomething(): Something<T> {
         return this.as<Something<T>>();
     }
@@ -415,7 +415,7 @@ concept Option<T> provides IOption, APIType when T APIType {
             return nothing;
         }
         else {
-            return something(this.data().as<V>());
+            return Something@{this.data().as<V>()};
         }
     }
 }
@@ -450,10 +450,10 @@ concept Result<T, E=None> provides Some {
 
     method convert<U=?, V=?>(): Result<U, V> {
         if(this.is<Ok>()) {
-            return ok(this.result().as<U>());
+            return Result<U, V>::Ok@{this.result().as<U>()};
         }
         else {
-            return err(this.error().as<V>());
+            return Result<U, V>::Err@{this.error().as<V>()};
         }
     }
 }

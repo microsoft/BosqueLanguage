@@ -31,13 +31,15 @@ function isBuildLevelEnabled(check: BuildLevel, enabled: BuildLevel): boolean {
 class TemplateTermDecl {
     readonly name: string;
     readonly isunique: boolean;
+    readonly isgrounded: boolean;
     readonly tconstraint: TypeSignature;
     readonly isInfer: boolean;
     readonly defaultType: TypeSignature | undefined;
 
-    constructor(name: string, isunique: boolean, tconstraint: TypeSignature, isinfer: boolean, defaulttype: TypeSignature | undefined) {
+    constructor(name: string, isunique: boolean, isgrounded: boolean, tconstraint: TypeSignature, isinfer: boolean, defaulttype: TypeSignature | undefined) {
         this.name = name;
         this.isunique = isunique;
+        this.isgrounded = isgrounded;
         this.tconstraint = tconstraint;
         this.isInfer = isinfer;
         this.defaultType = defaulttype;
@@ -47,11 +49,13 @@ class TemplateTermDecl {
 class TemplateTypeRestriction {
     readonly t: TypeSignature;
     readonly isunique: boolean;
+    readonly isgrounded: boolean;
     readonly tconstraint: TypeSignature;
 
-    constructor(t: TypeSignature, isunique: boolean, tconstraint: TypeSignature) {
+    constructor(t: TypeSignature, isunique: boolean, isgrounded: boolean, tconstraint: TypeSignature) {
         this.t = t;
         this.isunique = isunique;
+        this.isgrounded = isgrounded;
         this.tconstraint = tconstraint;
     }
 }
@@ -345,6 +349,26 @@ class OOPTypeDecl {
 
     isTypeAnExpandoableCollection(): boolean {
         return ["__list_type", "__stack_type", "__queue_type", "__set_type", "__map_type"].some((otype) => OOPTypeDecl.attributeSetContains(otype, this.attributes));
+    }
+
+    isListType(): boolean {
+        return OOPTypeDecl.attributeSetContains("__list_type", this.attributes);
+    }
+
+    isStackType(): boolean {
+        return OOPTypeDecl.attributeSetContains("__stack_type", this.attributes);
+    }
+
+    isQueueType(): boolean {
+        return OOPTypeDecl.attributeSetContains("__queue_type", this.attributes);
+    }
+
+    isSetType(): boolean {
+        return OOPTypeDecl.attributeSetContains("__set_type", this.attributes);
+    }
+
+    isMapType(): boolean {
+        return OOPTypeDecl.attributeSetContains("__map_type", this.attributes);
     }
 
     isInternalType(): boolean { 
@@ -754,8 +778,27 @@ class Assembly {
         }
     }
 
+    private getConceptsProvidedByTuple(tt: ResolvedTupleAtomType): ResolvedConceptAtomType {
+        let tci: ResolvedConceptAtomTypeEntry[] = [...(this.getSpecialTupleConceptType().options[0] as ResolvedConceptAtomType).conceptTypes];
+        if (tt.types.every((ttype) => this.subtypeOf(ttype, this.getSpecialAPITypeConceptType()))) {
+            tci.push(...(this.getSpecialAPITypeConceptType().options[0] as ResolvedConceptAtomType).conceptTypes);
+        }
+
+        return ResolvedConceptAtomType.create(tci);
+    }
+
+    private getConceptsProvidedByRecord(rr: ResolvedRecordAtomType): ResolvedConceptAtomType {
+        let tci: ResolvedConceptAtomTypeEntry[] = [...(this.getSpecialSomeConceptType().options[0] as ResolvedConceptAtomType).conceptTypes];
+        if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.getSpecialAPITypeConceptType()))) {
+                tci.push(...(this.getSpecialAPITypeConceptType().options[0] as ResolvedConceptAtomType).conceptTypes);
+        }
+
+        return ResolvedConceptAtomType.create(tci);
+    }
+
     private splitConceptTuple(ofc: ResolvedConceptAtomType, witht: ResolvedTupleAtomType): { tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined } {
-        if (this.atomSubtypeOf(witht, ofc)) {
+        const withc = this.getConceptsProvidedByTuple(witht);
+        if (this.atomSubtypeOf(withc, ofc)) {
             return { tp: witht, fp: ofc };
         }
         else {
@@ -764,7 +807,8 @@ class Assembly {
     }
 
     private splitConceptRecord(ofc: ResolvedConceptAtomType, withr: ResolvedRecordAtomType): { tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined } {
-        if (this.atomSubtypeOf(withr, ofc)) {
+        const withc = this.getConceptsProvidedByRecord(withr);
+        if (this.atomSubtypeOf(withc, ofc)) {
             return { tp: withr, fp: ofc };
         }
         else {
@@ -1226,19 +1270,26 @@ class Assembly {
     }
 
     private atomSubtypeOf_EntityConcept(t1: ResolvedEntityAtomType, t2: ResolvedConceptAtomType): boolean {
-        const t2type = ResolvedType.createSingle(t2);
-        return this.resolveProvides(t1.object, t1.binds).some((provide) => {
-            const tt = this.normalizeTypeOnly(provide, t1.binds);
-            return !tt.isEmptyType() && this.subtypeOf(tt, t2type);
-        });
+        if(t1.object.attributes.includes("__nothing_type") && t2.conceptTypes.some((cpt) => cpt.concept.attributes.includes("__option_type"))) {
+            return true;
+        }
+        else {
+            const t2type = ResolvedType.createSingle(t2);
+            return this.resolveProvides(t1.object, t1.binds).some((provide) => {
+                const tt = this.normalizeTypeOnly(provide, t1.binds);
+                return !tt.isEmptyType() && this.subtypeOf(tt, t2type);
+            });
+        }
     }
 
     private atomSubtypeOf_TupleConcept(t1: ResolvedTupleAtomType, t2: ResolvedConceptAtomType): boolean {
-        return this.subtypeOf(ResolvedType.createSingle(t1), ResolvedType.createSingle(t2));
+        const tt = this.getConceptsProvidedByTuple(t1);
+        return this.subtypeOf(ResolvedType.createSingle(tt), ResolvedType.createSingle(t2));
     }
 
     private atomSubtypeOf_RecordConcept(t1: ResolvedRecordAtomType, t2: ResolvedConceptAtomType): boolean {
-        return this.subtypeOf(ResolvedType.createSingle(t1), ResolvedType.createSingle(t2));
+        const tr = this.getConceptsProvidedByRecord(t1);
+        return this.subtypeOf(ResolvedType.createSingle(tr), ResolvedType.createSingle(t2));
     }
 
     private atomSubtypeOf_ConceptConcept(t1: ResolvedConceptAtomType, t2: ResolvedConceptAtomType, ): boolean {

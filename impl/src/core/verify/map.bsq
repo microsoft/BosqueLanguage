@@ -6,7 +6,7 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-__internal entity Map<K KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K APIType && V APIType {
+__internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K APIType && V APIType {
     private method value(): List<[K, V]> # special_extract
     private function from(v: List<[K, V]>): # special_inject
 

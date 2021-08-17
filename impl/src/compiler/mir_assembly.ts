@@ -258,9 +258,11 @@ abstract class MIROOTypeDecl {
                 return MIRObjectEntityTypeDecl.jparse(jobj);
             case "primitive":
                 return MIRPrimitiveInternalEntityTypeDecl.jparse(jobj);
-            default:
-                assert(tag === "constructable")
+            case "constructable":
                 return MIRConstructableInternalEntityTypeDecl.jparse(jobj);
+            default:
+                assert(tag === "collection")
+                return MIRPrimitiveCollectionEntityTypeDecl.jparse(jobj);
         }
     }
 }
@@ -293,6 +295,10 @@ abstract class MIREntityTypeDecl extends MIROOTypeDecl {
     }
 
     isConstructableEntity(): boolean {
+        return false;
+    }
+
+    isCollectionEntity(): boolean {
         return false;
     }
 }
@@ -340,7 +346,7 @@ class MIRPrimitiveInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
 
     //Should just be a special implemented value
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>;) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
         this.binds = binds;
@@ -396,6 +402,36 @@ class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
         return true;
     }
 }
+
+class MIRPrimitiveCollectionEntityTypeDecl extends MIRInternalEntityTypeDecl {
+    readonly binds: Map<string, MIRType>;
+
+    //Should just be a special implemented value
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
+        super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
+
+        this.binds = binds;
+    }
+
+    jemit(): object {
+        const fbinds = [...this.binds].sort((a, b) => a[0].localeCompare(b[0])).map((v) => [v[0], v[1].jemit()]);
+        return { tag: "collection", ...this.jemitbase(), binds: fbinds};
+    }
+
+    static jparse(jobj: any): MIRPrimitiveCollectionEntityTypeDecl {
+        const bbinds = new Map<string, MIRType>();
+        jobj.binds.foreach((v: [string, any]) => {
+            bbinds.set(v[0], MIRType.jparse(v[1]));
+        });
+
+        return new MIRPrimitiveCollectionEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), bbinds);
+    }
+
+    isCollectionEntity(): boolean {
+        return true;
+    }
+} 
 
 abstract class MIRTypeOption {
     readonly typeID: MIRResolvedTypeKey;

@@ -291,7 +291,7 @@ class ResolvedType {
         return (this.options[0] as ResolvedRecordAtomType);
     }
 
-    tryGetInferrableRecordConstructorType(isvalue: boolean): ResolvedRecordAtomType | undefined {
+    tryGetInferrableRecordConstructorType(): ResolvedRecordAtomType | undefined {
         const rcopts = this.options.filter((opt) => opt instanceof ResolvedRecordAtomType);
 
         if (rcopts.length !== 1) {
@@ -322,6 +322,17 @@ class ResolvedType {
                 : oobinds.get("T") as ResolvedType;
 
         return etype;
+    }
+
+    isGroundedType(): boolean {
+        return this.options.every((opt) => {
+            if(!(opt instanceof ResolvedConceptAtomType)) {
+                return true;
+            }
+            else {
+                return opt.conceptTypes.every((cpt) => !cpt.concept.attributes.includes("__universal"));
+            }
+        })
     }
 
     tryGetInferrableValueListConstructorType(): ResolvedEphemeralListType | undefined {

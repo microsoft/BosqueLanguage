@@ -352,21 +352,21 @@ __internal entity ListKeyOperators provides Object {
     ////////////////
 
     //assume non-empty
-    function s_hasCheck_Core<T KeyType>(l: List<T>, count: Nat, val: T): Bool # list_hascheck
-    function s_hasCheckMapKV_Core<T KeyType, U>(l: List<[T, U]>, count: Nat, val: T): Bool # list_hascheckmapkv
+    function s_hasCheck_Core<T grounded KeyType>(l: List<T>, count: Nat, val: T): Bool # list_hascheck
+    function s_hasCheckMapKV_Core<T grounded KeyType, U>(l: List<[T, U]>, count: Nat, val: T): Bool # list_hascheckmapkv
 
     //assume non-empty
-    function s_findIndexOf_KeyHelperCore<T KeyType>(l: List<T>, count: Nat, val: T): Nat # list_findindexof_keyhelper
-    function s_findIndexOfLast_KeyHelperCore<T KeyType>(l: List<T>, count: Nat, val: T): Nat # list_findindexoflast_keyhelper
-    function s_findIndexOfMapKV_KeyHelperCore<T KeyType, U>(l: List<[T, U]>, count: Nat, val: T): Nat # list_findindexofmapkv_keyhelper
+    function s_findIndexOf_KeyHelperCore<T grounded KeyType>(l: List<T>, count: Nat, val: T): Nat # list_findindexof_keyhelper
+    function s_findIndexOfLast_KeyHelperCore<T grounded KeyType>(l: List<T>, count: Nat, val: T): Nat # list_findindexoflast_keyhelper
+    function s_findIndexOfMapKV_KeyHelperCore<T grounded KeyType, U>(l: List<[T, U]>, count: Nat, val: T): Nat # list_findindexofmapkv_keyhelper
 
-    function s_overlapsMapKV_KeyHelperCore<T KeyType, U>(l1: List<[T, U]>, count1: Nat, l2: List<[T, U]>, count2: Nat): Bool # list_overlapsmapkv_keyhelper
+    function s_overlapsMapKV_KeyHelperCore<T grounded KeyType, U>(l1: List<[T, U]>, count1: Nat, l2: List<[T, U]>, count2: Nat): Bool # list_overlapsmapkv_keyhelper
 
     ////////////////
     //In code support operations
     ////////////////
 
-    function s_hasCheck<T KeyType>(l: List<T>, val: T): Bool {
+    function s_hasCheck<T grounded KeyType>(l: List<T>, val: T): Bool {
         if(ListOperators::s_empty<T>(l)) {
             return false;
         }
@@ -376,7 +376,7 @@ __internal entity ListKeyOperators provides Object {
         }
     }
 
-    function s_hasCheckMapKV<T KeyType, U>(l: List<[T, U]>, val: T): Bool {
+    function s_hasCheckMapKV<T grounded KeyType, U>(l: List<[T, U]>, val: T): Bool {
         if(ListOperators<[T, U]>::s_empty(l)) {
             return false;
         }
@@ -386,7 +386,7 @@ __internal entity ListKeyOperators provides Object {
         }
     }
 
-    function s_findIndexOf_KeyHelper<T KeyType>(l: List<T>, val: T): Nat {
+    function s_findIndexOf_KeyHelper<T grounded KeyType>(l: List<T>, val: T): Nat {
         if(ListOperators::s_empty<T>(l)) {
             return 0n;
         }
@@ -403,7 +403,7 @@ __internal entity ListKeyOperators provides Object {
         }
     }
 
-    function s_findIndexOfLast_KeyHelper<T KeyType>(l: List<T>, val: T): Nat {
+    function s_findIndexOfLast_KeyHelper<T grounded KeyType>(l: List<T>, val: T): Nat {
         if(ListOperators::s_empty<T>(l)) {
             return 0n;
         }
@@ -420,7 +420,7 @@ __internal entity ListKeyOperators provides Object {
         }
     }
 
-    function s_findIndexOfMapKV_KeyHelper<T KeyType, U>(l: List<[T, U]>, val: T): Nat {
+    function s_findIndexOfMapKV_KeyHelper<T grounded KeyType, U>(l: List<[T, U]>, val: T): Nat {
         if(ListOperators::s_empty<[T, U]>(l)) {
             return 0n;
         }
@@ -437,7 +437,7 @@ __internal entity ListKeyOperators provides Object {
         }
     }
 
-    function s_overlapsMapKV_KeyHelper<T KeyType, U>(l1: List<[T, U]>, l2: List<[T, U]>): Bool {
+    function s_overlapsMapKV_KeyHelper<T grounded KeyType, U>(l1: List<[T, U]>, l2: List<[T, U]>): Bool {
         if(ListOperators::s_empty<[T, U]>(l1) | ListOperators::s_empty<[T, U]>(l2)) {
             return false;
         }
@@ -890,7 +890,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         return ListOperators::s_countIf_Helper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
     }
 
-    method {when T KeyType} contains(v: T): Bool {
+    method {when T grounded KeyType} contains(v: T): Bool {
         return ListKeyOperators::s_hasCheck<T>(this, v);
     }
 
@@ -902,7 +902,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         return ListOperators::s_hasPredCheck<T>[recursive?](this, pred(v: T) => v === nothing);
     }
 
-    method {when T KeyType} count(v: T): Int {
+    method {when T grounded KeyType} count(v: T): Int {
         return ListOperators::s_countIf_Helper<T>[recursive?](this, pred(e: T) => v === e);
     }
 
@@ -1414,14 +1414,14 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T KeyType} indexOf(v: T): Nat {
+    method {when T grounded KeyType} indexOf(v: T): Nat {
         let idx = ListOperators::s_findIndexOf_KeyHelper<T>(this, v);
 
         check idx != ListOperators::s_size<T>(this);
         return idx;
     }
 
-    method {when T KeyType} indexOfOrNone(v: T): Nat? {
+    method {when T grounded KeyType} indexOfOrNone(v: T): Nat? {
         let idx = ListOperators::s_findIndexOf_KeyHelper<T>(this, v);
 
         if(idx == ListOperators::s_size<T>(this)) {
@@ -1432,7 +1432,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T KeyType} indexOfOption(v: T): Option<Nat> {
+    method {when T grounded KeyType} indexOfOption(v: T): Option<Nat> {
         let idx = ListOperators::s_findIndexOf_KeyHelper<T>(this, v);
 
         if(idx == ListOperators::s_size<T>(this)) {
@@ -1443,7 +1443,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T KeyType} indexOfTry(out? res: T, v: T): Bool {
+    method {when T grounded KeyType} indexOfTry(out? res: T, v: T): Bool {
         let idx = ListOperators::s_findIndexOf_KeyHelper<T>(this, v);
 
         if(idx == ListOperators::s_size<T>(this)) {
@@ -1455,14 +1455,14 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T KeyType} indexOfLast(v: T): Nat {
+    method {when T grounded KeyType} indexOfLast(v: T): Nat {
         let idx = ListKeyOperators::s_findIndexOfLast_KeyHelper<T>(this, v);
 
         check idx != ListOperators::s_size<T>(this);
         return idx;
     }
 
-    method {when T KeyType} indexOfLastOrNone(v: T): Nat? {
+    method {when T grounded KeyType} indexOfLastOrNone(v: T): Nat? {
         let idx = ListKeyOperators::s_findIndexOfLast_KeyHelper<T>(this, v);
 
         if(idx == ListOperators::s_size<T>(this)) {
@@ -1473,7 +1473,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
-    method {when T KeyType} indexOfLastOption(v: T): Option<Nat> {
+    method {when T grounded KeyType} indexOfLastOption(v: T): Option<Nat> {
         let idx = ListKeyOperators::s_findIndexOfLast_KeyHelper<T>(this, v);
 
         if(idx == ListOperators::s_size<T>(this)) {
@@ -1591,7 +1591,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         return ListOperators::s_slice_Helper<T>(this, lpos, end - lpos);
     }
 
-    method {when T KeyType} uniqueKey(): List<T> {
+    method {when T grounded KeyType} uniqueKey(): List<T> {
         return ListOperators::s_unique_Helper<T>(this, pred(a: T, b: T): Bool => KeyType::equal(a === b));
     }
 
@@ -1662,19 +1662,19 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         });
     }
 
-    method {when T KeyType} project<U=?>(m: Map<T, U>): List<U> {
+    method {when T grounded KeyType} project<U=?>(m: Map<T, U>): List<U> {
         return ListOperators::s_map_Helper<T, U>(this, fn(v: T): U => {
             return m.get(v);
         });
     }
 
-    method {when T KeyType} projectOrNone<U=?>(m: Map<T, U>): List<U?> {
+    method {when T grounded KeyType} projectOrNone<U=?>(m: Map<T, U>): List<U?> {
         return ListOperators::s_map_Helper<T, U?>(this, fn(v: T): U? => {
             return m.getOrNone(v);
         });
     }
 
-    method {when T KeyType} projectImage<U=?>(m: Map<T, U>): List<U> {
+    method {when T grounded KeyType} projectImage<U=?>(m: Map<T, U>): List<U> {
         return this.filter(pred(v: T) => m.has(v)).map<U>(fn(v: T): U => m.get(v));
     }
 
@@ -1697,7 +1697,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         return ListOperators::s_concat2_Helper<T>(l, this);
     }
 
-    recursive? method partition<K KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
+    recursive? method partition<K grounded KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
         let allkeys = ListOperators::s_map_Helper<T, K>[recursive?](this, pf);
         let ukeys = ListOperators::s_unique_Helper<K>(allkeys);
 

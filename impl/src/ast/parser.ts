@@ -2286,7 +2286,7 @@ class Parser {
                     this.ensureToken(TokenStrings.Identifier);
                     const name = this.consumeTokenAndGetValue();
 
-                    if (name === "as" || name === "is" || name === "isSome" || name === "isNone" 
+                    if (name === "as" || name === "is" || name === "isSome" || name === "isNone"
                         || name === "hasIndex" || name === "getIndexOrNone" || name === "getIndexOption" || name === "getIndexTry" 
                         || name === "hasProperty" || name === "getPropertyOrNone" || name === "getPropertyOption" || name === "getPropertyTry") {
                         ops.push(this.handleSpecialCaseMethods(sinfo, specificResolve, name));
@@ -3451,6 +3451,11 @@ class Parser {
                     this.consumeToken();
                 }
 
+                const isgrounded = this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "grounded";
+                if(isgrounded) {
+                    this.consumeToken();
+                }
+
                 const tconstraint = this.parseTemplateConstraint(!this.testToken(",") && !this.testToken(">") && !this.testToken("="));
 
                 let isinfer = false;
@@ -3464,7 +3469,7 @@ class Parser {
                     }
                 }
 
-                return new TemplateTermDecl(templatename, isunique, tconstraint, isinfer, defaulttype);
+                return new TemplateTermDecl(templatename, isunique, isgrounded, tconstraint, isinfer, defaulttype);
             })[0];
         }
         return terms;
@@ -3479,9 +3484,14 @@ class Parser {
             this.consumeToken();
         }
         
+        const isgrounded = this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "grounded";
+        if(isgrounded) {
+            this.consumeToken();
+        }
+
         const tconstraint = this.parseTemplateConstraint(true);
 
-        return new TemplateTypeRestriction(new TemplateTypeSignature(templatename), isunique, tconstraint);
+        return new TemplateTypeRestriction(new TemplateTypeSignature(templatename), isunique, isgrounded, tconstraint);
     }
 
     private parseTermRestrictionList(): TemplateTypeRestriction[] {
@@ -3858,7 +3868,6 @@ class Parser {
                 }
             }
 
-
             const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, cname, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
             currentDecl.concepts.set(cname, cdecl);
             this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + cname, cdecl);
@@ -4113,7 +4122,7 @@ class Parser {
                 const idval = this.parseTypeSignature();
 
                 let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
-                provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
+                provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
                 
                 if(attributes.includes("algebraic")) {
                     provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
