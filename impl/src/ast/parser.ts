@@ -1063,25 +1063,6 @@ class Parser {
         }
     }
 
-    parseElvisCheck(sinfo: SourceInfo): Expression | undefined {
-        let customCheck: Expression | undefined = undefined;
-        if (this.testToken("(")) {
-            this.consumeToken();
-            try {
-                this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                this.m_penv.getCurrentFunctionScope().defineLocalVar("$chkval", `$chkval_#${sinfo.pos}`, true);
-
-                customCheck = this.parseExpression();
-            }
-            finally {
-                this.m_penv.getCurrentFunctionScope().popLocalScope();
-            }
-            this.ensureAndConsumeToken(")");
-        }
-
-        return customCheck;
-    }
-
     ////
     //Type parsing
 
@@ -2615,18 +2596,10 @@ class Parser {
             const ffsinfo = this.getCurrentSrcInfo();
             this.consumeToken();
 
-            try {
-                this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                this.m_penv.getCurrentFunctionScope().defineLocalVar("$value", `$value_#${ffsinfo.pos}`, true);
+            let cond: "none" | "nothing" | "err" = this.consumeTokenAndGetValue() as "none" | "nothing" | "err";
+            this.consumeToken();
 
-                let cond: "none" | "nothing" | "err" = this.consumeTokenAndGetValue() as "none" | "nothing" | "err";
-                this.consumeToken();
-
-                return new ExpOrExpression(ffsinfo, texp, cond);
-            }
-            finally {
-                this.m_penv.popFunctionScope();
-            }
+            return new ExpOrExpression(ffsinfo, texp, cond);
         }
         else {
             return texp;
@@ -3315,7 +3288,7 @@ class Parser {
 
         try {
             this.m_penv.getCurrentFunctionScope().pushLocalScope();
-            this.m_penv.getCurrentFunctionScope().defineLocalVar("$match", `$match_#${sinfo.pos}`, true);
+            this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_#${sinfo.pos}`, true);
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
