@@ -307,6 +307,16 @@ class MIREmitter {
         this.m_currentBlock.push(xxxx);
     }
 
+    emitGuardedOptionInject(sinfo: SourceInfo, srctype: MIRType, somethingtype: MIRType, optiontype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined) {
+        if(!this.emitEnabled) {
+            return;
+        }
+
+        //either use default or inject into something and convert to Option
+
+        this.m_currentBlock.push(xxxx);
+    }
+
     emitExtract(sinfo: SourceInfo, srctype: MIRType, intotype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument) {
         if(!this.emitEnabled) {
             return;

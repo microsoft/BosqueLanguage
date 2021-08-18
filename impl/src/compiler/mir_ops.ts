@@ -150,7 +150,10 @@ abstract class MIRArgument {
 
     static jparse(jobj: any): MIRArgument {
         if(jobj === null) {
-            return new MIRConstantNone;
+            return new MIRConstantNone();
+        }
+        else if (Array.isArray(jobj) && jobj.length === 0) {
+            return new MIRConstantNothing()
         }
         else if(typeof(jobj) === "boolean") {
             return jobj ? new MIRConstantTrue() : new MIRConstantFalse();
@@ -248,6 +251,20 @@ class MIRConstantNone extends MIRConstantArgument {
 
     jemit(): any {
         return null;
+    }
+}
+
+class MIRConstantNothing extends MIRConstantArgument {
+    constructor() {
+        super("=nothing=");
+    }
+
+    stringify(): string {
+        return "nothing";
+    }
+
+    jemit(): any {
+        return [];
     }
 }
 
@@ -2639,7 +2656,7 @@ export {
     MIRGlobalKey, MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey,
     MIRGuard, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard,
     MIRArgument, MIRRegisterArgument, MIRGlobalVariable, 
-    MIRConstantArgument, MIRConstantNone, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantNat, MIRConstantBigInt, MIRConstantBigNat, MIRConstantRational, MIRConstantFloat, MIRConstantDecimal, MIRConstantString, MIRConstantRegex, MIRConstantStringOf, MIRConstantDataString, MIRConstantTypedNumber,
+    MIRConstantArgument, MIRConstantNone, MIRConstantNothing, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantNat, MIRConstantBigInt, MIRConstantBigNat, MIRConstantRational, MIRConstantFloat, MIRConstantDecimal, MIRConstantString, MIRConstantRegex, MIRConstantStringOf, MIRConstantDataString, MIRConstantTypedNumber,
     MIROpTag, MIROp, MIRNop, MIRDeadFlow, MIRAbort, MIRAssertCheck, MIRDebug,
     MIRLoadUnintVariableValue, MIRDeclareGuardFlagLocation, MIRSetConstantGuardFlag, MIRConvertValue,
     MIRLoadConst,

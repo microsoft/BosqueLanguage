@@ -745,6 +745,13 @@ class Assembly {
         if (ofc.typeID === "NSCore::Any" && withc.typeID === "NSCore::Some") {
             return { tp: withc, fp: this.getSpecialNoneType() };
         }
+        else if (ofc.typeID.startsWith("NSCore::Option<") && withc.typeID === "NSCore::ISomething") {
+            const somthingres = ResolvedEntityAtomType.create(this.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl, ofc.conceptTypes[0].binds)
+            return { tp: somthingres, fp: this.getSpecialNothingType() };
+        }
+        else if (ofc.typeID === "NSCore::IOption" && withc.typeID === "NSCore::ISomething") {
+            return { tp: withc, fp: this.getSpecialNothingType() };
+        }
         else {
             return { tp: withc, fp: ofc };
         }
@@ -754,6 +761,10 @@ class Assembly {
         const somethingdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl;
         const okdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
         const errdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
+
+        //
+        //TODO: we may want to handle some ISomething, Something, Option, Nothing situations more precisely if they can arise
+        //
 
         if (ofc.typeID === "NSCore::Any" && withe.typeID === "NSCore::None") {
             return { tp: withe, fp: this.getSpecialSomeConceptType() };
@@ -1436,6 +1447,7 @@ class Assembly {
     getSpecialTupleConceptType(): ResolvedType { return this.internSpecialConceptType(["Tuple"]); }
     getSpecialRecordConceptType(): ResolvedType { return this.internSpecialConceptType(["Record"]); }
 
+    getSpecialISomethingConceptType(): ResolvedType { return this.internSpecialConceptType(["ISomething"]); }
     getSpecialIOptionConceptType(): ResolvedType { return this.internSpecialConceptType(["IOption"]); }
     getSpecialIOptionTConceptType(): ResolvedType { return this.internSpecialConceptType(["IOptionT"]); }
     getSpecialObjectConceptType(): ResolvedType { return this.internSpecialConceptType(["Object"]); }
@@ -2234,6 +2246,10 @@ class Assembly {
 
     restrictNothing(from: ResolvedType): { tp: ResolvedType, fp: ResolvedType } {
         return this.splitTypes(from, this.getSpecialNothingType());
+    }
+
+    restrictSomething(from: ResolvedType): { tp: ResolvedType, fp: ResolvedType } {
+        return this.splitTypes(from, this.getSpecialISomethingConceptType());
     }
 
     restrictT(from: ResolvedType, t: ResolvedType): { tp: ResolvedType, fp: ResolvedType } {

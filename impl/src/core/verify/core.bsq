@@ -48,7 +48,7 @@ __universal concept KeyType provides Any {
 }
 
 //<summary>Type for indicating that a datatype is a Validator.</summary>
-__universal concept Validator provides Any {
+__universal private concept Validator provides Any {
 }
 
 //<summary>Type for indicating that a datatype is parsable.</summary>
@@ -367,6 +367,10 @@ __universal concept IOption provides Some {
     }
 }
 
+//<summary>Generic type for all Option<T> to inherit from.</summary>
+__universal private concept ISomething provides IOption {
+}
+
 //<summary>Type for representing the nothing option value.</summary>
 __internal entity Nothing provides IOption, APIType {
 }
@@ -381,7 +385,7 @@ __internal __constructable entity Something<T> provides Option<T>, APIType when 
 __universal concept IOptionT provides Some {
 }
 
-concept Option<T> provides IOption, APIType when T APIType {
+concept Option<T> provides ISomething, APIType when T APIType {
     method asSomething(): Something<T> {
         return this.as<Something<T>>();
     }
