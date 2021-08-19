@@ -6,12 +6,12 @@
 import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedRecordAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl } from "../ast/assembly";
 import { TypeEnvironment, VarInfo, FlowTypeTruthValue, ValueType } from "./type_environment";
-import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, TupleTypeSignature, FunctionTypeSignature } from "../ast/type_signature";
+import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, TupleTypeSignature, FunctionTypeSignature, EphemeralListTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, IgnoreTermStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, TemplateArguments, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, IsTypeExpression, AsTypeExpression, PostfixGetPropertyOption, PostfixGetIndexOption, SwitchExpression, WildcardSwitchGuard, LiteralSwitchGuard, SwitchGuard } from "../ast/body";
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
-import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl } from "../compiler/mir_assembly";
+import { MIREntityTypeDecl, MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIREntityType } from "../compiler/mir_assembly";
 import { BSQRegex } from "../ast/bsqregex";
 
 import * as assert from "assert";
@@ -5059,27 +5059,78 @@ class TypeChecker {
             });
             return ResolvedType.createSingle(ResolvedRecordAtomType.create(entries));
         }
-        else if(assign instanceof ValueListStructuredAssignment) {
-            const ttypes = assign.assigns.map((asg) => this.resolveAndEnsureTypeOnly(sinfo, asg.assigntype, env.terms));
-            return ResolvedType.createSingle(ResolvedEphemeralListType.create(ttypes));
-        }
         else {
-            assert(assign instanceof NominalStructuredAssignment);
+            this.raiseErrorIf(sinfo, !(assign instanceof NominalStructuredAssignment), "Can only destructure match on Tuples/Records/Entity types");
 
             const nassign = assign as NominalStructuredAssignment;
             return this.resolveAndEnsureTypeOnly(sinfo, nassign.atype, env.terms);
         }
     }
 
-    private getTypeOfStructuredAssignForAssign(sinfo: SourceInfo, env: TypeEnvironment, assign: StructuredAssignment, rhsflow: ResolvedType): ResolvedType {
-        xxxx;
+    private getTypeOfStructuredAssignForInfer(sinfo: SourceInfo, env: TypeEnvironment, assign: StructuredAssignment): ResolvedType | undefined {
         if(assign instanceof TupleStructuredAssignment) {
-            const ttypes = assign.assigns.map((asg) => this.resolveAndEnsureTypeOnly(sinfo, asg.assigntype, env.terms));
+            if(assign.assigns.some((asg) => asg.assigntype instanceof AutoTypeSignature)) {
+                return undefined;
+            }
+            else {
+                const ttypes = assign.assigns.map((asg) => this.resolveAndEnsureTypeOnly(sinfo, asg.assigntype, env.terms));
+                return ResolvedType.createSingle(ResolvedTupleAtomType.create(ttypes));
+            }
+        }
+        else if(assign instanceof RecordStructuredAssignment) {
+            if(assign.assigns.some((asg) => asg[1].assigntype instanceof AutoTypeSignature)) {
+                return undefined;
+            }
+            else {
+                const entries = assign.assigns.map((asg) => {
+                    return { pname: asg[0], ptype: this.resolveAndEnsureTypeOnly(sinfo, asg[1].assigntype, env.terms) };
+                });
+                return ResolvedType.createSingle(ResolvedRecordAtomType.create(entries));
+            }
+        }
+        else if(assign instanceof ValueListStructuredAssignment) {
+            if(assign.assigns.some((asg) => asg.assigntype instanceof AutoTypeSignature)) {
+                return undefined;
+            }
+            else {
+                const ttypes = assign.assigns.map((asg) => this.resolveAndEnsureTypeOnly(sinfo, asg.assigntype, env.terms));
+                return ResolvedType.createSingle(ResolvedEphemeralListType.create(ttypes));
+            }
+        }
+        else {
+            assert(assign instanceof NominalStructuredAssignment);
+
+            const nassign = assign as NominalStructuredAssignment;
+            const ntype = this.resolveAndEnsureTypeOnly(sinfo, nassign.atype, env.terms);
+            if(ntype.options.length !== 1) {
+                return undefined;
+            }
+
+            const entityorconcept = (ntype.options[0] instanceof ResolvedEntityAtomType) || (ntype.options[0] instanceof ResolvedConceptAtomType);
+            if(!entityorconcept) {
+                return undefined
+            }
+
+            return ntype;
+        }
+    }
+
+    private getTypeOfStructuredAssignForAssign(sinfo: SourceInfo, env: TypeEnvironment, assign: StructuredAssignment, rhsflow: ResolvedType): ResolvedType {
+        if(assign instanceof TupleStructuredAssignment) {
+            this.raiseErrorIf(sinfo, !rhsflow.isUniqueTupleTargetType(), "Expected unique tuple type to assign from");
+            this.raiseErrorIf(sinfo, rhsflow.getUniqueTupleTargetType().types.length !== assign.assigns.length, "Tuple length does not match assignment");
+
+            const ttypes = assign.assigns.map((asg, i) => !(asg.assigntype instanceof AutoTypeSignature) ? this.resolveAndEnsureTypeOnly(sinfo, asg.assigntype, env.terms) : rhsflow.getUniqueTupleTargetType().types[i]);
             return ResolvedType.createSingle(ResolvedTupleAtomType.create(ttypes));
         }
         else if(assign instanceof RecordStructuredAssignment) {
+            this.raiseErrorIf(sinfo, !rhsflow.isUniqueRecordTargetType(), "Expected unique record type to assign from");
+            this.raiseErrorIf(sinfo, rhsflow.getUniqueRecordTargetType().entries.length !== assign.assigns.length, "Record property counts do not match assignment");
+            this.raiseErrorIf(sinfo, rhsflow.getUniqueRecordTargetType().entries.some((v) => assign.assigns.find((entry) => entry[0] === v.pname) === undefined), "Mismatched property name in assignment");
+
             const entries = assign.assigns.map((asg) => {
-                return { pname: asg[0], ptype: this.resolveAndEnsureTypeOnly(sinfo, asg[1].assigntype, env.terms) };
+                const entrytype = !(asg[1].assigntype instanceof AutoTypeSignature) ? this.resolveAndEnsureTypeOnly(sinfo, asg[1].assigntype, env.terms) : (rhsflow.getUniqueRecordTargetType().entries.find((entry) => entry.pname === asg[0]) as {pname: string, ptype: ResolvedType}).ptype;
+                return { pname: asg[0], ptype: entrytype };
             });
             return ResolvedType.createSingle(ResolvedRecordAtomType.create(entries));
         }
@@ -5134,19 +5185,17 @@ class TypeChecker {
             return env.multiVarUpdate(declaredvars, []);
         }
         else if(assign instanceof ValueListStructuredAssignment) {
-            xxxx;
-            let elindecies: number[] = [];
+            let trgts: { pos: number, into: MIRRegisterArgument, oftype: MIRType }[] = [];
             assign.assigns.forEach((ap, i) => {
-                const aptype = ;
+                const aptype = (argoftype.options[0] as ResolvedEphemeralListType).types[i];
                 if(ap instanceof VariableDeclarationStructuredAssignment) {
                     eltypes.push(aptype);
                     declaredvars.push([true, ap.vname, aptype, aptype]);
-                    rindecies.push(i);
+                    trgts.push({pos: i, into: new MIRRegisterArgument(ap.vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
                 }
             });
 
-            elatom = ResolvedEphemeralListType.create(eltypes);
-            this.m_emitter.emitTupleProjectToEphemeral(sinfo, arg, this.m_emitter.registerResolvedTypeReference(arglayouttype), this.m_emitter.registerResolvedTypeReference(argoftype), rindecies, !argoftype.isUniqueTupleTargetType(), elatom, elreg);
+            this.m_emitter.emitMultiLoadFromEpehmeralList(sinfo, arg, this.m_emitter.registerResolvedTypeReference(arglayouttype), trgts);
 
             return env.multiVarUpdate(declaredvars, []);
         }
@@ -5154,20 +5203,33 @@ class TypeChecker {
             assert(assign instanceof NominalStructuredAssignment);
 
             const nassign = assign as NominalStructuredAssignment;
-            if(xxxx) {
-                //check for constructable special case here
-            }
-            else {
-                xxxx; //constructor types the assignment option is actually a declaration here we just take the type to be hte matching field type
-                const aptype = this.resolveAndEnsureTypeOnly(sinfo, ap.assigntype, env.terms);
-                if (ap instanceof VariableDeclarationStructuredAssignment) {
-                    eltypes.push(aptype);
-                    declaredvars.push([true, ap.vname, aptype, aptype]);
-                    rindecies.push(i);
+
+            this.raiseErrorIf(sinfo, argoftype.options.length !== 1, "Must be unique concept or entity");
+            if (argoftype.options[0] instanceof ResolvedEntityAtomType) {
+                const entity = argoftype.options[0].object;
+                if (entity.attributes.includes("__constructable")) {
+                    //check for constructable special case here
                 }
                 else {
-                    //nothing
+                    this.raiseErrorIf(sinfo, entity.attributes.includes("__internal"), "Cannot deconstruct primitive values");
+
+                    const allfields = this.m_assembly.getAllOOFieldsConstructors(entity, argoftype.options[0].binds);
+                    const isdestructable = [...allfields.req, ...allfields.opt].every((fd) => !(fd[1][1].attributes.includes("private") || fd[1][1].attributes.includes("hidden")));
+                    this.raiseErrorIf(sinfo, !isdestructable, "Cannot destruct a type with hidden or private fields");
+
+                    const aptype = this.resolveAndEnsureTypeOnly(sinfo, ap.assigntype, env.terms);
+                    if (ap instanceof VariableDeclarationStructuredAssignment) {
+                        eltypes.push(aptype);
+                        declaredvars.push([true, ap.vname, aptype, aptype]);
+                        rindecies.push(i);
+                    }
+                    else {
+                        //nothing
+                    }
                 }
+            }
+            else {
+                xxxx;
             }
         }
     }
