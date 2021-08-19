@@ -105,13 +105,13 @@ __internal entity ListOperators provides Object {
     }
 
     recursive? function s_safeCheckPred_Pair<T, U>[recursive?](l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<T>, List<U> {
-        if(ListOperators::s_empty<T>(l) & ListOperators::s_empty<U>(ol)) {
+        if(ListOperators::s_empty<T>(l) /\ ListOperators::s_empty<U>(ol)) {
             return List<T>@{}, List<U>@{};
         }
         elif(ListOperators::s_empty<T>(l)) {
             return List<T>@{}, ol;
         }
-        elif(ListOperators::s_empty<T>(l) | ListOperators::s_empty<U>(ol)) {
+        elif(ListOperators::s_empty<T>(l) \/ ListOperators::s_empty<U>(ol)) {
             return l, List<U>@{};
         }
         else {
@@ -147,7 +147,7 @@ __internal entity ListOperators provides Object {
         let l1empty = ListOperators::s_empty<T>(l1);
         let l2empty = ListOperators::s_empty<T>(l2);
 
-        if(l1empty & l2empty) {
+        if(l1empty /\ l2empty) {
             return List<T>@{};
         }
         else {
@@ -292,7 +292,7 @@ __internal entity ListOperators provides Object {
     }
 
     recursive? function s_join_Helper<T, U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> {
-        if(ListOperators::s_empty(l) | ListOperators::s_empty(ol)) {
+        if(ListOperators::s_empty(l) \/ ListOperators::s_empty(ol)) {
             return List<[T, U]>@{};
         }
         else {
@@ -438,7 +438,7 @@ __internal entity ListKeyOperators provides Object {
     }
 
     function s_overlapsMapKV_KeyHelper<T grounded KeyType, U>(l1: List<[T, U]>, l2: List<[T, U]>): Bool {
-        if(ListOperators::s_empty<[T, U]>(l1) | ListOperators::s_empty<[T, U]>(l2)) {
+        if(ListOperators::s_empty<[T, U]>(l1) \/ ListOperators::s_empty<[T, U]>(l2)) {
             return false;
         }
         else {
@@ -653,7 +653,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     private function s_sliceRangeInBounds(l: List<T>, start: Nat, end: Nat): Bool {
-        return start <= end & end <= ListOperators::s_size<T>(l); 
+        return start <= end /\ end <= ListOperators::s_size<T>(l); 
     }
 
     ////
@@ -821,7 +821,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
         let lastidx = ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
 
-        if((idx != lastidx) | (idx == ListOperators::s_size<T>(this))) {
+        if((idx != lastidx) \/ (idx == ListOperators::s_size<T>(this))) {
             return none;
         }
         else {
@@ -833,7 +833,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
         let lastidx = ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
 
-        if((idx != lastidx) | (idx == ListOperators::s_size<T>(this))) {
+        if((idx != lastidx) \/ (idx == ListOperators::s_size<T>(this))) {
             return nothing;
         }
         else {
@@ -845,7 +845,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
         let lastidx = ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
 
-        if((idx != lastidx) | (idx == ListOperators::s_size<T>(this))) {
+        if((idx != lastidx) \/ (idx == ListOperators::s_size<T>(this))) {
             return false;
         }
         else {

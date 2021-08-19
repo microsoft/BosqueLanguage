@@ -17,7 +17,6 @@ const KeywordStrings = [
     "abort",
     "assert",
     "astype",
-    "case",
     "check",
     "concept",
     "const",
@@ -106,7 +105,9 @@ const SymbolStrings = [
     "-",
     "->",
     "*",
-    "/"
+    "/",
+    "/\\",
+    "\\/"
 ].sort((a, b) => { return (a.length !== b.length) ? (b.length - a.length) : a.localeCompare(b); });
 
 const RegexFollows = new Set<string>([
@@ -147,7 +148,9 @@ const RegexFollows = new Set<string>([
     ">=",
     "-",
     "*",
-    "/"
+    "/",
+    "/\\",
+    "\\/"
 ]);
 
 const LeftScanParens = ["[", "(", "{", "(|", "{|"];
@@ -2509,8 +2512,8 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseImpliesExpression();
 
-        if (this.testAndConsumeTokenIf("&")) {
-            return new BinLogicExpression(sinfo, exp, "&", this.parseAndExpression());
+        if (this.testAndConsumeTokenIf("/\\")) {
+            return new BinLogicExpression(sinfo, exp, "/\\", this.parseAndExpression());
         }
         else if (this.testAndConsumeTokenIf("&&")) {
             return new BinLogicExpression(sinfo, exp, "&&", this.parseAndExpression());
@@ -2524,8 +2527,8 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseAndExpression();
 
-        if (this.testAndConsumeTokenIf("|")) {
-            return new BinLogicExpression(sinfo, exp, "|", this.parseOrExpression());
+        if (this.testAndConsumeTokenIf("\\/")) {
+            return new BinLogicExpression(sinfo, exp, "\\/", this.parseOrExpression());
         }
         else if (this.testAndConsumeTokenIf("||")) {
             return new BinLogicExpression(sinfo, exp, "||", this.parseOrExpression());
@@ -2674,7 +2677,8 @@ class Parser {
             
             let entries: SwitchEntry<Expression>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("case")) {
+            entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+            while (this.testToken("|")) {
                 entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
             }
             this.ensureAndConsumeToken("}");
@@ -2701,7 +2705,8 @@ class Parser {
             
             let entries: MatchEntry<Expression>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("case")) {
+            entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+            while (this.testToken("|")) {
                 entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
             }
             this.ensureAndConsumeToken("}");
@@ -3254,7 +3259,7 @@ class Parser {
         this.ensureAndConsumeToken("=>");
         const action = actionp();
 
-        const isokfollow = this.testToken("}") || this.testToken("case");
+        const isokfollow = this.testToken("}") || this.testToken("|");
         if(!isokfollow) {
             this.raiseError(this.getCurrentLine(), "Unknown token at end of match entry");
         }
@@ -3269,12 +3274,21 @@ class Parser {
         this.ensureAndConsumeToken("=>");
         const action = actionp();
 
-        const isokfollow = this.testToken("}") || this.testToken("case");
+        const isokfollow = this.testToken("}") || this.testToken("|");
         if(!isokfollow) {
             this.raiseError(this.getCurrentLine(), "Unknown token at end of match entry");
         }
 
         return new MatchEntry<T>(guard, action);
+    }
+
+    private parseStatementActionInBlock(): BlockStatement {
+        if(this.testToken("{")) {
+            return this.parseBlockStatement();
+        }
+        else {
+            return new BlockStatement(this.getCurrentSrcInfo(), [this.parseLineStatement()]);
+        }
     }
 
     private parseSwitchStatement(): Statement {
@@ -3292,8 +3306,9 @@ class Parser {
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("case")) {
-                entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseBlockStatement()));
+            entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+            while (this.testToken("|")) {
+                entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
             }
             this.ensureAndConsumeToken("}");
 
@@ -3319,8 +3334,9 @@ class Parser {
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("case")) {
-                entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseBlockStatement()));
+            entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+            while (this.testToken("|")) {
+                entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
             }
             this.ensureAndConsumeToken("}");
 
