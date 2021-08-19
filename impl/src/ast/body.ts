@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo } from "./parser";
-import { TypeSignature } from "./type_signature";
+import { AutoTypeSignature, TypeSignature } from "./type_signature";
 import { InvokeDecl, BuildLevel } from "./assembly";
 import { BSQRegex } from "./bsqregex";
 
@@ -124,7 +124,6 @@ class StructureMatchGuard extends MatchGuard {
         this.decls = decls;
     }
 }
-
 
 class MatchEntry<T> {
     readonly check: MatchGuard;
@@ -1035,25 +1034,26 @@ class StructuredAssignment {
 }
 
 class StructuredAssignementPrimitive extends StructuredAssignment {
+    readonly assigntype: TypeSignature;
+
+    constructor(assigntype: TypeSignature) {
+        super();
+        this.assigntype = assigntype;
+    }
 }
 
 class IgnoreTermStructuredAssignment extends StructuredAssignementPrimitive {
-    readonly termType: TypeSignature;
-
-    constructor(termType: TypeSignature) {
-        super();
-        this.termType = termType;
+    constructor(ignoretype: TypeSignature) {
+        super(ignoretype);
     }
 }
 
 class VariableDeclarationStructuredAssignment extends StructuredAssignementPrimitive {
     readonly vname: string;
-    readonly vtype: TypeSignature;
 
     constructor(vname: string, vtype: TypeSignature) {
-        super();
+        super(vtype);
         this.vname = vname;
-        this.vtype = vtype;
     }
 }
 
@@ -1061,7 +1061,7 @@ class VariableAssignmentStructuredAssignment extends StructuredAssignementPrimit
     readonly vname: string;
 
     constructor(vname: string) {
-        super();
+        super(new AutoTypeSignature());
         this.vname = vname;
     }
 }

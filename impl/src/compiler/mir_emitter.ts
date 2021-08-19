@@ -138,6 +138,8 @@ class MIREmitter {
     private yieldPatchInfo: [string, MIRRegisterArgument, ValueType][][] = [];
     private returnPatchInfo: [string, MIRRegisterArgument, ValueType][] = [];
 
+    m_activeResultType: ResolvedType | undefined = undefined;
+
     private constructor(assembly: Assembly, masm: MIRAssembly, emitEnabled: boolean) {
         this.assembly = assembly;
         this.masm = masm;
@@ -153,7 +155,7 @@ class MIREmitter {
         this.emitEnabled = enabled;
     }
 
-    initializeBodyEmitter() {
+    initializeBodyEmitter(activeResultType: ResolvedType | undefined) {
         this.m_tmpIDCtr = 0;
 
         this.m_blockMap = new Map<string, MIRBasicBlock>();
@@ -166,6 +168,8 @@ class MIREmitter {
 
         this.yieldPatchInfo = [];
         this.returnPatchInfo = [];
+
+        this.m_activeResultType = activeResultType; 
     }
 
     generateTmpRegister(): MIRRegisterArgument {
@@ -1407,4 +1411,4 @@ class MIREmitter {
     }
 }
 
-export { MIRPCodeIDKey, PCode, GeneratedKeyName, MIRKeyGenerator, MIREmitter };
+export { PCode, GeneratedKeyName, MIRKeyGenerator, MIREmitter };

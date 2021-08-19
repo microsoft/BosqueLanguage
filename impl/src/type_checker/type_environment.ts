@@ -9,7 +9,6 @@ import { Assembly } from "../ast/assembly";
 import { ResolvedType } from "../ast/resolved_type";
 import { MIRInvokeKey } from "../compiler/mir_ops";
 import { PCode } from "../compiler/mir_emitter";
-import { ConstantExpressionValue } from "../ast/body";
 
 enum FlowTypeTruthValue {
     True = "True",
@@ -136,22 +135,6 @@ class VarInfo {
         return new VarInfo(values[0].declaredType, values[0].isConst, values[0].isCaptured, jdef, jtype);
     }
 }
-
-type StructuredAssignmentPathStep = {
-    fromtype: ResolvedType,
-    t: ResolvedType,
-    step: "tuple" | "record" | "elist" | "nominal";
-    ival: number;
-    nval: string;
-};
-
-type StructuredAssignmentCheck = {
-    action: "eqchk" | "typechk",
-    srctype: ResolvedType,
-    oftype: ResolvedType | undefined,
-    isoptional: boolean,
-    eqvalue: ConstantExpressionValue | undefined
-};
 
 class TypeEnvironment {
     readonly ikey: MIRInvokeKey;
@@ -436,19 +419,19 @@ class TypeEnvironment {
         return new TypeEnvironment(this.ikey, this.bodyid, this.terms, this.pcodes, this.args, localcopy, this.inferResult, this.inferYield, this.expressionResult, this.returnResult, this.yieldResult, this.frozenVars);
     }
 
-    multiVarUpdate(allDeclared: [boolean, string, ResolvedType, StructuredAssignmentPathStep[], ResolvedType][], allAssigned: [string, StructuredAssignmentPathStep[], ResolvedType][]): TypeEnvironment {
+    multiVarUpdate(allDeclared: [boolean, string, ResolvedType, ResolvedType][], allAssigned: [string, ResolvedType][]): TypeEnvironment {
         assert(this.hasNormalFlow());
 
         let nenv: TypeEnvironment = this;
 
         for (let i = 0; i < allDeclared.length; ++i) {
             const declv = allDeclared[i];
-            nenv = nenv.addVar(declv[1], declv[0], declv[2], true, declv[4]);
+            nenv = nenv.addVar(declv[1], declv[0], declv[2], true, declv[3]);
         }
 
         for (let i = 0; i < allAssigned.length; ++i) {
             const assignv = allAssigned[i];
-            nenv = nenv.setVar(assignv[0], assignv[2]);
+            nenv = nenv.setVar(assignv[0], assignv[1]);
         }
 
         return nenv;
@@ -538,6 +521,6 @@ class TypeEnvironment {
 
 export {
     FlowTypeTruthValue, FlowTypeTruthOps, ValueType,
-    VarInfo, ExpressionReturnResult, StructuredAssignmentPathStep, StructuredAssignmentCheck,
+    VarInfo, ExpressionReturnResult,
     TypeEnvironment
 };

@@ -2762,14 +2762,14 @@ class Parser {
 
     parseStructuredAssignment(sinfo: SourceInfo, vars: "let" | "var" | undefined, decls: Set<string>): StructuredAssignment {
         if (this.testToken("[")) {
-            const assigns = this.parseListOf<StructuredAssignment>("[", "]", ",", () => {
+            const assigns = this.parseListOf<StructuredAssignementPrimitive>("[", "]", ",", () => {
                 return this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
             })[0];
 
             return new TupleStructuredAssignment(assigns);
         }
         else if (this.testToken("{")) {
-            const assigns = this.parseListOf<[string, StructuredAssignment]>("{", "}", ",", () => {
+            const assigns = this.parseListOf<[string, StructuredAssignementPrimitive]>("{", "}", ",", () => {
                 this.ensureToken(TokenStrings.Identifier);
                 const name = this.consumeTokenAndGetValue();
 
@@ -2782,7 +2782,7 @@ class Parser {
             return new RecordStructuredAssignment(assigns);
         }
         else if (this.testToken("(|")) {
-            const assigns = this.parseListOf<StructuredAssignment>("(|", "|)", ",", () => {
+            const assigns = this.parseListOf<StructuredAssignementPrimitive>("(|", "|)", ",", () => {
                 return this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
             })[0];
 
@@ -2857,7 +2857,7 @@ class Parser {
                 let vars: {name: string, vtype: TypeSignature}[] = [];
                 for(let i = 0; i < assigns.length; ++i) {
                     if (assigns[i] instanceof IgnoreTermStructuredAssignment) {
-                        vars.push({name: "_", vtype: (assigns[i] as IgnoreTermStructuredAssignment).termType});
+                        vars.push({name: "_", vtype: (assigns[i] as IgnoreTermStructuredAssignment).assigntype});
                     }
                     else if(assigns[i] instanceof VariableDeclarationStructuredAssignment) {
                         const dv = assigns[i] as VariableDeclarationStructuredAssignment;
@@ -2867,7 +2867,7 @@ class Parser {
                         }
                         this.m_penv.getCurrentFunctionScope().defineLocalVar(dv.vname, dv.vname, false);
 
-                        vars.push({name: dv.vname, vtype: dv.vtype});
+                        vars.push({name: dv.vname, vtype: dv.assigntype});
                     }
                     else {
                         this.raiseError(sinfo.line, "Cannot have structured multi-decls");
@@ -3058,7 +3058,7 @@ class Parser {
                 this.consumeToken();
 
                 let decls = new Set<string>();
-                const assigns = this.parseListOf<[string | undefined, StructuredAssignment]>("{", "}", ",", () => {
+                const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
                     if (this.testFollows(TokenStrings.Identifier, "=")) {
                         this.ensureToken(TokenStrings.Identifier);
                         const name = this.consumeTokenAndGetValue();
@@ -3213,7 +3213,7 @@ class Parser {
                 const oftype = this.parseTypeSignature();
                 if (this.testFollows("@", "{")) {
                     let decls = new Set<string>();
-                    const assigns = this.parseListOf<[string | undefined, StructuredAssignment]>("{", "}", ",", () => {
+                    const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
                         if (this.testFollows(TokenStrings.Identifier, "=")) {
                             this.ensureToken(TokenStrings.Identifier);
                             const name = this.consumeTokenAndGetValue();
