@@ -60,14 +60,29 @@ class MIRKeyGenerator {
 
     static generateFieldKey(t: ResolvedType, name: string): GeneratedKeyName<MIRFieldKey> {
         const tkey = this.generateTypeKey(t);
-        return {keyid: `${tkey.keyid}.${name}`, shortname: `${tkey.shortname}.${name}`};
+        return {keyid: `__f__${tkey.keyid}.${name}`, shortname: `${tkey.shortname}.${name}`};
+    }
+
+    static generateGlobalKeyWNamespace(ns: string, name: string, prefix?: string): GeneratedKeyName<MIRGlobalKey> {
+        const fname = `__g__${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}`;
+
+        return {keyid: fname, shortname: shortfname};
+    }
+
+    static generateGlobalKeyWType(t: ResolvedType, name: string, prefix?: string): GeneratedKeyName<MIRGlobalKey> {
+        const tinfo = MIRKeyGenerator.generateTypeKey(t);
+
+        const fname = `__g__${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.shortname}::${name}`;
+        return {keyid: fname, shortname: shortfname};
     }
 
     static generateFunctionKeyWNamespace(ns: string, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], prefix?: string): GeneratedKeyName<MIRInvokeKey> {
         const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
-        const fname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${binfo}${pcinfo}`;
+        const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${binfo}${pcinfo}`;
         const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${shortbinfo}${pcinfo}`;
         return {keyid: fname, shortname: shortfname};
     }
@@ -77,7 +92,7 @@ class MIRKeyGenerator {
         const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
-        const fname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}${binfo}${pcinfo}`;
+        const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}${binfo}${pcinfo}`;
         const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.shortname}::${name}${shortbinfo}${pcinfo}`;
         return {keyid: fname, shortname: shortfname};
     }
@@ -87,7 +102,7 @@ class MIRKeyGenerator {
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
 
-        const iname = `${vname}${binfo}${pcinfo}`;
+        const iname = `__v__${vname}${binfo}${pcinfo}`;
         const shortvname =  `${vname}${shortbinfo}${pcinfo}`;
         return {keyid: iname, shortname: shortvname};
     }
@@ -110,14 +125,24 @@ class MIRKeyGenerator {
     }
 }
 
+type PendingConstExprProcessingInfo = { gkey: MIRGlobalKey, shortname: string, name: string, srcFile: string, containingType: [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, cexp: ConstantExpressionValue, attribs: string[], binds: Map<string, ResolvedType>, ddecltype: ResolvedType };
+type PendingFunctionProcessingInfo = { fkey: MIRInvokeKey, shortname: string, name: string, enclosingdecl: [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, invoke: InvokeDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
+type PendingOperatorProcessing = ;
+type PendingOOMethodProcessing = ;
+type PendingPCodeProcessing = ;
+type PendingOPVirtualProcessing = ;
+
+type EntityInstantiationInfo = ;
+type AllVInvokesInfo = ;
+
 class MIREmitter {
     readonly assembly: Assembly;
     readonly masm: MIRAssembly;
     
     private readonly pendingOOProcessing: [MIRResolvedTypeKey, OOPTypeDecl, Map<string, ResolvedType>][] = [];
 
-    private readonly pendingConstExprProcessing: [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, ConstantExpressionValue, string[], Map<string, ResolvedType>, ResolvedType][] = [];
-    private readonly pendingFunctionProcessing: [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, InvokeDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
+    private readonly pendingConstExprProcessing: PendingConstExprProcessingInfo[] = [];
+    private readonly pendingFunctionProcessing: PendingFunctionProcessingInfo[] = [];
     private readonly pendingOperatorProcessing: [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, InvokeDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
     private readonly pendingOOMethodProcessing: [MIRVirtualMethodKey, MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>], MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]][] = [];
     private readonly pendingPCodeProcessing: [MIRInvokeKey, InvokeDecl, ResolvedFunctionType, Map<string, ResolvedType>, Map<string, ResolvedType>, [string, ResolvedType][], [string, { pcode: PCode, captured: string[] }][]][] = [];
@@ -478,7 +503,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRLoadRecordProperty(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, pname, isvirtual, resulttype.trkey, trgt));
+        this.m_currentBlock.push(new MIRLoadRecordProperty(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, pname, isvirtual, resulttype.typeID, trgt));
     }
 
     emitLoadRecordPropertySetGuard(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, pname: string, isvirtual: boolean, resulttype: MIRType, trgt: MIRRegisterArgument, guard: MIRGuard) {
@@ -486,7 +511,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRLoadRecordPropertySetGuard(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, pname, isvirtual, resulttype.trkey, trgt, guard));
+        this.m_currentBlock.push(new MIRLoadRecordPropertySetGuard(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, pname, isvirtual, resulttype.typeID, trgt, guard));
     }
 
     emitLoadField(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, fname: MIRFieldKey, isvirtual: boolean, resulttype: MIRType, trgt: MIRRegisterArgument) {
@@ -494,7 +519,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRLoadField(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, fname, isvirtual, resulttype.trkey, trgt));
+        this.m_currentBlock.push(new MIRLoadField(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, fname, isvirtual, resulttype.typeID, trgt));
     }
 
     emitTupleProjectToEphemeral(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, indecies: number[], isvirtual: boolean, epht: ResolvedEphemeralListType, trgt: MIRRegisterArgument) {
@@ -502,7 +527,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRTupleProjectToEphemeral(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, indecies, isvirtual, this.registerResolvedTypeReference(ResolvedType.createSingle(epht)).trkey, trgt));
+        this.m_currentBlock.push(new MIRTupleProjectToEphemeral(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, indecies, isvirtual, this.registerResolvedTypeReference(ResolvedType.createSingle(epht)).typeID, trgt));
     }
 
     emitRecordProjectToEphemeral(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, properties: string[], isvirtual: boolean, epht: ResolvedEphemeralListType, trgt: MIRRegisterArgument) {
@@ -510,7 +535,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRRecordProjectToEphemeral(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, properties, isvirtual, this.registerResolvedTypeReference(ResolvedType.createSingle(epht)).trkey, trgt));
+        this.m_currentBlock.push(new MIRRecordProjectToEphemeral(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, properties, isvirtual, this.registerResolvedTypeReference(ResolvedType.createSingle(epht)).typeID, trgt));
     }
 
     emitEntityProjectToEphemeral(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, fields: MIRFieldKey[], isvirtual: boolean, epht: ResolvedEphemeralListType, trgt: MIRRegisterArgument) {
@@ -518,7 +543,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIREntityProjectToEphemeral(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, fields, isvirtual, this.registerResolvedTypeReference(ResolvedType.createSingle(epht)).trkey, trgt));
+        this.m_currentBlock.push(new MIREntityProjectToEphemeral(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, fields, isvirtual, this.registerResolvedTypeReference(ResolvedType.createSingle(epht)).typeID, trgt));
     }
 
     emitTupleUpdate(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, updates: [number, ResolvedType, MIRArgument][], isvirtual: boolean, trgt: MIRRegisterArgument) {
@@ -526,8 +551,8 @@ class MIREmitter {
             return;
         }
 
-        const upds = updates.map((upd) => [upd[0], upd[2], this.registerResolvedTypeReference(upd[1]).trkey] as [number, MIRArgument, MIRResolvedTypeKey]);
-        this.m_currentBlock.push(new MIRTupleUpdate(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, upds, isvirtual, trgt));
+        const upds = updates.map((upd) => [upd[0], upd[2], this.registerResolvedTypeReference(upd[1]).typeID] as [number, MIRArgument, MIRResolvedTypeKey]);
+        this.m_currentBlock.push(new MIRTupleUpdate(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, upds, isvirtual, trgt));
     }
 
     emitRecordUpdate(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, updates: [string, ResolvedType, MIRArgument][], isvirtual: boolean, trgt: MIRRegisterArgument) {
@@ -535,8 +560,8 @@ class MIREmitter {
             return;
         }
 
-        const upds = updates.map((upd) => [upd[0], upd[2], this.registerResolvedTypeReference(upd[1]).trkey] as [string, MIRArgument, MIRResolvedTypeKey]);
-        this.m_currentBlock.push(new MIRRecordUpdate(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, upds, isvirtual, trgt));
+        const upds = updates.map((upd) => [upd[0], upd[2], this.registerResolvedTypeReference(upd[1]).typeID] as [string, MIRArgument, MIRResolvedTypeKey]);
+        this.m_currentBlock.push(new MIRRecordUpdate(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, upds, isvirtual, trgt));
     }
 
     emitEntityUpdate(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, updates: [MIRFieldKey, ResolvedType, MIRArgument][], isvirtual: boolean, trgt: MIRRegisterArgument) {
@@ -544,8 +569,8 @@ class MIREmitter {
             return;
         }
 
-        const upds = updates.map((upd) => [upd[0], upd[2], this.registerResolvedTypeReference(upd[1]).trkey] as [MIRFieldKey, MIRArgument, MIRResolvedTypeKey]);
-        this.m_currentBlock.push(new MIREntityUpdate(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, upds, isvirtual, trgt));
+        const upds = updates.map((upd) => [upd[0], upd[2], this.registerResolvedTypeReference(upd[1]).typeID] as [MIRFieldKey, MIRArgument, MIRResolvedTypeKey]);
+        this.m_currentBlock.push(new MIREntityUpdate(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, upds, isvirtual, trgt));
     }
 
     emitLoadFromEpehmeralList(sinfo: SourceInfo, arg: MIRArgument, argtype: MIRType, idx: number, resulttype: MIRType, trgt: MIRRegisterArgument) {
@@ -553,7 +578,7 @@ class MIREmitter {
             return;
         }
         
-        this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, arg, argtype.trkey, idx, resulttype.trkey, trgt));
+        this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, arg, argtype.typeID, idx, resulttype.typeID, trgt));
     }
 
     emitMultiLoadFromEpehmeralList(sinfo: SourceInfo, arg: MIRArgument, argtype: MIRType, trgts: { pos: number, into: MIRRegisterArgument, oftype: MIRType }[]) {
@@ -562,9 +587,9 @@ class MIREmitter {
         }
 
         const etrgts = trgts.map((trgt) => {
-            return { pos: trgt.pos, into: trgt.into, oftype: trgt.oftype.trkey };
+            return { pos: trgt.pos, into: trgt.into, oftype: trgt.oftype.typeID };
         });
-        this.m_currentBlock.push(new MIRMultiLoadFromEpehmeralList(sinfo, arg, argtype.trkey, etrgts));
+        this.m_currentBlock.push(new MIRMultiLoadFromEpehmeralList(sinfo, arg, argtype.typeID, etrgts));
     }
 
     emitInvokeFixedFunction(sinfo: SourceInfo, ikey: MIRInvokeKey, args: MIRArgument[], optstatusmask: string | undefined, rretinfo: MIRType | { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [MIRRegisterArgument, MIRType][] }, trgt: MIRRegisterArgument) {
@@ -574,17 +599,17 @@ class MIREmitter {
 
         const retinfo = rretinfo instanceof MIRType ? { declresult: rretinfo, runtimeresult: rretinfo, elrcount: -1, refargs: [] } : rretinfo;
         if (retinfo.refargs.length === 0) {
-            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, retinfo.declresult.trkey, ikey, args, optstatusmask, trgt, undefined));
+            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, retinfo.declresult.typeID, ikey, args, optstatusmask, trgt, undefined));
         }
         else {
             const rr = this.generateTmpRegister();
-            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, retinfo.runtimeresult.trkey, ikey, args, optstatusmask, rr, undefined));
+            this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, retinfo.runtimeresult.typeID, ikey, args, optstatusmask, rr, undefined));
 
             if (retinfo.elrcount === -1) {
-                this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult.trkey, 0, retinfo.declresult.trkey, trgt));
+                this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult.typeID, 0, retinfo.declresult.typeID, trgt));
             }
             else {
-                this.m_currentBlock.push(new MIRSliceEpehmeralList(sinfo, rr, retinfo.runtimeresult.trkey, retinfo.declresult.trkey, trgt));
+                this.m_currentBlock.push(new MIRSliceEpehmeralList(sinfo, rr, retinfo.runtimeresult.typeID, retinfo.declresult.typeID, trgt));
             }
 
             const refbase = retinfo.elrcount != -1 ? retinfo.elrcount : 1;
@@ -601,7 +626,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, retinfo.trkey, ikey, args, optstatusmask, trgt, guard));
+        this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, retinfo.typeID, ikey, args, optstatusmask, trgt, guard));
     }
 
     emitInvokeVirtualFunction(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, rcvrlayouttype: MIRType, rcvrflowtype: MIRType, args: MIRArgument[], optstatusmask: string | undefined, rretinfo: MIRType | { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [MIRRegisterArgument, MIRType][] }, trgt: MIRRegisterArgument) {
@@ -611,17 +636,17 @@ class MIREmitter {
 
         const retinfo = rretinfo instanceof MIRType ? { declresult: rretinfo, runtimeresult: rretinfo, elrcount: -1, refargs: [] as [MIRRegisterArgument, MIRType][] } : rretinfo;
         if (retinfo.refargs.length === 0) {
-            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, retinfo.declresult.trkey, vresolve, rcvrlayouttype.trkey, rcvrflowtype.trkey, args, optstatusmask, trgt));
+            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, retinfo.declresult.typeID, vresolve, rcvrlayouttype.typeID, rcvrflowtype.typeID, args, optstatusmask, trgt));
         }
         else {
             const rr = this.generateTmpRegister();
-            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, retinfo.runtimeresult.trkey, vresolve, rcvrlayouttype.trkey, rcvrflowtype.trkey, args, optstatusmask, rr));
+            this.m_currentBlock.push(new MIRInvokeVirtualFunction(sinfo, retinfo.runtimeresult.typeID, vresolve, rcvrlayouttype.typeID, rcvrflowtype.typeID, args, optstatusmask, rr));
            
             if (retinfo.elrcount === -1) {
-                this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult.trkey, 0, retinfo.declresult.trkey, trgt));
+                this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult.typeID, 0, retinfo.declresult.typeID, trgt));
             }
             else {
-                this.m_currentBlock.push(new MIRSliceEpehmeralList(sinfo, rr, retinfo.runtimeresult.trkey, retinfo.declresult.trkey, trgt));
+                this.m_currentBlock.push(new MIRSliceEpehmeralList(sinfo, rr, retinfo.runtimeresult.typeID, retinfo.declresult.typeID, trgt));
             }
 
             const refbase = retinfo.elrcount != -1 ? retinfo.elrcount : 1;
@@ -635,21 +660,21 @@ class MIREmitter {
 
     emitInvokeVirtualOperator(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, args: { arglayouttype: MIRType, argflowtype: MIRType, arg: MIRArgument }[], retinfo: { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [MIRRegisterArgument, MIRType][] }, trgt: MIRRegisterArgument) {
         const eargs = args.map((arg) => {
-            return { arglayouttype: arg.arglayouttype.trkey, argflowtype: arg.argflowtype.trkey, arg: arg.arg };
+            return { arglayouttype: arg.arglayouttype.typeID, argflowtype: arg.argflowtype.typeID, arg: arg.arg };
         });
 
         if (retinfo.refargs.length === 0) {
-            this.m_currentBlock.push(new MIRInvokeVirtualOperator(sinfo, retinfo.declresult.trkey, vresolve, eargs, trgt));
+            this.m_currentBlock.push(new MIRInvokeVirtualOperator(sinfo, retinfo.declresult.typeID, vresolve, eargs, trgt));
         }
         else {
             const rr = this.generateTmpRegister();
-            this.m_currentBlock.push(new MIRInvokeVirtualOperator(sinfo, retinfo.runtimeresult.trkey, vresolve, eargs, rr));
+            this.m_currentBlock.push(new MIRInvokeVirtualOperator(sinfo, retinfo.runtimeresult.typeID, vresolve, eargs, rr));
 
             if (retinfo.elrcount === -1) {
-                this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult.trkey, 0, retinfo.declresult.trkey, trgt));
+                this.m_currentBlock.push(new MIRLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult.typeID, 0, retinfo.declresult.typeID, trgt));
             }
             else {
-                this.m_currentBlock.push(new MIRSliceEpehmeralList(sinfo, rr, retinfo.runtimeresult.trkey, retinfo.declresult.trkey, trgt));
+                this.m_currentBlock.push(new MIRSliceEpehmeralList(sinfo, rr, retinfo.runtimeresult.typeID, retinfo.declresult.typeID, trgt));
             }
 
             const refbase = retinfo.elrcount != -1 ? retinfo.elrcount : 1;
@@ -666,7 +691,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorTuple(sinfo, resultTupleType.trkey, args, trgt));
+        this.m_currentBlock.push(new MIRConstructorTuple(sinfo, resultTupleType.typeID, args, trgt));
     }
 
     emitConstructorTupleFromEphemeralList(sinfo: SourceInfo, resultTupleType: MIRType, arg: MIRArgument, elisttype: MIRType, trgt: MIRRegisterArgument) {
@@ -674,7 +699,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorTupleFromEphemeralList(sinfo, resultTupleType.trkey, arg, elisttype.trkey, trgt));
+        this.m_currentBlock.push(new MIRConstructorTupleFromEphemeralList(sinfo, resultTupleType.typeID, arg, elisttype.typeID, trgt));
     }
 
     emitConstructorRecord(sinfo: SourceInfo, resultRecordType: MIRType, args: [string, MIRArgument][], trgt: MIRRegisterArgument) {
@@ -682,7 +707,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorRecord(sinfo, resultRecordType.trkey, args, trgt));
+        this.m_currentBlock.push(new MIRConstructorRecord(sinfo, resultRecordType.typeID, args, trgt));
     }
 
     emitConstructorRecordFromEphemeralList(sinfo: SourceInfo, resultRecordType: MIRType, arg: MIRArgument, elisttype: MIRType, namelayout: string[], trgt: MIRRegisterArgument) {
@@ -690,7 +715,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorRecordFromEphemeralList(sinfo, resultRecordType.trkey, arg, elisttype.trkey, namelayout, trgt));
+        this.m_currentBlock.push(new MIRConstructorRecordFromEphemeralList(sinfo, resultRecordType.typeID, arg, elisttype.typeID, namelayout, trgt));
     }
 
     emitStructuredAppendTuple(sinfo: SourceInfo, resultTupleType: MIRType, args: MIRArgument[], ttypes: {layout: MIRType, flow: MIRType}[], trgt: MIRRegisterArgument) {
@@ -699,9 +724,9 @@ class MIREmitter {
         }
 
         const etypes = ttypes.map((tt) => {
-            return { layout: tt.layout.trkey, flow: tt.flow.trkey };
+            return { layout: tt.layout.typeID, flow: tt.flow.typeID };
         });
-        this.m_currentBlock.push(new MIRStructuredAppendTuple(sinfo, resultTupleType.trkey, args, etypes, trgt));
+        this.m_currentBlock.push(new MIRStructuredAppendTuple(sinfo, resultTupleType.typeID, args, etypes, trgt));
     } 
 
     emitStructuredJoinRecord(sinfo: SourceInfo, resultRecordType: MIRType, args: MIRArgument[], ttypes: {layout: MIRType, flow: MIRType}[], trgt: MIRRegisterArgument) {
@@ -710,9 +735,9 @@ class MIREmitter {
         }
 
         const etypes = ttypes.map((tt) => {
-            return { layout: tt.layout.trkey, flow: tt.flow.trkey };
+            return { layout: tt.layout.typeID, flow: tt.flow.typeID };
         });
-        this.m_currentBlock.push(new MIRStructuredJoinRecord(sinfo, resultRecordType.trkey, args, etypes, trgt));
+        this.m_currentBlock.push(new MIRStructuredJoinRecord(sinfo, resultRecordType.typeID, args, etypes, trgt));
     }
 
     emitConstructorValueList(sinfo: SourceInfo, resultEphemeralType: MIRType, args: MIRArgument[], trgt: MIRRegisterArgument) {
@@ -720,7 +745,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorEphemeralList(sinfo, resultEphemeralType.trkey, args, trgt));
+        this.m_currentBlock.push(new MIRConstructorEphemeralList(sinfo, resultEphemeralType.typeID, args, trgt));
     }
 
     emitMIRPackExtend(sinfo: SourceInfo, basepack: MIRArgument, basetype: MIRType, ext: MIRArgument[], sltype: MIRType, trgt: MIRRegisterArgument) {
@@ -728,7 +753,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIREphemeralListExtend(sinfo, basepack, basetype.trkey, ext, sltype.trkey, trgt));
+        this.m_currentBlock.push(new MIREphemeralListExtend(sinfo, basepack, basetype.typeID, ext, sltype.typeID, trgt));
     }
 
     emitConstructorPrimaryCollectionEmpty(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, trgt: MIRRegisterArgument) {
@@ -744,7 +769,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map((arg) => [arg[0].trkey, arg[1]]), trgt));
+        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map((arg) => [arg[0].typeID, arg[1]]), trgt));
     }
 
     emitConstructorPrimaryCollectionCopies(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRType, MIRArgument][], trgt: MIRRegisterArgument) {
@@ -752,7 +777,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => [arg[0].trkey, arg[1]]), trgt));
+        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => [arg[0].typeID, arg[1]]), trgt));
     }
 
     emitConstructorPrimaryCollectionMixed(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [boolean, MIRType, MIRArgument][], trgt: MIRRegisterArgument) {
@@ -760,7 +785,7 @@ class MIREmitter {
             return;
         }
         
-        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionMixed(sinfo, tkey, args.map((arg) => [arg[0], arg[1].trkey, arg[2]]), trgt));
+        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionMixed(sinfo, tkey, args.map((arg) => [arg[0], arg[1].typeID, arg[2]]), trgt));
     }
 
     emitBinKeyEq(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined, lhsflowtype: MIRType, rhsflowtype: MIRType) {
@@ -768,7 +793,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRBinKeyEq(sinfo, lhslayouttype.trkey, lhs, rhslayouttype.trkey, rhs, cmptype.trkey, trgt, guard, lhsflowtype.trkey, rhsflowtype.trkey));
+        this.m_currentBlock.push(new MIRBinKeyEq(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, guard, lhsflowtype.typeID, rhsflowtype.typeID));
     }
 
     emitBinKeyLess(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined, lhsflowtype: MIRType, rhsflowtype: MIRType) {
@@ -776,7 +801,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.trkey, lhs, rhslayouttype.trkey, rhs, cmptype.trkey, trgt, guard, lhsflowtype.trkey, rhsflowtype.trkey));
+        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, guard, lhsflowtype.typeID, rhsflowtype.typeID));
     }
 
     emitPrefixNotOp(sinfo: SourceInfo, arg: MIRArgument, trgt: MIRRegisterArgument) {
@@ -808,7 +833,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRIsTypeOf(sinfo, trgt, chktype.trkey, src, srclayouttype.trkey, srcflowtype.trkey, guard));
+        this.m_currentBlock.push(new MIRIsTypeOf(sinfo, trgt, chktype.typeID, src, srclayouttype.typeID, srcflowtype.typeID, guard));
     }
 
     emitDirectJump(sinfo: SourceInfo, blck: string) {
@@ -832,7 +857,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRJumpNone(sinfo, arg, arglayout.trkey, noneblck, someblk));
+        this.m_currentBlock.push(new MIRJumpNone(sinfo, arg, arglayout.typeID, noneblck, someblk));
     }
 
     emitReturnAssign(sinfo: SourceInfo, src: MIRArgument, rtype: MIRType) {
@@ -840,7 +865,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRReturnAssign(sinfo, src, rtype.trkey));
+        this.m_currentBlock.push(new MIRReturnAssign(sinfo, src, rtype.typeID));
     }
 
     emitReturnAssignOfCons(sinfo: SourceInfo, oftype: MIRType, args: MIRArgument[]) {
@@ -848,7 +873,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRReturnAssignOfCons(sinfo, oftype.trkey, args));
+        this.m_currentBlock.push(new MIRReturnAssignOfCons(sinfo, oftype.typeID, args));
     }
 
     processEnterYield() {
@@ -881,7 +906,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(new MIRVarLifetimeStart(sinfo, name, vtype.trkey));
+        this.m_currentBlock.push(new MIRVarLifetimeStart(sinfo, name, vtype.typeID));
     }
 
     localLifetimeEnd(sinfo: SourceInfo, name: string) {
@@ -937,9 +962,9 @@ class MIREmitter {
 
                     const mctype = (mcreate.contiainingType instanceof EntityTypeDecl) ? ResolvedType.createSingle(ResolvedEntityAtomType.create(mcreate.contiainingType, mcreate.binds)) : ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(mcreate.contiainingType as ConceptTypeDecl, mcreate.binds)]));
                     const mirmctype = this.registerResolvedTypeReference(mctype);
-                    const mkey = MIRKeyGenerator.generateMethodKey(mcreate.decl.name, mirmctype.trkey, binds, vinv[5]);
+                    const mkey = MIRKeyGenerator.generateMethodKey(mcreate.decl.name, mirmctype.typeID, binds, vinv[5]);
                     if (!resvi.has(mkey)) {
-                        resvi.set(mkey, [vinv[0], mkey, mcreate.decl.name, `${mirmctype.trkey}::${mcreate.decl.name}`, [mirmctype, mcreate.contiainingType, mcreate.binds], mcreate.decl, binds, vinv[5], vinv[6]] as [MIRVirtualMethodKey, MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>], MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]]);
+                        resvi.set(mkey, [vinv[0], mkey, mcreate.decl.name, `${mirmctype.typeID}::${mcreate.decl.name}`, [mirmctype, mcreate.contiainingType, mcreate.binds], mcreate.decl, binds, vinv[5], vinv[6]] as [MIRVirtualMethodKey, MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>], MemberMethodDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]]);
                     }
                 }
             }
@@ -961,7 +986,7 @@ class MIREmitter {
             }
 
             if (invoke.params[i].litexp === undefined) {
-                sigkeys.push(this.registerResolvedTypeReference(ptype).trkey);
+                sigkeys.push(this.registerResolvedTypeReference(ptype).typeID);
             }
             else {
                 const lev = (invoke.params[i].litexp as LiteralExpressionValue);
@@ -1114,47 +1139,33 @@ class MIREmitter {
     }
 
     registerPendingGlobalProcessing(decl: NamespaceConstDecl, etype: ResolvedType): MIRGlobalKey {
-        const key = MIRKeyGenerator.generateFunctionKey(`global@${decl.ns}`, decl.name, new Map<string, ResolvedType>(), []);
-        const gkey = "$global_" + key;
-        if (!this.emitEnabled || this.masm.constantDecls.has(gkey) || this.pendingConstExprProcessing.findIndex((gp) => gp[0] === key) !== -1) {
-            return key;
+        const gkey = MIRKeyGenerator.generateGlobalKeyWNamespace(decl.ns, decl.name);
+        if (!this.emitEnabled || this.masm.constantDecls.has(gkey.keyid) || this.pendingConstExprProcessing.findIndex((gp) => gp.gkey === gkey.keyid) !== -1) {
+            return gkey.keyid;
         }
 
-        this.pendingConstExprProcessing.push([key, decl.srcFile, decl.name, undefined, decl.value, ["static_initializer", ...decl.attributes], new Map<string, ResolvedType>(), etype]);
-        return gkey;
+        this.pendingConstExprProcessing.push({ gkey: gkey.keyid, shortname: gkey.shortname, name: decl.name, srcFile: decl.srcFile, containingType: undefined, cexp: decl.value as ConstantExpressionValue, attribs: ["static_initializer", ...decl.attributes], binds: new Map<string, ResolvedType>(), ddecltype: etype });
+        return gkey.keyid;
     }
 
-    registerPendingConstProcessing(containingtype: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], decl: StaticMemberDecl, binds: Map<string, ResolvedType>, etype: ResolvedType): MIRGlobalKey {
-        const key = MIRKeyGenerator.generateFunctionKey(`static@${containingtype[0].trkey}`, decl.name, new Map<string, ResolvedType>(), []);
-        const gkey = "$global_" + key;
-        if (!this.emitEnabled || this.masm.constantDecls.has(gkey) || this.pendingConstExprProcessing.findIndex((cp) => cp[0] === key) !== -1) {
-            return key;
+    registerPendingConstProcessing(resolvedcontaining: ResolvedType, containingtype: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], decl: StaticMemberDecl, binds: Map<string, ResolvedType>, etype: ResolvedType): MIRGlobalKey {
+        const gkey = MIRKeyGenerator.generateGlobalKeyWType(resolvedcontaining, decl.name);
+        if (!this.emitEnabled || this.masm.constantDecls.has(gkey.keyid) || this.pendingConstExprProcessing.findIndex((cp) => cp.gkey === gkey.keyid) !== -1) {
+            return gkey.keyid;
         }
 
-        this.pendingConstExprProcessing.push([key, decl.srcFile, decl.name, containingtype, decl.value as ConstantExpressionValue, ["static_initializer", ...decl.attributes], binds, etype]);
-        return gkey;
-    }
-
-    registerConstExpr(srcFile: string, exp: ConstantExpressionValue, binds: Map<string, ResolvedType>, etype: ResolvedType): MIRGlobalKey {
-        xxxx; //use bodyid instead of srcfile
-        const key = MIRKeyGenerator.generateFunctionKey(`cexpr@${srcFile}#${exp.exp.sinfo.pos}`, "expr", new Map<string, ResolvedType>(), []);
-        const gkey = "$global_" + key;
-        if (!this.emitEnabled || this.masm.constantDecls.has(gkey) || this.pendingConstExprProcessing.findIndex((cp) => cp[0] === key) !== -1) {
-            return key;
-        }
-
-        this.pendingConstExprProcessing.push([key, srcFile, "[CONST]", undefined, exp, ["constexp_initializer"], binds, etype]);
-        return gkey;
+        this.pendingConstExprProcessing.push({ gkey: gkey.keyid, shortname: gkey.shortname, name: decl.name, srcFile: decl.srcFile, containingType: containingtype, cexp: decl.value as ConstantExpressionValue, attribs: ["static_initializer", ...decl.attributes], binds: binds, ddecltype: etype });
+        return gkey.keyid;
     }
 
     registerFunctionCall(ns: string, name: string, f: NamespaceFunctionDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
-        const key = MIRKeyGenerator.generateFunctionKey(ns, name, binds, pcodes);
-        if (!this.emitEnabled || this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingFunctionProcessing.findIndex((fp) => fp[0] === key) !== -1) {
-            return key;
+        const key = MIRKeyGenerator.generateFunctionKeyWNamespace(ns, name, binds, pcodes);
+        if (!this.emitEnabled || this.masm.invokeDecls.has(key.keyid) || this.masm.primitiveInvokeDecls.has(key.keyid) || this.pendingFunctionProcessing.findIndex((fp) => fp.fkey === key.keyid) !== -1) {
+            return key.keyid;
         }
 
-        this.pendingFunctionProcessing.push([key, f.name, name, undefined, f.invoke, binds, pcodes, cinfo]);
-        return key;
+        this.pendingFunctionProcessing.push({ fkey: key.keyid, shortname: key.shortname, name: name, enclosingdecl: undefined, invoke: f.invoke, binds: binds, pcodes: pcodes, cargs: cinfo });
+        return key.keyid;
     }
 
     registerNamespaceOperatorCall(ns: string, name: string, opdecl: NamespaceOperatorDecl, sigkeys: string[], pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
@@ -1169,14 +1180,14 @@ class MIREmitter {
         return okey;
     }
 
-    registerStaticCall(containingType: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], f: StaticFunctionDecl, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
-        const key = MIRKeyGenerator.generateFunctionKey(containingType[0].trkey, name, binds, pcodes);
-        if (!this.emitEnabled || this.masm.invokeDecls.has(key) || this.masm.primitiveInvokeDecls.has(key) || this.pendingFunctionProcessing.findIndex((sp) => sp[0] === key) !== -1) {
-            return key;
+    registerStaticCall(resolvedcontaining: ResolvedType, containingType: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], f: StaticFunctionDecl, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
+        const key = MIRKeyGenerator.generateFunctionKeyWType(resolvedcontaining, name, binds, pcodes);
+        if (!this.emitEnabled || this.masm.invokeDecls.has(key.keyid) || this.masm.primitiveInvokeDecls.has(key.keyid) || this.pendingFunctionProcessing.findIndex((sp) => sp.fkey === key.keyid) !== -1) {
+            return key.keyid;
         }
 
-        this.pendingFunctionProcessing.push([key, f.name, name, containingType, f.invoke, binds, pcodes, cinfo]);
-        return key;
+        this.pendingFunctionProcessing.push({ fkey: key.keyid, shortname: key.shortname, name: name, enclosingdecl: containingType, invoke: f.invoke, binds: binds, pcodes: pcodes, cargs: cinfo });
+        return key.keyid;
     }
 
     registerStaticOperatorCall(containingType: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], name: string, opdecl: StaticOperatorDecl, sigkeys: string[], binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {
@@ -1344,12 +1355,12 @@ class MIREmitter {
                     }
 
                     if(emitter.pendingConstExprProcessing.length !== 0) {
-                        const pc = emitter.pendingConstExprProcessing.pop() as [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, ConstantExpressionValue, string[], Map<string, ResolvedType>, ResolvedType];
-                        checker.processConstExpr(...pc);
+                        const pc = emitter.pendingConstExprProcessing.pop() as PendingConstExprProcessingInfo;
+                        checker.processConstExpr(pc.gkey, pc.shortname, pc.name, pc.srcFile, pc.containingType, pc.cexp, pc.attribs, pc.binds, pc.ddecltype);
                     }
                     else if (emitter.pendingFunctionProcessing.length !== 0) {
-                        const pf = emitter.pendingFunctionProcessing.pop() as [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, InvokeDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]];
-                        checker.processFunctionDecl(...pf);
+                        const pf = emitter.pendingFunctionProcessing.pop() as PendingFunctionProcessingInfo;
+                        checker.processFunctionDecl(pf.fkey, pf.shortname, pf.name, pf.enclosingdecl, pf.invoke, pf.binds, pf.pcodes, pf.cargs);
                     }
                     else if (emitter.pendingOperatorProcessing.length !== 0) {
                         const pf = emitter.pendingOperatorProcessing.pop() as [MIRInvokeKey, string, string, [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, InvokeDecl, Map<string, ResolvedType>, PCode[], [string, ResolvedType][]];

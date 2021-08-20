@@ -702,6 +702,7 @@ class Parser {
     //Helpers
 
     private generateBodyID(sinfo: SourceInfo, srcFile: string, etag?: string): string {
+        //Keep consistent with version in type checker!!!
         const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === srcFile);
 
         return `${this.sortedSrcFiles[sfpos].shortname}#k${sfpos}${etag !== undefined ? ("_" + etag) : ""}::${sinfo.line}@${sinfo.pos}`;

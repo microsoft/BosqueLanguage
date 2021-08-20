@@ -303,7 +303,7 @@ abstract class MIREntityTypeDecl extends MIROOTypeDecl {
     }
 }
 
-class MIRObjectEntityTypeDecl extends MIROOTypeDecl {
+class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     readonly consfunc: MIRInvokeKey | undefined;
     readonly consfuncfields: MIRFieldKey[];
 
@@ -335,35 +335,25 @@ class MIRObjectEntityTypeDecl extends MIROOTypeDecl {
     }
 } 
 
-abstract class MIRInternalEntityTypeDecl extends MIROOTypeDecl {
+abstract class MIRInternalEntityTypeDecl extends MIREntityTypeDecl {
     constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[]) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
     }
 } 
 
 class MIRPrimitiveInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
-    readonly binds: Map<string, MIRType>;
-
     //Should just be a special implemented value
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[]) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
-
-        this.binds = binds;
     }
 
     jemit(): object {
-        const fbinds = [...this.binds].sort((a, b) => a[0].localeCompare(b[0])).map((v) => [v[0], v[1].jemit()]);
-        return { tag: "primitive", ...this.jemitbase(), binds: fbinds};
+        return { tag: "primitive", ...this.jemitbase() };
     }
 
     static jparse(jobj: any): MIRPrimitiveInternalEntityTypeDecl {
-        const bbinds = new Map<string, MIRType>();
-        jobj.binds.foreach((v: [string, any]) => {
-            bbinds.set(v[0], MIRType.jparse(v[1]));
-        });
-
-        return new MIRPrimitiveInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), bbinds);
+        return new MIRPrimitiveInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj));
     }
 
     isPrimitiveEntity(): boolean {
