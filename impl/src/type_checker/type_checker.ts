@@ -647,7 +647,7 @@ class TypeChecker {
         });
 
         const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
-        this.m_emitter.registerPCode(ikey, exp.invoke, ltypetry as ResolvedFunctionType, bodybinds, cbinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])), [...capturedpcode].sort((a, b) => a[0].localeCompare(b[0])));
+        this.m_emitter.registerPCode(ikey, ikey, exp.invoke, ltypetry as ResolvedFunctionType, bodybinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])), [...capturedpcode].sort((a, b) => a[0].localeCompare(b[0])));
 
         return { code: exp.invoke, ikey: ikey, captured: capturedMap, ftype: ltypetry as ResolvedFunctionType };
     }
@@ -2658,7 +2658,7 @@ class TypeChecker {
                 }
             }
 
-            const opkey = this.m_emitter.registerStaticOperatorCall([mirootype, oodecl, oobinds], opdecl.name, opdecl, sigkeys, oobinds, pcodes, cinfo);
+            const opkey = this.m_emitter.registerStaticOperatorCall(ootype, [mirootype, oodecl, oobinds], opdecl.name, opdecl, sigkeys, oobinds, pcodes, cinfo);
             const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, refs);
             this.m_emitter.emitInvokeFixedFunction(sinfo, opkey, cargs, "[IGNORE]", refinfo, trgt);
         }
@@ -3631,8 +3631,9 @@ class TypeChecker {
             const rargs = this.checkArgumentsSignature(op.sinfo, eev, op.name, fsig, eargs);
             this.checkRecursion(op.sinfo, fsig, rargs.pcodes, op.rec);
 
-            const ootype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(knownimpl.contiainingType, knownimpl.binds));
-            const ckey = this.m_emitter.registerMethodCall([ootype, knownimpl.contiainingType, knownimpl.binds], knownimpl.decl, op.name, callbinds, rargs.pcodes, rargs.cinfo);
+            const ootyperesolved = this.resolveOOTypeFromDecls(knownimpl.contiainingType, knownimpl.binds);
+            const ootype = this.m_emitter.registerResolvedTypeReference(ootyperesolved);
+            const ckey = this.m_emitter.registerMethodCall(ootyperesolved, [ootype, knownimpl.contiainingType, knownimpl.binds], knownimpl.decl, op.name, callbinds, rargs.pcodes, rargs.cinfo);
             const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
             this.m_emitter.emitInvokeFixedFunction(op.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
 
@@ -3681,8 +3682,9 @@ class TypeChecker {
                     const rargs = this.checkArgumentsSignature(op.sinfo, eev, op.name, fsig, eargs);
                     this.checkRecursion(op.sinfo, fsig, rargs.pcodes, op.rec);
 
-                    const ootype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(knownimpl.contiainingType, knownimpl.binds));
-                    const ckey = this.m_emitter.registerMethodCall([ootype, knownimpl.contiainingType, knownimpl.binds], knownimpl.decl, op.name, callbinds, rargs.pcodes, rargs.cinfo);
+                    const ootyperesolved = this.resolveOOTypeFromDecls(knownimpl.contiainingType, knownimpl.binds);
+                    const ootype = this.m_emitter.registerResolvedTypeReference(ootyperesolved);
+                    const ckey = this.m_emitter.registerMethodCall(ootyperesolved, [ootype, knownimpl.contiainingType, knownimpl.binds], knownimpl.decl, op.name, callbinds, rargs.pcodes, rargs.cinfo);
                     const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
                     this.m_emitter.emitInvokeFixedFunction(op.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
 
@@ -6700,8 +6702,8 @@ class TypeChecker {
         }
     }
 
-    private processPCodeInfo(ikey: MIRInvokeKey, shortname: string, sinfo: SourceInfo, pci: InvokeDecl, binds: Map<string, ResolvedType>, fsig: ResolvedFunctionType, pargs: [string, ResolvedType][], capturedpcodes: PCode[]): MIRInvokeDecl {
-        this.checkPCodeDecl(sinfo, fsig, pci.recursive, capturedpcodes);
+    private processPCodeInfo(ikey: MIRInvokeKey, shortname: string, sinfo: SourceInfo, pci: InvokeDecl, binds: Map<string, ResolvedType>, fsig: ResolvedFunctionType, pargs: [string, ResolvedType][], capturedpcodes: [string, { pcode: PCode, captured: string[] }][]): MIRInvokeDecl {
+        this.checkPCodeDecl(sinfo, fsig, pci.recursive, capturedpcodes.map((cpc) => cpc[1].pcode));
 
         let cargs = new Map<string, VarInfo>();
         let refnames: string[] = [];
@@ -6756,7 +6758,11 @@ class TypeChecker {
             : ((pci.body as BodyImplementation).body as BlockStatement);
 
 
-        const env = TypeEnvironment.createInitialEnvForCall(ikey, pci.bodyID, binds, new Map<string, { pcode: PCode, captured: string[] }>(), cargs, fsig.resultType);
+        let pcodes = new Map<string, { pcode: PCode, captured: string[] }>();
+        capturedpcodes.forEach((cpc) => {
+            pcodes.set(cpc[0], cpc[1]);
+        });
+        const env = TypeEnvironment.createInitialEnvForCall(ikey, pci.bodyID, binds, pcodes, cargs, fsig.resultType);
 
         const mirbody = this.checkBodyStatement(pci.srcFile, env, realbody, fsig.resultType, [], outparaminfo, undefined, undefined);
         return new MIRInvokeBodyDecl(undefined, pci.bodyID, ikey, shortname, pci.attributes, pci.recursive === "yes", sinfo, pci.srcFile, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
@@ -6799,7 +6805,7 @@ class TypeChecker {
         }
     }
 
-    processLambdaFunction(lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: PCode[]) {
+    processLambdaFunction(lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, { pcode: PCode, captured: string[] }][]) {
         try {
             this.m_file = invoke.srcFile;
             const invinfo = this.processPCodeInfo(lkey, lshort, invoke.sourceLocation, invoke, bodybinds, sigt, cargs, capturedpcodes);
@@ -6834,10 +6840,11 @@ class TypeChecker {
         }
     }
 
-    processVirtualOperator(vkey: MIRVirtualMethodKey, mkey: MIRInvokeKey, shortname: string, name: string, enclosingDecl: [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, invoke: InvokeDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][]) {
+    processVirtualOperator(vkey: MIRVirtualMethodKey, mkey: MIRInvokeKey, shortname: string, name: string, enclosingDecl: [ResolvedType, MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, invoke: InvokeDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][]) {
         try {
             this.m_file = invoke.srcFile;
-            const invinfo = this.processInvokeInfo(name, mkey, shortname, enclosingDecl, "operator", invoke, binds, pcodes, cargs);
+            const vopencl = enclosingDecl !== undefined ? ([enclosingDecl[1], enclosingDecl[2], enclosingDecl[3]] as [MIRType, OOPTypeDecl, Map<string, ResolvedType>]) : undefined;
+            const invinfo = this.processInvokeInfo(name, mkey, shortname, vopencl, "operator", invoke, binds, pcodes, cargs);
 
             if (invinfo instanceof MIRInvokePrimitiveDecl) {
                 this.m_emitter.masm.primitiveInvokeDecls.set(mkey, invinfo);
