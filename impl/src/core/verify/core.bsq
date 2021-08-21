@@ -425,7 +425,7 @@ concept Option<T> provides ISomething, APIType when T APIType {
 }
 
 //<summary>Result type.</summary>
-concept Result<T, E=None> provides Some {
+concept Result<T, E=None> provides Some, APIType when T APIType && E APIType {
     __internal __constructable entity Ok provides Some, Result<T, E> {
         method value(): T # special_extract
         function from(v: T): # special_inject
