@@ -278,7 +278,7 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
 }
 
 //<summary>Primitive DataString value.</summary>
-__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType {
+__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T APIType {
     method value(): String # special_extract
     function from(str: String): # special_inject
 }
