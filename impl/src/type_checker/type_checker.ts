@@ -1220,11 +1220,7 @@ class TypeChecker {
     }
 
     private checkArgumentsEvaluationEntity(sinfo: SourceInfo, env: TypeEnvironment, oftype: ResolvedEntityAtomType, args: Arguments): ExpandedArgument[] {
-        if(oftype.object.attributes.includes("__internal")) {
-            if(!oftype.object.attributes.includes("__constructable")) {
-                this.raiseErrorIf(sinfo, oftype.object.attributes.includes("__internal"), "Type is not constructable");
-            }
-
+        if(oftype.object.attributes.includes("__constructable")) {
             const atype = (oftype.object.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
             const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oftype.binds);
 
@@ -1236,6 +1232,8 @@ class TypeChecker {
             return [{ name: "[constructable]", argtype: earg.valtype, ref: undefined, expando: false, pcode: undefined, treg: treg }];
         }
         else {
+            this.raiseErrorIf(sinfo, oftype.object.attributes.includes("__internal"), "Type is not constructable");
+
             const rrfinfo = this.m_assembly.getAllOOFieldsConstructors(oftype.object, oftype.binds);
             const fieldinfo = [...rrfinfo.req, ...rrfinfo.opt];
             let eargs: ExpandedArgument[] = [];
@@ -1307,11 +1305,7 @@ class TypeChecker {
     }
 
     private checkArgumentsEntityConstructor(sinfo: SourceInfo, oftype: ResolvedEntityAtomType, args: ExpandedArgument[], trgt: MIRRegisterArgument): ResolvedType {
-        if(oftype.object.attributes.includes("__internal")) {
-            if(!oftype.object.attributes.includes("__constructable")) {
-                this.raiseErrorIf(sinfo, oftype.object.attributes.includes("__internal"), "Type is not constructable");
-            }
-
+        if(oftype.object.attributes.includes("__constructable")) {
             const atype = (oftype.object.staticFunctions.find((mm) => mm.name === "from") as StaticFunctionDecl).invoke.params[0].type;
             const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oftype.binds);
             const mirfromtype = this.m_emitter.registerResolvedTypeReference(ratype);
@@ -1323,10 +1317,15 @@ class TypeChecker {
             const constype = ResolvedType.createSingle(oftype);
             const rtype = this.m_emitter.registerResolvedTypeReference(constype);
 
+            //TODO: call the constructor function instead!!! The inject will be in there after any invariant checks!!!
+            xxxx;
+
             this.m_emitter.emitInject(sinfo, mirfromtype, rtype, aarg, trgt);
             return constype;
         }
         else {
+            this.raiseErrorIf(sinfo, oftype.object.attributes.includes("__internal"), "Type is not constructable");
+
             const fieldInfo = this.m_assembly.getAllOOFieldsConstructors(oftype.object, oftype.binds);
             const flatfinfo = [...fieldInfo.req, ...fieldInfo.opt].map((ff) => ff[1]);
             const fields = flatfinfo.map((ff) => ff[1].name);
@@ -3056,7 +3055,7 @@ class TypeChecker {
             const ftype = this.resolveAndEnsureTypeOnly(op.sinfo, finfo.decl.declaredType, finfo.binds);
             
             const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(finfo.contiainingType, finfo.binds), op.name);
-            this.m_emitter.emitLoadField(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), fkey.keyid, !texp.flowtype.isUniqueCallTargetType(), this.m_emitter.registerResolvedTypeReference(ftype), trgt);
+            this.m_emitter.emitLoadField(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), fkey, !texp.flowtype.isUniqueCallTargetType(), this.m_emitter.registerResolvedTypeReference(ftype), trgt);
             
             return env.setUniformResultExpression(ftype);
         }
@@ -3133,7 +3132,7 @@ class TypeChecker {
             const rephemeralatom = ResolvedEphemeralListType.create(rfields.map((ee) => this.resolveAndEnsureTypeOnly(op.sinfo, ee.decl.declaredType, ee.binds)));
             const rephemeral = ResolvedType.createSingle(rephemeralatom);
 
-            const pindecies = rfields.map((ndv) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ndv.contiainingType, ndv.binds), ndv.decl.name).keyid);
+            const pindecies = rfields.map((ndv) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ndv.contiainingType, ndv.binds), ndv.decl.name));
 
             const prjtemp = this.m_emitter.generateTmpRegister();
             this.m_emitter.emitEntityProjectToEphemeral(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), pindecies, !texp.flowtype.isUniqueCallTargetType(), rephemeralatom, trgt);
@@ -3244,7 +3243,7 @@ class TypeChecker {
             });
 
             const updateinfo = updates.map((upd) => {
-                const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(upd[0].contiainingType, upd[0].binds), upd[0].decl.name).keyid;
+                const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(upd[0].contiainingType, upd[0].binds), upd[0].decl.name);
                 return [fkey, upd[1], upd[2]] as [MIRFieldKey, ResolvedType, MIRArgument];
             });
 
@@ -5262,7 +5261,7 @@ class TypeChecker {
                     nassign.assigns.forEach((ap, i) => {
                         if (ap[1] instanceof VariableDeclarationStructuredAssignment) {
                             const ffi = selectfields[i];
-                            const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ffi[0], ffi[2]), ffi[1].name).keyid
+                            const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ffi[0], ffi[2]), ffi[1].name)
                             const aptype = this.resolveAndEnsureTypeOnly(sinfo, ffi[1].declaredType, ffi[2]);
 
                             eltypes.push(aptype);
@@ -5279,7 +5278,7 @@ class TypeChecker {
                             this.raiseErrorIf(sinfo, ffix === undefined, "Could not match field with destructor variable");
 
                             const ffi = ffix as [OOPTypeDecl, MemberFieldDecl, Map<string, ResolvedType>];
-                            const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ffi[0], ffi[2]), ffi[1].name).keyid
+                            const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ffi[0], ffi[2]), ffi[1].name)
                             const aptype = this.resolveAndEnsureTypeOnly(sinfo, ffi[1].declaredType, ffi[2]);
 
                             eltypes.push(aptype);
@@ -6397,7 +6396,7 @@ class TypeChecker {
 
             let conskey: GeneratedKeyName<MIRInvokeKey> | undefined = undefined;
             let consfuncfields: MIRFieldKey[] = [];
-            if (!OOPTypeDecl.attributeSetContains("__internal", tdecl.attributes)) {
+            if (!OOPTypeDecl.attributeSetContains("__internal", tdecl.attributes) && !OOPTypeDecl.attributeSetContains("__constructable", tdecl.attributes)) {
                 const consbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@constructor");
                 conskey = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@constructor", new Map<string, ResolvedType>(), []);
                 const consenvargs = new Map<string, VarInfo>();
@@ -6407,12 +6406,16 @@ class TypeChecker {
                     const ftype = this.resolveAndEnsureTypeOnly(fdi[1].sourceLocation, fdi[1].declaredType, fdi[2]);
                     consenvargs.set(`$${fdi[1].name}`, new VarInfo(ftype, fdi[1].value === undefined, false, true, ftype));
                 });
-                consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name).keyid);
+                consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
 
                 if (tdecl instanceof EntityTypeDecl) {
                     const consenv = TypeEnvironment.createInitialEnvForCall(conskey.keyid, consbodyid, binds, new Map<string, { pcode: PCode, captured: string[] }>(), consenvargs, undefined);
                     this.generateConstructor(consbodyid, consenv, conskey.keyid, conskey.shortname, tdecl, binds);
                 }
+            }
+
+            if(OOPTypeDecl.attributeSetContains("__constructable", tdecl.attributes)) {
+                xxx; //TODO: generate the constructor function
             }
 
             //
@@ -6431,6 +6434,9 @@ class TypeChecker {
                         return new MIRPrimitiveInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides);
                     }
                 }
+                else if(tdecl.attributes.includes("__constructable")) { 
+                    xxxx;
+                }
                 else {
                     const fields: MIRFieldDecl[] = [];
                     const finfos = [...this.m_assembly.getAllOOFieldsLayout(tdecl, binds)];
@@ -6439,11 +6445,11 @@ class TypeChecker {
                         const f = fi[1];
 
                         const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(fi[0], fi[2]), f.name);
-                        if (!this.m_emitter.masm.fieldDecls.has(fkey.keyid)) {
+                        if (!this.m_emitter.masm.fieldDecls.has(fkey)) {
                             const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
                             const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
 
-                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey.keyid, fkey.shortname, dtype.typeID);
+                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, dtype.typeID);
                             this.m_emitter.masm.fieldDecls.set(fkey.keyid, mfield);
                         }
 

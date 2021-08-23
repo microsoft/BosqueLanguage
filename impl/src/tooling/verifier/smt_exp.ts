@@ -16,21 +16,48 @@ type VerifierOptions = {
 
 class BVEmitter {
     readonly bvsize: number;
+    readonly natmax: BigInt;
+    readonly intmin: BigInt;
+    readonly intmax: BigInt;
 
-    constructor(bvsize: number) {
+    constructor(bvsize: number, natmax: BigInt, intmin: BigInt, intmax: BigInt) {
         this.bvsize = bvsize;
+        this.natmax = natmax;
+        this.intmin = intmin;
+        this.intmax = intmax;
     }
 
-    emitSimple(val: number): SMTConst {
-        assert()
+    emitSimpleInt(val: number): SMTExp {
+        if(val >= 0) {
+            assert(BigInt(val) <= this.intmax);
+            return new SMTConst(`(_ bv${val} ${this.bvsize})`);
+        }
+        else {
+            assert(this.intmin <= BigInt(val));
+            return new SMTCallSimple("bvneg", [new SMTConst(`(_ bv${-val} ${this.bvsize})`)]); 
+        }
     }
 
-    emitInt(intv: string): SMTConst {
-
+    emitSimpleNat(val: number): SMTExp {
+        assert(0 <= val && BigInt(val) <= this.natmax);
+        return new SMTConst(`(_ bv${val} ${this.bvsize})`);
     }
 
-    emitNat(natv: string): SMTConst {
+    emitInt(intv: string): SMTExp {
+        if(!intv.startsWith("-")) {
+            assert(BigInt(intv.slice(0, intv.length - 1)) <= this.intmax);
 
+            return new SMTConst(`(_ bv${intv.slice(0, intv.length - 1)} ${this.bvsize})`);
+        }
+        else {
+            assert(BigInt(intv.slice(1, intv.length - 1)) <= this.intmax);
+            return new SMTCallSimple("bvneg", [ new SMTConst(`(_ bv${intv.slice(1, intv.length - 1)} ${this.bvsize})`)]);
+        }
+    }
+
+    emitNat(natv: string): SMTExp {
+        assert(BigInt(natv.slice(0, natv.length - 1)) <= this.natmax);
+        return new SMTConst(`(_ bv${natv.slice(0, natv.length - 1)} ${this.bvsize})`);
     }
 }
 
@@ -49,10 +76,12 @@ class SMTMaskConstruct {
 
 class SMTType {
     readonly name: string;
+    readonly smttypetag: string;
     readonly typeID: MIRResolvedTypeKey;
     
-    constructor(name: string, typeid: MIRResolvedTypeKey) {
+    constructor(name: string, smttypetag: string, typeid: MIRResolvedTypeKey) {
         this.name = name;
+        this.smttypetag = smttypetag;
         this.typeID = typeid;
     }
 

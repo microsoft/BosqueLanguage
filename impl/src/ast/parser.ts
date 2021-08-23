@@ -4166,7 +4166,7 @@ class Parser {
                 staticFunctions.push(from);
                 memberMethods.push(value);
 
-                attributes.push("__typedprimitive", "__internal", "__constructable");
+                attributes.push("__typedprimitive", "__constructable");
 
                 currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
                 this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);

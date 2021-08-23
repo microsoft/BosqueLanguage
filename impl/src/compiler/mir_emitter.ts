@@ -58,9 +58,9 @@ class MIRKeyGenerator {
         return {keyid: t.typeID, shortname: t.shortID};
     }
 
-    static generateFieldKey(t: ResolvedType, name: string): GeneratedKeyName<MIRFieldKey> {
+    static generateFieldKey(t: ResolvedType, name: string): MIRFieldKey {
         const tkey = this.generateTypeKey(t);
-        return {keyid: `__f__${tkey.keyid}.${name}`, shortname: `${tkey.shortname}.${name}`};
+        return `__f__${tkey.keyid}.${name}`;
     }
 
     static generateGlobalKeyWNamespace(ns: string, name: string, prefix?: string): GeneratedKeyName<MIRGlobalKey> {

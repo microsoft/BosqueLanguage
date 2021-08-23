@@ -57,25 +57,47 @@
 (declare-fun TypeTagRank@ (TypeTag) Int)
 ;;KEY_TYPE_TAG_RANK;;
 
-;;
-;;UFloat kind + UF ops for strong refutation checks
-;;
-(declare-sort UFloat 0)
 
-;;
-;; Define sort aliases for Int/Nat/BigInt/BigNat/Float/Decimal/Rational/String representation options
-;;
-;;BINTEGRAL_TYPE_ALIAS;;
-;;BFLOATPOINT_TYPE_ALIAS;;
-;;STRING_TYPE_ALIAS;;
-
+;;BINT_TYPE_ALIAS;;
+(define-sort BBigInt () Int)
+(define-sort BBigNat () Int)
+(define-sort BFloat () Real)
+(define-sort BDecimal () Real)
+(define-sort BRational () Real)
+(define-sort BStringPos () Int)
+;;BSTRING_TYPE_ALIAS;;
 (define-sort BByteBuffer () (Seq (_ BitVec 8)))
+(define-sort BISOTime () Int)
+(define-sort BLogicalTime () Int)
+(define-sort BUUID () (Seq (_ BitVec 8)))
+;;BHASHCODE_TYPE_ALIAS;;
 
-;;
-;; Define min/max/0 constants for Int/Nat/BigInt/BigNat/Float/Decimal/Rational/String representation options
-;;
-;;BINTEGRAL_CONSTANTS;;
-;;BFLOATPOINT_CONSTANTS;;
+(declare-datatypes (
+  (HashCodeStructEntryList 0)
+  (HashCodeStructEntry 0)
+  ) (
+    ( 
+      (HashCodeStructEntryList@nil)
+      (HashCodeStructEntryList@cons (HashCodeStructEntryList_head_value HashCodeStructEntry) (HashCodeStructEntryList_tail_value HashCodeStructEntryList))
+    )
+    ( 
+      (HashCodeStructEntry@nonecons)
+      (HashCodeStructEntry@nothingcons)
+      (HashCodeStructEntry@boolcons (HashCodeStructEntry_bool_value Bool))
+      (HashCodeStructEntry@intcons (HashCodeStructEntry_int_value BInt))
+      (HashCodeStructEntry@natcons (HashCodeStructEntry_nat_value BNat))
+      (HashCodeStructEntry@bigintcons (HashCodeStructEntry_bigint_value BBigInt))
+      (HashCodeStructEntry@bignatcons (HashCodeStructEntry_bignat_value BBigNat))
+      (HashCodeStructEntry@stringcons (HashCodeStructEntry_int_value BString))
+      (HashCodeStructEntry@bytebuffercons (HashCodeStructEntry_int_value BByteBuffer))
+      (HashCodeStructEntry@uuidcons (HashCodeStructEntry_int_value BUUID))
+      (HashCodeStructEntry@hashcons (HashCodeStructEntry_int_value BHashCode))
+    )
+))
+
+(declare-fun HashCodeInvert (()) )
+
+;;BINT_CONSTANTS;;
 
 ;;Define the ISequence datatype and operators
 (declare-sort ISequence 0)
@@ -102,23 +124,51 @@
 (declare-const ISequence@empty ISequence)
 (assert (= (ISequence@size ISequence@empty) BNat@zero))
 
+;;Define the JSequence, USequence, and SSequence datatypes
+(declare-sort JSequence 0)
+(declare-sort USequence 0)
+(declare-sort SSequence 0)
+
+(declare-fun JSequence@size (JSequence) BNat)
+(declare-fun JSequence@get (JSequence BNat) BNat)
+(declare-fun USequence@size (USequence) BNat)
+(declare-fun USequence@get (USequence BNat) BNat)
+(declare-fun SSequence@size (SSequence) BNat)
+(declare-fun SSequence@get (SSequence BNat) BNat)
+
+(declare-const JSequence@empty JSequence)
+(assert (= (JSequence@size JSequence@empty) BNat@zero))
+(declare-const USequence@empty USequence)
+(assert (= (USequence@size USequence@empty) BNat@zero))
+(declare-const SSequence@empty SSequence)
+(assert (= (SSequence@size SSequence@empty) BNat@zero))
+
 ;;
 ;; Primitive datatypes 
 ;;
 (declare-datatypes (
       (bsq_none 0)
+      (bsq_nothing 0)
       ; Bool -> Bool
-      ; Int -> BVX as BInt
-      ; Nat -> BVX as BNat
+      ; Int -> BV
+      ; Nat -> BV
       ; BigInt -> Int
       ; BigNat -> Int
-      ; Float ->   Float | UFloat as BFloat
-      ; Decimal -> Float | UFloat as BDecimal
-      ; Rational -> Float | UFloat as BRational
+      ; Float -> Real 
+      ; Decimal -> Real
+      ; Rational -> Real
       ; StringPos -> Int
-      ; String -> String | (Seq (_ BitVec 64)) as BString
+      ; String -> String | (Seq (_ BitVec 64))
+      ; ByteBuffer -> (Seq (_ BitVec 8))
+      ; ISOTime -> Int
+      ; LogicalTime -> Int
+      ; UUID -> (Seq (_ BitVec 8))
+      ; ContentHash -> (_ BitVec 2xNat)
     ) (
-    ( (bsq_none@literal) )
+    ( 
+      (bsq_none@literal) 
+      (bsq_nothing@literal) 
+    )
 ))
 
 ;;
@@ -131,22 +181,19 @@
       (bsq_keyobject 0)
       (BKey 0)
     ) (
-    ;;KEY_TUPLE_TYPE_CONSTRUCTORS;;
-    ;;KEY_RECORD_TYPE_CONSTRUCTORS;;
     ;;KEY_TYPE_CONSTRUCTORS;;
     (
-      (bsqkey_none@literal) 
+      (bsqkey_none@literal)
+      (bsqkey_nothing@literal) 
       (bsqkey_bool@box (bsqkey_bool_value Bool))
       (bsqkey_int@box (bsqkey_int_value BInt))
       (bsqkey_nat@box (bsqkey_nat_value BNat))
       (bsqkey_bigint@box (bsqkey_bigint_value BBigInt))
       (bsqkey_bignat@box (bsqkey_bignat_value BBigNat))
       (bsqkey_string@box (bsqkey_string_value BString))
-      (bsqkey_logicaltime@box (bsqkey_logicaltime_value Int))
-      (bsqkey_uuid@box (bsqkey_uuid_value String))
-      (bsqkey_contenthash@box (bsqkey_contenthash_value Int))
-      ;;KEY_TUPLE_TYPE_BOXING;;
-      ;;KEY_RECORD_TYPE_BOXING;;
+      (bsqkey_logicaltime@box (bsqkey_logicaltime_value BLogicalTime))
+      (bsqkey_uuid@box (bsqkey_uuid_value BUUID))
+      (bsqkey_contenthash@box (bsqkey_contenthash_value BHashCode))
       ;;KEY_TYPE_BOXING;;
     )
     ( (BKey@box (BKey_type TypeTag) (BKey_value bsq_keyobject)) )
@@ -155,7 +202,14 @@
 (declare-const BKey@none BKey)
 (assert (= BKey@none (BKey@box TypeTag_None bsqkey_none@literal)))
 
+(declare-const BKey@nothing BKey)
+(assert (= BKey@nothing (BKey@box TypeTag_Nothing bsqkey_nothing@literal)))
+
 (define-fun bsqkey_none@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
+  false
+)
+
+(define-fun bsqkey_nothing@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
   false
 )
 
@@ -188,7 +242,7 @@
 )
 
 (define-fun bsqkey_uuid@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (str.< (bsqkey_uuid_value k1) (bsqkey_uuid_value k2))
+  (seq.< (bsqkey_uuid_value k1) (bsqkey_uuid_value k2))
 )
 
 (define-fun bsqkey_contenthash@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
@@ -233,6 +287,9 @@
 (declare-const BTerm@none BTerm)
 (assert (= BTerm@none (BTerm@keybox BKey@none)))
 
+(declare-const BTerm@nothing BTerm)
+(assert (= BTerm@nothing (BTerm@keybox BKey@nothing)))
+
 ;;
 ;;Define utility functions
 ;;
@@ -275,7 +332,6 @@
 ;;
 ;;Free constructors for entrypoint initialization
 ;;
-(declare-fun BNone@UFCons_API ((Seq BNat)) bsq_none)
 (declare-fun BBool@UFCons_API ((Seq BNat)) Bool)
 (declare-fun BInt@UFCons_API ((Seq BNat)) BInt )
 (declare-fun BNat@UFCons_API ((Seq BNat)) BNat)
@@ -285,10 +341,11 @@
 (declare-fun BDecimal@UFCons_API ((Seq BNat)) BDecimal)
 (declare-fun BRational@UFCons_API ((Seq BNat)) BRational)
 (declare-fun BString@UFCons_API ((Seq BNat)) BString)
-(declare-fun BISOTime@UFCons_API ((Seq BNat)) Int)
-(declare-fun BLogicalTime@UFCons_API ((Seq BNat)) Int)
-(declare-fun BUUID@UFCons_API ((Seq BNat)) String)
-(declare-fun BContentHash@UFCons_API ((Seq BNat)) Int)
+(declare-fun BByteBuffer@UFCons_API ((Seq BNat)) BByteBuffer)
+(declare-fun BISOTime@UFCons_API ((Seq BNat)) BISOTime)
+(declare-fun BLogicalTime@UFCons_API ((Seq BNat)) BLogicalTime)
+(declare-fun BUUID@UFCons_API ((Seq BNat)) BUUID)
+(declare-fun BContentHash@UFCons_API ((Seq BNat)) BContentHash)
 
 (declare-fun ListSize@UFCons_API ((Seq BNat)) BNat)
 (declare-fun EnumChoice@UFCons_API ((Seq BNat)) BNat)

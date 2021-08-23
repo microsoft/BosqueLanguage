@@ -178,19 +178,19 @@ class MIRFieldDecl {
     readonly attributes: string[];
 
     readonly fkey: MIRFieldKey;
-    readonly shortname: string;
+    readonly fname: string;
 
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
     readonly declaredType: MIRResolvedTypeKey;
 
-    constructor(enclosingDecl: MIRResolvedTypeKey, attributes: string[], srcInfo: SourceInfo, srcFile: string, fkey: MIRFieldKey, shortname: string, dtype: MIRResolvedTypeKey) {
+    constructor(enclosingDecl: MIRResolvedTypeKey, attributes: string[], srcInfo: SourceInfo, srcFile: string, fkey: MIRFieldKey, fname: string, dtype: MIRResolvedTypeKey) {
         this.enclosingDecl = enclosingDecl;
         this.attributes = attributes;
 
         this.fkey = fkey;
-        this.shortname = shortname;
+        this.fname = fname;
 
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
@@ -199,11 +199,11 @@ class MIRFieldDecl {
     }
 
     jemit(): object {
-        return { enclosingDecl: this.enclosingDecl, attributes: this.attributes, fkey: this.fkey, shortname: this.shortname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, declaredType: this.declaredType };
+        return { enclosingDecl: this.enclosingDecl, attributes: this.attributes, fkey: this.fkey, fname: this.fname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, declaredType: this.declaredType };
     }
 
     static jparse(jobj: any): MIRFieldDecl {
-        return new MIRFieldDecl(jobj.enclosingDecl, jobj.attributes, jparsesinfo(jobj.sinfo), jobj.file, jobj.fkey, jobj.shortname, jobj.declaredType);
+        return new MIRFieldDecl(jobj.enclosingDecl, jobj.attributes, jparsesinfo(jobj.sinfo), jobj.file, jobj.fkey, jobj.fname, jobj.declaredType);
     }
 }
 
@@ -256,9 +256,11 @@ abstract class MIROOTypeDecl {
                 return MIRConceptTypeDecl.jparse(jobj);
             case "std":
                 return MIRObjectEntityTypeDecl.jparse(jobj);
+            case "constructablestd":
+                return MIRConstructableStdEntityTypeDecl.jparse(jobj);
             case "primitive":
                 return MIRPrimitiveInternalEntityTypeDecl.jparse(jobj);
-            case "constructable":
+            case "constructableinternal":
                 return MIRConstructableInternalEntityTypeDecl.jparse(jobj);
             default:
                 assert(tag === "collection")
@@ -335,6 +337,40 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     }
 } 
 
+class MIRConstructableStdEntityTypeDecl extends MIREntityTypeDecl {
+    readonly fromtype: MIRResolvedTypeKey | undefined;
+    readonly usinginv: MIRInvokeKey | undefined;
+    readonly binds: Map<string, MIRType>;
+
+    //Should have special inject/extract which are the constructors
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey | undefined, usinginv: MIRInvokeKey | undefined, binds: Map<string, MIRType>) {
+        super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
+
+        this.fromtype = fromtype;
+        this.usinginv = usinginv;
+        this.binds = binds;
+    }
+
+    jemit(): object {
+        const fbinds = [...this.binds].sort((a, b) => a[0].localeCompare(b[0])).map((v) => [v[0], v[1].jemit()]);
+        return { tag: "constructablestd", ...this.jemitbase(), fromtype: this.fromtype, usinginv: this.usinginv, binds: fbinds };
+    }
+
+    static jparse(jobj: any): MIRConstructableInternalEntityTypeDecl {
+        const bbinds = new Map<string, MIRType>();
+        jobj.binds.foreach((v: [string, any]) => {
+            bbinds.set(v[0], MIRType.jparse(v[1]));
+        });
+
+        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.usinginv, bbinds);
+    }
+
+    isConstructableEntity(): boolean {
+        return true;
+    }
+}
+
 abstract class MIRInternalEntityTypeDecl extends MIREntityTypeDecl {
     constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[]) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
@@ -362,21 +398,23 @@ class MIRPrimitiveInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
 } 
 
 class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
-    readonly fromtype: MIRType | undefined;
+    readonly fromtype: MIRResolvedTypeKey | undefined;
+    readonly usinginv: MIRInvokeKey | undefined;
     readonly binds: Map<string, MIRType>;
 
     //Should have special inject/extract which are the constructors
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRType | undefined, binds: Map<string, MIRType>) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey | undefined, usinginv: MIRInvokeKey | undefined, binds: Map<string, MIRType>) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
         this.fromtype = fromtype;
+        this.usinginv = usinginv;
         this.binds = binds;
     }
 
     jemit(): object {
         const fbinds = [...this.binds].sort((a, b) => a[0].localeCompare(b[0])).map((v) => [v[0], v[1].jemit()]);
-        return { tag: "constructable", ...this.jemitbase(), fromtype: this.fromtype, binds: fbinds };
+        return { tag: "constructableinternal", ...this.jemitbase(), fromtype: this.fromtype, usinginv: this.usinginv, binds: fbinds };
     }
 
     static jparse(jobj: any): MIRConstructableInternalEntityTypeDecl {
@@ -385,7 +423,7 @@ class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
             bbinds.set(v[0], MIRType.jparse(v[1]));
         });
 
-        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, bbinds);
+        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.usinginv, bbinds);
     }
 
     isConstructableEntity(): boolean {
@@ -394,19 +432,21 @@ class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
 }
 
 class MIRPrimitiveCollectionEntityTypeDecl extends MIRInternalEntityTypeDecl {
+    readonly oftype: MIRResolvedTypeKey;
     readonly binds: Map<string, MIRType>;
 
     //Should just be a special implemented value
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], oftype: MIRResolvedTypeKey, binds: Map<string, MIRType>) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
+        this.oftype = oftype;
         this.binds = binds;
     }
 
     jemit(): object {
         const fbinds = [...this.binds].sort((a, b) => a[0].localeCompare(b[0])).map((v) => [v[0], v[1].jemit()]);
-        return { tag: "collection", ...this.jemitbase(), binds: fbinds};
+        return { tag: "collection", ...this.jemitbase(), oftype: this.oftype, binds: fbinds};
     }
 
     static jparse(jobj: any): MIRPrimitiveCollectionEntityTypeDecl {
@@ -415,7 +455,7 @@ class MIRPrimitiveCollectionEntityTypeDecl extends MIRInternalEntityTypeDecl {
             bbinds.set(v[0], MIRType.jparse(v[1]));
         });
 
-        return new MIRPrimitiveCollectionEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), bbinds);
+        return new MIRPrimitiveCollectionEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.oftype, bbinds);
     }
 
     isCollectionEntity(): boolean {
@@ -930,6 +970,6 @@ class MIRAssembly {
 export {
     MIRConstantDecl, MIRFunctionParameter, MIRInvokeDecl, MIRInvokeBodyDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRFieldDecl,
     MIROOTypeDecl, MIRConceptTypeDecl, MIREntityTypeDecl,
-    MIRType, MIRTypeOption, MIREntityType, MIRObjectEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRConceptType, MIRTupleType, MIRRecordType, MIREphemeralListType,
+    MIRType, MIRTypeOption, MIREntityType, MIRObjectEntityTypeDecl, MIRConstructableStdEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRConceptType, MIRTupleType, MIRRecordType, MIREphemeralListType,
     PackageConfig, MIRAssembly
 };
