@@ -3,14 +3,36 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+import * as assert from "assert";
+import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
+
 type VerifierOptions = {
     ISize: number, //bits in the size 2-64
-    OverflowEnabled: boolean,
     StringOpt: "ASCII" | "UNICODE",
 
     SimpleQuantifierMode: boolean, //Set to true for a simplified version of Filter/Count that does not enforce subset/order properties but has simpler quantifiers
-    SpecializeSmallModelGen: boolean //Set to true if we want to generate special case enumerative "small" values to try and avoid quantifiers
+    CollectionHavoc: "SMALL_ONLY" | "SMALL_OPT" | "GENERAL"
 };
+
+class BVEmitter {
+    readonly bvsize: number;
+
+    constructor(bvsize: number) {
+        this.bvsize = bvsize;
+    }
+
+    emitSimple(val: number): SMTConst {
+        assert()
+    }
+
+    emitInt(intv: string): SMTConst {
+
+    }
+
+    emitNat(natv: string): SMTConst {
+
+    }
+}
 
 class SMTMaskConstruct {
     readonly maskname: string;
@@ -27,9 +49,11 @@ class SMTMaskConstruct {
 
 class SMTType {
     readonly name: string;
+    readonly typeID: MIRResolvedTypeKey;
     
-    constructor(name: string) {
+    constructor(name: string, typeid: MIRResolvedTypeKey) {
         this.name = name;
+        this.typeID = typeid;
     }
 
     isGeneralKeyType(): boolean {
@@ -387,6 +411,7 @@ class SMTExists extends SMTExp {
 export {
     VerifierOptions,
     SMTMaskConstruct,
+    BVEmitter,
     SMTType, SMTExp, SMTVar, SMTConst, 
     SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallGeneralWPassThroughMask,
     SMTLet, SMTLetMulti, SMTIf, SMTCond, SMTADTKindSwitch,

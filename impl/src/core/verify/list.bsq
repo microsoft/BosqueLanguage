@@ -7,19 +7,19 @@
 namespace NSCore;
 
 __internal entity ISequence provides Object {
-    __safe function s_size(l: List<T>): Nat # isequence_size
+    __safe function s_size(isq: ISequence): Nat # isequence_size
 }
 
 __internal entity JSequence provides Object {
-    __safe function s_size(l: List<T>): Nat # jsequence_size
+    __safe function s_size(jsq: JSequence): Nat # jsequence_size
 }
 
 __internal entity SSequence provides Object {
-    __safe function s_size(l: List<T>): Nat # ssequence_size
+    __safe function s_size(ssq: SSequence): Nat # ssequence_size
 }
 
 __internal entity USequence provides Object {
-    __safe function s_size(l: List<T>): Nat # usequence_size
+    __safe function s_size(usq: USequence): Nat # usequence_size
 }
 
 __internal entity ListOperators provides Object {
