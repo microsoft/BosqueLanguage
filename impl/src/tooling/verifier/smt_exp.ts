@@ -20,6 +20,14 @@ class BVEmitter {
     readonly intmin: BigInt;
     readonly intmax: BigInt;
 
+    readonly bvnatmax: string;
+    readonly bvintmin: string;
+    readonly bvintmax: string;
+
+    readonly bvnatmax1: string;
+    readonly bvintmin1: string;
+    readonly bvintmax1: string;
+
     constructor(bvsize: number, natmax: BigInt, intmin: BigInt, intmax: BigInt) {
         this.bvsize = bvsize;
         this.natmax = natmax;
@@ -33,6 +41,7 @@ class BVEmitter {
             return new SMTConst(`(_ bv${val} ${this.bvsize})`);
         }
         else {
+            xxxx; //get bit mask the right way
             assert(this.intmin <= BigInt(val));
             return new SMTCallSimple("bvneg", [new SMTConst(`(_ bv${-val} ${this.bvsize})`)]); 
         }
@@ -50,6 +59,7 @@ class BVEmitter {
             return new SMTConst(`(_ bv${intv.slice(0, intv.length - 1)} ${this.bvsize})`);
         }
         else {
+            xxxx; //get bit mask the right way
             assert(BigInt(intv.slice(1, intv.length - 1)) <= this.intmax);
             return new SMTCallSimple("bvneg", [ new SMTConst(`(_ bv${intv.slice(1, intv.length - 1)} ${this.bvsize})`)]);
         }
