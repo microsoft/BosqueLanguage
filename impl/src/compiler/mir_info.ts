@@ -212,6 +212,7 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
                     vinfo.set(conv.trgt.nameID, conv.intotype);
                     break;
                 }
+                xxxx;
                 case MIROpTag.MIRLoadConst: {
                     const lc = op as MIRLoadConst;
                     vinfo.set(lc.trgt.nameID, lc.consttype);

@@ -124,6 +124,7 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
             conv.sguard = propagateAssign_RemapStatementGuard(conv.sguard, propMap);
             break;
         }
+        xxxx;
         case MIROpTag.MIRTupleHasIndex: {
             const thi = op as MIRTupleHasIndex;
             thi.arg = propagateAssign_Remap(thi.arg, propMap);

@@ -4182,16 +4182,13 @@ class Parser {
 
             let cusing: MemberFieldDecl[] = [];
             if(this.testAndConsumeTokenIf("using")) {
-                let nonamectr = 0;
                 cusing = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
                     const mfinfo = this.getCurrentSrcInfo();
 
-                    let name = `_g${nonamectr++}`;
-                    if(this.testToken(TokenStrings.Identifier)) {
-                        name = this.consumeTokenAndGetValue();
-                    }
+                    this.ensureToken(TokenStrings.Identifier);
+                    const name = this.consumeTokenAndGetValue();
+                    this.ensureAndConsumeToken(":");
 
-                    this.ensureAndConsumeToken(":")
                     const ttype = this.parseTypeSignature();
             
                     let dvalue: ConstantExpressionValue | undefined = undefined;

@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRAssembly, MIRConstructableInternalEntityTypeDecl, MIRConstructableStdEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
-import { MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
+import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
 import * as assert from "assert";
@@ -53,14 +53,16 @@ class SMTTypeEmitter {
     private namectr: number = 0;
     private mangledTypeNameMap: Map<string, string> = new Map<string, string>();
     private mangledFunctionNameMap: Map<string, string> = new Map<string, string>();
+    private mangledGlobalNameMap: Map<string, string> = new Map<string, string>();
 
-    constructor(assembly: MIRAssembly, vopts: VerifierOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>) {
+    constructor(assembly: MIRAssembly, vopts: VerifierOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>, mangledGlobalNameMap?: Map<string, string>) {
         this.assembly = assembly;
         this.vopts = vopts;
 
         this.namectr = namectr || 0;
         this.mangledTypeNameMap = mangledTypeNameMap || new Map<string, string>();
         this.mangledFunctionNameMap = mangledFunctionNameMap || new Map<string, string>();
+        this.mangledGlobalNameMap = mangledGlobalNameMap || new Map<string, string>();
     }
 
     internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
@@ -87,6 +89,19 @@ class SMTTypeEmitter {
         assert(this.mangledFunctionNameMap.has(keyid));
 
         return this.mangledFunctionNameMap.get(keyid) as string;
+    }
+
+    internGlobalName(keyid: MIRGlobalKey, shortname: string) {
+        if (!this.mangledGlobalNameMap.has(keyid)) {
+            const cleanname = shortname.replace(/[<>, \[\]:]/g, "_") + "$" + this.namectr++;
+            this.mangledGlobalNameMap.set(keyid, cleanname);
+        }
+    }
+
+    lookupGlobalName(keyid: MIRGlobalKey): string {
+        assert(this.mangledGlobalNameMap.has(keyid));
+
+        return this.mangledGlobalNameMap.get(keyid) as string;
     }
 
     getMIRType(tkey: MIRResolvedTypeKey): MIRType {

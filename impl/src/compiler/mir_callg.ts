@@ -55,6 +55,7 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                     const trgts: MIRInvokeKey[] = [];
                     assembly.entityDecls.forEach((edcl) => {
                         if(assembly.subtypeOf(assembly.typeMap.get(edcl.tkey) as MIRType, rcvrtype)) {
+                            xxxx;
                             trgts.push(`${edcl.tkey}@@constructor`);
                         }
                     });

@@ -129,6 +129,7 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
             conv.trgt = convertToSSA(conv.trgt, conv.intotype, ssastate);
             return op;
         }
+        xxxx;
         case MIROpTag.MIRLoadConst: {
             const lc = op as MIRLoadConst;
             lc.trgt = convertToSSA(lc.trgt, lc.consttype, ssastate);

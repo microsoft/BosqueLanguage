@@ -4,10 +4,10 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo, Parser } from "../ast/parser";
-import { MIRAbort, MIRAllTrue, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRBody, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeadFlow, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMultiLoadFromEpehmeralList, MIRNop, MIROp, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRRegisterAssign, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart, MIRVirtualMethodKey, MIRSomeTrue } from "./mir_ops";
+import { MIRAbort, MIRAllTrue, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRBody, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeadFlow, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMultiLoadFromEpehmeralList, MIRNop, MIROp, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRRegisterAssign, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart, MIRVirtualMethodKey, MIRSomeTrue, MIRInject, MIRExtract, MIRGuardedOptionInject, MIRConstantNothing } from "./mir_ops";
 import { Assembly, BuildLevel, ConceptTypeDecl, EntityTypeDecl, InvokeDecl, MemberMethodDecl, NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, OOMemberLookupInfo, OOPTypeDecl, StaticFunctionDecl, StaticMemberDecl, StaticOperatorDecl } from "../ast/assembly";
 import { ResolvedConceptAtomType, ResolvedConceptAtomTypeEntry, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedFunctionType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedType } from "../ast/resolved_type";
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRTupleTypeEntry, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
 
 import { TypeChecker } from "../type_checker/type_checker";
 import { simplifyBody } from "./mir_cleanup";
@@ -332,7 +332,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(xxxx);
+        this.m_currentBlock.push(new MIRInject(sinfo, srctype.typeID, intotype.typeID, src, trgt));
     }
 
     emitGuardedOptionInject(sinfo: SourceInfo, srctype: MIRType, somethingtype: MIRType, optiontype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined) {
@@ -342,7 +342,7 @@ class MIREmitter {
 
         //either use default or inject into something and convert to Option
 
-        this.m_currentBlock.push(xxxx);
+        this.m_currentBlock.push(new MIRGuardedOptionInject(sinfo, srctype.typeID, somethingtype.typeID, optiontype.typeID, src, trgt, guard));
     }
 
     emitExtract(sinfo: SourceInfo, srctype: MIRType, intotype: MIRType, src: MIRArgument, trgt: MIRRegisterArgument) {
@@ -350,7 +350,7 @@ class MIREmitter {
             return;
         }
 
-        this.m_currentBlock.push(xxxx);
+        this.m_currentBlock.push(new MIRExtract(sinfo, srctype.typeID, intotype.typeID, src, trgt));
     }
 
     emitCheckNoError(sinfo: SourceInfo, src: MIRArgument, srctype: MIRType, oktype: MIRType, trgt: MIRRegisterArgument) {
@@ -486,7 +486,7 @@ class MIREmitter {
             return;
         }
         
-        this.m_currentBlock.push(new MIRLoadTupleIndex(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, idx, isvirtual, resulttype.trkey, trgt));
+        this.m_currentBlock.push(new MIRLoadTupleIndex(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, idx, isvirtual, resulttype.typeID, trgt));
     }
 
     emitLoadTupleIndexSetGuard(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, idx: number, isvirtual: boolean, resulttype: MIRType, trgt: MIRRegisterArgument, guard: MIRGuard) {
@@ -494,7 +494,7 @@ class MIREmitter {
             return;
         }
         
-        this.m_currentBlock.push(new MIRLoadTupleIndexSetGuard(sinfo, arg, arglayouttype.trkey, argflowtype.trkey, idx, isvirtual, resulttype.trkey, trgt, guard));
+        this.m_currentBlock.push(new MIRLoadTupleIndexSetGuard(sinfo, arg, arglayouttype.typeID, argflowtype.typeID, idx, isvirtual, resulttype.typeID, trgt, guard));
     }
 
     emitLoadProperty(sinfo: SourceInfo, arg: MIRArgument, arglayouttype: MIRType, argflowtype: MIRType, pname: string, isvirtual: boolean, resulttype: MIRType, trgt: MIRRegisterArgument) {
@@ -1139,24 +1139,24 @@ class MIREmitter {
         }
     }
 
-    registerPendingGlobalProcessing(decl: NamespaceConstDecl, etype: ResolvedType): MIRGlobalKey {
+    registerPendingGlobalProcessing(decl: NamespaceConstDecl, etype: ResolvedType): GeneratedKeyName<MIRGlobalKey> {
         const gkey = MIRKeyGenerator.generateGlobalKeyWNamespace(decl.ns, decl.name);
         if (!this.emitEnabled || this.masm.constantDecls.has(gkey.keyid) || this.pendingConstExprProcessing.findIndex((gp) => gp.gkey === gkey.keyid) !== -1) {
-            return gkey.keyid;
+            return gkey;
         }
 
         this.pendingConstExprProcessing.push({ gkey: gkey.keyid, shortname: gkey.shortname, name: decl.name, srcFile: decl.srcFile, containingType: undefined, cexp: decl.value as ConstantExpressionValue, attribs: ["static_initializer", ...decl.attributes], binds: new Map<string, ResolvedType>(), ddecltype: etype });
-        return gkey.keyid;
+        return gkey;
     }
 
-    registerPendingConstProcessing(resolvedcontaining: ResolvedType, containingtype: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], decl: StaticMemberDecl, binds: Map<string, ResolvedType>, etype: ResolvedType): MIRGlobalKey {
+    registerPendingConstProcessing(resolvedcontaining: ResolvedType, containingtype: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], decl: StaticMemberDecl, binds: Map<string, ResolvedType>, etype: ResolvedType): GeneratedKeyName<MIRGlobalKey> {
         const gkey = MIRKeyGenerator.generateGlobalKeyWType(resolvedcontaining, decl.name);
         if (!this.emitEnabled || this.masm.constantDecls.has(gkey.keyid) || this.pendingConstExprProcessing.findIndex((cp) => cp.gkey === gkey.keyid) !== -1) {
-            return gkey.keyid;
+            return gkey;
         }
 
         this.pendingConstExprProcessing.push({ gkey: gkey.keyid, shortname: gkey.shortname, name: decl.name, srcFile: decl.srcFile, containingType: containingtype, cexp: decl.value as ConstantExpressionValue, attribs: ["static_initializer", ...decl.attributes], binds: binds, ddecltype: etype });
-        return gkey.keyid;
+        return gkey;
     }
 
     registerFunctionCall(ns: string, name: string, f: NamespaceFunctionDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRInvokeKey {

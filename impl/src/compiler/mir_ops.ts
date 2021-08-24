@@ -215,22 +215,25 @@ class MIRRegisterArgument extends MIRArgument {
 
 class MIRGlobalVariable extends MIRArgument {
     readonly gkey: MIRGlobalKey;
-    constructor(gkey: MIRGlobalKey) {
+    readonly shortname: string;
+
+    constructor(gkey: MIRGlobalKey, shortname: string) {
         super(gkey);
 
         this.gkey = gkey;
+        this.shortname = shortname;
     }
 
     stringify(): string {
-        return this.gkey;
+        return this.shortname;
     }
 
     jemit(): object {
-        return { tag: "global", gkey: this.nameID };
+        return { tag: "global", gkey: this.nameID, shortname: this.shortname };
     }
 
     static jparse(jobj: any): MIRGlobalVariable {
-        return new MIRGlobalVariable(jobj.gkey);
+        return new MIRGlobalVariable(jobj.gkey, jobj.shortname);
     }
 }
 
@@ -529,8 +532,9 @@ enum MIROpTag {
     MIRDeclareGuardFlagLocation = "MIRDeclareGuardFlagLocation",
     MIRSetConstantGuardFlag = "MIRSetConstantGuardFlag",
     MIRConvertValue = "MIRConvertValue",
-
-    xxxx, //TODO the inject and extract ops 
+    MIRInject = "MIRInject",
+    MIRGuardedOptionInject = "MIRGuardedOptionInject",
+    MIRExtract = "MIRExtract",
 
     MIRLoadConst = "MIRLoadConst",
 
@@ -641,6 +645,7 @@ abstract class MIROp {
                 return MIRSetConstantGuardFlag.jparse(jobj);
             case MIROpTag.MIRConvertValue:
                 return MIRConvertValue.jparse(jobj);
+            xxxx;
             case MIROpTag.MIRLoadConst:
                 return MIRLoadConst.jparse(jobj);
             case MIROpTag.MIRTupleHasIndex:
@@ -988,6 +993,104 @@ class MIRConvertValue extends MIROp {
 
     static jparse(jobj: any): MIROp {
         return new MIRConvertValue(jparsesinfo(jobj.sinfo), jobj.srctypelayout, jobj.srctypeflow, jobj.intotype, MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt), jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined);
+    }
+}
+
+class MIRInject extends MIROp {
+    trgt: MIRRegisterArgument;
+    readonly srctype: MIRResolvedTypeKey;
+    readonly intotype: MIRResolvedTypeKey;
+    src: MIRArgument;
+
+    constructor(sinfo: SourceInfo, srctype: MIRResolvedTypeKey, intotype: MIRResolvedTypeKey, src: MIRArgument, trgt: MIRRegisterArgument) {
+        super(MIROpTag.MIRInject, sinfo);
+
+        this.trgt = trgt;
+        this.srctype = srctype;
+        this.intotype = intotype;
+        this.src = src;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.src]); }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = ${this.src} inject ${this.intotype}`;
+    }
+
+    jemit(): object {
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), srctype: this.srctype, intotype: this.intotype, src: this.src.jemit() };
+    }
+
+    static jparse(jobj: any): MIROp {
+        return new MIRInject(jparsesinfo(jobj.sinfo), jobj.srctype, jobj.intotype, MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt));
+    }
+}
+
+class MIRGuardedOptionInject extends MIROp {
+    trgt: MIRRegisterArgument;
+    readonly srctype: MIRResolvedTypeKey;
+    readonly somethingtype: MIRResolvedTypeKey;
+    readonly optiontype: MIRResolvedTypeKey;
+    src: MIRArgument;
+    sguard: MIRStatmentGuard | undefined;
+
+    constructor(sinfo: SourceInfo, srctype: MIRResolvedTypeKey, somethingtype: MIRResolvedTypeKey, optiontype: MIRResolvedTypeKey, src: MIRArgument, trgt: MIRRegisterArgument, sguard: MIRStatmentGuard | undefined) {
+        super(MIROpTag.MIRInject, sinfo);
+
+        this.trgt = trgt;
+        this.srctype = srctype;
+        this.somethingtype = somethingtype;
+        this.optiontype = optiontype;
+        this.src = src;
+        this.sguard = sguard;
+    }
+    
+    getUsedVars(): MIRRegisterArgument[] { return this.sguard !== undefined ? varsOnlyHelper([...this.sguard.getUsedVars(), this.src]) : varsOnlyHelper([this.src]); }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
+        return `${this.trgt.stringify()} = ${this.src} option inject ${this.optiontype}${gstring}`;
+    }
+
+    jemit(): object {
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), srctype: this.srctype, somethingtype: this.somethingtype, optiontype: this.optiontype, src: this.src.jemit(), sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined };
+    }
+
+    static jparse(jobj: any): MIROp {
+        return new MIRConvertValue(jparsesinfo(jobj.sinfo), jobj.srctype, jobj.somethingtype, jobj.optiontype, MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt), jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined);
+    }
+}
+
+class MIRExtract extends MIROp {
+    trgt: MIRRegisterArgument;
+    readonly srctype: MIRResolvedTypeKey;
+    readonly intotype: MIRResolvedTypeKey;
+    src: MIRArgument;
+
+    constructor(sinfo: SourceInfo, srctype: MIRResolvedTypeKey, intotype: MIRResolvedTypeKey, src: MIRArgument, trgt: MIRRegisterArgument) {
+        super(MIROpTag.MIRExtract, sinfo);
+
+        this.trgt = trgt;
+        this.srctype = srctype;
+        this.intotype = intotype;
+        this.src = src;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.src]); }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = ${this.src} inject ${this.intotype}`;
+    }
+
+    jemit(): object {
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), srctype: this.srctype, intotype: this.intotype, src: this.src.jemit() };
+    }
+
+    static jparse(jobj: any): MIROp {
+        return new MIRExtract(jparsesinfo(jobj.sinfo), jobj.srctype, jobj.intotype, MIRArgument.jparse(jobj.src), MIRRegisterArgument.jparse(jobj.trgt));
     }
 }
 
@@ -2660,7 +2763,7 @@ export {
     MIRArgument, MIRRegisterArgument, MIRGlobalVariable, 
     MIRConstantArgument, MIRConstantNone, MIRConstantNothing, MIRConstantTrue, MIRConstantFalse, MIRConstantInt, MIRConstantNat, MIRConstantBigInt, MIRConstantBigNat, MIRConstantRational, MIRConstantFloat, MIRConstantDecimal, MIRConstantString, MIRConstantRegex, MIRConstantStringOf, MIRConstantDataString, MIRConstantTypedNumber,
     MIROpTag, MIROp, MIRNop, MIRDeadFlow, MIRAbort, MIRAssertCheck, MIRDebug,
-    MIRLoadUnintVariableValue, MIRDeclareGuardFlagLocation, MIRSetConstantGuardFlag, MIRConvertValue,
+    MIRLoadUnintVariableValue, MIRDeclareGuardFlagLocation, MIRSetConstantGuardFlag, MIRConvertValue, MIRInject, MIRGuardedOptionInject, MIRExtract,
     MIRLoadConst,
     MIRTupleHasIndex, MIRRecordHasProperty,
     MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard,
