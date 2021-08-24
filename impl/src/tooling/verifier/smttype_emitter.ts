@@ -63,13 +63,11 @@ class SMTTypeEmitter {
         this.mangledFunctionNameMap = mangledFunctionNameMap || new Map<string, string>();
     }
 
-    internTypeName(keyid: MIRResolvedTypeKey, shortname: string): string {
+    internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
         if (!this.mangledTypeNameMap.has(keyid)) {
-            const cleanname = shortname.replace(/[<>, $@\[\]]/g, "_") + "$" + this.namectr++;
+            const cleanname = shortname.replace(/[<>, \[\]:]/g, "_") + "$" + this.namectr++;
             this.mangledTypeNameMap.set(keyid, cleanname);
         }
-
-        return this.mangledTypeNameMap.get(keyid) as string;
     }
 
     lookupTypeName(keyid: MIRResolvedTypeKey): string {
@@ -78,13 +76,11 @@ class SMTTypeEmitter {
         return this.mangledTypeNameMap.get(keyid) as string;
     }
 
-    internFunctionName(keyid: MIRInvokeKey, shortname: string): string {
+    internFunctionName(keyid: MIRInvokeKey, shortname: string) {
         if (!this.mangledFunctionNameMap.has(keyid)) {
-            const cleanname = shortname.replace(/[<>, $@\[\]]/g, "_") + "$" + this.namectr++;
+            const cleanname = shortname.replace(/[<>, \[\]:]/g, "_") + "$" + this.namectr++;
             this.mangledFunctionNameMap.set(keyid, cleanname);
         }
-
-        return this.mangledFunctionNameMap.get(keyid) as string;
     }
 
     lookupFunctionName(keyid: MIRInvokeKey): string {

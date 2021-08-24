@@ -2604,7 +2604,7 @@ class TypeChecker {
 
             const opkey = this.m_emitter.registerVirtualNamespaceOperatorCall(opdecl.ns, opdecl.name, pcodes, cinfo);
             const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, refs);
-            this.m_emitter.emitInvokeVirtualOperator(sinfo, opkey, cargs, refinfo, trgt);
+            this.m_emitter.emitInvokeVirtualOperator(sinfo, opkey.keyid, opkey.shortname, cargs, refinfo, trgt);
         }
 
         return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), refs);
@@ -2675,9 +2675,9 @@ class TypeChecker {
                 cargs.push({ arglayouttype: this.m_emitter.registerResolvedTypeReference(fsig.params[argidx].type as ResolvedType), argflowtype: this.m_emitter.registerResolvedTypeReference(argtypes[argidx].flowtype), arg: this.emitInlineConvertIfNeeded(sinfo, args[argidx], argtypes[argidx], fsig.params[argidx].type as ResolvedType) });
             }
 
-            const opkey = this.m_emitter.registerVirtualStaticOperatorCall([mirootype, oodecl, oobinds], opdecl.name, oobinds, pcodes, cinfo);
+            const opkey = this.m_emitter.registerVirtualStaticOperatorCall([ootype, mirootype, oodecl, oobinds], opdecl.name, oobinds, pcodes, cinfo);
             const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, refs);
-            this.m_emitter.emitInvokeVirtualOperator(sinfo, opkey, cargs,  refinfo, trgt);
+            this.m_emitter.emitInvokeVirtualOperator(sinfo, opkey.keyid, opkey.shortname, cargs,  refinfo, trgt);
         }
 
         return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), refs);
@@ -3715,7 +3715,7 @@ class TypeChecker {
                 const ootype = this.resolveOOTypeFromDecls(minfo.contiainingType, minfo.binds);
                 const ckey = this.m_emitter.registerVirtualMethodCall(ootype, op.name, callbinds, rargs.pcodes, rargs.cinfo);
                 const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
-                this.m_emitter.emitInvokeVirtualFunction(op.sinfo, ckey, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), rargs.args, rargs.fflag, refinfo, trgt);
+                this.m_emitter.emitInvokeVirtualFunction(op.sinfo, ckey.keyid, ckey.shortname, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), rargs.args, rargs.fflag, refinfo, trgt);
 
                 if (op.isBinder) {
                     this.m_emitter.localLifetimeEnd(op.sinfo, `$this_#${op.sinfo.pos}`)

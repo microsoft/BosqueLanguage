@@ -530,6 +530,8 @@ enum MIROpTag {
     MIRSetConstantGuardFlag = "MIRSetConstantGuardFlag",
     MIRConvertValue = "MIRConvertValue",
 
+    xxxx, //TODO the inject and extract ops 
+
     MIRLoadConst = "MIRLoadConst",
 
     MIRTupleHasIndex = "MIRTupleHasIndex",

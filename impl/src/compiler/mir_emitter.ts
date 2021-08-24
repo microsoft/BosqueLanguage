@@ -628,7 +628,7 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRInvokeFixedFunction(sinfo, retinfo.typeID, ikey, args, optstatusmask, trgt, guard));
     }
 
-    emitInvokeVirtualFunction(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, rcvrlayouttype: MIRType, rcvrflowtype: MIRType, args: MIRArgument[], optstatusmask: string | undefined, rretinfo: MIRType | { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [MIRRegisterArgument, MIRType][] }, trgt: MIRRegisterArgument) {
+    emitInvokeVirtualFunction(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, shortvname: string, rcvrlayouttype: MIRType, rcvrflowtype: MIRType, args: MIRArgument[], optstatusmask: string | undefined, rretinfo: MIRType | { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [MIRRegisterArgument, MIRType][] }, trgt: MIRRegisterArgument) {
         if(!this.emitEnabled) {
             return;
         }
@@ -657,7 +657,7 @@ class MIREmitter {
         }
     }
 
-    emitInvokeVirtualOperator(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, args: { arglayouttype: MIRType, argflowtype: MIRType, arg: MIRArgument }[], retinfo: { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [MIRRegisterArgument, MIRType][] }, trgt: MIRRegisterArgument) {
+    emitInvokeVirtualOperator(sinfo: SourceInfo, vresolve: MIRVirtualMethodKey, shortvname: string, args: { arglayouttype: MIRType, argflowtype: MIRType, arg: MIRArgument }[], retinfo: { declresult: MIRType, runtimeresult: MIRType, elrcount: number, refargs: [MIRRegisterArgument, MIRType][] }, trgt: MIRRegisterArgument) {
         const eargs = args.map((arg) => {
             return { arglayouttype: arg.arglayouttype.typeID, argflowtype: arg.argflowtype.typeID, arg: arg.arg };
         });
@@ -1214,34 +1214,34 @@ class MIREmitter {
         return key.keyid;
     }
 
-    registerVirtualMethodCall(containingType: ResolvedType, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRVirtualMethodKey {
+    registerVirtualMethodCall(containingType: ResolvedType, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): GeneratedKeyName<MIRVirtualMethodKey> {
         const key = MIRKeyGenerator.generateVirtualMethodKey(name, binds, pcodes);
         if (!this.emitEnabled || this.allVInvokes.findIndex((vi) => vi.vkey === key.keyid && vi.enclosingtype.typeID === containingType.typeID) !== -1) {
-            return key.keyid;
+            return key;
         }
 
         this.allVInvokes.push({ vkey: key.keyid, enclosingtype: containingType, name: name, binds: binds, pcodes: pcodes, cargs: cinfo });
-        return key.keyid;
+        return key;
     }
 
-    registerVirtualNamespaceOperatorCall(ns: string, name: string, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRVirtualMethodKey {
+    registerVirtualNamespaceOperatorCall(ns: string, name: string, pcodes: PCode[], cinfo: [string, ResolvedType][]): GeneratedKeyName<MIRVirtualMethodKey> {
         const key = MIRKeyGenerator.generateVirtualMethodKey(`${ns}::${name}`, new Map<string, ResolvedType>(), pcodes);
         if (!this.emitEnabled || this.masm.virtualOperatorDecls.has(key.keyid) || this.pendingOPVirtualProcessing.findIndex((vi) => vi.vkey === key.keyid) !== -1) {
-            return key.keyid;
+            return key;
         }
 
         this.pendingOPVirtualProcessing.push({vkey: key.keyid, optns: ns, optenclosingType: undefined, name: name, binds: new Map<string, ResolvedType>(), pcodes: pcodes, cargs: cinfo });
-        return key.keyid;
+        return key;
     }
 
-    registerVirtualStaticOperatorCall(containingType: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): MIRVirtualMethodKey {
+    registerVirtualStaticOperatorCall(containingType: [ResolvedType, MIRType, OOPTypeDecl, Map<string, ResolvedType>], name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cinfo: [string, ResolvedType][]): GeneratedKeyName<MIRVirtualMethodKey> {
         const key = MIRKeyGenerator.generateVirtualMethodKey(`${containingType[0].typeID}::${name}`, new Map<string, ResolvedType>(), pcodes);
         if (!this.emitEnabled || this.masm.virtualOperatorDecls.has(key.keyid) || this.pendingOPVirtualProcessing.findIndex((vi) => vi.vkey === key.keyid) !== -1) {
-            return key.keyid;
+            return key;
         }
 
         this.pendingOPVirtualProcessing.push({  vkey: key.keyid, optns: undefined, optenclosingType: containingType, name: name, binds: binds, pcodes: pcodes, cargs: cinfo  });
-        return key.keyid;
+        return key;
     }
 
     registerPCode(ikey: MIRInvokeKey, shortname: string, idecl: InvokeDecl, fsig: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cinfo: [string, ResolvedType][], capturedpcode: [string, { pcode: PCode, captured: string[] }][]) {
