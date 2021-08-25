@@ -105,9 +105,7 @@ const SymbolStrings = [
     "-",
     "->",
     "*",
-    "/",
-    "/\\",
-    "\\/"
+    "/"
 ].sort((a, b) => { return (a.length !== b.length) ? (b.length - a.length) : a.localeCompare(b); });
 
 const RegexFollows = new Set<string>([
@@ -148,9 +146,7 @@ const RegexFollows = new Set<string>([
     ">=",
     "-",
     "*",
-    "/",
-    "/\\",
-    "\\/"
+    "/"
 ]);
 
 const LeftScanParens = ["[", "(", "{", "(|", "{|"];
@@ -2513,10 +2509,7 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseImpliesExpression();
 
-        if (this.testAndConsumeTokenIf("/\\")) {
-            return new BinLogicExpression(sinfo, exp, "/\\", this.parseAndExpression());
-        }
-        else if (this.testAndConsumeTokenIf("&&")) {
+        if (this.testAndConsumeTokenIf("&&")) {
             return new BinLogicExpression(sinfo, exp, "&&", this.parseAndExpression());
         }
         else {
@@ -2528,10 +2521,7 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseAndExpression();
 
-        if (this.testAndConsumeTokenIf("\\/")) {
-            return new BinLogicExpression(sinfo, exp, "\\/", this.parseOrExpression());
-        }
-        else if (this.testAndConsumeTokenIf("||")) {
+        if (this.testAndConsumeTokenIf("||")) {
             return new BinLogicExpression(sinfo, exp, "||", this.parseOrExpression());
         }
         else {

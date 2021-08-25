@@ -62,7 +62,7 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     method merge(m: Map<K, V>): Map<K, V> {
         let overlap = ListKeyOperators::s_overlapsMapKV_KeyHelper<K, V>(this.value(), m.value());
         if(!overlap) {
-            let am = ListOperators::s_concat2_Helper<T>(this.value(), m.value());
+            let am = ListOperators::s_concat2_Helper<[K, V]>(this.value(), m.value());
             return Map<K, V>::from(am);
         }
         else {
@@ -70,7 +70,7 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
             let ml = m.value();
 
             let fm = ListOperators::s_filter_Helper<[K, V]>(ml, pred(kvp: [K, V]) => !ListKeyOperators::s_hasCheckMapKV(tl, kvp.0));
-            let am = ListOperators::s_concat2_Helper<T>(this.value(), fm);
+            let am = ListOperators::s_concat2_Helper<[K, V]>(this.value(), fm);
             
             return Map<K, V>::from(am);
         }
@@ -87,7 +87,7 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     }
 
     method add(k: K, v: V): Map<K, V> {
-        let am = ListOperators::s_concat2_Helper<T>(this.value(), List<[K, V]>{[k, v]});
+        let am = ListOperators::s_concat2_Helper<[K, V]>(this.value(), List<[K, V]>{[k, v]});
         return Map<K, V>::from(am);
     }
 

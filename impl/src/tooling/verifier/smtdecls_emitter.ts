@@ -15,28 +15,6 @@ import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTAssembly, SMTConstantDecl, SMTEntityDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTListDecl, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTType, SMTVar, VerifierOptions } from "./smt_exp";
 
-const BuiltinEntityDeclNames = [
-    "None",
-    "Bool",
-    "Int",
-    "Nat",
-    "BigInt",
-    "BigNat",
-    "Rational",
-    "Float",
-    "Decimal",
-    "String",
-    "StringPos",
-    "ByteBuffer",
-    "ISOTime",
-    "LogicalTime",
-    "UUID",
-    "ContentHash",
-    "Regex",
-
-    "ISequence"
-];
-
 type APIModuleInfo = {
     apitypes: object[],
     apisig: object,

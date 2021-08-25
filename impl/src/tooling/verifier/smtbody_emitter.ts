@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { MIRAbort, MIRAllTrue, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRSomeTrue, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
+import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTType, VerifierOptions, BVEmitter } from "./smt_exp";
 import { SourceInfo } from "../../ast/parser";
 import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
@@ -1575,11 +1575,13 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: SMTExp): SMTExp {
+        xxxx;
         const consexp = this.lopsManager.processLiteralK_0(this.typegen.getMIRType(op.tkey));
         return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
     }
 
     processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons, continuation: SMTExp): SMTExp {
+        xxxx;
         const consexp = this.lopsManager.processLiteralK_Pos(this.typegen.getMIRType(op.tkey), op.args.length, op.args.map((arg) => this.argToSMT(arg[1])));
         return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
     }
@@ -1615,14 +1617,6 @@ class SMTBodyEmitter {
 
     processPrefixNotOp(op: MIRPrefixNotOp, continuation: SMTExp): SMTExp {
         return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("not", [this.argToSMT(op.arg)]), continuation);
-    }
-
-    processAllTrue(op: MIRAllTrue, continuation: SMTExp): SMTExp {
-        return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("and", op.args.map((arg) => this.argToSMT(arg))), continuation);
-    }
-
-    processSomeTrue(op: MIRSomeTrue, continuation: SMTExp): SMTExp {
-        return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("or", op.args.map((arg) => this.argToSMT(arg))), continuation);
     }
 
     processIsTypeOf(op: MIRIsTypeOf, continuation: SMTExp): SMTExp {
@@ -1848,12 +1842,6 @@ class SMTBodyEmitter {
             case MIROpTag.MIRPrefixNotOp: {
                 return this.processPrefixNotOp(op as MIRPrefixNotOp, continuation);
             }
-            case MIROpTag.MIRAllTrue: {
-                return this.processAllTrue(op as MIRAllTrue, continuation);
-            }
-            case MIROpTag.MIRSomeTrue: {
-                return this.processSomeTrue(op as MIRSomeTrue, continuation);
-            }
             case MIROpTag.MIRIsTypeOf: {
                 return this.processIsTypeOf(op as MIRIsTypeOf, continuation);
             }
@@ -1949,7 +1937,7 @@ class SMTBodyEmitter {
 
     processGenerateSafeSub_Int(args: SMTExp[]): SMTExp {
         //TODO: maybe this is better (but more complex) https://github.com/Z3Prover/z3/blob/master/src/api/api_bv.cpp
-        
+
         const extl = new SMTCallSimple("(_ sign_extend 1)", [args[0]]);
         const extr = new SMTCallSimple("(_ sign_extend 1)", [args[1]]);
         const bvmin = new SMTConst(this.numgen.int.bvintmin1);
@@ -1967,45 +1955,20 @@ class SMTBodyEmitter {
         );
     }
 
-    processGenerateResultWithBounds(sinfo: SourceInfo, op: string, args: SMTExp[], oftype: MIRType): SMTExp {
-        //TODO: Bounds check -- also for signed need to do check for -Int::max (since range of negative values is one less than positive)
-        //https://stackoverflow.com/questions/40605207/how-to-zero-sign-extend-bitvectors-in-z3
-        //https://github.com/Z3Prover/z3/issues/574
-        //https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf
-        //(declare-const a (_ BitVec 1))
-        //(declare-const b (_ BitVec 2))
-        //(assert (= b ((_ zero_extend 1) a)))
+    processGenerateSafeMult_Nat(args: SMTExp[]): SMTExp {
+        return new SMTIf(
+            new SMTCallSimple("bvumul_noovfl", args),
+            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Nat"), new SMTCallSimple("bvsub", args)),
+            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Nat"))
+        );
+    }
 
-        //TODO: Suppose we try to refute the feasibility of an error on a small width bitvector say 5 and we get unsat
-        //      Hypothesis -- if the unsat core does not contain an arith overflow failure then the core also holds for any larger BV size
-        //      If so then we can A* up the bit-vector sizes
-
-        if(!this.vopts.OverflowEnabled) {
-            if (oftype.trkey === "NSCore::BigInt" || oftype.trkey === "NSCore::BigNat") {
-                if (op === "neg") {
-                    return new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
-                }
-                else {
-                    return new SMTCallSimple(op, args);
-                }
-            }
-            else if (op === "neg") {
-                return new SMTCallSimple("bvneg", args);
-            }
-            else {
-                const opbvbasic = { "+": "bvadd", "-": "bvsub", "*": "bvmul" }[op as "+" | "-" | "*"];
-                return new SMTCallSimple(opbvbasic, args);
-            }
-        }
-        else {
-            //TODO: See following links
-            //https://github.com/Z3Prover/z3/blob/master/src/api/api_bv.cpp
-            //https://github.com/Z3Prover/z3/issues/574
-            //https://github.com/Z3Prover/z3/blob/518296dbc10267d4a4b8589212feaeefca800022/src/ast/bv_decl_plugin.cpp
-            //https://github.com/Z3Prover/z3/discussions/5138
-
-            return NOT_IMPLEMENTED("Overflow Checked Arith");
-        }
+    processGenerateSafeMult_Int(args: SMTExp[]): SMTExp {
+        return new SMTIf(
+            new SMTCallSimple("and", [new SMTCallSimple("bvsmul_noovfl", args), new SMTCallSimple("bvumul_noudfl", args)]),
+            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvsub", args)),
+            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int"))
+        );
     }
 
     processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: MIRRegisterArgument, op: MIRInvokeKey, args: SMTExp[], continuation: SMTExp): SMTExp {
@@ -2156,13 +2119,13 @@ class SMTBodyEmitter {
             //op infix *
             case "NSCore::*=infix=(NSCore::Int, NSCore::Int)": {
                 rtype = this.typegen.getMIRType("NSCore::Int");
-                smte = this.processGenerateResultWithBounds(sinfo, "*", args, rtype);
+                smte = this.processGenerateSafeMult_Int(args);
                 erropt = true;
                 break;
             }
             case "NSCore::*=infix=(NSCore::Nat, NSCore::Nat)": {
                 rtype = this.typegen.getMIRType("NSCore::Nat");
-                smte = this.processGenerateResultWithBounds(sinfo, "*", args, rtype);
+                smte = this.processGenerateSafeMult_Nat(args);
                 erropt = true;
                 break;
             }
@@ -2402,7 +2365,9 @@ class SMTBodyEmitter {
             const cres = this.generateTempName();
 
             const okpath = new SMTLet(this.varToSMTName(trgt).vname, this.typegen.generateResultGetSuccess(rtype, new SMTVar(cres)), continuation);
-            const errpath = (rtype.trkey === this.currentRType.trkey) ? new SMTVar(cres) : this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(rtype, new SMTVar(cres)));
+            const smtrtype = this.typegen.getSMTTypeFor(rtype);
+            const smtcurrenttype = this.typegen.getSMTTypeFor(this.currentRType);
+            const errpath = (smtrtype.name === smtcurrenttype.name) ? new SMTVar(cres) : this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(rtype, new SMTVar(cres)));
 
             const icond = new SMTIf(this.typegen.generateResultIsErrorTest(rtype, new SMTVar(cres)), errpath, okpath);
             return new SMTLet(cres, smte, icond);

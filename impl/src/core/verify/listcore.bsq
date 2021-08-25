@@ -6,6 +6,202 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
+#if FINITE_IMPL
+__internal entity ListOperators provides Object {
+    //Core accessors
+    __assume_safe s_safeAs<T, U>(v: T): U # list_safeas
+
+    __safe function s_size<T>(l: List<T>): Nat # list_size
+    __safe function s_empty<T>(l: List<T>): Bool # list_empty
+
+    __safe function s_cons<T>(v: T, l: List<T>): List<T> # list_cons
+    __assume_safe function s_safe_head<T>(l: List<T>): T # list_head
+    __assume_safe function s_safe_tail<T>(l: List<T>): List<T> # list_tail
+
+    recursive function s_ints(start: Int, end: Int): List<Int> {
+        if(start == end) {
+            return List<Int>@{};
+        }
+        else {
+            let rest = ListOperators::s_ints<Int>[recursive](start + 1, end);
+            return ListOperators::s_cons<Int>(start, rest);
+        }
+    }
+
+    recursive function s_nats(start: Nat, end: Nat): List<Nat> {
+        if(start == end) {
+            return List<Nat>@{};
+        }
+        else {
+            let rest = ListOperators::s_nats<Nat>[recursive](start + 1, end);
+            return ListOperators::s_cons<Nat>(start, rest);
+        }
+    }
+
+    recursive function s_index<T>(l: List<T>, curr: Nat): List<[Nat, T]> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<[Nat, T]>@{};
+        }
+        else {
+            let rest = ListOperators::s_index<T>[recursive](ListOperators::s_safe_tail<T>(l), curr + 1);
+            return ListOperators::s_cons<[Nat, T]>([curr, ListOperators::s_safe_head<T>(l)], rest);
+        }
+    }
+
+    recursive function s_zip<T, U>(l: List<T>, ol: List<U>): List<[T, U]>  {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<[T, U]>@{};
+        }
+        else {
+            let rest = ListOperators::s_zip<T, U>[recursive](ListOperators::s_safe_tail<T>(l), ListOperators::s_safe_tail<U>(ol));
+            return ListOperators::s_cons<[T, U]>([ListOperators::s_safe_head<T>(l), ListOperators::s_safe_head<U>(ol)], rest);
+        }
+    }
+
+    recursive function fill<T>(k: Nat, val: T): List<T> {
+        if(k == 0n) {
+            return List<T>@{};
+        }
+        else {
+            let rest = ListOperators::s_fill<T>[recursive](k - 1, val);
+            return ListOperators::s_cons<T>(val, rest);
+        }
+    }
+
+    recursive function s_concat2<T>(l1: List<T>, l2: List<T>): List<T> {
+        if(ListOperators::s_empty<T>(l1)) {
+            return l2;
+        }
+        else {
+            let rest = ListOperators::s_concat2<T>[recursive](ListOperators::s_safe_tail<T>(l), l2);
+            return ListOperators::s_cons<T>(ListOperators::s_safe_head<T>(l), rest);
+        }
+    }
+
+    recursive function s_lconcat<T>(ll: List<List<T>>): List<T> {
+        if(ListOperators::s_empty<List<T>>(ll)) {
+            return List<T>@{};
+        }
+        else if(ListOperators::s_size<List<T>>(ll) == 1) {
+            return ListOperators::s_safe_head<List<T>>(ll);
+        }
+        else {
+            let rest = ListOperators::s_lconcat<T>[recursive](ListOperators::s_safe_tail<T>(ll));
+            return ListOperators::s_concat2<T>[recursive](ListOperators::s_safe_head<List<T>>(ll), rest);
+        }
+    }
+
+    recursive function s_get<T>(l: List<T>, i: Nat): T {
+        if(i == 0) {
+            return ListOperators::s_safe_head<T>(l);
+        }
+        else {
+            let rest = ListOperators::s_safe_tail<T>(l);
+            return ListOperators::s_get<T>[recursive](rest, i - 1);
+        }
+    }
+
+    recursive function s_haspred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
+        if(ListOperators::s_empty<T>(l)) {
+            return false;
+        }
+        else {
+            if(p[recursive?](ListOperators::s_safe_head<T>(l))) {
+                return true;
+            }
+            else {
+                return ListOperators::s_haspred<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+            }
+        }
+    }
+
+    recursive function s_haspred_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        if(ListOperators::s_empty<T>(l)) {
+            return false;
+        }
+        else {
+            if(p[recursive?](ListOperators::s_safe_head<T>(l), idx)) {
+                return true;
+            }
+            else {
+                return ListOperators::s_haspred_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+            }
+        }
+    }
+
+    recursive function s_discarduntil<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            if(p[recursive?](ListOperators::s_safe_head<T>(l))) {
+                return l;
+            }
+            else {
+                return ListOperators::s_discarduntil<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+            }
+        }
+    }
+
+    recursive function s_discarduntillast<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let taillast = ListOperators::s_discarduntillast<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+            if(!ListOperators::s_empty<T>(taillast)) {
+                return taillast;
+            }
+            else {
+                if(p[recursive?](ListOperators::s_safe_head<T>(l))) {
+                    return l;
+                }
+                else {
+                    return List<T>@{}; 
+                }
+            }
+        }
+    }
+}
+
+__internal entity ListKeyOperators provides Object {
+    recursive function s_discarduntilequal<T grounded KeyType>(l: List<T>, v: T): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            if(KeyType::equal<T>(ListOperators::s_safe_head<T>(l), v)) {
+                return l;
+            }
+            else {
+                return ListOperators::s_discarduntilequal<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            }
+        }
+    }
+
+    recursive function s_discarduntilequallast<T grounded KeyType>(l: List<T>, v: T): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let taillast = ListOperators::s_discarduntilequal<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            if(!ListOperators::s_empty<T>(taillast)) {
+                return taillast;
+            }
+            else {
+                if(KeyType::equal<T>(ListOperators::s_safe_head<T>(l), v)) {
+                    return l;
+                }
+                else {
+                    return List<T>@{}; 
+                }
+            }
+        }
+    }
+}
+
+#else
+
 __internal entity ISequence provides Object {
     __safe function s_size(isq: ISequence): Nat # isequence_size
 }
@@ -105,13 +301,13 @@ __internal entity ListOperators provides Object {
     }
 
     recursive? function s_safeCheckPred_Pair<T, U>[recursive?](l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<T>, List<U> {
-        if(ListOperators::s_empty<T>(l) /\ ListOperators::s_empty<U>(ol)) {
+        if(ListOperators::s_empty<T>(l) && ListOperators::s_empty<U>(ol)) {
             return List<T>@{}, List<U>@{};
         }
         elif(ListOperators::s_empty<T>(l)) {
             return List<T>@{}, ol;
         }
-        elif(ListOperators::s_empty<T>(l) \/ ListOperators::s_empty<U>(ol)) {
+        elif(ListOperators::s_empty<U>(ol)) {
             return l, List<U>@{};
         }
         else {
@@ -147,7 +343,7 @@ __internal entity ListOperators provides Object {
         let l1empty = ListOperators::s_empty<T>(l1);
         let l2empty = ListOperators::s_empty<T>(l2);
 
-        if(l1empty /\ l2empty) {
+        if(l1empty && l2empty) {
             return List<T>@{};
         }
         else {
@@ -292,7 +488,10 @@ __internal entity ListOperators provides Object {
     }
 
     recursive? function s_join_Helper<T, U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> {
-        if(ListOperators::s_empty(l) \/ ListOperators::s_empty(ol)) {
+        if(ListOperators::s_empty(l)) {
+            return List<[T, U]>@{};
+        }
+        elif(ListOperators::s_empty(ol)) {
             return List<[T, U]>@{};
         }
         else {
@@ -438,7 +637,10 @@ __internal entity ListKeyOperators provides Object {
     }
 
     function s_overlapsMapKV_KeyHelper<T grounded KeyType, U>(l1: List<[T, U]>, l2: List<[T, U]>): Bool {
-        if(ListOperators::s_empty<[T, U]>(l1) \/ ListOperators::s_empty<[T, U]>(l2)) {
+        if(ListOperators::s_empty<[T, U]>(l1)) {
+            return false;
+        }
+        elif(ListOperators::s_empty<[T, U]>(l2)) {
             return false;
         }
         else {
@@ -608,3 +810,4 @@ __internal entity ListArithOperators provides Object {
     }
 #endif
 }
+#endif
