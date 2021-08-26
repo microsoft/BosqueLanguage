@@ -11,12 +11,21 @@ __internal entity ListOperators provides Object {
     //Core accessors
     __assume_safe s_safeAs<T, U>(v: T): U # list_safeas
 
-    __safe function s_size<T>(l: List<T>): Nat # list_size
     __safe function s_empty<T>(l: List<T>): Bool # list_empty
 
-    __safe function s_cons<T>(v: T, l: List<T>): List<T> # list_cons
+    __assume_safe function s_cons<T>(v: T, l: List<T>): List<T> # list_cons
     __assume_safe function s_safe_head<T>(l: List<T>): T # list_head
     __assume_safe function s_safe_tail<T>(l: List<T>): List<T> # list_tail
+
+    recursive function s_size<T>(l: List<T>): Nat {
+        if(start == end) {
+            return 0n;
+        }
+        else {
+            let rest = ListOperators::s_size<T>[recursive](ListOperators::s_safe_tail<T>(l));
+            return rest + 1;
+        }
+    }
 
     recursive function s_ints(start: Int, end: Int): List<Int> {
         if(start == end) {
@@ -50,6 +59,11 @@ __internal entity ListOperators provides Object {
 
     recursive function s_zip<T, U>(l: List<T>, ol: List<U>): List<[T, U]>  {
         if(ListOperators::s_empty<T>(l)) {
+            check ListOperators::s_empty<U>(ol);
+            return List<[T, U]>@{};
+        }
+        elif(ListOperators::s_empty<U>(ol)) {
+            check ListOperators::s_empty<T>(l);
             return List<[T, U]>@{};
         }
         else {
@@ -91,9 +105,21 @@ __internal entity ListOperators provides Object {
         }
     }
 
-    recursive function s_get<T>(l: List<T>, i: Nat): T {
-        if(i == 0) {
+    recursive function s_back(l: List<T>): T {
+        if(ListOperators::s_empty(ListOperators::s_safe_tail<T>(l))) {
             return ListOperators::s_safe_head<T>(l);
+        }
+        else {
+            return ListOperators::s_back<T>[recursive](ListOperators::s_safe_tail<T>(l));
+        }
+    }
+
+    recursive function s_get<T>(l: List<T>, i: Nat): List<T> {
+        if(ListOperators::s_empty(l)) {
+            return List<T>@{};
+        }
+        elif(i == 0) {
+            return l;
         }
         else {
             let rest = ListOperators::s_safe_tail<T>(l);
@@ -129,6 +155,187 @@ __internal entity ListOperators provides Object {
         }
     }
 
+    recursive function s_haselem_none<T>(l: List<T>): Bool {
+        if(ListOperators::s_empty<T>(l)) {
+            return false;
+        }
+        else {
+            if(ListOperators::s_safe_head<T>(l) === none) {
+                return true;
+            }
+            else {
+                return ListKeyOperators::s_haselem_none<T>[recursive](ListOperators::s_safe_tail<T>(l));
+            }
+        }
+    }
+
+    recursive function s_haselem_nothing<T>(l: List<T>, v: T): Bool {
+        if(ListOperators::s_empty<T>(l)) {
+            return false;
+        }
+        else {
+            if(ListOperators::s_safe_head<T>(l) === nothing) {
+                return true;
+            }
+            else {
+                return ListKeyOperators::s_haselem_nothing<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            }
+        }
+    }
+
+    recursive function s_countelem_none<T>(l: List<T>): Nat {
+        if(ListOperators::s_empty<T>(l)) {
+            return 0n;
+        }
+        else {
+            let rest = ListKeyOperators::s_countelem_key<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            if(ListOperators::s_safe_head<T>(l) === none) {
+                return rest + 1;
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+    recursive function s_countelem_nothing<T>(l: List<T>): Nat {
+        if(ListOperators::s_empty<T>(l)) {
+            return 0n;
+        }
+        else {
+            let rest = ListKeyOperators::s_countelem_key<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            if(ListOperators::s_safe_head<T>(l) === nothing) {
+                return rest + 1;
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+    recursive function s_countif<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat {
+        if(ListOperators::s_empty<T>(l)) {
+            return 0n;
+        }
+        else {
+            let rest = ListOperators::s_countif<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+            if(p[recursive?](ListOperators::s_safe_head<T>(l))) {
+                return rest + 1n;
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+    recursive function s_countif_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+        if(ListOperators::s_empty<T>(l)) {
+            return 0n;
+        }
+        else {
+            let rest = ListOperators::s_countif_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+            if(p[recursive?](ListOperators::s_safe_head<T>(l), idx)) {
+                return rest + 1n;
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+
+    recursive function s_takewhile<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            if(!p[recursive?](vv)) {
+                return List<T>@{};
+            }
+            else {
+                let rest = ListOperators::s_takewhile<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+                return ListOperators::s_cons<T>(vv, rest);
+            }
+        }
+    }
+
+    recursive function s_takewhile_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            if(!p[recursive?](vv, idx)) {
+                return List<T>@{};
+            }
+            else {
+                let rest = ListOperators::s_takewhile_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+                return ListOperators::s_cons<T>(vv, rest);
+            }
+        }
+    }
+
+    recursive function s_takeuntil<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            if(p[recursive?](vv)) {
+                return List<T>@{};
+            }
+            else {
+                let rest = ListOperators::s_takeuntil<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+                return ListOperators::s_cons<T>(vv, rest);
+            }
+        }
+    }
+
+    recursive function s_takeuntil_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            if(p[recursive?](vv, idx)) {
+                return List<T>@{};
+            }
+            else {
+                let rest = ListOperators::s_takeuntil_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+                return ListOperators::s_cons<T>(vv, rest);
+            }
+        }
+    }
+
+    recursive function s_discardwhile<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            if(p[recursive?](ListOperators::s_safe_head<T>(l))) {
+                return ListOperators::s_discarduntil<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+            }
+            else {
+                return l;
+            }
+        }
+    }
+
+    recursive function s_discardwhile_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            if(p[recursive?](ListOperators::s_safe_head<T>(l), idx)) {
+                return ListOperators::s_discarduntil_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+            }
+            else {
+                return l;
+            }
+        }
+    }
+
     recursive function s_discarduntil<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
         if(ListOperators::s_empty<T>(l)) {
             return List<T>@{};
@@ -139,6 +346,20 @@ __internal entity ListOperators provides Object {
             }
             else {
                 return ListOperators::s_discarduntil<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+            }
+        }
+    }
+
+    recursive function s_discarduntil_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            if(p[recursive?](ListOperators::s_safe_head<T>(l), idx)) {
+                return l;
+            }
+            else {
+                return ListOperators::s_discarduntil_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
             }
         }
     }
@@ -162,9 +383,304 @@ __internal entity ListOperators provides Object {
             }
         }
     }
+
+    recursive function s_discarduntillast_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let taillast = ListOperators::s_discarduntillast_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+            if(!ListOperators::s_empty<T>(taillast)) {
+                return taillast;
+            }
+            else {
+                if(p[recursive?](ListOperators::s_safe_head<T>(l), idx)) {
+                    return l;
+                }
+                else {
+                    return List<T>@{}; 
+                }
+            }
+        }
+    }
+
+    recursive function s_countuntil<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(ListOperators::s_empty<T>(l)) {
+            return none;
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            if(p[recursive?](vv)) {
+                return idx;
+            }
+            else {
+                return ListOperators::s_countuntil<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+            }
+        }
+    }
+
+    recursive function s_countuntil_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(ListOperators::s_empty<T>(l)) {
+            return none;
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            if(p[recursive?](vv, idx)) {
+                return idx;
+            }
+            else {
+                return ListOperators::s_countuntil<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+            }
+        }
+    }
+
+    recursive function s_countuntillast<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(ListOperators::s_empty<T>(l)) {
+            return none;
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let taillast = ListOperators::s_countuntillast<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+
+            if(taillast === none) {
+                if(p[recursive?](vv)) {
+                    return idx;
+                }
+                else {
+                    return none; 
+                }
+            }
+            else {
+                return taillast;
+            }
+        }
+    }
+
+    recursive function s_countuntillast_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(ListOperators::s_empty<T>(l)) {
+            return none;
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let taillast = ListOperators::s_countuntillast_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+
+            if(taillast === none) {
+                if(p[recursive?](vv, idx)) {
+                    return idx;
+                }
+                else {
+                    return none; 
+                }
+            }
+            else {
+                return taillast;
+            }
+        }
+    }
+
+    recursive function s_filter<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let rest = ListOperators::s_filter<T>[recursive](ListOperators::s_safe_tail<T>(l), p);
+            if(p[recursive?](vv)) {
+                return ListOperators::s_cons<T>(vv, rest);
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+    recursive function s_filter_idx<T>(l: List<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let rest = ListOperators::s_filter_idx<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, p);
+            if(p[recursive?](vv, idx)) {
+                return ListOperators::s_cons<T>(vv, rest);
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+    recursive function s_filter_type<T, U>(l: List<T>): List<U> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<U>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let rest = ListOperators::s_filter_type<T, U>[recursive](ListOperators::s_safe_tail<T>(l));
+            if(vv.is<U>()) {
+                return ListOperators::s_cons<U>(ListOperators::s_safeAs<U>(vv), rest);
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+    recursive function s_filter_some<T>(l: List<T>): List<T!Some> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T!Some>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let rest = ListOperators::s_filter_some<T>[recursive](ListOperators::s_safe_tail<T>(l));
+            if(vv !== none) {
+                return ListOperators::s_cons<T!Some>(vv, rest);
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
+    recursive function s_filter_something<T unique IOption>(l: List<T>): List<T!IOptionT> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T!IOptionT>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let rest = ListOperators::s_filter_something<T>[recursive](ListOperators::s_safe_tail<T>(l));
+            if(vv !== nothing) {
+                return ListOperators::s_cons<T!IOptionT>(vv.value(), rest);
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+    
+    recursive function s_cast_type<T, U>(l: List<T>): List<U> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<U>@{};
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let rest = ListOperators::s_cast_type<T, U>[recursive](ListOperators::s_safe_tail<T>(l));
+            return ListOperators::s_cons<U>(vv.as<U>(), rest);
+        }
+    }
+
+    recursive function s_slicefirst<T>(l: List<T>, k: Nat): List<T>? {
+        if(k == 0) {
+            return l;
+        }
+        elif(ListOperators::s_empty<T>(l)) {
+            return none;
+        }
+        else {
+            return ListOperators::s_slicefirst<T>[recursive](l, k - 1);
+        }
+    }
+
+    recursive function s_slicelast<T>(l: List<T>, k: Nat): List<T> | Nat {
+        if(ListOperators::s_empty<T>(l)) {
+            return 0;
+        }
+        else {
+            let lsf = ListOperators::s_slicelast<T>[recursive](l, k);
+            if(lsf istype Nat) {
+                if(lsf < k) {
+                    return lsf + 1;
+                }
+                else {
+                    return List@<T>{};
+                } 
+            }
+            else {
+                return ListOperators::s_cons<T>(ListOperators::s_safe_head<T>(l), lsf);
+            }
+        }
+    }
+
+    recursive function s_unique(l: List<T>, rl: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+        if(ListOperators::s_empty(l)) {
+            return ListOperators::s_reverse<T>(rl);
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let has = ListOperators::s_haspred<T>[recursive](rl, recursive pred(v: T): Bool => eq(vv, v));
+            if(has) {
+                ListOperators::s_unique<T>[recursive](ListOperators::s_safe_tail<T>(l), rl, eq);
+            }
+            else {
+                const nrl = ListOperators::s_cons<T>(ListOperators::s_safe_head<T>(l), rl);
+                ListOperators::s_unique<T>[recursive](ListOperators::s_safe_tail<T>(l), nrl, eq);
+            }
+        }
+    }
+
+    recursive function s_reverse(l: List<T>, rl: List<T>): List<T> {
+        if(ListOperators::s_empty(l)) {
+            return rl;
+        }
+        else {
+            const nrl = ListOperators::s_cons<T>(ListOperators::s_safe_head<T>(l), rl);
+            return ListOperators::s_reverse<T>[recursive](ListOperators::s_safe_tail<T>(l), nrl);
+        }
+    }
+
+    recursive function s_map<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<U>@{};
+        }
+        else {
+            let u = f[recursive?](ListOperators::s_safe_head<T>(l));
+            let rest = ListOperators::s_map<T, U>[recursive](ListOperators::s_safe_tail<T>(l), f);
+            return ListOperators::s_cons<T>(u, rest);
+        }
+    }
+
+    recursive function s_map_idx<T, U>(l: List<T>, idx: Nat, f: recursive? fn(_: T, _: Nat) -> U): List<U> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<U>@{};
+        }
+        else {
+            let u = f[recursive?](ListOperators::s_safe_head<T>(l), idx);
+            let rest = ListOperators::s_map_idx<T, U>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, f);
+            return ListOperators::s_cons<T>(u, rest);
+        }
+    }
 }
 
 __internal entity ListKeyOperators provides Object {
+    recursive function s_haselem_key<T grounded KeyType>(l: List<T>, v: T): Bool {
+        if(ListOperators::s_empty<T>(l)) {
+            return false;
+        }
+        else {
+            if(KeyType::equal<T>(ListOperators::s_safe_head<T>(l), v)) {
+                return true;
+            }
+            else {
+                return ListKeyOperators::s_haselem_key<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            }
+        }
+    }
+
+    recursive function s_countelem_key<T grounded KeyType>(l: List<T>, v: T): Nat {
+        if(ListOperators::s_empty<T>(l)) {
+            return 0n;
+        }
+        else {
+            let rest = ListKeyOperators::s_countelem_key<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            if(KeyType::equal<T>(ListOperators::s_safe_head<T>(l), v)) {
+                return rest + 1;
+            }
+            else {
+                return rest;
+            }
+        }
+    }
+
     recursive function s_discarduntilequal<T grounded KeyType>(l: List<T>, v: T): List<T> {
         if(ListOperators::s_empty<T>(l)) {
             return List<T>@{};
@@ -196,6 +712,133 @@ __internal entity ListKeyOperators provides Object {
                     return List<T>@{}; 
                 }
             }
+        }
+    }
+
+    recursive function s_countuntilequal<T grounded KeyType>(l: List<T>, idx: Nat, v: T): Nat? {
+        if(ListOperators::s_empty<T>(l)) {
+            return none;
+        }
+        else {
+            if(KeyType::equal<T>(ListOperators::s_safe_head<T>(l), v)) {
+                return idx;
+            }
+            else {
+                return ListOperators::s_countuntilequal<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, v);
+            }
+        }
+    }
+
+    recursive function s_countuntilequallast<T grounded KeyType>(l: List<T>, idx: Nat, v: T): Nat? {
+        if(ListOperators::s_empty<T>(l)) {
+            return none;
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let taillast = ListOperators::s_countuntilequallast<T>[recursive](ListOperators::s_safe_tail<T>(l), idx + 1, v);
+
+            if(taillast === none) {
+                if(KeyType::equal<T>(ListOperators::s_safe_head<T>(l), v)) {
+                    return idx;
+                }
+                else {
+                    return none; 
+                }
+            }
+            else {
+                return taillast;
+            }
+        }
+    }
+
+    recursive function s_unique_key<T grounded KeyType>(l: List<T>): List<T> {
+        if(ListOperators::s_empty(l)) {
+            return ListOperators::s_reverse<T>(rl);
+        }
+        else {
+            let vv = ListOperators::s_safe_head<T>(l);
+            let has = ListOperators::s_haselem_key<T>[recursive](rl, vv);
+            if(has) {
+                ListOperators::s_unique_key<T>[recursive](ListOperators::s_safe_tail<T>(l), rl, eq);
+            }
+            else {
+                const nrl = ListOperators::s_cons<T>(ListOperators::s_safe_head<T>(l), rl);
+                ListOperators::s_unique_key<T>[recursive](ListOperators::s_safe_tail<T>(l), nrl, eq);
+            }
+        }
+    }
+}
+
+__internal entity ListArithOperators provides Object {
+    recursive function s_argmin<T, U unique Orderable>(l: List<T>, v: T, u: U, f: recursive? fn(_: T) -> U): T {
+        if(ListOperators::s_empty<T>(l)) {
+            return v;
+        }
+        else {
+            let vval = ListOperators::s_safe_head<T>(l);
+            let uval = f[recursive?](vval);
+            if(uval < u) {
+                return ListArithOperators::s_argmin<T, U>[recursive](ListOperators::s_safe_tail<T>(l), vval, uval, f);
+            }
+            else {
+                return ListArithOperators::s_argmin<T, U>[recursive](ListOperators::s_safe_tail<T>(l), v, u, f);
+            }
+        }
+    }
+
+    recursive function s_min<T unique Orderable>(l: List<T>, v: T): T {
+        if(ListOperators::s_empty<T>(l)) {
+            return v;
+        }
+        else {
+            let vval = ListOperators::s_safe_head<T>(l);
+            if(vval < v) {
+                return ListArithOperators::s_min<T>[recursive](ListOperators::s_safe_tail<T>(l), vval);
+            }
+            else {
+                return ListArithOperators::s_min<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            }
+        }
+    }
+
+    recursive function s_argmax<T, U unique Orderable>(l: List<T>, v: T, u: U, f: recursive? fn(_: T) -> U): T {
+        if(ListOperators::s_empty<T>(l)) {
+            return v;
+        }
+        else {
+            let vval = ListOperators::s_safe_head<T>(l);
+            let uval = f[recursive?](vval);
+            if(uval > u) {
+                return ListArithOperators::s_argmin<T, U>[recursive](ListOperators::s_safe_tail<T>(l), vval, uval, f);
+            }
+            else {
+                return ListArithOperators::s_argmin<T, U>[recursive](ListOperators::s_safe_tail<T>(l), v, u, f);
+            }
+        }
+    }
+
+    recursive function s_max<T unique Orderable>(l: List<T>, v: T): T {
+        if(ListOperators::s_empty<T>(l)) {
+            return v;
+        }
+        else {
+            let vval = ListOperators::s_safe_head<T>(l);
+            if(vval > v) {
+                return ListArithOperators::s_min<T>[recursive](ListOperators::s_safe_tail<T>(l), vval);
+            }
+            else {
+                return ListArithOperators::s_min<T>[recursive](ListOperators::s_safe_tail<T>(l), v);
+            }
+        }
+    }
+
+    recursive function s_sum<T unique Algebraic>(l: List<T>): T {
+        if(ListOperators::s_empty<T>(l)) {
+            return T::zero;
+        }
+        else {
+            let rest = ListArithOperators::s_sum<T>[recursive](ListOperators::s_safe_tail<T>(l));
+            return ListOperators::s_safe_head<T>(l) + rest; 
         }
     }
 }
