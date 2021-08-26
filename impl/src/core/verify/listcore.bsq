@@ -12,28 +12,156 @@ __internal entity ListOperators provides Object {
     __assume_safe s_safeAs<T, U>(v: T): U # list_safeas
 
     __safe function s_empty<T>(l: List<T>): Bool # list_empty
+    
+    __safe function s_is1<T>(l: List<T>): Bool # list_is1
+    __safe function s_1at_0<T>(l: List<T>): T # list_1at_0
+
+    __safe function s_is2<T>(l: List<T>): Bool # list_is2
+    __safe function s_2at_0<T>(l: List<T>): T # list_2at_0
+    __safe function s_2at_1<T>(l: List<T>): T # list_2at_1
+
+    __safe function s_is3<T>(l: List<T>): Bool # list_is3
+    __safe function s_1at_0<T>(l: List<T>): T # list_3at_0
+    __safe function s_2at_1<T>(l: List<T>): T # list_3at_1
+    __safe function s_3at_2<T>(l: List<T>): T # list_3at_2
+
+    __safe function s_is3<T>(l: List<T>): Bool # list_is3
+    __safe function s_1at_0<T>(l: List<T>): T # list_3at_0
+    __safe function s_2at_1<T>(l: List<T>): T # list_3at_1
+    __safe function s_3at_2<T>(l: List<T>): T # list_3at_2
+
+    __safe function s_is4<T>(l: List<T>): Bool # list_is4
+    __safe function s_4at_0<T>(l: List<T>): T # list_4at_0
+    __safe function s_4at_1<T>(l: List<T>): T # list_4at_1
+    __safe function s_4at_2<T>(l: List<T>): T # list_4at_2
+    __safe function s_4at_3<T>(l: List<T>): T # list_4at_3
 
     __assume_safe function s_cons<T>(v: T, l: List<T>): List<T> # list_cons
     __assume_safe function s_safe_head<T>(l: List<T>): T # list_head
     __assume_safe function s_safe_tail<T>(l: List<T>): List<T> # list_tail
 
-    recursive function s_size<T>(l: List<T>): Nat {
-        if(start == end) {
+    function normalize(l: List<T>): List<T> {
+        if(ListOperators::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        else {
+            let e0 = ListOperators::s_safe_head<T>(l);
+            let l0 = ListOperators::s_safe_tail<T>(l);
+            if(ListOperators::s_empty<T>(l0)) {
+                return List<T>@{e0};
+            }
+            else {
+                let e1 = ListOperators::s_safe_head<T>(l0);
+                let l1 = ListOperators::s_safe_tail<T>(l0);
+                if(ListOperators::s_empty<T>(l1)) {
+                    return List<T>@{e0, e1};
+                }
+                else {
+                    let e2 = ListOperators::s_safe_head<T>(l1);
+                    let l2 = ListOperators::s_safe_tail<T>(l1);
+                    if(ListOperators::s_empty<T>(l2)) {
+                        return List<T>@{e0, e1, e2};
+                    }
+                    else {
+                        let e3 = ListOperators::s_safe_head<T>(l2);
+                        let l3 = ListOperators::s_safe_tail<T>(l2);
+                        if(ListOperators::s_empty<T>(l3)) {
+                            return List<T>@{e0, e1, e2, e3};
+                        }
+                        else {
+                            return l;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function normalizeIntoLL(l: List<T>): List<T> {
+        if(ListOperators::s_is1<T>(l)) {
+            return ListOperators::s_cons<T>(ListOperators::s_1at_0<T>(l), List<T>@{});
+        }
+        elif(ListOperators::s_is2<T>(l)) {
+            return ListOperators::s_cons<T>(ListOperators::s_2at_0<T>(l), 
+                   ListOperators::s_cons<T>(ListOperators::s_2at_1<T>(l), List<T>@{}));
+        }
+        elif(ListOperators::s_is3<T>(l)) {
+            return ListOperators::s_cons<T>(ListOperators::s_3at_0<T>(l),
+                   ListOperators::s_cons<T>(ListOperators::s_3at_1<T>(l), 
+                   ListOperators::s_cons<T>(ListOperators::s_3at_2<T>(l), List<T>@{})));
+        }
+        elif(ListOperators::s_is4<T>(l)) {
+            return ListOperators::s_cons<T>(ListOperators::s_4at_0<T>(l),
+                   ListOperators::s_cons<T>(ListOperators::s_4at_1<T>(l),
+                   ListOperators::s_cons<T>(ListOperators::s_4at_2T>(l), 
+                   ListOperators::s_cons<T>(ListOperators::s_4at_3<T>(l), List<T>@{}))));
+        }
+        else {
+            return l;
+        }
+    }
+
+    recursive function s_size_rec<T>(l: List<T>): Nat {
+        if(ListOperators::s_empty<T>(l)) {
             return 0n;
         }
         else {
-            let rest = ListOperators::s_size<T>[recursive](ListOperators::s_safe_tail<T>(l));
+            let rest = ListOperators::s_size_rec<T>[recursive](ListOperators::s_safe_tail<T>(l));
             return rest + 1;
         }
     }
 
-    recursive function s_ints(start: Int, end: Int): List<Int> {
+    function s_size<T>(l: List<T>): Nat {
+        if(ListOperators::s_empty<T>(l)) {
+            return 0n;
+        }
+        elif(ListOperators::s_is1<T>(l)) {
+            return 1n;
+        }
+        elif(ListOperators::s_is2<T>(l)) {
+            return 2n;
+        }
+        elif(ListOperators::s_is3<T>(l)) {
+            return 3n;
+        }
+        elif(ListOperators::s_is4<T>(l)) {
+            return 4n;
+        }
+        else {
+            return ListOperators::s_size_rec<T>[recursive](l);
+        }
+    }
+
+    recursive function s_ints_rec(start: Int, end: Int): List<Int> {
         if(start == end) {
             return List<Int>@{};
         }
         else {
-            let rest = ListOperators::s_ints<Int>[recursive](start + 1, end);
+            let rest = ListOperators::s_ints_rec<Int>[recursive](start + 1, end);
             return ListOperators::s_cons<Int>(start, rest);
+        }
+    }
+
+    recursive function s_ints(start: Int, end: Int): List<Int> {
+        let dist = end - start;
+
+        if(dist == 0) {
+            return List<T>@{};
+        }
+        elif(dist == 1) {
+            return List<T>@{start};
+        }
+        elif(dist == 2) {
+            return List<T>@{start, start + 1n};
+        }
+        elif(dist == 3) {
+            return List<T>@{start, start + 1n, start + 2n};
+        }
+        elif(dist == 4) {
+            return List<T>@{start, start + 1n, start + 2n, start + 4n};
+        }
+        else {
+            return ListOperators::s_ints_rec<T>[recursive](start, end);
         }
     }
 
