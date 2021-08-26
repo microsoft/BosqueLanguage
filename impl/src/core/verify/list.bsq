@@ -2208,11 +2208,11 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     method pushBack(v: T): List<T> {
-        return ListOperators::s_concat2_Helper(this, List<T>@{v});
+        return ListOperators::s_concat2_Helper<T>(this, List<T>@{v});
     }
 
     method pushFront(v: T): List<T> {
-        return ListOperators::s_concat2_Helper(List<T>@{v}, this);
+        return ListOperators::s_concat2_Helper<T>(List<T>@{v}, this);
     }
 
     method popBack(): List<T> 
