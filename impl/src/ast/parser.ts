@@ -42,7 +42,6 @@ const KeywordStrings = [
     "of",
     "ok",
     "operator",
-    "private",
     "provides",
     "ref",
     "out",

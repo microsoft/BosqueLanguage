@@ -14,7 +14,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
             return List<Int>@{};
         }
         else {
-            return ListOperators::s_rangeInt(start, end);
+            return ListOps::s_range_int(start, end);
         }
     }
 
@@ -25,27 +25,27 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
             return List<Nat>@{};
         }
         else {
-            return ListOperators::s_rangeNat(start, end);
+            return ListOps::s_range_nat(start, end);
         }
     }
 
     method index(): List<[Nat, T]> {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return List<[Nat, T]>@{};
         }
         else {
-            return ListOperators::s_zipindex<T>(this, ListOperators::s_size<T>(this));
+            return ListOps::s_zip_index<T>(this, ListOps::s_size<T>(this));
         }
     }
 
     method zip<U=?>(l: List<U>): List<[T, U]> {
-        check ListOperators::s_size<T>(this) == ListOperators::s_size<U>(l);
+        check ListOps::s_size<T>(this) == ListOps::s_size<U>(l);
 
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return List<[T, U]>@{};
         }
         else {
-            return ListOperators::s_zip<T, U>(this, l, ListOperators::s_size<T>(this));
+            return ListOps::s_zip<T, U>(this, l, ListOps::s_size<T>(this));
         }
     }
 
@@ -58,72 +58,72 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
             return List<T>@{};
         }
         else {
-            return ListOperators::s_fill<T>(k, val);
+            return ListOps::s_fill<T>(k, val);
         }
     }
 
     function concat(...ll: List<List<T>>): List<T> {
-        if(ListOperators::s_empty<List<T>>(ll)) {
+        if(ListFlatOps::s_empty<List<T>>(ll)) {
             reutrn List<T>@{};
         }
         else {
-            let count = ListOperators::s_size<List<T>>(ll);
+            let count = ListOps::s_size<List<T>>(ll);
             if(count == 1) {
-                return ListOperators::s_safe_get<List<T>>(ll, 0n);
+                return ListOps::s_safe_get<List<T>>(ll, 0n);
             }
             elif(count == 2) {
-                return ListOperators::s_concat2_Helper<T>(ListOperators::s_safe_get<List<T>>(ll, 0n), ListOperators::s_safe_get<List<T>>(ll, 1n));
+                return ListOps::s_concat2_Helper<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
             }
             else if(count == 3) {
-                let fl = ListOperators::s_concat2_Helper<T>(ListOperators::s_safe_get<List<T>>(ll, 0n), ListOperators::s_safe_get<List<T>>(ll, 1n));
-                return ListOperators::s_concat2_Helper<T>(fl, ListOperators::s_safe_get<List<T>>(ll, 2n));
+                let fl = ListOps::s_concat2_Helper<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
+                return ListOps::s_concat2_Helper<T>(fl, ListOps::s_safe_get<List<T>>(ll, 2n));
             }
             else {
                 //TODO: we need to add a s_flatten constructor that is either an unroll for model generation or 
                 //      an \forall k \exists i, j s.t. get(k) = ll.get(i).get(j) /\ \forall i, j => \exists k s.t. get(k) = ll.get(i).get(j) 
                 check count == 4; 
 
-                let fl = ListOperators::s_concat2_Helper<T>(ListOperators::s_safe_get<List<T>>(ll, 0n), ListOperators::s_safe_get<List<T>>(ll, 1n));
-                let sl = ListOperators::s_concat2_Helper<T>(ListOperators::s_safe_get<List<T>>(ll, 2n), ListOperators::s_safe_get<List<T>>(ll, 3n));
-                return ListOperators::s_concat2_Helper<T>(fl, sl);
+                let fl = ListOps::s_concat2_Helper<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
+                let sl = ListOps::s_concat2_Helper<T>(ListOps::s_safe_get<List<T>>(ll, 2n), ListOps::s_safe_get<List<T>>(ll, 3n));
+                return ListOps::s_concat2_Helper<T>(fl, sl);
             }
         }
     }
 
     method size(): Nat {
-        return ListOperators::s_size<T>(this);
+        return ListOps::s_size<T>(this);
     }
 
     method empty(): Bool {
-        return ListOperators::s_empty<T>(this);
+        return ListFlatOps::s_empty<T>(this);
     }
 
     method front(): T {
-        check !ListOperators::s_empty<T>(this);
-        return ListOperators::s_safe_get<T>(this, 0n);
+        check !ListFlatOps::s_empty<T>(this);
+        return ListOps::s_safe_get<T>(this, 0n);
     }
 
     method frontOrNone(): T? {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return none;
         }
         else {
-            return ListOperators::s_safe_get<T>(this, 0n);
+            return ListOps::s_safe_get<T>(this, 0n);
         }
     }
 
     method frontOption(): Option<T> {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return nothing;
         }
         else {
-            return something(ListOperators::s_safe_get<T>(this, 0n));
+            return something(ListOps::s_safe_get<T>(this, 0n));
         }
     }
 
     method frontTry(out? res: T): Bool {
-        if(!ListOperators::s_empty<T>(this)) {
-            res = ListOperators::s_safe_get<T>(this, 0n);
+        if(!ListFlatOps::s_empty<T>(this)) {
+            res = ListOps::s_safe_get<T>(this, 0n);
             return true;
         }
         else {
@@ -132,31 +132,31 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     method back(): T {
-        check !ListOperators::s_empty<T>(this);
-        return ListOperators::s_safe_get<T>(this, ListOperators::s_size<T>(this) - 1n);
+        check !ListFlatOps::s_empty<T>(this);
+        return ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n);
     }
 
     method backOrNone(): T? {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return none;
         }
         else {
-            return ListOperators::s_safe_get<T>(this, ListOperators::s_size<T>(this) - 1n);
+            return ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n);
         }
     }
 
     method backOption(): Option<T> {
-        if(ListOperators::s_empty<T>(this)){
+        if(ListFlatOps::s_empty<T>(this)){
             return nothing;
         }
         else {
-            return something(ListOperators::s_safe_get<T>(this, ListOperators::s_size<T>(this) - 1n));
+            return something(ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n));
         }
     }
 
     method backTry(out? res: T): Bool {
-        if(!ListOperators::s_empty<T>(this)) {
-            res = ListOperators::s_safe_get<T>(this, ListOperators::s_size<T>(this) - 1n);
+        if(!ListFlatOps::s_empty<T>(this)) {
+            res = ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n);
             return true;
         }
         else {
@@ -165,13 +165,13 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     method get(i: Nat): T {
-        check i < ListOperators::s_size<T>(this);
-        return ListOperators::s_safe_get<T>(this, i);
+        check i < ListOps::s_size<T>(this);
+        return ListOps::s_safe_get<T>(this, i);
     }
 
     method getOrNone(i: Nat): T? {
-        if(i < ListOperators::s_size<T>(this)) {
-            return ListOperators::s_safe_get<T>(this, i);
+        if(i < ListOps::s_size<T>(this)) {
+            return ListOps::s_safe_get<T>(this, i);
         }
         else {
             return none;
@@ -179,8 +179,8 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     method getOption(i: Nat): Option<T> {
-        if(i < ListOperators::s_size<T>(this)) {
-            return something(ListOperators::s_safe_get<T>(this, i));
+        if(i < ListOps::s_size<T>(this)) {
+            return something(ListOps::s_safe_get<T>(this, i));
         }
         else {
             return nothing;
@@ -188,8 +188,8 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     method getTry(i: Nat, out? res: T): Bool {
-        if(i < ListOperators::s_size<T>(this)) {
-            res = ListOperators::s_safe_get<T>(this, i);
+        if(i < ListOps::s_size<T>(this)) {
+            res = ListOps::s_safe_get<T>(this, i);
             return true;
         }
         else {
@@ -197,9 +197,10 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
     }
 
+xxxx;
     recursive? method single(p: recursive? pred(_: T) -> Bool): T {
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
-        let lastidx = ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
+        let lastidx = ListOps::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
 
         check lastidx == idx;
         check idx < ListOperators::s_size<T>(this);
