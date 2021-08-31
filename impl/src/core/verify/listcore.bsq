@@ -272,38 +272,39 @@ __internal entity ListFlatOps provides Object {
     }
 }
 
-__internal entity ListBlockOps provides Object{
+__internal entity ListBlockOps provides Object {
     __safe function s_at0<T>(l: List<T>): List<T> # block_list_at0
     __safe function s_at1<T>(l: List<T>): List<T> # block_list_at1
     __safe function s_at2<T>(l: List<T>): List<T> # block_list_at2
 
     __safe function s_isBlockList<T>(l: List<T>): Nat # list_isblock
-    __assume_safe s_at(l: List<T>, i Nat): T # block_list_at
 
-    recursive? function s_has_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        if(ListOperators::s_empty<T>(l)) {
-            return false;
+    function s_at<T>(l: List<T>, i Nat): T {
+        if(i < 3) {
+            return ListFlatOps::s_at<T>(ListBlockOps::s_at0<T>(l), i);
+        }
+        elif(i < 6) {
+            return ListFlatOps::s_at<T>(ListBlockOps::s_at0<T>(l), i - 3);
         }
         else {
-            return ListOperators::s_or3(
-                ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at0<T>(l), p),
-                ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at1<T>(l), p),
-                ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at2<T>(l), p)
-            );
+            return ListFlatOps::s_at<T>(ListBlockOps::s_at0<T>(l), i - 6);
         }
     }
 
-    recursive? function s_has_pred_check_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        if(ListOperators::s_empty<T>(l)) {
-            return false;
-        }
-        else {
-            return ListOperators::s_or3(
-                ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_at0<T>(l), 0, p),
-                ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_at1<T>(l), 3, p),
-                ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_at2<T>(l), 6, p)
-            );
-        }
+    recursive? function s_has_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
+        return ListOperators::s_or3(
+            ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at0<T>(l), p),
+            ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at1<T>(l), p),
+            ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at2<T>(l), p)
+        );
+    }
+
+    recursive? function s_has_pred_check_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        return ListOperators::s_or3(
+            ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_at0<T>(l), bidx, p),
+            ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_at1<T>(l), bidx + 3, p),
+            ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_at2<T>(l), bidx + 6, p)
+        );
     }
 
     recursive? function s_find_index_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat? {
@@ -391,6 +392,69 @@ __internal entity ListBlockOps provides Object{
     }
 }
 
+__internal entity ListConcatOps provides Object {
+    __safe function s_left<T>(l: List<T>): List<T> # concat_list_left
+    __safe function s_right<T>(l: List<T>): List<T> # concat_list_right
+
+    __safe function s_isConcatList<T>(l: List<T>): Nat # list_isconcat
+
+    recursive function s_concat_lropt_at<T>(l: List<T>, i Nat): T {
+        if(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_at<T>(l, i);
+        }
+        elif(ListBlockOps::s_isBlockList<T>(l)) {
+            return ListBlockOps::s_at<T>(l, i);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            return ListConcatOps::s_at<T>[recursive](l, i);
+        }
+        else {
+            return return ListOperators::s_safe_get_impl<T>(l, i);
+        }
+    }
+
+    recursive function s_at<T>(l: List<T>, i Nat): T {
+        let ll = ListConcatOps::s_left<T>(l);
+        let count = ListOperators::s_size<T>(ll);
+
+        if(i < count) {
+            return ListConcatOps::s_concat_lropt_at<T>(ll, i);
+        }
+        else {
+            let rl = ListConcatOps::s_right<T>(l);
+            let ri = i - count;
+
+            return ListConcatOps::s_concat_lropt_at<T>(rl, ri);
+        }
+    }
+
+    recursive? function s_concat_lropt_has_prec_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool)): Bool {
+        xxxx;
+        if(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_at<T>(l, i);
+        }
+        elif(ListBlockOps::s_isBlockList<T>(l)) {
+            return ListBlockOps::s_at<T>(l, i);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            return ListConcatOps::s_at<T>[recursive](l, i);
+        }
+        else {
+            return return ListOperators::s_safe_get_impl<T>(l, i);
+        }
+    }
+
+    recursive? function s_has_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
+        return ListOperators::s_or3(
+            ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at0<T>(l), p),
+            ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_at2<T>(l), p)
+        );
+    }
+
+    recursive? function s_has_pred_check_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+    }
+}
+
 __internal entity ISequence provides Object {
     __safe function s_size(isq: ISequence): Nat # isequence_size
 }
@@ -463,6 +527,9 @@ __internal entity ListOperators provides Object {
         }
         elif(ListBlockOps::s_isBlockList<T>(l)) {
             return ListBlockOps::s_at<T>(l, i);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            return ListConcatOps::s_at<T>[recursive](l, i);
         }
         else {
 #endif
