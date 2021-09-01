@@ -21,10 +21,16 @@ __internal entity ListFlatOps provides Object {
     __assume_safe function s_3at1<T>(l: List<T>): T # flat_list_3at1
     __assume_safe function s_3at2<T>(l: List<T>): T # flat_list_3at2
 
-    //equiv s_empty | s_is1 | s_is2 | s_is3
+    __safe function s_is4<T>(l: List<T>): Bool # flat_list_is4
+    __assume_safe function s_4at0<T>(l: List<T>): T # flat_list_4at0
+    __assume_safe function s_4at1<T>(l: List<T>): T # flat_list_4at1
+    __assume_safe function s_4at2<T>(l: List<T>): T # flat_list_4at2
+    __assume_safe function s_4at3<T>(l: List<T>): T # flat_list_4at3
+
+    //equiv s_empty | s_is1 | s_is2 | s_is3 | s_is4
     __safe function s_isFlatList<T>(l: List<T>): Bool # list_isflat
 
-    function s_at<T>(l: List<T>, i Nat): T {
+    function s_at<T>(l: List<T>, i: Nat): T {
         if(ListFlatOps::s_is1<T>(l)) {
             return ListFlatOps::s_1at0<T>(l);
         }
@@ -36,7 +42,7 @@ __internal entity ListFlatOps provides Object {
                 return ListFlatOps::s_2at1<T>(l);
             }
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             if(i == 0) {
                 return ListFlatOps::s_3at0<T>(l);
             }
@@ -47,6 +53,111 @@ __internal entity ListFlatOps provides Object {
                 return ListFlatOps::s_3at2<T>(l);
             }
         }
+        else {
+            if(i == 0) {
+                return ListFlatOps::s_4at0<T>(l);
+            }
+            elif(i == 1) {
+                return ListFlatOps::s_4at1<T>(l);
+            }
+            elif(i == 2) {
+                return ListFlatOps::s_4at2<T>(l);
+            }
+            else {
+                return ListFlatOps::s_4at3<T>(l);
+            }
+        }
+    }
+
+    function s_slice_front<T>(l: List<T>, start: Nat): List<T> {
+        if(start == 0) {
+            return l;
+        }
+        elif(start == 1) {
+            if(ListFlatOps::s_is4<T>(l)) {
+                return List<T>@{ListFlatOps::s_4at1<T>(l), ListFlatOps::s_4at2<T>(l), ListFlatOps::s_4at3<T>(l)};
+            }
+            elif(ListFlatOps::s_is3<T>(l)) {
+                return List<T>@{ListFlatOps::s_3at1<T>(l), ListFlatOps::s_3at2<T>(l)};
+            }
+            elif(ListFlatOps::s_is2<T>(l)) {
+                return List<T>@{ListFlatOps::s_2at1<T>(l)};
+            }
+            else {
+                return List<T>@{};    
+            }
+        }
+        elif(start == 2) {
+            if(ListFlatOps::s_is4<T>(l)) {
+                return List<T>@{ListFlatOps::s_4at2<T>(l), ListFlatOps::s_4at3<T>(l)};
+            }
+            elif(ListFlatOps::s_is3<T>(l)) {
+                return List<T>@{ListFlatOps::s_3at2<T>(l)};
+            }
+            else {
+                return List<T>@{};    
+            }
+        }
+        else(start == 3) {
+            if(ListFlatOps::s_is4<T>(l)) {
+                return List<T>@{ListFlatOps::s_4at3<T>(l)};
+            }
+            else {
+                return List<T>@{};    
+            }
+        }
+        else {
+            return List<T>@{};
+        }
+    }
+
+    function s_slice_back<T>(l: List<T>, end: Nat): List<T> {
+        if(end == 0) {
+            return List<T>@{};
+        }
+        elif(end == 3) {
+            if(ListFlatOps::s_is4<T>(l)) {
+                return List<T>@{ListFlatOps::s_4at0<T>(l), ListFlatOps::s_4at1<T>(l), ListFlatOps::s_4at2<T>(l)};
+            }
+            else {
+                return l;    
+            }
+        }
+        elif(end == 2) {
+            if(ListFlatOps::s_is4<T>(l)) {
+                return List<T>@{ListFlatOps::s_4at0<T>(l), ListFlatOps::s_4at1<T>(l)};
+            }
+            elif(ListFlatOps::s_is3<T>(l)) {
+                return List<T>@{ListFlatOps::s_3at0<T>(l), ListFlatOps::s_3at1<T>(l)};
+            }
+            else {
+                return l;    
+            }
+        }
+        else(start == 1) {
+            iif(ListFlatOps::s_is4<T>(l)) {
+                return List<T>@{ListFlatOps::s_4at0<T>(l)};
+            }
+            elif(ListFlatOps::s_is3<T>(l)) {
+                return List<T>@{ListFlatOps::s_3at0<T>(l)};
+            }
+            elif(ListFlatOps::s_is2<T>(l)) {
+                return List<T>@{ListFlatOps::s_2at0<T>(l)};
+            }
+            else {
+                return l;
+            }
+        }
+        else {
+            return l;
+        }
+    }
+
+    function s_slice<T>(l: List<T>, start: Nat, end: Nat): List<T> {
+        let ff = ListFlatOps::s_slice_front<T>(l, start);
+        let ll = ListFlatOps::s_slice_back<T>(ff, end - start);
+
+        return ll;
     }
 
     recursive? function s_has_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
@@ -59,8 +170,11 @@ __internal entity ListFlatOps provides Object {
         else(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_or2(p[recursive?](ListFlatOps::s_2at0(l)), p[recursive?](ListFlatOps::s_2at1(l)));
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             return ListOps::s_or3(p[recursive?](ListFlatOps::s_3at0(l)), p[recursive?](ListFlatOps::s_3at1(l)), p[recursive?](ListFlatOps::s_3at2(l)));
+        }
+        else {
+            return ListOps::s_or4(p[recursive?](ListFlatOps::s_4at0(l)), p[recursive?](ListFlatOps::s_4at1(l)), p[recursive?](ListFlatOps::s_4at2(l)), p[recursive?](ListFlatOps::s_4at3(l)));
         }
     }
 
@@ -74,8 +188,11 @@ __internal entity ListFlatOps provides Object {
         else(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_or2(p[recursive?](ListFlatOps::s_2at0(l), bidx), p[recursive?](ListFlatOps::s_2at1(l), bidx + 1n));
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             return ListOps::s_or3(p[recursive?](ListFlatOps::s_3at0(l), bidx), p[recursive?](ListFlatOps::s_3at1(l), bidx + 1n), p[recursive?](ListFlatOps::s_3at2(l), bidx + 2n));
+        }
+        else {
+            return ListOps::s_or4(p[recursive?](ListFlatOps::s_4at0(l), bidx), p[recursive?](ListFlatOps::s_4at1(l), bidx + 1n), p[recursive?](ListFlatOps::s_4at2(l), bidx + 2n), p[recursive?](ListFlatOps::s_4at3(l), bidx + 3n));
         }
     }
 
@@ -89,8 +206,11 @@ __internal entity ListFlatOps provides Object {
         else(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_and2(p[recursive?](ListFlatOps::s_2at0(l)), p[recursive?](ListFlatOps::s_2at1(l)));
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             return ListOps::s_and3(p[recursive?](ListFlatOps::s_3at0(l)), p[recursive?](ListFlatOps::s_3at1(l)), p[recursive?](ListFlatOps::s_3at2(l)));
+        }
+        else {
+            return ListOps::s_and4(p[recursive?](ListFlatOps::s_4at0(l)), p[recursive?](ListFlatOps::s_4at1(l)), p[recursive?](ListFlatOps::s_4at2(l)), p[recursive?](ListFlatOps::s_4at3(l)));
         }
     }
 
@@ -104,8 +224,11 @@ __internal entity ListFlatOps provides Object {
         else(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_and2(p[recursive?](ListFlatOps::s_2at0(l), bidx), p[recursive?](ListFlatOps::s_2at1(l), bidx + 1n));
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l) {
             return ListOps::s_and3(p[recursive?](ListFlatOps::s_3at0(l), bidx), p[recursive?](ListFlatOps::s_3at1(l), bidx + 1n), p[recursive?](ListFlatOps::s_3at2(l), bidx + 2n));
+        }
+        else {
+            return ListOps::s_and4(p[recursive?](ListFlatOps::s_4at0(l), bidx), p[recursive?](ListFlatOps::s_4at1(l), bidx + 1n), p[recursive?](ListFlatOps::s_4at2(l), bidx + 2n), p[recursive?](ListFlatOps::s_4at3(l), bidx + 3n));
         }
     }
 
@@ -132,7 +255,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             if(p[recursive?](ListFlatOps::s_3at0(l))) {
                 return bidx;
             }
@@ -141,6 +264,23 @@ __internal entity ListFlatOps provides Object {
             }
             elif(p[recursive?](ListFlatOps::s_3at2(l))) {
                 return bidx + 2n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            if(p[recursive?](ListFlatOps::s_4at0(l))) {
+                return bidx;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at1(l))) {
+                return bidx + 1n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at2(l))) {
+                return bidx + 2n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at3(l))) {
+                return bidx + 3n;
             }
             else {
                 return none;
@@ -171,7 +311,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             if(p[recursive?](ListFlatOps::s_3at0(l), bidx)) {
                 return bidx;
             }
@@ -179,6 +319,23 @@ __internal entity ListFlatOps provides Object {
                 return bidx + 1n;
             }
             elif(p[recursive?](ListFlatOps::s_3at2(l), bidx + 2n)) {
+                return bidx + 2n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            if(p[recursive?](ListFlatOps::s_4at0(l), bidx)) {
+                return bidx;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at1(l), bidx + 1n)) {
+                return bidx + 1n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at2(l), bidx + 2n)) {
+                return bidx + 2n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at3(l), bidx + 3n)) {
                 return bidx + 2n;
             }
             else {
@@ -210,7 +367,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             if(p[recursive?](ListFlatOps::s_3at2(l))) {
                 return bidx + 2n;
             }
@@ -218,6 +375,23 @@ __internal entity ListFlatOps provides Object {
                 return bidx + 1n;
             }
             elif(p[recursive?](ListFlatOps::s_3at0(l))) {
+                return bidx;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            if(p[recursive?](ListFlatOps::s_4at3(l))) {
+                return bidx + 3n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at2(l))) {
+                return bidx + 2n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at1(l))) {
+                return bidx + 1n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at0(l))) {
                 return bidx;
             }
             else {
@@ -249,7 +423,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             if(p[recursive?](ListFlatOps::s_3at2(l), bidx + 2n)) {
                 return bidx + 2n;
             }
@@ -257,6 +431,23 @@ __internal entity ListFlatOps provides Object {
                 return bidx + 1n;
             }
             elif(p[recursive?](ListFlatOps::s_3at0(l), bidx)) {
+                return bidx;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            if(p[recursive?](ListFlatOps::s_4at3(l), bidx + 3n)) {
+                return bidx + 3n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at2(l), bidx + 2n)) {
+                return bidx + 2n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at1(l), bidx + 1n)) {
+                return bidx + 1n;
+            }
+            elif(p[recursive?](ListFlatOps::s_4at0(l), bidx)) {
                 return bidx;
             }
             else {
@@ -275,8 +466,11 @@ __internal entity ListFlatOps provides Object {
         else(ListFlatOps::s_is2<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_2at0(l)), f[recursive?](ListFlatOps::s_2at1(l))};
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_3at0(l)), f[recursive?](ListFlatOps::s_3at1(l)), f[recursive?](ListFlatOps::s_3at2(l))};
+        }
+        else {
+            return List<U>@{f[recursive?](ListFlatOps::s_4at0(l)), f[recursive?](ListFlatOps::s_4at1(l)), f[recursive?](ListFlatOps::s_4at2(l)), f[recursive?](ListFlatOps::s_4at3(l))};
         }
     }
 
@@ -290,8 +484,11 @@ __internal entity ListFlatOps provides Object {
         else(ListFlatOps::s_is2<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_2at0(l), bidx), f[recursive?](ListFlatOps::s_2at1(l), bidx + 1n)};
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_3at0(l), bidx), f[recursive?](ListFlatOps::s_3at1(l), bidx + 1n), f[recursive?](ListFlatOps::s_3at2(l), bidx + 2n)};
+        }
+        else {
+            return List<U>@{f[recursive?](ListFlatOps::s_4at0(l), bidx), f[recursive?](ListFlatOps::s_4at1(l), bidx + 1n), f[recursive?](ListFlatOps::s_4at2(l), bidx + 2n), f[recursive?](ListFlatOps::s_4at3(l), bidx + 3n)};
         }
     }
 
@@ -326,7 +523,7 @@ __internal entity ListFlatOps provides Object {
                 return List<T>@{};
             }
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             let at0 = ListFlatOps::s_3at0(l);
             let pat0 = p[recursive?](at0);
             let at1 = ListFlatOps::s_3at1(l);
@@ -359,6 +556,65 @@ __internal entity ListFlatOps provides Object {
                 return List<T>@{};
             }
         }
+        else {
+            let at0 = ListFlatOps::s_4at0(l);
+            let pat0 = p[recursive?](at0);
+            let at1 = ListFlatOps::s_4at1(l);
+            let pat1 = p[recursive?](at1);
+            let at2 = ListFlatOps::s_4at2(l);
+            let pat2 = p[recursive?](at2);
+            let at3 = ListFlatOps::s_4at3(l);
+            let pat3 = p[recursive?](at3);
+
+            if(ListOps::s_and4(pat0, pat1, pat2, pat3) {
+                return l;
+            }
+            elif(ListOps::s_and3(pat1, pat2, pat3) {
+                return List<T>@{at1, at2, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat2, pat3) {
+                return List<T>@{at0, at2, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat1, pat3) {
+                return List<T>@{at0, at1, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat1, pat2) {
+                return List<T>@{at0, at1, at2};
+            }
+            elif(ListOps::s_and2(pat0, pat1) {
+                return List<T>@{at0, at1};
+            }
+            elif(ListOps::s_and2(pat0, pat2) {
+                return List<T>@{at0, at2};
+            }
+            elif(ListOps::s_and2(pat0, pat3) {
+                return List<T>@{at0, at3};
+            }
+            elif(ListOps::s_and2(pat1, pat2) {
+                return List<T>@{at1, at2};
+            }
+            elif(ListOps::s_and2(pat1, pat3) {
+                return List<T>@{at1, at3};
+            }
+            elif(ListOps::s_and2(pat2, pat3) {
+                return List<T>@{at2, at3};
+            }
+            elif(pat0) {
+                return List<T>@{at0};
+            }
+            elif(pat1) {
+                return List<T>@{at1};
+            }
+            elif(pat2) {
+                return List<T>@{at2};
+            }
+            elif(pat3) {
+                return List<T>@{at3};
+            }
+            else {
+                return List<T>@{};
+            }
+        }
     }
 
     recursive? function s_filter_idx<T, U>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
@@ -392,7 +648,7 @@ __internal entity ListFlatOps provides Object {
                 return List<T>@{};
             }
         }
-        else {
+        elif(ListFlatOps::s_is3<T>(l)) {
             let at0 = ListFlatOps::s_3at0(l);
             let pat0 = p[recursive?](at0, bidx);
             let at1 = ListFlatOps::s_3at1(l);
@@ -425,134 +681,65 @@ __internal entity ListFlatOps provides Object {
                 return List<T>@{};
             }
         }
-    }
-}
-
-__internal entity ListBlockOps provides Object {
-    __safe function s_head<T>(l: List<T>): List<T> # block_list_head
-    __safe function s_tail<T>(l: List<T>): List<T> # block_list_tail
-
-    __safe function s_isBlockList<T>(l: List<T>): Nat # list_isblock
-
-    function s_at<T>(l: List<T>, i Nat): T {
-        if(i < 3) {
-            return ListFlatOps::s_at<T>(ListBlockOps::s_head<T>(l), i);
-        }
         else {
-            return ListFlatOps::s_at<T>(ListBlockOps::s_tail<T>(l), i - 3);
+            let at0 = ListFlatOps::s_4at0(l);
+            let pat0 = p[recursive?](at0, bidx);
+            let at1 = ListFlatOps::s_4at1(l);
+            let pat1 = p[recursive?](at1, bidx + 1n);
+            let at2 = ListFlatOps::s_4at2(l);
+            let pat2 = p[recursive?](at2, bidx + 2n);
+            let at3 = ListFlatOps::s_4at3(l);
+            let pat3 = p[recursive?](at3, bidx + 3n);
+
+            if(ListOps::s_and4(pat0, pat1, pat2, pat3) {
+                return l;
+            }
+            elif(ListOps::s_and3(pat1, pat2, pat3) {
+                return List<T>@{at1, at2, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat2, pat3) {
+                return List<T>@{at0, at2, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat1, pat3) {
+                return List<T>@{at0, at1, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat1, pat2) {
+                return List<T>@{at0, at1, at2};
+            }
+            elif(ListOps::s_and2(pat0, pat1) {
+                return List<T>@{at0, at1};
+            }
+            elif(ListOps::s_and2(pat0, pat2) {
+                return List<T>@{at0, at2};
+            }
+            elif(ListOps::s_and2(pat0, pat3) {
+                return List<T>@{at0, at3};
+            }
+            elif(ListOps::s_and2(pat1, pat2) {
+                return List<T>@{at1, at2};
+            }
+            elif(ListOps::s_and2(pat1, pat3) {
+                return List<T>@{at1, at3};
+            }
+            elif(ListOps::s_and2(pat2, pat3) {
+                return List<T>@{at2, at3};
+            }
+            elif(pat0) {
+                return List<T>@{at0};
+            }
+            elif(pat1) {
+                return List<T>@{at1};
+            }
+            elif(pat2) {
+                return List<T>@{at2};
+            }
+            elif(pat3) {
+                return List<T>@{at3};
+            }
+            else {
+                return List<T>@{};
+            }
         }
-    }
-
-    recursive? function s_has_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        return ListOps::s_or2(
-            ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_head<T>(l), p),
-            ListFlatOps::s_has_pred_check<T>[recursive?](ListBlockOps::s_tail<T>(l), p)
-        );
-    }
-
-    recursive? function s_has_pred_check_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return ListOps::s_or2(
-            ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_head<T>(l), bidx, p),
-            ListFlatOps::s_has_pred_check_idx<T>[recursive?](ListBlockOps::s_tail<T>(l), bidx + 3, p)
-        );
-    }
-
-    recursive? function s_all_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        return ListOps::s_and2(
-            ListFlatOps::s_all_pred_check<T>[recursive?](ListBlockOps::s_head<T>(l), p),
-            ListFlatOps::s_all_pred_check<T>[recursive?](ListBlockOps::s_tail<T>(l), p)
-        );
-    }
-
-    recursive? function s_all_pred_check_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return ListOps::s_and2(
-            ListFlatOps::s_all_pred_check_idx<T>[recursive?](ListBlockOps::s_head<T>(l), bidx, p),
-            ListFlatOps::s_all_pred_check_idx<T>[recursive?](ListBlockOps::s_tail<T>(l), bidx + 3, p)
-        );
-    }
-
-    recursive? function s_find_index_pred<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
-        let ff = ListFlatOps::s_find_index_pred<T>[recursive?](ListBlockOps::s_head<T>(l), bidx, p);
-        if(ff !== none) {
-            return ff;
-        }
-        else {
-            return ListFlatOps::s_find_index_pred<T>[recursive?](ListBlockOps::s_tail<T>(l), bidx + 3, p);
-        }
-    }
-
-    recursive? function s_find_index_pred_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        let ff = ListFlatOps::s_find_index_pred_idx<T>[recursive?](ListBlockOps::s_head<T>(l), bidx, p);
-        if(ff !== none) {
-            return ff;
-        }
-        else {
-            return ListFlatOps::s_find_index_pred_idx<T>[recursive?](ListBlockOps::s_tail<T>(l), bidx + 3, p);
-        }
-    }
-
-    recursive? function s_find_last_index_pred<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
-        let ll = ListFlatOps::s_find_last_index_pred<T>[recursive?](ListBlockOps::s_tail<T>(l), bidx + 3, p);
-        if(ll !== none) {
-            return ll;
-        }
-        else {
-            return ListFlatOps::s_find_last_index_pred<T>[recursive?](ListBlockOps::s_head<T>(l), bidx, p);
-        }
-    }
-
-    recursive? function s_find_index_pred_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        let ll = ListFlatOps::s_find_last_index_pred_idx<T>[recursive?](ListBlockOps::s_tail<T>(l), bidx + 3, p);
-        if(ll !== none) {
-            return ll;
-        }
-        else {
-            return ListFlatOps::s_find_last_index_pred_idx<T>[recursive?](ListBlockOps::s_head<T>(l), bidx, p);
-        }
-    }
-
-    recursive? function s_map<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> {
-        let ll = ListBlockOps::s_head<T>(l);
-        let lr = ListBlockOps::s_tail<T>(l);
-
-        if(ListFlatOps::s_is1<T>(lr)) {
-            return List<U>@{f[recursive?](ListFlatOps::s_3at0(ll)), f[recursive?](ListFlatOps::s_3at1(ll)), f[recursive?](ListFlatOps::s_3at2(ll)), f[recursive?](ListFlatOps::s_1at0(lr))};
-        }
-        else(ListFlatOps::s_is2<T>(lr)) {
-            return List<U>@{f[recursive?](ListFlatOps::s_3at0(ll)), f[recursive?](ListFlatOps::s_3at1(ll)), f[recursive?](ListFlatOps::s_3at2(ll)), f[recursive?](ListFlatOps::s_2at0(lr)), f[recursive?](ListFlatOps::s_2at1(lr))};
-        }
-        else {
-            return List<U>@{f[recursive?](ListFlatOps::s_3at0(ll)), f[recursive?](ListFlatOps::s_3at1(ll)), f[recursive?](ListFlatOps::s_3at2(ll)), f[recursive?](ListFlatOps::s_3at0(lr)), f[recursive?](ListFlatOps::s_3at1(lr)), f[recursive?](ListFlatOps::s_3at2(lr))};
-        }
-    }
-
-    recursive? function s_map_idx<T, U>(l: List<T>, bidx: Nat, f: recursive? fn(_: T, _: Nat) -> U): List<U> {
-        let ll = ListBlockOps::s_head<T>(l);
-        let lr = ListBlockOps::s_tail<T>(l);
-
-        if(ListFlatOps::s_is1<T>(l)) {
-            return List<U>@{f[recursive?](ListFlatOps::s_3at0(ll), bidx), f[recursive?](ListFlatOps::s_3at1(ll), bidx + 1n), f[recursive?](ListFlatOps::s_3at2(ll), bidx + 2n), f[recursive?](ListFlatOps::s_1at0(lr), bidx + 3n)};
-        }
-        else(ListFlatOps::s_is2<T>(l)) {
-            return List<U>@{f[recursive?](ListFlatOps::s_3at0(ll), bidx), f[recursive?](ListFlatOps::s_3at1(ll), bidx + 1n), f[recursive?](ListFlatOps::s_3at2(ll), bidx + 2n), f[recursive?](ListFlatOps::s_2at0(lr), bidx + 3n), f[recursive?](ListFlatOps::s_2at1(lr), bidx + 4n)};
-        }
-        else {
-            return List<U>@{f[recursive?](ListFlatOps::s_3at0(ll), bidx), f[recursive?](ListFlatOps::s_3at1(ll), bidx + 1n), f[recursive?](ListFlatOps::s_3at2(ll), bidx + 2n), f[recursive?](ListFlatOps::s_3at0(lr), bidx + 3n), f[recursive?](ListFlatOps::s_3at1(lr), bidx + 4n), f[recursive?](ListFlatOps::s_3at2(lr), bidx + 5n)};
-        }
-    }
-
-    recursive? function s_filter<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> {
-        let ll = ListFlatOps::s_filter(ListBlockOps::s_head<T>(l), p);
-        let lr = ListFlatOps::s_filter(ListBlockOps::s_tail<T>(l), p);
-
-        return ListOps::s_concat2(ll, lr);
-    }
-
-    recursive? function s_filter_idx<T, U>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
-        let ll = ListFlatOps::s_filter_idx(ListBlockOps::s_head<T>(l), bidx, p);
-        let lr = ListFlatOps::s_filter_idx(ListBlockOps::s_tail<T>(l), bidx + 3, p);
-
-        return ListOps::s_concat2(ll, lr);
     }
 }
 
@@ -565,9 +752,6 @@ __internal entity ListConcatOps provides Object {
     recursive function s_concat_lropt_at<T>(l: List<T>, i Nat): T {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_at<T>(l, i);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_at<T>(l, i);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_at<T>[recursive](l, i);
@@ -592,12 +776,69 @@ __internal entity ListConcatOps provides Object {
         }
     }
 
+    recursive function s_concat_lropt_slice_front<T>(l: List<T>, start: Nat): List<T> {
+        if(start == 0) {
+            return l;
+        }
+        elif(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_slice_front<T>(l, start);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            return ListConcatOps::s_slice_front<T>[recursive](l, start);
+        }
+        else {
+            let end = ListOps::s_size<T>(l);
+            let count = end - start;
+            return ListOps::s_slice_impl<T>(l, start, end, count);
+        }
+    }
+
+    recursive function s_slice_front<T>(l: List<T>, start: Nat): List<T> {
+        let ll = ListConcatOps::s_left<T>(l);
+        let lr = ListConcatOps::s_right<T>(l);
+
+        let llsize = ListOps::s_size<T>(ll);
+        if(start < llsize) {
+            let nl = ListConcatOps::s_concat_lropt_slice_front<T>[recursive](ll, start);
+            return ListOps::s_concat2(nl, lr);
+        }
+        else {
+            return ListConcatOps::s_concat_lropt_slice_front<T>[recursive](lr, start - llsize);
+        }
+    }
+
+    recursive function s_concat_lropt_slice_back<T>(l: List<T>, end: Nat): List<T> {
+        if(end == ListOps::s_size<T>(l)) {
+            return l;
+        }
+        elif(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_slice_back<T>(l, end);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            return ListConcatOps::s_slice_back<T>[recursive](l, end);
+        }
+        else {
+            return ListOps::s_slice_impl<T>(l, 0, end, end);
+        }
+    }
+
+    recursive function s_slice_back<T>(l: List<T>, end: Nat): List<T> {
+        let ll = ListConcatOps::s_left<T>(l);
+        let lr = ListConcatOps::s_right<T>(l);
+
+        let llsize = ListOps::s_size<T>(ll);
+        if(end < llsize) {
+            return ListConcatOps::s_concat_lropt_slice_back<T>[recursive](ll, end);
+        }
+        else {
+            let nr = ListConcatOps::s_concat_lropt_slice_front<T>[recursive](lr, end - llsize);
+            return ListOps::s_concat2(ll, nr);
+        }
+    }
+
     recursive function s_concat_lropt_has_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_has_pred_check<T>(l, p);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_has_pred_check<T>(l, p);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_has_pred_check<T>[recursive](l, p);
@@ -618,9 +859,6 @@ __internal entity ListConcatOps provides Object {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_has_pred_check_idx<T>(l, bidx, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_has_pred_check_idx<T>(l, bidx p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_has_pred_check_idx<T>[recursive](l, bidx, p);
         }
@@ -640,9 +878,6 @@ __internal entity ListConcatOps provides Object {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_all_pred_check<T>(l, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_all_pred_check<T>(l, p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_all_pred_check<T>[recursive](l, p);
         }
@@ -652,7 +887,7 @@ __internal entity ListConcatOps provides Object {
     }
 
     recursive function s_all_pred_check<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        return ListOps::s_all2(
+        return ListOps::s_and2(
             ListConcatOps::s_concat_lropt_all_pred_check<T>[recursive](ListBlockOps::s_left<T>(l), p),
             ListConcatOps::s_concat_lropt_all_pred_check<T>[recursive](ListBlockOps::s_right<T>(l), p)
         );
@@ -661,9 +896,6 @@ __internal entity ListConcatOps provides Object {
     recursive function s_concat_lropt_all_pred_idx_check<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_all_pred_check_idx<T>(l, bidx, p);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_all_pred_check_idx<T>(l, bidx p);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_all_pred_check_idx<T>[recursive](l, bidx, p);
@@ -674,7 +906,7 @@ __internal entity ListConcatOps provides Object {
     }
 
     recursive? function s_all_pred_check_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return ListOps::s_all2(
+        return ListOps::s_and2(
             ListConcatOps::s_concat_lropt_all_pred_idx_check<T>[recursive](ListBlockOps::s_left<T>(l), bidx, p),
             ListConcatOps::s_concat_lropt_all_pred_idx_check<T>[recursive](ListBlockOps::s_right<T>(l), bidx + ListOps::s_size<T>(ListBlockOps::s_left<T>(l)), p)
         );
@@ -683,9 +915,6 @@ __internal entity ListConcatOps provides Object {
     recursive function s_concat_lropt_find_index_pred<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_index_pred<T>[recursive?](l, bidx, p);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_index_pred<T>[recursive?](l, bidx, p);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_index_pred<T>[recursive](l, bidx, p);
@@ -709,9 +938,6 @@ __internal entity ListConcatOps provides Object {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_index_pred_idx<T>[recursive?](l, bidx, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_index_pred_idx<T>[recursive?](l, bidx p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_index_pred_idx<T>[recursive](l, bidx, p);
         }
@@ -734,9 +960,6 @@ __internal entity ListConcatOps provides Object {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_last_index_pred<T>[recursive?](l, bidx, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_last_index_pred<T>[recursive?](l, bidx, p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_last_index_pred<T>[recursive](l, bidx, p);
         }
@@ -758,9 +981,6 @@ __internal entity ListConcatOps provides Object {
     recursive function s_concat_lropt_find_last_index_pred_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_last_index_pred_idx<T>[recursive?](l, bidx, p);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_last_index_pred_idx<T>[recursive?](l, bidx p);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_last_index_pred_idx<T>[recursive](l, bidx, p);
@@ -803,17 +1023,12 @@ __internal entity ListOps provides Object {
     __assume_safe s_safeAs<T, U>(v: T): U # list_safeas
     __safe function s_or2(b1: Bool, b2: Bool): Bool # list_or2
     __safe function s_or3(b1: Bool, b2: Bool, b3: Bool): Bool # flat_or3
+    __safe function s_or4(b1: Bool, b2: Bool, b3: Bool): Bool # flat_or4
     __safe function s_and2(b1: Bool, b2: Bool): Bool # list_and2
     __safe function s_and3(b1: Bool, b2: Bool, b3: Bool): Bool # flat_and3
+    __safe function s_and4(b1: Bool, b2: Bool, b3: Bool): Bool # flat_and4
 
     __safe function s_size<T>(l: List<T>): Nat # list_size
-
-    __assume_safe function s_range_int(start: Int, end: Int): List<Int> # list_rangeofint
-    __assume_safe function s_range_nat(start: Nat, end: Nat): List<Nat> # list_rangeofnat
-    __assume_safe function s_fill<T>(k: Nat, val: T): List<T> # list_fill
-
-    __assume_safe function s_zip<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> # list_zip
-    __assume_safe function s_zip_index<T>(l1: List<T>, size: Nat): List<[Nat, T]> # list_zipindex
 
     ////////////////
     //Builtin
@@ -845,6 +1060,13 @@ __internal entity ListOps provides Object {
     __assume_safe function s_concat2_impl(l1: List<T>, l2: List<T>, count: Nat): List<T> # list_concat2
     __assume_safe function s_slice_impl(l: List<T>, start: Nat, end: Nat, count: Nat): List<T> # list_slice
 
+    __assume_safe function s_range_int_impl(start: Int, end: Int): List<Int> # list_rangeofint
+    __assume_safe function s_range_nat_impl(start: Nat, end: Nat): List<Nat> # list_rangeofnat
+    __assume_safe function s_fill_impl<T>(k: Nat, val: T): List<T> # list_fill
+
+    __assume_safe function s_zip_impl<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> # list_zip
+    __assume_safe function s_zip_index_impl<T>(l1: List<T>, size: Nat): List<[Nat, T]> # list_zipindex
+
     //assume non-empty, safe, and exists at least one satisfying
     recursive? function s_computeISequence<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): ISequence # list_computeisequence
     recursive? function s_computeJSequence<T, U>(l: List<T>, lcount: Nat, ol: List<U>, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> # list_computejsequence
@@ -855,85 +1077,10 @@ __internal entity ListOps provides Object {
 
     ////////////////
     //Called from lib
-    function s_smallFlat<T>(l: List<T>, count: Nat): List<T> {
-        if(count == 0) {
-            return List<T>@{};
-        }
-        elif(count == 1) {
-            return List<T>@{ListOps::s_safe_get<T>(l, 0)};
-        }
-        elif(count == 2) {
-            return List<T>@{ListOps::s_safe_get<T>(l, 0), ListOps::s_safe_get<T>(l, 1)};
-        }
-        elif(count == 3) {
-            return List<T>@{ListOps::s_safe_get<T>(l, 0), ListOps::s_safe_get<T>(l, 1), ListOps::s_safe_get<T>(l, 2)};
-        }
-        elif(count == 4) {
-            return List<T>@{ListOps::s_safe_get<T>(l, 0), ListOps::s_safe_get<T>(l, 1), ListOps::s_safe_get<T>(l, 2), ListOps::s_safe_get<T>(l, 3)};
-        }
-        elif(count == 5) {
-            return List<T>@{ListOps::s_safe_get<T>(l, 0), ListOps::s_safe_get<T>(l, 1), ListOps::s_safe_get<T>(l, 2), ListOps::s_safe_get<T>(l, 3), ListOps::s_safe_get<T>(l, 4)};
-        }
-        else {
-            return List<T>@{ListOps::s_safe_get<T>(l, 0), ListOps::s_safe_get<T>(l, 1), ListOps::s_safe_get<T>(l, 2), ListOps::s_safe_get<T>(l, 3), ListOps::s_safe_get<T>(l, 4), ListOps::s_safe_get<T>(l, 5)};
-        }
-    }
-
-    function s_smallConcat<T>(l: List<T>, count: Nat): List<T> {
-        if(count == 0) {
-            return List<T>@{};
-        }
-        elif(count == 1) {
-            return List<T>@{ListConcatOps::s_at[recursive]<T>(l, 0)};
-        }
-        elif(count == 2) {
-            return List<T>@{ListOps::s_at[recursive]<T>(l, 0), ListOps::s_at[recursive]<T>(l, 1)};
-        }
-        elif(count == 3) {
-            return List<T>@{ListOps::s_at[recursive]<T>(l, 0), ListOps::s_at[recursive]<T>(l, 1), ListOps::s_at[recursive]<T>(l, 2)};
-        }
-        elif(count == 4) {
-            return List<T>@{ListOps::s_at[recursive]<T>(l, 0), ListOps::s_at[recursive]<T>(l, 1), ListOps::s_at[recursive]<T>(l, 2), ListOps::s_at[recursive]<T>(l, 3)};
-        }
-        elif(count == 5) {
-            return List<T>@{ListOps::s_at[recursive]<T>(l, 0), ListOps::s_at[recursive]<T>(l, 1), ListOps::s_at[recursive]<T>(l, 2), ListOps::s_at[recursive]<T>(l, 3), ListOps::s_at[recursive]<T>(l, 4)};
-        }
-        else {
-            return List<T>@{ListOps::s_at[recursive]<T>(l, 0), ListOps::s_at[recursive]<T>(l, 1), ListOps::s_at[recursive]<T>(l, 2), ListOps::s_at[recursive]<T>(l, 3), ListOps::s_at[recursive]<T>(l, 4), ListOps::s_at[recursive]<T>(l, 5)};
-        }
-    }
-
-    function s_smallSlice<T>(l: List<T>, start: Nat, end: Nat, count: Nat): List<T> {
-        if(count == 0) {
-            return List<T>@{};
-        }
-        elif(count == 1) {
-            return List<T>@{ListOps::s_safe_get<T>(l, start)};
-        }
-        elif(count == 2) {
-            return List<T>@{ListOps::s_safe_get<T>(l, start), ListOps::s_safe_get<T>(l, start + 1)};
-        }
-        elif(count == 3) {
-            return List<T>@{ListOps::s_safe_get<T>(l, start), ListOps::s_safe_get<T>(l, start + 1), ListOps::s_safe_get<T>(l, start + 2)};
-        }
-        elif(count == 4) {
-            return List<T>@{ListOps::s_safe_get<T>(l, start), ListOps::s_safe_get<T>(l, start + 1), ListOps::s_safe_get<T>(l, start + 2), ListOps::s_safe_get<T>(l, start + 3)};
-        }
-        elif(count == 5) {
-            return List<T>@{ListOps::s_safe_get<T>(l, start), ListOps::s_safe_get<T>(l, start + 1), ListOps::s_safe_get<T>(l, start + 2), ListOps::s_safe_get<T>(l, start + 3), ListOps::s_safe_get<T>(l, start + 4)};
-        }
-        else {
-            return List<T>@{ListOps::s_safe_get<T>(l, start), ListOps::s_safe_get<T>(l, start + 1), ListOps::s_safe_get<T>(l, start + 2), ListOps::s_safe_get<T>(l, start + 3), ListOps::s_safe_get<T>(l, start + 4), ListOps::s_safe_get<T>(l, start + 5)};
-        }
-    }
-
     function s_safe_get<T>(l: List<T>, i: Nat): T {
 #if SMALL_MODEL_ENABLED
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_at<T>(l, i);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_at<T>(l, i);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_at<T>[recursive](l, i);
@@ -959,9 +1106,6 @@ __internal entity ListOps provides Object {
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_has_pred_check<T>[recursive?](l, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_has_pred_check<T>[recursive?](l, p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_has_pred_check<T>[recursive](l, p);
         }
@@ -983,9 +1127,6 @@ __internal entity ListOps provides Object {
 #if SMALL_MODEL_ENABLED
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_has_pred_check_idx<T>[recursive?](l, 0, p);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_has_pred_check_idx<T>[recursive?](l, 0, p);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_has_pred_check_idx<T>[recursive](l, 0, p);
@@ -1009,9 +1150,6 @@ __internal entity ListOps provides Object {
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_all_pred_check<T>[recursive?](l, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_all_pred_check<T>[recursive?](l, p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_all_pred_check<T>[recursive](l, p);
         }
@@ -1033,9 +1171,6 @@ __internal entity ListOps provides Object {
 #if SMALL_MODEL_ENABLED
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_all_pred_check_idx<T>[recursive?](l, 0, p);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_all_pred_check_idx<T>[recursive?](l, 0, p);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_all_pred_check_idx<T>[recursive](l, 0, p);
@@ -1066,9 +1201,6 @@ __internal entity ListOps provides Object {
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_index_pred<T>[recursive?](l, 0, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_index_pred<T>[recursive?](l, 0, p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_index_pred<T>[recursive](l, 0, p);
         }
@@ -1097,9 +1229,6 @@ __internal entity ListOps provides Object {
 #if SMALL_MODEL_ENABLED
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_index_pred_idx<T>[recursive?](l, 0, p);
-        }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_index_pred_idx<T>[recursive?](l, 0, p);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_index_pred_idx<T>[recursive](l, 0, p);
@@ -1130,9 +1259,6 @@ __internal entity ListOps provides Object {
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_last_index_pred<T>[recursive?](l, 0, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_last_index_pred<T>[recursive?](l, 0, p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_last_index_pred<T>[recursive](l, 0, p);
         }
@@ -1162,9 +1288,6 @@ __internal entity ListOps provides Object {
         elif(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_find_last_index_pred_idx<T>[recursive?](l, 0, p);
         }
-        elif(ListBlockOps::s_isBlockList<T>(l)) {
-            return ListBlockOps::s_find_last_index_pred_idx<T>[recursive?](l, 0, p);
-        }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_find_last_index_pred_idx<T>[recursive](l, 0, p);
         }
@@ -1193,17 +1316,7 @@ __internal entity ListOps provides Object {
                 let l2size = ListOps::s_size<T>(l2);
                 let ncount = l1size + l2size;
 
-                let cc = ListOps::s_concat2_impl<T>(l1, l2, ncount);
-#if SMALL_MODEL_ENABLED
-                if(ncount <= 6) {
-                    return ListOps::s_smallConcat(cc, ncount);
-                }
-                else {
-#endif
-                    return cc;
-#if SMALL_MODEL_ENABLED
-                }
-#endif
+                return ListOps::s_concat2_impl<T>(l1, l2, ncount);
             }
         }
     }
@@ -1217,17 +1330,25 @@ __internal entity ListOps provides Object {
         elif (count == ListOps::s_size<T>(l)) {
             return l;
         }
-        else {
 #if SMALL_MODEL_ENABLED
-            if(count <= 6) {
-                return ListOps::s_smallSlice(l, start, end, count);
+        elif(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_slice<T>(l, start, end);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            let ff = ListConcatOps::s_slice_front(l, start);
+            if(ListFlatOps::s_isFlatList<T>(ff)) {
+                return ListFlatOps::s_slice_back<T>(ff, end - start);
+            }
+            elif(ListConcatOps::s_isConcatList<T>(ff)) {
+                return ListConcatOps::s_slice_back<T>(ff, end - start);
             }
             else {
+                return ListOps::s_slice_impl<T>(l, 0, end - start, end - start);    
+            }
+        }
 #endif
-                return ListOps::s_slice_impl<T>(l, start, end, count);  
-#if SMALL_MODEL_ENABLED
-            }    
-#endif
+        else {
+            return ListOps::s_slice_impl<T>(l, start, end, count);
         }
     }
 
