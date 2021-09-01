@@ -264,210 +264,211 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method allOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return ListOperators::s_all_pred_check_idx<T>[recursive?](this, p);
+        return ListOps::s_all_pred_check_idx<T>[recursive?](this, p);
     }
 
     recursive? method noneOf(p: recursive? pred(_: T) -> Bool): Bool {
-        return !ListOperators::s_has_pred_check<T>[recursive?](this, p);
+        return !ListOps::s_has_pred_check<T>[recursive?](this, p);
     }
 
     recursive? method noneOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return !ListOperators::s_has_pred_check_idx<T>[recursive?](this, p);
+        return !ListOps::s_has_pred_check_idx<T>[recursive?](this, p);
     }
 
     recursive? method someOf(p: recursive? pred(_: T) -> Bool): Bool {
-        return ListOperators::s_has_pred_check<T>[recursive?](this, p);
+        return ListOps::s_has_pred_check<T>[recursive?](this, p);
     }
 
     recursive? method someOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return ListOperators::s_has_pred_check_idx<T>[recursive?](this, p);
+        return ListOps::s_has_pred_check_idx<T>[recursive?](this, p);
     }
 
-xxxx;
-
     recursive? method countIf(p: recursive? pred(_: T) -> Bool): Nat {
-        return ListOperators::s_countIf_Helper<T>[recursive?](this, p);
+        return ListOps::s_countif<T>[recursive?](this, p);
     }
 
     recursive? method countIf(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
-        let zl = this.index();
-        return ListOperators::s_countIf_Helper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        return ListOps::s_countif_idx<T>[recursive?](this, p);
     }
 
     method {when T grounded KeyType} contains(v: T): Bool {
-        return ListKeyOperators::s_hasCheck<T>(this, v);
+        return ListOps::s_has_pred_check<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
     }
 
     method containsNone(): Bool {
-        return ListOperators::s_hasPredCheck<T>[recursive?](this, pred(v: T) => v === none);
+        return ListOps::s_has_pred_check<T>(this, pred(e: T): Bool => e === none);
     }
 
     method containsNothing(): Bool {
-        return ListOperators::s_hasPredCheck<T>[recursive?](this, pred(v: T) => v === nothing);
+        return ListOps::s_has_pred_check<T>(this, pred(e: T): Bool => e === nothing);
     }
 
     method {when T grounded KeyType} count(v: T): Int {
-        return ListOperators::s_countIf_Helper<T>[recursive?](this, pred(e: T) => v === e);
+        return ListOps::s_countif<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
     }
 
     method countNone(): Bool {
-        return ListOperators::s_countIf_Helper<T>[recursive?](this, pred(v: T) => v === none);
+        return ListOps::s_countif<T>(this, pred(e: T): Bool => e === none);
     }
 
     method countNothing(): Bool {
-        return ListOperators::s_countIf_Helper<T>[recursive?](this, pred(v: T) => v === nothing);
+        return ListOps::s_countif<T>(this, pred(e: T): Bool => e === nothing);
     }
 
     method {when T unique Orderable} min(): T {
-        check !ListOperators::s_empty<T>(this);
-        let midx = ListArithOperators::s_minIdx_Helper<T>(this);
-        return ListOperators::s_safe_get<T>(this, midx);
+        check !ListFlatOps::s_empty<T>(this);
+
+        let midx = ListOps::s_min_idx<T>(this);
+        return ListOps::s_safe_get<T>(this, midx);
     }
 
     method {when T unique Orderable} max(): T {
-        check !ListOperators::s_empty<T>(this);
-        let midx = ListArithOperators::s_maxIdx_Helper<T>(this);
-        return ListOperators::s_safe_get<T>(this, midx);
+        check !ListFlatOps::s_empty<T>(this);
+
+        let midx = ListOps::s_max_idx<T>(this);
+        return ListOps::s_safe_get<T>(this, midx);
     }
 
     method {when T unique Orderable} minOrNone(): T? {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return none;
         }
         else {
-            let midx = ListArithOperators::s_minIdx_Helper<T>(this);
-            return ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_idx<T>(this);
+            return ListOps::s_safe_get<T>(this, midx);
         }
     }
 
     method {when T unique Orderable} maxOrNone(): T? {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return none;
         }
         else {
-            let midx = ListArithOperators::s_maxIdx_Helper<T>(this);
-            return ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_idx<T>(this);
+            return ListOps::s_safe_get<T>(this, midx);
         }
     }
 
     method {when T unique Orderable} minOption(): Option<T> {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return nothing;
         }
         else {
-            let midx = ListArithOperators::s_minIdx_Helper<T>(this);
-            return something(ListOperators::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_min_idx<T>(this);
+            return something(ListOps::s_safe_get<T>(this, midx));
         }
     }
 
     method {when T unique Orderable} maxOrOption(): Option<T> {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return nothing;
         }
         else {
-            let midx = ListArithOperators::s_maxIdx_Helper<T>(this);
-            return something(ListOperators::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_max_idx<T>(this);
+            return something(ListOps::s_safe_get<T>(this, midx));
         }
     }
 
     method {when T unique Orderable} minTry(out? res: T): Bool {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return false;
         }
         else {
-            let midx = ListArithOperators::s_minIdx_Helper<T>(this);
-            res = ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_min_idx<T>(this);
+            res = ListOps::s_safe_get<T>(this, midx);
             return true;
         }
     }
 
     method {when T unique Orderable} maxTry(out? res: T): Bool {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return false;
         }
         else {
-            let midx = ListArithOperators::s_maxIdx_Helper<T>(this);
-            res = ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_idx<T>(this);
+            res = ListOps::s_safe_get<T>(this, midx);
             return true;
         }
     }
 
     method argMin<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListOperators::s_empty<T>(this);
-        let midx = ListArithOperators::s_argminIdx_Helper<T, U>[recursive?](this, f);
-        return ListOperators::s_safe_get<T>(this, midx);
+        check !ListFlatOps::s_empty<T>(this);
+
+        let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
+        return ListOps::s_safe_get<T>(this, midx);
     }
 
     method argMax<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListOperators::s_empty<T>(this);
-        let midx = ListArithOperators::s_argmaxIdx_Helper<T, U>[recursive?](this, f);
-        return ListOperators::s_safe_get<T>(this, midx);
+        check !ListFlatOps::s_empty<T>(this);
+
+        let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
+        return ListOps::s_safe_get<T>(this, midx);
     }
 
     method argMinOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return none;
         }
         else {
-            let midx = ListArithOperators::s_argminIdx_Helper<T, U>[recursive?](this, f);
-            return ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
+            return ListOps::s_safe_get<T>(this, midx);
         }
     }
 
     method argMaxOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return none;
         }
         else {
-            let midx = ListArithOperators::s_argmaxIdx_Helper<T, U>[recursive?](this, f);
-            return ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
+            return ListOps::s_safe_get<T>(this, midx);
         }
     }
 
     method argMinOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return nothing;
         }
         else {
-            let midx = ListArithOperators::s_argminIdx_Helper<T, U>[recursive?](this, f);
-            return something(ListOperators::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
+            return something(ListOps::s_safe_get<T>(this, midx));
         }
     }
 
     method argMaxOrOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return nothing;
         }
         else {
-            let midx = ListArithOperators::s_argmaxIdx_Helper<T, U>[recursive?](this, f);
-            return something(ListOperators::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
+            return something(ListOps::s_safe_get<T>(this, midx));
         }
     }
 
     method argMinTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return false;
         }
         else {
-            let midx = ListArithOperators::s_argminIdx_Helper<T, U>[recursive?](this, f);
-            res = ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
+            res = ListOps::s_safe_get<T>(this, midx);
             return true;
         }
     }
 
     method argMaxTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
-        if(ListOperators::s_empty<T>(this)) {
+        if(ListFlatOps::s_empty<T>(this)) {
             return false;
         }
         else {
-            let midx = ListArithOperators::s_argmaxIdx_Helper<T, U>[recursive?](this, f);
-            res = ListOperators::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
+            res = ListOps::s_safe_get<T>(this, midx);
             return true;
         }
     }
 
     method {when T unique Algebraic} sum(): T {
-        return ListArithOperators::s_sum_Helper<T>(this);
+        return ListOps::s_sum<T>(this);
     }
 
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
