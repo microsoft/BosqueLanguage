@@ -472,176 +472,170 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_index_pred<T>[recursive?](this, p);
 
-        check idx != ListOperators::s_size<T>(this);
-        return ListOperators::s_safe_get<T>(this, idx);
+        check idx !== none;
+        return ListOps::s_safe_get<T>(this, idx);
     }
 
     recursive? method find(p: recursive? pred(_: T, _: Nat) -> Bool): T {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        let idx = ListOps::s_find_index_pred_idx<T>[recursive?](this, p);
 
-        check idx != ListOperators::s_size<T>(this);
-        return ListOperators::s_safe_get<T>(this, idx);
+        check idx !== none;
+        return ListOps::s_safe_get<T>(this, idx);
     }
 
     recursive? method findOrNone(p: recursive? pred(_: T) -> Bool): T? {
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_index_pred<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return none;
         }
         else {
-            return ListOperators::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this, idx);
         }
     }
 
     recursive? method findOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        let idx = ListOps::s_find_index_pred_idx<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return none;
         }
         else {
-            return ListOperators::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this, idx);
         }
     }
 
     recursive? method findOption(p: recursive? pred(_: T) -> Bool): Option<T> {
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_index_pred<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOperators::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this, idx));
         }
     }
 
     recursive? method findOption(p: recursive? pred(_: T, _: Nat) -> Bool): Option<T> {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        let idx = ListOps::s_find_index_pred_idx<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOperators::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this, idx));
         }
     }
 
     recursive? method findTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_index_pred<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return false;
         }
         else {
-            res = ListOperators::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this, idx);
             return true;
         }
     }
 
     recursive? method findTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOf_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        let idx = ListOps::s_find_index_pred_idx<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return false;
         }
         else {
-            res = ListOperators::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this, idx);
             return true;
         }
     }
 
     recursive? method findLast(p: recursive? pred(_: T) -> Bool): T {
-        let idx = ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_index_pred<T>[recursive?](this, p);
 
-        check idx != ListOperators::s_size<T>(this);
-        return ListOperators::s_safe_get<T>(this, idx);
+        check idx !== none;
+        return ListOps::s_safe_get<T>(this, idx);
     }
 
     recursive? method findLast(p: recursive? pred(_: T, _: Nat) -> Bool): T {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOfLast_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        let idx = ListOps::s_find_last_index_pred_idx<T>[recursive?](this, p);
 
-        check idx != ListOperators::s_size<T>(this);
-        return ListOperators::s_safe_get<T>(this, idx);
+        check idx !== none;
+        return ListOps::s_safe_get<T>(this, idx);
     }
 
     recursive? method findLastOrNone(p: recursive? pred(_: T) -> Bool): T? {
-        let idx = ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_index_pred<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return none;
         }
         else {
-            return ListOperators::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this, idx);
         }
     }
 
     recursive? method findLastOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOfLast_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        let idx = ListOps::s_find_last_index_pred_idx<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return none;
         }
         else {
-            return ListOperators::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this, idx);
         }
     }
 
     recursive? method findLastOption(p: recursive? pred(_: T) -> Bool): Option<T> {
-        let idx =  ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_index_pred<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOperators::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this, idx));
         }
     }
 
-    recursive? method findLastOption(d: T, p: recursive? pred(_: T, _: Nat) -> Bool): Option<T> {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOfLast_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+    recursive? method findLastOption(p: recursive? pred(_: T, _: Nat) -> Bool): Option<T> {
+        let idx = ListOps::s_find_last_index_pred_idx<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOperators::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this, idx));
         }
     }
 
     recursive? method findLastTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
-        let idx =  ListOperators::s_findIndexOfLast_PredicateHelper<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_index_pred<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return false;
         }
         else {
-            res = ListOperators::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this, idx);
             return true;
         }
     }
 
     recursive? method findLastTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        let zl = this.index();
-        let idx = ListOperators::s_findIndexOfLast_PredicateHelper<[Nat, T]>[recursive?](zl, recursive? pred(v: [Nat, T]) => p[recursive?](v.1, v.0));
+        let idx = ListOps::s_find_last_index_pred_idx<T>[recursive?](this, p);
 
-        if(idx == ListOperators::s_size<T>(this)) {
+        if(idx === none) {
             return false;
         }
         else {
-            res = ListOperators::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this, idx);
             return true;
         }
     }
+
+xxxxx;
 
     recursive? method findIndexOf(p: recursive? pred(_: T) -> Bool): Nat {
         let idx = ListOperators::s_findIndexOf_PredicateHelper<T>[recursive?](this, p);
