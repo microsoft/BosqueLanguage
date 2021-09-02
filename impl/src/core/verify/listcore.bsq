@@ -134,7 +134,7 @@ __internal entity ListFlatOps provides Object {
                 return l;    
             }
         }
-        else(start == 1n) {
+        else(end == 1n) {
             iif(ListFlatOps::s_is4<T>(l)) {
                 return List<T>@{ListFlatOps::s_4at0<T>(l)};
             }
@@ -193,6 +193,24 @@ __internal entity ListFlatOps provides Object {
         }
         else {
             return ListOps::s_or4(p[recursive?](ListFlatOps::s_4at0<T>(l), bidx), p[recursive?](ListFlatOps::s_4at1<T>(l), bidx + 1n), p[recursive?](ListFlatOps::s_4at2<T>(l), bidx + 2n), p[recursive?](ListFlatOps::s_4at3<T>(l), bidx + 3n));
+        }
+    }
+
+    function s_has_check_kv<K grounded KeyType, V>(l: List<[K, V]>, k: K): Bool {
+        if(ListOps::s_empty<[K, V]>(l)) {
+            return false;
+        }
+        elif(ListFlatOps::s_is1<[K, V]>(l)) {
+            return KeyType::equal<K>(ListFlatOps::s_1at0<[K, V]>(l).0, k);
+        }
+        else(ListFlatOps::s_is2<[K, V]>(l)) {
+            return ListOps::s_or2(KeyType::equal<K>(ListFlatOps::s_2at0<[K, V]>(l).0, k), KeyType::equal<K>(ListFlatOps::s_2at1<[K, V]>(l).0, k));
+        }
+        elif(ListFlatOps::s_is3<[K, V]>(l)) {
+            return ListOps::s_or3(KeyType::equal<K>(ListFlatOps::s_3at0<[K, V]>(l).0, k), KeyType::equal<K>(ListFlatOps::s_3at1<[K, V]>(l).0, k), KeyType::equal<K>(ListFlatOps::s_3at2<[K, V]>(l).0, k));
+        }
+        else {
+            return ListOps::s_or4(KeyType::equal<K>(ListFlatOps::s_4at0<[K, V]>(l).0, k), KeyType::equal<K>(ListFlatOps::s_4at1<[K, V]>(l).0, k), KeyType::equal<K>(ListFlatOps::s_4at2<[K, V]>(l).0, k), KeyType::equal<K>(ListFlatOps::s_4at3<[K, V]>(l).0, k));
         }
     }
 
@@ -337,6 +355,62 @@ __internal entity ListFlatOps provides Object {
             }
             elif(p[recursive?](ListFlatOps::s_4at3<T>(l), bidx + 3n)) {
                 return bidx + 2n;
+            }
+            else {
+                return none;
+            }
+        }
+    }
+
+    function s_find_index_kv<K grounded KeyType, V>(l: List<[K, V]>, bidx: Nat, k: K): Nat? {
+        if(ListFlatOps::s_empty<[K, V]>(l)) {
+            return none;
+        }
+        elif(ListFlatOps::s_is1<[K, V]>(l)) {
+            if(KeyType::equal<K>(ListFlatOps::s_1at0<[K, V]>(l).0, k)) {
+                return bidx;
+            }
+            else {
+                return none;
+            }
+        }
+        else(ListFlatOps::s_is2<[K, V]>(l)) {
+            if(KeyType::equal<K>(ListFlatOps::s_2at0<[K, V]>(l).0, k)) {
+                return bidx;
+            } 
+            elif(KeyType::equal<K>(ListFlatOps::s_2at1<[K, V]>(l).0, k)) {
+                return bidx + 1n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(ListFlatOps::s_is3<[K, V]>(l)) {
+            if(KeyType::equal<K>(ListFlatOps::s_3at0<[K, V]>(l).0, k)) {
+                return bidx;
+            }
+            elif(KeyType::equal<K>(ListFlatOps::s_3at1<[K, V]>(l).0, k)) {
+                return bidx + 1n;
+            }
+            elif(KeyType::equal<K>(ListFlatOps::s_3at2<[K, V]>(l).0, k)) {
+                return bidx + 2n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            if(KeyType::equal<K>(ListFlatOps::s_4at0<[K, V]>(l).0, k)) {
+                return bidx;
+            }
+            elif(KeyType::equal<K>(ListFlatOps::s_4at1<[K, V]>(l).0, k)) {
+                return bidx + 1n;
+            }
+            elif(KeyType::equal<K>(ListFlatOps::s_4at2<[K, V]>(l).0, k)) {
+                return bidx + 2n;
+            }
+            elif(KeyType::equal<K>(ListFlatOps::s_4at3<[K, V]>(l).0, k)) {
+                return bidx + 3n;
             }
             else {
                 return none;
@@ -870,6 +944,134 @@ __internal entity ListFlatOps provides Object {
         }
     }
 
+    function s_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>): List<[K, V]> {
+        if(ListFlatOps::s_empty<[K, V]>(l)) {
+            return List<T>@{};
+        }
+        elif(ListFlatOps::s_empty<[K, V]>(withl)) {
+            return l;
+        }
+        elif(ListFlatOps::s_is1<[K, V]>(l)) {
+            if(!ListOps::s_has_check_kv<K, V>(withl, ListFlatOps::s_1at0<[K, V]>(l).0)) {
+                return l;
+            }
+            else {
+                return List<T>@{};
+            }
+        }
+        else(ListFlatOps::s_is2<T>(l)) {
+            let at0 = ListFlatOps::s_2at0<[K, V]>(l);
+            let pat0 = !ListOps::s_has_check_kv<K, V>(withl, at0.0);
+            let at1 = ListFlatOps::s_2at1<[K, V]>(l);
+            let pat1 = !ListOps::s_has_check_kv<K, V>(withl, at1.0);
+
+            if(ListOps::s_and2(pat0, pat1) {
+                return l;
+            }
+            elif(pat0) {
+                return List<[K, V]>@{at0};
+            }
+            elif(pat1) {
+                return List<[K, V]>@{at1};
+            }
+            else {
+                return List<[K, V]>@{};
+            }
+        }
+        elif(ListFlatOps::s_is3<T>(l)) {
+            let at0 = ListFlatOps::s_3at0<[K, V]>(l);
+            let pat0 = !ListOps::s_has_check_kv<K, V>(withl, at0.0);
+            let at1 = ListFlatOps::s_3at1<[K, V]>(l);
+            let pat1 = !ListOps::s_has_check_kv<K, V>(withl, at1.0);
+            let at2 = ListFlatOps::s_3at2<[K, V]>(l);
+            let pat2 = !ListOps::s_has_check_kv<K, V>(withl, at2.0);
+
+            if(ListOps::s_and3(pat0, pat1, pat2) {
+                return l;
+            }
+            elif(ListOps::s_and2(pat0, pat1) {
+                return List<[K, V]>@{at0, at1};
+            }
+            elif(ListOps::s_and2(pat0, pat2) {
+                return List<[K, V]>@{at0, at2};
+            }
+            elif(ListOps::s_and2(pat1, pat2) {
+                return List<[K, V]>@{at1, at2};
+            }
+            elif(pat0) {
+                return List<[K, V]>@{at0};
+            }
+            elif(pat1) {
+                return List<[K, V]>@{at1};
+            }
+            elif(pat2) {
+                return List<[K, V]>@{at2};
+            }
+            else {
+                return List<[K, V]>@{};
+            }
+        }
+        else {
+            let at0 = ListFlatOps::s_4at0<[K, V]>(l);
+            let pat0 = !ListOps::s_has_check_kv<K, V>(withl, at0.0);
+            let at1 = ListFlatOps::s_4at1<[K, V]>(l);
+            let pat1 = !ListOps::s_has_check_kv<K, V>(withl, at1.0);
+            let at2 = ListFlatOps::s_4at2<[K, V]>(l);
+            let pat2 = !ListOps::s_has_check_kv<K, V>(withl, at2.0);
+            let at3 = ListFlatOps::s_4at3<[K, V]>(l);
+            let pat3 = !ListOps::s_has_check_kv<K, V>(withl, at3.0);
+
+            if(ListOps::s_and4(pat0, pat1, pat2, pat3) {
+                return l;
+            }
+            elif(ListOps::s_and3(pat1, pat2, pat3) {
+                return List<[K, V]>@{at1, at2, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat2, pat3) {
+                return List<[K, V]>@{at0, at2, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat1, pat3) {
+                return List<[K, V]>@{at0, at1, at3};
+            }
+            elif(ListOps::s_and3(pat0, pat1, pat2) {
+                return List<[K, V]>@{at0, at1, at2};
+            }
+            elif(ListOps::s_and2(pat0, pat1) {
+                return List<[K, V]>@{at0, at1};
+            }
+            elif(ListOps::s_and2(pat0, pat2) {
+                return List<[K, V]>@{at0, at2};
+            }
+            elif(ListOps::s_and2(pat0, pat3) {
+                return List<[K, V]>@{at0, at3};
+            }
+            elif(ListOps::s_and2(pat1, pat2) {
+                return List<[K, V]>@{at1, at2};
+            }
+            elif(ListOps::s_and2(pat1, pat3) {
+                return List<[K, V]>@{at1, at3};
+            }
+            elif(ListOps::s_and2(pat2, pat3) {
+                return List<[K, V]>@{at2, at3};
+            }
+            elif(pat0) {
+                return List<[K, V]>@{at0};
+            }
+            elif(pat1) {
+                return List<[K, V]>@{at1};
+            }
+            elif(pat2) {
+                return List<[K, V]>@{at2};
+            }
+            elif(pat3) {
+                return List<[K, V]>@{at3};
+            }
+            else {
+                return List<[K, V]>@{};
+            }
+        }
+    }
+
     recursive? function s_countif<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat {
         if(ListFlatOps::s_empty<T>(l)) {
             return 0n;
@@ -1363,6 +1565,25 @@ __internal entity ListConcatOps provides Object {
         );
     }
 
+    recursive function s_concat_lropt_has_check_kv<K grounded KeyType, V>(l: List<[K, V]>, k: K): Bool {
+        if(ListFlatOps::s_isFlatList<[K, V]>(l)) {
+            return ListFlatOps::s_has_check_kv<K, V>(l, k);
+        }
+        elif(ListConcatOps::s_isConcatList<[K, V]>(l)) {
+            return ListConcatOps::s_has_check_kv<K, V>[recursive](l, k);
+        }
+        else {
+            return ListOps::s_has_check_kv_base<K, V>(l, k);
+        }
+    }
+
+    recursive function s_has_check_kv<K grounded KeyType, V>(l: List<[K, V]>, k: K): Bool {
+        return ListOps::s_or2(
+            ListConcatOps::s_concat_lropt_has_check_kv<K, V>[recursive](ListBlockOps::s_left<T>(l), k),
+            ListConcatOps::s_concat_lropt_has_check_kv<K, V>[recursive](ListBlockOps::s_right<T>(l), k)
+        );
+    }
+
     recursive function s_concat_lropt_has_pred_idx_check<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_has_pred_check_idx<T>(l, bidx, p);
@@ -1439,6 +1660,28 @@ __internal entity ListConcatOps provides Object {
         }
         else {
             return ListFlatOps::s_concat_lropt_find_index_pred<T>[recursive](ListBlockOps::s_right<T>(l), bidx + ListOps::s_size<T>(ListBlockOps::s_left<T>(l)), p);
+        }
+    }
+
+    recursive function s_concat_lropt_find_index_kv<K grounded KeyType, V>(l: List<[K, V]>, bidx: Nat, k: K): Nat? {
+        if(ListFlatOps::s_isFlatList<[K, V]>(l)) {
+            return ListFlatOps::s_find_index_kv<K, V>(l, bidx, k);
+        }
+        elif(ListConcatOps::s_isConcatList<[K, V]>(l)) {
+            return ListConcatOps::s_find_index_kv<K, V>[recursive](l, bidx, k);
+        }
+        else {
+            return ListOps::s_find_index_kv_base<K, V>(l, bidx, k);
+        }
+    }
+
+    recursive function s_find_index_kv<K grounded KeyType, V>(l: List<[K, V]>, bidx: Nat, k: K): Nat? {
+        let ff = ListConcatOps::s_concat_lropt_find_index_kv<K, V>[recursive](ListConcatOps::s_left<[K, V]>(l), bidx, k);
+        if(ff !== none) {
+            return ff;
+        }
+        else {
+            return ListFlatOps::s_concat_lropt_find_index_kv<K, V>[recursive](ListBlockOps::s_right<[K, V]>(l), bidx + ListOps::s_size<[K, V]>(ListBlockOps::s_left<[K, V]>(l)), k);
         }
     }
 
@@ -1603,6 +1846,25 @@ __internal entity ListConcatOps provides Object {
         let rlm = ListConcatOps::s_concat_lropt_filter_type<T, U>[recursive](ListConcatOps::s_right<T>(l));
 
         return ListOps::s_concat2<U>(llm, rlm);
+    }
+
+    recursive function s_concat_lropt_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>): List<[K, V]> {
+        if(ListFlatOps::s_isFlatList<[K, V]>(l)) {
+            return ListFlatOps::s_filter_kv<K, V>(l, withl);
+        }
+        elif(ListConcatOps::s_isConcatList<[K, V]>(l)) {
+            return ListConcatOps::s_filter_kv<K, V>[recursive](l, withl);
+        }
+        else {
+            return ListOps::s_filter_kv_base<K, V>(l, withl);
+        }
+    }
+
+    recursive function s_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>): List<[K, V]> {
+        let llm = ListConcatOps::s_concat_lropt_filter_kv<K, V>[recursive](ListConcatOps::s_left<[K, V]>(l, withl));
+        let rlm = ListConcatOps::s_concat_lropt_filter_kv<K, V>[recursive](ListConcatOps::s_right<[K, V]>(l, withl));
+
+        return ListOps::s_concat2<[K, V]>(llm, rlm);
     }
 
     recursive function s_concat_lropt_countif<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat {
@@ -1809,14 +2071,16 @@ __internal entity ListOps provides Object {
     recursive? function s_safe_check_pred_pair_impl<T, U>[recursive?](l: List<T>, lcount: Nat, ol: List<U>, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): [List<T>, List<U>] # list_safe_check_pred_pair
     recursive? function s_safe_check_pred_picks_impl<T, U>[recursive?](l: List<T>, count: Nat, p: recursive? pred(_: T, _: T) -> Bool): List<T> # list_safe_check_pred_picks
 
-    recursive? function s_has_pred_check_impl<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_has_pred_check
-    recursive? function s_has_pred_check_idx_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_has_pred_check_idx
+    recursive? function s_has_pred_check_impl<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): Bool # list_has_pred_check
+    recursive? function s_has_pred_check_idx_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool # list_has_pred_check_idx
+    function s_has_check_kv_impl<K grounded KeyType, V>(l: List<[K, V]>, count: Nat, k: K): Bool # list_has_check_kv
 
-    recursive? function s_all_pred_check_impl<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_all_pred_check
-    recursive? function s_all_pred_check_idx_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_all_pred_check_idx
+    recursive? function s_all_pred_check_impl<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): Bool # list_all_pred_check
+    recursive? function s_all_pred_check_idx_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool # list_all_pred_check_idx
 
     recursive? function s_find_index_pred_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T) -> Bool): Nat # list_find_index_pred
     recursive? function s_find_index_pred_idx_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_find_index_pred_idx
+    function s_find_index_kv_impl<K grounded KeyType, V>(l: List<[K, V]>, count: Nat, bidx: Nat, k: K): Nat # list_find_index_kv
 
     recursive? function s_find_last_index_pred_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T) -> Bool): Nat # list_find_last_index_pred
     recursive? function s_find_last_index_pred_idx_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat # list_find_last_index_pred_idx
@@ -1834,6 +2098,8 @@ __internal entity ListOps provides Object {
     //assume non-empty, safe, and exists at least one satisfying
     recursive? function s_computeISequence<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): ISequence # list_computeisequence
     recursive? function s_computeISequence_idx<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T) -> Bool): ISequence # list_computeisequence_idx
+    function s_computeISequence_type<T, U>(l: List<T>, count: Nat): ISequence # list_computeisequence_type
+    function s_computeISequence_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>, count: Nat): ISequence # list_computeisequence_type
     
     //assume non-empty and safe
     recursive? function s_computeJSequence<T, U>(l: List<T>, lcount: Nat, ol: List<U>, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> # list_computejsequence
@@ -1845,7 +2111,8 @@ __internal entity ListOps provides Object {
 
     recursive? function s_filter_impl<T>(l: List<T>, isq: ISequence, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_filter
     recursive? function s_filter_idx_impl<T>(l: List<T>, isq: ISequence, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_filter_idx
-    recursive? function s_filter_type_impl<T, U>(l: List<T>, isq: ISequence, count: Nat): List<U> # list_filter_type
+    function s_filter_type_impl<T, U>(l: List<T>, isq: ISequence, count: Nat): List<U> # list_filter_type
+    function s_filter_kv_impl<K grounded KeyType, V>(l: List<[K, V]>, isq: ISequence, count: Nat): List<U> # list_filter_kv
 
     function s_min_idx_impl<T unique Orderable>(l: List<T>, bidx: Nat): [Nat, T] # list_min
     recursive? function s_min_arg_idx_impl<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] # list_min_arg
@@ -1889,6 +2156,27 @@ __internal entity ListOps provides Object {
 #endif
         else {
             return ListOps::s_has_pred_check_base<T>[recursive?](l, p);
+        }
+    }
+
+    function s_has_check_kv_base<K grounded KeyType, V>(l: List<[K, V]>, k: K): Bool {
+        return ListOps::s_has_check_kv_impl<K, V>(l, ListOps::s_size<[K, V]>(l), k);
+    }
+
+    function s_has_check_kv<K grounded KeyType, V>(l: List<[K, V]>, k: K): Bool {
+        if(ListFlatOps::s_empty<[K, V]>(l)) {
+            return false;
+        }
+#if SMALL_MODEL_ENABLED
+        elif(ListFlatOps::s_isFlatList<[K, V]>(l)) {
+            return ListFlatOps::s_has_check_kv<K, V>(l, k);
+        }
+        elif(ListConcatOps::s_isConcatList<[K, V]>(l)) {
+            return ListConcatOps::s_has_check_kv<K, V>[recursive](l, k);
+        }
+#endif
+        else {
+            return ListOps::s_has_check_kv_base<K, V>(l, k);
         }
     }
 
@@ -2013,6 +2301,34 @@ __internal entity ListOps provides Object {
 #endif
         else {
             return ListOps::s_find_index_pred_idx_base<T>[recursive?](l, 0, p);
+        }
+    }
+
+    function s_find_index_kv_base<K grounded KeyType, V>(l: List<[K, V]>, bidx: Nat, k: K): Nat? {
+        let count = ListOps::s_size<[K, V]>(l);
+
+        if(ListOps::s_has_check_kv_impl<K, V>(l, count, k)) {
+            return ListOps::s_find_index_kv_impl<K, V>(l, count, bidx, k);
+        }
+        else {
+            return none;
+        }
+    }
+
+    function s_find_index_pred<K grounded KeyType, V>(l: List<T>, k: K): Nat? {
+        if(ListOps::s_empty<[K, V]>(l)) {
+            return none;
+        }
+#if SMALL_MODEL_ENABLED
+        elif(ListFlatOps::s_isFlatList<[K, V]>(l)) {
+            return ListFlatOps::s_find_index_kv<K, V>(l, 0, k);
+        }
+        elif(ListConcatOps::s_isConcatList<[K, V]>(l)) {
+            return ListConcatOps::s_find_index_kv<K, V>[recursive](l, 0, k);
+        }
+#endif
+        else {
+            return ListOps::s_find_index_kv_base<K, V>(l, 0, k);
         }
     }
 
@@ -2240,6 +2556,8 @@ __internal entity ListOps provides Object {
         }
     }
 
+xxxx;
+
     function s_filter_type_base<T, U>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<U> {
         let count = ListOps::s_size<T>(l);
 
@@ -2248,7 +2566,7 @@ __internal entity ListOps provides Object {
         }
         else {
             let isq = ListOps::s_computeISequence<T>[recursive?](l, count, p);
-            return ListOps::s_filter_impl<T, U>[recursive?](l, isq, count);
+            return ListOps::s_filter_impl<T, U>(l, isq, count);
         }
     }
 
