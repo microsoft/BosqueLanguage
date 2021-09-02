@@ -1451,6 +1451,157 @@ __internal entity ListFlatOps provides Object {
             return ListFlatOps::s_4at0<T>(l) + ListFlatOps::s_4at1<T>(l) + ListFlatOps::s_4at2<T>(l) + ListFlatOps::s_4at3<T>(l);
         }
     }
+
+    function s_range_int(start: Int, end: Int): List<Int> {
+        let count = end - start;
+        if(count == 0) {
+            return List<Int>@{};
+        }
+        elif(count == 1) {
+            return List<Int>@{start};
+        }
+        elif(count == 2) {
+            return List<Int>@{start, start + 1i};
+        }
+        elif(count == 3) {
+            return List<Int>@{start, start + 1i, start + 2i};
+        }
+        else {
+            return List<Int>@{start, start + 1i, start + 2i, start + 3i};
+        }
+    }
+    
+    function s_range_nat(start: Nat, end: Nat): List<Nat> {
+        let count = end - start;
+        if(count == 0) {
+            return List<Nat>@{};
+        }
+        elif(count == 1) {
+            return List<Nat>@{start};
+        }
+        elif(count == 2) {
+            return List<Nat>@{start, start + 1n};
+        }
+        elif(count == 3) {
+            return List<Nat>@{start, start + 1n, start + 2n};
+        }
+        else {
+            return List<Nat>@{start, start + 1n, start + 2n, start + 3n};
+        }
+    }
+
+    function s_fill<T>(k: Nat, val: T): List<T> {
+        if(k == 0) {
+            return List<T>@{};
+        }
+        elif(k == 1) {
+            return List<T>@{val};
+        }
+        elif(k == 2) {
+            return List<T>@{val, val};
+        }
+        elif(k == 3) {
+            return List<T>@{val, val, val};
+        }
+        else {
+            return List<T>@{val, val, val, val};
+        }
+    }
+
+    function s_reverse<T>(l: List<T>): List<T> {
+        if(ListOps::s_or2(ListFlatOps::s_empty<T>(l), ListFlatOps::s_is1<T>(l))) {
+            return l;
+        }
+        elif(ListFlatOps::s_is2<T>(l)) {
+            return List<T>@{ListFlatOps::s_2at1<T>(l), ListFlatOps::s_2at0<T>(l)};
+        }
+        elif(ListFlatOps::s_is3<T>(l)) {
+            return List<T>@{ListFlatOps::s_3at2<T>(l), ListFlatOps::s_3at1<T>(l), ListFlatOps::s_3at0<T>(l)};
+        }
+        else {
+            return List<T>@{ListFlatOps::s_4at3<T>(l), ListFlatOps::s_4at2<T>(l), ListFlatOps::s_4at1<T>(l), ListFlatOps::s_4at0<T>(l)};
+        }
+    }
+
+    function s_zip<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
+        if(ListFlatOps::s_empty<T>(l1)) {
+            return List<[T, U]>@{};
+        }
+        elif(ListFlatOps::s_is1<T>(l1)) {
+            return List<[T, U]>@{[ListFlatOps::s_1at0<T>(l1), ListFlatOps::s_1at0<T>(l2)]};
+        }
+        elif(ListFlatOps::s_is2<T>(l1)) {
+            return List<[T, U]>@{[ListFlatOps::s_2at0<T>(l1), ListFlatOps::s_2at0<T>(l2)], [ListFlatOps::s_2at1<T>(l1), ListFlatOps::s_2at1<T>(l2)]};
+        }
+        elif(ListFlatOps::s_is3<T>(l1)) {
+            return List<[T, U]>@{[ListFlatOps::s_3at0<T>(l1), ListFlatOps::s_3at0<T>(l2)], [ListFlatOps::s_3at1<T>(l1), ListFlatOps::s_3at1<T>(l2)], [ListFlatOps::s_3at2<T>(l1), ListFlatOps::s_3at2<T>(l2)]};
+        }
+        else {
+            return List<[T, U]>@{[ListFlatOps::s_4at0<T>(l1), ListFlatOps::s_4at0<T>(l2)], [ListFlatOps::s_4at1<T>(l1), ListFlatOps::s_4at1<T>(l2)], [ListFlatOps::s_4at2<T>(l1), ListFlatOps::s_4at2<T>(l2)], [ListFlatOps::s_4at3<T>(l1), ListFlatOps::s_4at3<T>(l2)]};
+        }
+    }
+
+    function s_zip_index<T>(l: List<T>, bidx: Nat): List<[Nat, T]> {
+        if(ListFlatOps::s_empty<T>(l)) {
+            return List<[Nat, T]>@{};
+        }
+        elif(ListFlatOps::s_is1<T>(l)) {
+            return List<[Nat, T]>@{[bidx, ListFlatOps::s_1at0<T>(l)]};
+        }
+        elif(ListFlatOps::s_is2<T>(l)) {
+            return List<[Nat, T]>@{[bidx, ListFlatOps::s_2at0<T>(l)], [bidx + 1n, ListFlatOps::s_2at1<T>(l)]};
+        }
+        elif(ListFlatOps::s_is3<T>(l)) {
+            return List<[Nat, T]>@{[bidx, ListFlatOps::s_3at0<T>(l)], [bidx + 1, ListFlatOps::s_3at1<T>(l)], [bidx + 2, ListFlatOps::s_3at2<T>(l)]};
+        }
+        else {
+            return List<[Nat, T]>@{[bidx, ListFlatOps::s_4at0<T>(l)], [bidx + 1, ListFlatOps::s_4at1<T>(l)], [bidx + 2, ListFlatOps::s_4at2<T>(l)], [bidx + 3, ListFlatOps::s_4at3<T>(l)]};
+        }
+    }
+
+    recursive? function s_join<T, U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> {
+        //
+        //Assume that the max # of results is 4
+        //
+        if(ListOps::s_or2(ListFlatOps::s_empty<T>(l), ListFlatOps::s_empty<U>(ol))) {
+            return List<[T, U]>@{};
+        }
+        elif(ListFlatOps::s_is1<T>(l)) {
+            let at0 = ListFlatOps::s_1at0<T>(l);
+
+            if(ListFlatOps::s_is1<U>(ol)) {
+                let oat0 = ListFlatOps::s_1at0<U>(ol);
+                let pat00 = p[recursive?](at0, oat0);
+
+                if(pat00) {
+                    return List<[T, U]>@{[at0, oat0]};
+                }
+                else {
+                    return List<[T, U]>@{};
+                }
+            }
+            elif(ListFlatOps::s_is2<U>(ol)) {
+                
+            }
+            else {
+
+            }
+        }
+        elif(ListFlatOps::s_is2<T>(l)) {
+
+        }
+        else {
+            let at0 = ListFlatOps::s_3at0<[K, V]>(l);
+            let pat0 = !ListOps::s_has_check_kv<K, V>(withl, at0.0);
+            let at1 = ListFlatOps::s_3at1<[K, V]>(l);
+            let pat1 = !ListOps::s_has_check_kv<K, V>(withl, at1.0);
+            let at2 = ListFlatOps::s_3at2<[K, V]>(l);
+            let pat2 = !ListOps::s_has_check_kv<K, V>(withl, at2.0);
+        }
+    }
+
+    recursive? function s_sort<T>(l: List<T>, ssq: SSequence, count: Nat, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> # list_sort
+    recursive? function s_unique<T>(l: List<T>, usq: USequence, count: Nat, eq: recursive? pred(_: T, _: T) -> Bool): List<T> # list_filter
 }
 
 __internal entity ListConcatOps provides Object {
@@ -1829,40 +1980,40 @@ __internal entity ListConcatOps provides Object {
         return ListOps::s_concat2<T>(llm, rlm);
     }
 
-    recursive function s_concat_lropt_filter_type<T, U>(l: List<T>): List<U> {
+    recursive function s_concat_lropt_filter_type<T, U>(l: List<T>, p: pred(_: T) -> Bool): List<U> {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_filter_type<T, U>(l);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
-            return ListConcatOps::s_filter_type<T, U>[recursive](l);
+            return ListConcatOps::s_filter_type<T, U>[recursive](l, p);
         }
         else {
-            return ListOps::s_filter_type_base<T, U>(l);
+            return ListOps::s_filter_type_base<T, U>(l, p);
         }
     }
 
-    recursive function s_filter_type<T, U>(l: List<T>): List<U> {
-        let llm = ListConcatOps::s_concat_lropt_filter_type<T, U>[recursive](ListConcatOps::s_left<T>(l));
-        let rlm = ListConcatOps::s_concat_lropt_filter_type<T, U>[recursive](ListConcatOps::s_right<T>(l));
+    recursive function s_filter_type<T, U>(l: List<T>, p: pred(_: T) -> Bool): List<U> {
+        let llm = ListConcatOps::s_concat_lropt_filter_type<T, U>[recursive](ListConcatOps::s_left<T>(l), p);
+        let rlm = ListConcatOps::s_concat_lropt_filter_type<T, U>[recursive](ListConcatOps::s_right<T>(l), p);
 
         return ListOps::s_concat2<U>(llm, rlm);
     }
 
-    recursive function s_concat_lropt_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>): List<[K, V]> {
+    recursive function s_concat_lropt_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>, p: pred(_: [K, V]) -> Bool): List<[K, V]> {
         if(ListFlatOps::s_isFlatList<[K, V]>(l)) {
             return ListFlatOps::s_filter_kv<K, V>(l, withl);
         }
         elif(ListConcatOps::s_isConcatList<[K, V]>(l)) {
-            return ListConcatOps::s_filter_kv<K, V>[recursive](l, withl);
+            return ListConcatOps::s_filter_kv<K, V>[recursive](l, withl, p);
         }
         else {
-            return ListOps::s_filter_kv_base<K, V>(l, withl);
+            return ListOps::s_filter_kv_base<K, V>(l, p);
         }
     }
 
-    recursive function s_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>): List<[K, V]> {
-        let llm = ListConcatOps::s_concat_lropt_filter_kv<K, V>[recursive](ListConcatOps::s_left<[K, V]>(l, withl));
-        let rlm = ListConcatOps::s_concat_lropt_filter_kv<K, V>[recursive](ListConcatOps::s_right<[K, V]>(l, withl));
+    recursive function s_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>, p: pred(_: [K, V]) -> Bool): List<[K, V]> {
+        let llm = ListConcatOps::s_concat_lropt_filter_kv<K, V>[recursive](ListConcatOps::s_left<[K, V]>(l, withl, p));
+        let rlm = ListConcatOps::s_concat_lropt_filter_kv<K, V>[recursive](ListConcatOps::s_right<[K, V]>(l, withl, p));
 
         return ListOps::s_concat2<[K, V]>(llm, rlm);
     }
@@ -2024,6 +2175,37 @@ __internal entity ListConcatOps provides Object {
 
         return llm + rlm;
     }
+
+    //
+    //Several functions don't map well in small model mode to appends
+    //
+    ////////
+    //s_range_int
+    //s_range_nat
+    //s_fill
+    //s_reverse
+    //s_zip
+    ////////
+
+    recursive function s_concat_lropt_zip_index<T>(l: List<T>, bidx: Nat): List<[Nat, T]> {
+        if(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_zip_index<T>(l, bidx);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            return ListConcatOps::s_zip_index<T>[recursive](l, bidx);
+        }
+        else {
+            return ListOps::s_zip_index_base<T>(l, bidx);
+        }
+    }
+
+    recursive function s_zip_index<T>(l: List<T>, bidx: Nat): List<[Nat, T]> {
+        let ll = ListConcatOps::s_left<T>(l);
+        let llm = ListConcatOps::s_concat_lropt_zip_index<T>[recursive](ll, bidx);
+        let rlm = ListConcatOps::s_concat_lropt_zip_index<T>[recursive](ListConcatOps::s_right<T>(l), bidx + ListOps::s_size<T>(ll));
+
+        return ListOps::s_concat2<T>(llm, rlm);
+    }
 }
 
 __internal entity ISequence provides Object {
@@ -2091,6 +2273,7 @@ __internal entity ListOps provides Object {
     __assume_safe function s_range_int_impl(start: Int, end: Int): List<Int> # list_rangeofint
     __assume_safe function s_range_nat_impl(start: Nat, end: Nat): List<Nat> # list_rangeofnat
     __assume_safe function s_fill_impl<T>(k: Nat, val: T): List<T> # list_fill
+    __assume_safe function s_reverse_impl(l: List<T>, count: Nat): List<T> # list_reverse
 
     __assume_safe function s_zip_impl<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> # list_zip
     __assume_safe function s_zip_index_impl<T>(l1: List<T>, size: Nat): List<[Nat, T]> # list_zipindex
@@ -2111,13 +2294,16 @@ __internal entity ListOps provides Object {
 
     recursive? function s_filter_impl<T>(l: List<T>, isq: ISequence, count: Nat, p: recursive? pred(_: T) -> Bool): List<T> # list_filter
     recursive? function s_filter_idx_impl<T>(l: List<T>, isq: ISequence, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> # list_filter_idx
-    function s_filter_type_impl<T, U>(l: List<T>, isq: ISequence, count: Nat): List<U> # list_filter_type
-    function s_filter_kv_impl<K grounded KeyType, V>(l: List<[K, V]>, isq: ISequence, count: Nat): List<U> # list_filter_kv
 
     function s_min_idx_impl<T unique Orderable>(l: List<T>, bidx: Nat): [Nat, T] # list_min
     recursive? function s_min_arg_idx_impl<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] # list_min_arg
     function s_max_idx_impl<T unique Orderable>(l: List<T>, bidx: Nat): [Nat, T] # list_max
     recursive? function s_max_arg_idx_impl<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] # list_max_arg
+
+    recursive? function s_join_impl<T, U>(l: List<T>, ol: List<U>, jsq: JSequence, lcount: Nat, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> # list_join
+
+    recursive? function s_sort_impl<T>(l: List<T>, ssq: SSequence, count: Nat, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> # list_sort
+    recursive? function s_unique_impl<T>(l: List<T>, usq: USequence, count: Nat, eq: recursive? pred(_: T, _: T) -> Bool): List<T> # list_filter
 
     ////////////////
     //Called from lib
@@ -2445,7 +2631,6 @@ __internal entity ListOps provides Object {
         }
     }
 
-
     recursive? function s_map_base<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> {
         let sl = ListOps::s_safe_check_fn_impl<T, U>[recursive?](l, f);
         return ListOps::s_map_impl<T, U>[recursive?](sl, ListOps::s_size<T>(sl), f);
@@ -2556,8 +2741,6 @@ __internal entity ListOps provides Object {
         }
     }
 
-xxxx;
-
     function s_filter_type_base<T, U>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<U> {
         let count = ListOps::s_size<T>(l);
 
@@ -2566,7 +2749,8 @@ xxxx;
         }
         else {
             let isq = ListOps::s_computeISequence<T>[recursive?](l, count, p);
-            return ListOps::s_filter_impl<T, U>(l, isq, count);
+            let fl = ListOps::s_filter_impl<T>(l, isq, count);
+            return ListOps::s_map<T, U>(fl, fn(v: T): U => ListOps::s_safeAs<U>(v));
         }
     }
 
@@ -2584,6 +2768,35 @@ xxxx;
 #endif
         else {
             return ListOps::s_filter_type_base<T, U>(l, pred(v: T): Bool => v istype U);
+        }
+    }
+    
+    function s_filter_kv_base<K grounded KeyType, V>(l: List<T>, p: pred(_: [K, V]) -> Bool): List<U> {
+        let count = ListOps::s_size<[K, V]>(l);
+
+        if(!ListOps::s_has_pred_check<T>(l, count, p)) {
+            return List<[K, V]>@{};
+        }
+        else {
+            let isq = ListOps::s_computeISequence<[K, V]>(l, count, p);
+            return ListOps::s_filter_impl<[K, V]>(l, isq, count);
+        }
+    }
+
+    function s_filter_kv<K grounded KeyType, V>(l: List<[K, V]>, withl: List<[K, V]>): List<[K, V]> {
+        if(ListOps::s_empty(l)) {
+            return List<[K, V]>@{};
+        }
+#if SMALL_MODEL_ENABLED
+        elif(ListFlatOps::s_isFlatList<[K, V]>(l)) {
+            return ListFlatOps::s_filter_kv<K, V>(l, withl);
+        }
+        elif(ListConcatOps::s_isConcatList<T>(l)) {
+            return ListConcatOps::s_filter_type<T, U>[recursive](l, withl: List<[K, V]>, pred(v: T): Bool => !ListOps::s_has_check_kv<K, V>(withl, v.0));
+        }
+#endif
+        else {
+            return ListOps::s_filter_kv_base<T, U>(l, pred(v: T): Bool => pred(v: T): Bool => !ListOps::s_has_check_kv<K, V>(withl, v.0));
         }
     }
 
@@ -2779,19 +2992,6 @@ xxxx;
     }
 #endif
 
-
-
-    //Core accessors
-
-    ////
-    //Constructors 
-    __assume_safe function s_reverse_Constructor(l: List<T>, count: Nat): List<T> # list_reverse
-
-    recursive? function s_join_Constructor<T, U>(l: List<T>, ol: List<U>, jsq: JSequence, lcount: Nat, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> # list_join_helper
-
-    recursive? function s_sort_Constructor<T>(l: List<T>, ssq: SSequence, count: Nat, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> # list_sort_helper
-    recursive? function s_unique_Constructor<T>(l: List<T>, usq: USequence, count: Nat, eq: recursive? pred(_: T, _: T) -> Bool): List<T> # list_filter_helper
-
    
     ////////////////
     //In code support operations
@@ -2873,114 +3073,6 @@ xxxx;
             //TODO: here special case for small model
             let usq = ListOperators::s_computeUSequence<T>[recursive?](sl, count, cmp);
             return ListOperators::s_unique_Constructor<T>[recursive?](sl, usq, count, cmp);
-        }
-    }
-}
-
-__internal entity ListKeyOperators provides Object {
-    ////////////////
-    //Built Implemented Functions
-    ////////////////
-
-    //assume non-empty
-    function s_hasCheck_Core<T grounded KeyType>(l: List<T>, count: Nat, val: T): Bool # list_hascheck
-    function s_hasCheckMapKV_Core<T grounded KeyType, U>(l: List<[T, U]>, count: Nat, val: T): Bool # list_hascheckmapkv
-
-    //assume non-empty
-    function s_findIndexOf_KeyHelperCore<T grounded KeyType>(l: List<T>, count: Nat, val: T): Nat # list_findindexof_keyhelper
-    function s_findIndexOfLast_KeyHelperCore<T grounded KeyType>(l: List<T>, count: Nat, val: T): Nat # list_findindexoflast_keyhelper
-    function s_findIndexOfMapKV_KeyHelperCore<T grounded KeyType, U>(l: List<[T, U]>, count: Nat, val: T): Nat # list_findindexofmapkv_keyhelper
-
-    function s_overlapsMapKV_KeyHelperCore<T grounded KeyType, U>(l1: List<[T, U]>, count1: Nat, l2: List<[T, U]>, count2: Nat): Bool # list_overlapsmapkv_keyhelper
-
-    ////////////////
-    //In code support operations
-    ////////////////
-
-    function s_hasCheck<T grounded KeyType>(l: List<T>, val: T): Bool {
-        if(ListOperators::s_empty<T>(l)) {
-            return false;
-        }
-        else {
-            //TODO: here special case for small model
-            return ListKeyOperators::s_hasCheck_Core<T>(l, ListOperators::s_size<T>(l), val);
-        }
-    }
-
-    function s_hasCheckMapKV<T grounded KeyType, U>(l: List<[T, U]>, val: T): Bool {
-        if(ListOperators<[T, U]>::s_empty(l)) {
-            return false;
-        }
-        else {
-            //TODO: here special case for small model
-            return ListKeyOperators<[T, U]>::s_hasCheckMapKV_Core(l, ListOperators<[T, U]>::s_size(l), val);
-        }
-    }
-
-    function s_findIndexOf_KeyHelper<T grounded KeyType>(l: List<T>, val: T): Nat {
-        if(ListOperators::s_empty<T>(l)) {
-            return 0n;
-        }
-        else {
-            let count = ListOperators::s_size<T>(l);
-
-            //TODO: here special case for small model
-            if(ListKeyOperators::s_hasCheck_Core<T>(l, count, val)) {
-                return ListKeyOperators::s_findIndexOf_KeyHelperCore<T>(l, count, val);
-            }
-            else {
-                return count;
-            }
-        }
-    }
-
-    function s_findIndexOfLast_KeyHelper<T grounded KeyType>(l: List<T>, val: T): Nat {
-        if(ListOperators::s_empty<T>(l)) {
-            return 0n;
-        }
-        else {
-            let count = ListOperators::s_size<T>(l);
-
-            //TODO: here special case for small model
-            if(ListKeyOperators::s_hasCheck_Core<T>(l, count, val)) {
-                return ListKeyOperators::s_findIndexOfLast_KeyHelperCore<T>(l, count, val);
-            }
-            else {
-                return count;
-            }
-        }
-    }
-
-    function s_findIndexOfMapKV_KeyHelper<T grounded KeyType, U>(l: List<[T, U]>, val: T): Nat {
-        if(ListOperators::s_empty<[T, U]>(l)) {
-            return 0n;
-        }
-        else {
-            let count = ListOperators::s_size<[T, U]>(l);
-
-            //TODO: here special case for small model
-            if(ListKeyOperators::s_hasCheckMapKV_Core<T, U>(l, count, val)) {
-                return ListKeyOperators::s_findIndexOfMapKV_KeyHelperCore<T, U>(l, count, val);
-            }
-            else {
-                return count;
-            }
-        }
-    }
-
-    function s_overlapsMapKV_KeyHelper<T grounded KeyType, U>(l1: List<[T, U]>, l2: List<[T, U]>): Bool {
-        if(ListOperators::s_empty<[T, U]>(l1)) {
-            return false;
-        }
-        elif(ListOperators::s_empty<[T, U]>(l2)) {
-            return false;
-        }
-        else {
-            let count1 = ListOperators::s_size<[T, U]>(l1);
-            let count2 = ListOperators::s_size<[T, U]>(l2);
-
-            //TODO: here special case for small model
-            return ListKeyOperators::s_overlapsMapKV_KeyHelperCore<T, U>(l1, count1, l2, count2);
         }
     }
 }

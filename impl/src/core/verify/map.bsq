@@ -11,50 +11,51 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     private function from(v: List<[K, V]>): # special_inject
 
     method empty(): Bool {
-        return ListOperators::s_empty<[K, V]>(this.value());
+        return ListFlatOps::s_empty<[K, V]>(this.value());
     }
 
     method size(): Nat {
-        return ListOperators::s_size<[K, V]>(this.value());
+        return ListOps::s_size<[K, V]>(this.value());
     }
 
     method has(key: K): Bool {
-        return ListKeyOperators::s_hasCheckMapKV<[K, V]>(this.value(), k);
+        return ListOps::s_has_check_kv<K, V>(this.value(), k);
     }
 
     method get(key: K): V {
-        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
-        check idx != ListOperators::s_size<[K, V]>(this.value());
-        return ListOperators::s_safe_get<[K, V]>(this.m_entries, idx);
+        let idx = ListOps::s_find_index_kv<[K, V]>(this.value(), k);
+
+        check idx !== none;
+        return ListOps::s_safe_get<[K, V]>(this.value(), idx);
     }
 
     method getOrNone(k: K): V? {
-        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
-        if(idx == ListOperators::s_size<[K, V]>(this.value())) {
+        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        if(idx === none) {
             return none;
         }
         else {
-            return ListOperators::s_safe_get<[K, V]>(this.value(), idx);
+            return ListOps::s_safe_get<[K, V]>(this.value(), idx);
         }
     }
 
     method getOption(k: K): Option<V> {
-        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
-        if(idx == ListOperators::s_size<[K, V]>(this.value())) {
+        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOperators::s_safe_get<[K, V]>(this.value(), idx));
+            return something(ListOps::s_safe_get<[K, V]>(this.value(), idx));
         }
     }
 
     method getTry(k: K, out? v: V): Bool {
-        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
-        if(idx == ListOperators::s_size<[K, V]>(this.value())) {
+        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        if(idx === none) {
             return false;
         }
         else {
-            v = ListOperators::s_safe_get<[K, V]>(this.value(), idx);
+            v = ListOps::s_safe_get<[K, V]>(this.value(), idx);
             return true;
         }
     }
@@ -63,38 +64,40 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
             let tl = this.value();
             let ml = m.value();
 
-            let fm = ListOperators::s_filterKV_Helper<[K, V]>(ml, pred(kvp: [K, V]) => !ListKeyOperators::s_hasCheckMapKV(tl, kvp.0));
-            let am = ListOperators::s_concat2_Helper<[K, V]>(this.value(), fm);
+            let fm = ListOps::s_filter_kv<[K, V]>(ml, tl);
+            let am = ListOps::s_concat2<[K, V]>(tl, fm);
             
             return Map<K, V>::from(am);
     }
 
     recursive? method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
-        let sm = ListOperators::s_filter_Helper<[K, V]>(this.value(), p);
+        let sm = ListOps::s_filter<[K, V]>(this.value(), p);
         return Map<K, V>::from(sm);
     }
 
     recursive? method remap(f: recursive? fn(v: [K, V]) -> V): Map<K, V> {
-        let rm = ListOperators::s_map_Helper<[K, V]>(this.value(), recursive? fn(v: [K, V]): [K, V] => [v.0, f[recursive?](v)]);
+        let rm = ListOps::s_map<[K, V]>(this.value(), recursive? fn(v: [K, V]): [K, V] => [v.0, f[recursive?](v)]);
         return Map<K, V>::from(rm);
     }
 
     method add(k: K, v: V): Map<K, V> {
-        let am = ListOperators::s_concat2_Helper<[K, V]>(this.value(), List<[K, V]>{[k, v]});
+        check !ListOps::s_has_check_kv<K, V>(this.value(), k);
+        
+        let am = ListOps::s_concat2<[K, V]>(this.value(), List<[K, V]>{[k, v]});
         return Map<K, V>::from(am);
     }
 
     method set(k: K, v: V): Map<K, V> {
-        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
-        check idx != ListOperators::s_size<[K, V]>(this.value());
+        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        check idx !== none;
 
         let sm = this.value().set(idx, [k, v]);
         return Map<K, V>::from(sm);
     }
 
     method remove(k: K): Map<K, V> {
-        let idx = ListKeyOperators::s_findIndexOfMapKV_KeyHelper<[K, V]>(this.value(), k);
-        check idx != ListOperators::s_size<[K, V]>(this.value());
+        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        check idx !== none;
 
         let rm = this.value().remove(idx);
         return Map<K, V>::from(rm);

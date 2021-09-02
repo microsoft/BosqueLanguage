@@ -988,7 +988,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method mapNone<U=?>(f: recursive? fn(_: T, _: Nat) -> U): List<U>  {
-        return ListOperators::s_map_idx<T, U>[recursive?](this, recursive? fn(v: T, i: Nat): U => {
+        return ListOps::s_map_idx<T, U>[recursive?](this, recursive? fn(v: T, i: Nat): U => {
             if(v === none) {
                 return none;
             }
@@ -999,7 +999,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT) -> U): List<U>  {
-        return ListOperators::s_map<T, U>[recursive?](this, recursive? fn(v: T): U => {
+        return ListOps::s_map<T, U>[recursive?](this, recursive? fn(v: T): U => {
             if(v === nothing) {
                 return nothing;
             }
@@ -1010,7 +1010,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT, _: Nat) -> U): List<U>  {
-        return ListOperators::s_map_idx<T, U>[recursive?](this, recursive? fn(v: T, i: Nat): U => {
+        return ListOps::s_map_idx<T, U>[recursive?](this, recursive? fn(v: T, i: Nat): U => {
             if(v === nothing) {
                 return nothing;
             }
@@ -1020,57 +1020,56 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         });
     }
 
-xxxx;
-
     method {when T grounded KeyType} project<U=?>(m: Map<T, U>): List<U> {
-        return ListOperators::s_map<T, U>(this, fn(v: T): U => {
+        return ListOps::s_map<T, U>(this, fn(v: T): U => {
             return m.get(v);
         });
     }
 
     method {when T grounded KeyType} projectOrNone<U=?>(m: Map<T, U>): List<U?> {
-        return ListOperators::s_map_Helper<T, U?>(this, fn(v: T): U? => {
+        return ListOps::s_map_Helper<T, U?>(this, fn(v: T): U? => {
             return m.getOrNone(v);
         });
     }
 
     method {when T grounded KeyType} projectOption<U=?>(m: Map<T, U>): List<Option<U>> {
-        return ListOperators::s_map_Helper<T, Option<U>>(this, fn(v: T): Option<U> => {
+        return ListOps::s_map_Helper<T, Option<U>>(this, fn(v: T): Option<U> => {
             return m.getOption(v);
         });
     }
 
     method {when T grounded KeyType} projectImage<U=?>(m: Map<T, U>): List<U> {
-        return this.filter(pred(v: T) => m.has(v)).map<U>(fn(v: T): U => m.get(v));
+        let img = ListOps::s_filter<T>(pred(v: T) => m.has(v));
+        return ListOps::s_map<T, U>(img, fn(v: T): U => m.get(v));
     }
 
     recursive? method join<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
-        return ListOperators::s_join_Helper<T, U>[recursive?](this, ol, p);
+        return ListOps::s_join<T, U>[recursive?](this, ol, p);
     }
 
     recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, List<U>]> {
-        return ListOperators::s_map_Helper<T, [T, List<U>]>[recursive?](this, recursive? fn(v: T): [T, List<U>] => {
-            let ul = ListOperators::s_filter_Helper<U>[recursive?](ol, pred(u: U) => p[recursive?](v, u));
+        return ListOps::s_map<T, [T, List<U>]>[recursive?](this, recursive? fn(v: T): [T, List<U>] => {
+            let ul = ListOps::s_filter<U>[recursive?](ol, pred(u: U) => p[recursive?](v, u));
             return [v, ul];
         });
     }
 
     method append(l: List<T>): List<T> {
-        return ListOperators::s_concat2_Helper<T>(this, l);
+        return ListOps::s_concat2<T>(this, l);
     }
 
     method prepend(l: List<T>): List<T> {
-        return ListOperators::s_concat2_Helper<T>(l, this);
+        return ListOps::s_concat2<T>(l, this);
     }
 
     recursive? method partition<K grounded KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
-        let allkeys = ListOperators::s_map_Helper<T, K>[recursive?](this, pf);
-        let ukeys = ListOperators::s_unique_Helper<K>(allkeys);
+        let allkeys = ListOps::s_map<T, K>[recursive?](this, pf);
+        let ukeys = ListOps::s_unique<K>(allkeys);
 
-        let kopts = allkeys.zip(this);
-        let classes = ListOperators::s_map_Helper<K, [K, List<T>]>(ukeys, fn(k: K): [K, List<T>] => {
-            let pl = ListOperators::s_filter_Helper<[K, T]>(kopts, pred(v: [K, T]) => k === v.0);
-            let tl = ListOperators::s_map_Helper<[K, T], T>(pl, fn(vv: [K, T]): T => vv.1);
+        let kopts = ListOps::s_zip<K, T>(allkeys, this);
+        let classes = ListOps::s_map<K, [K, List<T>]>(ukeys, fn(k: K): [K, List<T>] => {
+            let pl = ListOps::s_filter<[K, T]>(kopts, pred(v: [K, T]) => k === v.0);
+            let tl = ListOps::s_map<[K, T], T>(pl, fn(vv: [K, T]): T => vv.1);
 
             return [k, tl];
         });
@@ -1079,45 +1078,45 @@ xxxx;
     }
 
     recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
-        return ListOperators::s_sort_Helper<T>[recursive?](this, cmp);
+        return ListOps::s_sort<T>[recursive?](this, cmp);
     }
 
     method {when T grounded KeyType} uniqueKey(): List<T> {
-        return ListOperators::s_unique<T>(this, pred(a: T, b: T): Bool => KeyType::equal<T>(a, b));
+        return ListOps::s_unique<T>(this, pred(a: T, b: T): Bool => KeyType::equal<T>(a, b));
     }
 
     recursive? method unique(eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
-       return ListOperators::s_unique<T>[recursive?](this, eq);
+       return ListOps::s_unique<T>[recursive?](this, eq);
     }
 
     method reverse(): List<T> {
-        return ListOperators::s_reverse<T>(this);
+        return ListOps::s_reverse<T>(this);
     }
 
     method pushBack(v: T): List<T> {
-        return ListOperators::s_concat2_Helper<T>(this, List<T>@{v});
+        return ListOps::s_concat2<T>(this, List<T>@{v});
     }
 
     method pushFront(v: T): List<T> {
-        return ListOperators::s_concat2_Helper<T>(List<T>@{v}, this);
+        return ListOps::s_concat2<T>(List<T>@{v}, this);
     }
 
-    method popBack(): List<T> 
-        requires release !ListOperators::s_empty<T>(this);
-    {
-        return ListOperators::s_slice_Helper<T>(this, 0, ListOperators::s_size<T>(this) - 1);
+    method popBack(): List<T> {
+        check !ListFlatOps::s_empty<T>(this);
+
+        return ListOps::s_slice_back<T>(this, ListOps::s_size<T>(this) - 1);
     }
 
-    method popFront(): List<T>
-        requires release !ListOperators::s_empty<T>(this);
-    {
-        return ListOperators::s_slice_Helper<T>(this, 1, ListOperators::s_size<T>(this));
+    method popFront(): List<T> {
+        check !ListFlatOps::s_empty<T>(this);
+
+        return ListOps::s_slice_front<T>(this, 1);
     }
 
-    method set(i: Nat, v: T): List<T> 
-        requires release i < ListOperators::s_size<T>(this);
-    {
-        let count = ListOperators::s_size<T>(this);
+    method set(i: Nat, v: T): List<T> {
+        check i < ListOps::s_size<T>(this);
+
+        let count = ListOps::s_size<T>(this);
         let vl = List<T>@{v};
 
         if(count == 1) {
@@ -1125,40 +1124,40 @@ xxxx;
         }
         else {
             if(i == 0) {
-                return ListOperators::s_concat2_Helper<T>(vl, ListOperators::s_slice_Helper<T>(this, 1, count));
+                return ListOps::s_concat2<T>(vl, ListOps::s_slice_front<T>(this, 1));
             }
             elif(i == count - 1) {
-                return ListOperators::s_concat2_Helper<T>(ListOperators::s_slice_Helper<T>(this, 0, count - 1), vl);
+                return ListOps::s_concat2<T>(ListOps::s_slice_back<T>(this, count - 1), vl);
             }
             else {
-                let front = ListOperators::s_slice_Helper<T>(this, 0, i);
-                let back = ListOperators::s_slice_Helper<T>(this, i + 1, count);
+                let front = ListOps::s_slice_back<T>(this, i);
+                let back = ListOps::s_slice_front<T>(this, i + 1);
 
-                return ListOperators::s_concat2_Helper<T>(ListOperators::s_concat2_Helper<T>(front, vl), back);
+                return ListOps::s_concat2<T>(ListOps::s_concat2<T>(front, vl), back);
             }
         } 
     }
 
-    method remove(i: Nat): List<T>
-        requires release i < ListOperators::s_size<T>(this);
-    {
-        let count = ListOperators::s_size<T>(this);
+    method remove(i: Nat): List<T> {
+        check i < ListOps::s_size<T>(this);
+
+        let count = ListOps::s_size<T>(this);
 
         if(count == 1) {
             return List<T>@{};
         }
         else {
             if(i == 0) {
-                return ListOperators::s_slice_Helper<T>(this, 1, count);
+                return ListOps::s_slice_front<T>(this, 1);
             }
             elif(i == count - 1) {
-                return ListOperators::s_slice_Helper<T>(this, 0, count - 1);
+                return ListOps::s_slice_back<T>(this, count - 1);
             }
             else {
-                let front = ListOperators::s_slice_Helper<T>(this, 0, i);
-                let back = ListOperators::s_slice_Helper<T>(this, i + 1, count);
+                let front = ListOps::s_slice_back<T>(this, i);
+                let back = ListOps::s_slice_front<T>(this, i + 1);
 
-                return ListOperators::s_concat2_Helper<T>(front), back);
+                return ListOps::s_concat2<T>(front, back);
             }
         } 
     }
