@@ -1033,13 +1033,13 @@ __internal entity ListFlatOps provides Object {
     //s_small_range_int
     function s_small_range_int(start: Int, end: Int): List<Int> {
         let count = end - start;
-        if(count == 0) {
+        if(count == 0i) {
             return List<Int>@{};
         }
-        elif(count == 1) {
+        elif(count == 1i) {
             return List<Int>@{start};
         }
-        elif(count == 2) {
+        elif(count == 2i) {
             return List<Int>@{start, start + 1i};
         }
         else {
@@ -1051,13 +1051,13 @@ __internal entity ListFlatOps provides Object {
     //s_small_range_nat
     function s_small_range_nat(start: Nat, end: Nat): List<Nat> {
         let count = end - start;
-        if(count == 0) {
+        if(count == 0n) {
             return List<Nat>@{};
         }
-        elif(count == 1) {
+        elif(count == 1n) {
             return List<Nat>@{start};
         }
-        elif(count == 2) {
+        elif(count == 2n) {
             return List<Nat>@{start, start + 1n};
         }
         else {
@@ -1068,20 +1068,17 @@ __internal entity ListFlatOps provides Object {
     ////
     //s_small_fill
     function s_small_fill<T>(k: Nat, val: T): List<T> {
-        if(k == 0) {
+        if(k == 0n) {
             return List<T>@{};
         }
-        elif(k == 1) {
+        elif(k == 1n) {
             return List<T>@{val};
         }
-        elif(k == 2) {
+        elif(k == 2n) {
             return List<T>@{val, val};
         }
-        elif(k == 3) {
-            return List<T>@{val, val, val};
-        }
         else {
-            return List<T>@{val, val, val, val};
+            return List<T>@{val, val, val};
         }
     }
 
@@ -1596,7 +1593,8 @@ __internal entity ListOps provides Object {
     __assume_safe function s_fill_impl<T>(k: Nat, val: T): List<T> # list_fill
     __assume_safe function s_reverse_impl(l: List<T>, count: Nat): List<T> # list_reverse
 
-    __assume_safe function s_zip_index_impl<T>(l1: List<T>, size: Nat): List<[Nat, T]> # list_zipindex
+    __assume_safe function s_zip_index_impl<T>(l: List<T>, size: Nat): List<[Nat, T]> # list_zipindex
+    __assume_safe function s_zip_impl<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> # list_zip
 
     //assume non-empty, safe, and exists at least one satisfying
     recursive? function s_computeISequence<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): ISequence # list_computeisequence
@@ -2183,72 +2181,91 @@ __internal entity ListOps provides Object {
         }
     }
 
-
-    //s_range_int
-    //s_range_nat
-    //s_fill
-    //s_reverse
-    //s_zip
-    ////////
-
-
-
-
-    function s_reverse_Helper<T>(l: List<T>): List<T> {
-        if(ListOperators::s_empty<T>(l)) {
+    function s_range_int(start: Int, end: Int): List<Int> {
+        let count = end - start;
+        if(count == 0i) {
             return List<T>@{};
         }
+#if SMALL_MODEL_ENABLED
+        else if(count < 4i) {
+            return ListFlatOps::s_small_range_int(start, end);
+        }
+#endif
         else {
-            let count = ListOperators::s_size<T>(l);
-            if (count == 1n) {
-                return l;
-            }
-            else {
-                //TODO: here special case for small model
-                return ListOperators::s_reverse_Constructor<T>(l, count);  
-            }
+            return ListOps::s_range_int_impl(start, end);
         }
     }
 
-   
-
-    recursive? function s_join_Helper<T, U>(l: List<T>, ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, U]> {
-        if(ListOperators::s_empty(l)) {
-            return List<[T, U]>@{};
+    function s_range_nat(start: Nat, end: Nat): List<Nat> {
+        let count = end - start;
+        if(count == 0n) {
+            return List<T>@{};
         }
-        elif(ListOperators::s_empty(ol)) {
-            return List<[T, U]>@{};
+#if SMALL_MODEL_ENABLED
+        else if(count < 4n) {
+            return ListFlatOps::s_small_range_nat(start, end);
         }
+#endif
         else {
-            let sl, sol = ListOperators::s_safeCheckPred_Pair<T, U>[recursive?](l, ol, p);
-            let count = ListOperators::s_size<T>(sl);
-            let ocount = ListOperators::s_size<T>(sl);
-
-            //TODO: here special case for small model
-            if(ListOperators::s_hasPredCheckPair_Core<T, U>[recursive?](sl, count, sol, ocount, p)) {
-                let jsq = ListOperators::s_computeJSequence<T>[recursive?](sl, count, sol, ocount, p);
-                return ListOperators::s_join_Constructor<T>[recursive?](sl, sol, jsq, count, ocount, p);
-            }
-            else {
-                return List<[T, U]>@{};
-            }
+            return ListOps::s_range_nat_impl(start, end);
         }
     }
 
-    recursive? function s_sort_Helper<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
-        if(ListOperators::s_empty(l)) {
+    function s_fill<T>(k: Nat, val: T): List<T> {
+        let count = end - start;
+        if(count == 0n) {
             return List<T>@{};
         }
-        elif (ListOperators::s_size<T>(l) == 1n) {
-            return l;
+#if SMALL_MODEL_ENABLED
+        else if(count < 4n) {
+            return ListFlatOps::s_small_fill<T>(k, val);
         }
+#endif
         else {
-            let sl = ListOperators::s_safeCheckPred_PairSingle<T>[recursive?](l, cmp);
-            let count = ListOperators::s_size<T>(sl);
+            return ListOps::s_fill_impl<T>(k, val);
+        }
+    }
 
-            //TODO: here special case for small model
-            let ssq = ListOperators::s_computeSSequence<T>[recursive?](sl, count, cmp);
-            return ListOperators::s_sort_Constructor<T>[recursive?](sl, ssq, count, cmp);
+    function s_reverse<T>(l: List<T>): List<T> {
+        if(ListFlatOps::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+#if SMALL_MODEL_ENABLED
+        else if(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_small_reverse<T>(l);
+        }
+#endif
+        else {
+            return ListOps::s_reverse_impl<T>(l, ListOps::s_size<T>(l));
+        }
+    }
+
+    function s_zip_1<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
+        return List<T>@{[ListOps::s_at<T>(l1, 0), ListOps::s_at<U>(l2, 0)]};
+    }
+    function s_zip_2<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
+        return List<T>@{[ListOps::s_at<T>(l1, 0), ListOps::s_at<U>(l2, 0)], [ListOps::s_at<T>(l1, 1), ListOps::s_at<U>(l2, 1)]};
+    }
+    function s_zip_3<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
+        return List<T>@{[ListOps::s_at<T>(l1, 0), ListOps::s_at<U>(l2, 0)], [ListOps::s_at<T>(l1, 1), ListOps::s_at<U>(l2, 1)], [ListOps::s_at<T>(l1, 2), ListOps::s_at<U>(l2, 2)]};
+    }
+    function s_zip<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]>
+        if(size == 0) {
+            return List<T>@{};
+        }
+#if SMALL_MODEL_ENABLED
+        elif(size == 1) {
+            return ListOps::s_zip_1<T, U>(l1, l2, size);
+        }
+        elif(size == 2) {
+            return ListOps::s_zip_2<T, U>(l1, l2, size);
+        }
+        elif(size == 3) {
+            return ListOps::s_zip_3<T, U>(l1, l2, size);
+        }
+#endif
+        else {
+            return ListOps::s_zip_impl<T>(l1, l2, size);
         }
     }
 }
