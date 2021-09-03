@@ -195,9 +195,6 @@ class SMTTypeEmitter {
                 else if (this.isType(tt, "NSCore::JSequence")) {
                     return new SMTType("JSequence", "TypeTag_JSequence", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::USequence")) {
-                    return new SMTType("USequence", "TypeTag_USequence", entity.tkey);
-                }
                 else if (this.isType(tt, "NSCore::SSequence")) {
                     return new SMTType("SSequence", "TypeTag_SSequence", entity.tkey);
                 }

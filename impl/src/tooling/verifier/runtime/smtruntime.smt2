@@ -124,22 +124,17 @@
 (declare-const ISequence@empty ISequence)
 (assert (= (ISequence@size ISequence@empty) BNat@zero))
 
-;;Define the JSequence, USequence, and SSequence datatypes
+;;Define the JSequence and SSequence datatypes
 (declare-sort JSequence 0)
-(declare-sort USequence 0)
 (declare-sort SSequence 0)
 
 (declare-fun JSequence@size (JSequence) BNat)
 (declare-fun JSequence@get (JSequence BNat) BNat)
-(declare-fun USequence@size (USequence) BNat)
-(declare-fun USequence@get (USequence BNat) BNat)
 (declare-fun SSequence@size (SSequence) BNat)
 (declare-fun SSequence@get (SSequence BNat) BNat)
 
 (declare-const JSequence@empty JSequence)
 (assert (= (JSequence@size JSequence@empty) BNat@zero))
-(declare-const USequence@empty USequence)
-(assert (= (USequence@size USequence@empty) BNat@zero))
 (declare-const SSequence@empty SSequence)
 (assert (= (SSequence@size SSequence@empty) BNat@zero))
 
