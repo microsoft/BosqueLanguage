@@ -2162,18 +2162,6 @@ __internal entity ListOps provides Object {
         }
     }
 
-    //
-    //Several functions don't map well in small model mode to appends
-    //
-    ////////
-    //s_sort
-    //s_range_int
-    //s_range_nat
-    //s_fill
-    //s_reverse
-    //s_zip
-    ////////
-
     function s_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
         if(ListFlatOps::s_empty(l)) {
             return List<T>@{};
@@ -2196,7 +2184,12 @@ __internal entity ListOps provides Object {
     }
 
 
-
+    //s_range_int
+    //s_range_nat
+    //s_fill
+    //s_reverse
+    //s_zip
+    ////////
 
 
 
