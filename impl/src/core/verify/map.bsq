@@ -60,13 +60,13 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
         }
     }
 
-    method merge(m: Map<K, V>): Map<K, V> {
+    method union(m: Map<K, V>): Map<K, V> {
             let tl = this.value();
             let ml = m.value();
 
-            let fm = ListOps::s_filter_kv<[K, V]>(ml, tl);
-            let am = ListOps::s_concat2<[K, V]>(tl, fm);
-            
+            xxxx;
+
+            let am = ListOps::s_concat2<[K, V]>(tl, ml);
             return Map<K, V>::from(am);
     }
 
