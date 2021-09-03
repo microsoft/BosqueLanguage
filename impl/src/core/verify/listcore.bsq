@@ -178,7 +178,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<T>(l)) {
             return p[recursive?](ListFlatOps::s_1at0<T>(l));
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_or2(p[recursive?](ListFlatOps::s_2at0<T>(l)), p[recursive?](ListFlatOps::s_2at1<T>(l)));
         }
         else {
@@ -193,7 +193,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<T>(l)) {
             return p[recursive?](ListFlatOps::s_1at0<T>(l), bidx);
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_or2(p[recursive?](ListFlatOps::s_2at0<T>(l), bidx), p[recursive?](ListFlatOps::s_2at1<T>(l), bidx + 1n));
         }
         else(ListFlatOps::s_is3<T>(l)) {
@@ -208,7 +208,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<[K, V]>(l)) {
             return KeyType::equal<K>(ListFlatOps::s_1at0<[K, V]>(l).0, k);
         }
-        else(ListFlatOps::s_is2<[K, V]>(l)) {
+        elif(ListFlatOps::s_is2<[K, V]>(l)) {
             return ListOps::s_or2(KeyType::equal<K>(ListFlatOps::s_2at0<[K, V]>(l).0, k), KeyType::equal<K>(ListFlatOps::s_2at1<[K, V]>(l).0, k));
         }
         elif(ListFlatOps::s_is3<[K, V]>(l)) {
@@ -226,7 +226,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<T>(l)) {
             return p[recursive?](ListFlatOps::s_1at0<T>(l));
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_and2(p[recursive?](ListFlatOps::s_2at0<T>(l)), p[recursive?](ListFlatOps::s_2at1<T>(l)));
         }
         else {
@@ -241,7 +241,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<T>(l)) {
             return p[recursive?](ListFlatOps::s_1at0<T>(l), bidx);
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             return ListOps::s_and2(p[recursive?](ListFlatOps::s_2at0<T>(l), bidx), p[recursive?](ListFlatOps::s_2at1<T>(l), bidx + 1n));
         }
         else(ListFlatOps::s_is3<T>(l) {
@@ -261,7 +261,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             if(p[recursive?](ListFlatOps::s_2at0<T>(l))) {
                 return bidx;
             } 
@@ -300,7 +300,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             if(p[recursive?](ListFlatOps::s_2at0<T>(l), bidx)) {
                 return bidx;
             } 
@@ -339,7 +339,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else(ListFlatOps::s_is2<[K, V]>(l)) {
+        elif(ListFlatOps::s_is2<[K, V]>(l)) {
             if(KeyType::equal<K>(ListFlatOps::s_2at0<[K, V]>(l).0, k)) {
                 return bidx;
             } 
@@ -394,7 +394,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             if(p[recursive?](ListFlatOps::s_2at1<T>(l))) {
                 return bidx + 1n;
             } 
@@ -450,7 +450,7 @@ __internal entity ListFlatOps provides Object {
                 return none;
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             if(p[recursive?](ListFlatOps::s_2at1<T>(l), bidx + 1n)) {
                 return bidx + 1n;
             } 
@@ -501,7 +501,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_1at0<T>(l))};
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_2at0<T>(l)), f[recursive?](ListFlatOps::s_2at1<T>(l))};
         }
         elif(ListFlatOps::s_is3<T>(l)) {
@@ -519,7 +519,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_1at0<T>(l), bidx)};
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             return List<U>@{f[recursive?](ListFlatOps::s_2at0<T>(l), bidx), f[recursive?](ListFlatOps::s_2at1<T>(l), bidx + 1n)};
         }
         elif(ListFlatOps::s_is3<T>(l)) {
@@ -542,7 +542,7 @@ __internal entity ListFlatOps provides Object {
                 return List<T>@{};
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = ListFlatOps::s_2at0<T>(l);
             let pat0 = p[recursive?](at0);
             let at1 = ListFlatOps::s_2at1<T>(l);
@@ -667,7 +667,7 @@ __internal entity ListFlatOps provides Object {
                 return List<T>@{};
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = ListFlatOps::s_2at0<T>(l);
             let pat0 = p[recursive?](at0, bidx);
             let at1 = ListFlatOps::s_2at1<T>(l);
@@ -795,7 +795,7 @@ __internal entity ListFlatOps provides Object {
                 return List<U>@{};
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = ListFlatOps::s_2at0<T>(l);
             let pat0 = at0 istype U;
             let at1 = ListFlatOps::s_2at1<T>(l);
@@ -920,7 +920,7 @@ __internal entity ListFlatOps provides Object {
                 return 0n;
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = ListFlatOps::s_2at0<T>(l);
             let pat0 = p[recursive?](at0);
             let at1 = ListFlatOps::s_2at1<T>(l);
@@ -997,7 +997,7 @@ __internal entity ListFlatOps provides Object {
                 return 0n;
             }
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = ListFlatOps::s_2at0<T>(l);
             let pat0 = p[recursive?](at0, bidx);
             let at1 = ListFlatOps::s_2at1<T>(l);
@@ -1067,7 +1067,7 @@ __internal entity ListFlatOps provides Object {
             let at0 = ListFlatOps::s_1at0<T>(l);
             return [bidx, at0];
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = ListFlatOps::s_2at0<T>(l);
             let at1 = ListFlatOps::s_2at1<T>(l);
 
@@ -1119,7 +1119,7 @@ __internal entity ListFlatOps provides Object {
             let at0 = ListFlatOps::s_1at0<T>(l);
             return [bidx, at0];
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = f[recursive?](ListFlatOps::s_2at0<T>(l));
             let at1 = f[recursive?](ListFlatOps::s_2at1<T>(l));
 
@@ -1171,7 +1171,7 @@ __internal entity ListFlatOps provides Object {
             let at0 = ListFlatOps::s_1at0<T>(l);
             return [bidx, at0];
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = ListFlatOps::s_2at0<T>(l);
             let at1 = ListFlatOps::s_2at1<T>(l);
 
@@ -1223,7 +1223,7 @@ __internal entity ListFlatOps provides Object {
             let at0 = ListFlatOps::s_1at0<T>(l);
             return [bidx, at0];
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             let at0 = f[recursive?](ListFlatOps::s_2at0<T>(l));
             let at1 = f[recursive?](ListFlatOps::s_2at1<T>(l));
 
@@ -1277,7 +1277,7 @@ __internal entity ListFlatOps provides Object {
         elif(ListFlatOps::s_is1<T>(l)) {
             return ListFlatOps::s_1at0<T>(l);
         }
-        else(ListFlatOps::s_is2<T>(l)) {
+        elif(ListFlatOps::s_is2<T>(l)) {
             return ListFlatOps::s_2at0<T>(l) + ListFlatOps::s_2at1<T>(l);
         }
         elif(ListFlatOps::s_is3<T>(l)) {
