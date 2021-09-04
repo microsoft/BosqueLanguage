@@ -1593,7 +1593,7 @@ __internal entity ListOps provides Object {
     __assume_safe function s_fill_impl<T>(k: Nat, val: T): List<T> # list_fill
     __assume_safe function s_reverse_impl(l: List<T>, count: Nat): List<T> # list_reverse
 
-    __assume_safe function s_zip_index_impl<T>(l: List<T>, size: Nat): List<[Nat, T]> # list_zipindex
+    __assume_safe function s_zip_index_impl<T>(l: List<T>, bidx: Nat, size: Nat): List<[Nat, T]> # list_zipindex
     __assume_safe function s_zip_impl<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> # list_zip
 
     //assume non-empty, safe, and exists at least one satisfying
@@ -2066,8 +2066,8 @@ __internal entity ListOps provides Object {
     //In code support operations
     ////////////////
 
-    recursive? function s_zip_index_base<T>(l: List<T>): List<T> {
-        return ListOps::s_zip_index_impl<T>(l, ListOps::s_size<T>(l));
+    recursive? function s_zip_index_base<T>(l: List<T>, bidx: Nat): List<T> {
+        return ListOps::s_zip_index_impl<T>(l, bidx, ListOps::s_size<T>(l));
     }
 
     recursive function s_zip_index<T>(l: List<T>): List<[Nat, T]> {
@@ -2076,14 +2076,14 @@ __internal entity ListOps provides Object {
         }
 #if SMALL_MODEL_ENABLED
         elif(ListFlatOps::s_isFlatList<T>(l)) {
-            return ListFlatOps::s_zip_index<T, U>(l, 0);
+            return ListFlatOps::s_zip_index<T>(l, 0);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
             return ListConcatOps::s_zip_index<T>(l, 0);
         }
 #endif
         else {
-           return ListOps::s_zip_index_base<T>(l);
+           return ListOps::s_zip_index_base<T>(l, 0);
         }
     }
 
@@ -2184,7 +2184,7 @@ __internal entity ListOps provides Object {
     function s_range_int(start: Int, end: Int): List<Int> {
         let count = end - start;
         if(count == 0i) {
-            return List<T>@{};
+            return List<Int>@{};
         }
 #if SMALL_MODEL_ENABLED
         else if(count < 4i) {
@@ -2199,7 +2199,7 @@ __internal entity ListOps provides Object {
     function s_range_nat(start: Nat, end: Nat): List<Nat> {
         let count = end - start;
         if(count == 0n) {
-            return List<T>@{};
+            return List<Nat>@{};
         }
 #if SMALL_MODEL_ENABLED
         else if(count < 4n) {
@@ -2212,8 +2212,7 @@ __internal entity ListOps provides Object {
     }
 
     function s_fill<T>(k: Nat, val: T): List<T> {
-        let count = end - start;
-        if(count == 0n) {
+        if(k == 0n) {
             return List<T>@{};
         }
 #if SMALL_MODEL_ENABLED
