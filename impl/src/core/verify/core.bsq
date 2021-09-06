@@ -278,7 +278,7 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
 }
 
 //<summary>Primitive DataString value.</summary>
-__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T APIType {
+__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType {
     method value(): String # special_extract
     function from(str: String): # special_inject
 }
@@ -301,7 +301,7 @@ enum BufferCompression {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-entity BufferOf<T APIType> provides Some, APIType {
+entity BufferOf<T grounded APIType> provides Some, APIType {
     private field format: BufferFormat;
     private field encoding: BufferEncoding;
     private field compression: BufferCompression;
@@ -309,7 +309,7 @@ entity BufferOf<T APIType> provides Some, APIType {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-entity DataBuffer<T unique Parsable> provides Some, APIType {
+entity DataBuffer<T unique Parsable> provides Some, APIType when T grounded APIType {
     private field format: BufferFormat;
     private field encoding: BufferEncoding;
     private field compression: BufferCompression;
@@ -376,7 +376,7 @@ __internal entity Nothing provides IOption, APIType {
 }
 
 //<summary>Type for representing the nothing option value.</summary>
-__internal __constructable entity Something<T> provides Option<T>, APIType when T APIType {
+__internal __constructable entity Something<T> provides Option<T>, APIType when T grounded APIType {
     method value(): T # special_extract
     function from(v: T): # special_inject
 }
@@ -385,7 +385,7 @@ __internal __constructable entity Something<T> provides Option<T>, APIType when 
 __universal concept IOptionT provides Some {
 }
 
-concept Option<T> provides ISomething, APIType when T APIType {
+concept Option<T> provides ISomething, APIType when T grounded APIType {
     method asSomething(): Something<T> {
         return this.as<Something<T>>();
     }
@@ -425,7 +425,7 @@ concept Option<T> provides ISomething, APIType when T APIType {
 }
 
 //<summary>Result type.</summary>
-concept Result<T, E=None> provides Some, APIType when T APIType && E APIType {
+concept Result<T, E=None> provides Some, APIType when T grounded APIType && E grounded APIType {
     __internal __constructable entity Ok provides Some, Result<T, E> {
         method value(): T # special_extract
         function from(v: T): # special_inject

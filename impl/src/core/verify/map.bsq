@@ -6,7 +6,7 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-__internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K APIType && V APIType {
+__internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType {
     private method value(): List<[K, V]> # special_extract
     private function from(v: List<[K, V]>): # special_inject
 
@@ -14,23 +14,19 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
         return ListFlatOps::s_empty<[K, V]>(this.value());
     }
 
-    method size(): Nat {
-        return ListOps::s_size<[K, V]>(this.value());
-    }
-
     method has(key: K): Bool {
-        return ListOps::s_has_check_kv<K, V>(this.value(), k);
+        return ListOps::s_has_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
     }
 
     method get(key: K): V {
-        let idx = ListOps::s_find_index_kv<[K, V]>(this.value(), k);
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
 
         check idx !== none;
         return ListOps::s_safe_get<[K, V]>(this.value(), idx);
     }
 
     method getOrNone(k: K): V? {
-        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         if(idx === none) {
             return none;
         }
@@ -40,7 +36,7 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     }
 
     method getOption(k: K): Option<V> {
-        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         if(idx === none) {
             return nothing;
         }
@@ -50,7 +46,7 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     }
 
     method getTry(k: K, out? v: V): Bool {
-        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         if(idx === none) {
             return false;
         }
@@ -61,13 +57,13 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     }
 
     method union(m: Map<K, V>): Map<K, V> {
-            let tl = this.value();
-            let ml = m.value();
+        let tl = this.value();
+        let ml = m.value();
 
-            xxxx;
+        check ListOps::s_s_chk_kv_disjoint<K, V>(tl, ml);
 
-            let am = ListOps::s_concat2<[K, V]>(tl, ml);
-            return Map<K, V>::from(am);
+        let am = ListOps::s_concat2<[K, V]>(tl, ml);
+        return Map<K, V>::from(am);
     }
 
     recursive? method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
@@ -81,14 +77,14 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     }
 
     method add(k: K, v: V): Map<K, V> {
-        check !ListOps::s_has_check_kv<K, V>(this.value(), k);
+        check !ListOps::s_has_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         
-        let am = ListOps::s_concat2<[K, V]>(this.value(), List<[K, V]>{[k, v]});
+        let am = ListOps::s_concat2<[K, V]>(this.value(), List<[K, V]>@{[k, v]});
         return Map<K, V>::from(am);
     }
 
     method set(k: K, v: V): Map<K, V> {
-        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        let idx = ListOps::s_find_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         check idx !== none;
 
         let sm = this.value().set(idx, [k, v]);
@@ -96,12 +92,14 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     }
 
     method remove(k: K): Map<K, V> {
-        let idx = ListOps::s_find_index_kv<K, V>(this.value(), k);
+        let idx = ListOps::s_find_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         check idx !== none;
 
         let rm = this.value().remove(idx);
         return Map<K, V>::from(rm);
     }
+
+    
 
     //
     //TODO: ref versions of the add/remove/set operators

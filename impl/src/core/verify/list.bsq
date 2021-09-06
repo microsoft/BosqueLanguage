@@ -6,7 +6,7 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-__internal entity List<T> provides Object, Expandoable<T>, APIType when T APIType {
+__internal entity List<T> provides Object, Expandoable<T>, APIType when T grounded APIType {
     function ints(start: Int, end: Int): List<Int> {
         check start <= end;
 
@@ -823,20 +823,28 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     }
 
     method filterType<U>(): List<U> {
-        return ListOps::s_filter_type<T, U>(this);
+        let fl = ListOps::s_filter<T>(this, pred(v: T): Bool => v istype U);
+        let tl = ListOps::s_map<T, U>(fl, fn(v: T): U => ListOps::s_safeAs<T, U>(v));
+        return tl;
     }
 
     method filterSome(): List<T!Some> {
-        return ListOps::s_filter_type<T, T!Some>(this);
+        let fl = ListOps::s_filter<T>(this, pred(v: T): Bool => v istype T!Some);
+        let tl = ListOps::s_map<T, T!Some>(fl, fn(v: T): T!Some => ListOps::s_safeAs<T, T!Some>(v));
+        return tl;
     }
 
     method {when T unique IOption} filterSomething(): List<T!IOptionT> {
+        let fl = ListOps::s_filter<T>(this, pred(v: T): Bool => v istype Something<T!IOptionT>);
+        let tl = ListOps::s_map<T, T!IOptionT>(fl, fn(v: T): T!IOptionT => ListOps::s_safeAs<T, Something<T!IOptionT>>(v).value());
+        return tl;
+
         let somes = ListOps::s_filter_type<T, Option<T!IOptionT>>(this);
         return ListOps::s_map<Option<T!IOptionT>, T!IOptionT>(somes, fn(v: Option<T!IOptionT>): T!IOptionT => v.value());
     }
 
     method castType<U>(): List<U> {
-        return ListOps::s_map<T, U>(this, fn(v: T): U => v.as<U>());
+        return ListOps::s_map<T, U>(this, fn(v: T): U => v astype U);
     }
 
     method slice(start?: Nat=0n, end?: Nat=ListOperators::s_size<T>(this)): List<T> {
@@ -847,99 +855,99 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
 
     method removeFirst(k: Nat): List<T> {
         check k <= ListOps::s_size<T>(this);
-        return ListOps::s_slice_front<T>(this, k);
-    }
+        return ListOps::s_slice<T>(this, k, ListOps::s_size<T>(this));
+    } 
 
     method removeLast(k: Nat): List<T> {
         check k <= ListOps::s_size<T>(this);
-        return ListOps::s_slice_back<T>(this, ListOps::s_size<T>(this) - k);
+        return ListOps::s_slice<T>(this, 0, ListOps::s_size<T>(this) - k);
     }
 
     recursive? method takeWhile(p: recursive? pred(_: T) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_index_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
+        let lpos = ListOps::s_find_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice_back<T>(this, lpos);
+            return ListOps::s_slice<T>(this, 0, lpos);
         }
     }
 
     recursive? method takeWhile(p: recursive? pred(_: T, _: Nat) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_index_pred_idx<T>[recursive?](this, recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice_back<T>(this, lpos);
+            return ListOps::s_slice<T>(this, 0, lpos);
         }
     }
 
     recursive? method discardWhile(p: recursive? pred(_: T) -> Bool): List<T> {
-        let lpos = ListOps::s_find_index_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
+        let lpos = ListOps::s_find_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
 
         if(lpos === none) {
             return List<T>@{};
         }
         else {
-            return ListOps::s_slice_front<T>(this, lpos);
+            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
         }
     }
 
     recursive? method discardWhile(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
-        let lpos = ListOps::s_find_index_pred_idx<T>[recursive?](this, recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
 
         if(lpos === none) {
             return List<T>@{};
         }
         else {
-            return ListOps::s_slice_front<T>(this, lpos);
+            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
         }
     }
 
     recursive? method takeUntil(p: recursive? pred(_: T) -> Bool): List<T> {
-        let lpos = ListOps::s_find_index_pred<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred<T>[recursive?](this, p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice_back<T>(this, lpos);
+            return ListOps::s_slice<T>(this, 0, lpos);
         }
     }
 
     recursive? method takeUntil(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
-        let lpos = ListOps::s_find_index_pred_idx<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice_back<T>(this, lpos);
+            return ListOps::s_slice<T>(this, 0, lpos);
         }
     }
 
     recursive? method discardUntil(p: recursive? pred(_: T) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_index_pred<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred<T>[recursive?](this, p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice_front<T>(this, lpos);
+            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
         }
     }
 
     recursive? method discardUntil(p: recursive? pred(_: T, _: Nat) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_index_pred_idx<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice_front<T>(this, lpos);
+            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
         }
     }
 
@@ -979,7 +987,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
                 return nothing;
             }
             else {
-                return f[recursive?](v.value());
+                return something(f[recursive?](v.value()));
             }
         });
     }
@@ -990,7 +998,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
                 return nothing;
             }
             else {
-                return f[recursive?](v.value(), i);
+                return something(f[recursive?](v.value(), i));
             }
         });
     }
@@ -1056,12 +1064,16 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         return ListOps::s_sort<T>[recursive?](this, cmp);
     }
 
-    method {when T grounded KeyType} uniqueKey(): List<T> {
+    method {when T grounded KeyType} uniqueifyKey(): List<T> {
         return ListOps::s_unique<T>(this, pred(a: T, b: T): Bool => KeyType::equal<T>(a, b));
     }
 
-    recursive? method unique(eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+    recursive? method uniqueify(eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
        return ListOps::s_unique<T>[recursive?](this, eq);
+    }
+
+    recursive? method unique(eq: recursive? pred(_: T, _: T) -> Bool): Bool {
+       return ListOps::s_isunique<T>[recursive?](this, eq);
     }
 
     method reverse(): List<T> {
@@ -1079,13 +1091,13 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
     method popBack(): List<T> {
         check !ListFlatOps::s_empty<T>(this);
 
-        return ListOps::s_slice_back<T>(this, ListOps::s_size<T>(this) - 1);
+        return ListOps::s_slice<T>(this, 0, ListOps::s_size<T>(this) - 1);
     }
 
     method popFront(): List<T> {
         check !ListFlatOps::s_empty<T>(this);
 
-        return ListOps::s_slice_front<T>(this, 1);
+        return ListOps::s_slice<T>(this, 1, ListOps::s_size<T>(this));
     }
 
     method set(i: Nat, v: T): List<T> {
@@ -1099,14 +1111,14 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
         else {
             if(i == 0) {
-                return ListOps::s_concat2<T>(vl, ListOps::s_slice_front<T>(this, 1));
+                return ListOps::s_concat2<T>(vl, ListOps::s_slice<T>(this, 1, count));
             }
             elif(i == count - 1) {
-                return ListOps::s_concat2<T>(ListOps::s_slice_back<T>(this, count - 1), vl);
+                return ListOps::s_concat2<T>(ListOps::s_slice<T>(this, 0, count - 1), vl);
             }
             else {
-                let front = ListOps::s_slice_back<T>(this, i);
-                let back = ListOps::s_slice_front<T>(this, i + 1);
+                let front = ListOps::s_slice<T>(this, 0, i);
+                let back = ListOps::s_slice<T>(this, i + 1, count);
 
                 return ListOps::s_concat2<T>(ListOps::s_concat2<T>(front, vl), back);
             }
@@ -1123,14 +1135,14 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T APITyp
         }
         else {
             if(i == 0) {
-                return ListOps::s_slice_front<T>(this, 1);
+                return ListOps::s_slice<T>(this, 1, count);
             }
             elif(i == count - 1) {
-                return ListOps::s_slice_back<T>(this, count - 1);
+                return ListOps::s_slice<T>(this, 0, count - 1);
             }
             else {
-                let front = ListOps::s_slice_back<T>(this, i);
-                let back = ListOps::s_slice_front<T>(this, i + 1);
+                let front = ListOps::s_slice<T>(this, 0, i);
+                let back = ListOps::s_slice<T>(this, i + 1, count);
 
                 return ListOps::s_concat2<T>(front, back);
             }
