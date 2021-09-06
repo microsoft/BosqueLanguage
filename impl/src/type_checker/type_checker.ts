@@ -6406,10 +6406,10 @@ class TypeChecker {
                             const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
 
                             const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, dtype.typeID);
-                            this.m_emitter.masm.fieldDecls.set(fkey.keyid, mfield);
+                            this.m_emitter.masm.fieldDecls.set(fkey, mfield);
                         }
 
-                        fields.push(this.m_emitter.masm.fieldDecls.get(fkey.keyid) as MIRFieldDecl);
+                        fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
                     });
 
                     const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, conskey !== undefined ? conskey.keyid : undefined, consfuncfields, fields);
