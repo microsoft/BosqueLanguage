@@ -57,12 +57,9 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
     }
 
     method union(m: Map<K, V>): Map<K, V> {
-        let tl = this.value();
-        let ml = m.value();
-
-        check ListOps::s_s_chk_kv_disjoint<K, V>(tl, ml);
-
-        let am = ListOps::s_concat2<[K, V]>(tl, ml);
+        let am = ListOps::s_concat2<[K, V]>(this.value(), m.value());
+        check ListOps::s_chk_kv_unique<K, V>(am);
+        
         return Map<K, V>::from(am);
     }
 

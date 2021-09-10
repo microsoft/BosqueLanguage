@@ -1064,10 +1064,6 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T ground
         return ListOps::s_sort<T>[recursive?](this, cmp);
     }
 
-    method {when T grounded KeyType} uniqueifyKey(): List<T> {
-        return ListOps::s_unique<T>(this, pred(a: T, b: T): Bool => KeyType::equal<T>(a, b));
-    }
-
     recursive? method uniqueify(eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
        return ListOps::s_unique<T>[recursive?](this, eq);
     }

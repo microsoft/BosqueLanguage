@@ -182,7 +182,7 @@ class SMTCallSimple extends SMTExp {
         return new SMTCallSimple(`(_ is ${smtname})`, [exp]);
     }
 
-    static makeNot(smtname: string, exp: SMTExp): SMTExp {
+    static makeNot(exp: SMTExp): SMTExp {
         return new SMTCallSimple("not", [exp]);
     }
 

@@ -883,10 +883,10 @@ __internal entity ListFlatOps provides Object {
 
     ////
     //s_small_unique
-    function s_small_unique_1<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+    recursive? function s_small_unique_1<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
         return l;
     }
-    recursive? function s_small_unique_2<K grounded KeyType, V>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+    recursive? function s_small_unique_2<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
         let at0 = ListFlatOps::s_2at0<T>(l);
         let at1 = ListFlatOps::s_2at1<T>(l);
         if(!eq[recursive](at0.0, at1.0)) {
@@ -896,10 +896,10 @@ __internal entity ListFlatOps provides Object {
             return List<T>@{at0};
         }
     }
-    recursive? function s_small_unique_3<K grounded KeyType, V>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+    recursive? function s_small_unique_3<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
         let at0 = ListFlatOps::s_3at0<T>(l);
         let at1 = ListFlatOps::s_3at1<T>(l);
-        let at2 = ListFlatOps::s_3at1<T>(l);
+        let at2 = ListFlatOps::s_3at2<T>(l);
 
         let eq01 = !eq[recursive](at0.0, at1.0);
         let eq02 = !eq[recursive](at0.0, at1.2);
@@ -918,7 +918,7 @@ __internal entity ListFlatOps provides Object {
             return List<T>{at0};
         }
     }
-    recursive? function s_small_unique<K grounded KeyType, V>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+    recursive? function s_small_unique<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
         if(ListFlatOps::s_empty<T>(l)) {
             return List<T>@{};
         }
@@ -930,6 +930,58 @@ __internal entity ListFlatOps provides Object {
         }
         else {
             return ListFlatOps::s_small_unique_3<T>[recursive?](l, eq);
+        }
+    }
+
+    ////
+    //s_small_key_unique
+    function s_small_key_unique_1<T grounded KeyType>(l: List<T>): List<T> {
+        return l;
+    }
+    function s_small_key_unique_2<T grounded KeyType>(l: List<T>): List<T> {
+        let at0 = ListFlatOps::s_2at0<T>(l);
+        let at1 = ListFlatOps::s_2at1<T>(l);
+        if(!KeyType::equal<T>(at0, at1)) {
+            return l;
+        }
+        else {
+            return List<T>@{at0};
+        }
+    }
+    function s_small_key_unique_3<T grounded KeyType>(l: List<T>): List<T> {
+        let at0 = ListFlatOps::s_3at0<T>(l);
+        let at1 = ListFlatOps::s_3at1<T>(l);
+        let at2 = ListFlatOps::s_3at2<T>(l);
+
+        let eq01 = !KeyType::equal<T>(at0, at1);
+        let eq02 = !KeyType::equal<T>(at0, at2);
+        let eq12 = !KeyType::equal<T>(at1, at2)
+
+        if(ListOps::s_and3(!eq01, !eq02, !eq12)) {
+            return l;
+        }
+        elif(ListOps::s_and2(!eq01, ListOps::s_or2(eq02, eq12))) {
+            return List<T>{at0, at1};
+        }
+        elif(ListOps::s_and2(eq01, !eq02)) {
+            return List<T>{at0, at2};
+        }
+        else {
+            return List<T>{at0};
+        }
+    }
+    function s_small_key_unique<T grounded KeyType>(l: List<T>): List<T> {
+        if(ListFlatOps::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        elif(ListFlatOps::s_is1<T>(l)) {
+            return ListFlatOps::s_small_key_unique_1<T>(l, eq);
+        }
+        elif(ListFlatOps::s_is2<T>(l)) {
+            return ListFlatOps::s_small_key_unique_2<T>(l, eq);
+        }
+        else {
+            return ListFlatOps::s_small_key_unique_3<T>(l, eq);
         }
     }
 
@@ -2163,13 +2215,34 @@ __internal entity ListOps provides Object {
         }
 #if SMALL_MODEL_ENABLED
         elif(ListFlatOps::s_isFlatList<T>(l)) {
-            return ListFlatOps::s_small_unique<T>(l, eq);
+            return ListFlatOps::s_small_unique<T>[recursive?](l, eq);
         }
 #endif
         else {
             return ListOps::s_filter_idx<T>(l, recursive? fn(v: T, i: Nat) => {
                 return !ListOps::s_has_pred_idx<T>(l, recursive? fn(u: T, j: Nat) => {
                     ListOps::s_and2(i != j, eq[recursive?](u, v));
+                });
+            });
+        }
+    }
+
+    function s_key_unique<T grounded KeyType>(l: List<K>): List<T> {
+        if(ListFlatOps::s_empty<T>(l)) {
+            return List<T>@{};
+        }
+        elif(ListOps::s_size<T>(l) == 1) {
+            return l;
+        }
+#if SMALL_MODEL_ENABLED
+        elif(ListFlatOps::s_isFlatList<T>(l)) {
+            return ListFlatOps::s_small_key_unique<T>(l);
+        }
+#endif
+        else {
+            return ListOps::s_filter_idx<T>(l, fn(v: T, i: Nat) => {
+                return !ListOps::s_has_pred_idx<T>(l, fn(u: T, j: Nat) => {
+                    ListOps::s_and2(i != j, KeyType::equal<T>(u, v));
                 });
             });
         }
@@ -2184,7 +2257,7 @@ __internal entity ListOps provides Object {
         }
 #if SMALL_MODEL_ENABLED
         elif(ListFlatOps::s_isFlatList<T>(l)) {
-            return ListFlatOps::s_small_isunique<T>(l, eq);
+            return ListFlatOps::s_small_isunique<T>[recursive?](l, eq);
         }
 #endif
         else {
@@ -2196,7 +2269,7 @@ __internal entity ListOps provides Object {
         }
     }
 
-    function s_chk_kv_unique<K grounded KeyType, V>(l: List<[K, V]>, bidx: Nat): Bool {
+    function s_chk_kv_unique<K grounded KeyType, V>(l: List<[K, V]>): Bool {
         if(ListFlatOps::s_empty<[K ,V]>(l)) {
             return true;
         }
@@ -2212,19 +2285,6 @@ __internal entity ListOps provides Object {
             return !ListOps::s_has_pred_idx<[K, V]>(l, pred(v: [K, V], i: Nat): Bool => {
                 return ListOps::s_has_pred_idx<[K, V]>(l, pred(u: [K, V], j: Nat): Bool => {
                     ListOps::s_and2(i != j, KeyType::equal<K>(u.0, v.0));
-                });
-            });
-        }
-    }
-
-    function s_chk_kv_disjoint<K grounded KeyType, V, U>(l: List<[K, V]>, ol: List<[K, U]>): Bool {
-        if(ListOps::s_or2(ListFlatOps::s_empty<[K, V]>(l), ListFlatOps::s_empty<[K, U]>(ol))) {
-            return true;
-        }
-        else {
-            return !ListOps::s_has_pred<[K, V]>(l, pred(v: [K, V]): Bool => {
-                return ListOps::s_has_pred<[K, U]>(l, pred(u: [K, U]): Bool => {
-                    KeyType::equal<K>(u.0, v.0);
                 });
             });
         }

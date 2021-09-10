@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTType, VerifierOptions, BVEmitter } from "./smt_exp";
@@ -685,7 +685,7 @@ class SMTBodyEmitter {
         }
         else {
             const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-            return new SMTCallSimple("=", [accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(ofentity.typeID)}`)]);
+            return SMTCallSimple.makeEq(accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(ofentity.typeID)}`));
         }
     }
 
@@ -707,7 +707,7 @@ class SMTBodyEmitter {
                 return tests[0];
             }
             else {
-                return new SMTCallSimple("and", tests);
+                return SMTCallSimple.makeAndOf(...tests);
             }
         }
     }
@@ -722,7 +722,7 @@ class SMTBodyEmitter {
         }
         else {
             const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-            return new SMTCallSimple("=", [accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(oftuple.typeID)}`)]);
+            return SMTCallSimple.makeEq(accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(oftuple.typeID)}`));
         }
     }
 
@@ -736,7 +736,7 @@ class SMTBodyEmitter {
         }
         else {
             const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-            return new SMTCallSimple("=", [accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(ofrecord.typeID)}`)]);
+            return SMTCallSimple.makeEq(accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(ofrecord.typeID)}`));
         }
     }
 
@@ -906,10 +906,10 @@ class SMTBodyEmitter {
         else {
             const trepr = this.typegen.getSMTTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return new SMTCallSimple("=", [this.argToSMT(arg), new SMTConst("BKey@none")]);
+                return SMTCallSimple.makeEq(this.argToSMT(arg), new SMTConst("BKey@none"));
             }
             else {
-                return new SMTCallSimple("=", [this.argToSMT(arg), new SMTConst("BTerm@none")]);
+                return SMTCallSimple.makeEq(this.argToSMT(arg), new SMTConst("BTerm@none"));
             }
         }
     }
@@ -924,10 +924,10 @@ class SMTBodyEmitter {
         else {
             const trepr = this.typegen.getSMTTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return new SMTCallSimple("not", [new SMTCallSimple("=", [this.argToSMT(arg), new SMTConst("BKey@none")])]);
+                return SMTCallSimple.makeNotEq(this.argToSMT(arg), new SMTConst("BKey@none"));
             }
             else {
-                return new SMTCallSimple("not", [new SMTCallSimple("=", [this.argToSMT(arg), new SMTConst("BTerm@none")])]);
+                return SMTCallSimple.makeNotEq(this.argToSMT(arg), new SMTConst("BTerm@none"));
             }
         }
     }
@@ -942,10 +942,10 @@ class SMTBodyEmitter {
         else {
             const trepr = this.typegen.getSMTTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return new SMTCallSimple("=", [this.argToSMT(arg), new SMTConst("BKey@nothing")]);
+                return SMTCallSimple.makeEq(this.argToSMT(arg), new SMTConst("BKey@nothing"));
             }
             else {
-                return new SMTCallSimple("=", [this.argToSMT(arg), new SMTConst("BTerm@nothing")]);
+                return SMTCallSimple.makeEq(this.argToSMT(arg), new SMTConst("BTerm@nothing"));
             }
         }
     }
@@ -1575,15 +1575,90 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: SMTExp): SMTExp {
-        xxxx;
-        const consexp = this.lopsManager.processLiteralK_0(this.typegen.getMIRType(op.tkey));
+        const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
         return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
     }
 
+    processConstructorPrimaryCollectionSingletons_Helper(ltype: MIRType, exps: SMTExp[]): SMTExp {
+        if(exps.length <= 3) {
+            assert(exps.length !== 0, "Not sure how this could happen");
+            
+            return this.lopsManager.processLiteralK_Pos(ltype, exps);
+        }
+        else {
+            const lhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(0, exps.length / 2));
+            const rhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(exps.length / 2));
+
+            return this.lopsManager.processConcat2(ltype, lhs, rhs, this.numgen.int.emitSimpleNat(exps.length));
+        }
+    }
+
     processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons, continuation: SMTExp): SMTExp {
-        xxxx;
-        const consexp = this.lopsManager.processLiteralK_Pos(this.typegen.getMIRType(op.tkey), op.args.length, op.args.map((arg) => this.argToSMT(arg[1])));
-        return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
+        const args = op.args.map((arg) => this.argToSMT(arg[1]));
+
+        if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
+            const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(this.typegen.getMIRType(op.tkey), args);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        }
+        else {
+            if(constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+                const ultype = this.typegen.getMIRType(constype.ultype);
+                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
+
+                //it is just an inject -- so direct assign is ok
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else if(constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+                const ultype = this.typegen.getMIRType(constype.ultype);
+                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
+
+                //it is just an inject -- so direct assign is ok
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else if(constype instanceof MIRPrimitiveSetEntityTypeDecl) {
+                const ultype = this.typegen.getMIRType(constype.ultype);
+                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
+
+                const cvar = this.generateTempName();
+                const uvar = this.generateTempName();
+                const unqinv = new SMTCallGeneral(this.typegen.lookupFunctionName(constype.unqconvinv), [new SMTVar(cvar)]);
+                const erropt = this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(ultype, new SMTVar(uvar)));
+                        
+                return new SMTLet(cvar, consexp,
+                        new SMTLet(uvar, unqinv,
+                            new SMTIf(this.typegen.generateResultIsErrorTest(ultype, unqinv),
+                            erropt,
+                            new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.generateResultGetSuccess(ultype, new SMTVar(uvar)), continuation)
+                        )
+                    )
+                );
+            }
+            else {
+                assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
+                const mapconstype = constype as MIRPrimitiveMapEntityTypeDecl;
+
+                const ultype = this.typegen.getMIRType(mapconstype.ultype);
+                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
+
+                const cvar = this.generateTempName();
+                const uvar = this.generateTempName();
+                const unqinv = new SMTCallGeneral(this.typegen.lookupFunctionName(mapconstype.unqchkinv), [new SMTVar(cvar)]);
+                const erropt = this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(this.typegen.getMIRType("NSCore::Bool"), new SMTVar(uvar)));
+                        
+                return new SMTLet(cvar, consexp,
+                        new SMTLet(uvar, unqinv,
+                            new SMTIf(this.typegen.generateResultIsErrorTest(this.typegen.getMIRType("NSCore::Bool"), unqinv),
+                            erropt,
+                            new SMTIf(SMTCallSimple.makeNot(this.typegen.generateResultGetSuccess(this.typegen.getMIRType("NSCore::Bool"), new SMTVar(uvar))),
+                                this.generateErrorCreate(op.sinfo, this.typegen.getMIRType(op.tkey), "Key collision in Map constructor"),
+                                new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.generateResultGetSuccess(ultype, new SMTVar(uvar)), continuation)
+                            )
+                        )
+                    )
+                );
+            }
+        }
     }
 
     processConstructorPrimaryCollectionCopies(op: MIRConstructorPrimaryCollectionCopies, continuation: SMTExp): SMTExp {
@@ -1598,13 +1673,13 @@ class SMTBodyEmitter {
         let eqcmp: SMTExp = new SMTConst("false");
 
         if(op.lhslayouttype === op.rhslayouttype) {
-            eqcmp = new SMTCallSimple("=", [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+            eqcmp = SMTCallSimple.makeEq(this.argToSMT(op.lhs), this.argToSMT(op.rhs));
         }
         else {
             const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.cmptype));
             const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.cmptype));
 
-            eqcmp = new SMTCallSimple("=", [lhs, rhs]);
+            eqcmp = SMTCallSimple.makeEq(lhs, rhs);
         }
 
         const gop = this.generateGuardStmtCond(op.sguard, eqcmp, "NSCore::Bool");
@@ -1616,7 +1691,7 @@ class SMTBodyEmitter {
     }
 
     processPrefixNotOp(op: MIRPrefixNotOp, continuation: SMTExp): SMTExp {
-        return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple("not", [this.argToSMT(op.arg)]), continuation);
+        return new SMTLet(this.varToSMTName(op.trgt).vname, SMTCallSimple.makeNot(this.argToSMT(op.arg)), continuation);
     }
 
     processIsTypeOf(op: MIRIsTypeOf, continuation: SMTExp): SMTExp {
@@ -1670,7 +1745,7 @@ class SMTBodyEmitter {
                 ttop = tests[0];
             }
             else {
-                ttop = new SMTCallSimple("or", tests);
+                ttop = SMTCallSimple.makeOrOf(...tests);
             }
         }
 
@@ -1863,15 +1938,15 @@ class SMTBodyEmitter {
     }
 
     processGenerateResultWithZeroArgCheck(sinfo: SourceInfo, zero: SMTConst, not0arg: SMTExp, oftype: MIRType, val: SMTExp): SMTExp {
-        const chkzero = new SMTCallSimple("=", [zero, not0arg]);
+        const chkzero = SMTCallSimple.makeEq(zero, not0arg);
         return new SMTIf(chkzero, this.generateErrorCreate(sinfo, oftype, "Div by 0"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
     }
 
     processGenerateSafeDiv_Int(sinfo: SourceInfo, args: SMTExp[]): SMTExp {
         const bvmin = new SMTConst(this.numgen.int.bvintmin);
 
-        const chkzero = new SMTCallSimple("=", [new SMTConst("BInt@zero"), args[1]]);
-        const checkovf = new SMTCallSimple("and", [new SMTCallSimple("=", [bvmin, args[0]]), new SMTCallSimple("=", [this.numgen.int.emitSimpleInt(-1), args[1]])]);
+        const chkzero = SMTCallSimple.makeEq(new SMTConst("BInt@zero"), args[1]);
+        const checkovf = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(bvmin, args[0]), SMTCallSimple.makeEq(this.numgen.int.emitSimpleInt(-1), args[1]));
 
 
         return new SMTIf(
@@ -1887,7 +1962,7 @@ class SMTBodyEmitter {
     processGenerateSafeNegate_Int(args: SMTExp[]): SMTExp {
         const bvmin = new SMTConst(this.numgen.int.bvintmin);
         return new SMTIf(
-            new SMTCallSimple("=", [args[0], bvmin]),
+            SMTCallSimple.makeEq(args[0], bvmin),
             this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int")),
             this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvneg", args))
         );
@@ -1920,7 +1995,7 @@ class SMTBodyEmitter {
             tres, 
             new SMTCallSimple("bvadd", [extl, extr]),
             new SMTIf(
-                new SMTCallSimple("or", [new SMTCallSimple("bvslt", [new SMTVar(tres), bvmin]), new SMTCallSimple("bvsgt", [new SMTVar(tres), bvmax])]),
+                SMTCallSimple.makeOrOf(new SMTCallSimple("bvslt", [new SMTVar(tres), bvmin]), new SMTCallSimple("bvsgt", [new SMTVar(tres), bvmax])),
                 this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int")),
                 this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvadd", args))
             )
@@ -1948,7 +2023,7 @@ class SMTBodyEmitter {
             tres, 
             new SMTCallSimple("bvsub", [extl, extr]),
             new SMTIf(
-                new SMTCallSimple("or", [new SMTCallSimple("bvslt", [new SMTVar(tres), bvmin]), new SMTCallSimple("bvsgt", [new SMTVar(tres), bvmax])]),
+                SMTCallSimple.makeOrOf(new SMTCallSimple("bvslt", [new SMTVar(tres), bvmin]), new SMTCallSimple("bvsgt", [new SMTVar(tres), bvmax])),
                 this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int")),
                 this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvsub", args))
             )
@@ -1965,7 +2040,7 @@ class SMTBodyEmitter {
 
     processGenerateSafeMult_Int(args: SMTExp[]): SMTExp {
         return new SMTIf(
-            new SMTCallSimple("and", [new SMTCallSimple("bvsmul_noovfl", args), new SMTCallSimple("bvumul_noudfl", args)]),
+            SMTCallSimple.makeAndOf(new SMTCallSimple("bvsmul_noovfl", args), new SMTCallSimple("bvumul_noudfl", args)),
             this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvsub", args)),
             this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int"))
         );
@@ -2201,7 +2276,7 @@ class SMTBodyEmitter {
             case "NSCore::===infix=(NSCore::BigInt, NSCore::BigInt)":
             case "NSCore::===infix=(NSCore::BigNat, NSCore::BigNat)":
             case "NSCore::===infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = new SMTCallSimple("=", args);
+                smte = SMTCallSimple.makeEq(args[0], args[1]);
                 break;
             }
             //op infix !=
@@ -2210,7 +2285,7 @@ class SMTBodyEmitter {
             case "NSCore::!==infix=(NSCore::BigInt, NSCore::BigInt)":
             case "NSCore::!==infix=(NSCore::BigNat, NSCore::BigNat)":
             case "NSCore::!==infix=(NSCore::Rational, NSCore::Rational)": {
-                smte = new SMTCallSimple("not", [new SMTCallSimple("=", args)]);
+                smte = SMTCallSimple.makeNotEq(args[0], args[1]);
                 break;
             }
             //op infix <
@@ -2330,11 +2405,11 @@ class SMTBodyEmitter {
                 break;
             }
             case "NSCore::===infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = new SMTCallSimple("=", args);
+                smte = SMTCallSimple.makeEq(args[0], args[1]);
                 break;
             }
             case "NSCore::!==infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = new SMTCallSimple("not", [new SMTCallSimple("=", args)]);
+                smte = SMTCallSimple.makeNotEq(args[0], args[1]);
                 break;
             }
             case "NSCore::<=infix=(NSCore::StringPos, NSCore::StringPos)":{
@@ -2522,8 +2597,8 @@ class SMTBodyEmitter {
         });
 
         const issafe = this.isSafeInvoke(idecl.ikey);
-        const encltypekey = idecl.enclosingDecl !== undefined ? idecl.enclosingDecl : "NSCore::None";
-        const smtencltypekey = this.typegen.getSMTTypeFor(this.typegen.getMIRType(encltypekey));
+        const arg0typekey = idecl.params.length !== 0 ? idecl.params[0].type : "NSCore::None";
+        const smtarg0typekey = this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg0typekey));
 
         const mirrestype = this.typegen.getMIRType(idecl.resultType);
         const smtrestype = this.typegen.getSMTTypeFor(mirrestype);
@@ -2531,11 +2606,13 @@ class SMTBodyEmitter {
         const chkrestype = issafe ? smtrestype : this.typegen.generateResultType(mirrestype);
 
         switch(idecl.implkey) {
-            case "default": {
+            case "default": 
+            case "special_extract": 
+            case "special_inject": {
                 return undefined;
             }
             case "validator_accepts": {
-                const bsqre = this.assembly.validatorRegexs.get(encltypekey) as BSQRegex;
+                const bsqre = this.assembly.validatorRegexs.get(idecl.enclosingDecl as MIRResolvedTypeKey) as BSQRegex;
                 const lre = bsqre.compileToPatternToSMT(this.vopts.StringOpt === "ASCII");
 
                 let accept: SMTExp = new SMTConst("false");
@@ -2569,54 +2646,54 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("str.substr", [new SMTVar(args[0].vname), new SMTVar(args[1].vname), new SMTVar(args[2].vname)]));
             }
             case "list_empty": {
-                const emptylist = new SMTConst(`${this.typegen.lookupTypeName(encltypekey)}@empty_const`);
+                const emptylist = new SMTConst(`${this.typegen.lookupTypeName(arg0typekey)}@empty_const`);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTVar(args[0].vname), emptylist));
             }
             case "flat_list_is1": {
-                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtencltypekey);
-                const check_uli = this.lopsManager.generateConsCallName_Direct(smtencltypekey, "list_1");
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const check_uli = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_1");
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, flat_uli));
             }
             case "flat_list_1at0": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_1", "_0_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_1", "_0_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_is2": {
-                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtencltypekey);
-                const check_uli = this.lopsManager.generateConsCallName_Direct(smtencltypekey, "list_2");
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const check_uli = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_2");
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, flat_uli));
             }
             case "flat_list_2at0": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_2", "_0_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_2", "_0_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_2at1": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_2", "_1_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_2", "_1_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_is3": {
-                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtencltypekey);
-                const check_uli = this.lopsManager.generateConsCallName_Direct(smtencltypekey, "list_3");
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const check_uli = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_3");
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, flat_uli));
             }
             case "flat_list_3at0": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_3", "_0_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_0_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_3at1": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_3", "_1_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_1_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_3at2": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_3", "_2_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_2_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "list_isflat": {
-                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtencltypekey);
-                const emptylist = new SMTConst(`${this.typegen.lookupTypeName(encltypekey)}@empty_const`);
-                const check_uli1 = this.lopsManager.generateConsCallName_Direct(smtencltypekey, "list_1");
-                const check_uli2 = this.lopsManager.generateConsCallName_Direct(smtencltypekey, "list_1");
-                const check_uli3 = this.lopsManager.generateConsCallName_Direct(smtencltypekey, "list_1");
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const emptylist = new SMTConst(`${this.typegen.lookupTypeName(arg0typekey)}@empty_const`);
+                const check_uli1 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_1");
+                const check_uli2 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_1");
+                const check_uli3 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_1");
 
                 const orof = SMTCallSimple.makeOrOf(
                     SMTCallSimple.makeEq(new SMTVar(args[0].vname), emptylist),
@@ -2627,16 +2704,16 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, orof);
             }
             case "concat_list_left": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_cons", "_left_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_cons", "_left_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "concat_list_right": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtencltypekey, "list_cons", "_right_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_cons", "_right_", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "list_isconcat": {
-                const cons_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtencltypekey);
-                const check_uli = this.lopsManager.generateConsCallName_Direct(smtencltypekey, "list_cons");
+                const cons_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const check_uli = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_cons");
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, cons_uli));
             }
             case "isequence_size":
@@ -2670,33 +2747,33 @@ class SMTBodyEmitter {
             }
             case "list_safe_get": {
                 const [l, n] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processGet(this.typegen.getMIRType(encltypekey), l, n);
+                const fbody = this.lopsManager.processGet(this.typegen.getMIRType(arg0typekey), l, n);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_safe_check_pred": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(encltypekey), false, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_safe_check_pred_idx": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(encltypekey), true, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_safe_check_fn": {
                 const pcode = idecl.pcodes.get("f") as MIRPCode;
                 const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(encltypekey), pcrtype, false, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, false, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_safe_check_fn_idx": {
                 const pcode = idecl.pcodes.get("f") as MIRPCode;
                 const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(encltypekey), pcrtype, true, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, true, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_safe_check_pred_pair": {
@@ -2710,170 +2787,144 @@ class SMTBodyEmitter {
             case "list_has_pred_check": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(encltypekey), false, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_has_pred_check_idx": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(encltypekey), true, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_find_index_pred": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(encltypekey), false, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_find_index_pred_idx": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(encltypekey), true, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_find_last_index_pred": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(encltypekey), false, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_find_last_index_pred_idx": {
                 const pcode = idecl.pcodes.get("p") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(encltypekey), true, pcode.code, pcode, l, count); 
+                const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
-            }
-            case "list_concat2": {
-
-            }
-            case "list_slice": {
-
-            }
-            case "list_rangeofint": {
-
-            }
-            case "list_rangeofnat": {
-
-            }
-            case "list_fill": {
-
-            }
-            case "list_reverse": {
-
-            }
-            case "list_zipindex": {
-
-            }
-            case "list_zip": {
-
-            }
-            case "list_computeisequence": {
-
-            }
-            case "list_computeisequence_idx": {
-
-            }
-            case "list_computejsequence": {
-
-            }
-            case "list_computessequence": {
-
-            }
-            case "list_map": {
-
-            }
-            case "list_map_idx": {
-
-            }
-            case "list_filter": {
-
-            }
-            case "list_filter_idx": {
-
-            }
-            case "list_min_arg": {
-
-            }
-            case "list_max_arg": {
-
-            }
-            case "list_join": {
-
-            }
-            case "list_sort": {
-
-            }
-            case "list_sum": {
-
-            }
-            default: {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
-            }
-
-
-            case "list_fill": {
-                const [count, value] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(encltypekey), count, value);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_rangeofint": {
-                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processRangeOfIntOperation(mirrestype, low, high, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_rangeofnat": {
-                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processRangeOfNatOperation(mirrestype, low, high, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-           
-            case "list_computeisequence": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            
-            case "list_fill": {
-                const [n, v] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(encltypekey), n, v);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
             }
             case "list_concat2": {
                 const [l1, l2, count] = args.map((arg) => new SMTVar(arg.vname));
                 const fbody = this.lopsManager.processConcat2(mirrestype, l1, l2, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            
-           
-            case "list_minidx": {
-                assert(false, "NOT IMPLEMENTED list_minidx")
-            }
-            case "list_maxidx": {
-                assert(false, "NOT IMPLEMENTED list_maxidx")
-            }
-            case "list_sum": {
-                const [l] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSum(this.typegen.getMIRType(encltypekey), l); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
-            }
-            case "list_filter_helper": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(encltypekey), pcode.code, pcode, l, isq, count); 
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_slice": {
                 const [l1, start, end, count] = args.map((arg) => new SMTVar(arg.vname));
                 const fbody = this.lopsManager.processSlice(mirrestype, l1, start, end, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_rangeofint": {
+                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processRangeOfIntOperation(mirrestype, low, high, count);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_rangeofnat": {
+                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processRangeOfNatOperation(mirrestype, low, high, count);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_fill": {
+                const [count, value] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(arg0typekey), count, value);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_reverse": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_zipindex": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_zip": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_computeisequence": {
+                const pcode = idecl.pcodes.get("p") as MIRPCode;
+                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_computeisequence_idx": {
+                const pcode = idecl.pcodes.get("p") as MIRPCode;
+                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_computejsequence": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_computessequence": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
             }
             case "list_map": {
                 const pcode = idecl.pcodes.get("f") as MIRPCode;
                 const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processMap(this.typegen.getMIRType(encltypekey), mirrestype, pcode.code, pcode, l, count);
-                return SMTFunction.create(this.typegen.mangle(idecl.key), args, chkrestype, fbody);
+                const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, false, pcode.code, pcode, l, count);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_map_idx": {
+                const pcode = idecl.pcodes.get("f") as MIRPCode;
+                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, true, pcode.code, pcode, l, count);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_filter": {
+                const pcode = idecl.pcodes.get("p") as MIRPCode;
+                const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, isq, count); 
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_filter_idx": {
+                const pcode = idecl.pcodes.get("p") as MIRPCode;
+                const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, isq, count); 
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            case "list_min_arg": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_max_arg": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_join": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_sort": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "list_sum": {
+                const [l] = args.map((arg) => new SMTVar(arg.vname));
+                const fbody = this.lopsManager.processSum(this.typegen.getMIRType(arg0typekey), l); 
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+            }
+            default: {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
             }
         }
     }

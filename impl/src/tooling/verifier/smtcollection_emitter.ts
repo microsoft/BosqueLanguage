@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIREntityTypeDecl, MIRInvokeBodyDecl, MIRPCode, MIRType } from "../../compiler/mir_assembly";
+import { MIREntityTypeDecl, MIRInvokeBodyDecl, MIRPCode, MIRPrimitiveListEntityTypeDecl, MIRType } from "../../compiler/mir_assembly";
 import { MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
@@ -92,14 +92,14 @@ class ListOpsManager {
     }
 
     private ensureOpsFor(encltype: MIRType): ListOpsInfo {
-        if (!this.ops.has(encltype.trkey)) {
-            const stypeinfo = (this.temitter.assembly.entityDecls.get(encltype.trkey) as MIREntityTypeDecl).specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[];
-            const ctype = this.temitter.getMIRType((stypeinfo.find((tke) => tke.tname === "T") as { tname: string, tkind: MIRResolvedTypeKey }).tkind);
+        if (!this.ops.has(encltype.typeID)) {
+            const stypeinfo = this.temitter.assembly.entityDecls.get(encltype.typeID) as MIRPrimitiveListEntityTypeDecl;
+            const ctype = stypeinfo.terms.get("T") as MIRType;
 
-            this.ops.set(encltype.trkey, new ListOpsInfo(encltype, ctype));
+            this.ops.set(encltype.typeID, new ListOpsInfo(encltype, ctype));
         }
 
-        return this.ops.get(encltype.trkey) as ListOpsInfo;
+        return this.ops.get(encltype.typeID) as ListOpsInfo;
     }
 
     private generateCapturedArgs(pcode: MIRPCode): SMTVar[] {
@@ -123,40 +123,12 @@ class ListOpsManager {
         const ops = this.ensureOpsFor(ltype);
 
         ops.consops.havoc = true;
-        if (this.vopts.SpecializeSmallModelGen) {
-            ops.consops.literalk.add(1);
-            ops.consops.literalk.add(2);
-            ops.consops.literalk.add(3);
-        }
-
         return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "havoc"), [path]);
     }
 
-    processLiteralK_0(ltype: MIRType): SMTExp {
-        this.ensureOpsFor(ltype);
-        return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "empty"), []);
-    }
-
-    processLiteralK_Pos(ltype: MIRType, k: number, values: SMTExp[]): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
+    processLiteralK_Pos(ltype: MIRType, values: SMTExp[]): SMTExp {
         const opname = `_${values.length}`;
-        ops.consops.literalk.add(k)
-
         return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), opname), values);
-    }
-
-    processRangeOfIntOperation(ltype: MIRType, start: SMTExp, end: SMTExp, count: SMTExp): SMTExp {
-        this.ensureOpsFor(ltype);
-        this.rangeint = true;
-
-        return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "rangeOfInt"),  [start, end, count]);
-    }
-
-    processRangeOfNatOperation(ltype: MIRType, start: SMTExp, end: SMTExp, count: SMTExp): SMTExp {
-        this.ensureOpsFor(ltype);
-        this.rangenat = true;
-        
-        return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "rangeOfNat"),  [start, end, count]);
     }
 
     processGet(ltype: MIRType, l: SMTExp, n: SMTExp): SMTExp {
@@ -183,11 +155,11 @@ class ListOpsManager {
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
 
-    processISequence(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
+    processISequence(ltype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
         const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "isequence", code);
+        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "isequence" + (isidx ? "_idx" : ""), code);
 
-        ops.dops.isequence.set(code, pcode);
+        ops.dops.isequence.set(code, {code: pcode, isidx: isidx});
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
 
@@ -215,40 +187,12 @@ class ListOpsManager {
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
 
-
-
-
-
-    processFillOperation(ltype: MIRType, count: SMTExp, value: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "fill");
-        ops.consops.fill = true;
-
-        return new SMTCallSimple(op, [count, value]);
-    }
-
     processConcat2(ltype: MIRType, l1: SMTExp, l2: SMTExp, count: SMTExp): SMTExp {
         this.ensureOpsFor(ltype);
         const op = this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "concat2");
         //concat always registered
 
         return new SMTCallSimple(op, [l1, l2, count]);
-    }
-
-    processSum(ltype: MIRType, l: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "sum");
-
-        ops.dops.sum = true;
-        return new SMTCallGeneral(op, [l]);
-    }
-
-    processFilter(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTVar, isq: SMTVar, count: SMTVar): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateConsCallNameUsing(this.temitter.getSMTTypeFor(ltype), "filter", code);
-
-        ops.consops.filter.set(code, pcode);
-        return new SMTCallGeneral(op, [l, isq, count, ...this.generateCapturedArgs(pcode)]);
     }
 
     processSlice(ltype: MIRType, l1: SMTExp, start: SMTExp, end: SMTExp, count: SMTExp): SMTExp {
@@ -259,12 +203,50 @@ class ListOpsManager {
         return new SMTCallSimple(op, [l1, start, end, count]);
     }
 
-    processMap(ltype: MIRType, intotype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(intotype);
-        const op = this.generateConsCallNameUsing(this.temitter.getSMTTypeFor(intotype), "map", code);
+    processRangeOfIntOperation(ltype: MIRType, start: SMTExp, end: SMTExp, count: SMTExp): SMTExp {
+        this.ensureOpsFor(ltype);
+        this.rangeint = true;
 
-        ops.consops.map.set(code, [pcode, ltype, intotype]);
+        return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "rangeOfInt"),  [start, end, count]);
+    }
+
+    processRangeOfNatOperation(ltype: MIRType, start: SMTExp, end: SMTExp, count: SMTExp): SMTExp {
+        this.ensureOpsFor(ltype);
+        this.rangenat = true;
+        
+        return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "rangeOfNat"),  [start, end, count]);
+    }
+
+    processFillOperation(ltype: MIRType, count: SMTExp, value: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "fill");
+        ops.consops.fill = true;
+
+        return new SMTCallSimple(op, [count, value]);
+    }
+
+    processMap(ltype: MIRType, intotype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(intotype);
+        const op = this.generateConsCallNameUsing(this.temitter.getSMTTypeFor(intotype), "map" + (isidx ? "_idx" : ""), code);
+
+        ops.consops.map.set(code, {code: pcode, fromtype: ltype, totype: intotype, isidx: isidx});
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
+    }
+
+    processFilter(ltype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTVar, isq: SMTVar, count: SMTVar): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateConsCallNameUsing(this.temitter.getSMTTypeFor(ltype), "filter" + (isidx ? "_idx" : ""), code);
+
+        ops.consops.filter.set(code, {code: pcode, isidx: isidx});
+        return new SMTCallGeneral(op, [l, isq, count, ...this.generateCapturedArgs(pcode)]);
+    }
+
+    processSum(ltype: MIRType, l: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "sum");
+
+        ops.dops.sum = true;
+        return new SMTCallGeneral(op, [l]);
     }
 
     generateConsCallName(ltype: SMTType, opname: string): string {
@@ -272,7 +254,7 @@ class ListOpsManager {
     }
 
     generateConsCallNameUsing(ltype: SMTType, opname: string, code: string): string {
-        return `_@@consop_${ltype.name}_${opname}_using_${this.temitter.mangle(code)}`;
+        return `_@@consop_${ltype.name}_${opname}_using_${this.temitter.lookupFunctionName(code)}`;
     }
 
     generateDesCallName(ltype: SMTType, opname: string): string {
@@ -280,11 +262,11 @@ class ListOpsManager {
     }
 
     generateDesCallNameUsing(ltype: SMTType, opname: string, code: string): string {
-        return `_@@desop_${ltype.name}_${opname}_using_${this.temitter.mangle(code)}`;
+        return `_@@desop_${ltype.name}_${opname}_using_${this.temitter.lookupFunctionName(code)}`;
     }
 
     generateULITypeFor(ltype: SMTType): SMTType {
-        return new SMTType(ltype.name + "$uli");
+        return new SMTType(ltype.name + "$uli", "[INTERNAL TYPE]", ltype.typeID + "$uli");
     }
 
     generateULIFieldFor(ltype: SMTType, consname: string, fname: string): string {
@@ -300,7 +282,7 @@ class ListOpsManager {
     }
 
     generateConsCallNameUsing_Direct(ltype: SMTType, opname: string, code: string): string {
-        return `_@@cons_${ltype.name}_${opname}_using_${this.temitter.mangle(code)}`;
+        return `_@@cons_${ltype.name}_${opname}_using_${this.temitter.lookupFunctionName(code)}`;
     }
 
     generateListSizeCall(exp: SMTExp, etype: SMTType): SMTExp {
