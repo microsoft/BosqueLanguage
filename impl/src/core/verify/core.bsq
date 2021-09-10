@@ -58,7 +58,7 @@ __universal concept Parsable provides Any {
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
 __universal concept APIType provides Any {
     //ONLY FOR USE IN MOCKING
-    function generate<T APIType>(): T # apitype_generate
+    function generate<T grounded APIType>(): T # apitype_generate
 }
 
 //<summary>Type for indicating that a datatype overrides the algebraic operators +, -, *, / along with the needed consts.</summary>

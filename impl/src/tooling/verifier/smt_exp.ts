@@ -165,6 +165,34 @@ class SMTCallSimple extends SMTExp {
         callees.add(this.fname);
         this.args.forEach((arg) => arg.computeCallees(callees));
     }
+
+    static makeEq(lhs: SMTExp, rhs: SMTExp): SMTExp {
+        return new SMTCallSimple("=", [lhs, rhs]);
+    }
+
+    static makeNotEq(lhs: SMTExp, rhs: SMTExp): SMTExp {
+        return new SMTCallSimple("not", [new SMTCallSimple("=", [lhs, rhs])]);
+    }
+
+    static makeBinOp(op: string, lhs: SMTExp, rhs: SMTExp): SMTExp {
+        return new SMTCallSimple(op, [lhs, rhs]);
+    }
+
+    static makeIsTypeOp(smtname: string, exp: SMTExp): SMTExp {
+        return new SMTCallSimple(`(_ is ${smtname})`, [exp]);
+    }
+
+    static makeNot(smtname: string, exp: SMTExp): SMTExp {
+        return new SMTCallSimple("not", [exp]);
+    }
+
+    static makeAndOf(...exps: SMTExp[]): SMTExp {
+        return new SMTCallSimple("and", exps);
+    }
+
+    static makeOrOf(...exps: SMTExp[]): SMTExp {
+        return new SMTCallSimple("or", exps);
+    }
 }
 
 class SMTCallGeneral extends SMTExp {

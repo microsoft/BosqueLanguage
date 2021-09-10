@@ -17,9 +17,8 @@ class RequiredListConstructors {
     havoc: boolean = false;
 
     fill: boolean = false;
-    literalk: Set<number> = new Set<number>([1, 2, 3]);
-    filter: Map<string, MIRPCode> = new Map<string, MIRPCode>();
-    map: Map<string, [MIRPCode, MIRType, MIRType]> = new Map<string, [MIRPCode, MIRType, MIRType]>();
+    filter: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
+    map: Map<string, {code: MIRPCode, fromtype: MIRType, totype: MIRType, isidx: boolean}> = new Map<string, {code: MIRPCode, fromtype: MIRType, totype: MIRType, isidx: boolean}>();
 }
 
 type SMTConstructorGenCode = {
@@ -31,19 +30,15 @@ type SMTConstructorGenCode = {
 class RequiredListDestructors {
     //always get
 
-    safecheckpred: Map<string, MIRPCode> = new Map<string, MIRPCode>();
-    safecheckfn: Map<string, [MIRPCode, MIRType]> = new Map<string, [MIRPCode, MIRType]>();
-    isequence: Map<string, MIRPCode> = new Map<string, MIRPCode>();
+    safecheckpred: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
+    safecheckfn: Map<string, {code: MIRPCode, rtype: MIRType, isidx: boolean}> = new Map<string, {code: MIRPCode, rtype: MIRType, isidx: boolean}>();
+    isequence: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
 
-    hascheck: boolean = false;
-    haspredcheck: Map<string, MIRPCode> = new Map<string, MIRPCode>();
+    haspredcheck: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
 
-    indexOf: boolean = false;
-    indexOfLast: boolean = false;
-    findIndexOf: Map<string, MIRPCode> = new Map<string, MIRPCode>();
-    findLastIndexOf: Map<string, MIRPCode> = new Map<string, MIRPCode>();
+    findIndexOf: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
+    findLastIndexOf: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
 
-    countIf: Map<string, MIRPCode> = new Map<string, MIRPCode>();
     sum: boolean = false;
 }
 
@@ -108,7 +103,7 @@ class ListOpsManager {
     }
 
     private generateCapturedArgs(pcode: MIRPCode): SMTVar[] {
-        return pcode.cargs.map((arg) => new SMTVar(this.temitter.mangle(arg)));
+        return pcode.cargs.map((arg) => new SMTVar(arg));
     }
 
     registerHavoc(ltype: MIRType): string {
@@ -164,19 +159,27 @@ class ListOpsManager {
         return new SMTCallSimple(this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "rangeOfNat"),  [start, end, count]);
     }
 
-    processSafePredCheck(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "safeCheckPred", code);
+    processGet(ltype: MIRType, l: SMTExp, n: SMTExp): SMTExp {
+        this.ensureOpsFor(ltype);
+        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "get");
+        //get always registered
 
-        ops.dops.safecheckpred.set(code, pcode);
+        return new SMTCallSimple(op, [l, n]);
+    }
+
+    processSafePredCheck(ltype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "safeCheckPred" + (isidx ? "_idx" : ""), code);
+
+        ops.dops.safecheckpred.set(code, {code: pcode, isidx: isidx});
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
 
-    processSafeFnCheck(ltype: MIRType, rtype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
+    processSafeFnCheck(ltype: MIRType, rtype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
         const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "safeCheckFn", code);
+        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "safeCheckFn" + (isidx ? "_idx" : ""), code);
 
-        ops.dops.safecheckfn.set(code, [pcode, rtype]);
+        ops.dops.safecheckfn.set(code, {code: pcode, rtype: rtype, isidx: isidx});
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
 
@@ -188,29 +191,33 @@ class ListOpsManager {
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
 
-    processHasCheck(ltype: MIRType, l: SMTExp, count: SMTExp, val: SMTExp): SMTExp {
+    processHasPredCheck(ltype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
         const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "hasCheck");
+        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "hasPredCheck" + (isidx ? "_idx" : ""), code);
 
-        ops.dops.hascheck = true;
-        return new SMTCallGeneral(op, [l, count, val]);
-    }
-
-    processHasPredCheck(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "hasPredCheck", code);
-
-        ops.dops.haspredcheck.set(code, pcode);
+        ops.dops.haspredcheck.set(code, {code: pcode, isidx: isidx});
         return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
 
-    processGet(ltype: MIRType, l: SMTExp, n: SMTExp): SMTExp {
-        this.ensureOpsFor(ltype);
-        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "get");
-        //get always registered
+    processFindIndexOf(ltype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "findIndexOf" + (isidx ? "_idx" : ""), code);
 
-        return new SMTCallSimple(op, [l, n]);
+        ops.dops.findIndexOf.set(code, {code: pcode, isidx: isidx});
+        return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
     }
+
+    processFindLastIndexOf(ltype: MIRType, isidx: boolean, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "findLastIndexOf" + (isidx ? "_idx" : ""), code);
+
+        ops.dops.findLastIndexOf.set(code, {code: pcode, isidx: isidx});
+        return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
+    }
+
+
+
+
 
     processFillOperation(ltype: MIRType, count: SMTExp, value: SMTExp): SMTExp {
         const ops = this.ensureOpsFor(ltype);
@@ -226,46 +233,6 @@ class ListOpsManager {
         //concat always registered
 
         return new SMTCallSimple(op, [l1, l2, count]);
-    }
-
-    processIndexOf(ltype: MIRType, l: SMTExp, count: SMTExp, val: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "indexOf");
-
-        ops.dops.indexOf = true;
-        return new SMTCallGeneral(op, [l, count, val]);
-    }
-
-    processIndexOfLast(ltype: MIRType, l: SMTExp, count: SMTExp, val: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "indexOfLast");
-
-        ops.dops.indexOfLast = true;
-        return new SMTCallGeneral(op, [l, count, val]);
-    }
-
-    processFindIndexOf(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "findIndexOf", code);
-
-        ops.dops.findIndexOf.set(code, pcode);
-        return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
-    }
-
-    processFindLastIndexOf(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, count: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "findLastIndexOf", code);
-
-        ops.dops.findLastIndexOf.set(code, pcode);
-        return new SMTCallGeneral(op, [l, count, ...this.generateCapturedArgs(pcode)]);
-    }
-
-    processCountIf(ltype: MIRType, code: string, pcode: MIRPCode, l: SMTExp, isq: SMTExp, count: SMTExp): SMTExp {
-        const ops = this.ensureOpsFor(ltype);
-        const op = this.generateDesCallNameUsing(this.temitter.getSMTTypeFor(ltype), "countIf", code);
-
-        ops.dops.countIf.set(code, pcode);
-        return new SMTCallGeneral(op, [l, isq, count, ...this.generateCapturedArgs(pcode)]);
     }
 
     processSum(ltype: MIRType, l: SMTExp): SMTExp {
