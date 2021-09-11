@@ -759,7 +759,7 @@ class SMTBodyEmitter {
             }
         });
 
-        this.lopsManager = new ListOpsManager(vopts, typegen, safecalls);
+        this.lopsManager = new ListOpsManager(vopts, typegen, this.numgen.int, safecalls);
     }
 
     generateTempName(): string {
@@ -2704,23 +2704,29 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, orof);
             }
             case "concat_list_left": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_cons", "_left_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "concat2", "left", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "concat_list_right": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_cons", "_right_", new SMTVar(args[0].vname));
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "concat2", "right", new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "list_isconcat": {
                 const cons_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
-                const check_uli = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_cons");
+                const check_uli = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "concat2");
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, cons_uli));
             }
-            case "isequence_size":
-            case "jsequence_size":
+            case "isequence_size": {
+                const sbody = new SMTCallSimple("ISequence@size", [new SMTVar(args[0].vname)]);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype,sbody);
+            }
+            case "jsequence_size": {
+                const sbody = new SMTCallSimple("JSequence@size", [new SMTVar(args[0].vname)]);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype,sbody);
+            }
             case "ssequence_size": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                const sbody = new SMTCallSimple("SSequence@size", [new SMTVar(args[0].vname)]);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype,sbody);
             }
             case "list_safeas": {
                 const conv = this.typegen.coerce(new SMTVar(args[0].vname), this.typegen.getMIRType(idecl.params[0].type), mirrestype);

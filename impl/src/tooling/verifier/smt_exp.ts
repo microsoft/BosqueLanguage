@@ -10,7 +10,6 @@ type VerifierOptions = {
     ISize: number, //bits in the size 2-64
     StringOpt: "ASCII" | "UNICODE",
 
-    SimpleQuantifierMode: boolean, //Set to true for a simplified version of Filter/Count that does not enforce subset/order properties but has simpler quantifiers
     CollectionHavoc: "SMALL_ONLY" | "SMALL_OPT" | "GENERAL"
 };
 
