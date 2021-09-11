@@ -10,7 +10,8 @@ type VerifierOptions = {
     ISize: number, //bits in the size 2-64
     StringOpt: "ASCII" | "UNICODE",
 
-    CollectionHavoc: "SMALL_ONLY" | "SMALL_OPT" | "GENERAL"
+    EnableCollection_SmallMode: boolean,
+    EnableCollection_LargeMode: boolean
 };
 
 class BVEmitter {

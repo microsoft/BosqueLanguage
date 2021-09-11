@@ -1767,7 +1767,7 @@ __internal entity ListOps provides Object {
     }
 
     recursive? function s_find_pred_base<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
-        let sl = ListOps::s_safek_pred_impl<T>[recursive?](l, ListOps::s_size<T>(l), p);
+        let sl = ListOps::s_safe_pred_impl<T>[recursive?](l, ListOps::s_size<T>(l), p);
         let count = ListOps::s_size<T>(sl);
 
         if(ListOps::s_has_pred_impl<T>[recursive?](sl, count, p)) {
@@ -1778,7 +1778,7 @@ __internal entity ListOps provides Object {
         }
     }
 
-    recursive? function s_find_index_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat? {
+    recursive? function s_find_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Nat? {
         if(ListFlatOps::s_empty<T>(l)) {
             return none;
         }

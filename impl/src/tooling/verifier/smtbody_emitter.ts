@@ -2718,15 +2718,15 @@ class SMTBodyEmitter {
             }
             case "isequence_size": {
                 const sbody = new SMTCallSimple("ISequence@size", [new SMTVar(args[0].vname)]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype,sbody);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, sbody);
             }
             case "jsequence_size": {
                 const sbody = new SMTCallSimple("JSequence@size", [new SMTVar(args[0].vname)]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype,sbody);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, sbody);
             }
             case "ssequence_size": {
                 const sbody = new SMTCallSimple("SSequence@size", [new SMTVar(args[0].vname)]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype,sbody);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, sbody);
             }
             case "list_safeas": {
                 const conv = this.typegen.coerce(new SMTVar(args[0].vname), this.typegen.getMIRType(idecl.params[0].type), mirrestype);
@@ -2757,74 +2757,134 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_safe_check_pred": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_safe_check_pred_idx": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_safe_check_fn": {
-                const pcode = idecl.pcodes.get("f") as MIRPCode;
-                const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, false, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("f") as MIRPCode;
+                    const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, false, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_safe_check_fn_idx": {
-                const pcode = idecl.pcodes.get("f") as MIRPCode;
-                const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, true, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("f") as MIRPCode;
+                    const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, true, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_safe_check_pred_pair": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_has_pred_pair": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_has_pred_check": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_has_pred_check_idx": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_find_index_pred": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_find_index_pred_idx": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_find_last_index_pred": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_find_last_index_pred_idx": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_concat2": {
                 const [l1, l2, count] = args.map((arg) => new SMTVar(arg.vname));
@@ -2837,96 +2897,191 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_rangeofint": {
-                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processRangeOfIntOperation(mirrestype, low, high, count);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processRangeOfIntOperation(mirrestype, low, high, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_rangeofnat": {
-                const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processRangeOfNatOperation(mirrestype, low, high, count);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const [low, high, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processRangeOfNatOperation(mirrestype, low, high, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_fill": {
-                const [count, value] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(arg0typekey), count, value);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const [count, value] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFillOperation(this.typegen.getMIRType(arg0typekey), count, value);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_reverse": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_zipindex": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_zip": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_computeisequence": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_computeisequence_idx": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_computejsequence": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_computessequence": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_map": {
-                const pcode = idecl.pcodes.get("f") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, false, pcode.code, pcode, l, count);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("f") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, false, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_map_idx": {
-                const pcode = idecl.pcodes.get("f") as MIRPCode;
-                const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, true, pcode.code, pcode, l, count);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("f") as MIRPCode;
+                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, true, pcode.code, pcode, l, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_filter": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, isq, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, isq, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_filter_idx": {
-                const pcode = idecl.pcodes.get("p") as MIRPCode;
-                const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, isq, count); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const pcode = idecl.pcodes.get("p") as MIRPCode;
+                    const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, isq, count);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             case "list_min_arg": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_max_arg": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_join": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_sort": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                    return undefined;
+                }
             }
             case "list_sum": {
-                const [l] = args.map((arg) => new SMTVar(arg.vname));
-                const fbody = this.lopsManager.processSum(this.typegen.getMIRType(arg0typekey), l); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                if (!this.vopts.EnableCollection_LargeMode) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const [l] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSum(this.typegen.getMIRType(arg0typekey), l);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
