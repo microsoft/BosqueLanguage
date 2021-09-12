@@ -3,8 +3,8 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRInvokeBodyDecl, MIRPCode, MIRPrimitiveListEntityTypeDecl, MIRType } from "../../compiler/mir_assembly";
-import { MIRInvokeKey } from "../../compiler/mir_ops";
+import { MIRConstructableStdEntityTypeDecl, MIREntityTypeDecl, MIRInvokeBodyDecl, MIRPCode, MIRPrimitiveListEntityTypeDecl, MIRType } from "../../compiler/mir_assembly";
+import { MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
 import { BVEmitter, SMTCallGeneral, SMTCallSimple, SMTCond, SMTConst, SMTExists, SMTExp, SMTForAll, SMTIf, SMTLet, SMTLetMulti, SMTType, SMTVar, VerifierOptions } from "./smt_exp";
@@ -933,10 +933,12 @@ class ListOpsManager {
     ////////
     //FindLastIndexOf
     emitDestructorFindIndexOfLast(ltype: SMTType, isidx: boolean, code: string, pcode: MIRPCode): SMTDestructorGenCode {
-        const [nn, suf] = this.emitDestructorFindIndexOf_Shared(ltype, code, pcode, new SMTVar("l"), new SMTVar("count"), new SMTConst("BNat@max"));
+        const [nn, suf] = this.emitDestructorFindIndexOf_Shared(ltype, isidx, code, pcode, new SMTVar("l"), new SMTVar("count"), new SMTConst("BNat@max"));
         const [capturedargs, capturedparams] = this.generateCapturedInfoFor(pcode, isidx ? 2 : 1);
 
         const getop = this.generateDesCallName(ltype, "get");
+        const getcall = new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")]);
+        const largs = isidx ? [getcall, new SMTVar("_@j")] : [getcall];
 
         const ffunc = new SMTLet("_@n", nn,
             new SMTIf(this.temitter.generateResultIsErrorTest(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")),
@@ -945,7 +947,7 @@ class ListOpsManager {
                     new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
                         new SMTCallSimple("=>", [
                             new SMTCallSimple("bvult", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")), new SMTVar("_@j")]),
-                            new SMTCallSimple("not", [this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), [new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")])], capturedargs)])
+                            SMTCallSimple.makeNot(this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), largs, capturedargs))
                         ])
                     ),
                     new SMTVar("_@n"),
@@ -955,7 +957,7 @@ class ListOpsManager {
         );
 
         return {
-            if: [new SMTFunction(this.generateDesCallNameUsing(ltype, "findIndexOfLast", code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype}, ...capturedparams], undefined, 0, this.temitter.generateResultType(this.temitter.getMIRType("NSCore::Nat")), ffunc)],
+            if: [new SMTFunction(this.generateDesCallNameUsing(ltype, "findIndexOfLast" + (isidx ? "_idx" : ""), code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype}, ...capturedparams], undefined, 0, this.temitter.generateResultType(this.temitter.getMIRType("NSCore::Nat")), ffunc)],
             uf: [suf]
         };
     }
@@ -965,26 +967,29 @@ class ListOpsManager {
     emitDestructorSum(ltype: SMTType, ctype: MIRType): SMTDestructorGenCode {
         const restype = this.temitter.generateResultType(ctype);
 
+        const cdecl = this.temitter.assembly.entityDecls.get(ctype.typeID) as MIREntityTypeDecl;
+        const primtype = cdecl instanceof MIRConstructableStdEntityTypeDecl ? this.temitter.getMIRType(cdecl.fromtype as MIRResolvedTypeKey) : ctype; 
+
         let ufconsname: string = "[UN_INITIALIZED]";
         let ovfname: string | undefined = undefined;
-        if (ctype.trkey === "NSCore::Int") {
+        if (primtype.typeID === "NSCore::Int") {
             ufconsname = "@UFSumConsInt";
             ovfname = "@UFSumConsIntOVF";
         }
-        else if (ctype.trkey === "NSCore::Nat") {
+        else if (primtype.typeID === "NSCore::Nat") {
             ufconsname = "@UFSumConsNat";
             ovfname = "@UFSumConsNatOVF";
         }
-        else if (ctype.trkey === "NSCore::BigInt") {
+        else if (primtype.typeID === "NSCore::BigInt") {
             ufconsname = "@UFSumConsBigInt";
         }
-        else if (ctype.trkey === "NSCore::BigNat") {
+        else if (primtype.typeID === "NSCore::BigNat") {
             ufconsname = "@UFSumConsBigNat";
         }
-        else if (ctype.trkey === "NSCore::Rational") {
+        else if (primtype.typeID === "NSCore::Rational") {
             ufconsname = "@UFSumConsRational";
         }
-        else if (ctype.trkey === "NSCore::Float") {
+        else if (primtype.typeID === "NSCore::Float") {
             ufconsname = "@UFSumConsFloat";
         }
         else {
@@ -996,11 +1001,50 @@ class ListOpsManager {
             ufops.push(new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ovfname), [ltype], this.booltype))
         }
         
-        let ffunc: SMTExp = (ctype.trkey !== "NSCore::BigNat") 
-            ? this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]))
-            : new SMTLet("@vval", new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]),
-                new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst("0")]), this.temitter.generateErrorResultAssert(ctype), this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("@vval")))
-            );
+        let ffunc: SMTExp = new SMTConst("[UNINIT]");
+        if(cdecl instanceof MIRConstructableStdEntityTypeDecl) {
+            if(primtype.typeID !== "NSCore::BigNat") {
+                if(cdecl.usinginv === undefined) {
+                    ffunc = this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]));
+                }
+                else {
+                    ffunc = new SMTLet("@vval", new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]),
+                        new SMTIf(SMTCallSimple.makeEq(new SMTCallGeneral(cdecl.usinginv, [new SMTVar("@vval")]), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::Bool"), new SMTConst("true"))),
+                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("@vval")),
+                            this.temitter.generateErrorResultAssert(ctype) 
+                        )
+                    );
+                }
+            }
+            else {
+                if(cdecl.usinginv === undefined) {
+                    ffunc = new SMTLet("@vval", new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]),
+                        new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst("0")]), this.temitter.generateErrorResultAssert(ctype), this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("@vval")))
+                    );
+                }
+                else {
+                    ffunc = new SMTLet("@vval", new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]),
+                    new SMTIf(SMTCallSimple.makeAndOf(
+                            new SMTCallSimple("<=", [new SMTConst("0"), new SMTVar("@vval")]),
+                            SMTCallSimple.makeEq(new SMTCallGeneral(cdecl.usinginv, [new SMTVar("@vval")]), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::Bool"), new SMTConst("true")))
+                            ),
+                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("@vval")),
+                            this.temitter.generateErrorResultAssert(ctype) 
+                        )
+                    );
+                }
+            }
+        }
+        else {
+            if(primtype.typeID !== "NSCore::BigNat") {
+                ffunc = this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]));
+            }
+            else {
+                ffunc = new SMTLet("@vval", new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]),
+                    new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst("0")]), this.temitter.generateErrorResultAssert(ctype), this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("@vval")))
+                );
+            }
+        }
 
         if (ovfname !== undefined) {
             ffunc = new SMTIf(

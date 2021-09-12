@@ -2317,8 +2317,13 @@ __internal entity ListOps provides Object {
             return List<Int>@{};
         }
 #if SMALL_MODEL_ENABLED
-        elif(count < 4i) {
+        elif(count <= 3i) {
             return ListFlatOps::s_small_range_int(start, end);
+        }
+        elif(count <= 6i) {
+            const ll = ListFlatOps::s_small_range_int(start, start + (count / 2i));
+            const rl = ListFlatOps::s_small_range_int(start + (count / 2i), end);
+            return ListConcatOps::s_concat2<Int>(ll, rl);
         }
 #endif
         else {
@@ -2332,8 +2337,13 @@ __internal entity ListOps provides Object {
             return List<Nat>@{};
         }
 #if SMALL_MODEL_ENABLED
-        elif(count < 4n) {
+        elif(count <= 3n) {
             return ListFlatOps::s_small_range_nat(start, end);
+        }
+        elif(count <= 6n) {
+            const ll = ListFlatOps::s_small_range_nat(start, start + (count / 2n));
+            const rl = ListFlatOps::s_small_range_nat(start + (count / 2n), end);
+            return ListConcatOps::s_concat2<Nat>(ll, rl);
         }
 #endif
         else {
@@ -2346,8 +2356,14 @@ __internal entity ListOps provides Object {
             return List<T>@{};
         }
 #if SMALL_MODEL_ENABLED
-        elif(count < 4n) {
+        elif(count <= 3n) {
             return ListFlatOps::s_small_fill<T>(k, val);
+        }
+        elif(count <= 6n) {
+            const llct = count / 2;
+            const ll = ListFlatOps::s_small_fill<T>(llct);
+            const rl = ListFlatOps::s_small_fill<T>(count - llct);
+            return ListConcatOps::s_concat2<T>(ll, rl);
         }
 #endif
         else {

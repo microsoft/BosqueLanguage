@@ -2775,6 +2775,8 @@ class TypeChecker {
             const treg = this.m_emitter.generateTmpRegister();
             const earg = this.checkExpression(env, arg.value, treg, injecttype).getExpressionResult().valtype;
             
+            xxxx;
+
             const aarg = this.emitInlineConvertIfNeeded(exp.sinfo, treg, earg, injecttype);
             this.m_emitter.emitInject(exp.sinfo, this.m_emitter.registerResolvedTypeReference(injecttype), this.m_emitter.registerResolvedTypeReference(fromtype), aarg, trgt);
             

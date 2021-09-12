@@ -1586,8 +1586,9 @@ class SMTBodyEmitter {
             return this.lopsManager.processLiteralK_Pos(ltype, exps);
         }
         else {
-            const lhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(0, exps.length / 2));
-            const rhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(exps.length / 2));
+            const mid = exps.length / 2;
+            const lhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(0, mid));
+            const rhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(mid));
 
             return this.lopsManager.processConcat2(ltype, lhs, rhs, this.numgen.int.emitSimpleNat(exps.length));
         }
