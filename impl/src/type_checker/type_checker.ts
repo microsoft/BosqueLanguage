@@ -1306,21 +1306,25 @@ class TypeChecker {
 
     private checkArgumentsEntityConstructor(sinfo: SourceInfo, oftype: ResolvedEntityAtomType, args: ExpandedArgument[], trgt: MIRRegisterArgument): ResolvedType {
         if(oftype.object.attributes.includes("__constructable")) {
-            const atype = (oftype.object.staticFunctions.find((mm) => mm.name === "from") as StaticFunctionDecl).invoke.params[0].type;
+            this.raiseErrorIf(sinfo, !oftype.object.attributes.includes("__typedprimitive"), "Can only construct typed numbers directly");
+            this.raiseErrorIf(sinfo, args.length !== 1, "Expected single argument");
+
+            const atype = (oftype.object.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
             const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oftype.binds);
             const mirfromtype = this.m_emitter.registerResolvedTypeReference(ratype);
-
-            this.raiseErrorIf(sinfo, args.length !== 1, "Expected single argument");
 
             const aarg = this.emitInlineConvertIfNeeded(sinfo, args[0].treg as MIRRegisterArgument, args[0].argtype as ValueType, ratype);
 
             const constype = ResolvedType.createSingle(oftype);
             const rtype = this.m_emitter.registerResolvedTypeReference(constype);
 
-            //TODO: call the constructor function instead!!! The inject will be in there after any invariant checks!!!
-            xxxx;
-
-            this.m_emitter.emitInject(sinfo, mirfromtype, rtype, aarg, trgt);
+            if(oftype.object.invariants.length === 0) { 
+                this.m_emitter.emitInject(sinfo, mirfromtype, rtype, aarg, trgt);
+            }
+            else {
+                const conskey = MIRKeyGenerator.generateFunctionKeyWType(constype, "@@constructor", new Map<string, ResolvedType>(), []);
+                this.m_emitter.emitInvokeFixedFunction(sinfo, conskey.keyid, [aarg], undefined, rtype, trgt);
+            }
             return constype;
         }
         else {
@@ -2760,27 +2764,6 @@ class TypeChecker {
             }
 
             return [env.setUniformResultExpression(this.m_assembly.getSpecialBoolType())];
-        }
-        else if(fdecltry !== undefined && fdecltry.decl.invoke.body !== undefined && fdecltry.decl.invoke.body.body === "special_inject") {
-            const injecttype = this.resolveAndEnsureTypeOnly(exp.sinfo, fdecltry.decl.invoke.params[0].type, fdecltry.binds);
-
-            this.raiseErrorIf(exp.sinfo, exp.args.argList.length !== 1, "Expected 1 argument");
-            const arg = exp.args.argList[0];
-            this.raiseErrorIf(arg.value.sinfo, arg.ref !== undefined, "Cannot use ref params in this call position");
-            this.raiseErrorIf(arg.value.sinfo, this.isPCodeTypedExpression(arg.value, env), "Cannot use function in this call position");
-
-            this.raiseErrorIf(arg.value.sinfo, !(arg instanceof PositionalArgument), "Only positional arguments allowed");
-            this.raiseErrorIf(arg.value.sinfo, (arg as PositionalArgument).isSpread, "Expando parameters are not allowed");
-
-            const treg = this.m_emitter.generateTmpRegister();
-            const earg = this.checkExpression(env, arg.value, treg, injecttype).getExpressionResult().valtype;
-            
-            xxxx;
-
-            const aarg = this.emitInlineConvertIfNeeded(exp.sinfo, treg, earg, injecttype);
-            this.m_emitter.emitInject(exp.sinfo, this.m_emitter.registerResolvedTypeReference(injecttype), this.m_emitter.registerResolvedTypeReference(fromtype), aarg, trgt);
-            
-            return [env.setUniformResultExpression(fromtype)];
         }
         else if(fromtype.typeID === "NSCore::Tuple" && exp.name === "append") {
             let eargs: [ResolvedType, ResolvedType, MIRRegisterArgument][] = [];
@@ -5192,7 +5175,7 @@ class TypeChecker {
                 const ap = nassign.assigns[0];
                 const apv = new MIRRegisterArgument((ap[1] as VariableDeclarationStructuredAssignment).vname);
 
-                const atype = (ootype.staticFunctions.find((mm) => mm.name === "from") as StaticFunctionDecl).invoke.params[0].type;
+                const atype = (ootype.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
                 const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oobinds);
 
                 this.m_emitter.emitExtract(sinfo, this.m_emitter.registerResolvedTypeReference(argoftype), this.m_emitter.registerResolvedTypeReference(ratype), arg, apv)

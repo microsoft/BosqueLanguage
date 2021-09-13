@@ -1423,7 +1423,6 @@ class Assembly {
     getSpecialStringPosType(): ResolvedType { return this.internSpecialObjectType(["StringPos"]); }
     getSpecialStringType(): ResolvedType { return this.internSpecialObjectType(["String"]); }
     getSpecialBufferFormatType(): ResolvedType { return this.internSpecialObjectType(["BufferFormat"]); }
-    getSpecialBufferEncodingType(): ResolvedType { return this.internSpecialObjectType(["BufferEncoding"]); }
     getSpecialBufferCompressionType(): ResolvedType { return this.internSpecialObjectType(["BufferCompression"]); }
     getSpecialByteBufferType(): ResolvedType { return this.internSpecialObjectType(["ByteBuffer"]); }
     getSpecialISOTimeType(): ResolvedType { return this.internSpecialObjectType(["ISOTime"]); }

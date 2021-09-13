@@ -274,24 +274,18 @@ __internal entity String provides Some, KeyType, APIType {
 //<summary>Primitive safe string value.</summary>
 __internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
     method value(): String # special_extract
-    function from(str: String): StringOf<T> # special_inject
 }
 
 //<summary>Primitive DataString value.</summary>
 __internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType {
     method value(): String # special_extract
-    function from(str: String): # special_inject
 }
 
 enum BufferFormat {
-    text,
+    utf8,
+    binary,
     bosque,
     json
-}
-
-enum BufferEncoding {
-    utf8,
-    binary
 }
 
 enum BufferCompression {
@@ -300,24 +294,20 @@ enum BufferCompression {
     space
 }
 
-//<summary>An efficient buffer encoding for data.</summary>
-entity BufferOf<T grounded APIType> provides Some, APIType {
-    private field format: BufferFormat;
-    private field encoding: BufferEncoding;
-    private field compression: BufferCompression;
-    private field buf: ByteBuffer;
-}
-
-//<summary>An efficient buffer encoding for data.</summary>
-entity DataBuffer<T unique Parsable> provides Some, APIType when T grounded APIType {
-    private field format: BufferFormat;
-    private field encoding: BufferEncoding;
-    private field compression: BufferCompression;
-    private field buf: ByteBuffer;
-}
-
 //<summary>An efficient byte buffer for data.</summary>
 __internal entity ByteBuffer provides Some, APIType {
+    //method getFormat(): BufferFormat # bytebuffer_getformat
+    //method getCompression(): BufferCompression # bytebuffer_getcompression;
+}
+
+//<summary>An efficient buffer encoding for data.</summary>
+__internal __constructable entity BufferOf<T grounded APIType> provides Some, APIType {
+    method value(): ByteBuffer # special_extract
+}
+
+//<summary>An efficient buffer encoding for data.</summary>
+__internal __constructable entity DataBuffer<T unique Parsable> provides Some, APIType when T grounded APIType {
+    method value(): ByteBuffer # special_extract
 }
 
 //<summary>Primitive ISOTime value.</summary>
@@ -378,7 +368,6 @@ __internal entity Nothing provides IOption, APIType {
 //<summary>Type for representing the nothing option value.</summary>
 __internal __constructable entity Something<T> provides Option<T>, APIType when T grounded APIType {
     method value(): T # special_extract
-    function from(v: T): # special_inject
 }
 
 //<summary>Type for flagging T projection from Option -- kludge that has no other purpose.</summary>
@@ -428,12 +417,10 @@ concept Option<T> provides ISomething, APIType when T grounded APIType {
 concept Result<T, E=None> provides Some, APIType when T grounded APIType && E grounded APIType {
     __internal __constructable entity Ok provides Some, Result<T, E> {
         method value(): T # special_extract
-        function from(v: T): # special_inject
     }
 
     __internal __constructable entity Err provides Result<T, E> {
         method value(): E # special_extract
-        function from(v: E): # special_inject
     }
 
     method isOk(): Bool {
@@ -464,6 +451,9 @@ concept Result<T, E=None> provides Some, APIType when T grounded APIType && E gr
 
 //<summary>All actual entities/concepts implicitly provide this concept.</summary>
 __universal concept Object provides Some {
+}
+
+__internal entity HavocSequence provides Some {
 }
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>

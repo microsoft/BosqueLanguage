@@ -380,6 +380,8 @@
 (declare-fun EnumChoice@UFCons_API ((Seq BNat)) BNat)
 (declare-fun UnionChoice@UFCons_API ((Seq BNat)) BNat)
 
+(define-sort HavocSequence () (Seq BNat))
+
 ;;GLOBAL_DECLS;;
 
 ;;UF_DECLS;;

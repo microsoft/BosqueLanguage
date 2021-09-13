@@ -7,8 +7,8 @@
 namespace NSCore;
 
 __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType {
-    private method value(): List<[K, V]> # special_extract
-    private function from(v: List<[K, V]>): # special_inject
+    __safe private method value(): List<[K, V]> # map_get_list_repr
+    __safe private function s_safecreate(v: List<[K, V]>): # map_safe_create
 
     method empty(): Bool {
         return ListFlatOps::s_empty<[K, V]>(this.value());
@@ -60,24 +60,24 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
         let am = ListOps::s_concat2<[K, V]>(this.value(), m.value());
         check ListOps::s_chk_kv_unique<K, V>(am);
         
-        return Map<K, V>::from(am);
+        return Map<K, V>::s_safecreate(am);
     }
 
     recursive? method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
         let sm = ListOps::s_filter<[K, V]>(this.value(), p);
-        return Map<K, V>::from(sm);
+        return Map<K, V>::s_safecreate(sm);
     }
 
     recursive? method remap(f: recursive? fn(v: [K, V]) -> V): Map<K, V> {
         let rm = ListOps::s_map<[K, V]>(this.value(), recursive? fn(v: [K, V]): [K, V] => [v.0, f[recursive?](v)]);
-        return Map<K, V>::from(rm);
+        return Map<K, V>::s_safecreate(rm);
     }
 
     method add(k: K, v: V): Map<K, V> {
         check !ListOps::s_has_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         
         let am = ListOps::s_concat2<[K, V]>(this.value(), List<[K, V]>@{[k, v]});
-        return Map<K, V>::from(am);
+        return Map<K, V>::s_safecreate(am);
     }
 
     method set(k: K, v: V): Map<K, V> {
@@ -85,7 +85,7 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
         check idx !== none;
 
         let sm = this.value().set(idx, [k, v]);
-        return Map<K, V>::from(sm);
+        return Map<K, V>::s_safecreate(sm);
     }
 
     method remove(k: K): Map<K, V> {
@@ -93,7 +93,7 @@ __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]
         check idx !== none;
 
         let rm = this.value().remove(idx);
-        return Map<K, V>::from(rm);
+        return Map<K, V>::s_safecreate(rm);
     }
 
     

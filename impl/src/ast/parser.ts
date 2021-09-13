@@ -3957,7 +3957,6 @@ class Parser {
         if(sfpos === -1) {
             this.raiseError(sinfo.line, "Source name not registered");
         }   
-        const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
 
         this.ensureAndConsumeToken("enum");
         this.ensureToken(TokenStrings.Type);
@@ -3983,32 +3982,19 @@ class Parser {
                 [new NominalTypeSignature("NSCore", ["APIType"]), undefined]
             ] as [TypeSignature, TypeConditionRestriction | undefined][];
 
-            const vparam = new FunctionParameter("v", this.m_penv.SpecialNatSignature, false, undefined, undefined, undefined);
-
-            const fromid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "from");
-            const frombody = new BodyImplementation(`${bodyid}_from`, this.m_penv.getCurrentFile(), "special_inject");
-            const fromdecl = new InvokeDecl(sinfo, fromid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, etype, [], [], false, false, new Set<string>(), frombody, [], []);
-            const from = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "from", fromdecl);
-
-            const valueid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "value");
-            const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
-            const valuedecl = new InvokeDecl(sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, this.m_penv.SpecialNatSignature, [], [], false, false, new Set<string>(), valuebody, [], []);
-            const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
-
             const invariants: InvariantDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
-            const staticFunctions: StaticFunctionDecl[] = [from];
+            const staticFunctions: StaticFunctionDecl[] = [];
             const staticOperators: StaticOperatorDecl[] = [];
             const memberFields: MemberFieldDecl[] = [];
-            const memberMethods: MemberMethodDecl[] = [value];
+            const memberMethods: MemberMethodDecl[] = [];
     
             for(let i = 0; i < enums.length; ++i) {
                 const exp = new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
-                const enminit = new CallStaticFunctionOrOperatorExpression(sinfo, etype, "from", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, exp)]), "std");
+                const enminit = new ConstructorPrimaryExpression(sinfo, etype, new Arguments([new PositionalArgument(undefined, false, exp)]));
                 const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["__enum"], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
                 staticMembers.push(enm);
             }
-
 
             if(this.testAndConsumeTokenIf("&")) {
                 this.setRecover(this.scanCodeParens());
@@ -4096,8 +4082,6 @@ class Parser {
                 if (terms.length !== 0) {
                     this.raiseError(line, "Cannot have template terms on Typed Primitive type");
                 }
-
-                const itype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
                 const idval = this.parseTypeSignature();
 
                 let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
@@ -4141,18 +4125,11 @@ class Parser {
 
                 const vparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
 
-                const fromid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "from");
-                const frombody = new BodyImplementation(`${bodyid}_from`, this.m_penv.getCurrentFile(), "special_inject");
-                const fromdecl = new InvokeDecl(sinfo, fromid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [], undefined, undefined, itype, [], [], false, false, new Set<string>(), frombody, [], []);
-                const from = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "from", fromdecl);
-
                 const valueid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "value");
                 const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
                 const valuedecl = new InvokeDecl(sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), valuebody, [], []);
                 const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
 
-
-                staticFunctions.push(from);
                 memberMethods.push(value);
 
                 attributes.push("__typedprimitive", "__constructable");

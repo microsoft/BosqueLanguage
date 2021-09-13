@@ -1292,7 +1292,6 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialStringPosType());
         emitter.registerResolvedTypeReference(assembly.getSpecialStringType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferFormatType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialBufferEncodingType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferCompressionType());
         emitter.registerResolvedTypeReference(assembly.getSpecialByteBufferType());
         emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeType());

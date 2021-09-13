@@ -643,7 +643,12 @@ abstract class MIROp {
                 return MIRSetConstantGuardFlag.jparse(jobj);
             case MIROpTag.MIRConvertValue:
                 return MIRConvertValue.jparse(jobj);
-            xxxx;
+            case MIROpTag.MIRInject:
+                return MIRInject.jparse(jobj);
+            case MIROpTag.MIRGuardedOptionInject:
+                return MIRGuardedOptionInject.jparse(jobj);
+            case MIROpTag.MIRExtract:
+                return MIRExtract.jparse(jobj);
             case MIROpTag.MIRLoadConst:
                 return MIRLoadConst.jparse(jobj);
             case MIROpTag.MIRTupleHasIndex:

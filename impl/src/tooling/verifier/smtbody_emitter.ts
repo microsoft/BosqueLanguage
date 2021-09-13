@@ -2608,8 +2608,7 @@ class SMTBodyEmitter {
 
         switch(idecl.implkey) {
             case "default": 
-            case "special_extract": 
-            case "special_inject": {
+            case "special_extract": {
                 return undefined;
             }
             case "validator_accepts": {
@@ -3083,6 +3082,12 @@ class SMTBodyEmitter {
                     const fbody = this.lopsManager.processSum(this.typegen.getMIRType(arg0typekey), l);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
+            }
+            case "map_get_list_repr": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+            }
+            case "map_safe_create": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

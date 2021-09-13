@@ -198,6 +198,9 @@ class SMTTypeEmitter {
                 else if (this.isType(tt, "NSCore::SSequence")) {
                     return new SMTType("SSequence", "TypeTag_SSequence", entity.tkey);
                 }
+                else if (this.isType(tt, "NSCore::HavocSequence")) {
+                    return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
+                }
                 else {
                     assert(false);
                     return new SMTType("[UNKNOWN MIRPrimitiveInternalEntityTypeDecl]", "[UNKNOWN]", entity.tkey);
@@ -726,13 +729,13 @@ class SMTTypeEmitter {
                     return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), re_validate: vre.jemit()};
                 }
                 else if (tt.typeID.startsWith("NSCore::DataString")) {
-                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), usinginv: (entity.usinginv as MIRInvokeKey)};
+                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
                 else if (tt.typeID.startsWith("NSCore::BufferOf")) {
                     return {tag: APIEmitTypeTag.BufferOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
                 else if (tt.typeID.startsWith("NSCore::DataBuffer")) {
-                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), usinginv: (entity.usinginv as MIRInvokeKey)};
+                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
                 else if (tt.typeID.startsWith("NSCore::Something")) {
                     return {tag: APIEmitTypeTag.SomethingTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
@@ -762,7 +765,7 @@ class SMTTypeEmitter {
         }
         else if(entity instanceof MIRConstructableStdEntityTypeDecl) {
             if(entity.attributes.includes("__typedprimitive")) {
-                return {tag: APIEmitTypeTag.NumberOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), usinginv: entity.usinginv};
+                return {tag: APIEmitTypeTag.NumberOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), usinginv: entity.usingcons};
             }
             else {
                 const ddcls = [...this.assembly.constantDecls].filter((cdcl) => cdcl[1].enclosingDecl !== undefined && cdcl[1].enclosingDecl === tt.typeID);
