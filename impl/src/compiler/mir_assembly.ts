@@ -366,13 +366,13 @@ class MIRConstructableStdEntityTypeDecl extends MIREntityTypeDecl {
         return { tag: "constructablestd", ...this.jemitbase(), fromtype: this.fromtype, usingcons: this.usingcons, binds: fbinds };
     }
 
-    static jparse(jobj: any): MIRConstructableInternalEntityTypeDecl {
+    static jparse(jobj: any): MIRConstructableStdEntityTypeDecl {
         const bbinds = new Map<string, MIRType>();
         jobj.binds.foreach((v: [string, any]) => {
             bbinds.set(v[0], MIRType.jparse(v[1]));
         });
 
-        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.usingcons, bbinds);
+        return new MIRConstructableStdEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.usingcons, bbinds);
     }
 
     isConstructableEntity(): boolean {

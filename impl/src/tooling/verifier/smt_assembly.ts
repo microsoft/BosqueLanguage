@@ -439,21 +439,6 @@ class SMTAssembly {
         return { invokes: invokes, topologicalOrder: tordered, roots: roots, recursive: recursive };
     }
 
-    computeBVMinSigned(bits: bigint): string {
-        const bbn = ((2n ** bits) / 2n);
-        return bbn.toString();
-    }
-
-    computeBVMaxSigned(bits: bigint): string {
-        const bbn = ((2n ** bits) / 2n) - 1n;
-        return bbn.toString();
-    }
-
-    computeBVMaxUnSigned(bits: bigint): string {
-        const bbn = (2n ** bits) - 1n;
-        return bbn.toString();
-    }
-
     generateSMT2AssemblyInfo(mode: "unreachable" | "witness" | "evaluate" | "invert"): SMT2FileInfo {
         const subtypeasserts = this.subtypeRelation.map((tc) => tc.value ? `(assert (SubtypeOf@ ${tc.ttype} ${tc.atype}))` : `(assert (not (SubtypeOf@ ${tc.ttype} ${tc.atype})))`).sort();
         const indexasserts = this.hasIndexRelation.map((hi) => hi.value ? `(assert (HasIndex@ ${hi.idxtag} ${hi.atype}))` : `(assert (not (HasIndex@ ${hi.idxtag} ${hi.atype})))`).sort();

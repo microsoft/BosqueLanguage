@@ -15,7 +15,7 @@ type VerifierOptions = {
 };
 
 class BVEmitter {
-    readonly bvsize: number;
+    readonly bvsize: bigint;
     readonly natmax: BigInt;
     readonly intmin: BigInt;
     readonly intmax: BigInt;
@@ -28,46 +28,89 @@ class BVEmitter {
     readonly bvintmin1: string;
     readonly bvintmax1: string;
 
-    constructor(bvsize: number, natmax: BigInt, intmin: BigInt, intmax: BigInt) {
+    computeBVMinSigned(bits: bigint): bigint {
+        return -((2n ** bits) / 2n);
+    }
+
+    computeBVMaxSigned(bits: bigint): bigint {
+        return ((2n ** bits) / 2n) - 1n;
+    }
+
+    computeBVMaxUnSigned(bits: bigint): bigint {
+        return (2n ** bits) - 1n;
+    }
+
+    constructor(bvsize: bigint, natmax: bigint, intmin: bigint, intmax: bigint, natmax1: bigint, intmin1: bigint, intmax1: bigint) {
         this.bvsize = bvsize;
         this.natmax = natmax;
         this.intmin = intmin;
         this.intmax = intmax;
+
+        this.bvnatmax = natmax.toString();
+        this.bvintmin = intmin.toString();
+        this.bvintmax = intmax.toString();
+
+        this.bvnatmax1 = natmax1.toString();
+        this.bvintmin1 = intmin1.toString();
+        this.bvintmax1 = intmax1.toString();
+    }
+
+    create(bvsize: bigint): BVEmitter {
+        return new BVEmitter(bvsize, 
+            this.computeBVMaxUnSigned(bvsize), this.computeBVMinSigned(bvsize), this.computeBVMaxSigned(bvsize),
+            this.computeBVMaxUnSigned(bvsize + 1n), this.computeBVMinSigned(bvsize + 1n), this.computeBVMaxSigned(bvsize + 1n))
+    }
+
+    emitIntGeneral(val: bigint): SMTExp {
+        if(val === 0n) {
+            return new SMTConst("BInt@zero");
+        }
+        else {
+            if (val > 0) {
+                assert(BigInt(val) <= this.intmax);
+                let bits = BigInt(val).toString(2);
+
+                while(bits.length < this.bvsize) {
+                    bits = "0" + bits;
+                }
+                return new SMTConst(`#b${bits}`);
+            }
+            else {
+                assert(this.intmin <= BigInt(val));
+
+                let bits = (~BigInt(val) + 1n).toString(2).slice(0, Number(this.bvsize));
+                while(bits.length < this.bvsize) {
+                    bits = "1" + bits;
+                }
+                return new SMTConst(`#b${bits}`);
+            }
+        }
+    }
+
+    emitNatGeneral(val: bigint): SMTExp {
+        if(val === 0n) {
+            return new SMTConst("BNat@zero");
+        }
+        else {
+            assert(0 < val && BigInt(val) <= this.natmax);
+            return new SMTConst(`(_ bv${val} ${this.bvsize})`);
+        }
     }
 
     emitSimpleInt(val: number): SMTExp {
-        if(val >= 0) {
-            assert(BigInt(val) <= this.intmax);
-            return new SMTConst(`(_ bv${val} ${this.bvsize})`);
-        }
-        else {
-            xxxx; //get bit mask the right way
-            assert(this.intmin <= BigInt(val));
-            return new SMTCallSimple("bvneg", [new SMTConst(`(_ bv${-val} ${this.bvsize})`)]); 
-        }
+        return this.emitIntGeneral(BigInt(val));
     }
 
     emitSimpleNat(val: number): SMTExp {
-        assert(0 <= val && BigInt(val) <= this.natmax);
-        return new SMTConst(`(_ bv${val} ${this.bvsize})`);
+       return this.emitNatGeneral(BigInt(val));
     }
 
     emitInt(intv: string): SMTExp {
-        if(!intv.startsWith("-")) {
-            assert(BigInt(intv.slice(0, intv.length - 1)) <= this.intmax);
-
-            return new SMTConst(`(_ bv${intv.slice(0, intv.length - 1)} ${this.bvsize})`);
-        }
-        else {
-            xxxx; //get bit mask the right way
-            assert(BigInt(intv.slice(1, intv.length - 1)) <= this.intmax);
-            return new SMTCallSimple("bvneg", [ new SMTConst(`(_ bv${intv.slice(1, intv.length - 1)} ${this.bvsize})`)]);
-        }
+        return this.emitIntGeneral(BigInt(intv.slice(0, intv.length - 1)));
     }
 
     emitNat(natv: string): SMTExp {
-        assert(BigInt(natv.slice(0, natv.length - 1)) <= this.natmax);
-        return new SMTConst(`(_ bv${natv.slice(0, natv.length - 1)} ${this.bvsize})`);
+        return this.emitNatGeneral(BigInt(natv.slice(0, natv.length - 1)));
     }
 }
 
