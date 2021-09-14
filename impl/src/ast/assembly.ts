@@ -791,7 +791,7 @@ class Assembly {
 
     private getConceptsProvidedByTuple(tt: ResolvedTupleAtomType): ResolvedConceptAtomType {
         let tci: ResolvedConceptAtomTypeEntry[] = [...(this.getSpecialTupleConceptType().options[0] as ResolvedConceptAtomType).conceptTypes];
-        if (tt.types.every((ttype) => ttype.isGroundedType() && this.subtypeOf(ttype, this.getSpecialAPITypeConceptType()))) {
+        if (tt.types.every((ttype) => this.subtypeOf(ttype, this.getSpecialAPITypeConceptType()))) {
             tci.push(...(this.getSpecialAPITypeConceptType().options[0] as ResolvedConceptAtomType).conceptTypes);
         }
 
@@ -800,7 +800,7 @@ class Assembly {
 
     private getConceptsProvidedByRecord(rr: ResolvedRecordAtomType): ResolvedConceptAtomType {
         let tci: ResolvedConceptAtomTypeEntry[] = [...(this.getSpecialSomeConceptType().options[0] as ResolvedConceptAtomType).conceptTypes];
-        if (rr.entries.every((entry) => entry.ptype.isGroundedType() && this.subtypeOf(entry.ptype, this.getSpecialAPITypeConceptType()))) {
+        if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.getSpecialAPITypeConceptType()))) {
                 tci.push(...(this.getSpecialAPITypeConceptType().options[0] as ResolvedConceptAtomType).conceptTypes);
         }
 

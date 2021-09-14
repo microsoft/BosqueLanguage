@@ -673,7 +673,7 @@ class Parser {
     private m_errors: [string, number, string][];
     private m_recoverStack: number[];
 
-    private sortedSrcFiles: {fullname: string, shortname: string}[]; 
+    readonly sortedSrcFiles: {fullname: string, shortname: string}[]; 
 
     constructor(assembly: Assembly, srcFileNames: {fullname: string, shortname: string}[]) {
         this.m_tokens = [];
@@ -3897,6 +3897,12 @@ class Parser {
                 }
                 else if(ename === "DataString") {
                     attributes.push("__datastring_type");
+                }
+                if(ename === "BufferOf") {
+                    attributes.push("__bufferof_type");
+                }
+                else if(ename === "DataBuffer") {
+                    attributes.push("__databuffer_type");
                 }
                 else if(ename === "Ok") {
                     attributes.push("__ok_type");

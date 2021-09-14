@@ -1229,18 +1229,18 @@ class MIREmitter {
     }
 
     registerPCode(ikey: MIRInvokeKey, shortname: string, idecl: InvokeDecl, fsig: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cinfo: [string, ResolvedType][], capturedpcode: [string, { pcode: PCode, captured: string[] }][]) {
-        if (!this.emitEnabled || this.masm.invokeDecls.has(ikey) || this.masm.primitiveInvokeDecls.has(ikey) || this.pendingPCodeProcessing.findIndex((fp) => fp[0] === ikey) !== -1) {
+        if (!this.emitEnabled || this.masm.invokeDecls.has(ikey) || this.masm.primitiveInvokeDecls.has(ikey) || this.pendingPCodeProcessing.findIndex((fp) => fp.lkey === ikey) !== -1) {
             return;
         }
 
         this.pendingPCodeProcessing.push({ lkey: ikey, lshort: shortname, invoke: idecl, sigt: fsig, bodybinds: bodybinds, cargs: cinfo, capturedpcodes: capturedpcode });
     }
 
-    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { fpath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
+    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { fpath: string, filepath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new Assembly();
-        let p = new Parser(assembly);
+        let p = new Parser(assembly, srcFiles.map((sfi) => { return {fullname: sfi.fpath, shortname: sfi.filepath}; }));
         try {
             for (let i = 0; i < srcFiles.length; ++i) {
                 p.parseCompilationUnitPass1(srcFiles[i].fpath, srcFiles[i].contents, macrodefs);
@@ -1270,14 +1270,18 @@ class MIREmitter {
 
         const masm = new MIRAssembly(pckge, srcFiles, hash.digest("hex"));
         const emitter = new MIREmitter(assembly, masm, true);
-        const checker = new TypeChecker(assembly, emitter, buildLevel);
+        const checker = new TypeChecker(assembly, emitter, buildLevel, p.sortedSrcFiles);
 
         emitter.registerResolvedTypeReference(assembly.getSpecialAnyConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialSomeConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialKeyTypeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialPODTypeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialValidatorConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialParsableConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialAPITypeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialAPIValueConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialAlgebraicConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialOrderableConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
 
         emitter.registerResolvedTypeReference(assembly.getSpecialNoneType());
@@ -1300,6 +1304,7 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexMatchType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialNothingType());
 
         //get any entrypoint functions and initialize the checker there
         const epns = assembly.getNamespace(entrypoints.namespace);
@@ -1332,8 +1337,8 @@ class MIREmitter {
                     || emitter.pendingOPVirtualProcessing.length !== 0) {
 
                     while (emitter.pendingOOProcessing.length !== 0) {
-                        const tt = emitter.pendingOOProcessing.pop() as [MIRResolvedTypeKey, OOPTypeDecl, Map<string, ResolvedType>];
-                        checker.processOOType(...tt);
+                        const tt = emitter.pendingOOProcessing.pop() as EntityInstantiationInfo;
+                        checker.processOOType(tt.tkey, tt.shortname, tt.ootype, tt.binds);
                     }
 
                     if(emitter.pendingConstExprProcessing.length !== 0) {

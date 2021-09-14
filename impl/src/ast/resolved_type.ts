@@ -326,13 +326,19 @@ class ResolvedType {
 
     isGroundedType(): boolean {
         return this.options.every((opt) => {
-            if(!(opt instanceof ResolvedConceptAtomType)) {
-                return true;
-            }
-            else {
+            if(opt instanceof ResolvedConceptAtomType) {
                 return opt.conceptTypes.every((cpt) => !cpt.concept.attributes.includes("__universal"));
             }
-        })
+            else if (opt instanceof ResolvedTupleAtomType) {
+                return opt.types.every((tt) => tt.isGroundedType());
+            }
+            else if (opt instanceof ResolvedRecordAtomType) {
+                return opt.entries.every((entry) => entry.ptype.isGroundedType());
+            }
+            else {
+                return true;
+            }
+        });
     }
 
     tryGetInferrableValueListConstructorType(): ResolvedEphemeralListType | undefined {

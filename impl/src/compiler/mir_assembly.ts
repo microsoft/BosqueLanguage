@@ -811,8 +811,26 @@ class MIRAssembly {
     private m_subtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
     private m_atomSubtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
 
+    private getConceptsProvidedByTuple(tt: MIRTupleType): MIRType {
+        let tci: [MIRResolvedTypeKey, string][] = [["NSCore::Some", "Some"]];
+        if (tt.entries.every((ttype) => this.subtypeOf(ttype, this.typeMap.get("NSCore::APIType") as MIRType))) {
+            tci.push(["NSCore::APIType", "APIType"]);
+        }
+
+        return MIRType.createSingle(MIRConceptType.create(tci));
+    }
+
+    private getConceptsProvidedByRecord(rr: MIRRecordType): MIRType {
+        let tci: [MIRResolvedTypeKey, string][] = [["NSCore::Some", "Some"]];
+        if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.typeMap.get("NSCore::APIType") as MIRType))) {
+            tci.push(["NSCore::APIType", "APIType"]);
+        }
+
+        return MIRType.createSingle(MIRConceptType.create(tci));
+    }
+
     private atomSubtypeOf_EntityConcept(t1: MIREntityType, t2: MIRConceptType): boolean {
-        const t1e = this.entityDecls.get(t1.trkey) as MIREntityTypeDecl;
+        const t1e = this.entityDecls.get(t1.typeID) as MIREntityTypeDecl;
         const mcc = MIRType.createSingle(t2);
         return t1e.provides.some((provide) => this.subtypeOf(this.typeMap.get(provide) as MIRType, mcc));
     }
@@ -832,172 +850,57 @@ class MIRAssembly {
         });
     }
 
-    private checkAllTupleEntriesOfType(t1: MIRTupleType, t2: MIRType): boolean {
-        return t1.entries.every((entry) => this.subtypeOf(entry.type, t2));
-    }
-
-    private getConceptsProvidedByTuple(tt: MIRTupleType): MIRType {
-        let tci: MIRResolvedTypeKey[] = ["NSCore::Some"];
-        if (tt.grounded) {
-            if (tt.isvalue && this.checkAllTupleEntriesOfType(tt, this.typeMap.get("NSCore::KeyType") as MIRType)) {
-                tci.push("NSCore::KeyType");
-            }
-            if (this.checkAllTupleEntriesOfType(tt, this.typeMap.get("NSCore::APIType") as MIRType)) {
-                if (this.checkAllTupleEntriesOfType(tt, this.typeMap.get("NSCore::PODType") as MIRType)) {
-                    tci.push("NSCore::APIType");
-                }
-                else {
-                    tci.push("NSCore::PODType");
-                }
-            }
-        }
-
-        return MIRType.createSingle(MIRConceptType.create(tci));
-    }
-
     private atomSubtypeOf_TupleConcept(t1: MIRTupleType, t2: MIRConceptType): boolean {
-        const t2type = this.typeMap.get(t2.trkey) as MIRType;
+        const t2type = this.typeMap.get(t2.typeID) as MIRType;
         const tcitype = this.getConceptsProvidedByTuple(t1);
         return this.subtypeOf(tcitype, t2type);
     }
 
-    private atomSubtypeOf_TupleTuple(t1: MIRTupleType, t2: MIRTupleType): boolean {
-        if(t1.isvalue !== t2.isvalue) {
-            return false;
-        }
-
-       for (let i = 0; i < t1.entries.length; ++i) {
-            const t1e = t1.entries[i];
-
-           if (i >= t2.entries.length) {
-               return false;
-           }
-           else {
-               const t2e = t2.entries[i];
-               if ((t1e.isOptional && !t2e.isOptional) || t1e.type.trkey !== t2e.type.trkey) {
-                   return false;
-               }
-            }
-        }
-
-        //t2 has a required entry that is not required in t1
-        if (t2.entries.length > t1.entries.length && t2.entries.slice(t1.entries.length).some((entry) => !entry.isOptional)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private checkAllRecordEntriesOfType(t1: MIRRecordType, t2: MIRType): boolean {
-        return t1.entries.every((entry) => this.subtypeOf(entry.type, t2));
-    }
-
-    private getConceptsProvidedByRecord(tt: MIRRecordType): MIRType {
-        let tci: MIRResolvedTypeKey[] = ["NSCore::Some"];
-        if (tt.grounded) {
-            if (tt.isvalue && this.checkAllRecordEntriesOfType(tt, this.typeMap.get("NSCore::KeyType") as MIRType)) {
-                tci.push("NSCore::KeyType");
-            }
-            if (this.checkAllRecordEntriesOfType(tt, this.typeMap.get("NSCore::APIType") as MIRType)) {
-                if (this.checkAllRecordEntriesOfType(tt, this.typeMap.get("NSCore::PODType") as MIRType)) {
-                    tci.push("NSCore::APIType");
-                }
-                else {
-                    tci.push("NSCore::PODType");
-                }
-            }
-        }
-
-        return MIRType.createSingle(MIRConceptType.create(tci));
-    }
-
     private atomSubtypeOf_RecordConcept(t1: MIRRecordType, t2: MIRConceptType): boolean {
-        const t2type = this.typeMap.get(t2.trkey) as MIRType;
+        const t2type = this.typeMap.get(t2.typeID) as MIRType;
         const tcitype = this.getConceptsProvidedByRecord(t1);
         return this.subtypeOf(tcitype, t2type);
     }
 
-    private atomSubtypeOf_RecordRecord(t1: MIRRecordType, t2: MIRRecordType): boolean {
-        if(t1.isvalue !== t2.isvalue) {
-            return false;
-        }
-
-        let badEntry = false;
-        t1.entries.forEach((entry) => {
-            const t2e = t2.entries.find((e) => e.name === entry.name);
-            if (t2e === undefined) {
-                badEntry = badEntry || true;
-            }
-            else {
-                if ((entry.isOptional && !t2e.isOptional) || entry.type.trkey !== t2e.type.trkey) {
-                    badEntry = badEntry || true;
-                }
-            }
-        });
-
-        t2.entries.forEach((entry) => {
-            badEntry = badEntry || (t1.entries.find((e) => e.name === entry.name) === undefined && !entry.isOptional);
-        });
-
-        if (badEntry) {
-            return false;
-        }
-
-        return true;
-    }
-
     private atomSubtypeOf(t1: MIRTypeOption, t2: MIRTypeOption): boolean {
-        let memores = this.m_atomSubtypeRelationMemo.get(t1.trkey);
+        let memores = this.m_atomSubtypeRelationMemo.get(t1.typeID);
         if (memores === undefined) {
-            this.m_atomSubtypeRelationMemo.set(t1.trkey, new Map<string, boolean>());
-            memores = this.m_atomSubtypeRelationMemo.get(t1.trkey) as Map<string, boolean>;
+            this.m_atomSubtypeRelationMemo.set(t1.typeID, new Map<string, boolean>());
+            memores = this.m_atomSubtypeRelationMemo.get(t1.typeID) as Map<string, boolean>;
         }
 
-        let memoval = memores.get(t2.trkey);
+        let memoval = memores.get(t2.typeID);
         if (memoval !== undefined) {
             return memoval;
         }
 
         let res = false;
 
-        if (t1.trkey === t2.trkey) {
+        if (t1.typeID === t2.typeID) {
             res = true;
         }
-        else {
-            if (t1 instanceof MIRConceptType && t2 instanceof MIRConceptType) {
-                res = this.atomSubtypeOf_ConceptConcept(t1, t2);
+        else if (t1 instanceof MIRConceptType && t2 instanceof MIRConceptType) {
+            res = this.atomSubtypeOf_ConceptConcept(t1, t2);
+        }
+        else if (t2 instanceof MIRConceptType) {
+            if (t1 instanceof MIREntityType) {
+                res = this.atomSubtypeOf_EntityConcept(t1, t2);
             }
-            else if (t1 instanceof MIRConceptType) {
-                //res stays false
+            else if (t1 instanceof MIRTupleType) {
+                res = this.atomSubtypeOf_TupleConcept(t1, t2);
             }
-            else if (t2 instanceof MIRConceptType) {
-                if (t1 instanceof MIREntityType) {
-                    res = this.atomSubtypeOf_EntityConcept(t1, t2);
-                }
-                else if (t1 instanceof MIRTupleType) {
-                    res = this.atomSubtypeOf_TupleConcept(t1, t2);
-                }
-                else if (t1 instanceof MIRRecordType) {
-                    res = this.atomSubtypeOf_RecordConcept(t1, t2);
-                }
-                else {
-                    //fall-through
-                }
+            else if (t1 instanceof MIRRecordType) {
+                res = this.atomSubtypeOf_RecordConcept(t1, t2);
             }
             else {
-                if (t1 instanceof MIRTupleType && t2 instanceof MIRTupleType) {
-                    res = this.atomSubtypeOf_TupleTuple(t1, t2);
-                }
-                else if (t1 instanceof MIRRecordType && t2 instanceof MIRRecordType) {
-                    res = this.atomSubtypeOf_RecordRecord(t1, t2);
-                }
-                else {
-                    //fall-through
-                }
+                //fall-through
             }
         }
+        else {
+            //fall-through
+        }
 
-        memores.set(t2.trkey, res);
+        memores.set(t2.typeID, res);
         return res;
     }
 
@@ -1008,20 +911,20 @@ class MIRAssembly {
     }
 
     subtypeOf(t1: MIRType, t2: MIRType): boolean {
-        let memores = this.m_subtypeRelationMemo.get(t1.trkey);
+        let memores = this.m_subtypeRelationMemo.get(t1.typeID);
         if (memores === undefined) {
-            this.m_subtypeRelationMemo.set(t1.trkey, new Map<string, boolean>());
-            memores = this.m_subtypeRelationMemo.get(t1.trkey) as Map<string, boolean>;
+            this.m_subtypeRelationMemo.set(t1.typeID, new Map<string, boolean>());
+            memores = this.m_subtypeRelationMemo.get(t1.typeID) as Map<string, boolean>;
         }
 
-        let memoval = memores.get(t2.trkey);
+        let memoval = memores.get(t2.typeID);
         if (memoval !== undefined) {
             return memoval;
         }
 
-        const res = (t1.trkey === t2.trkey) || t1.options.every((t1opt) => t2.options.some((t2opt) => this.atomSubtypeOf(t1opt, t2opt)));
+        const res = (t1.typeID === t2.typeID) || t1.options.every((t1opt) => t2.options.some((t2opt) => this.atomSubtypeOf(t1opt, t2opt)));
 
-        memores.set(t2.trkey, res);
+        memores.set(t2.typeID, res);
         return res;
     }
 
@@ -1039,7 +942,6 @@ class MIRAssembly {
             virtualOperatorDecls: [...this.virtualOperatorDecls],
             conceptDecls: [...this.conceptDecls].map((cd) => [cd[0], cd[1].jemit()]),
             entityDecls: [...this.entityDecls].map((ed) => [ed[0], ed[1].jemit()]),
-            literalTypes: [...this.literalTypes].map((lt) => [lt[0], lt[1].jemit()]),
             typeMap: [...this.typeMap].map((t) => [t[0], t[1].jemit()])
         };
     }
@@ -1056,7 +958,6 @@ class MIRAssembly {
         jobj.virtualOperatorDecls.forEach((od: any) => masm.virtualOperatorDecls.set(od[0], od[1]));
         jobj.conceptDecls.forEach((cd: any) => masm.conceptDecls.set(cd[0], MIROOTypeDecl.jparse(cd[1]) as MIRConceptTypeDecl));
         jobj.entityDecls.forEach((id: any) => masm.entityDecls.set(id[0], MIROOTypeDecl.jparse(id[1]) as MIREntityTypeDecl));
-        jobj.literalTypes.forEach((lt: any) => masm.literalTypes.set(lt[0], MIRLiteralType.jparse(lt[1]) as MIRLiteralType));
         jobj.typeMap.forEach((t: any) => masm.typeMap.set(t[0], MIRType.jparse(t[1])));
 
         return masm;
