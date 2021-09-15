@@ -99,6 +99,25 @@
 
 ;;BINT_CONSTANTS;;
 
+(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))
+(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))
+
+(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero 0))
+(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one 1))
+
+(declare-const BFloat@zero BFloat) (assert (= BFloat@zero 0.0))
+(declare-const BFloat@one BFloat) (assert (= BFloat@one 1.0))
+(declare-const BFloat@pi BFloat) (assert (= BFloat@pi 3.141592653589793))
+(declare-const BFloat@e BFloat) (assert (= BFloat@e 2.718281828459045))
+
+(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero 0.0))
+(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one 1.0))
+(declare-const BDecimal@pi BDecimal) (assert (= BDecimal@pi 3.141592653589793))
+(declare-const BDecimal@e BDecimal) (assert (= BDecimal@e 2.718281828459045))
+
+(declare-const BRational@zero BRational) (assert (= BRational@zero 0.0))
+(declare-const BRational@one BRational) (assert (= BRational@one 1.0))
+
 ;;Define the ISequence datatype and operators
 (declare-sort ISequence 0)
 

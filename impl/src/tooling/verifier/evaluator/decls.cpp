@@ -1537,7 +1537,7 @@ IType* IType::jparse(json j)
             return StringType::jparse(j);
         case TypeTag::StringOfTag:
             return StringOfType::jparse(j);
-        case TypeTag::NumberOfTag:
+        case TypeTag::PrimitiveOfTag:
             return NumberOfType::jparse(j);
         case TypeTag::DataStringTag:
             return DataStringType::jparse(j);

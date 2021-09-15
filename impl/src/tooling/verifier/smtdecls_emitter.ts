@@ -6,7 +6,7 @@
 import * as assert from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
 
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityType, MIREntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
@@ -753,13 +753,13 @@ class SMTEmitter {
         });
 
         assembly.constantDecls.forEach((cdecl) => {
-            const smtname = this.temitter.mangle(cdecl.gkey);
-            const consf = this.temitter.mangle(cdecl.value);
+            const smtname = this.temitter.lookupGlobalName(cdecl.gkey);
+            const consf = this.temitter.lookupFunctionName(cdecl.ivalue);
             const ctype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(cdecl.declaredType));
 
             let optenumname: [string, string] | undefined = undefined;
             if(cdecl.attributes.includes("enum")) {
-                optenumname = [cdecl.enclosingDecl as string, cdecl.cname];
+                optenumname = [cdecl.enclosingDecl as string, cdecl.gkey];
             }
 
             this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf));

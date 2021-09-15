@@ -5,7 +5,7 @@
 
 import { BSQRegex } from "../../ast/bsqregex";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
-import { SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
+import { BVEmitter, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
 type SMT2FileInfo = {
     TYPE_TAG_DECLS: string[],
@@ -18,8 +18,6 @@ type SMT2FileInfo = {
     KEY_TYPE_TAG_RANK: string[],
     BINTEGRAL_TYPE_ALIAS: string[],
     BINTEGRAL_CONSTANTS: string[],
-    BFLOATPOINT_TYPE_ALIAS: string[],
-    BFLOATPOINT_CONSTANTS: string[],
     STRING_TYPE_ALIAS: string,
     KEY_TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     KEY_RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
@@ -136,7 +134,6 @@ class SMTFunctionUninterpreted {
 
 class SMTEntityDecl {
     readonly iskeytype: boolean;
-    readonly isapitype: boolean;
 
     readonly smtname: string;
     readonly typetag: string;
@@ -145,9 +142,8 @@ class SMTEntityDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, isapitype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
-        this.isapitype = isapitype;
 
         this.smtname = smtname;
         this.typetag = typetag;
@@ -159,7 +155,6 @@ class SMTEntityDecl {
 
 class SMTListDecl {
     readonly iskeytype: boolean;
-    readonly isapitype: boolean;
 
     readonly smtllisttype: string; //the uninterpreted list contents kind with multiple constructors 
     readonly listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[]; //the constructors for each list
@@ -171,9 +166,8 @@ class SMTListDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, isapitype: boolean, smtllisttype: string, listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[], smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, smtllisttype: string, listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[], smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
-        this.isapitype = isapitype;
 
         this.smtllisttype = smtllisttype;
         this.listtypeconsf = listtypeconsf;
@@ -188,8 +182,6 @@ class SMTListDecl {
 
 class SMTTupleDecl {
     readonly iskeytype: boolean;
-    readonly isapitype: boolean;
-    
     readonly smtname: string;
     readonly typetag: string;
 
@@ -197,9 +189,8 @@ class SMTTupleDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, isapitype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
-        this.isapitype = isapitype;
 
         this.smtname = smtname;
         this.typetag = typetag;
@@ -211,8 +202,6 @@ class SMTTupleDecl {
 
 class SMTRecordDecl {
     readonly iskeytype: boolean;
-    readonly isapitype: boolean;
-    
     readonly smtname: string;
     readonly typetag: string;
 
@@ -220,9 +209,8 @@ class SMTRecordDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, isapitype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
-        this.isapitype = isapitype;
 
         this.smtname = smtname;
         this.typetag = typetag;
@@ -359,11 +347,14 @@ class SMTAssembly {
 
     entrypoint: string;
     havocfuncs: Set<string> = new Set<string>();
-    model: SMTModelState = new SMTModelState([], { vname: "[EMPTY]", vtype: new SMTType("[UNINIT_VTYPE]"), vinit: new SMTConst("[UNINT_VINIT]"), vchk: undefined, callexp: new SMTConst("[UNINT_CALLEXP]") }, undefined, new SMTType("[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"));
+    model: SMTModelState = new SMTModelState([], { vname: "[EMPTY]", vtype: new SMTType("[UNINIT_VTYPE]", "[UNINIT_VTYPE]", "[UNINIT_VTYPE]"), vinit: new SMTConst("[UNINT_VINIT]"), vchk: undefined, callexp: new SMTConst("[UNINT_CALLEXP]") }, undefined, new SMTType("[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"));
 
-    constructor(vopts: VerifierOptions, entrypoint: string) {
+    numgen: BVEmitter;
+
+    constructor(vopts: VerifierOptions, numgen: BVEmitter, entrypoint: string) {
         this.vopts = vopts;
         this.entrypoint = entrypoint;
+        this.numgen = numgen;
     }
 
     private static sccVisit(cn: SMTCallGNode, scc: Set<string>, marked: Set<string>, invokes: Map<string, SMTCallGNode>) {
@@ -452,41 +443,15 @@ class SMTAssembly {
         ];
         let integral_constants: string[] = [
             `(declare-const BInt@zero BInt) (assert (= BInt@zero (_ bv0 ${this.vopts.ISize})))`,
-            `(declare-const BInt@one BInt) (assert (= BInt@one (_ bv1 ${this.vopts.ISize})))`,
-            `(declare-const BInt@min BInt) (assert (= BInt@min (_ bv${this.computeBVMinSigned(BigInt(this.vopts.ISize))} ${this.vopts.ISize})))`,
-            `(declare-const BInt@max BInt) (assert (= BInt@max (_ bv${this.computeBVMaxSigned(BigInt(this.vopts.ISize))} ${this.vopts.ISize})))`,
+            `(declare-const BInt@one BInt) (assert (= BInt@one ${this.numgen.emitSimpleInt(1)}))`,
+            `(declare-const BInt@min BInt) (assert (= BInt@min ${this.numgen.emitIntGeneral(this.numgen.intmin)}))`,
+            `(declare-const BInt@max BInt) (assert (= BInt@max ${this.numgen.emitIntGeneral(this.numgen.intmax)}))`,
 
             `(declare-const BNat@zero BNat) (assert (= BNat@zero (_ bv0 ${this.vopts.ISize})))`,
-            `(declare-const BNat@one BNat) (assert (= BNat@one (_ bv1 ${this.vopts.ISize})))`,
+            `(declare-const BNat@one BNat) (assert (= BNat@one ${this.numgen.emitSimpleNat(1)}))`,
             `(declare-const BNat@min BNat) (assert (= BNat@min BNat@zero))`,
-            `(declare-const BNat@max BNat) (assert (= BNat@max (_ bv${this.computeBVMaxUnSigned(BigInt(this.vopts.ISize))} ${this.vopts.ISize})))`
+            `(declare-const BNat@max BNat) (assert (= BNat@max ${this.numgen.emitNatGeneral(this.numgen.natmax)}))`
         ];
-
-        integral_type_alias.push("(define-sort BBigInt () Int)");
-        integral_type_alias.push("(define-sort BBigNat () Int)");
-
-        integral_constants.push(`(declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))`);
-        integral_constants.push(`(declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))`);
-
-        integral_constants.push(`(declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero 0))`);
-        integral_constants.push(`(declare-const BBigNat@one BBigNat) (assert (= BBigNat@one 1))`);
-
-        let float_type_alias: string[] = [];
-        let float_constants: string[] = [];
-        float_type_alias.push("(define-sort BFloat () Real)", "(define-sort BDecimal () Real)", "(define-sort BRational () Real)");
-
-        float_constants.push(`(declare-const BFloat@zero BFloat) (assert (= BFloat@zero 0.0))`);
-        float_constants.push(`(declare-const BFloat@one BFloat) (assert (= BFloat@one 1.0))`);
-        float_constants.push(`(declare-const BFloat@pi BFloat) (assert (= BFloat@pi 3.141592653589793))`);
-        float_constants.push(`(declare-const BFloat@e BFloat) (assert (= BFloat@e 2.718281828459045))`);
-
-        float_constants.push(`(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero 0.0))`);
-        float_constants.push(`(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one 1.0))`);
-        float_constants.push(`(declare-const BDecimal@pi BDecimal) (assert (= BDecimal@pi 3.141592653589793))`);
-        float_constants.push(`(declare-const BDecimal@e BDecimal) (assert (= BDecimal@e 2.718281828459045))`);
-
-        float_constants.push(`(declare-const BRational@zero BRational) (assert (= BRational@zero 0.0))`);
-        float_constants.push(`(declare-const BRational@one BRational) (assert (= BRational@one 1.0))`);
         
         const keytupleinfo = this.tupleDecls
             .filter((tt) => tt.iskeytype)
@@ -723,9 +688,7 @@ class SMTAssembly {
             KEY_TYPE_TAG_RANK: keytypeorder,
             BINTEGRAL_TYPE_ALIAS: integral_type_alias,
             BINTEGRAL_CONSTANTS: integral_constants,
-            BFLOATPOINT_TYPE_ALIAS: float_type_alias,
-            BFLOATPOINT_CONSTANTS: float_constants,
-            STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 16)))" : "(define-sort BString () String)"),
+            STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 8)))" : "(define-sort BString () String)"),
             KEY_TUPLE_INFO: { decls: keytupleinfo.map((kti) => kti.decl), constructors: keytupleinfo.map((kti) => kti.consf), boxing: keytupleinfo.map((kti) => kti.boxf) },
             KEY_RECORD_INFO: { decls: keyrecordinfo.map((kti) => kti.decl), constructors: keyrecordinfo.map((kti) => kti.consf), boxing: keyrecordinfo.map((kti) => kti.boxf) },
             KEY_TYPE_INFO: { decls: keytypeinfo.filter((kti) => kti.decl !== undefined).map((kti) => kti.decl as string), constructors: keytypeinfo.filter((kti) => kti.consf !== undefined).map((kti) => kti.consf as string), boxing: keytypeinfo.map((kti) => kti.boxf) },
@@ -766,10 +729,8 @@ class SMTAssembly {
             .replace(";;RECORD_HAS_PROPERTY_DECLS;;", joinWithIndent(sfileinfo.RECORD_HAS_PROPERTY_DECLS, ""))
             .replace(";;KEY_TYPE_TAG_RANK;;", joinWithIndent(sfileinfo.KEY_TYPE_TAG_RANK, ""))
             .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
-            .replace(";;BFLOATPOINT_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BFLOATPOINT_TYPE_ALIAS, ""))
             .replace(";;STRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS + "\n")
             .replace(";;BINTEGRAL_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
-            .replace(";;BFLOATPOINT_CONSTANTS;;", joinWithIndent(sfileinfo.BFLOATPOINT_CONSTANTS, ""))
             .replace(";;KEY_TUPLE_DECLS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.decls, "      "))
             .replace(";;KEY_RECORD_DECLS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.decls, "      "))
             .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))

@@ -7,7 +7,7 @@ import * as assert from "assert";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 
 type VerifierOptions = {
-    ISize: number, //bits in the size 2-64
+    ISize: number, //bits used for Int/Nat
     StringOpt: "ASCII" | "UNICODE",
 
     EnableCollection_SmallMode: boolean,
@@ -16,9 +16,9 @@ type VerifierOptions = {
 
 class BVEmitter {
     readonly bvsize: bigint;
-    readonly natmax: BigInt;
-    readonly intmin: BigInt;
-    readonly intmax: BigInt;
+    readonly natmax: bigint;
+    readonly intmin: bigint;
+    readonly intmax: bigint;
 
     readonly bvnatmax: string;
     readonly bvintmin: string;

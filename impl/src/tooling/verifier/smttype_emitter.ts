@@ -24,7 +24,7 @@ enum APIEmitTypeTag
     DecimalTag,
     StringTag,
     StringOfTag,
-    NumberOfTag,
+    PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
     BufferOfTag,
@@ -765,7 +765,7 @@ class SMTTypeEmitter {
         }
         else if(entity instanceof MIRConstructableStdEntityTypeDecl) {
             if(entity.attributes.includes("__typedprimitive")) {
-                return {tag: APIEmitTypeTag.NumberOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), usinginv: entity.usingcons};
+                return {tag: APIEmitTypeTag.PrimitiveOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), usinginv: entity.usingcons};
             }
             else {
                 const ddcls = [...this.assembly.constantDecls].filter((cdcl) => cdcl[1].enclosingDecl !== undefined && cdcl[1].enclosingDecl === tt.typeID);

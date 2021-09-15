@@ -1306,7 +1306,7 @@ class TypeChecker {
 
     private checkArgumentsEntityConstructor(sinfo: SourceInfo, oftype: ResolvedEntityAtomType, args: ExpandedArgument[], trgt: MIRRegisterArgument): ResolvedType {
         if(oftype.object.attributes.includes("__constructable")) {
-            this.raiseErrorIf(sinfo, !oftype.object.attributes.includes("__typedprimitive"), "Can only construct typed numbers directly");
+            this.raiseErrorIf(sinfo, !oftype.object.attributes.includes("__typedprimitive"), "Can only construct typed primitives directly");
             this.raiseErrorIf(sinfo, args.length !== 1, "Expected single argument");
 
             const atype = (oftype.object.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;

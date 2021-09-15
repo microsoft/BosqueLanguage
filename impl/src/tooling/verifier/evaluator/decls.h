@@ -42,7 +42,7 @@ enum class TypeTag
     DecimalTag,
     StringTag,
     StringOfTag,
-    NumberOfTag,
+    PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
     BufferTag,
