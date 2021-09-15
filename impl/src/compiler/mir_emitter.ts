@@ -1032,23 +1032,33 @@ class MIREmitter {
             return;
         }
 
-        if (decl.ns === "NSCore" && decl.name === "Result") {    
+        if (decl.ns === "NSCore" && decl.name === "Result") {
             const okdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
             const okkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(okdecl, binds)));
-            if (!this.masm.entityDecls.has(okkey) && this.pendingOOProcessing.findIndex((oop) => oop[0] === okkey) === -1) {
-                this.pendingOOProcessing.push([okkey, okdecl, binds]);
-                this.entityInstantiationInfo.push([okkey, okdecl, binds]);
+            const okentry = { tkey: okkey.keyid, shortname: okkey.shortname, ootype: okdecl, binds: binds }
+            if (!this.masm.entityDecls.has(okkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === okkey.keyid) === -1) {
+                this.pendingOOProcessing.push(okentry);
+                this.entityInstantiationInfo.push(okentry);
             }
 
             const errdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
             const errkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(errdecl, binds)));
-            if (!this.masm.entityDecls.has(errkey) && this.pendingOOProcessing.findIndex((oop) => oop[0] === errkey) === -1) {
-                this.pendingOOProcessing.push([errkey, errdecl, binds]);
-                this.entityInstantiationInfo.push([errkey, errdecl, binds]);
+            const errentry = { tkey: errkey.keyid, shortname: errkey.shortname, ootype: errdecl, binds: binds }
+            if (!this.masm.entityDecls.has(errkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === errkey.keyid) === -1) {
+                this.pendingOOProcessing.push(errentry);
+                this.entityInstantiationInfo.push(errentry);
             }
         }
 
-        xxxx; //TODO handle option here as well
+        if (decl.ns === "NSCore" && decl.name === "Option") {
+            const somethingdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl;
+            const somethngkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(somethingdecl, binds)));
+            const somethingentry = { tkey: somethngkey.keyid, shortname: somethngkey.shortname, ootype: somethingdecl, binds: binds }
+            if (!this.masm.entityDecls.has(somethngkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === somethngkey.keyid) === -1) {
+                this.pendingOOProcessing.push(somethingentry);
+                this.entityInstantiationInfo.push(somethingentry);
+            }
+        }
 
         this.pendingOOProcessing.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
         this.entityInstantiationInfo.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
@@ -1072,7 +1082,8 @@ class MIREmitter {
 
             if (sopt instanceof ResolvedEntityAtomType) {
                 this.registerTypeInstantiation(rtt, sopt.object, sopt.binds);
-                rt = MIREntityType.create(MIRKeyGenerator.generateTypeKey(rtt));
+                const ekey = MIRKeyGenerator.generateTypeKey(rtt);
+                rt = MIREntityType.create(ekey.keyid, ekey.shortname);
             }
             else if (sopt instanceof ResolvedConceptAtomType) {
                 if(sopt.conceptTypes.length > 1) {
@@ -1083,40 +1094,33 @@ class MIREmitter {
                     this.registerTypeInstantiation(rtt, cpt.concept, cpt.binds);
                     return MIRKeyGenerator.generateTypeKey(rtt);
                 });
-                rt = MIRConceptType.create(natoms);
+                rt = MIRConceptType.create(natoms.map((kk) => [kk.keyid, kk.shortname]));
             }
             else if (sopt instanceof ResolvedTupleAtomType) {
-                const tatoms = sopt.types.map((entry) => new MIRTupleTypeEntry(this.registerResolvedTypeReference(entry.type), entry.isOptional));
-                rt = MIRTupleType.create(sopt.isvalue, sopt.grounded, tatoms);
-                if(!this.masm.tupleDecls.has(rt.trkey)) {
-                    this.masm.tupleDecls.set(rt.trkey, rt as MIRTupleType);
+                const tatoms = sopt.types.map((entry) => this.registerResolvedTypeReference(entry));
+                rt = MIRTupleType.create(tatoms);
+                if(!this.masm.tupleDecls.has(rt.typeID)) {
+                    this.masm.tupleDecls.set(rt.typeID, rt as MIRTupleType);
                 }
             }
             else if (sopt instanceof ResolvedRecordAtomType) {
-                const tatoms = sopt.entries.map((entry) => new MIRRecordTypeEntry(entry.name, this.registerResolvedTypeReference(entry.type), entry.isOptional));
-                rt = MIRRecordType.create(sopt.isvalue, sopt.grounded, tatoms);
-                if(!this.masm.recordDecls.has(rt.trkey)) {
-                    this.masm.recordDecls.set(rt.trkey, rt as MIRRecordType);
-                }
-            }
-            else if(sopt instanceof ResolvedLiteralAtomType) {
-                const 
-                rt = MIRLiteralType.create(sopt.idStr, sopt.ofvalue);
-                if(!this.masm.literalTypes.has(rt.trkey)) {
-                    this.masm.literalTypes.set(rt.trkey, rt as MIRLiteralType);
+                const tatoms = sopt.entries.map((entry) => { return {pname: entry.pname, ptype: this.registerResolvedTypeReference(entry.ptype)} });
+                rt = MIRRecordType.create(tatoms);
+                if(!this.masm.recordDecls.has(rt.typeID)) {
+                    this.masm.recordDecls.set(rt.typeID, rt as MIRRecordType);
                 }
             }
             else {
                 const vpatoms = (sopt as ResolvedEphemeralListType).types.map((tt) => this.registerResolvedTypeReference(tt));
                 rt = MIREphemeralListType.create(vpatoms);
-                if(!this.masm.ephemeralListDecls.has(rt.trkey)) {
-                    this.masm.ephemeralListDecls.set(rt.trkey, rt as MIREphemeralListType);
+                if(!this.masm.ephemeralListDecls.has(rt.typeID)) {
+                    this.masm.ephemeralListDecls.set(rt.typeID, rt as MIREphemeralListType);
                 }
             }
 
             const ft = MIRType.create([(rt as MIRTypeOption)]);
             if(this.emitEnabled) {
-                this.masm.typeMap.set(ft.trkey, ft);
+                this.masm.typeMap.set(ft.typeID, ft);
             }
 
             return ft;

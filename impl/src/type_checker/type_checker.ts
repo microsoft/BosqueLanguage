@@ -9,10 +9,10 @@ import { TypeEnvironment, VarInfo, FlowTypeTruthValue, ValueType } from "./type_
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, TupleTypeSignature, FunctionTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, TemplateArguments, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, IsTypeExpression, AsTypeExpression, PostfixGetPropertyOption, PostfixGetIndexOption, SwitchExpression, WildcardSwitchGuard, LiteralSwitchGuard, SwitchGuard, SwitchStatement } from "../ast/body";
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
-import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing } from "../compiler/mir_ops";
+import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing, MIRConstantArgument } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
 import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRConstructableStdEntityTypeDecl } from "../compiler/mir_assembly";
-import { BSQRegex } from "../ast/bsqregex";
+import { BSQRegex, RegexAlternation, RegexCharRange, RegexComponent, RegexConstClass, RegexDotCharClass, RegexLiteral, RegexOptional, RegexPlusRepeat, RegexRangeRepeat, RegexSequence, RegexStarRepeat } from "../ast/bsqregex";
 
 import * as assert from "assert";
 
@@ -2257,7 +2257,7 @@ class TypeChecker {
         this.raiseErrorIf(sinfo, !oftype.attributes.includes("__typedprimitive"), `Cannot construct typed primitive of ${tntt.typeID}`);
         this.raiseErrorIf(sinfo, !oftype.attributes.includes("__typedeclable"), `Cannot construct typed primitive using ${tntt.typeID}`);
 
-        let nval: MIRArgument = new MIRConstantNone();
+        let nval: MIRConstantArgument = new MIRConstantNone();
         if(ntype.isSameType(this.m_assembly.getSpecialIntType())) {
             const biv = BigInt(value.slice(0, value.length - 1));
             this.raiseErrorIf(sinfo, biv < INT_MIN || INT_MAX < biv, "Constant Int out of valid range");
@@ -6919,18 +6919,64 @@ class TypeChecker {
         }
     }
 
+    private resolveREExp(sinfo: SourceInfo, cre: RegexConstClass): RegexComponent {
+        this.raiseErrorIf(sinfo, !this.m_assembly.hasNamespace(cre.ns), "Namespace not found");
+        const ns = this.m_assembly.getNamespace(cre.ns);
+
+        this.raiseErrorIf(sinfo, !ns.consts.has(cre.ccname), "Const name not found");
+        const cc = ns.consts.get(cre.ccname) as NamespaceConstDecl;
+
+        if(cc.value.exp instanceof LiteralRegexExpression) {
+            return cc.value.exp.value.re;
+        }
+        else {
+            this.raiseErrorIf(sinfo, !(cc.value.exp instanceof AccessNamespaceConstantExpression), "Only literals and other const references allowed");
+
+            const cca = cc.value.exp as AccessNamespaceConstantExpression;
+            return this.resolveREExp(sinfo, new RegexConstClass(cca.ns, cca.name));
+        }
+    }
+
+    private processRegexComponent(sinfo: SourceInfo, rr: RegexComponent): RegexComponent {
+        if((rr instanceof RegexLiteral) || (rr instanceof RegexCharRange) || (rr instanceof RegexDotCharClass)) {
+            return rr;
+        } 
+        else if (rr instanceof RegexConstClass) {
+            return this.resolveREExp(sinfo, rr);
+        } 
+        else if (rr instanceof RegexStarRepeat) {
+            return new RegexStarRepeat(this.processRegexComponent(sinfo, rr.repeat));
+        } 
+        else if (rr instanceof RegexPlusRepeat) {
+            return new RegexPlusRepeat(this.processRegexComponent(sinfo, rr.repeat));
+        } 
+        else if (rr instanceof RegexRangeRepeat) {
+            return new RegexRangeRepeat(this.processRegexComponent(sinfo, rr.repeat), rr.min, rr.max);
+        } 
+        else if (rr instanceof RegexOptional) {
+            return new RegexOptional(this.processRegexComponent(sinfo, rr.opt));
+        } 
+        else if (rr instanceof RegexAlternation) {
+            return new RegexAlternation(rr.opts.map((ropt) => this.processRegexComponent(sinfo, ropt)));
+        } 
+        else {
+            assert(rr instanceof RegexSequence);
+            return new RegexSequence((rr as RegexSequence).elems.map((relem) => this.processRegexComponent(sinfo, relem)));
+        }
+    }
+
     processRegexInfo() {
+        const emptysinfo = new SourceInfo(-1, -1, -1, -1);
         this.m_assembly.getAllLiteralRegexs().forEach((lre) => {
-            assert(false, "TODO: tidy the regex constants!!!");
-            
-            this.m_emitter.masm.literalRegexs.push(lre);
-        })
+            const rr = this.processRegexComponent(emptysinfo, lre.re);
+            this.m_emitter.masm.literalRegexs.push(new BSQRegex(lre.restr, rr));
+        });
 
         this.m_assembly.getAllValidators().forEach((vre) => {
-            assert(false, "TODO: tidy the regex constants!!!");
+            const rr = this.processRegexComponent(emptysinfo, vre[1].re);
 
             const vkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(vre[0]));
-            this.m_emitter.masm.validatorRegexs.set(vkey.keyid, vre[1]);
+            this.m_emitter.masm.validatorRegexs.set(vkey.keyid, new BSQRegex(vre[1].restr, rr));
         });
     }
 }

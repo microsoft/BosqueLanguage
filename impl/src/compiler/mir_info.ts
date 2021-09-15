@@ -8,7 +8,7 @@
 //
 
 import { MIRAssembly, MIRFunctionParameter, MIRType } from "./mir_assembly";
-import { MIRBasicBlock, MIROpTag, MIRJump, MIRJumpCond, MIRJumpNone, MIROp, MIRRegisterArgument, MIRPhi, MIRLoadUnintVariableValue, MIRConvertValue, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRReturnAssignOfCons, MIRReturnAssign, MIRIsTypeOf, MIRPrefixNotOp, MIRBinKeyLess, MIRBinKeyEq, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorRecordFromEphemeralList, MIRResolvedTypeKey, MIRArgGuard, MIRRegisterAssign, MIRArgument, MIRConstantArgument } from "./mir_ops";
+import { MIRBasicBlock, MIROpTag, MIRJump, MIRJumpCond, MIRJumpNone, MIROp, MIRRegisterArgument, MIRPhi, MIRLoadUnintVariableValue, MIRConvertValue, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRReturnAssignOfCons, MIRReturnAssign, MIRIsTypeOf, MIRPrefixNotOp, MIRBinKeyLess, MIRBinKeyEq, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorRecordFromEphemeralList, MIRResolvedTypeKey, MIRArgGuard, MIRRegisterAssign, MIRArgument, MIRConstantArgument, MIRStatmentGuard, MIRInject, MIRGuardedOptionInject, MIRExtract } from "./mir_ops";
 
 type FlowLink = {
     label: string,
@@ -213,13 +213,19 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
                     break;
                 }
                 case MIROpTag.MIRInject: {
-                    xxxx;
+                    const inj = op as MIRInject;
+                    vinfo.set(inj.trgt.nameID, inj.intotype);
+                    break;
                 }
                 case MIROpTag.MIRGuardedOptionInject: {
-                    xxxx;
+                    const inj = op as MIRGuardedOptionInject;
+                    vinfo.set(inj.trgt.nameID, inj.optiontype);
+                    break;
                 }
                 case MIROpTag.MIRExtract: {
-                    xxxx;
+                    const ext = op as MIRExtract;
+                    vinfo.set(ext.trgt.nameID, ext.intotype);
+                    break;
                 }
                 case MIROpTag.MIRLoadConst: {
                     const lc = op as MIRLoadConst;
@@ -448,7 +454,20 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
     return vresinfo;
 }
 
-function maxconstarg(cc: bigint, arg: MIRArgument): bigint {
+function maxConst(cc: bigint, vv: number): bigint {
+    const bvv = BigInt(vv);
+    return cc >= bvv ? cc : bvv;
+}
+
+function maxConsts(cc: bigint, vv: number[]): bigint {
+    for (let i = 0; i < vv.length; ++i) {
+        const bvv = BigInt(vv[i]);
+        cc = cc >= bvv ? cc : bvv;
+    }
+    return cc;
+}
+
+function maxConstArg(cc: bigint, arg: MIRArgument): bigint {
     if(arg instanceof MIRConstantArgument) {
         const args = arg.constantSize();
         return cc >= args ? cc : args;
@@ -458,262 +477,184 @@ function maxconstarg(cc: bigint, arg: MIRArgument): bigint {
     }
 }
 
-function maxconstargs(cc: bigint, args: MIRArgument[]): bigint {
-    xxxx;
+function maxConstArgs(cc: bigint, args: MIRArgument[]): bigint {
+    for(let i = 0; i < args.length; ++i) {
+        cc = maxConstArg(cc, args[i]);
+    }
+
+    return cc;
+}
+
+
+function maxStructuredArgs<T>(cc: bigint, args: T[], extract: (arg: T) => MIRArgument): bigint {
+    for(let i = 0; i < args.length; ++i) {
+        cc = maxConstArg(cc, extract(args[i]));
+    }
+
+    return cc;
+}
+
+function maxStatementGuard(cc: bigint, arg: MIRStatmentGuard | undefined): bigint {
+    if(arg === undefined) {
+        return cc;
+    }
+    else {
+        if(arg.defaultvar === undefined) {
+            return cc;
+        } 
+        else {
+            return maxConstArg(cc, arg.defaultvar);
+        }
+    }
 }
 
 function computeMaxConstantSize(blocks: Map<string, MIRBasicBlock>): bigint {
-    let maxconst = 0n;
+    let cc = 0n;
 
     blocks.forEach((bb) => {
         bb.ops.forEach((op) => {
             switch (op.tag) {
                 case MIROpTag.MIRConvertValue: {
                     const conv = op as MIRConvertValue;
-                    conv.src = propagateAssign_Remap(conv.src, propMap);
-                    conv.sguard = propagateAssign_RemapStatementGuard(conv.sguard, propMap);
+                    cc = maxConstArg(cc, conv.src);
+                    cc = maxStatementGuard(cc, conv.sguard);
                     break;
                 }
                 case MIROpTag.MIRInject: {
-                    xxxx;
+                    const inj = op as MIRInject;
+                    cc = maxConstArg(cc, inj.src);
+                    break;
                 }
                 case MIROpTag.MIRGuardedOptionInject: {
-                    xxxx;
+                    const inj = op as MIRGuardedOptionInject;
+                    cc = maxConstArg(cc, inj.src);
+                    cc = maxStatementGuard(cc, inj.sguard);
+                    break;
                 }
                 case MIROpTag.MIRExtract: {
-                    xxxx;
+                    const ext = op as MIRExtract;
+                    cc = maxConstArg(cc, ext.src);
+                    break;
                 }
                 case MIROpTag.MIRTupleHasIndex: {
                     const thi = op as MIRTupleHasIndex;
-                    thi.arg = propagateAssign_Remap(thi.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRRecordHasProperty: {
-                    const rhi = op as MIRRecordHasProperty;
-                    rhi.arg = propagateAssign_Remap(rhi.arg, propMap);
+                    cc = maxConst(cc, thi.idx);
                     break;
                 }
                 case MIROpTag.MIRLoadTupleIndex: {
                     const lti = op as MIRLoadTupleIndex;
-                    lti.arg = propagateAssign_Remap(lti.arg, propMap);
+                    cc = maxConst(cc, lti.idx);
                     break;
                 }
                 case MIROpTag.MIRLoadTupleIndexSetGuard: {
                     const ltig = op as MIRLoadTupleIndexSetGuard;
-                    ltig.arg = propagateAssign_Remap(ltig.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRLoadRecordProperty: {
-                    const lrp = op as MIRLoadRecordProperty;
-                    lrp.arg = propagateAssign_Remap(lrp.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRLoadRecordPropertySetGuard: {
-                    const lrpg = op as MIRLoadRecordPropertySetGuard;
-                    lrpg.arg = propagateAssign_Remap(lrpg.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRLoadField: {
-                    const lmf = op as MIRLoadField;
-                    lmf.arg = propagateAssign_Remap(lmf.arg, propMap);
+                    cc = maxConst(cc, ltig.idx);
                     break;
                 }
                 case MIROpTag.MIRTupleProjectToEphemeral: {
                     const pte = op as MIRTupleProjectToEphemeral;
-                    pte.arg = propagateAssign_Remap(pte.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRRecordProjectToEphemeral: {
-                    const pre = op as MIRRecordProjectToEphemeral;
-                    pre.arg = propagateAssign_Remap(pre.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIREntityProjectToEphemeral: {
-                    const pee = op as MIREntityProjectToEphemeral;
-                    pee.arg = propagateAssign_Remap(pee.arg, propMap);
+                    cc = maxConsts(cc, pte.indecies);
                     break;
                 }
                 case MIROpTag.MIRTupleUpdate: {
                     const mi = op as MIRTupleUpdate;
-                    mi.arg = propagateAssign_Remap(mi.arg, propMap);
-                    mi.updates = propagateAssign_RemapStructuredArgs<[number, MIRArgument, MIRResolvedTypeKey]>(mi.updates, (u) => [u[0], propagateAssign_Remap(u[1], propMap), u[2]]);
-                    break;
-                }
-                case MIROpTag.MIRRecordUpdate: {
-                    const mp = op as MIRRecordUpdate;
-                    mp.arg = propagateAssign_Remap(mp.arg, propMap);
-                    mp.updates = propagateAssign_RemapStructuredArgs<[string, MIRArgument, MIRResolvedTypeKey]>(mp.updates, (u) => [u[0], propagateAssign_Remap(u[1], propMap), u[2]]);
-                    break;
-                }
-                case MIROpTag.MIREntityUpdate: {
-                    const mf = op as MIREntityUpdate;
-                    mf.arg = propagateAssign_Remap(mf.arg, propMap);
-                    mf.updates = propagateAssign_RemapStructuredArgs<[string, MIRArgument, MIRResolvedTypeKey]>(mf.updates, (u) => [u[0], propagateAssign_Remap(u[1], propMap), u[2]]);
+                    cc = maxConsts(cc, mi.updates.map((uu) => uu[0]));
+                    cc = maxStructuredArgs(cc, mi.updates, (uu) => uu[1]);
                     break;
                 }
                 case MIROpTag.MIRLoadFromEpehmeralList: {
                     const mle = op as MIRLoadFromEpehmeralList;
-                    mle.arg = propagateAssign_Remap(mle.arg, propMap);
+                    cc = maxConst(cc, mle.idx);
                     break;
                 }
                 case MIROpTag.MIRMultiLoadFromEpehmeralList: {
                     const mle = op as MIRMultiLoadFromEpehmeralList;
-                    mle.arg = propagateAssign_Remap(mle.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRSliceEpehmeralList: {
-                    const mle = op as MIRSliceEpehmeralList;
-                    mle.arg = propagateAssign_Remap(mle.arg, propMap);
+                    cc = maxConsts(cc, mle.trgts.map((ll) => ll.pos));
                     break;
                 }
                 case MIROpTag.MIRInvokeFixedFunction: {
                     const invk = op as MIRInvokeFixedFunction;
-                    invk.args = propagateAssign_RemapArgs(invk.args, propMap);
-                    invk.sguard = propagateAssign_RemapStatementGuard(invk.sguard, propMap);
+                    cc = maxConstArgs(cc, invk.args);
+                    cc = maxStatementGuard(cc, invk.sguard);
                     break;
                 }
                 case MIROpTag.MIRInvokeVirtualFunction: {
                     const invk = op as MIRInvokeVirtualFunction;
-                    invk.args = propagateAssign_RemapArgs(invk.args, propMap);
+                    cc = maxConstArgs(cc, invk.args);
                     break;
                 }
                 case MIROpTag.MIRInvokeVirtualOperator: {
                     const invk = op as MIRInvokeVirtualOperator;
-                    invk.args = propagateAssign_RemapStructuredArgs<{ arglayouttype: MIRResolvedTypeKey, argflowtype: MIRResolvedTypeKey, arg: MIRArgument }>(invk.args, (u) => {
-                        return { arglayouttype: u.arglayouttype, argflowtype: u.argflowtype, arg: propagateAssign_Remap(u.arg, propMap) };
-                    });
+                    cc = maxStructuredArgs(cc, invk.args, (vv) => vv.arg);
                     break;
                 }
                 case MIROpTag.MIRConstructorTuple: {
                     const tc = op as MIRConstructorTuple;
-                    tc.args = propagateAssign_RemapArgs(tc.args, propMap);
-                    break;
-                }
-                case MIROpTag.MIRConstructorTupleFromEphemeralList: {
-                    const tc = op as MIRConstructorTupleFromEphemeralList;
-                    tc.arg = propagateAssign_Remap(tc.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRConstructorRecord: {
-                    const tc = op as MIRConstructorRecord;
-                    tc.args = propagateAssign_RemapStructuredArgs<[string, MIRArgument]>(tc.args, (v) => [v[0], propagateAssign_Remap(v[1], propMap)]);
-                    break;
-                }
-                case MIROpTag.MIRConstructorRecordFromEphemeralList: {
-                    const tc = op as MIRConstructorRecordFromEphemeralList;
-                    tc.arg = propagateAssign_Remap(tc.arg, propMap);
-                    break;
-                }
-                case MIROpTag.MIRStructuredAppendTuple: {
-                    const at = op as MIRStructuredAppendTuple;
-                    at.args = propagateAssign_RemapArgs(at.args, propMap);
-                    break;
-                }
-                case MIROpTag.MIRStructuredJoinRecord: {
-                    const sj = op as MIRStructuredJoinRecord;
-                    sj.args = propagateAssign_RemapArgs(sj.args, propMap);
-                    break;
-                }
-                case MIROpTag.MIRConstructorEphemeralList: {
-                    const tc = op as MIRConstructorEphemeralList;
-                    tc.args = propagateAssign_RemapArgs(tc.args, propMap);
-                    break;
-                }
-                case MIROpTag.MIREphemeralListExtend: {
-                    const pse = op as MIREphemeralListExtend;
-                    pse.arg = propagateAssign_Remap(pse.arg, propMap);
-                    pse.ext = propagateAssign_RemapArgs(pse.ext, propMap);
-                    break;
-                }
-                case MIROpTag.MIRConstructorPrimaryCollectionEmpty: {
+                    cc = maxConstArgs(cc, tc.args);
                     break;
                 }
                 case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
-                    const cc = op as MIRConstructorPrimaryCollectionSingletons;
-                    cc.args = propagateAssign_RemapStructuredArgs<[MIRResolvedTypeKey, MIRArgument]>(cc.args, (v) => [v[0], propagateAssign_Remap(v[1], propMap)]);
+                    const cps = op as MIRConstructorPrimaryCollectionSingletons;
+                    cc = maxStructuredArgs(cc, cps.args, (vv) => vv[1]);
                     break;
                 }
                 case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
-                    const cc = op as MIRConstructorPrimaryCollectionCopies;
-                    cc.args = propagateAssign_RemapStructuredArgs<[MIRResolvedTypeKey, MIRArgument]>(cc.args, (v) => [v[0], propagateAssign_Remap(v[1], propMap)]);
+                    const cpc = op as MIRConstructorPrimaryCollectionCopies;
+                    cc = maxStructuredArgs(cc, cpc.args, (vv) => vv[1]);
                     break;
                 }
                 case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
-                    const cc = op as MIRConstructorPrimaryCollectionMixed;
-                    cc.args = propagateAssign_RemapStructuredArgs<[boolean, MIRResolvedTypeKey, MIRArgument]>(cc.args, (v) => [v[0], v[1], propagateAssign_Remap(v[2], propMap)]);
+                    const cpm = op as MIRConstructorPrimaryCollectionMixed;
+                    cc = maxStructuredArgs(cc, cpm.args, (vv) => vv[2]);
                     break;
                 }
                 case MIROpTag.MIRBinKeyEq: {
                     const beq = op as MIRBinKeyEq;
-                    beq.lhs = propagateAssign_Remap(beq.lhs, propMap);
-                    beq.rhs = propagateAssign_Remap(beq.rhs, propMap);
-                    beq.sguard = propagateAssign_RemapStatementGuard(beq.sguard, propMap);
+                    cc = maxConstArgs(cc, [beq.lhs, beq.rhs]);
+                    cc = maxStatementGuard(cc, beq.sguard);
                     break;
                 }
                 case MIROpTag.MIRBinKeyLess: {
                     const bl = op as MIRBinKeyLess;
-                    bl.lhs = propagateAssign_Remap(bl.lhs, propMap);
-                    bl.rhs = propagateAssign_Remap(bl.rhs, propMap);
-                    bl.sguard = propagateAssign_RemapStatementGuard(bl.sguard, propMap);
-                    break;
-                }
-                case MIROpTag.MIRPrefixNotOp: {
-                    const pfx = op as MIRPrefixNotOp;
-                    pfx.arg = propagateAssign_Remap(pfx.arg, propMap);
+                    cc = maxConstArgs(cc, [bl.lhs, bl.rhs]);
+                    cc = maxStatementGuard(cc, bl.sguard);
                     break;
                 }
                 case MIROpTag.MIRIsTypeOf: {
                     const it = op as MIRIsTypeOf;
-                    it.arg = propagateAssign_Remap(it.arg, propMap);
-                    it.sguard = propagateAssign_RemapStatementGuard(it.sguard, propMap);
-                    break;
-                }
-                case MIROpTag.MIRJump: {
-                    break;
-                }
-                case MIROpTag.MIRJumpCond: {
-                    const cjop = op as MIRJumpCond;
-                    cjop.arg = propagateAssign_Remap(cjop.arg, propMap);
+                    cc = maxConstArg(cc, it.arg);
+                    cc = maxStatementGuard(cc, it.sguard);
                     break;
                 }
                 case MIROpTag.MIRJumpNone: {
                     const njop = op as MIRJumpNone;
-                    njop.arg = propagateAssign_Remap(njop.arg, propMap);
+                    cc = maxConstArg(cc, njop.arg);
                     break;
                 }
                 case MIROpTag.MIRRegisterAssign: {
                     const regop = op as MIRRegisterAssign;
-                    regop.src = propagateAssign_Remap(regop.src, propMap);
-                    regop.sguard = propagateAssign_RemapStatementGuard(regop.sguard, propMap);
+                    cc = maxConstArg(cc, regop.src);
+                    cc = maxStatementGuard(cc, regop.sguard);
                     break;
                 }
                 case MIROpTag.MIRReturnAssign: {
                     const ra = op as MIRReturnAssign;
-                    ra.src = propagateAssign_Remap(ra.src, propMap);
+                    cc = maxConstArg(cc, ra.src);
                     break;
                 }
                 case MIROpTag.MIRReturnAssignOfCons: {
                     const ra = op as MIRReturnAssignOfCons;
-                    ra.args = propagateAssign_RemapArgs(ra.args, propMap);
-                    break;
-                }
-                case MIROpTag.MIRPhi: {
-                    const mp = op as MIRPhi;
-                    mp.src
+                    cc = maxConstArgs(cc, ra.args);
                     break;
                 }
                 default: {
-                    assert(false);
                     break;
                 }
             }
         });
     });
 
-    let vresinfo = new Map<string, MIRType>();
-    vinfo.forEach((v, k) => vresinfo.set(k, masm.typeMap.get(v) as MIRType));
-
-    return vresinfo;
+   return cc;
 }
 
 export { FlowLink, BlockLiveSet, computeDominators, topologicalOrder, computeBlockLinks, computeBlockLiveVars, computeVarTypes, computeMaxConstantSize };
