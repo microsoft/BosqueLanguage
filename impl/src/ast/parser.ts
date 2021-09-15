@@ -4020,6 +4020,10 @@ class Parser {
                 this.raiseError(line, "Collision between object and other names");
             }
 
+            if(invariants.length !== 0) {
+                this.raiseError(line, "Cannot have invariant function on Enum types");
+            }
+
             attributes.push("__enum_type", "__constructable");
 
             this.clearRecover();

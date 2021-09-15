@@ -9,7 +9,7 @@
 
 import * as assert from "assert";
 import { MIRBasicBlock, MIROpTag, MIRInvokeKey, MIRInvokeFixedFunction, MIRBody, MIRInvokeVirtualOperator, MIRInvokeVirtualFunction, MIREntityUpdate } from "./mir_ops";
-import { MIRAssembly, MIRConstantDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRType } from "./mir_assembly";
+import { MIRAssembly, MIRConstantDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRType } from "./mir_assembly";
 
 type CallGNode = {
     invoke: MIRInvokeKey,
@@ -38,9 +38,11 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                     const rcvrtype = assembly.typeMap.get((op as MIRInvokeVirtualFunction).rcvrflowtype) as MIRType;
                     const trgts: MIRInvokeKey[] = [];
                     assembly.entityDecls.forEach((edcl) => {
-                        if(assembly.subtypeOf(assembly.typeMap.get(edcl.tkey) as MIRType, rcvrtype)) {
-                            assert(edcl.vcallMap.has(vcall));
-                            trgts.push(edcl.vcallMap.get(vcall) as MIRInvokeKey);
+                        if (edcl instanceof MIRObjectEntityTypeDecl) {
+                            if (assembly.subtypeOf(assembly.typeMap.get(edcl.tkey) as MIRType, rcvrtype)) {
+                                assert(edcl.vcallMap.has(vcall));
+                                trgts.push(edcl.vcallMap.get(vcall) as MIRInvokeKey);
+                            }
                         }
                     });
                     break;
@@ -55,7 +57,6 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                     const trgts: MIRInvokeKey[] = [];
                     assembly.entityDecls.forEach((edcl) => {
                         if(assembly.subtypeOf(assembly.typeMap.get(edcl.tkey) as MIRType, rcvrtype)) {
-                            xxxx;
                             trgts.push(`${edcl.tkey}@@constructor`);
                         }
                     });
@@ -122,8 +123,8 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
     });
 
     assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
-        roots.push(invokes.get(cdecl.value) as CallGNode);
-        topoVisit(invokes.get(cdecl.value) as CallGNode, [], tordered, invokes);
+        roots.push(invokes.get(cdecl.ivalue) as CallGNode);
+        topoVisit(invokes.get(cdecl.ivalue) as CallGNode, [], tordered, invokes);
     });
 
     tordered = tordered.reverse();

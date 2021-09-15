@@ -169,18 +169,18 @@ function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: M
     
     let {rblocks, cblocks} = computeBodySplits(jidx, bo, links);
     const tailvars = [...(lv.get(bo[jidx].label) as BlockLiveSet).liveEntry].sort((a, b) => a[0].localeCompare(b[0]));
-    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0], (vtypes.get(lvn[0]) as MIRType).trkey));
+    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0], (vtypes.get(lvn[0]) as MIRType).typeID));
 
     const ninvid = generateTargetFunctionName(invid, jlabel);
 
-    let fenv = new FunctionalizeEnv(emitter, rtype.trkey, ninvid, tailvars.map((lvn) => lvn[1]), jlabel);
+    let fenv = new FunctionalizeEnv(emitter, rtype.typeID, ninvid, tailvars.map((lvn) => lvn[1]), jlabel);
     const nbb = replaceJumpsWithCalls(rblocks, fenv);
 
     cblocks = [
         new MIRBasicBlock("entry", [...bo[jidx].ops]), 
         ...cblocks,
         new MIRBasicBlock("returnassign", [
-            new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rtype.trkey, undefined),
+            new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rtype.typeID, undefined),
             new MIRJump(sinfo_undef, "exit")
         ]),
         new MIRBasicBlock("exit", [])
@@ -193,7 +193,7 @@ function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: M
 }
 
 function processInvoke(emitter: MIREmitter, inv: MIRInvokeBodyDecl, masm: MIRAssembly): MIRInvokeBodyDecl[] {
-    const f1 = processBody(emitter, inv.key, masm, inv.body, inv.params);
+    const f1 = processBody(emitter, inv.ikey, masm, inv.body, inv.params);
     if(f1 === undefined) {
         return [];
     }
@@ -209,7 +209,7 @@ function processInvoke(emitter: MIREmitter, inv: MIRInvokeBodyDecl, masm: MIRAss
         const ninv = new MIRInvokeBodyDecl(inv.enclosingDecl, "[FUNCTIONALIZE_SPECIAL]", bproc.nname, bproc.nname, [...inv.attributes], inv.recursive, inv.sourceLocation, inv.srcFile, bproc.nparams, 0, inv.resultType, undefined, item.post, new MIRBody(inv.srcFile, inv.sourceLocation, bmap));
         rbl.push(ninv);
 
-        const ff = processBody(emitter, inv.key, masm, inv.body, inv.params);
+        const ff = processBody(emitter, inv.ikey, masm, inv.body, inv.params);
         if (ff !== undefined) {
             wl.push({ nbi: ff, post: undefined })
         }
@@ -222,7 +222,7 @@ function functionalizeInvokes(emitter: MIREmitter, masm: MIRAssembly) {
     const oinvokes = [...masm.invokeDecls].map((iv) => iv[1]);
     oinvokes.forEach((iiv) => {
         const nil = processInvoke(emitter, iiv, masm);
-        nil.forEach((niv) => masm.invokeDecls.set(niv.key, niv));
+        nil.forEach((niv) => masm.invokeDecls.set(niv.ikey, niv));
     });
 }
 

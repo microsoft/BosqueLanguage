@@ -14,18 +14,18 @@ function compile(files: string[], functionalize: boolean, outfile: string, dgf: 
     process.stdout.write("Reading app code...\n");
 
     let bosque_dir: string = Path.normalize(Path.join(__dirname, "../"));
-    let code: { fpath: string, contents: string }[] = [];
+    let code: { fpath: string, filepath: string, contents: string }[] = [];
     try {
         const coredir = Path.join(bosque_dir, "core/", "verify");
         const corefiles = FS.readdirSync(coredir);
 
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ fpath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+            code.push({ fpath: cfpath, filepath: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
         }
  
-        for (let i = 0; i < files.length; ++i) {
-            const file = { fpath: files[i], contents: FS.readFileSync(files[i]).toString() };
+        for (let i = 0; i < files.length; ++i) { 
+            const file = { fpath: files[i], filepath: Path.basename(files[i]), contents: FS.readFileSync(files[i]).toString() };
             code.push(file);
         }
     }
@@ -61,7 +61,7 @@ function compile(files: string[], functionalize: boolean, outfile: string, dgf: 
                 sigargs.push("#maskparam#");
             }
 
-            const siginfo = `${iiv.key}(${sigargs.join(", ")}): ${iiv.resultType}`;
+            const siginfo = `${iiv.ikey}(${sigargs.join(", ")}): ${iiv.resultType}`;
             FS.writeFileSync(outfile + ".dgml", iiv.body.dgmlify(siginfo));
         }
     }

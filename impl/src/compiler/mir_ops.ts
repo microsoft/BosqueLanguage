@@ -183,7 +183,7 @@ abstract class MIRArgument {
                 case "datastring":
                     return new MIRConstantDataString(jobj.value, jobj.oftype);
                 case "typednumber":
-                    return new MIRConstantTypedNumber(MIRArgument.jparse(jobj.value), jobj.oftype);
+                    return new MIRConstantTypedNumber(MIRArgument.jparse(jobj.value) as MIRConstantArgument, jobj.oftype);
                 default:
                     return new MIRConstantRegex(jobj.value);
             }
@@ -241,11 +241,17 @@ abstract class MIRConstantArgument extends MIRArgument {
     constructor(name: string) {
         super(name);
     }
+
+    abstract constantSize(): bigint;
 }
 
 class MIRConstantNone extends MIRConstantArgument {
     constructor() {
         super("=none=");
+    }
+
+    constantSize(): bigint {
+        return 0n;
     }
 
     stringify(): string {
@@ -262,6 +268,10 @@ class MIRConstantNothing extends MIRConstantArgument {
         super("=nothing=");
     }
 
+    constantSize(): bigint {
+        return 0n;
+    }
+
     stringify(): string {
         return "nothing";
     }
@@ -276,6 +286,10 @@ class MIRConstantTrue extends MIRConstantArgument {
         super("=true=");
     }
 
+    constantSize(): bigint {
+        return 0n;
+    }
+
     stringify(): string {
         return "true";
     }
@@ -288,6 +302,10 @@ class MIRConstantTrue extends MIRConstantArgument {
 class MIRConstantFalse extends MIRConstantArgument {
     constructor() {
         super("=false=");
+    }
+
+    constantSize(): bigint {
+        return 0n;
     }
 
     stringify(): string {
@@ -308,6 +326,10 @@ class MIRConstantInt extends MIRConstantArgument {
         this.value = value;
     }
 
+    constantSize(): bigint {
+        return BigInt(this.value.slice(0, this.value.length - 1));
+    }
+
     stringify(): string {
         return this.value;
     }
@@ -324,6 +346,10 @@ class MIRConstantNat extends MIRConstantArgument {
         super(`=nat=${value}`);
 
         this.value = value;
+    }
+
+    constantSize(): bigint {
+        return BigInt(this.value.slice(0, this.value.length - 1));
     }
 
     stringify(): string {
@@ -344,6 +370,10 @@ class MIRConstantBigInt extends MIRConstantArgument {
         this.value = value;
     }
 
+    constantSize(): bigint {
+        return BigInt(this.value.slice(0, this.value.length - 1));
+    }
+
     stringify(): string {
         return this.value;
     }
@@ -360,6 +390,10 @@ class MIRConstantBigNat extends MIRConstantArgument {
         super(`=bignat=${value}`);
 
         this.value = value;
+    }
+
+    constantSize(): bigint {
+        return BigInt(this.value.slice(0, this.value.length - 1));
     }
 
     stringify(): string {
@@ -380,6 +414,10 @@ class MIRConstantRational extends MIRConstantArgument {
         this.value = value;
     }
 
+    constantSize(): bigint {
+        return 0n;
+    }
+
     stringify(): string {
         return this.value;
     }
@@ -396,6 +434,10 @@ class MIRConstantFloat extends MIRConstantArgument {
         super(`=float=${value}`);
 
         this.value = value;
+    }
+
+    constantSize(): bigint {
+        return 0n;
     }
 
     stringify(): string {
@@ -416,6 +458,10 @@ class MIRConstantDecimal extends MIRConstantArgument {
         this.value = value;
     }
     
+    constantSize(): bigint {
+        return 0n;
+    }
+
     stringify(): string {
         return this.value;
     }
@@ -434,6 +480,10 @@ class MIRConstantString extends MIRConstantArgument {
         this.value = value;
     }
 
+    constantSize(): bigint {
+        return BigInt(this.value.length);
+    }
+
     stringify(): string {
         return this.value;
     }
@@ -450,6 +500,10 @@ class MIRConstantRegex extends MIRConstantArgument {
         super(`=regex=${value.restr}`);
 
         this.value = value;
+    }
+
+    constantSize(): bigint {
+        return 0n;
     }
 
     stringify(): string {
@@ -472,6 +526,10 @@ class MIRConstantStringOf extends MIRConstantArgument {
         this.tskey = tskey;
     }
 
+    constantSize(): bigint {
+        return BigInt(this.value.length);
+    }
+
     stringify(): string {
         return `${this.tskey} of ${this.value}`;
     }
@@ -492,6 +550,10 @@ class MIRConstantDataString extends MIRConstantArgument {
         this.tskey = tskey;
     }
 
+    constantSize(): bigint {
+        return BigInt(this.value.length);
+    }
+
     stringify(): string {
         return `${this.tskey} of ${this.value}`;
     }
@@ -510,6 +572,10 @@ class MIRConstantTypedNumber extends MIRConstantArgument {
 
         this.value = value;
         this.tnkey = tnkey;
+    }
+
+    constantSize(): bigint {
+        return this.value.constantSize();
     }
 
     stringify(): string {
