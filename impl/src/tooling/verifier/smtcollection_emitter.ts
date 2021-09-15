@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRConstructableStdEntityTypeDecl, MIREntityTypeDecl, MIRInvokeBodyDecl, MIRPCode, MIRPrimitiveListEntityTypeDecl, MIRType } from "../../compiler/mir_assembly";
+import { MIRConstructableEntityTypeDecl, MIREntityTypeDecl, MIRInvokeBodyDecl, MIRPCode, MIRPrimitiveListEntityTypeDecl, MIRType } from "../../compiler/mir_assembly";
 import { MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
@@ -493,13 +493,13 @@ class ListOpsManager {
     emitConstructorLiteralK(mtype: MIRType, ltype: SMTType, ctype: MIRType, k: number): SMTConstructorGenCode {
         const smtctype = this.temitter.getSMTTypeFor(ctype);
         
-        const opname = `_${k}`;
+        const opname = `list_${k}`;
 
         let kfields: {fname: string, ftype: SMTType}[] = [];
         let kfargs: {vname: string, vtype: SMTType}[] = [];
         for(let i = 0; i < k; ++i) {
-            kfields.push({fname: this.generateULIFieldFor(ltype, opname, `idx${i}`), ftype: smtctype});
-            kfargs.push({vname: `idx${i}`, vtype: smtctype});
+            kfields.push({fname: this.generateULIFieldFor(ltype, opname, `_${i}_`), ftype: smtctype});
+            kfargs.push({vname: `_${i}_`, vtype: smtctype});
         }
 
         //default construct
@@ -537,21 +537,23 @@ class ListOpsManager {
 
     ////////
     //Map
-    emitConstructorMap(ltype: SMTType, mtype: MIRType, code: string, pcode: MIRPCode): SMTConstructorGenCode {
+    emitConstructorMap(ltype: SMTType, mtype: MIRType, isidx: boolean, code: string, pcode: MIRPCode): SMTConstructorGenCode {
         const lcons = this.temitter.getSMTConstructorName(mtype).cons;
         const constype = this.temitter.getSMTTypeFor(mtype);
-        const capturedfields = this.generateCapturedFieldInfoFor(ltype, "map", 1, code, pcode);
+        const mapname = "map" + (isidx ? "_idx" : "");
+
+        const capturedfields = this.generateCapturedFieldInfoFor(ltype, mapname, isidx ? 2 : 1, code, pcode);
 
         const ffunc = this.temitter.generateResultTypeConstructorSuccess(mtype,
             new SMTCallSimple(lcons, [
                 new SMTVar("count"),
-                new SMTCallSimple(this.generateConsCallNameUsing_Direct(constype, "map", code), [new SMTVar("l")])
+                new SMTCallSimple(this.generateConsCallNameUsing_Direct(constype, mapname, code), [new SMTVar("l")])
             ])
         );
 
         return {
-            cons: { cname: this.generateConsCallNameUsing_Direct(constype, "map", code), cargs: [{ fname: this.generateULIFieldUsingFor(ltype, "map", code, "l"), ftype: ltype }, ...capturedfields] },
-            if: [new SMTFunction(this.generateConsCallNameUsing(constype, "map", code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype }], undefined, 0, this.temitter.generateResultType(mtype), ffunc)],
+            cons: { cname: this.generateConsCallNameUsing_Direct(constype, mapname, code), cargs: [{ fname: this.generateULIFieldUsingFor(ltype, mapname, code, "l"), ftype: ltype }, ...capturedfields] },
+            if: [new SMTFunction(this.generateConsCallNameUsing(constype, mapname, code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype }], undefined, 0, this.temitter.generateResultType(mtype), ffunc)],
             uf: []
         };
     }
@@ -613,13 +615,16 @@ class ListOpsManager {
         );
     }
 
-    emitDestructorGet_Map(ctype: MIRType, srcltype: SMTType, ll: SMTVar, n: SMTVar, code: string, pcode: MIRPCode): SMTExp {
+    emitDestructorGet_Map(ctype: MIRType, srcltype: SMTType, ll: SMTVar, n: SMTVar, isidx: boolean, code: string, pcode: MIRPCode): SMTExp {
         const getop = this.generateDesCallName(srcltype, "get");
-        const capturedfieldlets = this.generateCapturedFieldLetsInfoFor(srcltype, "map", 1, code, pcode, ll);
+        const mapname = "map" + (isidx ? "_idx" : "");
 
-        return new SMTLet("_@olist", this.generateGetULIFieldUsingFor(srcltype, "map", code, "l", ll),
+        const capturedfieldlets = this.generateCapturedFieldLetsInfoFor(srcltype, mapname, isidx ? 2 : 1, code, pcode, ll);
+        const largs = isidx ? [new SMTCallSimple(getop, [new SMTVar("_@olist"), n]), n] :  [new SMTCallSimple(getop, [new SMTVar("_@olist"), n])];
+
+        return new SMTLet("_@olist", this.generateGetULIFieldUsingFor(srcltype, mapname, code, "l", ll),
             this.processCapturedFieldLets(capturedfieldlets, 
-                this.generateLambdaCallKnownSafe(code, ctype, [new SMTCallSimple(getop, [new SMTVar("_@olist"), n])], capturedfieldlets.map((cfl) => new SMTVar(cfl.vname)))
+                this.generateLambdaCallKnownSafe(code, ctype, largs, capturedfieldlets.map((cfl) => new SMTVar(cfl.vname)))
             )
         );
     }
@@ -686,8 +691,8 @@ class ListOpsManager {
 
         consopts.map.forEach((omi, code) => {
             tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallNameUsing_Direct(ltype, "map", code), llv),
-                result: this.emitDestructorGet_Map(ctype, this.temitter.getSMTTypeFor(omi.fromtype), llv, new SMTVar("n"), code, omi.code)
+                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallNameUsing_Direct(ltype, omi.isidx ? "map_idx" : "map", code), llv),
+                result: this.emitDestructorGet_Map(ctype, this.temitter.getSMTTypeFor(omi.fromtype), llv, new SMTVar("n"), omi.isidx, code, omi.code)
             });
         });
 
@@ -966,7 +971,7 @@ class ListOpsManager {
         const restype = this.temitter.generateResultType(ctype);
 
         const cdecl = this.temitter.assembly.entityDecls.get(ctype.typeID) as MIREntityTypeDecl;
-        const primtype = cdecl instanceof MIRConstructableStdEntityTypeDecl ? this.temitter.getMIRType(cdecl.fromtype as MIRResolvedTypeKey) : ctype; 
+        const primtype = cdecl instanceof MIRConstructableEntityTypeDecl ? this.temitter.getMIRType(cdecl.fromtype as MIRResolvedTypeKey) : ctype; 
 
         let ufconsname: string = "[UN_INITIALIZED]";
         let ovfname: string | undefined = undefined;
@@ -1000,7 +1005,7 @@ class ListOpsManager {
         }
         
         let ffunc: SMTExp = new SMTConst("[UNINIT]");
-        if(cdecl instanceof MIRConstructableStdEntityTypeDecl) {
+        if(cdecl instanceof MIRConstructableEntityTypeDecl) {
             if(primtype.typeID !== "NSCore::BigNat") {
                 if(cdecl.usingcons === undefined) {
                     ffunc = this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]));

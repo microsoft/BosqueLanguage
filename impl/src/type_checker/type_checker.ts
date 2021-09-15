@@ -11,7 +11,7 @@ import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedSt
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing, MIRConstantArgument } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
-import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRConstructableStdEntityTypeDecl } from "../compiler/mir_assembly";
+import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl } from "../compiler/mir_assembly";
 import { BSQRegex, RegexAlternation, RegexCharRange, RegexComponent, RegexConstClass, RegexDotCharClass, RegexLiteral, RegexOptional, RegexPlusRepeat, RegexRangeRepeat, RegexSequence, RegexStarRepeat } from "../ast/bsqregex";
 
 import * as assert from "assert";
@@ -2198,25 +2198,19 @@ class TypeChecker {
         }
         else {
             const aoftype = this.checkDataStringCommon(exp.sinfo, env, exp.stype);
-            const sdecl = aoftype.oftype[0].staticFunctions.find((sf) => sf.name === "tryParse");
-            this.raiseErrorIf(exp.sinfo, sdecl === undefined, "Missing static function 'tryParse'");
+            const sdecl = aoftype.oftype[0].staticFunctions.find((sf) => sf.name === "accepts");
+            this.raiseErrorIf(exp.sinfo, sdecl === undefined, "Missing static function 'accepts'");
 
             const stype = this.m_emitter.registerResolvedTypeReference(aoftype.stringtype);
             const presult = this.m_emitter.registerResolvedTypeReference(aoftype.parsetype);
 
             const sbinds = this.m_assembly.resolveBindsForCallComplete([], [], (aoftype.stringtype.options[0] as ResolvedEntityAtomType).binds, new Map<string, ResolvedType>(), new Map<string, ResolvedType>()) as Map<string, ResolvedType>;
             const ctype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(aoftype.oftype[0], aoftype.oftype[1]));
-            const skey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(aoftype.oftype[0], aoftype.oftype[1]), [ctype, aoftype.oftype[0], aoftype.oftype[1]], sdecl as StaticFunctionDecl, "tryParse", sbinds, [], []);
+            const skey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(aoftype.oftype[0], aoftype.oftype[1]), [ctype, aoftype.oftype[0], aoftype.oftype[1]], sdecl as StaticFunctionDecl, "accepts", sbinds, [], []);
 
             const tmps = this.m_emitter.generateTmpRegister();
             this.m_emitter.emitInvokeFixedFunction(exp.sinfo, skey, [new MIRConstantString(exp.value)], undefined, presult, tmps);
-
-            const tmpokt = this.m_emitter.generateTmpRegister();
-
-            this.raiseErrorIf(exp.sinfo, !aoftype.oftype[1].has("T"));
-            const oktype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.getOkType(aoftype.ofresolved, this.m_assembly.getSpecialStringType()));
-            this.m_emitter.emitCheckNoError(exp.sinfo, tmps, presult, oktype, tmpokt);
-            this.m_emitter.emitAssertCheck(exp.sinfo, "String not parsable as given type", tmpokt);
+            this.m_emitter.emitAssertCheck(exp.sinfo, "String not parsable as given type", tmps);
             
             this.m_emitter.emitLoadConstDataString(exp.sinfo, exp.value, stype.typeID, trgt);
             return env.setUniformResultExpression(aoftype.stringtype);
@@ -6381,7 +6375,13 @@ class TypeChecker {
                     const conskey = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@constructor", new Map<string, ResolvedType>(), []);
                     this.generateInjectableConstructor(consbodyid, conskey.keyid, conskey.shortname, tdecl, binds, this.m_assembly.getSpecialNatType());
 
-                    const mirentity = new MIRConstructableStdEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, "NSCore::Nat", conskey.keyid, new Map<string, MIRType>());
+                    const enums = tdecl.staticMembers.map((sdecl) => { 
+                        const vve = (sdecl.value as ConstantExpressionValue).exp as LiteralIntegralExpression;
+                        const v = Number.parseInt(vve.value.slice(0, vve.value.length - 1));
+                        return {ename: sdecl.name, value: v}; 
+                    });
+
+                    const mirentity = new MIREnumEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, conskey.keyid, enums);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__typedprimitive")) {
@@ -6396,7 +6396,7 @@ class TypeChecker {
 
                         conskey = conskeyid.keyid;
                     }
-                    const mirentity = new MIRConstructableStdEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, conskey, new Map<string, MIRType>());
+                    const mirentity = new MIRConstructableEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, conskey, new Map<string, MIRType>());
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__stringof_type") || tdecl.attributes.includes("__datastring_type")) {
@@ -6405,9 +6405,9 @@ class TypeChecker {
 
                     let optparse: MIRInvokeKey | undefined = undefined;
                     if (tdecl.attributes.includes("__datastring_type")) {
-                        const sf = (tdecl.staticFunctions.find((sfv) => sfv.name === "tryParse") as StaticFunctionDecl);
+                        const sf = (tdecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
                         const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(tdecl, binds));
-                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(tdecl, binds), [mirencltype, tdecl, binds], sf, "tryParse", binds, [], []);
+                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(tdecl, binds), [mirencltype, tdecl, binds], sf, "accepts", binds, [], []);
                     }
 
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, optparse);
@@ -6419,9 +6419,9 @@ class TypeChecker {
 
                     let optparse: MIRInvokeKey | undefined = undefined;
                     if (tdecl.attributes.includes("__databuffer_type")) {
-                        const sf = (tdecl.staticFunctions.find((sfv) => sfv.name === "tryParse") as StaticFunctionDecl);
+                        const sf = (tdecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
                         const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(tdecl, binds));
-                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(tdecl, binds), [mirencltype, tdecl, binds], sf, "tryParse", binds, [], []);
+                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(tdecl, binds), [mirencltype, tdecl, binds], sf, "accepts", binds, [], []);
                     }
 
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, optparse);

@@ -257,7 +257,9 @@ enum BufferFormat {
     utf8,
     binary,
     bosque,
-    json
+    bosque_binary,
+    json,
+    json_binary
 }
 
 enum BufferCompression {

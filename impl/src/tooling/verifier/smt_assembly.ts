@@ -19,12 +19,11 @@ type SMT2FileInfo = {
     BINTEGRAL_TYPE_ALIAS: string[],
     BINTEGRAL_CONSTANTS: string[],
     STRING_TYPE_ALIAS: string,
-    KEY_TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
-    KEY_RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
     KEY_TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
     TYPE_COLLECTION_INTERNAL_INFO: { decls: string[], constructors: string[] },
+    TYPE_COLLECTION_CONSTS: string[],
     TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
     EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
@@ -159,6 +158,8 @@ class SMTListDecl {
     readonly smtllisttype: string; //the uninterpreted list contents kind with multiple constructors 
     readonly listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[]; //the constructors for each list
 
+    readonly emptyconst: string;
+
     readonly smtname: string;
     readonly typetag: string;
 
@@ -166,11 +167,12 @@ class SMTListDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, smtllisttype: string, listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[], smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, smtllisttype: string, listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[], emptyconst: string, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
 
         this.smtllisttype = smtllisttype;
         this.listtypeconsf = listtypeconsf;
+        this.emptyconst = emptyconst;
 
         this.smtname = smtname;
         this.typetag = typetag;
@@ -452,31 +454,9 @@ class SMTAssembly {
             `(declare-const BNat@min BNat) (assert (= BNat@min BNat@zero))`,
             `(declare-const BNat@max BNat) (assert (= BNat@max ${this.numgen.emitNatGeneral(this.numgen.natmax)}))`
         ];
-        
-        const keytupleinfo = this.tupleDecls
-            .filter((tt) => tt.iskeytype)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((kt) => {
-                return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
-                };
-            });
 
         const termtupleinfo = this.tupleDecls
             .filter((tt) => !tt.iskeytype)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((kt) => {
-                return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
-                };
-            });
-
-        const keyrecordinfo = this.recordDecls
-            .filter((rt) => rt.iskeytype)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((kt) => {
                 return {
@@ -520,6 +500,7 @@ class SMTAssembly {
             });
 
         let generalcollectioninternaldecls: {decl: string, consf: string}[] = [];
+        let constcollectiondecls: string[] = [];
         this.listDecls
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .forEach((kt) => {
@@ -534,6 +515,8 @@ class SMTAssembly {
                     consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
                     boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
                 });
+
+                constcollectiondecls.push(kt.emptyconst)
             });
 
         const etypeinfo = this.ephemeralDecls
@@ -689,12 +672,11 @@ class SMTAssembly {
             BINTEGRAL_TYPE_ALIAS: integral_type_alias,
             BINTEGRAL_CONSTANTS: integral_constants,
             STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 32)))" : "(define-sort BString () String)"),
-            KEY_TUPLE_INFO: { decls: keytupleinfo.map((kti) => kti.decl), constructors: keytupleinfo.map((kti) => kti.consf), boxing: keytupleinfo.map((kti) => kti.boxf) },
-            KEY_RECORD_INFO: { decls: keyrecordinfo.map((kti) => kti.decl), constructors: keyrecordinfo.map((kti) => kti.consf), boxing: keyrecordinfo.map((kti) => kti.boxf) },
             KEY_TYPE_INFO: { decls: keytypeinfo.filter((kti) => kti.decl !== undefined).map((kti) => kti.decl as string), constructors: keytypeinfo.filter((kti) => kti.consf !== undefined).map((kti) => kti.consf as string), boxing: keytypeinfo.map((kti) => kti.boxf) },
             TUPLE_INFO: { decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), boxing: termtupleinfo.map((kti) => kti.boxf) },
             RECORD_INFO: { decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), boxing: termrecordinfo.map((kti) => kti.boxf) },
             TYPE_COLLECTION_INTERNAL_INFO: { decls: generalcollectioninternaldecls.map((kti) => kti.decl), constructors: generalcollectioninternaldecls.map((kti) => kti.consf) },
+            TYPE_COLLECTION_CONSTS: constcollectiondecls,
             TYPE_INFO: { decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), boxing: termtypeinfo.map((tti) => tti.boxf) },
             EPHEMERAL_DECLS: { decls: etypeinfo.map((kti) => kti.decl), constructors: etypeinfo.map((kti) => kti.consf) },
             RESULT_INFO: { decls: rtypeinfo.map((kti) => kti.decl), constructors: rtypeinfo.map((kti) => kti.consf) },
@@ -731,18 +713,13 @@ class SMTAssembly {
             .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
             .replace(";;STRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS + "\n")
             .replace(";;BINTEGRAL_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
-            .replace(";;KEY_TUPLE_DECLS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.decls, "      "))
-            .replace(";;KEY_RECORD_DECLS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.decls, "      "))
             .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))
-            .replace(";;KEY_TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.constructors, "    "))
-            .replace(";;KEY_RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.constructors, "    "))
             .replace(";;KEY_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.constructors, "    "))
-            .replace(";;KEY_TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TUPLE_INFO.boxing, "      "))
-            .replace(";;KEY_RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_RECORD_INFO.boxing, "      "))
             .replace(";;KEY_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.boxing, "      "))
             .replace(";;TUPLE_DECLS;;", joinWithIndent(sfileinfo.TUPLE_INFO.decls, "    "))
             .replace(";;RECORD_DECLS;;", joinWithIndent(sfileinfo.RECORD_INFO.decls, "    "))
             .replace(";;TYPE_COLLECTION_INTERNAL_INFO_DECLS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.decls, "    "))
+            .replace(";;TYPE_COLLECTION_EMPTY_DECLS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_CONSTS, ""))
             .replace(";;TYPE_DECLS;;", joinWithIndent(sfileinfo.TYPE_INFO.decls, "    "))
             .replace(";;TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TUPLE_INFO.constructors, "    "))
             .replace(";;RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.RECORD_INFO.constructors, "    "))

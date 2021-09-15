@@ -118,6 +118,8 @@
 (declare-const BRational@zero BRational) (assert (= BRational@zero 0.0))
 (declare-const BRational@one BRational) (assert (= BRational@one 1.0))
 
+(declare-fun BByteBuffer@expandstr ((BByteBuffer)) BString)
+
 ;;Define the ISequence datatype and operators
 (declare-sort ISequence 0)
 
@@ -252,6 +254,8 @@
 
 (declare-const BKey@nothing BKey)
 (assert (= BKey@nothing (BKey@box TypeTag_Nothing bsqkey_nothing@literal)))
+
+;;TYPE_COLLECTION_EMPTY_DECLS;;
 
 (define-fun bsqkey_none@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
   false

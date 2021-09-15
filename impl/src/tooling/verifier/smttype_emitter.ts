@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConstructableInternalEntityTypeDecl, MIRConstructableStdEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
@@ -39,6 +39,8 @@ enum APIEmitTypeTag
     OkTag,
     ErrTag,
     ListTag,
+    StackTag,
+    QueueTag,
     SetTag,
     MapTag,
     EnumTag,
@@ -239,8 +241,12 @@ class SMTTypeEmitter {
                 return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
         }
-        else if (entity instanceof MIRConstructableStdEntityTypeDecl) {
+        else if (entity instanceof MIRConstructableEntityTypeDecl) {
             const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
+            return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+        }
+        else if (entity instanceof MIREnumEntityTypeDecl) {
+            const sof = this.getSMTTypeFor(this.getMIRType("NSCore::Nat"));
             return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
         else {
@@ -748,28 +754,29 @@ class SMTTypeEmitter {
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 
-                const centity = entity as MIRPrimitiveCollectionEntityTypeDecl;
-                if(entity.attributes.includes("__list_type")) {
-                    return {tag: APIEmitTypeTag.ListTag, name: tt.typeID, oftype: (centity.oftype as MIRResolvedTypeKey)};
+                if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.ListTag, name: tt.typeID, oftype: entity.oftype};
                 }
-                else if(entity.attributes.includes("__set_type")) {
-                    return {tag: APIEmitTypeTag.SetTag, name: tt.typeID, oftype: (centity.oftype as MIRResolvedTypeKey)};
+                else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.StackTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
+                }
+                else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.QueueTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
+                }
+                else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.SetTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype, unqchkinv: entity.unqchkinv, unqconvinv: entity.unqconvinv};
                 }
                 else {
-                    return {tag: APIEmitTypeTag.MapTag, name: tt.typeID, oftype: (centity.oftype as MIRResolvedTypeKey)};
+                    const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
+                    return {tag: APIEmitTypeTag.MapTag, name: tt.typeID, oftype: mentity.oftype, ultype: mentity.ultype, unqchkinv: mentity.unqchkinv};
                 }
             }
         }
-        else if(entity instanceof MIRConstructableStdEntityTypeDecl) {
-            if(entity.attributes.includes("__typedprimitive")) {
-                return {tag: APIEmitTypeTag.PrimitiveOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), usinginv: entity.usingcons};
-            }
-            else {
-                const ddcls = [...this.assembly.constantDecls].filter((cdcl) => cdcl[1].enclosingDecl !== undefined && cdcl[1].enclosingDecl === tt.typeID);
-                const enuminvs = ddcls.map((cdcl) => [cdcl[1].gkey, this.lookupFunctionName(cdcl[1].ivalue)] as [string, string]);
-
-                return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), enuminvs: enuminvs};
-            }
+        else if(entity instanceof MIRConstructableEntityTypeDecl) {
+            return {tag: APIEmitTypeTag.PrimitiveOfTag, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons};
+        }
+        else if(entity instanceof MIREnumEntityTypeDecl) {
+            return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, usinginv: entity.usingcons, enums: entity.enums};
         }
         else {
             const oentity = entity as MIRObjectEntityTypeDecl;

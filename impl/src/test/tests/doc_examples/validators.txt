@@ -16,6 +16,10 @@ parsable entity StatusCode {
             case _         => err("Unknown code")
         };
     }
+
+    function accepts(name: string): Bool {
+        return name === "IO" || name === "Network";
+    }
 }
 
 function isIOCode(s: DataString<StatusCode>): Bool {

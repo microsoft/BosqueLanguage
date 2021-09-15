@@ -32,6 +32,7 @@ class APIModule;
 enum class TypeTag
 {
     NoneTag = 0x0,
+    NothingTag,
     BoolTag,
     NatTag,
     IntTag,
@@ -45,7 +46,7 @@ enum class TypeTag
     PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
-    BufferTag,
+    BufferOfTag,
     DataBufferTag,
     ISOTag,
     LogicalTag,
@@ -53,8 +54,16 @@ enum class TypeTag
     ContentHashTag,
     TupleTag,
     RecordTag,
+    SomethingTag,
+    OkTag,
+    ErrTag,
     ListTag,
+    StackTag,
+    QueueTag,
+    SetTag,
+    MapTag,
     EnumTag,
+    EntityTag,
     UnionTag
 };
 
