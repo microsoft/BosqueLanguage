@@ -20,13 +20,13 @@ class BVEmitter {
     readonly intmin: bigint;
     readonly intmax: bigint;
 
-    readonly bvnatmax: string;
-    readonly bvintmin: string;
-    readonly bvintmax: string;
+    readonly bvnatmax: SMTExp;
+    readonly bvintmin: SMTExp;
+    readonly bvintmax: SMTExp;
 
-    readonly bvnatmax1: string;
-    readonly bvintmin1: string;
-    readonly bvintmax1: string;
+    readonly bvnatmax1: SMTExp;
+    readonly bvintmin1: SMTExp;
+    readonly bvintmax1: SMTExp;
 
     computeBVMinSigned(bits: bigint): bigint {
         return -((2n ** bits) / 2n);
@@ -40,19 +40,55 @@ class BVEmitter {
         return (2n ** bits) - 1n;
     }
 
+    private static emitIntCore(val: bigint, imin: bigint, imax: bigint, bvsize: bigint): SMTExp {
+        if(val === 0n) {
+            return new SMTConst("BInt@zero");
+        }
+        else {
+            if (val > 0) {
+                assert(BigInt(val) <= imax);
+                let bits = BigInt(val).toString(2);
+
+                while(bits.length < bvsize) {
+                    bits = "0" + bits;
+                }
+                return new SMTConst(`#b${bits}`);
+            }
+            else {
+                assert(imin <= BigInt(val));
+
+                let bits = (~BigInt(val) + 1n).toString(2).slice(0, Number(bvsize));
+                while(bits.length < bvsize) {
+                    bits = "1" + bits;
+                }
+                return new SMTConst(`#b${bits}`);
+            }
+        }
+    }
+
+    private static emitNatCore(val: bigint, nmax: bigint, bvsize: bigint): SMTExp {
+        if(val === 0n) {
+            return new SMTConst("BNat@zero");
+        }
+        else {
+            assert(0 < val && BigInt(val) <= nmax);
+            return new SMTConst(`(_ bv${val} ${bvsize})`);
+        }
+    }
+
     constructor(bvsize: bigint, natmax: bigint, intmin: bigint, intmax: bigint, natmax1: bigint, intmin1: bigint, intmax1: bigint) {
         this.bvsize = bvsize;
         this.natmax = natmax;
         this.intmin = intmin;
         this.intmax = intmax;
 
-        this.bvnatmax = natmax.toString();
-        this.bvintmin = intmin.toString();
-        this.bvintmax = intmax.toString();
+        this.bvnatmax = BVEmitter.emitNatCore(natmax, natmax, bvsize);
+        this.bvintmin = BVEmitter.emitIntCore(intmin, intmin, intmax, bvsize);
+        this.bvintmax = BVEmitter.emitIntCore(intmax, intmin, intmax, bvsize);
 
-        this.bvnatmax1 = natmax1.toString();
-        this.bvintmin1 = intmin1.toString();
-        this.bvintmax1 = intmax1.toString();
+        this.bvnatmax1 = BVEmitter.emitNatCore(natmax1, natmax1, bvsize + 1n);
+        this.bvintmin1 = BVEmitter.emitIntCore(intmin1, intmin1, intmax1, bvsize + 1n);
+        this.bvintmax1 = BVEmitter.emitIntCore(intmax1, intmin1, intmax1, bvsize + 1n);
     }
 
     create(bvsize: bigint): BVEmitter {
@@ -62,39 +98,11 @@ class BVEmitter {
     }
 
     emitIntGeneral(val: bigint): SMTExp {
-        if(val === 0n) {
-            return new SMTConst("BInt@zero");
-        }
-        else {
-            if (val > 0) {
-                assert(BigInt(val) <= this.intmax);
-                let bits = BigInt(val).toString(2);
-
-                while(bits.length < this.bvsize) {
-                    bits = "0" + bits;
-                }
-                return new SMTConst(`#b${bits}`);
-            }
-            else {
-                assert(this.intmin <= BigInt(val));
-
-                let bits = (~BigInt(val) + 1n).toString(2).slice(0, Number(this.bvsize));
-                while(bits.length < this.bvsize) {
-                    bits = "1" + bits;
-                }
-                return new SMTConst(`#b${bits}`);
-            }
-        }
+        return BVEmitter.emitIntCore(val, this.intmin, this.intmax, this.bvsize);
     }
 
     emitNatGeneral(val: bigint): SMTExp {
-        if(val === 0n) {
-            return new SMTConst("BNat@zero");
-        }
-        else {
-            assert(0 < val && BigInt(val) <= this.natmax);
-            return new SMTConst(`(_ bv${val} ${this.bvsize})`);
-        }
+        return BVEmitter.emitNatCore(val, this.natmax, this.bvsize);
     }
 
     emitSimpleInt(val: number): SMTExp {

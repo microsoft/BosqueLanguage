@@ -1944,7 +1944,7 @@ class SMTBodyEmitter {
     }
 
     processGenerateSafeDiv_Int(sinfo: SourceInfo, args: SMTExp[]): SMTExp {
-        const bvmin = new SMTConst(this.numgen.int.bvintmin);
+        const bvmin = this.numgen.int.bvintmin;
 
         const chkzero = SMTCallSimple.makeEq(new SMTConst("BInt@zero"), args[1]);
         const checkovf = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(bvmin, args[0]), SMTCallSimple.makeEq(this.numgen.int.emitSimpleInt(-1), args[1]));
@@ -1961,7 +1961,7 @@ class SMTBodyEmitter {
     }
 
     processGenerateSafeNegate_Int(args: SMTExp[]): SMTExp {
-        const bvmin = new SMTConst(this.numgen.int.bvintmin);
+        const bvmin = this.numgen.int.bvintmin;
         return new SMTIf(
             SMTCallSimple.makeEq(args[0], bvmin),
             this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int")),
@@ -1974,7 +1974,7 @@ class SMTBodyEmitter {
 
         const extl = new SMTCallSimple("(_ zero_extend 1)", [args[0]]);
         const extr = new SMTCallSimple("(_ zero_extend 1)", [args[1]]);
-        const bvmax = new SMTConst(this.numgen.int.bvnatmax1);
+        const bvmax = this.numgen.int.bvnatmax1;
 
         return new SMTIf(
             new SMTCallSimple("bvugt", [new SMTCallSimple("bvadd", [extl, extr]), bvmax]),
@@ -1988,8 +1988,8 @@ class SMTBodyEmitter {
 
         const extl = new SMTCallSimple("(_ sign_extend 1)", [args[0]]);
         const extr = new SMTCallSimple("(_ sign_extend 1)", [args[1]]);
-        const bvmin = new SMTConst(this.numgen.int.bvintmin1);
-        const bvmax = new SMTConst(this.numgen.int.bvintmax1);
+        const bvmin = this.numgen.int.bvintmin1;
+        const bvmax = this.numgen.int.bvintmax1;
 
         const tres = this.generateTempName();
         return new SMTLet(
@@ -2016,8 +2016,8 @@ class SMTBodyEmitter {
 
         const extl = new SMTCallSimple("(_ sign_extend 1)", [args[0]]);
         const extr = new SMTCallSimple("(_ sign_extend 1)", [args[1]]);
-        const bvmin = new SMTConst(this.numgen.int.bvintmin1);
-        const bvmax = new SMTConst(this.numgen.int.bvintmax1);
+        const bvmin = this.numgen.int.bvintmin1;
+        const bvmax = this.numgen.int.bvintmax1;
 
         const tres = this.generateTempName();
         return new SMTLet(
@@ -2632,18 +2632,8 @@ class SMTBodyEmitter {
             case "string_empty": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));
             }
-            case "string_iterator_min":
-            case "string_iterator_max":
-            case "string_iterator_begin":
-            case "string_iterator_end": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
-                return undefined;
-            }
             case "string_append": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
-            }
-            case "string_slice": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("str.substr", [new SMTVar(args[0].vname), new SMTVar(args[1].vname), new SMTVar(args[2].vname)]));
             }
             case "list_empty": {
                 const emptylist = new SMTConst(`${this.typegen.lookupTypeName(arg0typekey)}@empty_const`);

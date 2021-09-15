@@ -347,13 +347,13 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
 } 
 
 class MIRConstructableStdEntityTypeDecl extends MIREntityTypeDecl {
-    readonly fromtype: MIRResolvedTypeKey | undefined;
+    readonly fromtype: MIRResolvedTypeKey;
     readonly usingcons: MIRInvokeKey | undefined;
     readonly binds: Map<string, MIRType>;
 
     //Should have special inject/extract which are the constructors
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey | undefined, usingcons: MIRInvokeKey | undefined, binds: Map<string, MIRType>) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, usingcons: MIRInvokeKey | undefined, binds: Map<string, MIRType>) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
         this.fromtype = fromtype;
@@ -407,21 +407,21 @@ class MIRPrimitiveInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
 } 
 
 class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
-    readonly fromtype: MIRResolvedTypeKey | undefined;
+    readonly fromtype: MIRResolvedTypeKey;
     readonly binds: Map<string, MIRType>;
+    readonly optparse: MIRInvokeKey | undefined;
 
-    //Should have special inject/extract which are the constructors
-
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey | undefined, binds: Map<string, MIRType>) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, binds: Map<string, MIRType>, optparse: MIRInvokeKey | undefined) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
         this.fromtype = fromtype;
         this.binds = binds;
+        this.optparse = optparse;
     }
 
     jemit(): object {
         const fbinds = [...this.binds].sort((a, b) => a[0].localeCompare(b[0])).map((v) => [v[0], v[1].jemit()]);
-        return { tag: "constructableinternal", ...this.jemitbase(), fromtype: this.fromtype, binds: fbinds };
+        return { tag: "constructableinternal", ...this.jemitbase(), fromtype: this.fromtype, binds: fbinds, optparse: this.optparse };
     }
 
     static jparse(jobj: any): MIRConstructableInternalEntityTypeDecl {
@@ -430,7 +430,7 @@ class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
             bbinds.set(v[0], MIRType.jparse(v[1]));
         });
 
-        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, bbinds);
+        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, bbinds, jobj.optparse);
     }
 
     isConstructableEntity(): boolean {

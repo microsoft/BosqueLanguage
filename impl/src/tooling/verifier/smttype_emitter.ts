@@ -635,9 +635,6 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "NSCore::Decimal")) {
             return ["BDecimal@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::UUID")) {
-            return ["BUUID@UFCons_API", false];
-        }
         else if (this.isType(tt, "NSCore::ContentHash")) {
             return ["BContentHash@UFCons_API", false];
         }
