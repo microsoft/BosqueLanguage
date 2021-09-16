@@ -14,7 +14,7 @@ import { MIREmitter } from "../../compiler/mir_emitter";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 
 import { Payload, SMTEmitter } from "./smtdecls_emitter";
-import { VerifierOptions } from "./smt_exp";
+import { BVEmitter, VerifierOptions } from "./smt_exp";
 import { CodeFileInfo } from "../../ast/parser";
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
@@ -27,12 +27,9 @@ const DEFAULT_TIMEOUT = 5000;
 
 const DEFAULT_VOPTS = {
     ISize: 5,
-    BigXMode: "Int",
-    OverflowEnabled: false,
-    FPOpt: "Real",
     StringOpt: "ASCII",
-    SimpleQuantifierMode: false,
-    SpecializeSmallModelGen: false
+    EnableCollection_SmallMode: true,
+    EnableCollection_LargeMode: true
 } as VerifierOptions;
 
 type CheckerResult = "unreachable" | "witness" | "possible" | "timeout";
@@ -52,7 +49,7 @@ function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            code.push({ fpath: realpath, contents: FS.readFileSync(realpath).toString() });
+            code.push({ fpath: realpath, filepath: files[i], contents: FS.readFileSync(realpath).toString() });
         }
 
         return code;
@@ -70,7 +67,7 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
         const corefiles = FS.readdirSync(coredir);
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ fpath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+            code.push({ fpath: cfpath, filepath: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
         }
 
         return code;
@@ -95,6 +92,7 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string, asmflavor: A
         entryfunc = entrypoint.slice(cpos + 2);
     }
 
+    xxxx;
     let macros: string[] = [];
     if(asmflavor === AssemblyFlavor.UFOverApproximate)
     {
@@ -108,9 +106,9 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string, asmflavor: A
     return MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
 }
 
-function generateSMTPayload(masm: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert", timeout: number, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload | undefined {
+function generateSMTPayload(masm: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert", timeout: number, numgen: { int: BVEmitter, hash: BVEmitter }, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload | undefined {
     try {
-        return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, errorTrgtPos, entrypoint);
+        return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, numgen, errorTrgtPos, entrypoint);
     } catch(e) {
         process.stderr.write(chalk.red(`SMT generate error -- ${e}\n`));
         return undefined;

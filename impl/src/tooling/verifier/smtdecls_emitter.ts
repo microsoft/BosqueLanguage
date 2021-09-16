@@ -13,7 +13,7 @@ import { SMTBodyEmitter } from "./smtbody_emitter";
 import { ListOpsInfo, SMTConstructorGenCode, SMTDestructorGenCode } from "./smtcollection_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTAssembly, SMTConstantDecl, SMTEntityDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTListDecl, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
-import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTType, SMTVar, VerifierOptions } from "./smt_exp";
+import { BVEmitter, SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTType, SMTVar, VerifierOptions } from "./smt_exp";
 
 type APIModuleInfo = {
     apitypes: object[],
@@ -1088,7 +1088,7 @@ class SMTEmitter {
         this.assembly.allErrors = this.bemitter.allErrors;
     }
 
-    private generateAPIModule(entryname: string, entrypoint: MIRInvokeDecl, bvwidth: number, constants: object[]): APIModuleInfo {
+    private generateAPIModule(entrypoint: MIRInvokeDecl, bvwidth: number, constants: object[]): APIModuleInfo {
         const apitype = this.temitter.assembly.typeMap.get("NSCore::APIType") as MIRType;
 
         const mirapitypes = [...this.temitter.assembly.typeMap].filter((tme) => this.temitter.assembly.subtypeOf(tme[1], apitype) && (tme[1].options.length > 1 || !(tme[1].options[0] instanceof MIRConceptType)))
@@ -1106,7 +1106,7 @@ class SMTEmitter {
         }
 
         const signature = {
-            name: entryname,
+            name: this.temitter.lookupFunctionName(entrypoint.ikey),
             restype: entrypoint.resultType,
             argnames: argnames,
             smtargnames: smtargnames,
@@ -1121,13 +1121,13 @@ class SMTEmitter {
         }
     }
 
-    static generateSMTPayload(assembly: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert",  timeout: number, runtime: string, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload {
-        const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
+    static generateSMTPayload(assembly: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert",  timeout: number, runtime: string, vopts: VerifierOptions, numgen: { int: BVEmitter, hash: BVEmitter }, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload {
+        const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].ivalue);
         const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, errorTrgtPos);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
-        const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, errorTrgtPos);
-        const smtassembly = new SMTAssembly(vopts, temitter.mangle(entrypoint));
+        const bemitter = new SMTBodyEmitter(assembly, temitter, numgen, vopts, callsafety, errorTrgtPos);
+        const smtassembly = new SMTAssembly(vopts, numgen.int, temitter.lookupFunctionName(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
         smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
@@ -1140,19 +1140,19 @@ class SMTEmitter {
         //
         const constants: object[] = [];
 
-        const apiinfo = smtemit.generateAPIModule(mirep, vopts.ISize, constants);
+        const apiinfo = smtemit.generateAPIModule(mirep, Number(numgen.int.bvsize), constants);
         const smtinfo = smtemit.assembly.buildSMT2file(mode, runtime);
 
         return {smt2decl: smtinfo, timeout: timeout, apimodule: apiinfo};
     }
 
-    static generateSMTAssemblyAllErrors(assembly: MIRAssembly, vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
-        const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].value);
+    static generateSMTAssemblyAllErrors(assembly: MIRAssembly, vopts: VerifierOptions, numgen: { int: BVEmitter, hash: BVEmitter }, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
+        const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].ivalue);
         const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, {file: "[]", line: -1, pos: -1});
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
-        const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, {file: "[]", line: -1, pos: -1});
-        const smtassembly = new SMTAssembly(vopts, temitter.mangle(entrypoint));
+        const bemitter = new SMTBodyEmitter(assembly, temitter, numgen, vopts, callsafety, {file: "[]", line: -1, pos: -1});
+        const smtassembly = new SMTAssembly(vopts, numgen.int, temitter.lookupFunctionName(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
         smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);

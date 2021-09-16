@@ -740,7 +740,7 @@ class SMTBodyEmitter {
         }
     }
 
-    constructor(assembly: MIRAssembly, typegen: SMTTypeEmitter, numgen: { int: BVEmitter, nat: BVEmitter, hash: BVEmitter }, vopts: VerifierOptions, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, errorTrgtPos: { file: string, line: number, pos: number }) {
+    constructor(assembly: MIRAssembly, typegen: SMTTypeEmitter, numgen: { int: BVEmitter, hash: BVEmitter }, vopts: VerifierOptions, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, errorTrgtPos: { file: string, line: number, pos: number }) {
         this.assembly = assembly;
         this.typegen = typegen;
         this.numgen = numgen;

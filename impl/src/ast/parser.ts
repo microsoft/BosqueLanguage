@@ -245,6 +245,7 @@ class SourceInfo {
 
 type CodeFileInfo = { 
     fpath: string, 
+    filepath: string,
     contents: string 
 };
 
