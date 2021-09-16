@@ -352,7 +352,7 @@ class ListOpsManager {
     ////////
     //Havoc
     emitConstructorHavoc(mtype: MIRType, ltype: SMTType, ctype: MIRType): SMTConstructorGenCode {
-        assert(this.vopts.EnableCollection_SmallMode || this.vopts.EnableCollection_LargeMode);
+        assert(this.vopts.EnableCollection_SmallHavoc || this.vopts.EnableCollection_LargeHavoc);
 
         const lcons = this.temitter.getSMTConstructorName(mtype).cons;
         const ptype = this.temitter.getSMTTypeFor(this.temitter.getMIRType("NSCore::HavocSequence"));
@@ -430,12 +430,12 @@ class ListOpsManager {
         );
 
         let ffunc: SMTExp = new SMTConst("[UNINIT]");
-        if(this.vopts.EnableCollection_SmallMode && !this.vopts.EnableCollection_LargeMode) {
+        if(this.vopts.EnableCollection_SmallHavoc && !this.vopts.EnableCollection_LargeHavoc) {
             ffunc = new SMTLet(size, new SMTCallSimple("ListSize@UFCons_API", [new SMTVar("path")]),
                 new SMTCond(smallmodeopts.slice(0, smallmodeopts.length - 1), smallmodeopts[smallmodeopts.length - 1].result)
             );
         }
-        else if (!this.vopts.EnableCollection_SmallMode && this.vopts.EnableCollection_LargeMode) {
+        else if (!this.vopts.EnableCollection_SmallHavoc && this.vopts.EnableCollection_LargeHavoc) {
             ffunc = new SMTLet(size, new SMTCallSimple("ListSize@UFCons_API", [new SMTVar("path")]), largemodeopts);
         }
         else {

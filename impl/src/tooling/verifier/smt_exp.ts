@@ -10,8 +10,10 @@ type VerifierOptions = {
     ISize: number, //bits used for Int/Nat
     StringOpt: "ASCII" | "UNICODE",
 
-    EnableCollection_SmallMode: boolean,
-    EnableCollection_LargeMode: boolean
+    EnableCollection_SmallHavoc: boolean,
+    EnableCollection_LargeHavoc: boolean,
+    EnableCollection_SmallOps: boolean,
+    EnableCollection_LargeOps: boolean
 };
 
 class BVEmitter {
@@ -28,15 +30,15 @@ class BVEmitter {
     readonly bvintmin1: SMTExp;
     readonly bvintmax1: SMTExp;
 
-    computeBVMinSigned(bits: bigint): bigint {
+    static computeBVMinSigned(bits: bigint): bigint {
         return -((2n ** bits) / 2n);
     }
 
-    computeBVMaxSigned(bits: bigint): bigint {
+    static computeBVMaxSigned(bits: bigint): bigint {
         return ((2n ** bits) / 2n) - 1n;
     }
 
-    computeBVMaxUnSigned(bits: bigint): bigint {
+    static computeBVMaxUnSigned(bits: bigint): bigint {
         return (2n ** bits) - 1n;
     }
 
@@ -91,10 +93,10 @@ class BVEmitter {
         this.bvintmax1 = BVEmitter.emitIntCore(intmax1, intmin1, intmax1, bvsize + 1n);
     }
 
-    create(bvsize: bigint): BVEmitter {
+    static create(bvsize: bigint): BVEmitter {
         return new BVEmitter(bvsize, 
-            this.computeBVMaxUnSigned(bvsize), this.computeBVMinSigned(bvsize), this.computeBVMaxSigned(bvsize),
-            this.computeBVMaxUnSigned(bvsize + 1n), this.computeBVMinSigned(bvsize + 1n), this.computeBVMaxSigned(bvsize + 1n))
+            BVEmitter.computeBVMaxUnSigned(bvsize), BVEmitter.computeBVMinSigned(bvsize), BVEmitter.computeBVMaxSigned(bvsize),
+            BVEmitter.computeBVMaxUnSigned(bvsize + 1n), BVEmitter.computeBVMinSigned(bvsize + 1n), BVEmitter.computeBVMaxSigned(bvsize + 1n));
     }
 
     emitIntGeneral(val: bigint): SMTExp {

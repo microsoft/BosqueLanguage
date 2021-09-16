@@ -21,7 +21,7 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
         const corefiles = FS.readdirSync(coredir);
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ fpath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+            code.push({ fpath: cfpath, filepath: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
         }
 
         return code;
@@ -51,7 +51,7 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string): { masm: MIR
 
 function runCompilerTest(testsrc: string): { result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string } {
     const start = new Date();
-    const codeinfo = [{fpath: "test.bsq", contents: testsrc}];
+    const codeinfo = [{fpath: "test.bsq", filepath: "test.bsq", contents: testsrc}];
     try {
         const { masm, errors } = generateMASM(codeinfo, "NSMain::main");
 

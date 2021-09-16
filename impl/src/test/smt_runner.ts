@@ -3,19 +3,65 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEvaluateSingle, workflowGetErrors } from "../tooling/verifier/smt_workflows";
+import { VerifierOptions } from "../tooling/verifier/smt_exp";
+import { DEFAULT_TIMEOUT, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEvaluateSingle, workflowGetErrors } from "../tooling/verifier/smt_workflows";
+
+const vopts_err = {
+    ISize: 64,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: false,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: false,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_refute = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: false,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: false,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_witnesssmall = {
+    ISize: 5,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: true,
+        EnableCollection_LargeHavoc: false,
+        EnableCollection_SmallOps: true,
+        EnableCollection_LargeOps: false
+} as VerifierOptions;
+
+const vopts_witnesslarge = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_evaluate = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
 
 function enqueueSMTTestRefute(testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
-    const codeinfo = [{fpath: "test.bsq", contents: testsrc}];
+    const codeinfo = [{fpath: "test.bsq", filepath: "test.bsq", contents: testsrc}];
 
-    const allerrors = workflowGetErrors(codeinfo, DEFAULT_VOPTS, "NSMain::main");
+    const allerrors = workflowGetErrors(codeinfo, vopts_err, "NSMain::main");
     const errlocation = allerrors !== undefined ? allerrors.find((ee) => ee.file === "test.bsq" && ee.line === trgtline) : undefined;
     if(errlocation === undefined) {
         cb("error", start, new Date(), "Invalid trgt line");
     }
     else {
-        workflowBSQInfeasibleSingle(false, codeinfo, DEFAULT_VOPTS, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
+        workflowBSQInfeasibleSingle(false, codeinfo, vopts_refute, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
             const end = new Date();
             try {
                 const jres = JSON.parse(result);
@@ -41,17 +87,17 @@ function enqueueSMTTestRefute(testsrc: string, trgtline: number, cb: (result: "p
     }
 }
 
-function enqueueSMTTestWitness(testsrc: string, trgtline: number, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+function enqueueSMTTestWitness(testsrc: string, trgtline: number, dosmall: boolean, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
-    const codeinfo = [{fpath: "test.bsq", contents: testsrc}];
+    const codeinfo = [{fpath: "test.bsq", filepath: "test.bsq", contents: testsrc}];
 
-    const allerrors = workflowGetErrors(codeinfo, DEFAULT_VOPTS, "NSMain::main");
+    const allerrors = workflowGetErrors(codeinfo, vopts_err, "NSMain::main");
     const errlocation = allerrors !== undefined ? allerrors.find((ee) => ee.file === "test.bsq" && ee.line === trgtline) : undefined;
     if(errlocation === undefined) {
         cb("error", start, new Date(), "Invalid trgt line");
     }
     else {
-        workflowBSQWitnessSingle(false, codeinfo, DEFAULT_VOPTS, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
+        workflowBSQWitnessSingle(false, codeinfo, dosmall ? vopts_witnesssmall : vopts_witnesslarge, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
             const end = new Date();
             try {
                 const jres = JSON.parse(result);
@@ -79,9 +125,9 @@ function enqueueSMTTestWitness(testsrc: string, trgtline: number, cb: (result: "
 
 function enqueueSMTTestEvaluate(testsrc: string, jin: any[], expected: any, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
-    const codeinfo = [{fpath: "test.bsq", contents: testsrc}];
+    const codeinfo = [{fpath: "test.bsq", filepath: "test.bsq", contents: testsrc}];
 
-    workflowEvaluateSingle(false, codeinfo, jin, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (result: string) => {
+    workflowEvaluateSingle(false, codeinfo, jin, vopts_evaluate, DEFAULT_TIMEOUT, "NSMain::main", (result: string) => {
         const end = new Date();
 
         try {

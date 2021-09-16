@@ -7,7 +7,8 @@ import chalk from "chalk";
 import * as readline from "readline";
 import * as path from "path";
 
-import { AssemblyFlavor, DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
+import { AssemblyFlavor, DEFAULT_TIMEOUT, workflowBSQCheck, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
+import { VerifierOptions } from "../tooling/verifier/smt_exp";
 
 function parseLocation(location: string): { file: string, line: number, pos: number } | undefined {
     try {
@@ -51,7 +52,17 @@ if(mode === "--output") {
     process.stdout.write(`Writing file to ${into}\n`);
 
     const asmflavor = smtmode === "unreachable" ? AssemblyFlavor.UFOverApproximate : AssemblyFlavor.RecuriveImpl;
-    workflowEmitToFile(into, usercode, asmflavor, smtmode, DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
+
+    const vopts = {
+        ISize: 8,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: smtmode === "unreachable" ? false : true,
+        EnableCollection_LargeHavoc: smtmode === "unreachable" ? true : false,
+        EnableCollection_SmallOps: smtmode === "unreachable" ? false : true,
+        EnableCollection_LargeOps: true
+    } as VerifierOptions;
+
+    workflowEmitToFile(into, usercode, asmflavor, smtmode, DEFAULT_TIMEOUT, vopts, location, "NSMain::main", smtonly)
 }
 else if(mode === "--unreachable") {
     const location = parseLocation(args[0]);
@@ -67,11 +78,20 @@ else if(mode === "--unreachable") {
         process.exit(1);
     }
 
-    workflowBSQInfeasibleSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    const vopts = {
+        ISize: 8,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: false,
+        EnableCollection_LargeHavoc: true,
+        EnableCollection_SmallOps: false,
+        EnableCollection_LargeOps: true
+    } as VerifierOptions;
+
+    workflowBSQInfeasibleSingle(false, usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
-else if(mode === "--witness") {
+else if(mode === "--smallwitness") {
     const location = parseLocation(args[0]);
     if(location === undefined) {
         process.stderr.write("Location should be of the form file.bsq@line#pos\n");
@@ -85,7 +105,43 @@ else if(mode === "--witness") {
         process.exit(1);
     }
 
-    workflowBSQWitnessSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    const vopts = {
+        ISize: 5,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: true,
+        EnableCollection_LargeHavoc: false,
+        EnableCollection_SmallOps: true,
+        EnableCollection_LargeOps: false
+    } as VerifierOptions;
+
+    workflowBSQWitnessSingle(false, usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+        process.stdout.write(res + "\n");
+    });
+}
+else if(mode === "--largewitness") {
+    const location = parseLocation(args[0]);
+    if(location === undefined) {
+        process.stderr.write("Location should be of the form file.bsq@line#pos\n");
+        process.exit(1);
+    }
+
+    const files = args.slice(1);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
+    const vopts = {
+        ISize: 8,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: true,
+        EnableCollection_LargeHavoc: true,
+        EnableCollection_SmallOps: true,
+        EnableCollection_LargeOps: true
+    } as VerifierOptions;
+
+    workflowBSQWitnessSingle(false, usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -99,7 +155,16 @@ else if(mode === "--check") {
         process.exit(1);
     }
 
-    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
+    const error_vopts = {
+        ISize: 64,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: false,
+        EnableCollection_LargeHavoc: true,
+        EnableCollection_SmallOps: false,
+        EnableCollection_LargeOps: true
+    } as VerifierOptions;
+
+    const errors = workflowGetErrors(usercode, error_vopts, "NSMain::main");
     if(errors === undefined) {
         process.stdout.write("Failed to load error lines\n");
         process.exit(1);
@@ -194,6 +259,15 @@ else if(mode === "--evaluate") {
         process.exit(1);
     }
 
+    const vopts = {
+        ISize: 8,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: true,
+        EnableCollection_LargeHavoc: true,
+        EnableCollection_SmallOps: true,
+        EnableCollection_LargeOps: true
+    } as VerifierOptions;
+
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -202,7 +276,7 @@ else if(mode === "--evaluate") {
     rl.question(">> ", (input) => {
         try {
             const jinput = JSON.parse(input) as any[];
-            workflowEvaluateSingle(false, usercode, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowEvaluateSingle(false, usercode, jinput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 
@@ -242,6 +316,15 @@ else if(mode === "--invert") {
         process.exit(1);
     }
 
+    const vopts = {
+        ISize: 8,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: true,
+        EnableCollection_LargeHavoc: true,
+        EnableCollection_SmallOps: true,
+        EnableCollection_LargeOps: true
+    } as VerifierOptions;
+
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -250,7 +333,7 @@ else if(mode === "--invert") {
     rl.question(">> ", (input) => {
         try {
             const joutput = JSON.parse(input);
-            workflowInvertSingle(false, usercode, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowInvertSingle(false, usercode, joutput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 
@@ -290,7 +373,16 @@ else {
         process.exit(1);
     }
 
-    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
+    const error_vopts = {
+        ISize: 64,
+        StringOpt: "ASCII",
+        EnableCollection_SmallHavoc: false,
+        EnableCollection_LargeHavoc: true,
+        EnableCollection_SmallOps: false,
+        EnableCollection_LargeOps: true
+    } as VerifierOptions;
+
+    const errors = workflowGetErrors(usercode, error_vopts, "NSMain::main");
     if(errors === undefined) {
         process.stderr.write("Failed to load error lines\n");
         process.exit(1);

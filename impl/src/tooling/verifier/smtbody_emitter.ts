@@ -2747,7 +2747,7 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_safe_check_pred": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2758,7 +2758,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_safe_check_pred_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2769,7 +2769,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_safe_check_fn": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2781,7 +2781,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_safe_check_fn_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2793,7 +2793,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_safe_check_pred_pair": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2802,7 +2802,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_has_pred_pair": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2811,7 +2811,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_has_pred_check": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2822,7 +2822,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_has_pred_check_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2833,7 +2833,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_find_index_pred": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2844,7 +2844,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_find_index_pred_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2855,7 +2855,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_find_last_index_pred": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2866,7 +2866,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_find_last_index_pred_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2887,7 +2887,7 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
             }
             case "list_rangeofint": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2897,7 +2897,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_rangeofnat": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2907,7 +2907,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_fill": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2917,7 +2917,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_reverse": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2926,7 +2926,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_zipindex": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2935,7 +2935,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_zip": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2944,7 +2944,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_computeisequence": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2955,7 +2955,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_computeisequence_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2966,7 +2966,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_computejsequence": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2975,7 +2975,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_computessequence": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2984,7 +2984,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_map": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -2995,7 +2995,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_map_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -3006,7 +3006,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_filter": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -3017,7 +3017,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_filter_idx": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -3028,7 +3028,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_min_arg": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -3037,7 +3037,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_max_arg": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -3046,7 +3046,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_join": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -3055,7 +3055,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_sort": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {
@@ -3064,7 +3064,7 @@ class SMTBodyEmitter {
                 }
             }
             case "list_sum": {
-                if (!this.vopts.EnableCollection_LargeMode) {
+                if (!this.vopts.EnableCollection_LargeOps) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
                 }
                 else {

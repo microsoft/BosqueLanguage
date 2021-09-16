@@ -2,12 +2,12 @@
 // Copyright (C) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
-
+/*
 import { DEFAULT_TOPTS, workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
 
 function enqueueICPPTest(testsrc: string, jargs: any[], expected: string | undefined, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
     const start = new Date();
-    const codeinfo = [{fpath: "test.bsq", contents: testsrc}];
+    const codeinfo = [{fpath: "test.bsq", filepath: "test.bsq", contents: testsrc}];
 
     workflowRunICPPFile(jargs, codeinfo, DEFAULT_TOPTS, "NSMain::main", (result: string | undefined) => {
         const end = new Date();
@@ -34,6 +34,14 @@ function enqueueICPPTest(testsrc: string, jargs: any[], expected: string | undef
         }
     });
 }
+*/
+
+function enqueueICPPTest(testsrc: string, jargs: any[], expected: string | undefined, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
+    const start = new Date();
+    const end = new Date();
+    cb("fail", start, end, "Disabled");
+}
+
 
 export {
     enqueueICPPTest
