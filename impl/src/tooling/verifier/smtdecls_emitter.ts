@@ -1127,7 +1127,7 @@ class SMTEmitter {
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         const bemitter = new SMTBodyEmitter(assembly, temitter, numgen, vopts, callsafety, errorTrgtPos);
-        const smtassembly = new SMTAssembly(vopts, numgen.int, temitter.lookupFunctionName(entrypoint));
+        const smtassembly = new SMTAssembly(vopts, numgen.int, Number(numgen.hash.bvsize), temitter.lookupFunctionName(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
         smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
@@ -1152,7 +1152,7 @@ class SMTEmitter {
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         const bemitter = new SMTBodyEmitter(assembly, temitter, numgen, vopts, callsafety, {file: "[]", line: -1, pos: -1});
-        const smtassembly = new SMTAssembly(vopts, numgen.int, temitter.lookupFunctionName(entrypoint));
+        const smtassembly = new SMTAssembly(vopts, numgen.int, Number(numgen.hash.bvsize), temitter.lookupFunctionName(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
         smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);

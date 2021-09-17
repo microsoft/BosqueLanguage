@@ -57,8 +57,7 @@
 (declare-fun TypeTagRank@ (TypeTag) Int)
 ;;KEY_TYPE_TAG_RANK;;
 
-
-;;BINT_TYPE_ALIAS;;
+;;BINTEGRAL_TYPE_ALIAS;;
 (define-sort BBigInt () Int)
 (define-sort BBigNat () Int)
 (define-sort BFloat () Real)
@@ -72,30 +71,7 @@
 (define-sort BUUID () (Seq (_ BitVec 8)))
 ;;BHASHCODE_TYPE_ALIAS;;
 
-(declare-datatypes (
-  (HashCodeStructEntryList 0)
-  (HashCodeStructEntry 0)
-  ) (
-    ( 
-      (HashCodeStructEntryList@nil)
-      (HashCodeStructEntryList@cons (HashCodeStructEntryList_head_value HashCodeStructEntry) (HashCodeStructEntryList_tail_value HashCodeStructEntryList))
-    )
-    ( 
-      (HashCodeStructEntry@nonecons)
-      (HashCodeStructEntry@nothingcons)
-      (HashCodeStructEntry@boolcons (HashCodeStructEntry_bool_value Bool))
-      (HashCodeStructEntry@intcons (HashCodeStructEntry_int_value BInt))
-      (HashCodeStructEntry@natcons (HashCodeStructEntry_nat_value BNat))
-      (HashCodeStructEntry@bigintcons (HashCodeStructEntry_bigint_value BBigInt))
-      (HashCodeStructEntry@bignatcons (HashCodeStructEntry_bignat_value BBigNat))
-      (HashCodeStructEntry@stringcons (HashCodeStructEntry_int_value BString))
-      (HashCodeStructEntry@bytebuffercons (HashCodeStructEntry_int_value BByteBuffer))
-      (HashCodeStructEntry@uuidcons (HashCodeStructEntry_int_value BUUID))
-      (HashCodeStructEntry@hashcons (HashCodeStructEntry_int_value BHashCode))
-    )
-))
-
-(declare-fun HashCodeInvert (()) )
+;;TODO BHashable and Hash + HashInvert and axioms
 
 ;;BINT_CONSTANTS;;
 

@@ -19,6 +19,7 @@ type SMT2FileInfo = {
     BINTEGRAL_TYPE_ALIAS: string[],
     BINTEGRAL_CONSTANTS: string[],
     STRING_TYPE_ALIAS: string,
+    BHASHCODE_TYPE_ALIAS: string,
     KEY_TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
@@ -352,11 +353,13 @@ class SMTAssembly {
     model: SMTModelState = new SMTModelState([], { vname: "[EMPTY]", vtype: new SMTType("[UNINIT_VTYPE]", "[UNINIT_VTYPE]", "[UNINIT_VTYPE]"), vinit: new SMTConst("[UNINT_VINIT]"), vchk: undefined, callexp: new SMTConst("[UNINT_CALLEXP]") }, undefined, new SMTType("[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"));
 
     numgen: BVEmitter;
+    hashsize: number;
 
-    constructor(vopts: VerifierOptions, numgen: BVEmitter, entrypoint: string) {
+    constructor(vopts: VerifierOptions, numgen: BVEmitter, hashsize: number, entrypoint: string) {
         this.vopts = vopts;
         this.entrypoint = entrypoint;
         this.numgen = numgen;
+        this.hashsize = hashsize;
     }
 
     private static sccVisit(cn: SMTCallGNode, scc: Set<string>, marked: Set<string>, invokes: Map<string, SMTCallGNode>) {
@@ -672,6 +675,7 @@ class SMTAssembly {
             BINTEGRAL_TYPE_ALIAS: integral_type_alias,
             BINTEGRAL_CONSTANTS: integral_constants,
             STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 32)))" : "(define-sort BString () String)"),
+            BHASHCODE_TYPE_ALIAS: `(define-sort BString () (Seq (_ BitVec ${this.hashsize}))).`,
             KEY_TYPE_INFO: { decls: keytypeinfo.filter((kti) => kti.decl !== undefined).map((kti) => kti.decl as string), constructors: keytypeinfo.filter((kti) => kti.consf !== undefined).map((kti) => kti.consf as string), boxing: keytypeinfo.map((kti) => kti.boxf) },
             TUPLE_INFO: { decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), boxing: termtupleinfo.map((kti) => kti.boxf) },
             RECORD_INFO: { decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), boxing: termrecordinfo.map((kti) => kti.boxf) },
@@ -712,6 +716,7 @@ class SMTAssembly {
             .replace(";;KEY_TYPE_TAG_RANK;;", joinWithIndent(sfileinfo.KEY_TYPE_TAG_RANK, ""))
             .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
             .replace(";;STRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS + "\n")
+            .replace(";;BHASHCODE_TYPE_ALIAS;;", sfileinfo.BHASHCODE_TYPE_ALIAS + "\n")
             .replace(";;BINTEGRAL_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
             .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))
             .replace(";;KEY_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.constructors, "    "))

@@ -109,9 +109,9 @@ function generateSMTPayload(masm: MIRAssembly, mode: "unreachable" | "witness" |
     }
 }
 
-function runVEvaluator(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert", bson: boolean): string {
+function runVEvaluator(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert"): string {
     try {
-        const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
+        const cmd = `${exepath} --${workflow}`;
         return execSync(cmd, { input: JSON.stringify(cpayload, undefined, 2) }).toString().trim();
     }
     catch(ex) {
@@ -141,9 +141,9 @@ function computeNumGen(masm: MIRAssembly, desiredbv: number): BVEmitter | undefi
     }
 } 
 
-function runVEvaluatorAsync(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert", bson: boolean, cb: (result: string) => void) {
+function runVEvaluatorAsync(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert", cb: (result: string) => void) {
     try {
-        const cmd = `${exepath}${bson ? " --bsqon" : ""} --${workflow}`;
+        const cmd = `${exepath} --${workflow}`;
         const proc = exec(cmd, (err, stdout, stderr) => {
             if(err) {
                 cb(JSON.stringify({result: "error", info: `${err}`}));
@@ -209,7 +209,7 @@ function workflowEmitToFile(into: string, usercode: CodeFileInfo[], asmflavor: A
     }
 }
 
-function workflowBSQInfeasibleSingle(bson: boolean, usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
+function workflowBSQInfeasibleSingle(usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, vopts.EnableCollection_SmallOps);
         if(masm === undefined) {
@@ -229,14 +229,14 @@ function workflowBSQInfeasibleSingle(bson: boolean, usercode: CodeFileInfo[], vo
                 return;
             }
 
-            runVEvaluatorAsync(res, "unreachable", bson, cb);
+            runVEvaluatorAsync(res, "unreachable", cb);
         }
     } catch(e) {
         cb(JSON.stringify({result: "error", info: `${e}`}));
     }
 }
 
-function workflowBSQWitnessSingle(bson: boolean, usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
+function workflowBSQWitnessSingle(usercode: CodeFileInfo[], vopts: VerifierOptions, timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, vopts.EnableCollection_SmallOps);
         if(masm === undefined) {
@@ -256,14 +256,14 @@ function workflowBSQWitnessSingle(bson: boolean, usercode: CodeFileInfo[], vopts
                 return;
             }
 
-            runVEvaluatorAsync(res, "witness", bson, cb);
+            runVEvaluatorAsync(res, "witness", cb);
         }
     } catch(e) {
         cb(JSON.stringify({result: "error", info: `${e}`}));
     }
 }
 
-function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
+function wfInfeasibleSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
     const SMALL_MODEL = [
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: false, StringOpt: "ASCII" },
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
@@ -312,7 +312,7 @@ function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: num
                             return undefined;
                         }
 
-                        const cres = runVEvaluator(res, "unreachable", bson);
+                        const cres = runVEvaluator(res, "unreachable");
                         const jres = JSON.parse(cres);
                         const rr = jres["result"];
                         if (rr === "unreachable") {
@@ -357,7 +357,7 @@ function wfInfeasibleSmall(bson: boolean, usercode: CodeFileInfo[], timeout: num
     return {result: "unreachable", time: (end - start) / 1000};
 }
 
-function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+function wfWitnessSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
     const SMALL_MODEL = [
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: false, StringOpt: "ASCII" },
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
@@ -406,7 +406,7 @@ function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number
                             return undefined;
                         }
 
-                        const cres = runVEvaluator(res, "witness", bson);
+                        const cres = runVEvaluator(res, "witness");
                         const jres = JSON.parse(cres);
                         const rr = jres["result"];
                         if (rr === "unreachable") {
@@ -458,7 +458,7 @@ function wfWitnessSmall(bson: boolean, usercode: CodeFileInfo[], timeout: number
     return {result: "unreachable", time: (end - start) / 1000};
 }
 
-function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
+function wfInfeasibleLarge(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
     const start = Date.now();
 
     const vopts = {
@@ -494,7 +494,7 @@ function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: num
                 return undefined;
             }
 
-            const cres = runVEvaluator(res, "unreachable", bson);
+            const cres = runVEvaluator(res, "unreachable");
             const jres = JSON.parse(cres);
             const rr = jres["result"];
             if (rr === "unreachable") {
@@ -536,7 +536,7 @@ function wfInfeasibleLarge(bson: boolean, usercode: CodeFileInfo[], timeout: num
     }
 }
 
-function wfWitnessLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+function wfWitnessLarge(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
     const start = Date.now();
 
     const vopts = {
@@ -572,7 +572,7 @@ function wfWitnessLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number
                 return undefined;
             }
 
-            const cres = runVEvaluator(res, "witness", bson);
+            const cres = runVEvaluator(res, "witness");
             const jres = JSON.parse(cres);
             const rr = jres["result"];
             if (rr === "unreachable") {
@@ -621,14 +621,14 @@ function wfWitnessLarge(bson: boolean, usercode: CodeFileInfo[], timeout: number
     }
 }
 
-function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: ChkWorkflowOutcome, time: number, input?: any} | undefined {
+function workflowBSQCheck(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: ChkWorkflowOutcome, time: number, input?: any} | undefined {
     if(printprogress) {
         process.stderr.write(`  Checking error at ${errorTrgtPos.file}@${errorTrgtPos.line}...\n`);
     }
 
     const start = Date.now();
 
-    const smi = wfInfeasibleSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
+    const smi = wfInfeasibleSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress);
     if(smi === undefined) {
         if(printprogress) {
             process.stderr.write(`  blocked on small model unreachability -- moving on :(\n`);
@@ -636,7 +636,7 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
         return undefined;
     }
 
-    let smw = smi.result != "unreachable" ? wfWitnessSmall(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
+    let smw = smi.result != "unreachable" ? wfWitnessSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
     if(smw !== undefined && smw.result === "witness") {
         if(printprogress) {
             process.stderr.write(`  witness input generation successful (1b)!\n`);
@@ -645,7 +645,7 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
         return {result: "witness", time: (end - start) / 1000, input: smw.input};
     }
 
-    let lmw = smi.result != "unreachable" ? wfWitnessLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
+    let lmw = smi.result != "unreachable" ? wfWitnessLarge(usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
     if(lmw !== undefined && lmw.result === "witness") {
         if(printprogress) {
             process.stderr.write(`  witness input generation successful (1b)!\n`);
@@ -654,7 +654,7 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
         return {result: "witness", time: (end - start) / 1000, input: lmw.input};
     }
 
-    const lmr = wfInfeasibleLarge(bson, usercode, timeout, errorTrgtPos, entrypoint, printprogress);
+    const lmr = wfInfeasibleLarge(usercode, timeout, errorTrgtPos, entrypoint, printprogress);
     if(lmr === undefined) {
         if(printprogress) {
             process.stderr.write(`  blocked on large model unreachability -- no result :(\n`);
@@ -687,7 +687,7 @@ function workflowBSQCheck(bson: boolean, usercode: CodeFileInfo[], timeout: numb
     }
 }
 
-function workflowEvaluateSingle(bson: boolean, usercode: CodeFileInfo[], jin: any[], vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
+function workflowEvaluateSingle(usercode: CodeFileInfo[], jin: any[], vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, true);
         if(masm === undefined) {
@@ -707,14 +707,14 @@ function workflowEvaluateSingle(bson: boolean, usercode: CodeFileInfo[], jin: an
                 return;
             }
 
-            runVEvaluatorAsync({...res, jin: jin}, "eval", bson, cb);
+            runVEvaluatorAsync({...res, jin: jin}, "eval", cb);
         }
     } catch(e) {
         cb(JSON.stringify({result: "error", info: `${e}`}));
     }
 }
 
-function workflowInvertSingle(bson: boolean, usercode: CodeFileInfo[], jout: any, vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
+function workflowInvertSingle(usercode: CodeFileInfo[], jout: any, vopts: VerifierOptions, timeout: number, entrypoint: MIRInvokeKey, cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, true);
         if(masm === undefined) {
@@ -734,7 +734,7 @@ function workflowInvertSingle(bson: boolean, usercode: CodeFileInfo[], jout: any
                 return;
             }
 
-            runVEvaluatorAsync({...res, jout: jout}, "invert", bson, cb);
+            runVEvaluatorAsync({...res, jout: jout}, "invert", cb);
         }
     } catch(e) {
         cb(JSON.stringify({result: "error", info: `${e}`}));

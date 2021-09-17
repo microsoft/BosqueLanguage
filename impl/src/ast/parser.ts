@@ -1580,16 +1580,14 @@ class Parser {
         }
     }
 
-    private parseFollowTypeConstructor(): ["@" | "#", TypeSignature] {
-        let constype: "@" | "#" = this.consumeTokenAndGetValue() as "@" | "#";
-        
+    private parseFollowTypeConstructor(): TypeSignature {
         if (this.testToken(TokenStrings.Template)) {
-            return [constype, this.parseTemplateTypeReference()];
+            return this.parseTemplateTypeReference();
         }
         else {
             const ostype = this.parseNominalType();
 
-            return [constype, ostype];
+            return ostype;
         }
     }
 
@@ -1904,12 +1902,15 @@ class Parser {
 
         if (this.testToken(TokenStrings.TypedString)) {
             const tstring = this.consumeTokenAndGetValue();
-            const [cinfo, ttype] = this.parseFollowTypeConstructor();
 
-            if (cinfo === "#") {
+            if (this.testAndConsumeTokenIf("#")) {
+                const ttype = this.parseFollowTypeConstructor();
                 return [new LiteralTypedStringExpression(sinfo, tstring, ttype), ops];
             }
             else {
+                this.ensureAndConsumeToken("(");
+                const ttype = this.parseFollowTypeConstructor();
+                this.ensureAndConsumeToken(")");
                 return [new LiteralTypedStringConstructorExpression(sinfo, tstring, ttype), ops];
             }
         }
