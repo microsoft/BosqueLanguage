@@ -87,7 +87,7 @@ else if(mode === "--unreachable") {
         EnableCollection_LargeOps: true
     } as VerifierOptions;
 
-    workflowBSQInfeasibleSingle(false, usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQInfeasibleSingle(usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -114,7 +114,7 @@ else if(mode === "--smallwitness") {
         EnableCollection_LargeOps: false
     } as VerifierOptions;
 
-    workflowBSQWitnessSingle(false, usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQWitnessSingle(usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -141,7 +141,7 @@ else if(mode === "--largewitness") {
         EnableCollection_LargeOps: true
     } as VerifierOptions;
 
-    workflowBSQWitnessSingle(false, usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQWitnessSingle(usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -191,7 +191,7 @@ else if(mode === "--check") {
             process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}#${errors[i].pos}...\n`);
         }
 
-        const jres = workflowBSQCheck(false, usercode, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
+        const jres = workflowBSQCheck(usercode, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
 
         if(jres === undefined) {
             if(!quiet) {
@@ -276,7 +276,7 @@ else if(mode === "--evaluate") {
     rl.question(">> ", (input) => {
         try {
             const jinput = JSON.parse(input) as any[];
-            workflowEvaluateSingle(false, usercode, jinput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowEvaluateSingle(usercode, jinput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 
@@ -333,7 +333,7 @@ else if(mode === "--invert") {
     rl.question(">> ", (input) => {
         try {
             const joutput = JSON.parse(input);
-            workflowInvertSingle(false, usercode, joutput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowInvertSingle(usercode, joutput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 

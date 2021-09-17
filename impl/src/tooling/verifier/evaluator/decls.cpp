@@ -426,11 +426,11 @@ std::optional<char> stringBinSearchCharASCII(const APIModule* apimodule, z3::sol
         }
     }
 
-    uint64_t cmin = 32;
-    uint64_t cmax = 126;
+    uint16_t cmin = 32;
+    uint16_t cmax = 126;
     while(cmin < cmax)
     {
-        uint64_t cmid = (cmax / 2) + (cmin / 2) + (((cmax % 2) + (cmin % 2)) / 2);
+        uint16_t cmid = (cmax / 2) + (cmin / 2) + (((cmax % 2) + (cmin % 2)) / 2);
         std::string imidstr = str + (char)cmid;
 
         s.push();
@@ -455,7 +455,7 @@ std::optional<char> stringBinSearchCharASCII(const APIModule* apimodule, z3::sol
         }
     }
 
-    return std::make_optional(cmin);
+    return std::make_optional((char)cmin);
 }
 
 std::optional<std::string> stringBinSearchContentsASCII(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, size_t slen)
@@ -2151,8 +2151,8 @@ bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::contex
     }
     
     std::string enumchoice = j.get<std::string>();
-    auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&enumchoice](const std::string& cname) {
-        return cname == enumchoice;
+    auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&enumchoice](const std::pair<std::string, uint32_t>& entry) {
+        return entry.first == enumchoice;
     });
 
     if(pos == this->enums.cend())

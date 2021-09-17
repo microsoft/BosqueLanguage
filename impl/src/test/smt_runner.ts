@@ -61,7 +61,7 @@ function enqueueSMTTestRefute(testsrc: string, trgtline: number, cb: (result: "p
         cb("error", start, new Date(), "Invalid trgt line");
     }
     else {
-        workflowBSQInfeasibleSingle(false, codeinfo, vopts_refute, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
+        workflowBSQInfeasibleSingle(codeinfo, vopts_refute, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
             const end = new Date();
             try {
                 const jres = JSON.parse(result);
@@ -97,7 +97,7 @@ function enqueueSMTTestWitness(testsrc: string, trgtline: number, dosmall: boole
         cb("error", start, new Date(), "Invalid trgt line");
     }
     else {
-        workflowBSQWitnessSingle(false, codeinfo, dosmall ? vopts_witnesssmall : vopts_witnesslarge, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
+        workflowBSQWitnessSingle(codeinfo, dosmall ? vopts_witnesssmall : vopts_witnesslarge, DEFAULT_TIMEOUT, errlocation, "NSMain::main", (result: string) => {
             const end = new Date();
             try {
                 const jres = JSON.parse(result);
@@ -127,7 +127,7 @@ function enqueueSMTTestEvaluate(testsrc: string, jin: any[], expected: any, cb: 
     const start = new Date();
     const codeinfo = [{fpath: "test.bsq", filepath: "test.bsq", contents: testsrc}];
 
-    workflowEvaluateSingle(false, codeinfo, jin, vopts_evaluate, DEFAULT_TIMEOUT, "NSMain::main", (result: string) => {
+    workflowEvaluateSingle(codeinfo, jin, vopts_evaluate, DEFAULT_TIMEOUT, "NSMain::main", (result: string) => {
         const end = new Date();
 
         try {

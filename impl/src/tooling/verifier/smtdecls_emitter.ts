@@ -492,7 +492,7 @@ class SMTEmitter {
 
         let fbody: SMTExp = new SMTLet("cc", bselect, bexp);
         havocfuncs.add(this.temitter.generateHavocConstructorName(ctt));
-        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(ctt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(tt), fbody));
+        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(ctt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(ctt), fbody));
     }
 
     private generateAPITypeConstructorFunction_List(tt: MIRType, havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
@@ -826,7 +826,10 @@ class SMTEmitter {
             }
         }
         else if (tt instanceof MIRConceptType) {
-            xxxx;
+            const etypes = [...this.temitter.assembly.entityDecls].filter((edi) => this.temitter.assembly.subtypeOf(this.temitter.getMIRType(edi[1].tkey), this.temitter.getMIRType(tt.typeID)));
+            const opts: MIRType[] = etypes.map((opt) => this.temitter.getMIRType(opt[1].tkey));
+
+            this.generateAPITypeConstructorFunction_Concept(tt, opts, havocfuncs, ufuncs);
         }
         else {
             //Don't need to do anything
