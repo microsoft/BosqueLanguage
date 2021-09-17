@@ -457,6 +457,44 @@ class SMTEmitter {
         this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(tt), fbody));
     }
 
+    private generateAPITypeConstructorFunction_Concept(ctt: MIRType, options: MIRType[], havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
+        for(let i = 0; i < options.length; ++i) {
+            this.walkAndGenerateHavocType(this.temitter.getMIRType(options[i].typeID), havocfuncs, ufuncs);
+        }
+
+        const bselect = new SMTCallSimple("ConceptChoice@UFCons_API", [new SMTVar("path")]);
+        let ccv = new SMTVar("cc");
+
+        let bexp: SMTExp = this.temitter.generateErrorResultAssert(ctt);
+        for(let i = 0; i < options.length; ++i) {
+            let ofidx = options.length - (i + 1);
+            let oftt = this.temitter.getMIRType(options[ofidx].typeID);
+
+            const cc = this.temitter.generateHavocConstructorCall(oftt, new SMTVar("path"), this.bemitter.numgen.int.emitSimpleNat(ofidx));
+            const ccvar = this.bemitter.generateTempName();
+            const issafehavoc = this.temitter.isKnownSafeHavocConstructorType(oftt);
+
+            const chkfun = issafehavoc ? new SMTConst("true") : this.temitter.generateResultIsSuccessTest(oftt, new SMTVar(ccvar));
+            const access = this.temitter.generateResultGetSuccess(oftt, new SMTVar(ccvar));
+
+            bexp = new SMTIf(
+                new SMTCallSimple("=", [ccv, this.bemitter.numgen.int.emitSimpleNat(ofidx)]),
+                new SMTLet(ccvar, cc,
+                    new SMTIf(
+                        chkfun,
+                        this.temitter.generateResultTypeConstructorSuccess(ctt, this.temitter.coerce(access, oftt, ctt)),
+                        this.temitter.generateErrorResultAssert(ctt)
+                    )
+                ),
+                bexp
+            );
+        }
+
+        let fbody: SMTExp = new SMTLet("cc", bselect, bexp);
+        havocfuncs.add(this.temitter.generateHavocConstructorName(ctt));
+        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(ctt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(tt), fbody));
+    }
+
     private generateAPITypeConstructorFunction_List(tt: MIRType, havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
         const ldecl = this.temitter.assembly.entityDecls.get(tt.typeID) as MIRPrimitiveListEntityTypeDecl;
         const ctype = this.temitter.getMIRType(ldecl.oftype);
@@ -786,6 +824,9 @@ class SMTEmitter {
             else {
                 //Don't need to do anything
             }
+        }
+        else if (tt instanceof MIRConceptType) {
+            xxxx;
         }
         else {
             //Don't need to do anything

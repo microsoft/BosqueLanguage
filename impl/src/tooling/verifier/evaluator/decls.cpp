@@ -1320,6 +1320,8 @@ IType* IType::jparse(json j)
             return EntityType::jparse(j);
         case TypeTag::UnionTag:
             return UnionType::jparse(j);
+        case TypeTag::ConceptTag:
+            return ConceptType::jparse(j);
         default: 
         {
             assert(false);
@@ -1585,8 +1587,9 @@ PrimitiveOfType* PrimitiveOfType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
     auto oftype = j["oftype"].get<std::string>();
+    auto usinginv = j["usinginv"].get<std::string>();
     
-    return new PrimitiveOfType(name, oftype);
+    return new PrimitiveOfType(name, oftype, usinginv);
 }
 
 bool PrimitiveOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1787,12 +1790,9 @@ std::optional<json> ContentHashType::z3extract(ExtractionInfo& ex, const z3::exp
     return nullptr;
 }
 
-xxxx;
-
 TupleType* TupleType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto isvalue = j["isvalue"].get<bool>();
 
     std::vector<std::string> ttypes;
     auto jtypes = j["ttypes"];
@@ -1800,7 +1800,7 @@ TupleType* TupleType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new TupleType(name, isvalue, ttypes);
+    return new TupleType(name, ttypes);
 }
 
 bool TupleType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1829,44 +1829,6 @@ bool TupleType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::conte
     return true;
 }
 
-std::optional<std::string> TupleType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_array() || this->ttypes.size() != j.size())
-    {
-        return std::nullopt;
-    }
-
-    auto iidt = indent + "  ";
-    std::string bres;
-    for(size_t i = 0; i < this->ttypes.size(); ++i)
-    {
-        const std::string& tt = this->ttypes[i];
-        
-        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
-        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        bres += '\n' + iidt + pexpr.value();
-
-        if(i != this->ttypes.size() - 1)
-        {
-            bres += ',' ;
-        }
-    }
-
-    if(this->ttypes.size() == 0)
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "[]");
-    }
-    else
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "[" + bres + indent + "]");
-    }
-}
-
 std::optional<json> TupleType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::array();
@@ -1890,7 +1852,6 @@ std::optional<json> TupleType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
 RecordType* RecordType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto isvalue = j["isvalue"].get<bool>();
 
     std::vector<std::string> props;
     auto jprops = j["props"];
@@ -1904,7 +1865,7 @@ RecordType* RecordType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new RecordType(name, isvalue, props, ttypes);
+    return new RecordType(name, props, ttypes);
 }
 
 bool RecordType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1940,52 +1901,6 @@ bool RecordType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::cont
     return true;
 }
 
-std::optional<std::string> RecordType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_object() || this->props.size() != j.size())
-    {
-        return std::nullopt;
-    }
-
-    auto allprops = std::all_of(this->props.cbegin(), this->props.cend(), [&j](const std::string& prop){
-                return j.contains(prop);
-            });
-    if(!allprops)
-    {
-        return std::nullopt;
-    }
-
-    auto iidt = indent + "  ";
-    std::string bres;
-    for(size_t i = 0; i < this->props.size(); ++i)
-    {
-        const std::string& tt = this->ttypes[i];
-       
-        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
-        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        bres += '\n' + iidt + this->props[i] + "=" + pexpr.value();
-
-        if(i != this->ttypes.size() - 1)
-        {
-            bres += ',' ;
-        }
-    }
-
-    if(this->ttypes.size() == 0)
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "{}");
-    }
-    else
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "{" + bres + indent + "}");
-    }
-}
-
 std::optional<json> RecordType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::object();
@@ -2005,6 +1920,66 @@ std::optional<json> RecordType::z3extract(ExtractionInfo& ex, const z3::expr& ct
     }
 
     return std::make_optional(jres);
+}
+
+SomethingType* SomethingType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    
+    return new SomethingType(name, oftype);
+}
+
+bool SomethingType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> SomethingType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);
+}
+
+OkType* OkType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    
+    return new OkType(name, oftype);
+}
+
+bool OkType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> OkType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);
+}
+
+ErrType* ErrType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    
+    return new ErrType(name, oftype);
+}
+
+bool ErrType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> ErrType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);
 }
 
 ListType* ListType::jparse(json j)
@@ -2042,43 +2017,6 @@ bool ListType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::contex
     return true;
 }
 
-std::optional<std::string> ListType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_array())
-    {
-        return std::nullopt;
-    }
-
-    auto ttype = pinfo.apimodule->typemap.find(this->oftype)->second;
-
-    auto iidt = indent + "  ";
-    std::string bres;
-    for(size_t i = 0; i < j.size(); ++i)
-    {
-        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        bres += '\n' + iidt + pexpr.value();
-
-        if(i != j.size() - 1)
-        {
-            bres += ',' ;
-        }
-    }
-
-    if(j.size() == 0)
-    {
-        return std::make_optional(indent + this->name + "@" + "{}");
-    }
-    else
-    {
-        return std::make_optional(indent + this->name + "@" + "{" + bres + indent + "}");
-    }
-}
-
 std::optional<json> ListType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::array();
@@ -2107,15 +2045,102 @@ std::optional<json> ListType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
     return std::make_optional(jres);
 }
 
+StackType* StackType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    
+    return new StackType(name, oftype, ultype);
+}
+
+bool StackType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> StackType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
+
+QueueType* QueueType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    
+    return new QueueType(name, oftype, ultype);
+}
+
+bool QueueType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> QueueType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
+
+SetType* SetType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    auto unqchkinv = j["unqchkinv"].get<std::string>();
+    auto unqconvinv = j["unqconvinv"].get<std::string>();
+    
+    return new SetType(name, oftype, ultype, unqchkinv, unqconvinv);
+}
+
+bool SetType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> SetType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
+
+MapType* MapType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    auto unqchkinv = j["unqchkinv"].get<std::string>();
+    
+    return new MapType(name, oftype, ultype, unqchkinv);
+}
+
+bool MapType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> MapType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
+
 EnumType* EnumType::jparse(json j)
 {
-    std::vector<std::string> enuminvs;
-    auto jenuminvs = j["enuminvs"];
-    std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enuminvs), [](const json& jv) {
-        return jv.get<std::string>();
+    std::vector<std::pair<std::string, uint32_t>> enums;
+    auto jenuminvs = j["enums"];
+    std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enums), [](const json& jv) {
+        return std::make_pair(jv[0].get<std::string>(), jv[1].get<uint32_t>());
     });
 
-    return new EnumType(j["name"].get<std::string>(), j["underlying"].get<std::string>(), enuminvs);
+    return new EnumType(j["name"].get<std::string>(), j["usinginv"].get<std::string>(), enums);
 }
 
 bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2126,30 +2151,19 @@ bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::contex
     }
     
     std::string enumchoice = j.get<std::string>();
-    auto pos = std::find_if(this->enuminvs.cbegin(), this->enuminvs.cend(), [&enumchoice](const std::string& cname) {
+    auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&enumchoice](const std::string& cname) {
         return cname == enumchoice;
     });
 
-    if(pos == this->enuminvs.cend())
+    if(pos == this->enums.cend())
     {
         return false;
     }
-    auto idx = std::distance(pos, this->enuminvs.cend());
 
     auto lef = getArgContextConstructor(pinfo.apimodule, c, "EnumChoice@UFCons_API", c.bv_sort(pinfo.apimodule->bv_width));
-    pinfo.chks.top()->push_back(lef(ctx) == c.bv_val((uint64_t)idx, pinfo.apimodule->bv_width));
+    pinfo.chks.top()->push_back(lef(ctx) == c.bv_val(pos->second, pinfo.apimodule->bv_width));
 
     return true;
-}
-
-std::optional<std::string> EnumType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_string())
-    {
-        return std::nullopt;
-    }
-        
-    return j.get<std::string>();
 }
 
 std::optional<json> EnumType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2161,12 +2175,85 @@ std::optional<json> EnumType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
         return std::nullopt;
     }
 
-    if(lenval.value() >= this->enuminvs.size())
+    if(lenval.value() >= this->enums.size())
     {
         return std::nullopt;
     }
 
-    return std::make_optional(this->enuminvs[lenval.value()]);
+    return std::make_optional(this->enums[lenval.value()].first);
+}
+
+EntityType* EntityType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+
+    std::vector<std::string> fields;
+    auto jprops = j["fields"];
+    std::transform(jprops.cbegin(), jprops.cend(), std::back_inserter(fields), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    std::vector<std::string> ttypes;
+    auto jtypes = j["ttypes"];
+    std::transform(jtypes.cbegin(), jtypes.cend(), std::back_inserter(ttypes), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    return new EntityType(name, fields, ttypes);
+}
+
+bool EntityType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    if(!j.is_object() || this->fields.size() != j.size())
+    {
+        return false;
+    }
+
+    auto allprops = std::all_of(this->fields.cbegin(), this->fields.cend(), [&j](const std::string& prop){
+                return j.contains(prop);
+            });
+    if(!allprops)
+    {
+        return false;
+    }
+
+    std::vector<const IType*> argtypes;
+    z3::expr_vector targs(c);
+    for(size_t i = 0; i < this->fields.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+        auto ectx = extendContext(pinfo.apimodule, c, ctx, i);
+
+        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
+        auto pexpr = ttype->toz3arg(pinfo, j[this->fields[i]], ectx, c);
+        if(!pexpr)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+std::optional<json> EntityType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto jres = json::object();
+    for(size_t i = 0; i < this->fields.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+        auto idxval = extendContext(ex.apimodule, m.ctx(), ctx, i);
+
+        auto ttype = ex.apimodule->typemap.find(tt)->second;
+        auto rr = ttype->z3extract(ex, idxval, s, m);
+        if(!rr.has_value())
+        {
+            return std::nullopt;
+        }
+
+        jres[this->fields[i]] = rr.value();
+    }
+
+    return std::make_optional(jres);
 }
 
 UnionType* UnionType::jparse(json j)
@@ -2212,21 +2299,6 @@ bool UnionType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::conte
     return false;
 }
 
-std::optional<std::string> UnionType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    for(size_t i = 0; i < this->opts.size(); ++i)
-    {
-        auto ttype = dynamic_cast<const IGroundedType*>(pinfo.apimodule->typemap.find(this->opts[i])->second);
-        auto pexpr = ttype->tobsqarg(pinfo, j, indent);
-        if(pexpr.has_value())
-        {
-            return pexpr;
-        }
-    }
-
-    return std::nullopt;
-}
-
 std::optional<json> UnionType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "UnionChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
@@ -2245,6 +2317,64 @@ std::optional<json> UnionType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
     auto ectx = extendContext(ex.apimodule, m.ctx(), ctx, choice.value());
 
     return ttype->z3extract(ex, ectx, s, m);
+}
+
+ConceptType* ConceptType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+
+    std::vector<std::string> opts;
+    auto jopts = j["opts"];
+    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(opts), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    return new ConceptType(name, opts);
+}
+
+bool ConceptType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto jname = j["tag"].get<std::string>();
+    auto jvalue = j["value"];
+
+    auto ii = std::find(this->opts.cbegin(), this->opts.cend(), jname);
+    auto idx = std::distance(this->opts.cbegin(), ii);
+
+    auto lef = getArgContextConstructor(pinfo.apimodule, c, "ConceptChoice@UFCons_API", c.bv_sort(pinfo.apimodule->bv_width));
+    pinfo.chks.top()->push_back(lef(ctx) == c.bv_val((uint64_t)idx, pinfo.apimodule->bv_width));
+
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(jname)->second->toz3arg(pinfo, jvalue, ectx, c);
+}
+
+std::optional<json> ConceptType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "ConceptChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
+    auto choice = ex.bvToCardinality(s, m, bef(ctx));
+    if(!choice.has_value())
+    {
+        return std::nullopt;
+    }
+
+    if(choice.value() >= this->opts.size())
+    {
+        return std::nullopt;
+    }
+
+    auto ttype = dynamic_cast<const IGroundedType*>(ex.apimodule->typemap.find(this->opts[choice.value()])->second);
+    auto ectx = extendContext(ex.apimodule, m.ctx(), ctx, choice.value());
+
+    auto jj = ttype->z3extract(ex, ectx, s, m);
+    if(!jj.has_value())
+    {
+        return std::nullopt;
+    }
+
+    auto jres = json::object();
+    jres["tag"] = this->name;
+    jres["value"] = jj.value();
+
+    return jres;
 }
 
 InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, const IType*>& typemap)

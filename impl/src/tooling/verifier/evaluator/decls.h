@@ -64,7 +64,8 @@ enum class TypeTag
     MapTag,
     EnumTag,
     EntityTag,
-    UnionTag
+    UnionTag,
+    ConceptTag
 };
 
 z3::func_decl getArgContextConstructor(const APIModule* apimodule, z3::context& c, const char* fname, const z3::sort& ressort);
@@ -295,8 +296,9 @@ class PrimitiveOfType : public IGroundedType
 {
 public:
     const std::string oftype;
+    const std::string usinginv;
 
-    PrimitiveOfType(std::string name, std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    PrimitiveOfType(std::string name, std::string oftype, std::string usinginv) : IGroundedType(name), oftype(oftype), usinginv(usinginv) {;}
     virtual ~PrimitiveOfType() {;}
 
     static PrimitiveOfType* jparse(json j);
@@ -463,7 +465,7 @@ class SomethingType : public IGroundedType
 public:
     const std::string oftype;
 
-    SomethingType(std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    SomethingType(std::string name, std::string oftype) : IGroundedType(name), oftype(oftype) {;}
     virtual ~SomethingType() {;}
 
     static SomethingType* jparse(json j);
@@ -478,7 +480,7 @@ class OkType : public IGroundedType
 public:
     const std::string oftype;
 
-    OkType(std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    OkType(std::string name, std::string oftype) : IGroundedType(name), oftype(oftype) {;}
     virtual ~OkType() {;}
 
     static OkType* jparse(json j);
@@ -493,7 +495,7 @@ class ErrType : public IGroundedType
 public:
     const std::string oftype;
 
-    ErrType(std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    ErrType(std::string name, std::string oftype) : IGroundedType(name), oftype(oftype) {;}
     virtual ~ErrType() {;}
 
     static ErrType* jparse(json j);
@@ -521,9 +523,10 @@ public:
 class StackType : public IGroundedType
 {
 public:
+    const std::string oftype;
     const std::string ultype;
 
-    StackType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    StackType(std::string name, std::string oftype, std::string ultype) : IGroundedType(name), oftype(oftype), ultype(ultype) {;}
     virtual ~StackType() {;}
 
     static StackType* jparse(json j);
@@ -537,9 +540,10 @@ public:
 class QueueType : public IGroundedType
 {
 public:
+    const std::string oftype;
     const std::string ultype;
 
-    QueueType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    QueueType(std::string name, std::string oftype, std::string ultype) : IGroundedType(name), oftype(oftype), ultype(ultype) {;}
     virtual ~QueueType() {;}
 
     static QueueType* jparse(json j);
@@ -552,9 +556,13 @@ public:
 class SetType : public IGroundedType
 {
 public:
+    const std::string oftype;
     const std::string ultype;
 
-    SetType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    const std::string unqchkinv;
+    const std::string unqconvinv;
+
+    SetType(std::string name, std::string oftype, std::string ultype, std::string unqchkinv, std::string unqconvinv) : IGroundedType(name), oftype(oftype), ultype(ultype), unqchkinv(unqchkinv), unqconvinv(unqconvinv) {;}
     virtual ~SetType() {;}
 
     static SetType* jparse(json j);
@@ -564,13 +572,15 @@ public:
     virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
 };
 
-
 class MapType : public IGroundedType
 {
 public:
+    const std::string oftype;
     const std::string ultype;
 
-    MapType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    const std::string unqchkinv;
+
+    MapType(std::string name, std::string oftype, std::string ultype, std::string unqchkinv) : IGroundedType(name), oftype(oftype), ultype(ultype), unqchkinv(unqchkinv) {;}
     virtual ~MapType() {;}
 
     static MapType* jparse(json j);
@@ -583,10 +593,10 @@ public:
 class EnumType : public IGroundedType
 {
 public:
-    const std::string underlying;
-    const std::vector<std::string> enuminvs; //list of full enum names
+    const std::string usinginv;
+    const std::vector<std::pair<std::string, uint32_t>> enums;
 
-    EnumType(std::string name, std::string underlying, std::vector<std::string> enuminvs) : IGroundedType(name), underlying(underlying), enuminvs(enuminvs) {;}
+    EnumType(std::string name, std::string usinginv, std::vector<std::pair<std::string, uint32_t>> enums) : IGroundedType(name), usinginv(usinginv), enums(enums) {;}
     virtual ~EnumType() {;}
 
     static EnumType* jparse(json j);
@@ -621,6 +631,21 @@ public:
     virtual ~UnionType() {;}
 
     static UnionType* jparse(json j);
+
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class ConceptType : public IType
+{
+public:
+    const std::vector<std::string> opts;
+
+    ConceptType(std::string name, std::vector<std::string> opts) : IType(name), opts(opts) {;}
+    virtual ~ConceptType() {;}
+
+    static ConceptType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
 
