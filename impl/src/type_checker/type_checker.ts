@@ -5158,8 +5158,8 @@ class TypeChecker {
             this.raiseErrorIf(sinfo, argoftype.options.length !== 1, "Must be unique concept or entity");
             this.raiseErrorIf(sinfo, !(argoftype.options[0] instanceof ResolvedEntityAtomType) && (argoftype.options[0] as ResolvedConceptAtomType).conceptTypes.length !== 1, "Must be unique concept or entity");
 
-            const ootype = ((argoftype.options[0] instanceof ResolvedEntityAtomType) ? argoftype.options[0].object : (argoftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].concept) as OOPTypeDecl;
-            const oobinds = (argoftype.options[0] instanceof ResolvedEntityAtomType) ? argoftype.options[0].binds : (argoftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds;
+            const ootype = ((argoftype.options[0] instanceof ResolvedEntityAtomType) ? (argoftype.options[0] as ResolvedEntityAtomType).object : (argoftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].concept) as OOPTypeDecl;
+            const oobinds = (argoftype.options[0] instanceof ResolvedEntityAtomType) ? (argoftype.options[0] as ResolvedEntityAtomType).binds : (argoftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds;
             
             if (ootype.attributes.includes("__constructable")) {
                 //check for constructable special case here
