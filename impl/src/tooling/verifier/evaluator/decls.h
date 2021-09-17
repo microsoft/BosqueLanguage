@@ -67,46 +67,6 @@ enum class TypeTag
     UnionTag
 };
 
-struct NumericFuzzLimits
-{
-    uint16_t nat_max;
-    int16_t int_min;
-    int16_t int_max;
-
-    double float_min;
-    double float_max;
-    double decimal_min;
-    double decimal_max;
-
-    uint64_t iso_time_min;
-    uint64_t iso_time_max;
-    uint16_t ltime_max;
-
-    uint16_t re_repeat_max;
-    uint16_t strlen_max;
-    uint16_t container_max;
-};
-
-class FuzzInfo
-{
-public:
-    const APIModule* apimodule;
-    const NumericFuzzLimits limits;
-
-    std::map<std::string, std::vector<std::pair<std::string, json>>> reuse;
-
-    bool hasConstantsForType(std::string tag) const;
-    json pickConstantForType(std::string tag, RandGenerator& rnd) const;
-
-    bool hasReuseForType(std::string tag) const;
-    void addReuseForType(std::string tag, json j);
-    json pickReuseForType(std::string tag, RandGenerator& rnd) const;
-
-    bool sampleKnownOpt(std::string tag, RandGenerator& rnd, json& j);
-
-    FuzzInfo(const APIModule* apimodule, NumericFuzzLimits limits) : limits(limits) {;}
-};
-
 z3::func_decl getArgContextConstructor(const APIModule* apimodule, z3::context& c, const char* fname, const z3::sort& ressort);
 z3::expr genInitialContextArg(const APIModule* apimodule, z3::context& c);
 z3::expr genInitialContextResult(const APIModule* apimodule, z3::context& c);
@@ -166,162 +126,6 @@ public:
     std::optional<std::string> parseToDecimalNumber(json j) const;
 };
 
-////
-//Regex
-
-enum class SpecialCharKind 
-{
-    Wildcard = 0x0,
-    WhiteSpace
-};
-
-class BSQRegexOpt
-{
-public:
-    BSQRegexOpt() {;}
-    virtual ~BSQRegexOpt() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const = 0;
-
-    static BSQRegexOpt* parse(json j);
-};
-
-class BSQLiteralRe : public BSQRegexOpt
-{
-public:
-    const std::string restr;
-    const std::string escstr;
-    const std::vector<uint8_t> litstr;
-
-    BSQLiteralRe(std::string restr, std::string escstr, std::vector<uint8_t> litstr) : BSQRegexOpt(), restr(restr), escstr(escstr), litstr(litstr) {;}
-    virtual ~BSQLiteralRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQLiteralRe* parse(json j);
-};
-
-class BSQCharRangeRe : public BSQRegexOpt
-{
-public:
-    const uint64_t low;
-    const uint64_t high;
-
-    BSQCharRangeRe(uint64_t low, uint64_t high) : BSQRegexOpt(), low(low), high(high) {;}
-    virtual ~BSQCharRangeRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQCharRangeRe* parse(json j);
-};
-
-class BSQCharClassRe : public BSQRegexOpt
-{
-public:
-    const SpecialCharKind kind;
-
-    BSQCharClassRe(SpecialCharKind kind) : BSQRegexOpt(), kind(kind) {;}
-    virtual ~BSQCharClassRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQCharClassRe* parse(json j);
-};
-
-class BSQStarRepeatRe : public BSQRegexOpt
-{
-public:
-    const BSQRegexOpt* opt;
-
-    BSQStarRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
-    virtual ~BSQStarRepeatRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQStarRepeatRe* parse(json j);
-};
-
-class BSQPlusRepeatRe : public BSQRegexOpt
-{
-public:
-    const BSQRegexOpt* opt;
-
-    BSQPlusRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
-    virtual ~BSQPlusRepeatRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQPlusRepeatRe* parse(json j);
-};
-
-class BSQRangeRepeatRe : public BSQRegexOpt
-{
-public:
-    const uint32_t low;
-    const uint32_t high;
-    const BSQRegexOpt* opt;
-
-    BSQRangeRepeatRe(uint32_t low, uint32_t high, const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt), low(low), high(high) {;}
-    virtual ~BSQRangeRepeatRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQRangeRepeatRe* parse(json j);
-};
-
-class BSQOptionalRe : public BSQRegexOpt
-{
-public:
-    const BSQRegexOpt* opt;
-
-    BSQOptionalRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
-    virtual ~BSQOptionalRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQOptionalRe* parse(json j);
-};
-
-class BSQAlternationRe : public BSQRegexOpt
-{
-public:
-    const std::vector<const BSQRegexOpt*> opts;
-
-    BSQAlternationRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
-    virtual ~BSQAlternationRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQAlternationRe* parse(json j);
-};
-
-class BSQSequenceRe : public BSQRegexOpt
-{
-public:
-    const std::vector<const BSQRegexOpt*> opts;
-
-    BSQSequenceRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
-    virtual ~BSQSequenceRe() {;}
-
-    virtual std::string generate(RandGenerator& rnd, FuzzInfo& finfo) const override final;
-
-    static BSQSequenceRe* parse(json j);
-};
-
-class BSQRegex
-{
-public:
-    const std::string restr;
-    const BSQRegexOpt* re;
-
-    BSQRegex(std::string restr, const BSQRegexOpt* re): restr(restr), re(re) {;}
-    ~BSQRegex() {;}
-
-    std::string generate(RandGenerator& rnd, FuzzInfo& finfo);
-
-    static BSQRegex* parse(json j);
-};
-
 class IType
 {
 public:
@@ -331,8 +135,6 @@ public:
     virtual ~IType() {;}
 
     static IType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const = 0;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const = 0;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const = 0;
@@ -355,7 +157,19 @@ public:
 
     static NoneType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class NothingType : public IGroundedType
+{
+public:
+    NothingType() : IGroundedType("NSCore::Nothing") {;}
+    virtual ~NothingType() {;}
+
+    static NothingType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -371,8 +185,6 @@ public:
 
     static BoolType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
@@ -386,8 +198,6 @@ public:
     virtual ~NatType() {;}
 
     static NatType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -403,8 +213,6 @@ public:
 
     static IntType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
@@ -418,8 +226,6 @@ public:
     virtual ~BigNatType() {;}
 
     static BigNatType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -435,8 +241,6 @@ public:
 
     static BigIntType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
@@ -450,8 +254,6 @@ public:
     virtual ~RationalType() {;}
 
     static RationalType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -467,8 +269,6 @@ public:
 
     static FloatType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
@@ -482,8 +282,6 @@ public:
     virtual ~DecimalType() {;}
 
     static DecimalType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -499,7 +297,21 @@ public:
 
     static StringType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class PrimitiveOfType : public IGroundedType
+{
+public:
+    const std::string oftype;
+
+    PrimitiveOfType(std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    virtual ~PrimitiveOfType() {;}
+
+    static PrimitiveOfType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -511,33 +323,11 @@ class StringOfType : public IGroundedType
 {
 public:
     const std::string validator;
-    const BSQRegex* re_validate;
 
-    StringOfType(std::string name, std::string validator, const BSQRegex* re_validate) : IGroundedType(name), validator(validator), re_validate(re_validate) {;}
+    StringOfType(std::string name, std::string validator) : IGroundedType(name), validator(validator) {;}
     virtual ~StringOfType() {;}
 
     static StringOfType* jparse(json j);
-
-   virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
-    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
-
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
-};
-
-class NumberOfType : public IGroundedType
-{
-public:
-    const std::string primitive;
-    const std::string oftype; //either another numberof or a primitive
-
-    NumberOfType(std::string name, std::string primitive, std::string oftype) : IGroundedType(name), primitive(primitive), oftype(oftype) {;}
-    virtual ~NumberOfType() {;}
-
-    static NumberOfType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -549,14 +339,11 @@ class DataStringType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const bool isvalue;
 
-    DataStringType(std::string name, std::string oftype, bool isvalue) : IGroundedType(name), oftype(oftype), isvalue(isvalue) {;}
+    DataStringType(std::string name, std::string oftype) : IGroundedType(name), oftype(oftype) {;}
     virtual ~DataStringType() {;}
 
     static DataStringType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -572,23 +359,19 @@ public:
 
     static ByteBufferType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
     virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
 };
 
-class BufferType : public IGroundedType
+class BufferOfType : public IGroundedType
 {
 public:
-    BufferType(std::string name) : IGroundedType(name) {;}
-    virtual ~BufferType() {;}
+    BufferOfType(std::string name) : IGroundedType(name) {;}
+    virtual ~BufferOfType() {;}
 
-    static BufferType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    static BufferOfType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -604,8 +387,6 @@ public:
 
     static DataBufferType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
@@ -619,8 +400,6 @@ public:
     virtual ~ISOTimeType() {;}
 
     static ISOTimeType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -636,8 +415,6 @@ public:
 
     static LogicalTimeType* jparse(json j);
 
-   virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j,const z3::expr& ctx,  z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
@@ -651,8 +428,6 @@ public:
     virtual ~UUIDType() {;}
 
     static UUIDType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -668,8 +443,6 @@ public:
 
     static ContentHashType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
-
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
 
@@ -679,15 +452,12 @@ public:
 class TupleType : public IGroundedType
 {
 public:
-    const bool isvalue;
     const std::vector<std::string> ttypes;
 
-    TupleType(std::string name, bool isvalue, std::vector<std::string> ttypes) : IGroundedType(name), isvalue(isvalue), ttypes(ttypes) {;}
+    TupleType(std::string name, std::vector<std::string> ttypes) : IGroundedType(name), ttypes(ttypes) {;}
     virtual ~TupleType() {;}
 
     static TupleType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -698,16 +468,61 @@ public:
 class RecordType : public IGroundedType
 {
 public:
-    const bool isvalue;
     const std::vector<std::string> props;
     const std::vector<std::string> ttypes;
 
-    RecordType(std::string name, bool isvalue, std::vector<std::string> props, std::vector<std::string> ttypes) : IGroundedType(name), isvalue(isvalue), props(props), ttypes(ttypes) {;}
+    RecordType(std::string name, std::vector<std::string> props, std::vector<std::string> ttypes) : IGroundedType(name), props(props), ttypes(ttypes) {;}
     virtual ~RecordType() {;}
 
     static RecordType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class SomethingType : public IGroundedType
+{
+public:
+    const std::string oftype;
+
+    SomethingType(std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    virtual ~SomethingType() {;}
+
+    static SomethingType* jparse(json j);
+
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class OkType : public IGroundedType
+{
+public:
+    const std::string oftype;
+
+    OkType(std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    virtual ~OkType() {;}
+
+    static OkType* jparse(json j);
+
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class ErrType : public IGroundedType
+{
+public:
+    const std::string oftype;
+
+    ErrType(std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    virtual ~ErrType() {;}
+
+    static ErrType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -725,7 +540,71 @@ public:
 
     static ListType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class StackType : public IGroundedType
+{
+public:
+    const std::string ultype;
+
+    StackType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    virtual ~StackType() {;}
+
+    static StackType* jparse(json j);
+
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+
+class QueueType : public IGroundedType
+{
+public:
+    const std::string ultype;
+
+    QueueType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    virtual ~QueueType() {;}
+
+    static QueueType* jparse(json j);
+
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class SetType : public IGroundedType
+{
+public:
+    const std::string ultype;
+
+    SetType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    virtual ~SetType() {;}
+
+    static SetType* jparse(json j);
+
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+
+class MapType : public IGroundedType
+{
+public:
+    const std::string ultype;
+
+    MapType(std::string name, std::string ultype) : IGroundedType(name), ultype(ultype) {;}
+    virtual ~MapType() {;}
+
+    static MapType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -744,7 +623,22 @@ public:
 
     static EnumType* jparse(json j);
 
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
+    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
+
+    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+};
+
+class EntityType : public IGroundedType
+{
+public:
+    const std::vector<std::string> fields;
+    const std::vector<std::string> ttypes;
+
+    EntityType(std::string name, std::vector<std::string> fields, std::vector<std::string> ttypes) : IGroundedType(name), fields(fields), ttypes(ttypes) {;}
+    virtual ~EntityType() {;}
+
+    static EntityType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;
@@ -761,8 +655,6 @@ public:
     virtual ~UnionType() {;}
 
     static UnionType* jparse(json j);
-
-    virtual json fuzz(FuzzInfo& finfo, RandGenerator& rnd) const override final;
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
     virtual std::optional<std::string> tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const override final;

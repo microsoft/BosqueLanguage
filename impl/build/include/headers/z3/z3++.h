@@ -253,8 +253,13 @@ namespace z3 {
            \brief Return the Bit-vector sort of size \c sz. That is, the sort for bit-vectors of size \c sz.
         */
         sort bv_sort(unsigned sz);
+
         /**
-           \brief Return the sort for ASCII strings.
+           \brief Return the sort for Unicode characters.
+         */
+        sort char_sort();
+        /**
+           \brief Return the sort for Unicode strings.
          */
         sort string_sort();
         /**
@@ -501,8 +506,7 @@ namespace z3 {
     public:
         ast(context & c):object(c), m_ast(0) {}
         ast(context & c, Z3_ast n):object(c), m_ast(n) { Z3_inc_ref(ctx(), m_ast); }
-        ast(ast const & s):object(s), m_ast(s.m_ast) { Z3_inc_ref(ctx(), m_ast); }
-        ast(ast && s) noexcept : object(std::forward<object>(s)), m_ast(s.m_ast) { s.m_ast = nullptr; }
+        ast(ast const & s) :object(s), m_ast(s.m_ast) { Z3_inc_ref(ctx(), m_ast); }
         ~ast() { if (m_ast) Z3_dec_ref(*m_ctx, m_ast); }
         operator Z3_ast() const { return m_ast; }
         operator bool() const { return m_ast != 0; }
@@ -512,14 +516,6 @@ namespace z3 {
                 Z3_dec_ref(ctx(), m_ast);
             object::operator=(s);
             m_ast = s.m_ast;
-            return *this;
-        }
-        ast & operator=(ast && s) noexcept {
-            if (this != &s) {
-                object::operator=(std::forward<object>(s));
-                m_ast = s.m_ast;
-                s.m_ast = nullptr;
-            }
             return *this;
         }
         Z3_ast_kind kind() const { Z3_ast_kind r = Z3_get_ast_kind(ctx(), m_ast); check_error(); return r; }
@@ -603,6 +599,7 @@ namespace z3 {
         iterator begin() const noexcept { return iterator(this, 0); }
         iterator end() const { return iterator(this, size()); }
         friend std::ostream & operator<<(std::ostream & out, ast_vector_tpl const & v) { out << Z3_ast_vector_to_string(v.ctx(), v); return out; }
+        std::string to_string() const { return std::string(Z3_ast_vector_to_string(ctx(), m_vector)); }
     };
 
 
@@ -1213,6 +1210,7 @@ namespace z3 {
         friend expr implies(bool a, expr const & b);
 
         friend expr mk_or(expr_vector const& args);
+        friend expr mk_xor(expr_vector const& args);
         friend expr mk_and(expr_vector const& args);
 
         friend expr ite(expr const & c, expr const & t, expr const & e);
@@ -1437,7 +1435,37 @@ namespace z3 {
             check_error();
             return expr(ctx(), r);
         }
-
+        expr ubvtos() const {
+            Z3_ast r = Z3_mk_ubv_to_str(ctx(), *this);
+            check_error();
+            return expr(ctx(), r);
+        }
+        expr sbvtos() const {
+            Z3_ast r = Z3_mk_sbv_to_str(ctx(), *this);
+            check_error();
+            return expr(ctx(), r);
+        }
+        expr char_to_int() const {
+            Z3_ast r = Z3_mk_char_to_int(ctx(), *this);
+            check_error();
+            return expr(ctx(), r);
+        }
+        expr char_to_bv() const {
+            Z3_ast r = Z3_mk_char_to_bv(ctx(), *this);
+            check_error();
+            return expr(ctx(), r);
+        }
+        expr char_from_bv() const {
+            Z3_ast r = Z3_mk_char_from_bv(ctx(), *this);
+            check_error();
+            return expr(ctx(), r);
+        }
+        expr is_digit() const {
+            Z3_ast r = Z3_mk_char_is_digit(ctx(), *this);
+            check_error();
+            return expr(ctx(), r);
+        }
+ 
         friend expr range(expr const& lo, expr const& hi);
         /**
            \brief create a looping regular expression.
@@ -1486,6 +1514,26 @@ namespace z3 {
            \brief Apply substitution. Replace bound variables by expressions.
         */
         expr substitute(expr_vector const& dst);
+
+
+	class iterator {
+            expr& e;
+            unsigned i;
+        public:
+            iterator(expr& e, unsigned i): e(e), i(i) {}
+            bool operator==(iterator const& other) noexcept {
+                return i == other.i;
+            }
+            bool operator!=(iterator const& other) noexcept {
+                return i != other.i;
+            }
+            expr operator*() const { return e.arg(i); }
+            iterator& operator++() { ++i; return *this; }
+            iterator operator++(int) { assert(false); return *this; }
+        };
+
+        iterator begin() { return iterator(*this, 0); }
+        iterator end() { return iterator(*this, is_app() ? num_args() : 0); }
 
    };
 
@@ -1864,11 +1912,15 @@ namespace z3 {
         Z3_ast r;
         if (a.is_int()) {
             expr zero = a.ctx().int_val(0);
-            r = Z3_mk_ite(a.ctx(), Z3_mk_ge(a.ctx(), a, zero), a, -a);
+	    expr ge = a >= zero;
+	    expr na = -a;
+            r = Z3_mk_ite(a.ctx(), ge, a, na);	    
         }
         else if (a.is_real()) {
             expr zero = a.ctx().real_val(0);
-            r = Z3_mk_ite(a.ctx(), Z3_mk_ge(a.ctx(), a, zero), a, -a);
+	    expr ge = a >= zero;
+	    expr na = -a;
+            r = Z3_mk_ite(a.ctx(), ge, a, na);
         }
         else {
             r = Z3_mk_fpa_abs(a.ctx(), a); 
@@ -2372,6 +2424,14 @@ namespace z3 {
         Z3_ast r = Z3_mk_and(args.ctx(), _args.size(), _args.ptr());
         args.check_error();
         return expr(args.ctx(), r);
+    }
+    inline expr mk_xor(expr_vector const& args) {
+        if (args.empty())
+            return args.ctx().bool_val(false);
+        expr r = args[0];
+        for (unsigned i = 1; i < args.size(); ++i)
+            r = r ^ args[i];
+        return r;
     }
 
 
@@ -3199,6 +3259,7 @@ namespace z3 {
     inline sort context::real_sort() { Z3_sort s = Z3_mk_real_sort(m_ctx); check_error(); return sort(*this, s); }
     inline sort context::bv_sort(unsigned sz) { Z3_sort s = Z3_mk_bv_sort(m_ctx, sz); check_error(); return sort(*this, s); }
     inline sort context::string_sort() { Z3_sort s = Z3_mk_string_sort(m_ctx); check_error(); return sort(*this, s); }
+    inline sort context::char_sort() { Z3_sort s = Z3_mk_char_sort(m_ctx); check_error(); return sort(*this, s); }
     inline sort context::seq_sort(sort& s) { Z3_sort r = Z3_mk_seq_sort(m_ctx, s); check_error(); return sort(*this, r); }
     inline sort context::re_sort(sort& s) { Z3_sort r = Z3_mk_re_sort(m_ctx, s); check_error(); return sort(*this, r); }
     inline sort context::fpa_sort(unsigned ebits, unsigned sbits) { Z3_sort s = Z3_mk_fpa_sort(m_ctx, ebits, sbits); check_error(); return sort(*this, s); }
@@ -3862,8 +3923,11 @@ namespace z3 {
 
 
     public:
-        user_propagator_base(solver* s): s(s), c(nullptr) {}
-        user_propagator_base(Z3_context c): s(nullptr), c(c) {}
+        user_propagator_base(Z3_context c) : s(nullptr), c(c) {}
+        
+        user_propagator_base(solver* s): s(s), c(nullptr) {
+              Z3_solver_propagate_init(ctx(), *s, this, push_eh, pop_eh, fresh_eh);
+	    }
 
         virtual void push() = 0;
         virtual void pop(unsigned num_scopes) = 0;
