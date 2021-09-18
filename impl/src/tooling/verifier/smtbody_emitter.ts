@@ -2054,378 +2054,378 @@ class SMTBodyEmitter {
 
         switch (op) {
             //op unary +
-            case "NSCore::+=prefix=(NSCore::Int)": {
+            case "__i__NSCore::+=prefix=(NSCore::Int)": {
                 rtype = this.typegen.getMIRType("NSCore::Int");
                 smte = args[0];
                 break;
             }
-            case "NSCore::+=prefix=(NSCore::Nat)": {
+            case "__i__NSCore::+=prefix=(NSCore::Nat)": {
                 rtype = this.typegen.getMIRType("NSCore::Nat");
                 smte = args[0];
                 break;
             }
-            case "NSCore::+=prefix=(NSCore::BigInt)": {
+            case "__i__NSCore::+=prefix=(NSCore::BigInt)": {
                 rtype = this.typegen.getMIRType("NSCore::BigInt");
                 smte = args[0];
                 break;
             }
-            case "NSCore::+=prefix=(NSCore::BigNat)": {
+            case "__i__NSCore::+=prefix=(NSCore::BigNat)": {
                 rtype = this.typegen.getMIRType("NSCore::BigNat");
                 smte = args[0];
                 break;
             }
-            case "NSCore::+=prefix=(NSCore::Rational)": {
+            case "__i__NSCore::+=prefix=(NSCore::Rational)": {
                 rtype = this.typegen.getMIRType("NSCore::Rational");
                 smte = args[0];
                 break;
             }
-            case "NSCore::+=prefix=(NSCore::Float)": {
+            case "__i__NSCore::+=prefix=(NSCore::Float)": {
                 rtype = this.typegen.getMIRType("NSCore::Float");
                 smte = args[0];
                 break;
             }
-            case "NSCore::+=prefix=(NSCore::Decimal)": {
+            case "__i__NSCore::+=prefix=(NSCore::Decimal)": {
                 rtype = this.typegen.getMIRType("NSCore::Decimal");
                 smte = args[0];
                 break;
             }
             //op unary -
-            case "NSCore::-=prefix=(NSCore::Int)": {
+            case "__i__NSCore::-=prefix=(NSCore::Int)": {
                 rtype = this.typegen.getMIRType("NSCore::Int");
                 smte = this.processGenerateSafeNegate_Int(args);
                 erropt = true;
                 break;
             }
-            case "NSCore::-=prefix=(NSCore::BigInt)": {
+            case "__i__NSCore::-=prefix=(NSCore::BigInt)": {
                 rtype = this.typegen.getMIRType("NSCore::BigInt");
                 smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
                 break;
             }
-            case "NSCore::-=prefix=(NSCore::Rational)": {
+            case "__i__NSCore::-=prefix=(NSCore::Rational)": {
                 rtype = this.typegen.getMIRType("NSCore::Rational");
                 smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
                 break;
             }
-            case "NSCore::-=prefix=(NSCore::Float)": {
+            case "__i__NSCore::-=prefix=(NSCore::Float)": {
                 rtype = this.typegen.getMIRType("NSCore::Float");
                 smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
                 break;
             }
-            case "NSCore::-=prefix=(NSCore::Decimal)": {
+            case "__i__NSCore::-=prefix=(NSCore::Decimal)": {
                 rtype = this.typegen.getMIRType("NSCore::Decimal");
                 smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
                 break;
             }
             //op infix +
-            case "NSCore::+=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::+=infix=(NSCore::Int, NSCore::Int)": {
                 rtype = this.typegen.getMIRType("NSCore::Int");
                 smte = this.processGenerateSafeAdd_Int(args);
                 erropt = true;
                 break;
             }
-            case "NSCore::+=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::+=infix=(NSCore::Nat, NSCore::Nat)": {
                 rtype = this.typegen.getMIRType("NSCore::Nat");
                 smte = this.processGenerateSafeAdd_Nat(args);
                 erropt = true;
                 break;
             }
-            case "NSCore::+=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__NSCore::+=infix=(NSCore::BigInt, NSCore::BigInt)": {
                 rtype = this.typegen.getMIRType("NSCore::BigInt");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "NSCore::+=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::+=infix=(NSCore::BigNat, NSCore::BigNat)": {
                 rtype = this.typegen.getMIRType("NSCore::BigNat");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "NSCore::+=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::+=infix=(NSCore::Rational, NSCore::Rational)": {
                 rtype = this.typegen.getMIRType("NSCore::Rational");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "NSCore::+=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__NSCore::+=infix=(NSCore::Float, NSCore::Float)": {
                 rtype = this.typegen.getMIRType("NSCore::Float");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "NSCore::+=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__NSCore::+=infix=(NSCore::Decimal, NSCore::Decimal)": {
                 rtype = this.typegen.getMIRType("NSCore::Decmial");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
             //op infix -
-            case "NSCore::-=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::-=infix=(NSCore::Int, NSCore::Int)": {
                 rtype = this.typegen.getMIRType("NSCore::Int");
                 smte = this.processGenerateSafeSub_Int(args);
                 erropt = true;
                 break;
             }
-            case "NSCore::-=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::-=infix=(NSCore::Nat, NSCore::Nat)": {
                 rtype = this.typegen.getMIRType("NSCore::Nat");
                 smte = this.processGenerateSafeSub_Nat(args);
                 erropt = true;
                 break;
             }
-            case "NSCore::-=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__NSCore::-=infix=(NSCore::BigInt, NSCore::BigInt)": {
                 rtype = this.typegen.getMIRType("NSCore::BigInt");
                 smte = new SMTCallSimple("-", args);
                 break;
             }
-            case "NSCore::-=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::-=infix=(NSCore::BigNat, NSCore::BigNat)": {
                 rtype = this.typegen.getMIRType("NSCore::BigNat");
                 smte = new SMTCallSimple("-", args);
                 break
             }
-            case "NSCore::-=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::-=infix=(NSCore::Rational, NSCore::Rational)": {
                 rtype = this.typegen.getMIRType("NSCore::Rational");
                 smte = new SMTCallSimple("-", args);
                 break;
             }
-            case "NSCore::-=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__NSCore::-=infix=(NSCore::Float, NSCore::Float)": {
                 rtype = this.typegen.getMIRType("NSCore::Float");
                 smte = new SMTCallSimple("-", args);
                 break;
             }
-            case "NSCore::-=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__NSCore::-=infix=(NSCore::Decimal, NSCore::Decimal)": {
                 rtype = this.typegen.getMIRType("NSCore::Decmial");
                 smte = new SMTCallSimple("-", args);
                 break;
             }
             //op infix *
-            case "NSCore::*=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::*=infix=(NSCore::Int, NSCore::Int)": {
                 rtype = this.typegen.getMIRType("NSCore::Int");
                 smte = this.processGenerateSafeMult_Int(args);
                 erropt = true;
                 break;
             }
-            case "NSCore::*=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::*=infix=(NSCore::Nat, NSCore::Nat)": {
                 rtype = this.typegen.getMIRType("NSCore::Nat");
                 smte = this.processGenerateSafeMult_Nat(args);
                 erropt = true;
                 break;
             }
-            case "NSCore::*=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__NSCore::*=infix=(NSCore::BigInt, NSCore::BigInt)": {
                 rtype = this.typegen.getMIRType("NSCore::BigInt");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "NSCore::*=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::*=infix=(NSCore::BigNat, NSCore::BigNat)": {
                 rtype = this.typegen.getMIRType("NSCore::BigNat");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "NSCore::*=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::*=infix=(NSCore::Rational, NSCore::Rational)": {
                 rtype = this.typegen.getMIRType("NSCore::Rational");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "NSCore::*=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__NSCore::*=infix=(NSCore::Float, NSCore::Float)": {
                 rtype = this.typegen.getMIRType("NSCore::Float");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "NSCore::*=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__NSCore::*=infix=(NSCore::Decimal, NSCore::Decimal)": {
                 rtype = this.typegen.getMIRType("NSCore::Decmial");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
             //op infix /
-            case "NSCore::/=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::/=infix=(NSCore::Int, NSCore::Int)": {
                 rtype = this.typegen.getMIRType("NSCore::Int");
                 smte = this.processGenerateSafeDiv_Int(sinfo, args);
                 erropt = true;
                 break;
             }
-            case "NSCore::/=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::/=infix=(NSCore::Nat, NSCore::Nat)": {
                 rtype = this.typegen.getMIRType("NSCore::Nat");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("bvudiv", args));
                 erropt = true;
                 break;
             }
-            case "NSCore::/=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__NSCore::/=infix=(NSCore::BigInt, NSCore::BigInt)": {
                 rtype = this.typegen.getMIRType("NSCore::BigInt");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigInt@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
-            case "NSCore::/=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::/=infix=(NSCore::BigNat, NSCore::BigNat)": {
                 rtype = this.typegen.getMIRType("NSCore::BigNat");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigNat@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break
             }
-            case "NSCore::/=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::/=infix=(NSCore::Rational, NSCore::Rational)": {
                 rtype = this.typegen.getMIRType("NSCore::Rational");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BRational@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
-            case "NSCore::/=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__NSCore::/=infix=(NSCore::Float, NSCore::Float)": {
                 rtype = this.typegen.getMIRType("NSCore::Float");
                 smte = new SMTCallSimple("/", args);
                 break;
             }
-            case "NSCore::/=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__NSCore::/=infix=(NSCore::Decimal, NSCore::Decimal)": {
                 rtype = this.typegen.getMIRType("NSCore::Decmial");
                 smte = new SMTCallSimple("/", args);
                 break;
             }
             //op infix ==
-            case "NSCore::===infix=(NSCore::Int, NSCore::Int)":
-            case "NSCore::===infix=(NSCore::Nat, NSCore::Nat)":
-            case "NSCore::===infix=(NSCore::BigInt, NSCore::BigInt)":
-            case "NSCore::===infix=(NSCore::BigNat, NSCore::BigNat)":
-            case "NSCore::===infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::===infix=(NSCore::Int, NSCore::Int)":
+            case "__i__NSCore::===infix=(NSCore::Nat, NSCore::Nat)":
+            case "__i__NSCore::===infix=(NSCore::BigInt, NSCore::BigInt)":
+            case "__i__NSCore::===infix=(NSCore::BigNat, NSCore::BigNat)":
+            case "__i__NSCore::===infix=(NSCore::Rational, NSCore::Rational)": {
                 smte = SMTCallSimple.makeEq(args[0], args[1]);
                 break;
             }
             //op infix !=
-            case "NSCore::!==infix=(NSCore::Int, NSCore::Int)":
-            case "NSCore::!==infix=(NSCore::Nat, NSCore::Nat)":
-            case "NSCore::!==infix=(NSCore::BigInt, NSCore::BigInt)":
-            case "NSCore::!==infix=(NSCore::BigNat, NSCore::BigNat)":
-            case "NSCore::!==infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::!==infix=(NSCore::Int, NSCore::Int)":
+            case "__i__NSCore::!==infix=(NSCore::Nat, NSCore::Nat)":
+            case "__i__NSCore::!==infix=(NSCore::BigInt, NSCore::BigInt)":
+            case "__i__NSCore::!==infix=(NSCore::BigNat, NSCore::BigNat)":
+            case "__i__NSCore::!==infix=(NSCore::Rational, NSCore::Rational)": {
                 smte = SMTCallSimple.makeNotEq(args[0], args[1]);
                 break;
             }
             //op infix <
-            case "NSCore::<=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::<=infix=(NSCore::Int, NSCore::Int)": {
                 smte = new SMTCallSimple("bvslt", args);
                 break;
             }
-            case "NSCore::<=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::<=infix=(NSCore::Nat, NSCore::Nat)": {
                 smte = new SMTCallSimple("bvult", args);
                 break;
             }
-            case "NSCore::<=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__NSCore::<=infix=(NSCore::BigInt, NSCore::BigInt)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "NSCore::<=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::<=infix=(NSCore::BigNat, NSCore::BigNat)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "NSCore::<=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::<=infix=(NSCore::Rational, NSCore::Rational)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "NSCore::<=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__NSCore::<=infix=(NSCore::Float, NSCore::Float)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "NSCore::<=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__NSCore::<=infix=(NSCore::Decimal, NSCore::Decimal)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
             //op infix >
-            case "NSCore::>=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::>=infix=(NSCore::Int, NSCore::Int)": {
                 smte = new SMTCallSimple("bvsgt", args);
                 break;
             }
-            case "NSCore::>=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::>=infix=(NSCore::Nat, NSCore::Nat)": {
                 smte = new SMTCallSimple("bvugt", args);
                 break;
             }
-            case "NSCore::>=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__NSCore::>=infix=(NSCore::BigInt, NSCore::BigInt)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "NSCore::>=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::>=infix=(NSCore::BigNat, NSCore::BigNat)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "NSCore::>=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::>=infix=(NSCore::Rational, NSCore::Rational)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "NSCore::>=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__NSCore::>=infix=(NSCore::Float, NSCore::Float)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "NSCore::>=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__NSCore::>=infix=(NSCore::Decimal, NSCore::Decimal)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
             //op infix <=
-            case "NSCore::<==infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::<==infix=(NSCore::Int, NSCore::Int)": {
                 smte = new SMTCallSimple("bvsle", args);
                 break;
             }
-            case "NSCore::<==infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::<==infix=(NSCore::Nat, NSCore::Nat)": {
                 smte = new SMTCallSimple("bvule", args);
                 break;
             }
-            case "NSCore::<==infix=(NSCore::BigInt, NSCore::BigInt)":  {
+            case "__i__NSCore::<==infix=(NSCore::BigInt, NSCore::BigInt)":  {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "NSCore::<==infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::<==infix=(NSCore::BigNat, NSCore::BigNat)": {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "NSCore::<==infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__NSCore::<==infix=(NSCore::Rational, NSCore::Rational)": {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "NSCore::<==infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__NSCore::<==infix=(NSCore::Float, NSCore::Float)": {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "NSCore::<==infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__NSCore::<==infix=(NSCore::Decimal, NSCore::Decimal)": {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
             //op infix >=
-            case "NSCore::>==infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__NSCore::>==infix=(NSCore::Int, NSCore::Int)": {
                 smte = new SMTCallSimple("bvsge", args);
                 break;
             }
-            case "NSCore::>==infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__NSCore::>==infix=(NSCore::Nat, NSCore::Nat)": {
                 smte = new SMTCallSimple("bvuge", args);
                 break;
             }
-            case "NSCore::>==infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__NSCore::>==infix=(NSCore::BigInt, NSCore::BigInt)": {
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "NSCore::>==infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__NSCore::>==infix=(NSCore::BigNat, NSCore::BigNat)": {
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "NSCore::>==infix=(NSCore::Rational, NSCore::Rational)":{
+            case "__i__NSCore::>==infix=(NSCore::Rational, NSCore::Rational)":{
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "NSCore::>==infix=(NSCore::Float, NSCore::Float)":{
+            case "__i__NSCore::>==infix=(NSCore::Float, NSCore::Float)":{
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "NSCore::>==infix=(NSCore::Decimal, NSCore::Decimal)":{
+            case "__i__NSCore::>==infix=(NSCore::Decimal, NSCore::Decimal)":{
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "NSCore::===infix=(NSCore::StringPos, NSCore::StringPos)":{
+            case "__i__NSCore::===infix=(NSCore::StringPos, NSCore::StringPos)":{
                 smte = SMTCallSimple.makeEq(args[0], args[1]);
                 break;
             }
-            case "NSCore::!==infix=(NSCore::StringPos, NSCore::StringPos)":{
+            case "__i__NSCore::!==infix=(NSCore::StringPos, NSCore::StringPos)":{
                 smte = SMTCallSimple.makeNotEq(args[0], args[1]);
                 break;
             }
-            case "NSCore::<=infix=(NSCore::StringPos, NSCore::StringPos)":{
+            case "__i__NSCore::<=infix=(NSCore::StringPos, NSCore::StringPos)":{
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "NSCore::>=infix=(NSCore::StringPos, NSCore::StringPos)":{
+            case "__i__NSCore::>=infix=(NSCore::StringPos, NSCore::StringPos)":{
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "NSCore::<==infix=(NSCore::StringPos, NSCore::StringPos)":{
+            case "__i__NSCore::<==infix=(NSCore::StringPos, NSCore::StringPos)":{
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "NSCore::>==infix=(NSCore::StringPos, NSCore::StringPos)":{
+            case "__i__NSCore::>==infix=(NSCore::StringPos, NSCore::StringPos)":{
                 smte = new SMTCallSimple(">=", args);
                 break;
             }

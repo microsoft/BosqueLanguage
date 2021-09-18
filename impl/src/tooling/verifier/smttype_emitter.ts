@@ -54,6 +54,7 @@ class SMTTypeEmitter {
     readonly vopts: VerifierOptions;
 
     private namectr: number = 0;
+    private allshortnames = new Set<string>();
     private mangledTypeNameMap: Map<string, string> = new Map<string, string>();
     private mangledFunctionNameMap: Map<string, string> = new Map<string, string>();
     private mangledGlobalNameMap: Map<string, string> = new Map<string, string>();
@@ -66,12 +67,22 @@ class SMTTypeEmitter {
         this.mangledTypeNameMap = mangledTypeNameMap || new Map<string, string>();
         this.mangledFunctionNameMap = mangledFunctionNameMap || new Map<string, string>();
         this.mangledGlobalNameMap = mangledGlobalNameMap || new Map<string, string>();
+
+        this.allshortnames = new Set<string>();
+        this.mangledTypeNameMap.forEach((sn) => this.allshortnames.add(sn));
+        this.mangledFunctionNameMap.forEach((sn) => this.allshortnames.add(sn));
+        this.mangledGlobalNameMap.forEach((sn) => this.allshortnames.add(sn));
     }
 
     internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
         if (!this.mangledTypeNameMap.has(keyid)) {
-            const cleanname = shortname.replace(/[<>, \[\]:]/g, "_") + "$" + this.namectr++;
+            let cleanname = shortname.replace(/[<>, \[\]:]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
             this.mangledTypeNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
         }
     }
 
@@ -83,8 +94,13 @@ class SMTTypeEmitter {
 
     internFunctionName(keyid: MIRInvokeKey, shortname: string) {
         if (!this.mangledFunctionNameMap.has(keyid)) {
-            const cleanname = shortname.replace(/[<>, \[\]:]/g, "_") + "$" + this.namectr++;
+            let cleanname = shortname.replace(/[<>, \[\]:]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
             this.mangledFunctionNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
         }
     }
 
@@ -96,8 +112,13 @@ class SMTTypeEmitter {
 
     internGlobalName(keyid: MIRGlobalKey, shortname: string) {
         if (!this.mangledGlobalNameMap.has(keyid)) {
-            const cleanname = shortname.replace(/[<>, \[\]:]/g, "_") + "$" + this.namectr++;
+            let cleanname = shortname.replace(/[<>, \[\]:]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
             this.mangledGlobalNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
         }
     }
 
@@ -279,7 +300,7 @@ class SMTTypeEmitter {
     }
 
     getSMTConstructorName(tt: MIRType): { cons: string, box: string, bfield: string } {
-        assert(tt.options.length === 0);
+        assert(tt.options.length === 1);
         this.internTypeName(tt.typeID, tt.shortname);
 
         const kfix = this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType")) ? "bsqkey_" : "bsqobject_"
@@ -290,8 +311,6 @@ class SMTTypeEmitter {
             return { cons: `${this.lookupTypeName(tt.typeID)}@cons`, box: `${this.lookupTypeName(tt.typeID)}@box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}_value` };
         }
         else if (this.isUniqueEntityType(tt)) {
-            assert(!(this.assembly.entityDecls.get(tt.typeID) instanceof MIRInternalEntityTypeDecl));
-
             return { cons: `${this.lookupTypeName(tt.typeID)}@cons`, box: `${this.lookupTypeName(tt.typeID)}@box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}_value` };
         }
         else {

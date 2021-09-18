@@ -837,18 +837,6 @@ class SMTEmitter {
     }
 
     private initializeSMTAssembly(assembly: MIRAssembly, entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
-        assembly.typeMap.forEach((tt) => {
-            this.temitter.internTypeName(tt.typeID, tt.shortname);
-        });
-
-        assembly.invokeDecls.forEach((idcl) => {
-            this.temitter.internFunctionName(idcl.ikey, idcl.shortname);
-        });
-
-        assembly.constantDecls.forEach((cdecl) => {
-            this.temitter.internGlobalName(cdecl.gkey, cdecl.shortname);
-        });
-
         const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].ivalue);
         const cginfo = constructCallGraphInfo([entrypoint, ...cinits], assembly);
         const rcg = [...cginfo.topologicalOrder].reverse();
@@ -1170,6 +1158,16 @@ class SMTEmitter {
         const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, errorTrgtPos);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
+        assembly.typeMap.forEach((tt) => {
+            temitter.internTypeName(tt.typeID, tt.shortname);
+        });
+        assembly.invokeDecls.forEach((idcl) => {
+            temitter.internFunctionName(idcl.ikey, idcl.shortname);
+        });
+        assembly.constantDecls.forEach((cdecl) => {
+            temitter.internGlobalName(cdecl.gkey, cdecl.shortname);
+        });
+
         const bemitter = new SMTBodyEmitter(assembly, temitter, numgen, vopts, callsafety, errorTrgtPos);
         const smtassembly = new SMTAssembly(vopts, numgen.int, Number(numgen.hash.bvsize), temitter.lookupFunctionName(entrypoint));
 

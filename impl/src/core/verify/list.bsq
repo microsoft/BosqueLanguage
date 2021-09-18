@@ -39,7 +39,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T ground
 
     function concat(...ll: List<List<T>>): List<T> {
         if(ListFlatOps::s_empty<List<T>>(ll)) {
-            reutrn List<T>@{};
+            return List<T>@{};
         }
         else {
             let count = ListOps::s_size<List<T>>(ll);
@@ -49,7 +49,7 @@ __internal entity List<T> provides Object, Expandoable<T>, APIType when T ground
             elif(count == 2) {
                 return ListOps::s_concat2<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
             }
-            else if(count == 3) {
+            elif(count == 3) {
                 let fl = ListOps::s_concat2<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
                 return ListOps::s_concat2<T>(fl, ListOps::s_safe_get<List<T>>(ll, 2n));
             }

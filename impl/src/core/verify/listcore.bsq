@@ -292,7 +292,7 @@ __internal entity ListFlatOps provides Object {
             return none;
         }
     }
-    recursive? function s_find_pred_idx_3<T>(l: List<T>, bidx: Nat, p: p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+    recursive? function s_find_pred_idx_3<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
         if(p[recursive?](ListFlatOps::s_3at0<T>(l), bidx)) {
             return bidx;
         }
@@ -490,7 +490,7 @@ __internal entity ListFlatOps provides Object {
         let at1 = ListFlatOps::s_2at1<T>(l);
         let pat1 = p[recursive?](at1);
 
-        if(ListOps::s_and2(pat0, pat1) {
+        if(ListOps::s_and2(pat0, pat1)) {
             return l;
         }
         elif(pat0) {
@@ -511,16 +511,16 @@ __internal entity ListFlatOps provides Object {
         let at2 = ListFlatOps::s_3at2<T>(l);
         let pat2 = p[recursive?](at2);
 
-        if(ListOps::s_and3(pat0, pat1, pat2) {
+        if(ListOps::s_and3(pat0, pat1, pat2)) {
             return l;
         }
-        elif(ListOps::s_and2(pat0, pat1) {
+        elif(ListOps::s_and2(pat0, pat1)) {
             return List<T>@{at0, at1};
         }
-        elif(ListOps::s_and2(pat0, pat2) {
+        elif(ListOps::s_and2(pat0, pat2)) {
             return List<T>@{at0, at2};
         }
-        elif(ListOps::s_and2(pat1, pat2) {
+        elif(ListOps::s_and2(pat1, pat2)) {
             return List<T>@{at1, at2};
         }
         elif(pat0) {
@@ -553,7 +553,7 @@ __internal entity ListFlatOps provides Object {
 
     ////
     //s_filter_idx
-    recursive? function s_filter_idx_1<T>(l: List<T>, bidx: Nat p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+    recursive? function s_filter_idx_1<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
         if(p[recursive?](ListFlatOps::s_1at0<T>(l), bidx)) {
             return l;
         }
@@ -561,13 +561,13 @@ __internal entity ListFlatOps provides Object {
             return List<T>@{};
         }
     }
-    recursive? function s_filter_idx_2<T>(l: List<T>, bidx: Nat p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+    recursive? function s_filter_idx_2<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
         let at0 = ListFlatOps::s_2at0<T>(l);
         let pat0 = p[recursive?](at0, bidx);
         let at1 = ListFlatOps::s_2at1<T>(l);
         let pat1 = p[recursive?](at1, bidx + 1n);
 
-        if(ListOps::s_and2(pat0, pat1) {
+        if(ListOps::s_and2(pat0, pat1)) {
             return l;
         }
         elif(pat0) {
@@ -580,7 +580,7 @@ __internal entity ListFlatOps provides Object {
             return List<T>@{};
         }
     }
-    recursive? function s_filter_idx_3<T>(l: List<T>, bidx: Nat p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+    recursive? function s_filter_idx_3<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
         let at0 = ListFlatOps::s_3at0<T>(l);
         let pat0 = p[recursive?](at0, bidx);
         let at1 = ListFlatOps::s_3at1<T>(l);
@@ -588,16 +588,16 @@ __internal entity ListFlatOps provides Object {
         let at2 = ListFlatOps::s_3at2<T>(l);
         let pat2 = p[recursive?](at2, bidx + 2n);
 
-        if(ListOps::s_and3(pat0, pat1, pat2) {
+        if(ListOps::s_and3(pat0, pat1, pat2)) {
             return l;
         }
-        elif(ListOps::s_and2(pat0, pat1) {
+        elif(ListOps::s_and2(pat0, pat1)) {
             return List<T>@{at0, at1};
         }
-        elif(ListOps::s_and2(pat0, pat2) {
+        elif(ListOps::s_and2(pat0, pat2)) {
             return List<T>@{at0, at2};
         }
-        elif(ListOps::s_and2(pat1, pat2) {
+        elif(ListOps::s_and2(pat1, pat2)) {
             return List<T>@{at1, at2};
         }
         elif(pat0) {
@@ -613,7 +613,7 @@ __internal entity ListFlatOps provides Object {
             return List<T>@{};
         }
     }
-    recursive? function s_filter_idx<T>(l: List<T>, bidx: Nat p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+    recursive? function s_filter_idx<T>(l: List<T>, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
         if(ListFlatOps::s_empty<T>(l)) {
             return List<T>@{};
         }
@@ -630,11 +630,11 @@ __internal entity ListFlatOps provides Object {
 
     ////
     //s_min_arg
-    recursive? function s_min_arg_1<T, U unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_min_arg_1<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         let at0 = ListFlatOps::s_1at0<T>(l);
         return [bidx, at0];
     }
-    recursive? function s_min_arg_2<T, U unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_min_arg_2<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         let at0 = f[recursive?](ListFlatOps::s_2at0<T>(l));
         let at1 = f[recursive?](ListFlatOps::s_2at1<T>(l));
 
@@ -645,7 +645,7 @@ __internal entity ListFlatOps provides Object {
             return [bidx, at0];
         }
     }
-    recursive? function s_min_arg_3<T, U unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_min_arg_3<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         let at0 = f[recursive?](ListFlatOps::s_3at0<T>(l));
         let at1 = f[recursive?](ListFlatOps::s_3at1<T>(l));
         let at2 = f[recursive?](ListFlatOps::s_3at2<T>(l));
@@ -660,7 +660,7 @@ __internal entity ListFlatOps provides Object {
             return [bidx, at0];
         }
     }
-    recursive? function s_min_arg<T, U unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_min_arg<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         if(ListFlatOps::s_is1<T>(l)) {
             return ListFlatOps::s_min_arg1<T, U>[recursive?](l, bidx, f);
         }
@@ -674,11 +674,11 @@ __internal entity ListFlatOps provides Object {
 
     ////
     //s_max_arg
-    recursive? function s_max_arg_1<T, U unique Orderable>(l: List<T>, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_max_arg_1<T, U unique Orderable>(l: List<T>, f: recursive? fn(_: T) -> U): [Nat, U] {
         let at0 = ListFlatOps::s_1at0<T>(l);
         return [bidx, at0];
     }
-    recursive? function s_max_arg_2<T, U unique Orderable>(l: List<T>, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_max_arg_2<T, U unique Orderable>(l: List<T>, f: recursive? fn(_: T) -> U): [Nat, U] {
         let at0 = f[recursive?](ListFlatOps::s_2at0<T>(l));
         let at1 = f[recursive?](ListFlatOps::s_2at1<T>(l));
 
@@ -689,7 +689,7 @@ __internal entity ListFlatOps provides Object {
             return [bidx, at0];
         }
     }
-    recursive? function s_max_arg_3<T, U unique Orderable>(l: List<T>, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_max_arg_3<T, U unique Orderable>(l: List<T>, f: recursive? fn(_: T) -> U): [Nat, U] {
         let at0 = f[recursive?](ListFlatOps::s_3at0<T>(l));
         let at1 = f[recursive?](ListFlatOps::s_3at1<T>(l));
         let at2 = f[recursive?](ListFlatOps::s_3at2<T>(l));
@@ -704,7 +704,7 @@ __internal entity ListFlatOps provides Object {
             return [bidx, at0];
         }
     }
-    recursive? function s_max_arg<T, U unique Orderable>(l: List<T>, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive? function s_max_arg<T, U unique Orderable>(l: List<T>, f: recursive? fn(_: T) -> U): [Nat, U] {
         if(ListFlatOps::s_is1<T>(l)) {
             return ListFlatOps::s_max_arg1<T, U>[recursive?](l, bidx, f);
         }
@@ -808,20 +808,20 @@ __internal entity ListFlatOps provides Object {
         let at2 = ListFlatOps::s_3at2<U>(ol);
         let pat2 = p[recursive?](v, at2);
 
-        if(ListOps::s_and3(pat0, pat1, pat2) {
+        if(ListOps::s_and3(pat0, pat1, pat2)) {
             return List<[T, U]>@{[v, at0], [v, at1], [v, at2]};
         }
-        elif(ListOps::s_and2(pat0, pat1) {
+        elif(ListOps::s_and2(pat0, pat1)) {
             return List<[T, U]>@{[v, at0], [v, at1]};
         }
-        elif(ListOps::s_and2(pat0, pat2) {
+        elif(ListOps::s_and2(pat0, pat2)) {
             return List<[T, U]>@{[v, at0], [v, at2]};
         }
-        elif(ListOps::s_and2(pat1, pat2) {
+        elif(ListOps::s_and2(pat1, pat2)) {
             return List<[T, U]>@{[v, at1], [v, at2]};
         }
         elif(pat0) {
-            return return List<[T, U]>@{[v, at0]};
+            return List<[T, U]>@{[v, at0]};
         }
         elif(pat1) {
             return List<[T, U]>@{[v, at1]};
@@ -909,13 +909,13 @@ __internal entity ListFlatOps provides Object {
             return l;
         }
         elif(ListOps::s_and2(!eq01, ListOps::s_or2(eq02, eq12))) {
-            return List<T>{at0, at1};
+            return List<T>@{at0, at1};
         }
         elif(ListOps::s_and2(eq01, !eq02)) {
-            return List<T>{at0, at2};
+            return List<T>@{at0, at2};
         }
         else {
-            return List<T>{at0};
+            return List<T>@{at0};
         }
     }
     recursive? function s_small_unique<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
@@ -955,19 +955,19 @@ __internal entity ListFlatOps provides Object {
 
         let eq01 = !KeyType::equal<T>(at0, at1);
         let eq02 = !KeyType::equal<T>(at0, at2);
-        let eq12 = !KeyType::equal<T>(at1, at2)
+        let eq12 = !KeyType::equal<T>(at1, at2);
 
         if(ListOps::s_and3(!eq01, !eq02, !eq12)) {
             return l;
         }
         elif(ListOps::s_and2(!eq01, ListOps::s_or2(eq02, eq12))) {
-            return List<T>{at0, at1};
+            return List<T>@{at0, at1};
         }
         elif(ListOps::s_and2(eq01, !eq02)) {
-            return List<T>{at0, at2};
+            return List<T>@{at0, at2};
         }
         else {
-            return List<T>{at0};
+            return List<T>@{at0};
         }
     }
     function s_small_key_unique<T grounded KeyType>(l: List<T>): List<T> {
@@ -995,7 +995,7 @@ __internal entity ListFlatOps provides Object {
         let at1 = ListFlatOps::s_2at1<T>(l);
         return !eq[recursive](at0.0, at1.0);
     }
-    recursive? function s_small_unique_3<K grounded KeyType, V>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): Bool {
+    recursive? function s_small_isunique_3<K grounded KeyType, V>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): Bool {
         let at0 = ListFlatOps::s_3at0<T>(l);
         let at1 = ListFlatOps::s_3at1<T>(l);
         let at2 = ListFlatOps::s_3at1<T>(l);
@@ -1214,7 +1214,7 @@ __internal entity ListConcatOps provides Object {
 
     __safe function s_isConcatList<T>(l: List<T>): Nat # list_isconcat
 
-    recursive function s_concat_lropt_at<T>(l: List<T>, i Nat): T {
+    recursive function s_concat_lropt_at<T>(l: List<T>, i: Nat): T {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_at<T>(l, i);
         }
@@ -1226,7 +1226,7 @@ __internal entity ListConcatOps provides Object {
         }
     }
 
-    recursive function s_at<T>(l: List<T>, i Nat): T {
+    recursive function s_at<T>(l: List<T>, i: Nat): T {
         let ll = ListConcatOps::s_left<T>(l);
         let count = ListOps::s_size<T>(ll);
 
@@ -1505,7 +1505,7 @@ __internal entity ListConcatOps provides Object {
         return ListOps::s_concat2<T>(llm, rlm);
     }
 
-    recursive function s_concat_lropt_min_arg<T unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive function s_concat_lropt_min_arg<T unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_min_arg<T>[recursive?](l, bidx, f);
         }
@@ -1517,7 +1517,7 @@ __internal entity ListConcatOps provides Object {
         }
     }
 
-    recursive function s_min_arg<T, U unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive function s_min_arg<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         let ll = ListConcatOps::s_left<T>(l);
         let llm = ListConcatOps::s_concat_lropt_min_arg_idx<T>[recursive](ll, bidx, f);
         let rlm = ListConcatOps::s_concat_lropt_min_arg_idx<T>[recursive](ListConcatOps::s_right<T>(l), bidx + ListOps::s_size(ll), f);
@@ -1530,7 +1530,7 @@ __internal entity ListConcatOps provides Object {
         }
     }
 
-    recursive function s_concat_lropt_max_arg<T unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive function s_concat_lropt_max_arg<T unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_max_arg<T>[recursive?](l, bidx, f);
         }
@@ -1542,7 +1542,7 @@ __internal entity ListConcatOps provides Object {
         }
     }
 
-    recursive function s_max_arg_idx<T, U unique Orderable>(l: List<T>, bidx: Nat, recursive? f: (_: T) -> U): [Nat, U] {
+    recursive function s_max_arg_idx<T, U unique Orderable>(l: List<T>, bidx: Nat, f: recursive? fn(_: T) -> U): [Nat, U] {
         let ll = ListConcatOps::s_left<T>(l);
         let llm = ListConcatOps::s_concat_lropt_max_arg_idx<T>[recursive](ll, bidx, f);
         let rlm = ListConcatOps::s_concat_lropt_max_arg_idx<T>[recursive](ListConcatOps::s_right<T>(l), bidx + ListOps::s_size(ll), f);
@@ -1641,7 +1641,7 @@ __internal entity SSequence provides Object {
 __internal entity ListOps provides Object {
     ////////////////
     //Called from Lib AND Builtin
-    __assume_safe s_safeAs<T, U>(v: T): U # list_safeas
+    __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
     __safe function s_or2(b1: Bool, b2: Bool): Bool # list_or2
     __safe function s_or3(b1: Bool, b2: Bool, b3: Bool): Bool # list_or3
     __safe function s_and2(b1: Bool, b2: Bool): Bool # list_and2
@@ -1661,8 +1661,8 @@ __internal entity ListOps provides Object {
     recursive? function s_safe_fn_impl<T, U>(l: List<T>, count: Nat, f: recursive? fn(_: T) -> U): List<T> # list_safe_check_fn
     recursive? function s_safe_fn_idx_impl<T, U>(l: List<T>, count: Nat, bidx: Nat, f: recursive? fn(_: T, _: Nat) -> U): List<T> # list_safe_check_fn_idx
 
-    recursive? function s_safe_pred_pair_impl<T, U>[recursive?](l: List<T>, lcount: Nat, ol: List<U>, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): [List<T>, List<U>] # list_safe_check_pred_pair
-    recursive? function s_has_pred_pair_impl<T, U>[recursive?](l: List<T>, lcount: Nat, ol: List<U>, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): Bool # list_has_pred_pair
+    recursive? function s_safe_pred_pair_impl<T, U>(l: List<T>, lcount: Nat, ol: List<U>, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): [List<T>, List<U>] # list_safe_check_pred_pair
+    recursive? function s_has_pred_pair_impl<T, U>(l: List<T>, lcount: Nat, ol: List<U>, olcount: Nat, p: recursive? pred(_: T, _: U) -> Bool): Bool # list_has_pred_pair
     
     recursive? function s_has_pred_impl<T>(l: List<T>, count: Nat, p: recursive? pred(_: T) -> Bool): Bool # list_has_pred_check
     recursive? function s_has_pred_idx_impl<T>(l: List<T>, count: Nat, bidx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool # list_has_pred_check_idx
@@ -2219,8 +2219,8 @@ __internal entity ListOps provides Object {
         }
 #endif
         else {
-            return ListOps::s_filter_idx<T>(l, recursive? fn(v: T, i: Nat) => {
-                return !ListOps::s_has_pred_idx<T>(l, recursive? fn(u: T, j: Nat) => {
+            return ListOps::s_filter_idx<T>(l, recursive? pred(v: T, i: Nat): Bool => {
+                return !ListOps::s_has_pred_idx<T>(l, recursive? pred(u: T, j: Nat): Bool => {
                     ListOps::s_and2(i != j, eq[recursive?](u, v));
                 });
             });
@@ -2240,8 +2240,8 @@ __internal entity ListOps provides Object {
         }
 #endif
         else {
-            return ListOps::s_filter_idx<T>(l, fn(v: T, i: Nat) => {
-                return !ListOps::s_has_pred_idx<T>(l, fn(u: T, j: Nat) => {
+            return ListOps::s_filter_idx<T>(l, pred(v: T, i: Nat): Bool => {
+                return !ListOps::s_has_pred_idx<T>(l, pred(u: T, j: Nat): Bool => {
                     ListOps::s_and2(i != j, KeyType::equal<T>(u, v));
                 });
             });
@@ -2261,8 +2261,8 @@ __internal entity ListOps provides Object {
         }
 #endif
         else {
-            return !ListOps::s_has_pred_idx<T>(l, recursive? fn(v: T, i: Nat) => {
-                return ListOps::s_has_pred_idx<T>(l, recursive? fn(u: T, j: Nat) => {
+            return !ListOps::s_has_pred_idx<T>(l, recursive? pred(v: T, i: Nat): Bool => {
+                return ListOps::s_has_pred_idx<T>(l, recursive? pred(u: T, j: Nat): Bool => {
                     ListOps::s_and2(i != j, eq[recursive?](u, v));
                 });
             });
@@ -2321,8 +2321,8 @@ __internal entity ListOps provides Object {
             return ListFlatOps::s_small_range_int(start, end);
         }
         elif(count <= 6i) {
-            const ll = ListFlatOps::s_small_range_int(start, start + (count / 2i));
-            const rl = ListFlatOps::s_small_range_int(start + (count / 2i), end);
+            let ll = ListFlatOps::s_small_range_int(start, start + (count / 2i));
+            let rl = ListFlatOps::s_small_range_int(start + (count / 2i), end);
             return ListConcatOps::s_concat2<Int>(ll, rl);
         }
 #endif
@@ -2341,8 +2341,8 @@ __internal entity ListOps provides Object {
             return ListFlatOps::s_small_range_nat(start, end);
         }
         elif(count <= 6n) {
-            const ll = ListFlatOps::s_small_range_nat(start, start + (count / 2n));
-            const rl = ListFlatOps::s_small_range_nat(start + (count / 2n), end);
+            let ll = ListFlatOps::s_small_range_nat(start, start + (count / 2n));
+            let rl = ListFlatOps::s_small_range_nat(start + (count / 2n), end);
             return ListConcatOps::s_concat2<Nat>(ll, rl);
         }
 #endif
@@ -2360,9 +2360,9 @@ __internal entity ListOps provides Object {
             return ListFlatOps::s_small_fill<T>(k, val);
         }
         elif(count <= 6n) {
-            const llct = count / 2;
-            const ll = ListFlatOps::s_small_fill<T>(llct);
-            const rl = ListFlatOps::s_small_fill<T>(count - llct);
+            let llct = count / 2n;
+            let ll = ListFlatOps::s_small_fill<T>(llct);
+            let rl = ListFlatOps::s_small_fill<T>(count - llct);
             return ListConcatOps::s_concat2<T>(ll, rl);
         }
 #endif
@@ -2386,26 +2386,26 @@ __internal entity ListOps provides Object {
     }
 
     function s_zip_1<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
-        return List<T>@{[ListOps::s_at<T>(l1, 0), ListOps::s_at<U>(l2, 0)]};
+        return List<T>@{[ListOps::s_at<T>(l1, 0n), ListOps::s_at<U>(l2, 0n)]};
     }
     function s_zip_2<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
-        return List<T>@{[ListOps::s_at<T>(l1, 0), ListOps::s_at<U>(l2, 0)], [ListOps::s_at<T>(l1, 1), ListOps::s_at<U>(l2, 1)]};
+        return List<T>@{[ListOps::s_at<T>(l1, 0n), ListOps::s_at<U>(l2, 0n)], [ListOps::s_at<T>(l1, 1n), ListOps::s_at<U>(l2, 1n)]};
     }
     function s_zip_3<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
-        return List<T>@{[ListOps::s_at<T>(l1, 0), ListOps::s_at<U>(l2, 0)], [ListOps::s_at<T>(l1, 1), ListOps::s_at<U>(l2, 1)], [ListOps::s_at<T>(l1, 2), ListOps::s_at<U>(l2, 2)]};
+        return List<T>@{[ListOps::s_at<T>(l1, 0n), ListOps::s_at<U>(l2, 0n)], [ListOps::s_at<T>(l1, 1n), ListOps::s_at<U>(l2, 1n)], [ListOps::s_at<T>(l1, 2n), ListOps::s_at<U>(l2, 2n)]};
     }
-    function s_zip<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]>
-        if(size == 0) {
-            return List<T>@{};
+    function s_zip<T, U>(l1: List<T>, l2: List<U>, size: Nat): List<[T, U]> {
+        if(size == 0n) {
+            return List<[T, U]>@{};
         }
 #if SMALL_MODEL_ENABLED
-        elif(size == 1) {
+        elif(size == 1n) {
             return ListOps::s_zip_1<T, U>(l1, l2, size);
         }
-        elif(size == 2) {
+        elif(size == 2n) {
             return ListOps::s_zip_2<T, U>(l1, l2, size);
         }
-        elif(size == 3) {
+        elif(size == 3n) {
             return ListOps::s_zip_3<T, U>(l1, l2, size);
         }
 #endif

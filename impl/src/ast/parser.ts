@@ -1536,7 +1536,16 @@ class Parser {
         const line = this.getCurrentLine();
         const sinfo = this.getCurrentSrcInfo();
 
-        const isrecursive = this.testAndConsumeTokenIf("recursive");
+        let isrecursive: "yes" | "no" | "cond" = "no";
+        if(this.testAndConsumeTokenIf("recursive")) {
+            isrecursive = "yes";
+        }
+        else if(this.testAndConsumeTokenIf("recursive?")) {
+            isrecursive = "cond";
+        }
+        else {
+            isrecursive = "no";
+        }
 
         const ispred = this.testToken("pred");
         this.consumeToken();
@@ -1807,7 +1816,7 @@ class Parser {
 
             return new CallNamespaceFunctionOrOperatorExpression(sinfo, ns as string, istr, new TemplateArguments([]), rec, args, "std");
         }
-        else if (tk === "fn" || this.testFollows("recursive", "fn") || tk === "pred" || this.testFollows("recursive", "pred")) {
+        else if (tk === "fn" || this.testFollows("recursive", "fn") || this.testFollows("recursive?", "fn") || tk === "pred" || this.testFollows("recursive", "pred") || this.testFollows("recursive?", "pred")) {
             return this.parsePCodeTerm();
         }
         else if (tk === "(" && !this.checkTypeBasedExpressionFollowsParens()) {

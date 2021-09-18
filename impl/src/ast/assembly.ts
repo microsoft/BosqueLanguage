@@ -1430,8 +1430,9 @@ class Assembly {
     getSpecialUUIDType(): ResolvedType { return this.internSpecialObjectType(["UUID"]); }
     getSpecialContentHashType(): ResolvedType { return this.internSpecialObjectType(["ContentHash"]); }
     getSpecialRegexType(): ResolvedType { return this.internSpecialObjectType(["Regex"]); }
-    getSpecialRegexMatchType(): ResolvedType { return this.internSpecialObjectType(["RegexMatch"]); }
     getSpecialNothingType(): ResolvedType { return this.internSpecialObjectType(["Nothing"]); }
+
+    getSpecialHavocType(): ResolvedType { return this.internSpecialObjectType(["HavocSequence"]); }
 
     getSpecialAnyConceptType(): ResolvedType { return this.internSpecialConceptType(["Any"]); }
     getSpecialSomeConceptType(): ResolvedType { return this.internSpecialConceptType(["Some"]); }

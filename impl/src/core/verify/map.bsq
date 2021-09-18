@@ -8,7 +8,7 @@ namespace NSCore;
 
 __internal entity Map<K grounded KeyType, V> provides Object, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType {
     __safe private method value(): List<[K, V]> # map_get_list_repr
-    __safe private function s_safecreate(v: List<[K, V]>): # map_safe_create
+    __safe private function s_safecreate(v: List<[K, V]>): Map<K, V> # map_safe_create
 
     private function s_uniqinv(m: Map<K, V>): Bool {
         return ListOps::s_chk_kv_unique<K, V>(m.value()); 

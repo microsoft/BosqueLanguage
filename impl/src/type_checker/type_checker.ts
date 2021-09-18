@@ -6376,7 +6376,7 @@ class TypeChecker {
                     this.generateInjectableConstructor(consbodyid, conskey.keyid, conskey.shortname, tdecl, binds, this.m_assembly.getSpecialNatType());
 
                     const enums = tdecl.staticMembers.map((sdecl) => { 
-                        const vve = (sdecl.value as ConstantExpressionValue).exp as LiteralIntegralExpression;
+                        const vve = (((sdecl.value as ConstantExpressionValue).exp as ConstructorPrimaryExpression).args.argList[0] as PositionalArgument).value as LiteralIntegralExpression;
                         const v = Number.parseInt(vve.value.slice(0, vve.value.length - 1));
                         return {ename: sdecl.name, value: v}; 
                     });

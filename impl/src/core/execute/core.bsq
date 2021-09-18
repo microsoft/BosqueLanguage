@@ -343,13 +343,6 @@ __internal grounded entity ContentHash provides Some, KeyType, PODType, APIType 
 __internal entity Regex provides Some {
 }
 
-struct entity RegexMatch provides Some {
-    field index: Nat;
-    field length: Nat;
-
-    invariant $index >= 0n & $length >= 0n;
-}
-
 //<summary>Static methods for Tuples.</summary>
 concept Tuple provides Some {
     function append(arg: Any): Tuple # special_method

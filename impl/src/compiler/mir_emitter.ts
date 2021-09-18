@@ -1307,8 +1307,8 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialUUIDType());
         emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialRegexMatchType());
         emitter.registerResolvedTypeReference(assembly.getSpecialNothingType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialHavocType());
 
         //get any entrypoint functions and initialize the checker there
         const epns = assembly.getNamespace(entrypoints.namespace);

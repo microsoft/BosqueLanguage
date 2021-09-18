@@ -213,7 +213,7 @@ __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = defa
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string position value.</summary>
-__internal StringPos provides Some {
+__internal entity StringPos provides Some {
 }
 __primitive inline infix operator <(a: StringPos, b: StringPos): Bool = default;
 __primitive inline infix operator >(a: StringPos, b: StringPos): Bool = default;
@@ -301,13 +301,6 @@ __internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
 
 //<summary>Primitive regex value.</summary>
 __internal entity Regex provides Some {
-}
-
-struct entity RegexMatch provides Some {
-    field index: Nat;
-    field length: Nat;
-
-    invariant $index >= 0n & $length >= 0n;
 }
 
 //<summary>Static methods for Tuples.</summary>

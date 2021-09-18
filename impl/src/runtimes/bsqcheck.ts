@@ -34,13 +34,14 @@ if(mode === "--output") {
 
     const smtonly = args[1] === "--smt";
 
-    const location = parseLocation(args[smtonly ? 2 : 1]);
+    const location = (smtmode !== "evaluate") ? parseLocation(args[smtonly ? 2 : 1]) : {file: "[ignore]", line: -1, pos: -1};
+    let files = (smtmode !== "evaluate") ? args.slice(smtonly ? 3 : 2) : args.slice(smtonly ? 2 : 1);
+
     if(location === undefined) {
         process.stdout.write("Location should be of the form file.bsq@line#pos\n");
         process.exit(1);
     }
 
-    const files = args.slice(smtonly ? 3 : 2);
     const usercode = workflowLoadUserSrc(files);
     if(usercode === undefined) {
         process.stdout.write("Could not load code files\n");

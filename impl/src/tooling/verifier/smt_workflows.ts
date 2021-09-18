@@ -102,7 +102,7 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string, asmflavor: A
 
 function generateSMTPayload(masm: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert", timeout: number, numgen: { int: BVEmitter, hash: BVEmitter }, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload | undefined {
     try {
-        return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, numgen, errorTrgtPos, entrypoint);
+        return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, numgen, errorTrgtPos, "__i__" + entrypoint);
     } catch(e) {
         process.stderr.write(chalk.red(`SMT generate error -- ${e}\n`));
         return undefined;
