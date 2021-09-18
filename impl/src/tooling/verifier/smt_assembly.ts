@@ -448,14 +448,14 @@ class SMTAssembly {
         ];
         let integral_constants: string[] = [
             `(declare-const BInt@zero BInt) (assert (= BInt@zero (_ bv0 ${this.vopts.ISize})))`,
-            `(declare-const BInt@one BInt) (assert (= BInt@one ${this.numgen.emitSimpleInt(1)}))`,
-            `(declare-const BInt@min BInt) (assert (= BInt@min ${this.numgen.emitIntGeneral(this.numgen.intmin)}))`,
-            `(declare-const BInt@max BInt) (assert (= BInt@max ${this.numgen.emitIntGeneral(this.numgen.intmax)}))`,
+            `(declare-const BInt@one BInt) (assert (= BInt@one ${this.numgen.emitSimpleInt(1).emitSMT2(undefined)}))`,
+            `(declare-const BInt@min BInt) (assert (= BInt@min ${this.numgen.emitIntGeneral(this.numgen.intmin).emitSMT2(undefined)}))`,
+            `(declare-const BInt@max BInt) (assert (= BInt@max ${this.numgen.emitIntGeneral(this.numgen.intmax).emitSMT2(undefined)}))`,
 
             `(declare-const BNat@zero BNat) (assert (= BNat@zero (_ bv0 ${this.vopts.ISize})))`,
-            `(declare-const BNat@one BNat) (assert (= BNat@one ${this.numgen.emitSimpleNat(1)}))`,
+            `(declare-const BNat@one BNat) (assert (= BNat@one ${this.numgen.emitSimpleNat(1).emitSMT2(undefined)}))`,
             `(declare-const BNat@min BNat) (assert (= BNat@min BNat@zero))`,
-            `(declare-const BNat@max BNat) (assert (= BNat@max ${this.numgen.emitNatGeneral(this.numgen.natmax)}))`
+            `(declare-const BNat@max BNat) (assert (= BNat@max ${this.numgen.emitNatGeneral(this.numgen.natmax).emitSMT2(undefined)}))`
         ];
 
         const termtupleinfo = this.tupleDecls
@@ -675,7 +675,7 @@ class SMTAssembly {
             BINTEGRAL_TYPE_ALIAS: integral_type_alias,
             BINTEGRAL_CONSTANTS: integral_constants,
             STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 32)))" : "(define-sort BString () String)"),
-            BHASHCODE_TYPE_ALIAS: `(define-sort BString () (Seq (_ BitVec ${this.hashsize}))).`,
+            BHASHCODE_TYPE_ALIAS: `(define-sort BHash () (_ BitVec ${this.hashsize}))`,
             KEY_TYPE_INFO: { decls: keytypeinfo.filter((kti) => kti.decl !== undefined).map((kti) => kti.decl as string), constructors: keytypeinfo.filter((kti) => kti.consf !== undefined).map((kti) => kti.consf as string), boxing: keytypeinfo.map((kti) => kti.boxf) },
             TUPLE_INFO: { decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), boxing: termtupleinfo.map((kti) => kti.boxf) },
             RECORD_INFO: { decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), boxing: termrecordinfo.map((kti) => kti.boxf) },
@@ -715,9 +715,9 @@ class SMTAssembly {
             .replace(";;RECORD_HAS_PROPERTY_DECLS;;", joinWithIndent(sfileinfo.RECORD_HAS_PROPERTY_DECLS, ""))
             .replace(";;KEY_TYPE_TAG_RANK;;", joinWithIndent(sfileinfo.KEY_TYPE_TAG_RANK, ""))
             .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
-            .replace(";;STRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS + "\n")
-            .replace(";;BHASHCODE_TYPE_ALIAS;;", sfileinfo.BHASHCODE_TYPE_ALIAS + "\n")
-            .replace(";;BINTEGRAL_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
+            .replace(";;BSTRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS)
+            .replace(";;BHASHCODE_TYPE_ALIAS;;", sfileinfo.BHASHCODE_TYPE_ALIAS)
+            .replace(";;BINT_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
             .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))
             .replace(";;KEY_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.constructors, "    "))
             .replace(";;KEY_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.boxing, "      "))

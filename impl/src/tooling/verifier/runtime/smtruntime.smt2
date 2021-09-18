@@ -68,12 +68,14 @@
 (define-sort BByteBuffer () (Seq (_ BitVec 8)))
 (define-sort BISOTime () Int)
 (define-sort BLogicalTime () Int)
-(define-sort BUUID () (Seq (_ BitVec 8)))
+(define-sort BUUID () (_ BitVec 12)) ;;TODO we should experiment with this encoding -- int, bv128, constructor?
 ;;BHASHCODE_TYPE_ALIAS;;
 
 ;;TODO BHashable and Hash + HashInvert and axioms
 
 ;;BINT_CONSTANTS;;
+
+(define-sort HavocSequence () (Seq BNat))
 
 (declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))
 (declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))
@@ -188,21 +190,17 @@
       ; ByteBuffer -> (Seq (_ BitVec 8))
       ; ISOTime -> Int
       ; LogicalTime -> Int
-      ; UUID -> (Seq (_ BitVec 8))
-      ; ContentHash -> (_ BitVec 2xNat)
+      ; UUID -> ?? need to investigate
+      ; ContentHash -> (_ BitVec X)
     ) (
-    ( 
-      (bsq_none@literal) 
-      (bsq_nothing@literal) 
-    )
+      ( (bsq_none@literal) ) 
+      ( (bsq_nothing@literal) ) 
 ))
 
 ;;
 ;; KeyType Concept datatypes
 ;;
 (declare-datatypes (
-      ;;KEY_TUPLE_DECLS;;
-      ;;KEY_RECORD_DECLS;;
       ;;KEY_TYPE_DECLS;;
       (bsq_keyobject 0)
       (BKey 0)
@@ -219,7 +217,7 @@
       (bsqkey_string@box (bsqkey_string_value BString))
       (bsqkey_logicaltime@box (bsqkey_logicaltime_value BLogicalTime))
       (bsqkey_uuid@box (bsqkey_uuid_value BUUID))
-      (bsqkey_contenthash@box (bsqkey_contenthash_value BHashCode))
+      (bsqkey_contenthash@box (bsqkey_contenthash_value BHash))
       ;;KEY_TYPE_BOXING;;
     )
     ( (BKey@box (BKey_type TypeTag) (BKey_value bsq_keyobject)) )
@@ -270,11 +268,11 @@
 )
 
 (define-fun bsqkey_uuid@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (seq.< (bsqkey_uuid_value k1) (bsqkey_uuid_value k2))
+  (bvult (bsqkey_uuid_value k1) (bsqkey_uuid_value k2))
 )
 
 (define-fun bsqkey_contenthash@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (< (bsqkey_contenthash_value k1) (bsqkey_contenthash_value k2))
+  (bvult (bsqkey_contenthash_value k1) (bsqkey_contenthash_value k2))
 )
 
 ;;
@@ -373,13 +371,11 @@
 (declare-fun BISOTime@UFCons_API ((Seq BNat)) BISOTime)
 (declare-fun BLogicalTime@UFCons_API ((Seq BNat)) BLogicalTime)
 (declare-fun BUUID@UFCons_API ((Seq BNat)) BUUID)
-(declare-fun BContentHash@UFCons_API ((Seq BNat)) BContentHash)
+(declare-fun BContentHash@UFCons_API ((Seq BNat)) BHash)
 
 (declare-fun ListSize@UFCons_API ((Seq BNat)) BNat)
 (declare-fun EnumChoice@UFCons_API ((Seq BNat)) BNat)
 (declare-fun UnionChoice@UFCons_API ((Seq BNat)) BNat)
-
-(define-sort HavocSequence () (Seq BNat))
 
 ;;GLOBAL_DECLS;;
 

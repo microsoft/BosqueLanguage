@@ -436,7 +436,7 @@ std::optional<char> stringBinSearchCharASCII(const APIModule* apimodule, z3::sol
         s.push();
 
         z3::expr_vector chks(s.ctx());
-        chks.push_back(e.extract(s.ctx().int_val(0), s.ctx().int_val(cidx + 1)) < s.ctx().string_val(imidstr));
+        chks.push_back(e.extract(s.ctx().int_val(0), s.ctx().int_val((uint64_t)cidx + 1)) < s.ctx().string_val(imidstr));
         auto rr = s.check(chks);
 
         s.pop();

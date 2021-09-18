@@ -437,7 +437,7 @@ function isDeadTempAssign(op: MIROp, liveTemps: Set<string>): boolean {
     switch (op.tag) {
         case MIROpTag.MIRLoadConst:
         case MIROpTag.MIRRegisterAssign: {
-            return op.getModVars().every((mv) => mv instanceof MIRRegisterArgument && mv.nameID.startsWith("#tmp") && !liveTemps.has(mv.nameID));
+            return op.getModVars().every((mv) => mv instanceof MIRRegisterArgument && mv.nameID.startsWith("@tmp") && !liveTemps.has(mv.nameID));
         }
         default:
             return false;

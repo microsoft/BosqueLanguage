@@ -88,9 +88,9 @@ class BVEmitter {
         this.bvintmin = BVEmitter.emitIntCore(intmin, intmin, intmax, bvsize);
         this.bvintmax = BVEmitter.emitIntCore(intmax, intmin, intmax, bvsize);
 
-        this.bvnatmax1 = BVEmitter.emitNatCore(natmax1, natmax1, bvsize + 1n);
-        this.bvintmin1 = BVEmitter.emitIntCore(intmin1, intmin1, intmax1, bvsize + 1n);
-        this.bvintmax1 = BVEmitter.emitIntCore(intmax1, intmin1, intmax1, bvsize + 1n);
+        this.bvnatmax1 = BVEmitter.emitNatCore(natmax, natmax1, bvsize + 1n);
+        this.bvintmin1 = BVEmitter.emitIntCore(intmin, intmin1, intmax1, bvsize + 1n);
+        this.bvintmax1 = BVEmitter.emitIntCore(intmax, intmin1, intmax1, bvsize + 1n);
     }
 
     static create(bvsize: bigint): BVEmitter {

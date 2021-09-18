@@ -198,10 +198,10 @@ class MIREmitter {
 
     generateTmpRegister(): MIRRegisterArgument {
         if(!this.emitEnabled) {
-            return new MIRRegisterArgument(`#tmp_${-1}`);
+            return new MIRRegisterArgument(`@tmp_${-1}`);
         }
 
-        return new MIRRegisterArgument(`#tmp_${this.m_tmpIDCtr++}`);
+        return new MIRRegisterArgument(`@tmp_${this.m_tmpIDCtr++}`);
     }
 
     generateCapturedVarName(name: string, bodyid: string): string {
