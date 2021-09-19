@@ -4007,9 +4007,9 @@ class Parser {
             const memberMethods: MemberMethodDecl[] = [];
     
             for(let i = 0; i < enums.length; ++i) {
-                const exp = new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
+                const exp = new LiteralIntegralExpression(sinfo, i.toString() + "n", this.m_penv.SpecialNatSignature);
                 const enminit = new ConstructorPrimaryExpression(sinfo, etype, new Arguments([new PositionalArgument(undefined, false, exp)]));
-                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["__enum"], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
+                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["__enum"], enums[i], etype, new ConstantExpressionValue(enminit, new Set<string>()));
                 staticMembers.push(enm);
             }
 

@@ -25,9 +25,45 @@ function parseLocation(location: string): { file: string, line: number, pos: num
 const mode = process.argv[2];
 const args = process.argv.slice(3);
 
+const vopts_unreachable = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: false,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: false,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_smallwitness = {
+    ISize: 5,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: false,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: false
+} as VerifierOptions;
+
+const vopts_largewitness = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_evaluate = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
 if(mode === "--output") {
     let smtmode = args[0];
-    if(smtmode !== "unreachable" && smtmode !== "witness" && smtmode !== "evaluate" && smtmode !== "invert") {
+    if(smtmode !== "unreachable" && smtmode !== "smallwitness" && smtmode !== "largewitness" && smtmode !== "evaluate" && smtmode !== "invert") {
         process.stdout.write("Valid mode options are unreachable | witness | evaluate | invert\n");
         process.exit(1);
     }
@@ -54,16 +90,27 @@ if(mode === "--output") {
 
     const asmflavor = smtmode === "unreachable" ? AssemblyFlavor.UFOverApproximate : AssemblyFlavor.RecuriveImpl;
 
-    const vopts = {
-        ISize: 8,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: smtmode === "unreachable" ? false : true,
-        EnableCollection_LargeHavoc: smtmode === "unreachable" ? true : false,
-        EnableCollection_SmallOps: smtmode === "unreachable" ? false : true,
-        EnableCollection_LargeOps: true
-    } as VerifierOptions;
+    let vopts = vopts_evaluate;
+    let mmode: "unreachable" | "witness" | "evaluate" | "invert" = "evaluate"
+    if(smtmode === "unreachable") {
+        vopts = vopts_unreachable;
+        mmode = "unreachable";
+    }
+    else if(smtmode === "smallwitness") {
+        vopts = vopts_smallwitness;
+        mmode = "witness";
+    }
+    else if(smtmode === "largewitness") {
+        vopts = vopts_largewitness;
+        mmode = "witness";
+    }
+    else {
+        if(smtmode === "invert") {
+            mmode = "invert";
+        } 
+    }
 
-    workflowEmitToFile(into, usercode, asmflavor, smtmode, DEFAULT_TIMEOUT, vopts, location, "NSMain::main", smtonly)
+    workflowEmitToFile(into, usercode, asmflavor, mmode, DEFAULT_TIMEOUT, vopts, location, "NSMain::main", smtonly)
 }
 else if(mode === "--unreachable") {
     const location = parseLocation(args[0]);
@@ -79,16 +126,7 @@ else if(mode === "--unreachable") {
         process.exit(1);
     }
 
-    const vopts = {
-        ISize: 8,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: false,
-        EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: false,
-        EnableCollection_LargeOps: true
-    } as VerifierOptions;
-
-    workflowBSQInfeasibleSingle(usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQInfeasibleSingle(usercode, vopts_unreachable, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -106,16 +144,7 @@ else if(mode === "--smallwitness") {
         process.exit(1);
     }
 
-    const vopts = {
-        ISize: 5,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: true,
-        EnableCollection_LargeHavoc: false,
-        EnableCollection_SmallOps: true,
-        EnableCollection_LargeOps: false
-    } as VerifierOptions;
-
-    workflowBSQWitnessSingle(usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQWitnessSingle(usercode, vopts_smallwitness, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -133,16 +162,7 @@ else if(mode === "--largewitness") {
         process.exit(1);
     }
 
-    const vopts = {
-        ISize: 8,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: true,
-        EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: true,
-        EnableCollection_LargeOps: true
-    } as VerifierOptions;
-
-    workflowBSQWitnessSingle(usercode, vopts, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQWitnessSingle(usercode, vopts_largewitness, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -260,15 +280,6 @@ else if(mode === "--evaluate") {
         process.exit(1);
     }
 
-    const vopts = {
-        ISize: 8,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: true,
-        EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: true,
-        EnableCollection_LargeOps: true
-    } as VerifierOptions;
-
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -277,7 +288,7 @@ else if(mode === "--evaluate") {
     rl.question(">> ", (input) => {
         try {
             const jinput = JSON.parse(input) as any[];
-            workflowEvaluateSingle(usercode, jinput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowEvaluateSingle(usercode, jinput, vopts_evaluate, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 
@@ -317,15 +328,6 @@ else if(mode === "--invert") {
         process.exit(1);
     }
 
-    const vopts = {
-        ISize: 8,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: true,
-        EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: true,
-        EnableCollection_LargeOps: true
-    } as VerifierOptions;
-
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -334,7 +336,7 @@ else if(mode === "--invert") {
     rl.question(">> ", (input) => {
         try {
             const joutput = JSON.parse(input);
-            workflowInvertSingle(usercode, joutput, vopts, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowInvertSingle(usercode, joutput, vopts_evaluate, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 

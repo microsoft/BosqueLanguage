@@ -1193,6 +1193,16 @@ class SMTEmitter {
         const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, {file: "[]", line: -1, pos: -1});
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
+        assembly.typeMap.forEach((tt) => {
+            temitter.internTypeName(tt.typeID, tt.shortname);
+        });
+        assembly.invokeDecls.forEach((idcl) => {
+            temitter.internFunctionName(idcl.ikey, idcl.shortname);
+        });
+        assembly.constantDecls.forEach((cdecl) => {
+            temitter.internGlobalName(cdecl.gkey, cdecl.shortname);
+        });
+
         const bemitter = new SMTBodyEmitter(assembly, temitter, numgen, vopts, callsafety, {file: "[]", line: -1, pos: -1});
         const smtassembly = new SMTAssembly(vopts, numgen.int, Number(numgen.hash.bvsize), temitter.lookupFunctionName(entrypoint));
 

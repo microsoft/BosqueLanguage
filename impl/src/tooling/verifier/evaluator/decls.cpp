@@ -1646,8 +1646,7 @@ std::optional<json> DataStringType::z3extract(ExtractionInfo& ex, const z3::expr
 
 ByteBufferType* ByteBufferType::jparse(json j)
 {
-    assert(false);
-    return nullptr;
+    return new ByteBufferType();
 }
 
 bool ByteBufferType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2137,7 +2136,7 @@ EnumType* EnumType::jparse(json j)
     std::vector<std::pair<std::string, uint32_t>> enums;
     auto jenuminvs = j["enums"];
     std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enums), [](const json& jv) {
-        return std::make_pair(jv[0].get<std::string>(), jv[1].get<uint32_t>());
+        return std::make_pair(jv["ename"].get<std::string>(), jv["value"].get<uint32_t>());
     });
 
     return new EnumType(j["name"].get<std::string>(), j["usinginv"].get<std::string>(), enums);

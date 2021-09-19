@@ -174,7 +174,7 @@ function workflowGetErrors(usercode: CodeFileInfo[], vopts: VerifierOptions, ent
         else {
             const simplenumgen = BVEmitter.create(BigInt(vopts.ISize));
             const hashgen = BVEmitter.create(BigInt(512));
-            return SMTEmitter.generateSMTAssemblyAllErrors(masm, vopts, { int: simplenumgen, hash: hashgen}, entrypoint);
+            return SMTEmitter.generateSMTAssemblyAllErrors(masm, vopts, { int: simplenumgen, hash: hashgen}, "__i__" + entrypoint);
         }
     } catch(e) {
         process.stdout.write(chalk.red(`SMT generate error -- ${e}\n`));
@@ -297,12 +297,16 @@ function wfInfeasibleSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtP
                 const numgen = computeNumGen(masm, BV_SIZES[i]);
                 const hashgen = BVEmitter.create(BigInt(16));
                 if(numgen === undefined) {
-                    process.stderr.write(`    constants larger than specified bitvector size -- continuing checks...\n`);
+                    if(printprogress) {
+                        process.stderr.write(`    constants larger than specified bitvector size -- continuing checks...\n`);
+                    }
                 }
                 else {
                     for (let j = 0; j < SMALL_MODEL.length; ++j) {
                         const vopts = { ISize: BV_SIZES[i], ...SMALL_MODEL[j] } as VerifierOptions;
-                        process.stderr.write(`      Checking *${vopts.EnableCollection_LargeHavoc ? "mixed" : "small"}* inputs with *${vopts.EnableCollection_LargeOps ? "mixed" : "small"}* operations...\n`);
+                        if(printprogress) {
+                            process.stderr.write(`      Checking *${vopts.EnableCollection_LargeHavoc ? "mixed" : "small"}* inputs with *${vopts.EnableCollection_LargeOps ? "mixed" : "small"}* operations...\n`);
+                        }
 
                         const res = generateSMTPayload(masm, "unreachable", timeout, {int: numgen, hash: hashgen}, vopts, errorTrgtPos, entrypoint);
                         if (res === undefined) {
@@ -391,12 +395,16 @@ function wfWitnessSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtPos:
                 const numgen = computeNumGen(masm, BV_SIZES[i]);
                 const hashgen = BVEmitter.create(BigInt(16));
                 if(numgen === undefined) {
-                    process.stderr.write(`    constants larger than specified bitvector size -- continuing checks...\n`);
+                    if(printprogress) {
+                        process.stderr.write(`    constants larger than specified bitvector size -- continuing checks...\n`);
+                    }
                 }
                 else {
                     for (let j = 0; j < SMALL_MODEL.length; ++j) {
                         const vopts = { ISize: BV_SIZES[i], ...SMALL_MODEL[j] } as VerifierOptions;
-                        process.stderr.write(`      Checking *${vopts.EnableCollection_LargeHavoc ? "mixed" : "small"}* inputs with *${vopts.EnableCollection_LargeOps ? "mixed" : "small"}* operations...\n`);
+                        if(printprogress) {
+                            process.stderr.write(`      Checking *${vopts.EnableCollection_LargeHavoc ? "mixed" : "small"}* inputs with *${vopts.EnableCollection_LargeOps ? "mixed" : "small"}* operations...\n`);
+                        }
 
                         const res = generateSMTPayload(masm, "witness", timeout, {int: numgen, hash: hashgen}, vopts, errorTrgtPos, entrypoint);
                         if (res === undefined) {
