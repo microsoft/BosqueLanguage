@@ -631,7 +631,7 @@ class SMTAssembly {
             else {
                 let worklist = [...cscc].sort();
                 if(worklist.length === 1) {
-                    const cf = worklist.pop() as string;
+                    const cf = worklist.shift() as string;
                     const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
 
                     const decl = crf.emitSMT2_SingleDeclOnly();
@@ -647,7 +647,7 @@ class SMTAssembly {
                     let decls: string[] = [];
                     let impls: string[] = [];
                     while (worklist.length !== 0) {
-                        const cf = worklist.pop() as string;
+                        const cf = worklist.shift() as string;
                         const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
 
                         decls.push(crf.emitSMT2_DeclOnly());

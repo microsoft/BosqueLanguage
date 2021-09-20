@@ -1221,15 +1221,25 @@ class TypeChecker {
 
     private checkArgumentsEvaluationEntity(sinfo: SourceInfo, env: TypeEnvironment, oftype: ResolvedEntityAtomType, args: Arguments): ExpandedArgument[] {
         if(oftype.object.attributes.includes("__constructable")) {
-            const atype = (oftype.object.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
-            const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oftype.binds);
+            if(oftype.object.attributes.includes("__enum_type")) {
+                this.raiseErrorIf(sinfo, args.argList.length !== 1 || !(args.argList[0] instanceof PositionalArgument), "Expected single argument");
 
-            this.raiseErrorIf(sinfo, args.argList.length !== 1 || !(args.argList[0] instanceof PositionalArgument), "Expected single argument");
+                const treg = this.m_emitter.generateTmpRegister();
+                const earg = this.checkExpression(env, (args.argList[0] as PositionalArgument).value, treg, this.m_assembly.getSpecialNatType()).getExpressionResult();
 
-            const treg = this.m_emitter.generateTmpRegister();
-            const earg = this.checkExpression(env, (args.argList[0] as PositionalArgument).value, treg, ratype).getExpressionResult();
+                return [{ name: "[constructable]", argtype: earg.valtype, ref: undefined, expando: false, pcode: undefined, treg: treg }];
+            }
+            else {
+                const atype = (oftype.object.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
+                const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oftype.binds);
 
-            return [{ name: "[constructable]", argtype: earg.valtype, ref: undefined, expando: false, pcode: undefined, treg: treg }];
+                this.raiseErrorIf(sinfo, args.argList.length !== 1 || !(args.argList[0] instanceof PositionalArgument), "Expected single argument");
+
+                const treg = this.m_emitter.generateTmpRegister();
+                const earg = this.checkExpression(env, (args.argList[0] as PositionalArgument).value, treg, ratype).getExpressionResult();
+
+                return [{ name: "[constructable]", argtype: earg.valtype, ref: undefined, expando: false, pcode: undefined, treg: treg }];
+            }
         }
         else {
             this.raiseErrorIf(sinfo, oftype.object.attributes.includes("__internal"), "Type is not constructable");
@@ -1306,26 +1316,39 @@ class TypeChecker {
 
     private checkArgumentsEntityConstructor(sinfo: SourceInfo, oftype: ResolvedEntityAtomType, args: ExpandedArgument[], trgt: MIRRegisterArgument): ResolvedType {
         if(oftype.object.attributes.includes("__constructable")) {
-            this.raiseErrorIf(sinfo, !oftype.object.attributes.includes("__typedprimitive"), "Can only construct typed primitives directly");
-            this.raiseErrorIf(sinfo, args.length !== 1, "Expected single argument");
+            if(oftype.object.attributes.includes("__enum_type")) {
+                this.raiseErrorIf(sinfo, args.length !== 1, "Expected single argument");
 
-            const atype = (oftype.object.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
-            const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oftype.binds);
-            const mirfromtype = this.m_emitter.registerResolvedTypeReference(ratype);
+                const mirfromtype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNatType());
 
-            const aarg = this.emitInlineConvertIfNeeded(sinfo, args[0].treg as MIRRegisterArgument, args[0].argtype as ValueType, ratype);
+                const constype = ResolvedType.createSingle(oftype);
+                const rtype = this.m_emitter.registerResolvedTypeReference(constype);
 
-            const constype = ResolvedType.createSingle(oftype);
-            const rtype = this.m_emitter.registerResolvedTypeReference(constype);
-
-            if(oftype.object.invariants.length === 0) { 
-                this.m_emitter.emitInject(sinfo, mirfromtype, rtype, aarg, trgt);
+                this.m_emitter.emitInject(sinfo, mirfromtype, rtype, args[0].treg as MIRRegisterArgument, trgt);
+                return constype;
             }
             else {
-                const conskey = MIRKeyGenerator.generateFunctionKeyWType(constype, "@@constructor", new Map<string, ResolvedType>(), []);
-                this.m_emitter.emitInvokeFixedFunction(sinfo, conskey.keyid, [aarg], undefined, rtype, trgt);
+                this.raiseErrorIf(sinfo, !oftype.object.attributes.includes("__typedprimitive"), "Can only construct typed primitives directly");
+                this.raiseErrorIf(sinfo, args.length !== 1, "Expected single argument");
+
+                const atype = (oftype.object.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
+                const ratype = this.resolveAndEnsureTypeOnly(sinfo, atype, oftype.binds);
+                const mirfromtype = this.m_emitter.registerResolvedTypeReference(ratype);
+
+                const aarg = this.emitInlineConvertIfNeeded(sinfo, args[0].treg as MIRRegisterArgument, args[0].argtype as ValueType, ratype);
+
+                const constype = ResolvedType.createSingle(oftype);
+                const rtype = this.m_emitter.registerResolvedTypeReference(constype);
+
+                if (oftype.object.invariants.length === 0) {
+                    this.m_emitter.emitInject(sinfo, mirfromtype, rtype, aarg, trgt);
+                }
+                else {
+                    const conskey = MIRKeyGenerator.generateFunctionKeyWType(constype, "@@constructor", new Map<string, ResolvedType>(), []);
+                    this.m_emitter.emitInvokeFixedFunction(sinfo, conskey.keyid, [aarg], undefined, rtype, trgt);
+                }
+                return constype;
             }
-            return constype;
         }
         else {
             this.raiseErrorIf(sinfo, oftype.object.attributes.includes("__internal"), "Type is not constructable");

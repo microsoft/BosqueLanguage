@@ -210,7 +210,7 @@ function markSafeCalls(entryPoints: MIRInvokeKey[], masm: MIRAssembly, errorTrgt
         let worklist = cscc !== undefined ? [...cscc].sort() : [cn.invoke];
 
         while (worklist.length !== 0) {
-            const ikey = worklist.pop() as string;
+            const ikey = worklist.shift() as string;
             const issafe = isBodySafe(ikey, masm, etrgt, cginfo, safeinfo);
 
             const osafe = safeinfo.get(ikey);

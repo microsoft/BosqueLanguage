@@ -1341,36 +1341,50 @@ class MIREmitter {
                     || emitter.pendingOPVirtualProcessing.length !== 0) {
 
                     while (emitter.pendingOOProcessing.length !== 0) {
-                        const tt = emitter.pendingOOProcessing.pop() as EntityInstantiationInfo;
+                        const tt = emitter.pendingOOProcessing[0];
                         checker.processOOType(tt.tkey, tt.shortname, tt.ootype, tt.binds);
+
+                        emitter.pendingOOProcessing.shift();
                     }
 
                     if(emitter.pendingConstExprProcessing.length !== 0) {
-                        const pc = emitter.pendingConstExprProcessing.pop() as PendingConstExprProcessingInfo;
+                        const pc = emitter.pendingConstExprProcessing[0];
                         checker.processConstExpr(pc.gkey, pc.shortname, pc.name, pc.srcFile, pc.containingType, pc.cexp, pc.attribs, pc.binds, pc.ddecltype);
+
+                        emitter.pendingConstExprProcessing.shift();
                     }
                     else if (emitter.pendingFunctionProcessing.length !== 0) {
-                        const pf = emitter.pendingFunctionProcessing.pop() as PendingFunctionProcessingInfo;
+                        const pf = emitter.pendingFunctionProcessing[0];
                         checker.processFunctionDecl(pf.fkey, pf.shortname, pf.name, pf.enclosingdecl, pf.invoke, pf.binds, pf.pcodes, pf.cargs);
+
+                        emitter.pendingFunctionProcessing.shift();
                     }
                     else if (emitter.pendingOperatorProcessing.length !== 0) {
-                        const pf = emitter.pendingOperatorProcessing.pop() as PendingFunctionProcessingInfo;
+                        const pf = emitter.pendingOperatorProcessing[0];
                         checker.processFunctionDecl(pf.fkey, pf.shortname, pf.name, pf.enclosingdecl, pf.invoke, pf.binds, pf.pcodes, pf.cargs);
+
+                        emitter.pendingOperatorProcessing.shift();
                     }
                     else if (emitter.pendingOOMethodProcessing.length !== 0) {
-                        const mf = emitter.pendingOOMethodProcessing.pop() as PendingOOMethodProcessingInfo;
+                        const mf = emitter.pendingOOMethodProcessing[0];
                         checker.processMethodFunction(mf.vkey, mf.mkey, mf.shortname, mf.name, mf.enclosingDecl, mf.mdecl, mf.binds, mf.pcodes, mf.cargs);
+
+                        emitter.pendingOOMethodProcessing.shift();
                     }
                     else if (emitter.pendingPCodeProcessing.length !== 0) {
-                        const lf = emitter.pendingPCodeProcessing.pop() as PendingPCodeProcessingInfo;
+                        const lf = emitter.pendingPCodeProcessing[0];
                         checker.processLambdaFunction(lf.lkey, lf.lshort, lf.invoke, lf.sigt, lf.bodybinds, lf.cargs, lf.capturedpcodes);
+
+                        emitter.pendingPCodeProcessing.shift();
                     }
                     else if (emitter.pendingOPVirtualProcessing.length !== 0) {
-                        const vop = emitter.pendingOPVirtualProcessing.pop() as PendingOPVirtualProcessingInfo;
+                        const vop = emitter.pendingOPVirtualProcessing[0];
                         const opimpls = emitter.getVirtualOpImpls(vop.vkey, vop.optns, vop.optenclosingType, vop.name, vop.binds, vop.pcodes, vop.cargs);
                         for (let i = 0; i < opimpls.length; ++i) {
                             checker.processVirtualOperator(...opimpls[i]);
                         }
+
+                        emitter.pendingOPVirtualProcessing.shift();
                     }
                     else {
                         ;
