@@ -76,7 +76,7 @@ class SMTTypeEmitter {
 
     internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
         if (!this.mangledTypeNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/[<>, \[\]\{\}:]/g, "_");
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#]/g, "_");
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "$" + this.namectr++;
             }
@@ -94,7 +94,7 @@ class SMTTypeEmitter {
 
     internFunctionName(keyid: MIRInvokeKey, shortname: string) {
         if (!this.mangledFunctionNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/[<>, \[\]\{\}:]/g, "_");
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#]/g, "_");
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "$" + this.namectr++;
             }
@@ -112,7 +112,7 @@ class SMTTypeEmitter {
 
     internGlobalName(keyid: MIRGlobalKey, shortname: string) {
         if (!this.mangledGlobalNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/[<>, \[\]\{\}:]/g, "_");
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#]/g, "_");
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "$" + this.namectr++;
             }
