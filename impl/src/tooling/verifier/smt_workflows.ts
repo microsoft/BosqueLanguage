@@ -120,10 +120,10 @@ function runVEvaluator(cpayload: object, workflow: "unreachable" | "witness" | "
 }
 
 function computeNumGen(masm: MIRAssembly, desiredbv: number): BVEmitter | undefined {
-    const tuplemax = Math.max(...[desiredbv, ...[...masm.tupleDecls].map((tdcl) => tdcl[1].entries.length)]);
-    const recordmax = Math.max(...[desiredbv, ...[...masm.recordDecls].map((rdcl) => rdcl[1].entries.length)]);
-    const emax = Math.max(...[desiredbv, ...[...masm.entityDecls].map((edcl) => (edcl[1] instanceof MIRObjectEntityTypeDecl) ? edcl[1].fields.length : 0)]);
-    const elmax = Math.max(...[desiredbv, ...[...masm.ephemeralListDecls].map((tdcl) => tdcl[1].entries.length)]);
+    const tuplemax = Math.max(...[0, ...[...masm.tupleDecls].map((tdcl) => tdcl[1].entries.length)]);
+    const recordmax = Math.max(...[0, ...[...masm.recordDecls].map((rdcl) => rdcl[1].entries.length)]);
+    const emax = Math.max(...[0, ...[...masm.entityDecls].map((edcl) => (edcl[1] instanceof MIRObjectEntityTypeDecl) ? edcl[1].fields.length : 0)]);
+    const elmax = Math.max(...[0, ...[...masm.ephemeralListDecls].map((tdcl) => tdcl[1].entries.length)]);
 
     const consts = [...masm.invokeDecls].map((idcl) => computeMaxConstantSize(idcl[1].body.body));
     let max = BigInt(Math.max(tuplemax, recordmax, emax, elmax));
@@ -133,7 +133,7 @@ function computeNumGen(masm: MIRAssembly, desiredbv: number): BVEmitter | undefi
         }
     }
 
-    if(BigInt(desiredbv) < max) {
+    if(2n**(BigInt(desiredbv) - 1n) < max) {
         return undefined;
     }
     else {
@@ -194,7 +194,7 @@ function workflowEmitToFile(into: string, usercode: CodeFileInfo[], asmflavor: A
             const numgen = computeNumGen(masm, vopts.ISize);
             const hashgen = BVEmitter.create(BigInt(16));
             if(numgen === undefined) {
-                process.stderr.write(chalk.red(`Constants larger than specified bitvector size!\n`));
+                process.stderr.write(chalk.red(`Constants larger than specified bitvector size (${vopts.ISize})!\n`));
                 process.exit(1);
             }
 
@@ -219,7 +219,7 @@ function workflowBSQInfeasibleSingle(usercode: CodeFileInfo[], vopts: VerifierOp
             const numgen = computeNumGen(masm, vopts.ISize);
             const hashgen = BVEmitter.create(BigInt(16));
             if(numgen === undefined) {
-                cb(JSON.stringify({result: "error", info: "constants larger than specified bitvector size"}));
+                cb(JSON.stringify({result: "error", info: `constants larger than specified bitvector size (${vopts.ISize})`}));
                 return;
             }
             
@@ -246,7 +246,7 @@ function workflowBSQWitnessSingle(usercode: CodeFileInfo[], vopts: VerifierOptio
             const numgen = computeNumGen(masm, vopts.ISize);
             const hashgen = BVEmitter.create(BigInt(16));
             if(numgen === undefined) {
-                cb(JSON.stringify({result: "error", info: "constants larger than specified bitvector size"}));
+                cb(JSON.stringify({result: "error", info: `constants larger than specified bitvector size (${vopts.ISize})`}));
                 return;
             }
 
@@ -271,10 +271,8 @@ function wfInfeasibleSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtP
     ];
 
     const BV_SIZES = [
-        3,
-        5, 
+        4,
         8, 
-        12, 
         16
     ];
 
@@ -705,7 +703,7 @@ function workflowEvaluateSingle(usercode: CodeFileInfo[], jin: any[], vopts: Ver
             const numgen = computeNumGen(masm, vopts.ISize);
             const hashgen = BVEmitter.create(BigInt(16));
             if(numgen === undefined) {
-                cb(JSON.stringify({result: "error", info: "constants larger than specified bitvector size"}));
+                cb(JSON.stringify({result: "error", info: `constants larger than specified bitvector size (${vopts.ISize})`}));
                 return;
             }
 
@@ -732,7 +730,7 @@ function workflowInvertSingle(usercode: CodeFileInfo[], jout: any, vopts: Verifi
             const numgen = computeNumGen(masm, vopts.ISize);
             const hashgen = BVEmitter.create(BigInt(16));
             if(numgen === undefined) {
-                cb(JSON.stringify({result: "error", info: "constants larger than specified bitvector size"}));
+                cb(JSON.stringify({result: "error", info: `constants larger than specified bitvector size (${vopts.ISize})`}));
                 return;
             }
 

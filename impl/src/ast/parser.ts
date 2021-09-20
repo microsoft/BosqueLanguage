@@ -1949,13 +1949,16 @@ class Parser {
                 else if(exp instanceof LiteralFloatPointExpression) {
                     return [new LiteralTypedPrimitiveConstructorExpression(sinfo, exp.value, exp.fptype, ttype), rops];
                 }
+                else if(exp instanceof LiteralRationalExpression) {
+                    return [new LiteralTypedPrimitiveConstructorExpression(sinfo, exp.value, exp.rtype, ttype), rops];
+                }
                 else {
-                    if(!(exp instanceof LiteralRationalExpression)) {
-                        this.raiseError(sinfo.line, "Expected literal value -- int, float, or rational");
+                    if(!(exp instanceof LiteralNumberinoExpression)) {
+                        this.raiseError(sinfo.line, "Expected literal value -- int, float, rational, or numberino");
                     }
 
-                    const rexp = exp as LiteralRationalExpression;
-                    return [new LiteralTypedPrimitiveConstructorExpression(sinfo, rexp.value, rexp.rtype, ttype), rops];
+                    const rexp = exp as LiteralNumberinoExpression;
+                    return [new LiteralTypedPrimitiveConstructorExpression(sinfo, rexp.value, undefined, ttype), rops];
                 }
             }
             else {

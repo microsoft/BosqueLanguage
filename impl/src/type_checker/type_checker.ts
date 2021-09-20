@@ -2270,9 +2270,8 @@ class TypeChecker {
     private checkTypedTypedNumericConstructor_helper(sinfo: SourceInfo, env: TypeEnvironment, value: string, tntt: ResolvedType, ntype: ResolvedType, trgt: MIRRegisterArgument): TypeEnvironment {
         const oftype = (tntt.options[0] as ResolvedEntityAtomType).object;
         const ofbinds = (tntt.options[0] as ResolvedEntityAtomType).binds;
-
-        this.raiseErrorIf(sinfo, !oftype.attributes.includes("__typedprimitive"), `Cannot construct typed primitive of ${tntt.typeID}`);
-        this.raiseErrorIf(sinfo, !oftype.attributes.includes("__typedeclable"), `Cannot construct typed primitive using ${tntt.typeID}`);
+        this.raiseErrorIf(sinfo, !oftype.attributes.includes("__typedprimitive"), `Cannot construct typed primitive ${tntt.typeID}`);
+        this.raiseErrorIf(sinfo, !(ntype.options[0] as ResolvedEntityAtomType).object.attributes.includes("__typedeclable"), `Cannot construct typed primitive using ${ntype.typeID}`);
 
         let nval: MIRConstantArgument = new MIRConstantNone();
         if(ntype.isSameType(this.m_assembly.getSpecialIntType())) {
@@ -2320,10 +2319,22 @@ class TypeChecker {
     }
 
     private checkTypedTypedNumericConstructor(env: TypeEnvironment, exp: LiteralTypedPrimitiveConstructorExpression, trgt: MIRRegisterArgument): TypeEnvironment {
-        const tntt = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.oftype, env.terms);
-        const ntype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.vtype, new Map<string, ResolvedType>());
+        if(exp.oftype !== undefined) {
+            const ntype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.oftype, new Map<string, ResolvedType>());
+            const tntt = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.vtype, env.terms);
 
-        return this.checkTypedTypedNumericConstructor_helper(exp.sinfo, env, exp.value, tntt, ntype, trgt);
+            return this.checkTypedTypedNumericConstructor_helper(exp.sinfo, env, exp.value, tntt, ntype, trgt);
+        }
+        else {
+            const tntt = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.vtype, new Map<string, ResolvedType>());
+            this.raiseErrorIf(exp.sinfo, !tntt.isUniqueCallTargetType(), "Expected unique typed primitive");
+            
+            const vdecl = tntt.getUniqueCallTargetType().object.memberMethods.find((mm) => mm.name === "value");
+            this.raiseErrorIf(exp.sinfo, vdecl !== undefined, "Missing value definition on typed primitive");
+
+            const ntype = this.resolveAndEnsureTypeOnly(exp.sinfo, (vdecl as MemberMethodDecl).invoke.resultType, new Map<string, ResolvedType>());
+            return this.checkTypedTypedNumericConstructor_helper(exp.sinfo, env, exp.value, tntt, ntype, trgt);
+        }
     }
 
     private checkAccessNamespaceConstant(env: TypeEnvironment, exp: AccessNamespaceConstantExpression, trgt: MIRRegisterArgument): TypeEnvironment {
@@ -3648,10 +3659,10 @@ class TypeChecker {
             if (knownimpl_multi !== undefined) {
                 const knownimpl = new OOMemberLookupInfo<MemberMethodDecl>(knownimpl_multi.contiainingType, knownimpl_multi.decl[0], knownimpl_multi.binds);
 
-                if(knownimpl.decl.invoke.body !== undefined && (typeof(knownimpl.decl.invoke.body) === "string") && ["special_nothing", "special_something", "special_extract"].includes(knownimpl.decl.invoke.body as string)) {
+                if(knownimpl.decl.invoke.body !== undefined && (typeof(knownimpl.decl.invoke.body.body) === "string") && ["special_nothing", "special_something", "special_extract"].includes(knownimpl.decl.invoke.body.body as string)) {
                     this.raiseErrorIf(op.sinfo, op.args.argList.length !== 0, "No arguments permitted on this method");
                     
-                    const sinv = knownimpl.decl.invoke.body as string;
+                    const sinv = knownimpl.decl.invoke.body.body as string;
                     if(sinv === "special_nothing") {
                         return this.checkIsTypeExpression_commondirect(op.sinfo, env, arg, this.m_assembly.getSpecialNothingType(), trgt);
                     }

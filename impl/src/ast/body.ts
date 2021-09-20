@@ -388,10 +388,10 @@ class LiteralTypedStringExpression extends Expression {
 
 class LiteralTypedPrimitiveConstructorExpression extends Expression {
     readonly value: string;
-    readonly oftype: TypeSignature;
+    readonly oftype: TypeSignature | undefined;
     readonly vtype: TypeSignature;
 
-    constructor(sinfo: SourceInfo, value: string, oftype: TypeSignature, vtype: TypeSignature) {
+    constructor(sinfo: SourceInfo, value: string, oftype: TypeSignature | undefined, vtype: TypeSignature) {
         super(ExpressionTag.LiteralTypedPrimitiveConstructorExpression, sinfo);
         this.value = value;
         this.oftype = oftype;

@@ -296,7 +296,7 @@ class PrimitiveOfType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::string usinginv;
+    const std::string usinginv; //may be sentinal "[NO CONSTRUCTOR]"
 
     PrimitiveOfType(std::string name, std::string oftype, std::string usinginv) : IGroundedType(name), oftype(oftype), usinginv(usinginv) {;}
     virtual ~PrimitiveOfType() {;}

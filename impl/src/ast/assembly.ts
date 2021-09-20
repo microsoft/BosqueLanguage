@@ -733,10 +733,10 @@ class Assembly {
                 assert(cexp instanceof LiteralTypedPrimitiveConstructorExpression);
                 const lexp = cexp as LiteralTypedPrimitiveConstructorExpression;
 
-                const oftype = this.normalizeTypeOnly(lexp.oftype, binds);
-                const vv = lexp.value.slice(0, lexp.value.length - 1);
+                const vtype = this.normalizeTypeOnly(lexp.vtype, binds);
+                const vv = (/.*[inINfdR]$/.test(lexp.value)) ? lexp.value.slice(0, lexp.value.length - 1) : lexp.value;
 
-                return [lexp, oftype, `${vv}#${oftype.typeID}`];
+                return [lexp, vtype, `${vv}#${vtype.typeID}`];
             }
         }
     }
