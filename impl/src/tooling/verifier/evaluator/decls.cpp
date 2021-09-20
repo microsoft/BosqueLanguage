@@ -2150,8 +2150,21 @@ bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::contex
     }
     
     std::string enumchoice = j.get<std::string>();
-    auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&enumchoice](const std::pair<std::string, uint32_t>& entry) {
-        return entry.first == enumchoice;
+    if(enumchoice.length() <= this->name.length() + 2)
+    {
+        return false;
+    }
+
+    std::string scopestr(enumchoice.cbegin(), enumchoice.cbegin() + this->name.length());
+    auto scopeok = this->name == scopestr;
+    if(!scopeok)
+    {
+        return false;
+    }
+
+    std::string namestr(enumchoice.cbegin() + this->name.length() + 2, enumchoice.cend());
+    auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&namestr](const std::pair<std::string, uint32_t>& entry) {
+        return entry.first == namestr;
     });
 
     if(pos == this->enums.cend())

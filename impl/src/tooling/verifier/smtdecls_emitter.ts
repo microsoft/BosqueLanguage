@@ -315,9 +315,9 @@ class SMTEmitter {
         const tdecl = this.bemitter.assembly.entityDecls.get(tt.typeID) as MIREnumEntityTypeDecl;
 
         const fbody = new SMTLet("@vval", new SMTCallSimple("EnumChoice@UFCons_API", [new SMTVar("path")]),
-            new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst(`${tdecl.enums.length}`)]), 
-                this.temitter.generateErrorResultAssert(tt), 
-                this.temitter.generateResultTypeConstructorSuccess(tt, new SMTVar("@vval")))
+            new SMTIf(new SMTCallSimple("bvult", [new SMTVar("@vval"), this.bemitter.numgen.int.emitSimpleNat(tdecl.enums.length)]), 
+                this.temitter.generateResultTypeConstructorSuccess(tt, new SMTVar("@vval")),
+                this.temitter.generateErrorResultAssert(tt))
             );
     
         havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
