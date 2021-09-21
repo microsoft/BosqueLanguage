@@ -297,7 +297,7 @@ else if(mode === "--evaluate") {
                     }
                     else if (jres["result"] === "output") {
                         process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
-                        process.stdout.write(JSON.stringify(jres["output"]) + "\n");
+                        process.stdout.write(JSON.stringify(jres["output"], undefined, 2) + "\n");
                     }
                     else if (jres["result"] === "timeout") {
                         process.stdout.write(`Solver timeout :(\n`);
@@ -345,7 +345,7 @@ else if(mode === "--invert") {
                     }
                     else if (jres["result"] === "witness") {
                         process.stdout.write(`Generated candidate input in ${jres["time"]} millis!\n`);
-                        process.stdout.write(JSON.stringify(jres["input"]) + "\n");
+                        process.stdout.write(JSON.stringify(jres["input"], undefined, 2) + "\n");
                     }
                     else if (jres["result"] === "timeout") {
                         process.stdout.write(`Solver timeout :(\n`);

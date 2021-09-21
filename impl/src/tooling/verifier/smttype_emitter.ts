@@ -8,7 +8,6 @@ import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/m
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
 import * as assert from "assert";
-import { BSQRegex } from "../../ast/bsqregex";
 
 enum APIEmitTypeTag
 {
@@ -748,8 +747,7 @@ class SMTTypeEmitter {
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                 if (tt.typeID.startsWith("NSCore::StringOf")) {
-                    const vre = this.assembly.validatorRegexs.get(entity.fromtype as MIRResolvedTypeKey) as BSQRegex;
-                    return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), re_validate: vre.jemit()};
+                    return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: (entity.fromtype as MIRResolvedTypeKey)};
                 }
                 else if (tt.typeID.startsWith("NSCore::DataString")) {
                     return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};

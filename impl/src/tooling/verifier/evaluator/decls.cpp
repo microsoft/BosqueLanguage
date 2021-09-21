@@ -2192,7 +2192,8 @@ std::optional<json> EnumType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
         return std::nullopt;
     }
 
-    return std::make_optional(this->enums[lenval.value()].first);
+    std::string rres = this->name + "::" + this->enums[lenval.value()].first;
+    return std::make_optional(rres);
 }
 
 EntityType* EntityType::jparse(json j)

@@ -589,7 +589,12 @@ class Assembly {
             }
         }
 
-        return fullbinds;
+        if([...fullbinds].some((bb) => bb[1].isEmptyType())) {
+            return undefined;
+        }
+        else {
+            return fullbinds;
+        }
     }
 
     processNumberinoExpressionIntoTypedExpression(exp: LiteralNumberinoExpression, infertype: ResolvedType): Expression | undefined {
