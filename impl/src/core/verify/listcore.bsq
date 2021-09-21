@@ -1212,7 +1212,7 @@ __internal entity ListConcatOps provides Object {
     __safe function s_left<T>(l: List<T>): List<T> # concat_list_left
     __safe function s_right<T>(l: List<T>): List<T> # concat_list_right
 
-    __safe function s_isConcatList<T>(l: List<T>): Nat # list_isconcat
+    __safe function s_isConcatList<T>(l: List<T>): Bool # list_isconcat
 
     recursive function s_concat_lropt_at<T>(l: List<T>, i: Nat): T {
         if(ListFlatOps::s_isFlatList<T>(l)) {
@@ -2121,7 +2121,7 @@ __internal entity ListOps provides Object {
     }
 
     function s_sum_base<T unique Algebraic>(l: List<T>): T {
-        return ListOps::s_sum_rec<T>(l, T::zero, 0n, ListOps::s_size<T>(l));
+        return ListOps::s_sum_rec<T>[recursive](l, T::zero, 0n, ListOps::s_size<T>(l));
     }
 
     function s_sum<T unique Algebraic>(l: List<T>): T {
