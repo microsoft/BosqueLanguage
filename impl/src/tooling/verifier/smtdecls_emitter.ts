@@ -150,10 +150,10 @@ class SMTEmitter {
 
         let accept: SMTExp = new SMTConst("false");
         if (this.bemitter.vopts.StringOpt === "ASCII") {
-            accept = new SMTCallSimple("str.in.re", [this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str")), new SMTConst(lre)]);
+            accept = new SMTCallSimple("str.in.re", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str")), new SMTConst(lre)]);
         }
         else {
-            accept = new SMTCallSimple("seq.in.re", [this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str")), new SMTConst(lre)]);
+            accept = new SMTCallSimple("seq.in.re", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::String"), new SMTVar("str")), new SMTConst(lre)]);
         }
 
         const fbody = new SMTLet("str", bcreate,
@@ -1177,6 +1177,9 @@ class SMTEmitter {
         assembly.invokeDecls.forEach((idcl) => {
             temitter.internFunctionName(idcl.ikey, idcl.shortname);
         });
+        assembly.primitiveInvokeDecls.forEach((idcl) => {
+            temitter.internFunctionName(idcl.ikey, idcl.shortname);
+        });
         assembly.constantDecls.forEach((cdecl) => {
             temitter.internGlobalName(cdecl.gkey, cdecl.shortname);
         });
@@ -1210,6 +1213,9 @@ class SMTEmitter {
             temitter.internTypeName(tt.typeID, tt.shortname);
         });
         assembly.invokeDecls.forEach((idcl) => {
+            temitter.internFunctionName(idcl.ikey, idcl.shortname);
+        });
+        assembly.primitiveInvokeDecls.forEach((idcl) => {
             temitter.internFunctionName(idcl.ikey, idcl.shortname);
         });
         assembly.constantDecls.forEach((cdecl) => {

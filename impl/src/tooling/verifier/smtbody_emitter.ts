@@ -2632,7 +2632,7 @@ class SMTBodyEmitter {
 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
             }
-            case "apivalue_generate": {
+            case "apitype_generate": {
                 const synthbody = this.typegen.generateHavocConstructorCall(mirrestype, new SMTConst("(as seq.empty (Seq BNat))"), this.numgen.int.emitSimpleNat(1));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, synthbody);
             }

@@ -6,10 +6,12 @@
 import * as assert from "assert";
 
 class RegexParser {
+    readonly currentns: string;
     readonly restr: string;
     pos: number;
 
-    constructor(restr: string) {
+    constructor(currentns: string, restr: string) {
+        this.currentns = currentns;
         this.restr = restr;
         this.pos = 0;
     }
@@ -69,13 +71,18 @@ class RegexParser {
             }
 
             if(!this.isToken("]")) {
-                return "Invalid range given";
+                return "Invalid range";
             }
             this.advance();
 
             return new RegexCharRange(compliment, range);
         }
-        else if(this.isToken("{")) {
+        else if(this.isToken("$")) {
+            this.advance();
+
+            if(!this.isToken("{")) {
+                return "Invalid regex const";
+            }
             this.advance();
 
             let fname = "";
@@ -85,13 +92,13 @@ class RegexParser {
             }
 
             if(!this.isToken("}")) {
-                return "Invalid range given";
+                return "Invalid regex const";
             }
             this.advance();
 
             let ccpos = fname.indexOf("::");
 
-            let ns = ccpos === -1 ? "NSCore" : fname.slice(0, ccpos);
+            let ns = ccpos === -1 ? this.currentns : fname.slice(0, ccpos);
             let ccname = ccpos === -1 ? fname : fname.slice(ccpos + 3);
 
             return new RegexConstClass(ns, ccname);            
@@ -113,7 +120,7 @@ class RegexParser {
             if(this.isToken("\\") || this.isToken("/") 
                 || this.isToken(".") || this.isToken("*") || this.isToken("+") || this.isToken("?") || this.isToken("|")
                 || this.isToken("(") || this.isToken(")") || this.isToken("[") || this.isToken("]") || this.isToken("{") || this.isToken("}")
-                || this.isToken("$") || this.isToken("^")) {
+                || this.isToken("$")) {
                 const cc = this.token();
                 this.advance();
 
@@ -285,8 +292,8 @@ class BSQRegex {
         return this.re.compilePatternToSMT(ascii);
     }
 
-    static parse(rstr: string): BSQRegex | string {
-        const reparser = new RegexParser(rstr.substr(1, rstr.length - 2));
+    static parse(currentns: string, rstr: string): BSQRegex | string {
+        const reparser = new RegexParser(currentns, rstr.substr(1, rstr.length - 2));
         const rep = reparser.parseComponent();
        
         if(typeof(rep) === "string") {

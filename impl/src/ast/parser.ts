@@ -1753,7 +1753,7 @@ class Parser {
         }
         else if (tk === TokenStrings.Regex) {
             const restr = this.consumeTokenAndGetValue(); //keep in escaped format
-            const re = BSQRegex.parse(restr);
+            const re = BSQRegex.parse(this.m_penv.getCurrentNamespace(), restr);
             if(typeof(re) === "string") {
                 this.raiseError(line, re);
             }
@@ -4081,7 +4081,7 @@ class Parser {
                 const vregex = this.consumeTokenAndGetValue();
                 this.consumeToken();
 
-                const re = BSQRegex.parse(vregex);
+                const re = BSQRegex.parse(this.m_penv.getCurrentNamespace(), vregex);
                 if (typeof (re) === "string") {
                     this.raiseError(this.getCurrentLine(), re);
                 }
@@ -4483,7 +4483,11 @@ class Parser {
 
                     const isassigntype = this.testAndConsumeTokenIf("=");
                     if (isassigntype) {
-                        if (!this.testToken(TokenStrings.Regex)) {
+                        if (this.testToken(TokenStrings.Regex)) {
+                            this.consumeToken();
+                            this.ensureAndConsumeToken(";");
+                        }
+                        else {
                             if (this.testAndConsumeTokenIf("&")) {
                                 this.ensureToken("{"); //we should be at the opening left paren 
                                 this.m_cpos = this.scanCodeParens(); //scan to the closing paren
