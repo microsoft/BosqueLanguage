@@ -2306,15 +2306,14 @@ class TypeChecker {
             nval = new MIRConstantDecimal(value);
         }
 
-        if(oftype.invariants.length !== 0) {
-            const fkey = MIRKeyGenerator.generateFunctionKeyWType(tntt, "@@constructor", ofbinds, []);
-        
-            const tmps = this.m_emitter.generateTmpRegister();
-            this.m_emitter.emitInvokeFixedFunction(sinfo, fkey.keyid, [nval], undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), tmps);
-            this.m_emitter.emitAssertCheck(sinfo, "Value does not satisfy requirements for type", tmps);    
+        if(oftype.invariants.length === 0) {
+            this.m_emitter.emitLoadTypedNumeric(sinfo, nval, this.m_emitter.registerResolvedTypeReference(tntt).typeID, trgt);
         }
-        
-        this.m_emitter.emitLoadTypedNumeric(sinfo, nval, this.m_emitter.registerResolvedTypeReference(tntt).typeID, trgt);
+        else {
+            const fkey = MIRKeyGenerator.generateFunctionKeyWType(tntt, "@@constructor", ofbinds, []);
+            this.m_emitter.emitInvokeFixedFunction(sinfo, fkey.keyid, [nval], undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), trgt);
+        }
+
         return env.setUniformResultExpression(tntt);
     }
 
