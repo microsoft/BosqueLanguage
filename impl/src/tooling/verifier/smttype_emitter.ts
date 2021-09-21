@@ -804,10 +804,10 @@ class SMTTypeEmitter {
             for(let i = 0; i < oentity.consfuncfields.length; ++i)
             {
                 const ff = oentity.consfuncfields[i];
-                const mirtt = this.assembly.fieldDecls.get(ff) as MIRFieldDecl;
+                const mirff = this.assembly.fieldDecls.get(ff) as MIRFieldDecl;
 
-                fields.push(ff);
-                ttypes.push(mirtt.declaredType);
+                fields.push(mirff.fname);
+                ttypes.push(mirff.declaredType);
             }
 
             return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, fields: fields, ttypes: ttypes};
