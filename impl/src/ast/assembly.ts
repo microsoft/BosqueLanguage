@@ -2069,6 +2069,7 @@ class Assembly {
                 if(!this.subtypeOf(args[i], spp.sig.params[j].type as ResolvedType)) {
                     return false;
                 }
+                j++;
             }
             return true;
         });

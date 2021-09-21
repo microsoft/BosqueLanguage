@@ -165,7 +165,7 @@ class SMTBodyEmitter {
         const callersmt = this.typegen.getSMTTypeFor(callertype);
         const calleesmt = this.typegen.getSMTTypeFor(calleetype);
 
-        const okpath = new SMTLet(this.varToSMTName(trgt).vname, this.typegen.generateResultGetSuccess(callertype, new SMTVar(cres)), continuation);
+        const okpath = new SMTLet(this.varToSMTName(trgt).vname, this.typegen.generateResultGetSuccess(calleetype, new SMTVar(cres)), continuation);
         const errpath = (callersmt.name === calleesmt.name) ? new SMTVar(cres) : this.typegen.generateResultTypeConstructorError(callertype, this.typegen.generateResultGetError(calleetype, new SMTVar(cres)));
 
         const icond = new SMTIf(this.typegen.generateResultIsErrorTest(calleetype, new SMTVar(cres)), errpath, okpath);
