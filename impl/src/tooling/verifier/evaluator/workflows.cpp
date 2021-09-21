@@ -202,7 +202,7 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
     {
         ExtractionInfo einfo(apimodule);
         auto m = s.get_model();
-        
+
         auto resctx = genInitialContextResult(apimodule, c);
         auto eres = apimodule->api->restype->z3extract(einfo, resctx, s, m);
 

@@ -4106,7 +4106,7 @@ class Parser {
                 if (terms.length !== 0) {
                     this.raiseError(line, "Cannot have template terms on Typed Primitive type");
                 }
-                const idval = this.parseTypeSignature();
+                const idval = this.parseNominalType();
 
                 let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
@@ -4118,6 +4118,10 @@ class Parser {
                 if(attributes.includes("orderable")) {
                     provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
                 }
+
+                //
+                //TODO: [using {+, -, *, /, ==, !=, >, < , <=, >=}]
+                //
 
                 const invariants: InvariantDecl[] = [];
                 const staticMembers: StaticMemberDecl[] = [];

@@ -2307,7 +2307,7 @@ class TypeChecker {
         }
 
         if(oftype.invariants.length !== 0) {
-            const fkey = MIRKeyGenerator.generateFunctionKeyWType(tntt, "@@invariant", ofbinds, []);
+            const fkey = MIRKeyGenerator.generateFunctionKeyWType(tntt, "@@constructor", ofbinds, []);
         
             const tmps = this.m_emitter.generateTmpRegister();
             this.m_emitter.emitInvokeFixedFunction(sinfo, fkey.keyid, [nval], undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), tmps);
@@ -2330,10 +2330,34 @@ class TypeChecker {
             this.raiseErrorIf(exp.sinfo, !tntt.isUniqueCallTargetType(), "Expected unique typed primitive");
             
             const vdecl = tntt.getUniqueCallTargetType().object.memberMethods.find((mm) => mm.name === "value");
-            this.raiseErrorIf(exp.sinfo, vdecl !== undefined, "Missing value definition on typed primitive");
+            this.raiseErrorIf(exp.sinfo, vdecl === undefined, "Missing value definition on typed primitive");
 
             const ntype = this.resolveAndEnsureTypeOnly(exp.sinfo, (vdecl as MemberMethodDecl).invoke.resultType, new Map<string, ResolvedType>());
-            return this.checkTypedTypedNumericConstructor_helper(exp.sinfo, env, exp.value, tntt, ntype, trgt);
+
+            let vspec = "[UNDEFINED]";
+            if(ntype.isSameType(this.m_assembly.getSpecialIntType())) {
+                vspec = "i";
+            }
+            else if(ntype.isSameType(this.m_assembly.getSpecialBigIntType())) {
+                vspec = "I";
+            }
+            else if(ntype.isSameType(this.m_assembly.getSpecialNatType())) {
+                vspec = "n";
+            }
+            else if(ntype.isSameType(this.m_assembly.getSpecialBigNatType())) {
+                vspec = "N";
+            }
+            else if(ntype.isSameType(this.m_assembly.getSpecialFloatType())) {
+                vspec = "f";
+            }
+            else if(ntype.isSameType(this.m_assembly.getSpecialDecimalType())) {
+                vspec = "d";
+            }
+            else {
+                vspec = "R";
+            }
+
+            return this.checkTypedTypedNumericConstructor_helper(exp.sinfo, env, exp.value + vspec, tntt, ntype, trgt);
         }
     }
 

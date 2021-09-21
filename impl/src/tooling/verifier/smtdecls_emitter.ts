@@ -838,7 +838,20 @@ class SMTEmitter {
 
     private initializeSMTAssembly(assembly: MIRAssembly, entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
         const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].ivalue);
-        const cginfo = constructCallGraphInfo([entrypoint, ...cinits], assembly);
+        const apicons: MIRInvokeKey[] = [];
+         [...assembly.entityDecls].forEach((edecl) => {
+            if(edecl[1] instanceof MIRConstructableEntityTypeDecl && this.temitter.assembly.subtypeOf(this.temitter.getMIRType(edecl[0]), this.temitter.getMIRType("NSCore::APIType")) && edecl[1].usingcons !== undefined) {
+                apicons.push(edecl[1].usingcons);
+            }
+            else if(edecl[1] instanceof MIRObjectEntityTypeDecl && this.temitter.assembly.subtypeOf(this.temitter.getMIRType(edecl[0]), this.temitter.getMIRType("NSCore::APIType")) && edecl[1].consfunc !== undefined) {
+                apicons.push(edecl[1].consfunc);
+            }
+            else {
+                //nothing needs to be done
+            }
+        });
+
+        const cginfo = constructCallGraphInfo([entrypoint, ...apicons, ...cinits], assembly);
         const rcg = [...cginfo.topologicalOrder].reverse();
 
         for (let i = 0; i < rcg.length; ++i) {
@@ -1154,8 +1167,8 @@ class SMTEmitter {
     }
 
     static generateSMTPayload(assembly: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert",  timeout: number, runtime: string, vopts: VerifierOptions, numgen: { int: BVEmitter, hash: BVEmitter }, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload {
-        const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].ivalue);
-        const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, errorTrgtPos);
+        const allivks = [...assembly.invokeDecls].map((idecl) => idecl[1].ikey);
+        const callsafety = markSafeCalls([...allivks], assembly, errorTrgtPos);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         assembly.typeMap.forEach((tt) => {
@@ -1189,8 +1202,8 @@ class SMTEmitter {
     }
 
     static generateSMTAssemblyAllErrors(assembly: MIRAssembly, vopts: VerifierOptions, numgen: { int: BVEmitter, hash: BVEmitter }, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
-        const cinits = [...assembly.constantDecls].map((cdecl) => cdecl[1].ivalue);
-        const callsafety = markSafeCalls([entrypoint, ...cinits], assembly, {file: "[]", line: -1, pos: -1});
+        const allivks = [...assembly.invokeDecls].map((idecl) => idecl[1].ikey);
+        const callsafety = markSafeCalls([...allivks], assembly, {file: "[]", line: -1, pos: -1});
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         assembly.typeMap.forEach((tt) => {

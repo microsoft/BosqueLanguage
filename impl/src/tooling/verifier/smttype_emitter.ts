@@ -665,7 +665,7 @@ class SMTTypeEmitter {
             return ["BContentHash@UFCons_API", false];
         }
         else {
-            return [`_@@cons_${this.getSMTTypeFor(tt).name}_entrypoint`, true];
+            return [`_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`, true];
         }
     }
 
