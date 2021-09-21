@@ -225,8 +225,19 @@ class SMTTypeEmitter {
                     return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
                 }
                 else {
-                    assert(false);
-                    return new SMTType("[UNKNOWN MIRPrimitiveInternalEntityTypeDecl]", "[UNKNOWN]", entity.tkey);
+                    if (this.isType(tt, "NSCore::ListFlatOps")) {
+                        return new SMTType("ListFlatOps", "TypeTag_ListFlatOps", entity.tkey);
+                    }
+                    else if (this.isType(tt, "NSCore::ListConcatOps")) {
+                        return new SMTType("ListConcatOps", "TypeTag_ListConcatOps", entity.tkey);
+                    }
+                    else if (this.isType(tt, "NSCore::ListOps")) {
+                        return new SMTType("ListOps", "ListOps", entity.tkey);
+                    }
+                    else {
+                        assert(false, "Unknown primitive internal entity");
+                        return new SMTType("[UNKNOWN MIRPrimitiveInternalEntityTypeDecl]", "[UNKNOWN]", entity.tkey);
+                    }
                 }
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {

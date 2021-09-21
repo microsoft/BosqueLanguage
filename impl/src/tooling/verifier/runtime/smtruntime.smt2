@@ -77,6 +77,11 @@
 
 (define-sort HavocSequence () (Seq BNat))
 
+
+(declare-sort ListFlatOps 0)
+(declare-sort ListConcatOps 0)
+(declare-sort ListOps 0)
+
 (declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))
 (declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))
 
@@ -229,8 +234,6 @@
 (declare-const BKey@nothing BKey)
 (assert (= BKey@nothing (BKey@box TypeTag_Nothing bsqkey_nothing@literal)))
 
-;;TYPE_COLLECTION_EMPTY_DECLS;;
-
 (define-fun bsqkey_none@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
   false
 )
@@ -315,6 +318,8 @@
 
 (declare-const BTerm@nothing BTerm)
 (assert (= BTerm@nothing (BTerm@keybox BKey@nothing)))
+
+;;TYPE_COLLECTION_EMPTY_DECLS;;
 
 ;;
 ;;Define utility functions
