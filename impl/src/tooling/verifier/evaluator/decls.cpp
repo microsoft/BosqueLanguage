@@ -853,17 +853,17 @@ std::optional<std::string> ExtractionInfo::evalRealAsFP(z3::solver& s, z3::model
     auto nexp = m.eval(e, true);
     auto sstr = nexp.to_string();
 
-    std::cmatch match;
-    if(std::regex_match(sstr, re_numberino_f))
+    std::smatch match;
+    if(std::regex_match(sstr, match, re_numberino_f))
     {
         s.add(e == s.ctx().real_val(sstr.c_str()));
 
         return std::make_optional(sstr);
     }
-    else if(std::regex_match(sstr, re_fpdiverino))
+    else if(std::regex_match(sstr, match, re_fpdiverino))
     {
         double num = std::stod(match[1].str());
-        double denom = std::stod(match[3].str());
+        double denom = std::stod(match[4].str());
 
         auto sstr = std::to_string(num / denom);
         return std::make_optional(sstr);

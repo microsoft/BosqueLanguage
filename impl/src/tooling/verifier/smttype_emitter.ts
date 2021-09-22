@@ -225,7 +225,10 @@ class SMTTypeEmitter {
                     return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
                 }
                 else {
-                    if (this.isType(tt, "NSCore::ListFlatOps")) {
+                    if (this.isType(tt, "NSCore::NumericOps")) {
+                        return new SMTType("NumericOps", "TypeTag_NumericOps", entity.tkey);
+                    }
+                    else if (this.isType(tt, "NSCore::ListFlatOps")) {
                         return new SMTType("ListFlatOps", "TypeTag_ListFlatOps", entity.tkey);
                     }
                     else if (this.isType(tt, "NSCore::ListConcatOps")) {

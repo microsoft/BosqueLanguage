@@ -2102,7 +2102,7 @@ __internal entity ListOps provides Some {
             let count = ListOps::s_size<T>(l);
             
             if(count == 1n) {
-                return ListOs::s_safe_get<T>(l, 0n);
+                return ListOps::s_safe_get<T>(l, 0n);
             }
             else {
                 return ListOps::s_sum_base<T>(l);

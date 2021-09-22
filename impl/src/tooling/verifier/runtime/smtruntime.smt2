@@ -77,7 +77,7 @@
 
 (define-sort HavocSequence () (Seq BNat))
 
-
+(declare-sort NumericOps 0)
 (declare-sort ListFlatOps 0)
 (declare-sort ListConcatOps 0)
 (declare-sort ListOps 0)

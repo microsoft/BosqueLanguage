@@ -2275,7 +2275,7 @@ class SMTBodyEmitter {
                 break;
             }
             case "__i__NSCore::/=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                rtype = this.typegen.getMIRType("NSCore::Decmial");
+                rtype = this.typegen.getMIRType("NSCore::Decimal");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BDecimal@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
