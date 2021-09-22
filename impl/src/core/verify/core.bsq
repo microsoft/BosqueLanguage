@@ -95,6 +95,13 @@ __internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyTyp
     const zero: Int = 0i;
     const one: Int = 1i;
     const negativeone: Int = -1i;
+
+    method toNat(): Nat { return NumericOps::s_intToNat(this); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_intToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_intToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_bigIntToFloat(NumericOps::s_intToBigInt(this)); }
+    method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(NumericOps::s_intToBigInt(this)); }
+    method toRational(): Decimal { return NumericOps::s_bigIntToRational(NumericOps::s_intToBigInt(this)); }
 }
 __safe __primitive inline prefix operator +(a: Int): Int = default;
 __primitive inline prefix operator -(a: Int): Int = default;
@@ -113,6 +120,13 @@ __safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 __internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Nat = 0n;
     const one: Nat = 1n;
+
+    method toBigNat(): BigNat { return NumericOps::s_natToBigNat(this); }
+    method toInt(): Int { return NumericOps::s_natToInt(this); }
+    method toBigInt(): BigInt { return NumericOps::s_bigNatToBigInt(NumericOps::s_natToBigNat(this)); }
+    method toFloat(): Float { return NumericOps::s_bigNatToFloat(NumericOps::s_natToBigNat(this)); }
+    method toDecimal(): Decimal { return NumericOps::s_bigNatToDecimal(NumericOps::s_natToBigNat(this)); }
+    method toRational(): Decimal { return NumericOps::s_bigNatToRational(NumericOps::s_natToBigNat(this)); }
 }
 __safe __primitive inline prefix operator +(a: Nat): Nat = default;
 __primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
@@ -131,11 +145,18 @@ __internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, Key
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
     const negativeone: BigInt = -1I;
+
+    method toNat(): Int { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(this); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(this); }
+    method toFloat(): Float { return NumericOps::s_bigIntToFloat(this); }
+    method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(this); }
+    method toRational(): Decimal { return NumericOps::s_bigIntToRational(this); }
 }
 __safe __primitive inline prefix operator +(a: BigInt): BigInt = default;
 __safe __primitive inline prefix operator -(a: BigInt): BigInt = default;
 __safe __primitive inline infix operator *(a: BigInt, b: BigInt): BigInt = default;
-__safe __primitive inline infix operator /(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator /(a: BigInt, b: BigInt): BigInt = default;
 __safe __primitive inline infix operator +(a: BigInt, b: BigInt): BigInt = default;
 __safe __primitive inline infix operator -(a: BigInt, b: BigInt): BigInt = default;
 __safe __primitive inline infix operator ==(a: BigInt, b: BigInt): Bool = default;
@@ -149,10 +170,17 @@ __safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = defaul
 __internal __typedeclable entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigNat = 0N;
     const one: BigNat = 1N;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(this); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_bigNatToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_bigNatToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_bigNatToFloat(this); }
+    method toDecimal(): Decimal { return NumericOps::s_bigNatToDecimal(this); }
+    method toRational(): Decimal { return NumericOps::s_bigNatToRational(this); }
 }
 __safe __primitive inline prefix operator +(a: BigNat): BigNat = default;
 __safe __primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
-__safe __primitive inline infix operator /(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator /(a: BigNat, b: BigNat): BigNat = default;
 __safe __primitive inline infix operator +(a: BigNat, b: BigNat): BigNat = default;
 __safe __primitive inline infix operator -(a: BigNat, b: BigNat): BigNat = default;
 __safe __primitive inline infix operator ==(a: BigNat, b: BigNat): Bool = default;
@@ -164,13 +192,23 @@ __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = defaul
 
 //<summary>Primitive rational value.</summary>
 __internal __typedeclable entity Rational provides Some, Algebraic, Orderable, APIType {
+    const zero: Rational = 0/1R;
+    const one: Rational = 1/1R;
+    const negativeone: Rational = -1/1R;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this))); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this)); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_rationalToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_rationalToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_rationalToFloat(this); }
+    method toDecimal(): Decimal { return NumericOps::s_rationalToDecimal(this); }
 }
-__safe __primitive inline prefix operator +(a: Rational): Rational? = default;
-__safe __primitive inline prefix operator -(a: Rational): Rational? = default;
-__safe __primitive inline infix operator *(a: Rational, b: Rational): Rational? = default;
-__safe __primitive inline infix operator /(a: Rational, b: Rational): Rational? = default;
-__safe __primitive inline infix operator +(a: Rational, b: Rational): Rational? = default;
-__safe __primitive inline infix operator -(a: Rational, b: Rational): Rational? = default;
+__safe __primitive inline prefix operator +(a: Rational): Rational = default;
+__safe __primitive inline prefix operator -(a: Rational): Rational = default;
+__safe __primitive inline infix operator *(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator /(a: Rational, b: Rational): Rational = default;
+__safe __primitive inline infix operator +(a: Rational, b: Rational): Rational = default;
+__safe __primitive inline infix operator -(a: Rational, b: Rational): Rational = default;
 __safe __primitive inline infix operator ==(a: Rational, b: Rational): Bool = default;
 __safe __primitive inline infix operator !=(a: Rational, b: Rational): Bool = default;
 __safe __primitive inline infix operator <(a: Rational, b: Rational): Bool = default;
@@ -183,11 +221,18 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
     const negativeone: Float = -1.0f;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this))); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this)); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_floatToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_floatToBigInt(this); }
+    method toDecimal(): Decimal { return NumericOps::s_floatToDecimal(this); }
+    method toRational(): Rational { return NumericOps::s_floatToRational(this); }
 }
 __safe __primitive inline prefix operator +(a: Float): Float = default;
 __safe __primitive inline prefix operator -(a: Float): Float = default;
 __safe __primitive inline infix operator *(a: Float, b: Float): Float = default;
-__safe __primitive inline infix operator /(a: Float, b: Float): Float = default;
+__primitive inline infix operator /(a: Float, b: Float): Float = default;
 __safe __primitive inline infix operator +(a: Float, b: Float): Float = default;
 __safe __primitive inline infix operator -(a: Float, b: Float): Float = default;
 __safe __primitive inline infix operator <(a: Float, b: Float): Bool = default;
@@ -200,11 +245,18 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     const zero: Decimal = 0.0d;
     const one: Decmial = 1.0d;
     const negativeone: Decmial = -1.0d;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this))); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this)); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_decimalToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_decimalToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_decimalToFloat(this); }
+    method toRational(): Rational { return NumericOps::s_decimalToRational(this); }
 }
 __safe __primitive inline prefix operator +(a: Decimal): Decimal = default;
 __safe __primitive inline prefix operator -(a: Decimal): Decimal = default;
 __safe __primitive inline infix operator *(a: Decimal, b: Decimal): Decimal = default;
-__safe __primitive inline infix operator /(a: Decimal, b: Decimal): Decimal = default;
+__primitive inline infix operator /(a: Decimal, b: Decimal): Decimal = default;
 __safe __primitive inline infix operator +(a: Decimal, b: Decimal): Decimal = default;
 __safe __primitive inline infix operator -(a: Decimal, b: Decimal): Decimal = default;
 __safe __primitive inline infix operator <(a: Decimal, b: Decimal): Bool = default;
@@ -423,6 +475,6 @@ __internal entity HavocSequence provides Some {
 }
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>
-concept Expandoable<T> provides Object {
+concept Expandoable<T> provides Some {
     method expand<U>(): List<U> # special_method
 }

@@ -6,7 +6,7 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-__internal entity List<T> provides Object, Expandoable<T>, APIType when T grounded APIType {
+__internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType {
     function ints(start: Int, end: Int): List<Int> {
         check start <= end;
 

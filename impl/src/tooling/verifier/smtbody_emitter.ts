@@ -2270,12 +2270,14 @@ class SMTBodyEmitter {
             }
             case "__i__NSCore::/=infix=(NSCore::Float, NSCore::Float)": {
                 rtype = this.typegen.getMIRType("NSCore::Float");
-                smte = new SMTCallSimple("/", args);
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BFloat@zero"), args[1], rtype, new SMTCallSimple("/", args));
+                erropt = true;
                 break;
             }
             case "__i__NSCore::/=infix=(NSCore::Decimal, NSCore::Decimal)": {
                 rtype = this.typegen.getMIRType("NSCore::Decmial");
-                smte = new SMTCallSimple("/", args);
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BDecimal@zero"), args[1], rtype, new SMTCallSimple("/", args));
+                erropt = true;
                 break;
             }
             //op infix ==
@@ -2635,6 +2637,78 @@ class SMTBodyEmitter {
             case "apitype_generate": {
                 const synthbody = this.typegen.generateHavocConstructorCall(mirrestype, new SMTConst("(as seq.empty (Seq BNat))"), this.numgen.int.emitSimpleNat(1));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, synthbody);
+            }
+            case "number_nattoint": {
+                const bchk = new SMTCallSimple("bvule", [new SMTVar(args[0].vname), this.numgen.int.bvintmax]);
+                const bce = new SMTIf(bchk, 
+                    this.typegen.generateResultTypeConstructorSuccess(mirrestype,new SMTVar(args[0].vname)),
+                    this.typegen.generateErrorResultAssert(mirrestype)
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+            }
+            case "number_inttonat": {
+                const bchk = new SMTCallSimple("bvsle", [this.numgen.int.emitSimpleInt(0), new SMTVar(args[0].vname)]);
+                const bce = new SMTIf(bchk, 
+                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTVar(args[0].vname)),
+                    this.typegen.generateErrorResultAssert(mirrestype)
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+            }
+            case "number_nattobignat": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("bv2nat", [new SMTVar(args[0].vname)]));
+            }
+            case "number_inttobigint": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("bv2int", [new SMTVar(args[0].vname)]));
+            }
+            case "number_bignattonat": {
+                const bchk = new SMTCallSimple("<=", [new SMTVar(args[0].vname), new SMTConst(this.numgen.int.natmax.toString())]);
+                const bce = new SMTIf(bchk, 
+                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("nat2bv", [new SMTVar(args[0].vname)])),
+                    this.typegen.generateErrorResultAssert(mirrestype)
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+            }
+            case "number_biginttoint": {
+                const bchk = SMTCallSimple.makeAndOf(
+                    new SMTCallSimple("<=", [new SMTConst(this.numgen.int.intmin.toString()), new SMTVar(args[0].vname)]),
+                    new SMTCallSimple("<=", [new SMTVar(args[0].vname), new SMTConst(this.numgen.int.intmax.toString())])
+                );
+                const bce = new SMTIf(bchk, 
+                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("int2bv", [new SMTVar(args[0].vname)])),
+                    this.typegen.generateErrorResultAssert(mirrestype)
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+            }
+            case "number_bignattobigint": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+            }
+            case "number_biginttobignat": {
+                const bce = new SMTIf(new SMTCallSimple("<=", [new SMTConst("0"), new SMTVar(args[0].vname)]), 
+                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTVar(args[0].vname)),
+                    this.typegen.generateErrorResultAssert(mirrestype)
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+            }
+            case "number_bignattofloat":
+            case "number_bignattodecimal":
+            case "number_bignattorational":
+            case "number_biginttofloat":
+            case "number_biginttodecimal":
+            case "number_biginttorational": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_real", [new SMTVar(args[0].vname)]));
+            }
+            case "number_floattobigint":
+            case "number_decimaltobigint": 
+            case "number_rationaltobigint": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]));
+            }
+            case "number_floattodecimal":
+            case "number_floattorational":
+            case "number_decimaltofloat":
+            case "number_decimaltorational":
+            case "number_rationaltofloat":
+            case "number_rationaltodecimal": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));

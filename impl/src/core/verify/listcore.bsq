@@ -6,7 +6,7 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-__internal entity ListFlatOps provides Object {
+__internal entity ListFlatOps provides Some {
     __safe function s_empty<T>(l: List<T>): Bool # list_empty
 
     __safe function s_is1<T>(l: List<T>): Bool # flat_list_is1
@@ -1208,7 +1208,7 @@ __internal entity ListFlatOps provides Object {
     }
 }
 
-__internal entity ListConcatOps provides Object {
+__internal entity ListConcatOps provides Some {
     __safe function s_left<T>(l: List<T>): List<T> # concat_list_left
     __safe function s_right<T>(l: List<T>): List<T> # concat_list_right
 
@@ -1626,19 +1626,19 @@ __internal entity ListConcatOps provides Object {
     ////////
 }
 
-__internal entity ISequence provides Object {
+__internal entity ISequence provides Some {
     __safe function s_size(isq: ISequence): Nat # isequence_size
 }
 
-__internal entity JSequence provides Object {
+__internal entity JSequence provides Some {
     __safe function s_size(jsq: JSequence): Nat # jsequence_size
 }
 
-__internal entity SSequence provides Object {
+__internal entity SSequence provides Some {
     __safe function s_size(ssq: SSequence): Nat # ssequence_size
 }
 
-__internal entity ListOps provides Object {
+__internal entity ListOps provides Some {
     ////////////////
     //Called from Lib AND Builtin
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
