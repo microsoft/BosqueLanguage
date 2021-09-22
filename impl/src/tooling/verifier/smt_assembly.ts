@@ -614,7 +614,7 @@ class SMTAssembly {
         let foutput: string[] = [];
         let doneset: Set<string> = new Set<string>();
         const cginfo = SMTAssembly.constructCallGraphInfo([this.entrypoint, ...this.havocfuncs], this);
-        const rcg = [...cginfo.topologicalOrder].reverse();
+        const rcg = [...cginfo.topologicalOrder];
 
         for (let i = 0; i < rcg.length; ++i) {
             const cn = rcg[i];
@@ -687,7 +687,7 @@ class SMTAssembly {
             MASK_INFO: { decls: maskinfo.map((mi) => mi.decl), constructors: maskinfo.map((mi) => mi.consf) },
             GLOBAL_DECLS: gdecls,
             UF_DECLS: ufdecls,
-            FUNCTION_DECLS: foutput,
+            FUNCTION_DECLS: foutput.reverse(),
             GLOBAL_DEFINITIONS: gdefs,
             ACTION: action
         };

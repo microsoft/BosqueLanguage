@@ -369,12 +369,14 @@ class ListOpsManager {
                 test: SMTCallSimple.makeEq(sizev, this.numgen.emitSimpleNat(1)),
                 result: new SMTLetMulti([
                     { vname: "_@val0", value: this.temitter.generateHavocConstructorCall(ctype, new SMTVar("path"), this.numgen.emitSimpleNat(0)) }
-                ],
+                    ],
                     new SMTIf(this.temitter.generateResultIsErrorTest(ctype, new SMTVar("_@val0")),
                         this.temitter.generateErrorResultAssert(mtype),
-                        this.temitter.generateResultTypeConstructorSuccess(mtype, new SMTCallSimple(this.generateConsCallName(ltype, "list_1"), [
-                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("_@val0"))
-                        ]))
+                        this.temitter.generateResultTypeConstructorSuccess(mtype,
+                            new SMTCallSimple(this.generateConsCallName(ltype, "list_1"), [
+                                this.temitter.generateResultGetSuccess(ctype, new SMTVar("_@val0"))
+                            ])
+                        )
                     )
                 )
             },
@@ -390,8 +392,8 @@ class ListOpsManager {
                     ),
                         this.temitter.generateErrorResultAssert(mtype),
                         this.temitter.generateResultTypeConstructorSuccess(mtype, new SMTCallSimple(this.generateConsCallName(ltype, "list_2"), [
-                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("_@val0")), 
-                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("_@val1"))
+                            this.temitter.generateResultGetSuccess(ctype, new SMTVar("_@val0")), 
+                            this.temitter.generateResultGetSuccess(ctype, new SMTVar("_@val1"))
                         ]))
                     )
                 )
@@ -410,9 +412,9 @@ class ListOpsManager {
                     ]),
                         this.temitter.generateErrorResultAssert(mtype),
                         this.temitter.generateResultTypeConstructorSuccess(mtype, new SMTCallSimple(this.generateConsCallName(ltype, "list_3"), [
-                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("_@val0")), 
-                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("_@val1")), 
-                            this.temitter.generateResultTypeConstructorSuccess(ctype, new SMTVar("_@val2"))
+                            this.temitter.generateResultGetSuccess(ctype, new SMTVar("_@val0")), 
+                            this.temitter.generateResultGetSuccess(ctype, new SMTVar("_@val1")), 
+                            this.temitter.generateResultGetSuccess(ctype, new SMTVar("_@val2"))
                         ]))
                     )
                 )
@@ -677,7 +679,7 @@ class ListOpsManager {
 
         for(let i = 1; i <= 3; ++i) {
             tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, `_${i}_`), llv),
+                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, `list_${i}`), llv),
                 result: this.emitDestructorGet_K(ltype, llv, new SMTVar("n"), i)
             });
         }

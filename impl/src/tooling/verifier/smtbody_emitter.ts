@@ -2652,7 +2652,8 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, flat_uli));
             }
             case "flat_list_1at0": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_1", "_0_", new SMTVar(args[0].vname));
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_1", "_0_", flat_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_is2": {
@@ -2661,11 +2662,13 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, flat_uli));
             }
             case "flat_list_2at0": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_2", "_0_", new SMTVar(args[0].vname));
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_2", "_0_", flat_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_2at1": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_2", "_1_", new SMTVar(args[0].vname));
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_2", "_1_", flat_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_is3": {
@@ -2674,15 +2677,18 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeIsTypeOp(check_uli, flat_uli));
             }
             case "flat_list_3at0": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_0_", new SMTVar(args[0].vname));
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_0_", flat_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_3at1": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_1_", new SMTVar(args[0].vname));
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_1_", flat_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "flat_list_3at2": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_2_", new SMTVar(args[0].vname));
+                const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "list_3", "_2_", flat_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "list_isflat": {
@@ -2701,11 +2707,13 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, orof);
             }
             case "concat_list_left": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "concat2", "left", new SMTVar(args[0].vname));
+                const cons_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "concat2", "left", cons_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "concat_list_right": {
-                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "concat2", "right", new SMTVar(args[0].vname));
+                const cons_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
+                const get_uli = this.lopsManager.generateGetULIFieldFor(smtarg0typekey, "concat2", "right", cons_uli);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, get_uli);
             }
             case "list_isconcat": {

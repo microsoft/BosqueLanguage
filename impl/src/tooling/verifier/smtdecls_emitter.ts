@@ -681,7 +681,7 @@ class SMTEmitter {
             ]
         };
 
-        const emptyconst = `(declare-const ${this.temitter.lookupTypeName(ldecl.tkey)}@empty_const ${ltype.name}) (assert (= ${this.temitter.lookupTypeName(ldecl.tkey)}@empty_const (${this.bemitter.lopsManager.generateConsCallName_Direct(ltype, "empty")})))`;
+        const emptyconst = `(declare-const ${this.temitter.lookupTypeName(ldecl.tkey)}@empty_const ${ltype.name}) (assert (= ${this.temitter.lookupTypeName(ldecl.tkey)}@empty_const (${consfuncs.cons} BNat@zero ${this.bemitter.lopsManager.generateConsCallName_Direct(ltype, "empty")})))`;
 
         const smtdecl = new SMTListDecl(iskey, this.bemitter.lopsManager.generateULITypeFor(ltype).name, constructors, emptyconst, ltype.name, ttag, consdecl, consfuncs.box, consfuncs.bfield);
         this.assembly.listDecls.push(smtdecl);
