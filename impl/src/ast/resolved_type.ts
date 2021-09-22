@@ -469,22 +469,14 @@ class ResolvedFunctionType {
         const shortcvalues = params.map((param) => (param.refKind !== undefined ? param.refKind : "") + param.name + (param.isOptional ? "?: " : ": ") + param.type.shortID + (param.litexp !== undefined ? ("==" + param.litexp) : ""));
         let shortcvalue = shortcvalues.join(", ");
 
-        let recstr = "";
-        if (recursive === "yes") {
-            recstr = "recursive ";
-        }
-        if (recursive === "cond") {
-            recstr = "recursive? ";
-        }
-
         if (optRestParamName !== undefined && optRestParamType !== undefined) {
             cvalue += ((cvalues.length !== 0 ? ", " : "") + ("..." + optRestParamName + ": " + optRestParamType.typeID));
             shortcvalue += ((cvalues.length !== 0 ? ", " : "") + ("..." + optRestParamName + ": " + optRestParamType.shortID));
         }
 
         const lstr = isPred ? "pred" : "fn";
-        const name = recstr + lstr + "(" + cvalue + ") -> " + resultType.typeID;
-        const shortname = recstr + lstr + "(" + shortcvalue + ") -> " + resultType.shortID;
+        const name = lstr + "(" + cvalue + ") -> " + resultType.typeID;
+        const shortname = lstr + "(" + shortcvalue + ") -> " + resultType.shortID;
         return new ResolvedFunctionType(name, shortname, recursive, params, optRestParamName, optRestParamType, resultType, isPred);
     }
 }

@@ -6,21 +6,12 @@
 import { VerifierOptions } from "../tooling/verifier/smt_exp";
 import { DEFAULT_TIMEOUT, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEvaluateSingle, workflowGetErrors } from "../tooling/verifier/smt_workflows";
 
-const vopts_err = {
-    ISize: 64,
-    StringOpt: "ASCII",
-    EnableCollection_SmallHavoc: false,
-    EnableCollection_LargeHavoc: true,
-    EnableCollection_SmallOps: false,
-    EnableCollection_LargeOps: true
-} as VerifierOptions;
-
 const vopts_refute = {
     ISize: 8,
     StringOpt: "ASCII",
-    EnableCollection_SmallHavoc: false,
+    EnableCollection_SmallHavoc: true,
     EnableCollection_LargeHavoc: true,
-    EnableCollection_SmallOps: false,
+    EnableCollection_SmallOps: true,
     EnableCollection_LargeOps: true
 } as VerifierOptions;
 
@@ -48,6 +39,15 @@ const vopts_evaluate = {
     EnableCollection_SmallHavoc: true,
     EnableCollection_LargeHavoc: true,
     EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_err = {
+    ISize: 64,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: false,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: false,
     EnableCollection_LargeOps: true
 } as VerifierOptions;
 

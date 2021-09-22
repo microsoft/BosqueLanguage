@@ -28,9 +28,9 @@ const args = process.argv.slice(3);
 const vopts_unreachable = {
     ISize: 8,
     StringOpt: "ASCII",
-    EnableCollection_SmallHavoc: false,
+    EnableCollection_SmallHavoc: true,
     EnableCollection_LargeHavoc: true,
-    EnableCollection_SmallOps: false,
+    EnableCollection_SmallOps: true,
     EnableCollection_LargeOps: true
 } as VerifierOptions;
 
@@ -58,6 +58,15 @@ const vopts_evaluate = {
     EnableCollection_SmallHavoc: true,
     EnableCollection_LargeHavoc: true,
     EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const error_vopts = {
+    ISize: 64,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: false,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: false,
     EnableCollection_LargeOps: true
 } as VerifierOptions;
 
@@ -175,15 +184,6 @@ else if(mode === "--check") {
         process.stdout.write("Could not load code files\n");
         process.exit(1);
     }
-
-    const error_vopts = {
-        ISize: 64,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: false,
-        EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: false,
-        EnableCollection_LargeOps: true
-    } as VerifierOptions;
 
     const errors = workflowGetErrors(usercode, error_vopts, "NSMain::main");
     if(errors === undefined) {
@@ -375,15 +375,6 @@ else {
         process.stdout.write("Could not load code files\n");
         process.exit(1);
     }
-
-    const error_vopts = {
-        ISize: 64,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: false,
-        EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: false,
-        EnableCollection_LargeOps: true
-    } as VerifierOptions;
 
     const errors = workflowGetErrors(usercode, error_vopts, "NSMain::main");
     if(errors === undefined) {

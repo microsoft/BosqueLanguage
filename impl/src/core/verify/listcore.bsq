@@ -1427,7 +1427,7 @@ __internal entity ListConcatOps provides Some {
         }
     }
 
-    recursive function s_concat_lropt_map<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> {
+    recursive function s_concat_lropt_map<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_map<T, U>[recursive?](l, f);
         }
@@ -1937,8 +1937,8 @@ __internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_map_base<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> {
-        let sl = ListOps::s_safe_fn_impl<T, U>[recursive?](l, f);
+    recursive? function s_map_base<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> {
+        let sl = ListOps::s_safe_fn_impl<T, U>[recursive?](l, ListOps::s_size<T>(l), f);
         return ListOps::s_map_impl<T, U>[recursive?](sl, ListOps::s_size<T>(sl), f);
     }
 

@@ -470,9 +470,9 @@ function wfInfeasibleLarge(usercode: CodeFileInfo[], timeout: number, errorTrgtP
     const vopts = {
         ISize: 64,
         StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: false,
+        EnableCollection_SmallHavoc: true,
         EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: false,
+        EnableCollection_SmallOps: true,
         EnableCollection_LargeOps: true
     } as VerifierOptions;
 
