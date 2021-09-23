@@ -257,7 +257,12 @@ class APITestGroup {
         const infeasible = (spec.infeasible || []).map((tt, i) => IndividualInfeasibleTestInfo.create(`infeasible#${i}`, `${groupname}.infeasible#${i}`, spec.sig, tt.action, tt.check, spec.code, spec.src || undefined));
         const witness = (spec.witness || []).map((tt, i) => IndividualWitnessTestInfo.create(`witness#${i}`, tt.dosmall || false, `${groupname}.witness#${i}`, spec.sig, tt.action, tt.check, spec.code, spec.src || undefined));
         const evaluate = (spec.evaluates || []).map((tt, i) => IndividualEvaluateTestInfo.create(`evaluate#${i}`, `${groupname}.evaluate#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
-        const icpp = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
+        
+        //
+        //TODO: ICPP TESTS
+        //
+        //const icpp = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
+        const icpp: IndividualICPPTestInfo[] = [];
 
         return new APITestGroup(groupname, [...compiles, ...infeasible, ...witness, ...evaluate, ...icpp]);
     }
