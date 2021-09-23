@@ -11,17 +11,17 @@ const vopts_refute = {
     StringOpt: "ASCII",
     EnableCollection_SmallHavoc: true,
     EnableCollection_LargeHavoc: true,
-    EnableCollection_SmallOps: true,
+    EnableCollection_SmallOps: false,
     EnableCollection_LargeOps: true
 } as VerifierOptions;
 
 const vopts_witnesssmall = {
     ISize: 5,
-        StringOpt: "ASCII",
-        EnableCollection_SmallHavoc: true,
-        EnableCollection_LargeHavoc: false,
-        EnableCollection_SmallOps: true,
-        EnableCollection_LargeOps: false
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: false,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: false
 } as VerifierOptions;
 
 const vopts_witnesslarge = {
