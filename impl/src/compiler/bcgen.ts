@@ -58,7 +58,7 @@ function compile(files: string[], functionalize: boolean, outfile: string, dgf: 
 
             const sigargs = iiv.params.map((p) => `${p.name}: ${p.type}`);
             if(iiv.masksize !== 0) {
-                sigargs.push("#maskparam#");
+                sigargs.push("@maskparam@");
             }
 
             const siginfo = `${iiv.ikey}(${sigargs.join(", ")}): ${iiv.resultType}`;
