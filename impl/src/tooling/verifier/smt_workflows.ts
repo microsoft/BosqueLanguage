@@ -267,7 +267,7 @@ function wfInfeasibleSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtP
     const SMALL_MODEL = [
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: false, StringOpt: "ASCII" },
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
-        { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: true, EnableCollection_SmallOps: true, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
+        { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: true, EnableCollection_SmallOps: false, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
     ];
 
     const BV_SIZES = [
@@ -472,7 +472,7 @@ function wfInfeasibleLarge(usercode: CodeFileInfo[], timeout: number, errorTrgtP
         StringOpt: "ASCII",
         EnableCollection_SmallHavoc: true,
         EnableCollection_LargeHavoc: true,
-        EnableCollection_SmallOps: true,
+        EnableCollection_SmallOps: false,
         EnableCollection_LargeOps: true
     } as VerifierOptions;
 
