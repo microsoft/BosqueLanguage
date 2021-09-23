@@ -6016,7 +6016,7 @@ class TypeChecker {
             const iv = opi.initaction;
             const oftype = opi.ptype;
             const storevar = new MIRRegisterArgument(opi.pname);
-            const guard = new MIRMaskGuard("#maskparam#", opidx, optparaminfo.length);
+            const guard = new MIRMaskGuard("@maskparam@", opidx, optparaminfo.length);
             if(iv instanceof InitializerEvaluationLiteralExpression) {
                 const ttmp = this.m_emitter.generateTmpRegister();
                 const oftt = this.checkExpression(env, iv.constexp, ttmp, oftype).getExpressionResult().valtype;
@@ -6265,7 +6265,7 @@ class TypeChecker {
 
             const oftype = this.resolveAndEnsureTypeOnly(ofi[1].sourceLocation, ofi[1].declaredType, ofi[2]);
             const storevar = new MIRRegisterArgument(`$${ofi[1].name}`);
-            const guard = new MIRMaskGuard("#maskparam#", opidx, optfields.length);
+            const guard = new MIRMaskGuard("@maskparam@", opidx, optfields.length);
             if(iv instanceof InitializerEvaluationLiteralExpression) {
                 const ttmp = this.m_emitter.generateTmpRegister();
                 const oftt = this.checkExpression(env, iv.constexp, ttmp, oftype).getExpressionResult().valtype;

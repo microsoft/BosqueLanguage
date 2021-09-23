@@ -428,7 +428,7 @@ class ICPPBodyEmitter {
         }
         else {
             const mg = gg as MIRMaskGuard;
-            if(mg.gmask === "#maskparam#") {
+            if(mg.gmask === "@maskparam@") {
                 return ICPPOpEmitter.genMaskGuard(mg.gindex, -1);
             }
             else {
