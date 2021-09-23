@@ -3,14 +3,126 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+import * as assert from "assert";
+import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
+
 type VerifierOptions = {
-    ISize: number, //bits in the size 2-64
-    OverflowEnabled: boolean,
+    ISize: number, //bits used for Int/Nat
     StringOpt: "ASCII" | "UNICODE",
 
-    SimpleQuantifierMode: boolean, //Set to true for a simplified version of Filter/Count that does not enforce subset/order properties but has simpler quantifiers
-    SpecializeSmallModelGen: boolean //Set to true if we want to generate special case enumerative "small" values to try and avoid quantifiers
+    EnableCollection_SmallHavoc: boolean,
+    EnableCollection_LargeHavoc: boolean,
+    EnableCollection_SmallOps: boolean,
+    EnableCollection_LargeOps: boolean
 };
+
+class BVEmitter {
+    readonly bvsize: bigint;
+    readonly natmax: bigint;
+    readonly intmin: bigint;
+    readonly intmax: bigint;
+
+    readonly bvnatmax: SMTExp;
+    readonly bvintmin: SMTExp;
+    readonly bvintmax: SMTExp;
+
+    readonly bvnatmax1: SMTExp;
+    readonly bvintmin1: SMTExp;
+    readonly bvintmax1: SMTExp;
+
+    static computeBVMinSigned(bits: bigint): bigint {
+        return -((2n ** bits) / 2n);
+    }
+
+    static computeBVMaxSigned(bits: bigint): bigint {
+        return ((2n ** bits) / 2n) - 1n;
+    }
+
+    static computeBVMaxUnSigned(bits: bigint): bigint {
+        return (2n ** bits) - 1n;
+    }
+
+    private static emitIntCore(val: bigint, imin: bigint, imax: bigint, bvsize: bigint): SMTExp {
+        if(val === 0n) {
+            return new SMTConst("BInt@zero");
+        }
+        else {
+            if (val > 0) {
+                assert(BigInt(val) <= imax);
+                let bits = BigInt(val).toString(2);
+
+                while(bits.length < bvsize) {
+                    bits = "0" + bits;
+                }
+                return new SMTConst(`#b${bits}`);
+            }
+            else {
+                assert(imin <= BigInt(val));
+
+                let bits = (~BigInt(val) + 1n).toString(2).slice(0, Number(bvsize));
+                while(bits.length < bvsize) {
+                    bits = "1" + bits;
+                }
+                return new SMTConst(`#b${bits}`);
+            }
+        }
+    }
+
+    private static emitNatCore(val: bigint, nmax: bigint, bvsize: bigint): SMTExp {
+        if(val === 0n) {
+            return new SMTConst("BNat@zero");
+        }
+        else {
+            assert(0 < val && BigInt(val) <= nmax);
+            return new SMTConst(`(_ bv${val} ${bvsize})`);
+        }
+    }
+
+    constructor(bvsize: bigint, natmax: bigint, intmin: bigint, intmax: bigint, natmax1: bigint, intmin1: bigint, intmax1: bigint) {
+        this.bvsize = bvsize;
+        this.natmax = natmax;
+        this.intmin = intmin;
+        this.intmax = intmax;
+
+        this.bvnatmax = BVEmitter.emitNatCore(natmax, natmax, bvsize);
+        this.bvintmin = BVEmitter.emitIntCore(intmin, intmin, intmax, bvsize);
+        this.bvintmax = BVEmitter.emitIntCore(intmax, intmin, intmax, bvsize);
+
+        this.bvnatmax1 = BVEmitter.emitNatCore(natmax, natmax1, bvsize + 1n);
+        this.bvintmin1 = BVEmitter.emitIntCore(intmin, intmin1, intmax1, bvsize + 1n);
+        this.bvintmax1 = BVEmitter.emitIntCore(intmax, intmin1, intmax1, bvsize + 1n);
+    }
+
+    static create(bvsize: bigint): BVEmitter {
+        return new BVEmitter(bvsize, 
+            BVEmitter.computeBVMaxUnSigned(bvsize), BVEmitter.computeBVMinSigned(bvsize), BVEmitter.computeBVMaxSigned(bvsize),
+            BVEmitter.computeBVMaxUnSigned(bvsize + 1n), BVEmitter.computeBVMinSigned(bvsize + 1n), BVEmitter.computeBVMaxSigned(bvsize + 1n));
+    }
+
+    emitIntGeneral(val: bigint): SMTExp {
+        return BVEmitter.emitIntCore(val, this.intmin, this.intmax, this.bvsize);
+    }
+
+    emitNatGeneral(val: bigint): SMTExp {
+        return BVEmitter.emitNatCore(val, this.natmax, this.bvsize);
+    }
+
+    emitSimpleInt(val: number): SMTExp {
+        return this.emitIntGeneral(BigInt(val));
+    }
+
+    emitSimpleNat(val: number): SMTExp {
+       return this.emitNatGeneral(BigInt(val));
+    }
+
+    emitInt(intv: string): SMTExp {
+        return this.emitIntGeneral(BigInt(intv.slice(0, intv.length - 1)));
+    }
+
+    emitNat(natv: string): SMTExp {
+        return this.emitNatGeneral(BigInt(natv.slice(0, natv.length - 1)));
+    }
+}
 
 class SMTMaskConstruct {
     readonly maskname: string;
@@ -27,9 +139,13 @@ class SMTMaskConstruct {
 
 class SMTType {
     readonly name: string;
+    readonly smttypetag: string;
+    readonly typeID: MIRResolvedTypeKey;
     
-    constructor(name: string) {
+    constructor(name: string, smttypetag: string, typeid: MIRResolvedTypeKey) {
         this.name = name;
+        this.smttypetag = smttypetag;
+        this.typeID = typeid;
     }
 
     isGeneralKeyType(): boolean {
@@ -101,6 +217,34 @@ class SMTCallSimple extends SMTExp {
     computeCallees(callees: Set<string>): void {
         callees.add(this.fname);
         this.args.forEach((arg) => arg.computeCallees(callees));
+    }
+
+    static makeEq(lhs: SMTExp, rhs: SMTExp): SMTExp {
+        return new SMTCallSimple("=", [lhs, rhs]);
+    }
+
+    static makeNotEq(lhs: SMTExp, rhs: SMTExp): SMTExp {
+        return new SMTCallSimple("not", [new SMTCallSimple("=", [lhs, rhs])]);
+    }
+
+    static makeBinOp(op: string, lhs: SMTExp, rhs: SMTExp): SMTExp {
+        return new SMTCallSimple(op, [lhs, rhs]);
+    }
+
+    static makeIsTypeOp(smtname: string, exp: SMTExp): SMTExp {
+        return new SMTCallSimple(`(_ is ${smtname})`, [exp]);
+    }
+
+    static makeNot(exp: SMTExp): SMTExp {
+        return new SMTCallSimple("not", [exp]);
+    }
+
+    static makeAndOf(...exps: SMTExp[]): SMTExp {
+        return new SMTCallSimple("and", exps);
+    }
+
+    static makeOrOf(...exps: SMTExp[]): SMTExp {
+        return new SMTCallSimple("or", exps);
     }
 }
 
@@ -387,6 +531,7 @@ class SMTExists extends SMTExp {
 export {
     VerifierOptions,
     SMTMaskConstruct,
+    BVEmitter,
     SMTType, SMTExp, SMTVar, SMTConst, 
     SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallGeneralWPassThroughMask,
     SMTLet, SMTLetMulti, SMTIf, SMTCond, SMTADTKindSwitch,

@@ -40,33 +40,20 @@ class NominalTypeSignature extends TypeSignature {
     }
 }
 
-class LiteralTypeSignature extends TypeSignature {
-    readonly typevalue: LiteralExpressionValue;
-
-    constructor(typevalue: LiteralExpressionValue) {
-        super();
-        this.typevalue = typevalue;
-    }
-}
-
 class TupleTypeSignature extends TypeSignature {
-    readonly isvalue: boolean;
-    readonly entries: [TypeSignature, boolean][];
+    readonly entries: TypeSignature[];
 
-    constructor(isvalue: boolean, entries: [TypeSignature, boolean][]) {
+    constructor(entries: TypeSignature[]) {
         super();
-        this.isvalue = isvalue;
         this.entries = entries;
     }
 }
 
-class RecordTypeSignature extends TypeSignature {
-    readonly isvalue: boolean;
-    readonly entries: [string, TypeSignature, boolean][];
+class RecordTypeSignature extends TypeSignature {;
+    readonly entries: [string, TypeSignature][];
 
-    constructor(isvalue: boolean, entries: [string, TypeSignature, boolean][]) {
+    constructor(entries: [string, TypeSignature][]) {
         super();
-        this.isvalue = isvalue;
         this.entries = entries;
     }
 }
@@ -157,7 +144,7 @@ class UnionTypeSignature extends TypeSignature {
 
 export { 
     TypeSignature, ParseErrorTypeSignature, AutoTypeSignature, 
-    TemplateTypeSignature, LiteralTypeSignature, NominalTypeSignature, 
+    TemplateTypeSignature, NominalTypeSignature, 
     TupleTypeSignature, RecordTypeSignature, EphemeralListTypeSignature,
     FunctionParameter, FunctionTypeSignature, ProjectTypeSignature, PlusTypeSignature, AndTypeSignature, UnionTypeSignature
 };

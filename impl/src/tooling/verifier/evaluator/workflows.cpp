@@ -17,7 +17,7 @@
 //  Solver timeout and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowInfeasible(std::string smt2decl, APIModule* apimodule, unsigned timeout, bool bsqon)
+json workflowInfeasible(std::string smt2decl, APIModule* apimodule, unsigned timeout)
 {
     z3::context c;
     z3::solver s(c);
@@ -68,7 +68,7 @@ json workflowInfeasible(std::string smt2decl, APIModule* apimodule, unsigned tim
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowWitness(std::string smt2decl, APIModule* apimodule, unsigned timeout, bool bsqon)
+json workflowWitness(std::string smt2decl, APIModule* apimodule, unsigned timeout)
 {
     z3::context c;
     z3::solver s(c);
@@ -125,15 +125,7 @@ json workflowWitness(std::string smt2decl, APIModule* apimodule, unsigned timeou
                 };
             }
 
-            if(!bsqon)
-            {
-                argv.push_back(jarg.value());
-            }
-            else
-            {
-                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg.value(), "");
-                argv.push_back(bsqarg.value());
-            }
+            argv.push_back(jarg.value());
         }
 
         return {
@@ -152,7 +144,7 @@ json workflowWitness(std::string smt2decl, APIModule* apimodule, unsigned timeou
 //  Timeout a and return the JSON payload -- {result: "timeout", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsigned timeout, bool bsqon)
+json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsigned timeout)
 {
     z3::context c;
     z3::solver s(c);
@@ -210,15 +202,9 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
     {
         ExtractionInfo einfo(apimodule);
         auto m = s.get_model();
-        
+
         auto resctx = genInitialContextResult(apimodule, c);
         auto eres = apimodule->api->restype->z3extract(einfo, resctx, s, m);
-        
-        if(bsqon && eres.has_value())
-        {
-            std::optional<std::string> bsqarg = apimodule->api->restype->tobsqarg(pinfo, eres.value(), "");
-            eres = bsqarg.value();
-        }
 
         if(!eres.has_value())
         {
@@ -246,7 +232,7 @@ json workflowCompute(std::string smt2decl, APIModule* apimodule, json jin, unsig
 //  Timeout a and return the JSON payload -- {result: "unknown", time: number}
 //  Main should also handle exceptions and -- {result: "error", info: string}
 
-json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsigned timeout, bool bsqon)
+json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsigned timeout)
 {
     z3::context c;
     z3::solver s(c);
@@ -317,15 +303,7 @@ json workflowInvert(std::string smt2decl, APIModule* apimodule, json jout, unsig
                 };
             }
 
-            if(!bsqon)
-            {
-                argv.push_back(jarg.value());
-            }
-            else
-            {
-                std::optional<std::string> bsqarg = argtype->tobsqarg(pinfo, jarg.value(), "");
-                argv.push_back(bsqarg.value());
-            }
+            argv.push_back(jarg.value());
         }
 
         return {
@@ -363,13 +341,7 @@ json getPayload(int argc, char** argv, int argidx)
 
 int main(int argc, char** argv)
 {
-    bool bsqon = false;
     int argidx = 1;
-    if(argc > 1 && std::string(argv[1]) == "--bsqon")
-    {
-        bsqon = true;
-        argidx = 2;
-    }
 
     if(argc > argidx && std::string(argv[argidx]) == "--unreachable")
     {
@@ -381,7 +353,7 @@ int main(int argc, char** argv)
             unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowInfeasible(smt2decl, apimodule, timeout, bsqon);
+            json result = workflowInfeasible(smt2decl, apimodule, timeout);
             
             std::cout << result << std::endl;
         }
@@ -401,7 +373,7 @@ int main(int argc, char** argv)
             unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowWitness(smt2decl, apimodule, timeout, bsqon);
+            json result = workflowWitness(smt2decl, apimodule, timeout);
             
             std::cout << result << std::endl;
         }
@@ -421,7 +393,7 @@ int main(int argc, char** argv)
             unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowCompute(smt2decl, apimodule, payload["jin"], timeout, bsqon);
+            json result = workflowCompute(smt2decl, apimodule, payload["jin"], timeout);
             
             std::cout << result << std::endl;
         }
@@ -441,7 +413,7 @@ int main(int argc, char** argv)
             unsigned timeout = payload["timeout"].get<unsigned>();
             APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
 
-            json result = workflowInvert(smt2decl, apimodule, payload["jout"], timeout, bsqon);
+            json result = workflowInvert(smt2decl, apimodule, payload["jout"], timeout);
             
             std::cout << result << std::endl;
         }
@@ -453,7 +425,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        printf("Unknown usage [--bsqon] (--unreachable|--witness|--eval|--invert) [file.json]\n");
+        printf("Unknown usage (--unreachable|--witness|--eval|--invert) [file.json]\n");
     }
 
     return 0;

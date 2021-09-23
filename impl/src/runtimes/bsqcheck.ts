@@ -7,7 +7,8 @@ import chalk from "chalk";
 import * as readline from "readline";
 import * as path from "path";
 
-import { AssemblyFlavor, DEFAULT_TIMEOUT, DEFAULT_VOPTS, workflowBSQCheck, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
+import { AssemblyFlavor, DEFAULT_TIMEOUT, workflowBSQCheck, workflowBSQInfeasibleSingle, workflowBSQWitnessSingle, workflowEmitToFile, workflowEvaluateSingle, workflowGetErrors, workflowInvertSingle, workflowLoadUserSrc } from "../tooling/verifier/smt_workflows";
+import { VerifierOptions } from "../tooling/verifier/smt_exp";
 
 function parseLocation(location: string): { file: string, line: number, pos: number } | undefined {
     try {
@@ -24,22 +25,68 @@ function parseLocation(location: string): { file: string, line: number, pos: num
 const mode = process.argv[2];
 const args = process.argv.slice(3);
 
+const vopts_unreachable = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_smallwitness = {
+    ISize: 5,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: false,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: false
+} as VerifierOptions;
+
+const vopts_largewitness = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const vopts_evaluate = {
+    ISize: 8,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: true,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: true,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
+const error_vopts = {
+    ISize: 64,
+    StringOpt: "ASCII",
+    EnableCollection_SmallHavoc: false,
+    EnableCollection_LargeHavoc: true,
+    EnableCollection_SmallOps: false,
+    EnableCollection_LargeOps: true
+} as VerifierOptions;
+
 if(mode === "--output") {
     let smtmode = args[0];
-    if(smtmode !== "unreachable" && smtmode !== "witness" && smtmode !== "evaluate" && smtmode !== "invert") {
+    if(smtmode !== "unreachable" && smtmode !== "smallwitness" && smtmode !== "largewitness" && smtmode !== "evaluate" && smtmode !== "invert") {
         process.stdout.write("Valid mode options are unreachable | witness | evaluate | invert\n");
         process.exit(1);
     }
 
     const smtonly = args[1] === "--smt";
 
-    const location = parseLocation(args[smtonly ? 2 : 1]);
+    const location = (smtmode !== "evaluate") ? parseLocation(args[smtonly ? 2 : 1]) : {file: "[ignore]", line: -1, pos: -1};
+    let files = (smtmode !== "evaluate") ? args.slice(smtonly ? 3 : 2) : args.slice(smtonly ? 2 : 1);
+
     if(location === undefined) {
         process.stdout.write("Location should be of the form file.bsq@line#pos\n");
         process.exit(1);
     }
 
-    const files = args.slice(smtonly ? 3 : 2);
     const usercode = workflowLoadUserSrc(files);
     if(usercode === undefined) {
         process.stdout.write("Could not load code files\n");
@@ -51,7 +98,28 @@ if(mode === "--output") {
     process.stdout.write(`Writing file to ${into}\n`);
 
     const asmflavor = smtmode === "unreachable" ? AssemblyFlavor.UFOverApproximate : AssemblyFlavor.RecuriveImpl;
-    workflowEmitToFile(into, usercode, asmflavor, smtmode, DEFAULT_TIMEOUT, DEFAULT_VOPTS, location, "NSMain::main", smtonly)
+
+    let vopts = vopts_evaluate;
+    let mmode: "unreachable" | "witness" | "evaluate" | "invert" = "evaluate"
+    if(smtmode === "unreachable") {
+        vopts = vopts_unreachable;
+        mmode = "unreachable";
+    }
+    else if(smtmode === "smallwitness") {
+        vopts = vopts_smallwitness;
+        mmode = "witness";
+    }
+    else if(smtmode === "largewitness") {
+        vopts = vopts_largewitness;
+        mmode = "witness";
+    }
+    else {
+        if(smtmode === "invert") {
+            mmode = "invert";
+        } 
+    }
+
+    workflowEmitToFile(into, usercode, asmflavor, mmode, DEFAULT_TIMEOUT, vopts, location, "NSMain::main", smtonly)
 }
 else if(mode === "--unreachable") {
     const location = parseLocation(args[0]);
@@ -67,11 +135,11 @@ else if(mode === "--unreachable") {
         process.exit(1);
     }
 
-    workflowBSQInfeasibleSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQInfeasibleSingle(usercode, vopts_unreachable, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
-else if(mode === "--witness") {
+else if(mode === "--smallwitness") {
     const location = parseLocation(args[0]);
     if(location === undefined) {
         process.stderr.write("Location should be of the form file.bsq@line#pos\n");
@@ -85,7 +153,25 @@ else if(mode === "--witness") {
         process.exit(1);
     }
 
-    workflowBSQWitnessSingle(false, usercode, DEFAULT_VOPTS, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+    workflowBSQWitnessSingle(usercode, vopts_smallwitness, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
+        process.stdout.write(res + "\n");
+    });
+}
+else if(mode === "--largewitness") {
+    const location = parseLocation(args[0]);
+    if(location === undefined) {
+        process.stderr.write("Location should be of the form file.bsq@line#pos\n");
+        process.exit(1);
+    }
+
+    const files = args.slice(1);
+    const usercode = workflowLoadUserSrc(files);
+    if(usercode === undefined) {
+        process.stdout.write("Could not load code files\n");
+        process.exit(1);
+    }
+
+    workflowBSQWitnessSingle(usercode, vopts_largewitness, DEFAULT_TIMEOUT, location, "NSMain::main", (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -99,7 +185,7 @@ else if(mode === "--check") {
         process.exit(1);
     }
 
-    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
+    const errors = workflowGetErrors(usercode, error_vopts, "NSMain::main");
     if(errors === undefined) {
         process.stdout.write("Failed to load error lines\n");
         process.exit(1);
@@ -126,7 +212,7 @@ else if(mode === "--check") {
             process.stdout.write(`Checking error ${errors[i].msg} at ${errors[i].file}@${errors[i].line}#${errors[i].pos}...\n`);
         }
 
-        const jres = workflowBSQCheck(false, usercode, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
+        const jres = workflowBSQCheck(usercode, DEFAULT_TIMEOUT, errors[i], "NSMain::main", printprocess);
 
         if(jres === undefined) {
             if(!quiet) {
@@ -202,7 +288,7 @@ else if(mode === "--evaluate") {
     rl.question(">> ", (input) => {
         try {
             const jinput = JSON.parse(input) as any[];
-            workflowEvaluateSingle(false, usercode, jinput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowEvaluateSingle(usercode, jinput, vopts_evaluate, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 
@@ -211,7 +297,7 @@ else if(mode === "--evaluate") {
                     }
                     else if (jres["result"] === "output") {
                         process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
-                        process.stdout.write(JSON.stringify(jres["output"]) + "\n");
+                        process.stdout.write(JSON.stringify(jres["output"], undefined, 2) + "\n");
                     }
                     else if (jres["result"] === "timeout") {
                         process.stdout.write(`Solver timeout :(\n`);
@@ -250,7 +336,7 @@ else if(mode === "--invert") {
     rl.question(">> ", (input) => {
         try {
             const joutput = JSON.parse(input);
-            workflowInvertSingle(false, usercode, joutput, DEFAULT_VOPTS, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
+            workflowInvertSingle(usercode, joutput, vopts_evaluate, DEFAULT_TIMEOUT, "NSMain::main", (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 
@@ -259,7 +345,7 @@ else if(mode === "--invert") {
                     }
                     else if (jres["result"] === "witness") {
                         process.stdout.write(`Generated candidate input in ${jres["time"]} millis!\n`);
-                        process.stdout.write(JSON.stringify(jres["input"]) + "\n");
+                        process.stdout.write(JSON.stringify(jres["input"], undefined, 2) + "\n");
                     }
                     else if (jres["result"] === "timeout") {
                         process.stdout.write(`Solver timeout :(\n`);
@@ -290,7 +376,7 @@ else {
         process.exit(1);
     }
 
-    const errors = workflowGetErrors(usercode, DEFAULT_VOPTS, "NSMain::main");
+    const errors = workflowGetErrors(usercode, error_vopts, "NSMain::main");
     if(errors === undefined) {
         process.stderr.write("Failed to load error lines\n");
         process.exit(1);

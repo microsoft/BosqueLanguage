@@ -72,9 +72,6 @@ uint64_t computeBVMaxUnSigned(uint64_t bits)
 
 std::optional<uint64_t> bvBinSearchUnsigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& copts)
 {
-    auto bbval = m.eval(e, true);
-    auto strval = bbval.to_string();
-
     for(size_t i = 0; i < copts.size(); ++i)
     {
         s.push();
@@ -126,9 +123,6 @@ std::optional<uint64_t> bvBinSearchUnsigned(const APIModule* apimodule, z3::solv
 
 std::optional<int64_t> bvBinSearchSigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& copts)
 {
-    auto bbval = m.eval(e, true);
-    auto strval = bbval.to_string();
-
     for(size_t i = 0; i < copts.size(); ++i)
     {
         s.push();
@@ -206,9 +200,6 @@ std::optional<int64_t> bvBinSearchSigned(const APIModule* apimodule, z3::solver&
 
 std::optional<uint64_t> intBinSearchUnsigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& copts)
 {
-    auto bbval = m.eval(e, true);
-    auto strval = bbval.to_string();
-
     for(size_t i = 0; i < copts.size(); ++i)
     {
         s.push();
@@ -260,9 +251,6 @@ std::optional<uint64_t> intBinSearchUnsigned(const APIModule* apimodule, z3::sol
 
 std::optional<int64_t> intBinSearchSigned(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& copts)
 {
-    auto bbval = m.eval(e, true);
-    auto strval = bbval.to_string();
-
     for(size_t i = 0; i < copts.size(); ++i)
     {
         s.push();
@@ -340,9 +328,6 @@ std::optional<int64_t> intBinSearchSigned(const APIModule* apimodule, z3::solver
 
 std::optional<double> realBinSearch(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, const std::vector<double>& copts)
 {
-    auto bbval = m.eval(e, true);
-    auto strval = bbval.to_string();
-
     for(size_t i = 0; i < copts.size(); ++i)
     {
         s.push();
@@ -417,6 +402,81 @@ std::optional<double> realBinSearch(const APIModule* apimodule, z3::solver& s, c
     }
 
     return std::make_optional(rmin);
+}
+
+std::optional<char> stringBinSearchCharASCII(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, const std::string& str, size_t cidx)
+{
+    char copts[] = {'z', 'A', '0', ' ', '3', '!', '\0'};
+
+    for(size_t i = 0; i < sizeof(copts); ++i)
+    {
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        std::string iistr = str + copts[i];
+
+        chks.push_back(e == s.ctx().string_val(iistr));
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            return std::make_optional(copts[i]);
+        }
+    }
+
+    uint16_t cmin = 32;
+    uint16_t cmax = 126;
+    while(cmin < cmax)
+    {
+        uint16_t cmid = (cmax / 2) + (cmin / 2) + (((cmax % 2) + (cmin % 2)) / 2);
+        std::string imidstr = str + (char)cmid;
+
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        chks.push_back(e.extract(s.ctx().int_val(0), s.ctx().int_val((uint64_t)cidx + 1)) < s.ctx().string_val(imidstr));
+        auto rr = s.check(chks);
+
+        s.pop();
+        
+        if(rr == z3::check_result::sat) 
+        {
+            cmax = cmid;
+        }
+        else if(rr == z3::check_result::unsat) 
+        {
+            cmin = cmid + 1;
+        }
+        else
+        {
+            return std::nullopt;
+        }
+    }
+
+    return std::make_optional((char)cmin);
+}
+
+std::optional<std::string> stringBinSearchContentsASCII(const APIModule* apimodule, z3::solver& s, const z3::model& m, const z3::expr& e, size_t slen)
+{
+    if(slen == 0) {
+        return std::make_optional(std::string(""));
+    }
+
+    std::string rstr("");
+    for(size_t i = 0; i < slen; ++i)
+    {
+        auto nchar = stringBinSearchCharASCII(apimodule, s, m, e, rstr, i);
+        if(!nchar.has_value())
+        {
+            return std::nullopt;
+        }
+
+        rstr += nchar.value();
+    }
+
+    return std::make_optional(rstr);
 }
 
 z3::func_decl getArgContextConstructor(const APIModule* apimodule, z3::context& c, const char* fname, const z3::sort& ressort)
@@ -793,17 +853,17 @@ std::optional<std::string> ExtractionInfo::evalRealAsFP(z3::solver& s, z3::model
     auto nexp = m.eval(e, true);
     auto sstr = nexp.to_string();
 
-    std::cmatch match;
-    if(std::regex_match(sstr, re_numberino_f))
+    std::smatch match;
+    if(std::regex_match(sstr, match, re_numberino_f))
     {
         s.add(e == s.ctx().real_val(sstr.c_str()));
 
         return std::make_optional(sstr);
     }
-    else if(std::regex_match(sstr, re_fpdiverino))
+    else if(std::regex_match(sstr, match, re_fpdiverino))
     {
         double num = std::stod(match[1].str());
-        double denom = std::stod(match[3].str());
+        double denom = std::stod(match[4].str());
 
         auto sstr = std::to_string(num / denom);
         return std::make_optional(sstr);
@@ -838,16 +898,36 @@ std::optional<std::string> ExtractionInfo::evalStringAsString(z3::solver& s, z3:
 
     if(sstr.length() >= 2 && sstr[0] == '"' && sstr[sstr.length() - 1] == '"')
     {
-        s.add(e == s.ctx().string_val(sstr.c_str()));
+        s.add(e == s.ctx().string_val(sstr));
 
         return std::make_optional(sstr);
     }
     else
     {
-        //TODO: need to bin search string
-        assert(false);
+        auto slen = this->evalToUnsignedNumber(s, m, e.length());
+        if(!slen.has_value())
+        {
+            assert(false);
+            return std::nullopt;
+        }
 
-        return std::nullopt;
+        auto rstr = stringBinSearchContentsASCII(this->apimodule, s, m, e, slen.value());
+        if(!rstr.has_value())
+        {
+            assert(false);
+            return std::nullopt;
+        }
+
+        s.add(e == s.ctx().string_val(rstr.value()));
+
+        auto refinechk = s.check();
+        if(refinechk != z3::check_result::sat)
+        {
+            return std::nullopt;
+        }
+        m = s.get_model();
+
+        return sstr;
     }
 }
 
@@ -1168,355 +1248,14 @@ std::optional<std::string> ParseInfo::parseToDecimalNumber(json j) const
     return nval;
 }
 
-bool FuzzInfo::hasConstantsForType(std::string tag) const
-{
-    return this->apimodule->constants.find(tag) != this->apimodule->constants.cend();
-}
-
-json FuzzInfo::pickConstantForType(std::string tag, RandGenerator& rnd) const
-{
-    auto citer = this->apimodule->constants.find(tag);
-
-    std::uniform_int_distribution<size_t> cdist(0, citer->second.size() - 1);
-    return citer->second.at(cdist(rnd));
-}
-
-bool FuzzInfo::hasReuseForType(std::string tag) const
-{
-    return this->reuse.find(tag) != this->reuse.cend();
-}
-
-void FuzzInfo::addReuseForType(std::string tag, json j)
-{
-    if(!this->hasReuseForType(tag))
-    {
-        this->reuse[tag] = {};
-    }
-    std::vector<std::pair<std::string, json>>& tve = this->reuse[tag];
-
-    std::string str = j.dump();
-    auto mval = std::find_if(tve.cbegin(), tve.cend(), [&str](const std::pair<std::string, json>& entry) {
-        return entry.first == str;
-    });
-
-    if(mval == tve.cend())
-    {
-        tve.push_back({j.dump(), j});
-    }
-}
-
-json FuzzInfo::pickReuseForType(std::string tag, RandGenerator& rnd) const
-{
-    auto riter = this->reuse.find(tag);
-
-    std::uniform_int_distribution<size_t> rdist(0, riter->second.size() - 1);
-    return riter->second.at(rdist(rnd));
-}
-
-bool FuzzInfo::sampleKnownOpt(std::string tag, RandGenerator& rnd, json& j)
-{
-    std::uniform_int_distribution<size_t> fchoice(0, 3);
-    auto cval = fchoice(rnd);
-
-    if(cval == 0 || cval == 1)
-    {
-        return false;
-    }
-    else if(cval == 2)
-    {
-        if(!this->hasConstantsForType(tag))
-        {
-            return false;
-        }
-        else
-        {
-            j = this->pickConstantForType(tag, rnd);
-            return true;
-        }
-    }
-    else
-    {
-         if(!this->hasReuseForType(tag))
-        {
-            return false;
-        }
-        else
-        {
-            j = this->pickReuseForType(tag, rnd);
-            return true;
-        }
-    }
-}
-
-std::string generateRandomChar(RandGenerator& rnd)
-{
-    constexpr size_t printascii = 94;
-    constexpr size_t nullchar = 1; 
-
-    std::uniform_int_distribution<size_t> cchoice(0, printascii + nullchar);
-    auto cval = cchoice(rnd);
-
-    std::string data;
-    if(cval <= printascii)
-    {
-        data.append({ (char)(32 + cval) });
-    }
-    else
-    {
-        data.append({ '\0' });
-    }
-
-    return data;
-}
-
-BSQRegexOpt* BSQRegexOpt::parse(json j)
-{
-    auto tag = j["tag"].get<std::string>();
-    if(tag == "Literal")
-    {
-        return BSQLiteralRe::parse(j);
-    }
-    else if(tag == "CharClass")
-    {
-        return BSQCharClassRe::parse(j);
-    }
-    else if(tag == "CharRange")
-    {
-        return BSQCharRangeRe::parse(j);
-    }
-    else if(tag == "StarRepeat")
-    {
-        return BSQStarRepeatRe::parse(j);
-    }
-    else if(tag == "PlusRepeat")
-    {
-        return BSQPlusRepeatRe::parse(j);
-    }
-    else if(tag == "RangeRepeat")
-    {
-        return BSQRangeRepeatRe::parse(j);
-    }
-    else if(tag == "Optional")
-    {
-        return BSQOptionalRe::parse(j);
-    }
-    else if(tag == "Alternation")
-    {
-        return BSQAlternationRe::parse(j);
-    }
-    else
-    {
-        return BSQSequenceRe::parse(j);
-    }
-}
-
-std::string BSQLiteralRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    return this->escstr;
-}
-
-BSQLiteralRe* BSQLiteralRe::parse(json j)
-{
-    auto litstr = j["litstr"].get<std::string>();
-    std::vector<uint8_t> utf8;
-    std::transform(litstr.cbegin(), litstr.cend(), std::back_inserter(utf8), [](const char cc) {
-        return (uint8_t)cc;
-    });
-
-    return new BSQLiteralRe(j["restr"].get<std::string>(), j["escstr"].get<std::string>(), utf8);
-}
-
-std::string BSQCharRangeRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    //
-    //TODO: unicode support and escape support
-    //
-    assert(32 <= low && high < 126);
-
-    std::uniform_int_distribution<uint32_t> distribution(low, high);
-    return std::string{(char)distribution(rnd)};
-}
-
-BSQCharRangeRe* BSQCharRangeRe::parse(json j)
-{
-    auto lb = j["lb"].get<uint64_t>();
-    auto ub = j["ub"].get<uint64_t>();
-
-    return new BSQCharRangeRe(lb, ub);
-}
-
-std::string BSQCharClassRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    //
-    //TODO: unicode support and escape support
-    //
-    if(this->kind == SpecialCharKind::Wildcard)
-    {
-        return generateRandomChar(rnd);
-    }
-    else
-    {
-        char ws_char[] = {' ', '\n', '\r', '\t' };
-        std::uniform_int_distribution<uint32_t> chardist(0, sizeof(ws_char) - 1);
-
-        return std::string{ws_char[chardist(rnd)]};
-    }
-}
-
-BSQCharClassRe* BSQCharClassRe::parse(json j)
-{
-    auto kind = j["kind"].get<SpecialCharKind>();
-
-    return new BSQCharClassRe(kind);
-}
-
-std::string BSQStarRepeatRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    std::uniform_int_distribution<size_t> ctdist(0, finfo.limits.re_repeat_max);
-
-    auto ct = ctdist(rnd);
-    std::string res;
-    for(size_t i = 0; i < ct; ++i)
-    {
-        res.append(this->opt->generate(rnd, finfo));
-    }
-
-    return res;
-}
-
-BSQStarRepeatRe* BSQStarRepeatRe::parse(json j)
-{
-    auto repeat = BSQRegexOpt::parse(j["repeat"]);
-
-    return new BSQStarRepeatRe(repeat);
-}
-
-std::string BSQPlusRepeatRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    std::uniform_int_distribution<size_t> ctdist(1, finfo.limits.re_repeat_max);
-
-    auto ct = ctdist(rnd);
-    std::string res;
-    for(size_t i = 0; i < ct; ++i)
-    {
-        res.append(this->opt->generate(rnd, finfo));
-    }
-
-    return res;
-}
-
-BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
-{
-    auto repeat = BSQRegexOpt::parse(j["repeat"]);
-
-    return new BSQPlusRepeatRe(repeat);
-}
-
-std::string BSQRangeRepeatRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    std::uniform_int_distribution<size_t> ctdist(this->low, this->high);
-
-    auto ct = ctdist(rnd);
-    std::string res;
-    for(size_t i = 0; i < ct; ++i)
-    {
-        res.append(this->opt->generate(rnd, finfo));
-    }
-
-    return res;
-}
-
-BSQRangeRepeatRe* BSQRangeRepeatRe::parse(json j)
-{
-    auto min = j["min"].get<uint64_t>();
-    auto max = j["max"].get<uint64_t>();
-    auto repeat = BSQRegexOpt::parse(j["repeat"]);
-
-    return new BSQRangeRepeatRe(min, max, repeat);
-}
-
-std::string BSQOptionalRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    std::uniform_int_distribution<uint32_t> ctdist(0, 1);
-
-    auto ct = ctdist(rnd);
-    if(ct == 1)
-    {
-        return this->opt->generate(rnd, finfo);
-    }
-    else
-    {
-        return "";
-    }
-}
-
-BSQOptionalRe* BSQOptionalRe::parse(json j)
-{
-    auto opt = BSQRegexOpt::parse(j["opt"]);
-
-    return new BSQOptionalRe(opt);
-}
-
-std::string BSQAlternationRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    std::uniform_int_distribution<size_t> idxdist(0, this->opts.size() - 1);
-    auto opt = this->opts[idxdist(rnd)];
-
-    return opt->generate(rnd, finfo);   
-}
-
-BSQAlternationRe* BSQAlternationRe::parse(json j)
-{
-    std::vector<const BSQRegexOpt*> opts;
-    auto jopts = j["opts"];
-    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(opts), [](json arg) {
-        return BSQRegexOpt::parse(arg);
-    });
-
-    return new BSQAlternationRe(opts);
-}
-
-std::string BSQSequenceRe::generate(RandGenerator& rnd, FuzzInfo& finfo) const
-{
-    std::string res;
-    for(size_t i = 0; i < this->opts.size(); ++i)
-    {
-        res.append(this->opts[i]->generate(rnd, finfo));
-    }
-
-    return res;
-}
-
-BSQSequenceRe* BSQSequenceRe::parse(json j)
-{
-    std::vector<const BSQRegexOpt*> elems;
-    auto jelems = j["elems"];
-    std::transform(jelems.cbegin(), jelems.cend(), std::back_inserter(elems), [](json arg) {
-        return BSQRegexOpt::parse(arg);
-    });
-
-    return new BSQSequenceRe(elems);
-}
-
-std::string BSQRegex::generate(RandGenerator& rnd, FuzzInfo& finfo)
-{
-    return this->re->generate(rnd, finfo);
-}
-
-BSQRegex* BSQRegex::parse(json j)
-{
-    auto restr = j["restr"].get<std::string>();
-    auto re = BSQRegexOpt::parse(j["re"]);
-
-    return new BSQRegex(restr, re);
-}
-
 IType* IType::jparse(json j)
 {
     switch(j["tag"].get<TypeTag>())
     {
         case TypeTag::NoneTag:
             return NoneType::jparse(j);
+        case TypeTag::NothingTag:
+            return NothingType::jparse(j);
         case TypeTag::BoolTag:
             return BoolType::jparse(j);
         case TypeTag::NatTag:
@@ -1537,14 +1276,14 @@ IType* IType::jparse(json j)
             return StringType::jparse(j);
         case TypeTag::StringOfTag:
             return StringOfType::jparse(j);
-        case TypeTag::NumberOfTag:
-            return NumberOfType::jparse(j);
+        case TypeTag::PrimitiveOfTag:
+            return PrimitiveOfType::jparse(j);
         case TypeTag::DataStringTag:
             return DataStringType::jparse(j);
         case TypeTag::ByteBufferTag:
             return ByteBufferType::jparse(j);
-        case TypeTag::BufferTag:
-            return BufferType::jparse(j);
+        case TypeTag::BufferOfTag:
+            return BufferOfType::jparse(j);
         case TypeTag::DataBufferTag:
             return DataBufferType::jparse(j);
         case TypeTag::ISOTag:
@@ -1559,12 +1298,30 @@ IType* IType::jparse(json j)
             return TupleType::jparse(j);
         case TypeTag::RecordTag:
             return RecordType::jparse(j);
+        case TypeTag::SomethingTag:
+            return SomethingType::jparse(j);
+        case TypeTag::OkTag:
+            return OkType::jparse(j);
+        case TypeTag::ErrTag:
+            return ErrType::jparse(j);
         case TypeTag::ListTag:
             return ListType::jparse(j);
+        case TypeTag::StackTag:
+            return StackType::jparse(j);
+        case TypeTag::QueueTag:
+            return QueueType::jparse(j);
+        case TypeTag::SetTag:
+            return SetType::jparse(j);
+        case TypeTag::MapTag:
+            return MapType::jparse(j);
         case TypeTag::EnumTag:
             return EnumType::jparse(j);
+        case TypeTag::EntityTag:
+            return EntityType::jparse(j);
         case TypeTag::UnionTag:
             return UnionType::jparse(j);
+        case TypeTag::ConceptTag:
+            return ConceptType::jparse(j);
         default: 
         {
             assert(false);
@@ -1578,29 +1335,27 @@ NoneType* NoneType::jparse(json j)
     return new NoneType();
 }
 
-json NoneType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
+bool NoneType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
-    return nullptr;
-}
-
- bool NoneType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
- {
     return j.is_null();
- }
-
-std::optional<std::string> NoneType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_null())
-    {
-        return std::nullopt;
-    }
-    else
-    {
-        return std::make_optional("none");
-    }
 }
 
 std::optional<json> NoneType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    return std::make_optional(nullptr);
+}
+
+NothingType* NothingType::jparse(json j)
+{
+    return new NothingType();
+}
+
+bool NothingType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    return j.is_null();
+}
+
+std::optional<json> NothingType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     return std::make_optional(nullptr);
 }
@@ -1610,15 +1365,9 @@ BoolType* BoolType::jparse(json j)
     return new BoolType();
 }
 
-json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
+bool BoolType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
-    std::uniform_int_distribution<int> distribution(0, 1);
-    return distribution(rnd) == 1 ? true : false;
-}
-
- bool BoolType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
- {
-     if(!j.is_boolean())
+    if(!j.is_boolean())
     {
         return false;
     }
@@ -1627,18 +1376,6 @@ json BoolType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
     pinfo.chks.top()->push_back(bef(ctx) == c.bool_val(j.get<bool>()));
 
     return true;
- }
-
-std::optional<std::string> BoolType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_boolean())
-    {
-        return std::nullopt;
-    }
-    else
-    {
-        return std::make_optional(j.get<bool>() ? "true" : "false");
-    }
 }
 
 std::optional<json> BoolType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -1650,23 +1387,6 @@ std::optional<json> BoolType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
 NatType* NatType::jparse(json j)
 {
     return new NatType();
-}
-
-json NatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<uint64_t> distribution(0, finfo.limits.nat_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
 }
 
 bool NatType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1683,17 +1403,6 @@ bool NatType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context
     return true;
 }
 
-std::optional<std::string> NatType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    std::optional<uint64_t> nval = pinfo.parseToUnsignedNumber(j);
-    if(!nval.has_value())
-    {
-        return std::nullopt;
-    }
-    
-    return std::make_optional(std::to_string(nval.value()) + "n");
-}
-
 std::optional<json> NatType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BNat@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
@@ -1703,23 +1412,6 @@ std::optional<json> NatType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, 
 IntType* IntType::jparse(json j)
 {
     return new IntType();
-}
-
-json IntType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<uint64_t> distribution(finfo.limits.int_min, finfo.limits.int_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
 }
 
 bool IntType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1736,17 +1428,6 @@ bool IntType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context
     return true;
 }
 
-std::optional<std::string> IntType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    std::optional<int64_t> nval = pinfo.parseToSignedNumber(j);
-    if(!nval.has_value())
-    {
-        return std::nullopt;
-    }
-    
-    return std::make_optional(std::to_string(nval.value()) + "i");
-}
-
 std::optional<json> IntType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BInt@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
@@ -1756,23 +1437,6 @@ std::optional<json> IntType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, 
 BigNatType* BigNatType::jparse(json j)
 {
     return new BigNatType();
-}
-
-json BigNatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<uint64_t> distribution(0, finfo.limits.nat_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
 }
 
 bool BigNatType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1789,17 +1453,6 @@ bool BigNatType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::cont
     return true;
 }
 
-std::optional<std::string> BigNatType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    std::optional<std::string> nval = pinfo.parseToBigUnsignedNumber(j);
-    if(!nval.has_value())
-    {
-        return std::nullopt;
-    }
-    
-    return std::make_optional(nval.value() + "N");
-}
-
 std::optional<json> BigNatType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BBigNat@UFCons_API", m.ctx().int_sort());
@@ -1809,23 +1462,6 @@ std::optional<json> BigNatType::z3extract(ExtractionInfo& ex, const z3::expr& ct
 BigIntType* BigIntType::jparse(json j)
 {
     return new BigIntType();
-}
-
-json BigIntType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<uint64_t> distribution(finfo.limits.int_min, finfo.limits.int_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
 }
 
 bool BigIntType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1842,17 +1478,6 @@ bool BigIntType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::cont
     return true;
 }
 
-std::optional<std::string> BigIntType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    std::optional<std::string> nval = pinfo.parseToBigSignedNumber(j);
-    if(!nval.has_value())
-    {
-        return std::nullopt;
-    }
-    
-    return std::make_optional(nval.value() + "I");
-}
-
 std::optional<json> BigIntType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BBigInt@UFCons_API", m.ctx().int_sort());
@@ -1862,28 +1487,6 @@ std::optional<json> BigIntType::z3extract(ExtractionInfo& ex, const z3::expr& ct
 RationalType* RationalType::jparse(json j)
 {
     return new RationalType();
-}
-
-json RationalType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        const BigIntType* numtype = (const BigIntType*)finfo.apimodule->typemap.find("NSCore::BigInt")->second;
-        const NatType* denomtype = (const NatType*)finfo.apimodule->typemap.find("NSCore::Nat")->second;
-
-        json num = numtype->fuzz(finfo, rnd);
-        json denom = denomtype->fuzz(finfo, rnd);
-
-        res = { num, denom };
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
 }
 
 bool RationalType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1900,51 +1503,15 @@ bool RationalType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::co
     return false;
 }
 
-std::optional<std::string> RationalType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-     if(!j.is_array())
-    {
-        return std::nullopt;
-    }
-
-    const BigIntType* numtype = (const BigIntType*)pinfo.apimodule->typemap.find("NSCore::BigInt")->second;
-    const NatType* denomtype = (const NatType*)pinfo.apimodule->typemap.find("NSCore::Nat")->second;
-
-    auto num = numtype->tobsqarg(pinfo, j[0], "");
-    auto denom = denomtype->tobsqarg(pinfo, j[1], "");
-        
-    return (num.has_value() && denom.has_value()) ? std::make_optional(num.value() + "/" + denom.value() + "R") : std::nullopt;
-}
-
 std::optional<json> RationalType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
-    //const BigIntType* numtype = (const BigIntType*)pinfo.apimodule->typemap.find("NSCore::BigInt")->second;
-    //const NatType* denomtype = (const NatType*)pinfo.apimodule->typemap.find("NSCore::Nat")->second;
-
     assert(false);
-    return nullptr;
+    return std::nullopt;
 }
 
 FloatType* FloatType::jparse(json j)
 {
     return new FloatType();
-}
-
-json FloatType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_real_distribution<double> distribution(finfo.limits.float_min, finfo.limits.float_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
 }
 
 bool FloatType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -1961,17 +1528,6 @@ bool FloatType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::conte
     return true;
 }
 
-std::optional<std::string> FloatType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    auto fval = pinfo.parseToRealNumber(j);
-    if(!fval.has_value())
-    {
-        return std::nullopt;
-    }
-        
-    return fval.value() + "f";
-}
-
 std::optional<json> FloatType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BFloat@UFCons_API", m.ctx().real_sort());
@@ -1981,23 +1537,6 @@ std::optional<json> FloatType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
 DecimalType* DecimalType::jparse(json j)
 {
     return new DecimalType();
-}
-
-json DecimalType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_real_distribution<double> distribution(finfo.limits.decimal_min, finfo.limits.decimal_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
 }
 
 bool DecimalType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2014,17 +1553,6 @@ bool DecimalType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::con
     return true;
 }
 
-std::optional<std::string> DecimalType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    auto fval = pinfo.parseToDecimalNumber(j);
-    if(!fval.has_value())
-    {
-        return std::nullopt;
-    }
-        
-    return fval.value() + "d";
-}
-
 std::optional<json> DecimalType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BDecimal@UFCons_API", m.ctx().real_sort());
@@ -2036,29 +1564,6 @@ StringType* StringType::jparse(json j)
     return new StringType();
 }
 
-json StringType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<size_t> distribution(0, finfo.limits.strlen_max);
-        auto size = distribution(rnd);
-
-        std::string res;
-        for(size_t i = 0; i < size; ++i)
-        {
-            res.append(generateRandomChar(rnd));
-        }
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
-}
-
 bool StringType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     if(!j.is_string())
@@ -2067,19 +1572,9 @@ bool StringType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::cont
     }
         
     auto bef = getArgContextConstructor(pinfo.apimodule, c, "BString@UFCons_API", c.string_sort());
-    pinfo.chks.top()->push_back(bef(ctx) == c.string_val(j.get<std::string>().c_str()));
+    pinfo.chks.top()->push_back(bef(ctx) == c.string_val(j.get<std::string>()));
     
     return true;
-}
-
-std::optional<std::string> StringType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_string())
-    {
-        return std::nullopt;
-    }
-        
-    return std::make_optional("\"" + j.get<std::string>() + "\"");
 }
 
 std::optional<json> StringType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2088,33 +1583,33 @@ std::optional<json> StringType::z3extract(ExtractionInfo& ex, const z3::expr& ct
     return ex.evalToString(s, m, bef(ctx));
 }
 
+PrimitiveOfType* PrimitiveOfType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto usinginv = j["usinginv"].get<std::string>();
+    
+    return new PrimitiveOfType(name, oftype, usinginv);
+}
+
+bool PrimitiveOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> PrimitiveOfType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);
+}
+
 StringOfType* StringOfType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
     auto validator = j["validator"].get<std::string>();
-    auto re_validate = BSQRegex::parse(j["re_validate"]);
 
-    return new StringOfType(name, validator, re_validate);
-}
-
-json StringOfType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::string res = this->re_validate->re->generate(rnd, finfo);
-        while(res.size() > finfo.limits.strlen_max)
-        {
-            res = this->re_validate->re->generate(rnd, finfo);
-        }
-        
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
+    return new StringOfType(name, validator);
 }
 
 bool StringOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2123,118 +1618,24 @@ bool StringOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::co
     return pinfo.apimodule->typemap.find("NSCore::String")->second->toz3arg(pinfo, j, ectx, c);
 }
 
-std::optional<std::string> StringOfType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    auto pstr = pinfo.apimodule->typemap.find("NSCore::String")->second->tobsqarg(pinfo, j, indent);
-    if(!pstr.has_value())
-    {
-        return std::nullopt;
-    }
-        
-    return "\'" + pstr.value().substr(1, pstr.value().size() - 2) + "\'" + " of " + this->name;
-}
-
 std::optional<json> StringOfType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
     return ex.apimodule->typemap.find("NSCore::String")->second->z3extract(ex, ectx, s, m);
 }
 
-NumberOfType* NumberOfType::jparse(json j)
-{
-    auto name = j["name"].get<std::string>();
-    auto primitive = j["primitive"].get<std::string>();
-    auto oftype = j["oftype"].get<std::string>();
-    
-    return new NumberOfType(name, primitive, oftype);
-}
-
-json NumberOfType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        json res = finfo.apimodule->typemap.find(this->primitive)->second->fuzz(finfo, rnd);
-        
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
-}
-
-bool NumberOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
-{
-    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
-    return pinfo.apimodule->typemap.find(this->primitive)->second->toz3arg(pinfo, j, ectx, c);
-}
-
-std::optional<std::string> NumberOfType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    auto pstr = pinfo.apimodule->typemap.find(this->primitive)->second->tobsqarg(pinfo, j, indent);
-    if(!pstr.has_value())
-    {
-        return std::nullopt;
-    }
-        
-    return pstr.value() + " of " + this->name;
-}
-
-std::optional<json> NumberOfType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
-{
-    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
-    return ex.apimodule->typemap.find(this->primitive)->second->z3extract(ex, ectx, s, m);
-}
-
 DataStringType* DataStringType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
     auto oftype = j["oftype"].get<std::string>();
-    auto isvalue = j["isvalue"].get<bool>();
 
-    return new DataStringType(name, oftype, isvalue);
-}
-
-json DataStringType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<size_t> distribution(0, finfo.limits.strlen_max);
-        auto size = distribution(rnd);
-
-        std::string res;
-        for(size_t i = 0; i < size; ++i)
-        {
-            res.append(generateRandomChar(rnd));
-        }
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
+    return new DataStringType(name, oftype);
 }
 
 bool DataStringType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
     return pinfo.apimodule->typemap.find("NSCore::String")->second->toz3arg(pinfo, j, ectx, c);
-}
-
-std::optional<std::string> DataStringType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    auto pstr = pinfo.apimodule->typemap.find("NSCore::String")->second->tobsqarg(pinfo, j, indent);
-    if(!pstr.has_value())
-    {
-        return std::nullopt;
-    }
-        
-    return "\'" + pstr.value().substr(1, pstr.value().size() - 2) + "\'" + (this->isvalue ? "#" : "@") + this->name;
 }
 
 std::optional<json> DataStringType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2245,14 +1646,7 @@ std::optional<json> DataStringType::z3extract(ExtractionInfo& ex, const z3::expr
 
 ByteBufferType* ByteBufferType::jparse(json j)
 {
-    assert(false);
-    return nullptr;
-}
-
-json ByteBufferType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    assert(false);
-    return nullptr;
+    return new ByteBufferType();
 }
 
 bool ByteBufferType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2261,43 +1655,25 @@ bool ByteBufferType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::
     return false;
 }
 
-std::optional<std::string> ByteBufferType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    assert(false);
-    return std::nullopt;
-}
-
 std::optional<json> ByteBufferType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
 }
 
-BufferType* BufferType::jparse(json j)
+BufferOfType* BufferOfType::jparse(json j)
 {
     assert(false);
     return nullptr;
 }
 
-json BufferType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    assert(false);
-    return nullptr;
-}
-
-bool BufferType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+bool BufferOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     assert(false);
     return false;
 }
 
-std::optional<std::string> BufferType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    assert(false);
-    return std::nullopt;
-}
-
-std::optional<json> BufferType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+std::optional<json> BufferOfType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;
@@ -2309,22 +1685,10 @@ DataBufferType* DataBufferType::jparse(json j)
     return nullptr;
 }
 
-json DataBufferType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    assert(false);
-    return nullptr;
-}
-
 bool DataBufferType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     assert(false);
     return false;
-}
-
-std::optional<std::string> DataBufferType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    assert(false);
-    return std::nullopt;
 }
 
 std::optional<json> DataBufferType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2338,33 +1702,11 @@ ISOTimeType* ISOTimeType::jparse(json j)
     return new ISOTimeType();
 }
 
-json ISOTimeType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<uint64_t> distribution(finfo.limits.iso_time_min, finfo.limits.iso_time_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
-}
-
 bool ISOTimeType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     //TODO: see std::get_time here I think
     assert(false);
     return false;
-}
-
-std::optional<std::string> ISOTimeType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    return j.get<std::string>();
 }
 
 std::optional<json> ISOTimeType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2393,23 +1735,6 @@ LogicalTimeType* LogicalTimeType::jparse(json j)
     return new LogicalTimeType();
 }
 
-json LogicalTimeType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<uint64_t> distribution(0, finfo.limits.ltime_max);
-        res = distribution(rnd);
-
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
-}
-
 bool LogicalTimeType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     std::optional<std::string> nval = pinfo.parseToBigUnsignedNumber(j);
@@ -2424,17 +1749,6 @@ bool LogicalTimeType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3:
     return true;
 }
 
-std::optional<std::string> LogicalTimeType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    std::optional<std::string> nval = pinfo.parseToBigUnsignedNumber(j);
-    if(!nval.has_value())
-    {
-        return std::nullopt;
-    }
-    
-    return std::make_optional(nval.value() + "T");
-}
-
 std::optional<json> LogicalTimeType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "BLogicalTime@UFCons_API", m.ctx().int_sort());
@@ -2446,22 +1760,10 @@ UUIDType* UUIDType::jparse(json j)
     return new UUIDType();
 }
 
-json UUIDType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    assert(false);
-    return nullptr;
-}
-
 bool UUIDType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     assert(false);
     return false;
-}
-
-std::optional<std::string> UUIDType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    assert(false);
-    return std::nullopt;
 }
 
 std::optional<json> UUIDType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2475,22 +1777,10 @@ ContentHashType* ContentHashType::jparse(json j)
     return new ContentHashType();
 }
 
-json ContentHashType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    assert(false);
-    return nullptr;
-}
-
 bool ContentHashType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     assert(false);
     return false;
-}
-
-std::optional<std::string> ContentHashType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    assert(false);
-    return std::nullopt;
 }
 
 std::optional<json> ContentHashType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2502,7 +1792,6 @@ std::optional<json> ContentHashType::z3extract(ExtractionInfo& ex, const z3::exp
 TupleType* TupleType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto isvalue = j["isvalue"].get<bool>();
 
     std::vector<std::string> ttypes;
     auto jtypes = j["ttypes"];
@@ -2510,17 +1799,7 @@ TupleType* TupleType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new TupleType(name, isvalue, ttypes);
-}
-
-json TupleType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    auto jres = json::array();
-    std::transform(this->ttypes.cbegin(), this->ttypes.cend(), std::back_inserter(jres), [&finfo, &rnd](const std::string& tt) {
-        auto ttype = finfo.apimodule->typemap.find(tt)->second;
-        return ttype->fuzz(finfo, rnd);
-    });
-    return jres;
+    return new TupleType(name, ttypes);
 }
 
 bool TupleType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2549,44 +1828,6 @@ bool TupleType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::conte
     return true;
 }
 
-std::optional<std::string> TupleType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_array() || this->ttypes.size() != j.size())
-    {
-        return std::nullopt;
-    }
-
-    auto iidt = indent + "  ";
-    std::string bres;
-    for(size_t i = 0; i < this->ttypes.size(); ++i)
-    {
-        const std::string& tt = this->ttypes[i];
-        
-        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
-        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        bres += '\n' + iidt + pexpr.value();
-
-        if(i != this->ttypes.size() - 1)
-        {
-            bres += ',' ;
-        }
-    }
-
-    if(this->ttypes.size() == 0)
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "[]");
-    }
-    else
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "[" + bres + indent + "]");
-    }
-}
-
 std::optional<json> TupleType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::array();
@@ -2610,7 +1851,6 @@ std::optional<json> TupleType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
 RecordType* RecordType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
-    auto isvalue = j["isvalue"].get<bool>();
 
     std::vector<std::string> props;
     auto jprops = j["props"];
@@ -2624,18 +1864,7 @@ RecordType* RecordType::jparse(json j)
         return jv.get<std::string>();
     });
 
-    return new RecordType(name, isvalue, props, ttypes);
-}
-
-json RecordType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    auto jres = json::object();
-    for(size_t i = 0; i < this->props.size(); ++i)
-    {
-        auto ttype = finfo.apimodule->typemap.find(this->ttypes[i])->second;
-        return jres[this->props[i]] = ttype->fuzz(finfo, rnd);
-    }
-    return jres;
+    return new RecordType(name, props, ttypes);
 }
 
 bool RecordType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2671,52 +1900,6 @@ bool RecordType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::cont
     return true;
 }
 
-std::optional<std::string> RecordType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_object() || this->props.size() != j.size())
-    {
-        return std::nullopt;
-    }
-
-    auto allprops = std::all_of(this->props.cbegin(), this->props.cend(), [&j](const std::string& prop){
-                return j.contains(prop);
-            });
-    if(!allprops)
-    {
-        return std::nullopt;
-    }
-
-    auto iidt = indent + "  ";
-    std::string bres;
-    for(size_t i = 0; i < this->props.size(); ++i)
-    {
-        const std::string& tt = this->ttypes[i];
-       
-        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
-        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        bres += '\n' + iidt + this->props[i] + "=" + pexpr.value();
-
-        if(i != this->ttypes.size() - 1)
-        {
-            bres += ',' ;
-        }
-    }
-
-    if(this->ttypes.size() == 0)
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "{}");
-    }
-    else
-    {
-        return std::make_optional(indent + std::string(this->isvalue ? "#" : "@") + "{" + bres + indent + "}");
-    }
-}
-
 std::optional<json> RecordType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto jres = json::object();
@@ -2738,27 +1921,72 @@ std::optional<json> RecordType::z3extract(ExtractionInfo& ex, const z3::expr& ct
     return std::make_optional(jres);
 }
 
+SomethingType* SomethingType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    
+    return new SomethingType(name, oftype);
+}
+
+bool SomethingType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> SomethingType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);
+}
+
+OkType* OkType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    
+    return new OkType(name, oftype);
+}
+
+bool OkType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> OkType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);
+}
+
+ErrType* ErrType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    
+    return new ErrType(name, oftype);
+}
+
+bool ErrType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> ErrType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);
+}
+
 ListType* ListType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
     auto oftype = j["oftype"].get<std::string>();
 
     return new ListType(name, oftype);
-}
-
-json ListType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    std::uniform_int_distribution<uint64_t> distribution(0, finfo.limits.container_max);
-    auto lsize = distribution(rnd);
-
-    auto etype = finfo.apimodule->typemap.find(this->oftype)->second;
-    auto jres = json::array();
-    for(size_t i = 0; i < lsize; ++i)
-    {
-        jres.push_back(etype->fuzz(finfo, rnd));
-    }
-
-    return jres;
 }
 
 bool ListType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2786,43 +2014,6 @@ bool ListType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::contex
     }
 
     return true;
-}
-
-std::optional<std::string> ListType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_array())
-    {
-        return std::nullopt;
-    }
-
-    auto ttype = pinfo.apimodule->typemap.find(this->oftype)->second;
-
-    auto iidt = indent + "  ";
-    std::string bres;
-    for(size_t i = 0; i < j.size(); ++i)
-    {
-        auto pexpr = ttype->tobsqarg(pinfo, j[i], iidt);
-        if(!pexpr.has_value())
-        {
-            return std::nullopt;
-        }
-
-        bres += '\n' + iidt + pexpr.value();
-
-        if(i != j.size() - 1)
-        {
-            bres += ',' ;
-        }
-    }
-
-    if(j.size() == 0)
-    {
-        return std::make_optional(indent + this->name + "@" + "{}");
-    }
-    else
-    {
-        return std::make_optional(indent + this->name + "@" + "{" + bres + indent + "}");
-    }
 }
 
 std::optional<json> ListType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2853,34 +2044,102 @@ std::optional<json> ListType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
     return std::make_optional(jres);
 }
 
-EnumType* EnumType::jparse(json j)
+StackType* StackType::jparse(json j)
 {
-    std::vector<std::string> enuminvs;
-    auto jenuminvs = j["enuminvs"];
-    std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enuminvs), [](const json& jv) {
-        return jv.get<std::string>();
-    });
-
-    return new EnumType(j["name"].get<std::string>(), j["underlying"].get<std::string>(), enuminvs);
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    
+    return new StackType(name, oftype, ultype);
 }
 
-json EnumType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
+bool StackType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
-    json res;
-    if(finfo.sampleKnownOpt(this->name, rnd, res))
-    {
-        return res;
-    }
-    else
-    {
-        std::uniform_int_distribution<size_t> distribution(0, this->enuminvs.size() - 1);
-        auto opt = distribution(rnd);
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
 
-        res = this->enuminvs[opt];
+std::optional<json> StackType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
 
-        finfo.addReuseForType(this->name, res);
-        return res;
-    }
+QueueType* QueueType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    
+    return new QueueType(name, oftype, ultype);
+}
+
+bool QueueType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> QueueType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
+
+SetType* SetType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    auto unqchkinv = j["unqchkinv"].get<std::string>();
+    auto unqconvinv = j["unqconvinv"].get<std::string>();
+    
+    return new SetType(name, oftype, ultype, unqchkinv, unqconvinv);
+}
+
+bool SetType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> SetType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
+
+MapType* MapType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+    auto oftype = j["oftype"].get<std::string>();
+    auto ultype = j["ultype"].get<std::string>();
+    auto unqchkinv = j["unqchkinv"].get<std::string>();
+    
+    return new MapType(name, oftype, ultype, unqchkinv);
+}
+
+bool MapType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(this->ultype)->second->toz3arg(pinfo, j, ectx, c);
+}
+
+std::optional<json> MapType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
+    return ex.apimodule->typemap.find(this->ultype)->second->z3extract(ex, ectx, s, m);
+}
+
+EnumType* EnumType::jparse(json j)
+{
+    std::vector<std::pair<std::string, uint32_t>> enums;
+    auto jenuminvs = j["enums"];
+    std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enums), [](const json& jv) {
+        return std::make_pair(jv["ename"].get<std::string>(), jv["value"].get<uint32_t>());
+    });
+
+    return new EnumType(j["name"].get<std::string>(), j["usinginv"].get<std::string>(), enums);
 }
 
 bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2891,30 +2150,32 @@ bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::contex
     }
     
     std::string enumchoice = j.get<std::string>();
-    auto pos = std::find_if(this->enuminvs.cbegin(), this->enuminvs.cend(), [&enumchoice](const std::string& cname) {
-        return cname == enumchoice;
-    });
-
-    if(pos == this->enuminvs.cend())
+    if(enumchoice.length() <= this->name.length() + 2)
     {
         return false;
     }
-    auto idx = std::distance(pos, this->enuminvs.cend());
+
+    std::string scopestr(enumchoice.cbegin(), enumchoice.cbegin() + this->name.length());
+    auto scopeok = this->name == scopestr;
+    if(!scopeok)
+    {
+        return false;
+    }
+
+    std::string namestr(enumchoice.cbegin() + this->name.length() + 2, enumchoice.cend());
+    auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&namestr](const std::pair<std::string, uint32_t>& entry) {
+        return entry.first == namestr;
+    });
+
+    if(pos == this->enums.cend())
+    {
+        return false;
+    }
 
     auto lef = getArgContextConstructor(pinfo.apimodule, c, "EnumChoice@UFCons_API", c.bv_sort(pinfo.apimodule->bv_width));
-    pinfo.chks.top()->push_back(lef(ctx) == c.bv_val((uint64_t)idx, pinfo.apimodule->bv_width));
+    pinfo.chks.top()->push_back(lef(ctx) == c.bv_val(pos->second, pinfo.apimodule->bv_width));
 
     return true;
-}
-
-std::optional<std::string> EnumType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    if(!j.is_string())
-    {
-        return std::nullopt;
-    }
-        
-    return j.get<std::string>();
 }
 
 std::optional<json> EnumType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
@@ -2926,12 +2187,86 @@ std::optional<json> EnumType::z3extract(ExtractionInfo& ex, const z3::expr& ctx,
         return std::nullopt;
     }
 
-    if(lenval.value() >= this->enuminvs.size())
+    if(lenval.value() >= this->enums.size())
     {
         return std::nullopt;
     }
 
-    return std::make_optional(this->enuminvs[lenval.value()]);
+    std::string rres = this->name + "::" + this->enums[lenval.value()].first;
+    return std::make_optional(rres);
+}
+
+EntityType* EntityType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+
+    std::vector<std::string> fields;
+    auto jprops = j["fields"];
+    std::transform(jprops.cbegin(), jprops.cend(), std::back_inserter(fields), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    std::vector<std::string> ttypes;
+    auto jtypes = j["ttypes"];
+    std::transform(jtypes.cbegin(), jtypes.cend(), std::back_inserter(ttypes), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    return new EntityType(name, fields, ttypes);
+}
+
+bool EntityType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    if(!j.is_object() || this->fields.size() != j.size())
+    {
+        return false;
+    }
+
+    auto allprops = std::all_of(this->fields.cbegin(), this->fields.cend(), [&j](const std::string& prop){
+                return j.contains(prop);
+            });
+    if(!allprops)
+    {
+        return false;
+    }
+
+    std::vector<const IType*> argtypes;
+    z3::expr_vector targs(c);
+    for(size_t i = 0; i < this->fields.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+        auto ectx = extendContext(pinfo.apimodule, c, ctx, i);
+
+        auto ttype = pinfo.apimodule->typemap.find(tt)->second;
+        auto pexpr = ttype->toz3arg(pinfo, j[this->fields[i]], ectx, c);
+        if(!pexpr)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+std::optional<json> EntityType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto jres = json::object();
+    for(size_t i = 0; i < this->fields.size(); ++i)
+    {
+        const std::string& tt = this->ttypes[i];
+        auto idxval = extendContext(ex.apimodule, m.ctx(), ctx, i);
+
+        auto ttype = ex.apimodule->typemap.find(tt)->second;
+        auto rr = ttype->z3extract(ex, idxval, s, m);
+        if(!rr.has_value())
+        {
+            return std::nullopt;
+        }
+
+        jres[this->fields[i]] = rr.value();
+    }
+
+    return std::make_optional(jres);
 }
 
 UnionType* UnionType::jparse(json j)
@@ -2945,15 +2280,6 @@ UnionType* UnionType::jparse(json j)
     });
 
     return new UnionType(name, opts);
-}
-
-json UnionType::fuzz(FuzzInfo& finfo, RandGenerator& rnd) const
-{
-    std::uniform_int_distribution<uint64_t> distribution(0, this->opts.size() - 1);
-    auto i = distribution(rnd);
-
-    auto otype = finfo.apimodule->typemap.find(this->opts[i])->second;
-    return otype->fuzz(finfo, rnd);
 }
 
 bool UnionType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2986,21 +2312,6 @@ bool UnionType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::conte
     return false;
 }
 
-std::optional<std::string> UnionType::tobsqarg(const ParseInfo& pinfo, json j, const std::string& indent) const
-{
-    for(size_t i = 0; i < this->opts.size(); ++i)
-    {
-        auto ttype = dynamic_cast<const IGroundedType*>(pinfo.apimodule->typemap.find(this->opts[i])->second);
-        auto pexpr = ttype->tobsqarg(pinfo, j, indent);
-        if(pexpr.has_value())
-        {
-            return pexpr;
-        }
-    }
-
-    return std::nullopt;
-}
-
 std::optional<json> UnionType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "UnionChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
@@ -3019,6 +2330,64 @@ std::optional<json> UnionType::z3extract(ExtractionInfo& ex, const z3::expr& ctx
     auto ectx = extendContext(ex.apimodule, m.ctx(), ctx, choice.value());
 
     return ttype->z3extract(ex, ectx, s, m);
+}
+
+ConceptType* ConceptType::jparse(json j)
+{
+    auto name = j["name"].get<std::string>();
+
+    std::vector<std::string> opts;
+    auto jopts = j["opts"];
+    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(opts), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    return new ConceptType(name, opts);
+}
+
+bool ConceptType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+{
+    auto jname = j["tag"].get<std::string>();
+    auto jvalue = j["value"];
+
+    auto ii = std::find(this->opts.cbegin(), this->opts.cend(), jname);
+    auto idx = std::distance(this->opts.cbegin(), ii);
+
+    auto lef = getArgContextConstructor(pinfo.apimodule, c, "ConceptChoice@UFCons_API", c.bv_sort(pinfo.apimodule->bv_width));
+    pinfo.chks.top()->push_back(lef(ctx) == c.bv_val((uint64_t)idx, pinfo.apimodule->bv_width));
+
+    auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
+    return pinfo.apimodule->typemap.find(jname)->second->toz3arg(pinfo, jvalue, ectx, c);
+}
+
+std::optional<json> ConceptType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+{
+    auto bef = getArgContextConstructor(ex.apimodule, m.ctx(), "ConceptChoice@UFCons_API", m.ctx().bv_sort(ex.apimodule->bv_width));
+    auto choice = ex.bvToCardinality(s, m, bef(ctx));
+    if(!choice.has_value())
+    {
+        return std::nullopt;
+    }
+
+    if(choice.value() >= this->opts.size())
+    {
+        return std::nullopt;
+    }
+
+    auto ttype = dynamic_cast<const IGroundedType*>(ex.apimodule->typemap.find(this->opts[choice.value()])->second);
+    auto ectx = extendContext(ex.apimodule, m.ctx(), ctx, choice.value());
+
+    auto jj = ttype->z3extract(ex, ectx, s, m);
+    if(!jj.has_value())
+    {
+        return std::nullopt;
+    }
+
+    auto jres = json::object();
+    jres["tag"] = this->name;
+    jres["value"] = jj.value();
+
+    return jres;
 }
 
 InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, const IType*>& typemap)

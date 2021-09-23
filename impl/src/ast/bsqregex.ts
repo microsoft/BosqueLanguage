@@ -3,13 +3,15 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { assert } from "console";
+import * as assert from "assert";
 
 class RegexParser {
+    readonly currentns: string;
     readonly restr: string;
     pos: number;
 
-    constructor(restr: string) {
+    constructor(currentns: string, restr: string) {
+        this.currentns = currentns;
         this.restr = restr;
         this.pos = 0;
     }
@@ -45,28 +47,64 @@ class RegexParser {
         else if(this.isToken("[")) {
             this.advance();
 
-            const lb = this.token();
-            this.advance();
-
-            if(!this.isToken("-")) {
-                return "Invalid range given";
-            }
-            else {
+            const compliment = this.isToken("^")
+            if(compliment) {
                 this.advance();
             }
 
-            const ub = this.token();
-            this.advance();
+            let range: {lb: number, ub: number}[] = [];
+            while(!this.isToken("]")) {
+                const lb = this.token();
+                this.advance();
+
+                if (!this.isToken("-")) {
+                    range.push({ lb: lb.codePointAt(0) as number, ub: lb.codePointAt(0) as number });
+                }
+                else {
+                    this.advance();
+
+                    const ub = this.token();
+                    this.advance();
+
+                    range.push({ lb: lb.codePointAt(0) as number, ub: ub.codePointAt(0) as number });
+                }
+            }
 
             if(!this.isToken("]")) {
-                return "Invalid range given";
+                return "Invalid range";
             }
             this.advance();
 
-            return new CharRange(lb.codePointAt(0) as number, ub.codePointAt(0) as number);
+            return new RegexCharRange(compliment, range);
+        }
+        else if(this.isToken("$")) {
+            this.advance();
+
+            if(!this.isToken("{")) {
+                return "Invalid regex const";
+            }
+            this.advance();
+
+            let fname = "";
+            while(!this.isToken("}")) {
+                fname += this.token();
+                this.advance();
+            }
+
+            if(!this.isToken("}")) {
+                return "Invalid regex const";
+            }
+            this.advance();
+
+            let ccpos = fname.indexOf("::");
+
+            let ns = ccpos === -1 ? this.currentns : fname.slice(0, ccpos);
+            let ccname = ccpos === -1 ? fname : fname.slice(ccpos + 3);
+
+            return new RegexConstClass(ns, ccname);            
         }
         else {
-            res = new Literal(this.token(), this.token(), this.token());
+            res = new RegexLiteral(this.token(), this.token(), this.token());
             this.advance();
         }
 
@@ -75,20 +113,20 @@ class RegexParser {
 
     private parseCharClassOrEscapeComponent(): RegexComponent | string {
         if(this.isToken(".")) {
-            return new CharClass(SpecialCharKind.Wildcard);
+            return new RegexDotCharClass();
         }
         else if(this.isToken("\\")) {
             this.advance();
             if(this.isToken("\\") || this.isToken("/") 
                 || this.isToken(".") || this.isToken("*") || this.isToken("+") || this.isToken("?") || this.isToken("|")
                 || this.isToken("(") || this.isToken(")") || this.isToken("[") || this.isToken("]") || this.isToken("{") || this.isToken("}")
-                || this.isToken("$") || this.isToken("^")) {
+                || this.isToken("$")) {
                 const cc = this.token();
                 this.advance();
 
-                return new Literal(`\\${cc}`, cc, cc);
+                return new RegexLiteral(`\\${cc}`, cc, cc);
             }
-            else if(this.isToken("n") || this.isToken("r") || this.isToken("t")) {
+            else {
                 const cc = this.token();
                 this.advance();
 
@@ -103,33 +141,7 @@ class RegexParser {
                     rc = "\t";
                 }
 
-                return new Literal(`\\${cc}`, `\\${cc}`, rc);
-            }
-            else {
-                if(!this.isToken("p")) {
-                    return "Ill formed character class";
-                }
-                this.advance();
-                if(!this.isToken("{")) {
-                    return "Ill formed character class";
-                }
-                this.advance();
-
-                let res: RegexComponent | string = "Ill formed character class";
-                if(this.isToken("Z")) {
-                    res = new CharClass(SpecialCharKind.WhiteSpace);
-                    this.advance();
-                }
-                else {
-                    res = "Ill formed character class";
-                }
-
-                if(!this.isToken("}")) {
-                    return "Ill formed character class";
-                }
-                this.advance();
-
-                return res;
+                return new RegexLiteral(`\\${cc}`, `\\${cc}`, rc);
             }
         }
         else {
@@ -145,15 +157,15 @@ class RegexParser {
 
         while(this.isToken("*") || this.isToken("+") || this.isToken("?") || this.isToken("{")) {
             if(this.isToken("*")) {
-                rcc = new StarRepeat(rcc);
+                rcc = new RegexStarRepeat(rcc);
                 this.advance();
             }
             else if(this.isToken("+")) {
-                rcc = new PlusRepeat(rcc);
+                rcc = new RegexPlusRepeat(rcc);
                 this.advance();
             }
             else if(this.isToken("?")) {
-                rcc = new Optional(rcc);
+                rcc = new RegexOptional(rcc);
                 this.advance();
             }
             else {
@@ -187,7 +199,7 @@ class RegexParser {
                 }
                 this.advance();
 
-                rcc = new RangeRepeat(rcc, min, max);
+                rcc = new RegexRangeRepeat(rcc, min, max);
             }
         }   
 
@@ -208,8 +220,8 @@ class RegexParser {
             }
             else {
                 const lcc = sre[sre.length - 1];
-                if(lcc instanceof Literal && rpe instanceof Literal) {
-                    sre[sre.length - 1] = Literal.mergeLiterals(lcc, rpe);
+                if(lcc instanceof RegexLiteral && rpe instanceof RegexLiteral) {
+                    sre[sre.length - 1] = RegexLiteral.mergeLiterals(lcc, rpe);
                 }
                 else {
                     sre.push(rpe);
@@ -225,7 +237,7 @@ class RegexParser {
             return sre[0];
         }
         else {
-            return new Sequence(sre);
+            return new RegexSequence(sre);
         }
     }
 
@@ -251,7 +263,7 @@ class RegexParser {
             return are[0];
         }
         else {
-            return new Alternation(are);
+            return new RegexAlternation(are);
         }
     }
 
@@ -270,6 +282,9 @@ class BSQRegex {
     }
 
     compileToJS(): string {
+        //
+        //TODO: we actually have NFA semantics for our regex -- JS matching is a subset so we need to replace this!!!
+        //
         return "$" + this.re.compileToJS() + "^";
     }
 
@@ -277,8 +292,8 @@ class BSQRegex {
         return this.re.compilePatternToSMT(ascii);
     }
 
-    static parse(rstr: string): BSQRegex | string {
-        const reparser = new RegexParser(rstr.substr(1, rstr.length - 2));
+    static parse(currentns: string, rstr: string): BSQRegex | string {
+        const reparser = new RegexParser(currentns, rstr.substr(1, rstr.length - 2));
         const rep = reparser.parseComponent();
        
         if(typeof(rep) === "string") {
@@ -298,11 +313,6 @@ class BSQRegex {
     }
 }
 
-enum SpecialCharKind {
-    Wildcard = 0x0,
-    WhiteSpace
-}
-
 abstract class RegexComponent {
     useParens(): boolean {
         return false;
@@ -317,28 +327,30 @@ abstract class RegexComponent {
         const tag = obj.tag;
         switch (tag) {
             case "Literal":
-                return Literal.jparse(obj);
-            case "CharClass":
-                return CharClass.jparse(obj);
+                return RegexLiteral.jparse(obj);
             case "CharRange":
-                return CharRange.jparse(obj);
+                return RegexCharRange.jparse(obj);
+            case "DotCharClass":
+                return RegexDotCharClass.jparse(obj);
+            case "ConstRegexClass":
+                return RegexConstClass.jparse(obj);
             case "StarRepeat":
-                return StarRepeat.jparse(obj);
+                return RegexStarRepeat.jparse(obj);
             case "PlusRepeat":
-                return PlusRepeat.jparse(obj);
+                return RegexPlusRepeat.jparse(obj);
             case "RangeRepeat":
-                return RangeRepeat.jparse(obj);
+                return RegexRangeRepeat.jparse(obj);
             case "Optional":
-                return Optional.jparse(obj);
+                return RegexOptional.jparse(obj);
             case "Alternation":
-                return Alternation.jparse(obj);
+                return RegexAlternation.jparse(obj);
             default:
-                return Sequence.jparse(obj);
+                return RegexSequence.jparse(obj);
         }
     }
 }
 
-class Literal extends RegexComponent {
+class RegexLiteral extends RegexComponent {
     readonly restr: string;
     readonly escstr: string;
     readonly litstr: string;
@@ -356,11 +368,11 @@ class Literal extends RegexComponent {
     }
 
     static jparse(obj: any): RegexComponent {
-        return new Literal(obj.restr, obj.escstr, obj.litstr);
+        return new RegexLiteral(obj.restr, obj.escstr, obj.litstr);
     }
 
-    static mergeLiterals(l1: Literal, l2: Literal): Literal {
-        return new Literal(l1.restr + l2.restr, l1.escstr + l2.escstr, l1.litstr + l2.litstr);
+    static mergeLiterals(l1: RegexLiteral, l2: RegexLiteral): RegexLiteral {
+        return new RegexLiteral(l1.restr + l2.restr, l1.escstr + l2.escstr, l1.litstr + l2.litstr);
     }
 
     compileToJS(): string {
@@ -374,75 +386,121 @@ class Literal extends RegexComponent {
     }
 }
 
-class CharRange extends RegexComponent {
-    readonly lb: number;
-    readonly ub: number;
+class RegexCharRange extends RegexComponent {
+    readonly compliment: boolean;
+    readonly range: {lb: number, ub: number}[];
 
-    constructor(lb: number, ub: number) {
+    constructor(compliment: boolean, range: {lb: number, ub: number}[]) {
         super();
 
-        this.lb = lb;
-        this.ub = ub;
+        assert(range.length !== 0);
+
+        this.compliment = compliment;
+        this.range = range;
     }
 
     jemit(): any {
-        return { tag: "CharRange", lb: this.lb, ub: this.ub };
+        return { tag: "CharRange", compliment: this.compliment, range: this.range };
     }
 
     static jparse(obj: any): RegexComponent {
-        return new CharRange(obj.lb, obj.ub);
+        return new RegexCharRange(obj.compliment, obj.range);
+    }
+
+    private static valToSStr(cc: number): string {
+        assert(cc >= 9);
+
+        if(cc === 9) {
+            return "\\t";
+        }
+        else if (cc === 10) {
+            return "\\n";
+        }
+        else if (cc === 13) {
+            return "\\r";
+        }
+        else {
+            return String.fromCodePoint(cc);
+        }
     }
 
     compileToJS(): string {
-        return `[${this.lb}-${this.ub}]`;
+        //
+        //TODO: probably need to do some escaping here as well
+        //
+        const rng = this.range.map((rr) => (rr.lb == rr.ub) ? RegexCharRange.valToSStr(rr.lb) : `${RegexCharRange.valToSStr(rr.lb)}-${RegexCharRange.valToSStr(rr.ub)}`);
+        return `[${this.compliment ? "^" : ""}${rng.join("")}]`;
     }
 
     compilePatternToSMT(ascii: boolean): string  {
         assert(ascii);
-
-        return `(re.range \"${this.lb}\" \"${this.ub}\")`;
+        assert(!this.compliment);
+        //
+        //TODO: probably need to do some escaping here as well
+        //
+        const rng = this.range.map((rr) => (rr.lb == rr.ub) ? `(str.to.re "${RegexCharRange.valToSStr(rr.lb)}")` : `(re.range "${RegexCharRange.valToSStr(rr.lb)}" "${RegexCharRange.valToSStr(rr.ub)}")`);
+        if(rng.length === 1) {
+            return rng[0];
+        }
+        else {
+            return `(re.union ${rng.join(" ")})`; 
+        }
     }
 }
 
-class CharClass extends RegexComponent {
-    readonly kind: SpecialCharKind;
-
-    constructor(kind: SpecialCharKind) {
+class RegexDotCharClass extends RegexComponent {
+    constructor() {
         super();
-
-        this.kind = kind;
     }
 
     jemit(): any {
-        return { tag: "CharClass", kind: this.kind };
+        return { tag: "DotCharClass" };
     }
 
     static jparse(obj: any): RegexComponent {
-        return new CharClass(obj.kind);
+        return new RegexDotCharClass();
     }
 
     compileToJS(): string {
-        switch (this.kind) {
-            case SpecialCharKind.WhiteSpace:
-                return "\\p{Z}";
-            default:
-                return ".";
-        }
+        return ".";
     }
 
     compilePatternToSMT(ascii: boolean): string  {
-        assert(ascii);
-        
-        switch (this.kind) {
-            case SpecialCharKind.WhiteSpace:
-                return "(re.union (str.to.re \" \") (str.to.re \"\\t\") (str.to.re \"\\n\") (str.to.re \"\\r\"))";
-            default:
-                return "re.allchar";
-        }
+        return "re.allchar";
     }
 }
 
-class StarRepeat extends RegexComponent {
+class RegexConstClass extends RegexComponent {
+    readonly ns: string;
+    readonly ccname: string;
+
+    constructor(ns: string, ccname: string) {
+        super();
+
+        this.ns = ns;
+        this.ccname = ccname;
+    }
+
+    jemit(): any {
+        return { tag: "ConstRegexClass", ns: this.ns, ccname: this.ccname };
+    }
+
+    static jparse(obj: any): RegexComponent {
+        return new RegexConstClass(obj.ns, obj.ccname);
+    }
+
+    compileToJS(): string {
+        assert(false, `Should be replaced by const ${this.ns}::${this.ccname}`);
+        return `${this.ns}::${this.ccname}`;
+    }
+
+    compilePatternToSMT(ascii: boolean): string  {
+        assert(false, `Should be replaced by const ${this.ns}::${this.ccname}`);
+        return `${this.ns}::${this.ccname}`;
+    }
+}
+
+class RegexStarRepeat extends RegexComponent {
     readonly repeat: RegexComponent;
 
     constructor(repeat: RegexComponent) {
@@ -456,7 +514,7 @@ class StarRepeat extends RegexComponent {
     }
 
     static jparse(obj: any): RegexComponent {
-        return new StarRepeat(RegexComponent.jparse(obj.repeat));
+        return new RegexStarRepeat(RegexComponent.jparse(obj.repeat));
     }
 
     compileToJS(): string {
@@ -468,7 +526,7 @@ class StarRepeat extends RegexComponent {
     }
 }
 
-class PlusRepeat extends RegexComponent {
+class RegexPlusRepeat extends RegexComponent {
     readonly repeat: RegexComponent;
 
     constructor(repeat: RegexComponent) {
@@ -482,7 +540,7 @@ class PlusRepeat extends RegexComponent {
     }
 
     static jparse(obj: any): RegexComponent {
-        return new PlusRepeat(RegexComponent.jparse(obj.repeat));
+        return new RegexPlusRepeat(RegexComponent.jparse(obj.repeat));
     }
 
     compileToJS(): string {
@@ -494,7 +552,7 @@ class PlusRepeat extends RegexComponent {
     }
 }
 
-class RangeRepeat extends RegexComponent {
+class RegexRangeRepeat extends RegexComponent {
     readonly repeat: RegexComponent;
     readonly min: number;
     readonly max: number;
@@ -512,7 +570,7 @@ class RangeRepeat extends RegexComponent {
     }
 
     static jparse(obj: any): RegexComponent {
-        return new RangeRepeat(RegexComponent.jparse(obj.repeat), obj.min, obj.max);
+        return new RegexRangeRepeat(RegexComponent.jparse(obj.repeat), obj.min, obj.max);
     }
 
     compileToJS(): string {
@@ -524,7 +582,7 @@ class RangeRepeat extends RegexComponent {
     }
 }
 
-class Optional extends RegexComponent {
+class RegexOptional extends RegexComponent {
     readonly opt: RegexComponent;
 
     constructor(opt: RegexComponent) {
@@ -538,7 +596,7 @@ class Optional extends RegexComponent {
     }
 
     static jparse(obj: any): RegexComponent {
-        return new Optional(RegexComponent.jparse(obj.repeat));
+        return new RegexOptional(RegexComponent.jparse(obj.repeat));
     }
 
     compileToJS(): string {
@@ -550,7 +608,7 @@ class Optional extends RegexComponent {
     }
 }
 
-class Alternation extends RegexComponent {
+class RegexAlternation extends RegexComponent {
     readonly opts: RegexComponent[];
 
     constructor(opts: RegexComponent[]) {
@@ -568,7 +626,7 @@ class Alternation extends RegexComponent {
     }
 
     static jparse(obj: any): RegexComponent {
-        return new Alternation(obj.opts.map((opt: any) => RegexComponent.jparse(opt)));
+        return new RegexAlternation(obj.opts.map((opt: any) => RegexComponent.jparse(opt)));
     }
 
     compileToJS(): string {
@@ -580,7 +638,7 @@ class Alternation extends RegexComponent {
     }
 }
 
-class Sequence extends RegexComponent {
+class RegexSequence extends RegexComponent {
     readonly elems: RegexComponent[];
 
     constructor(elems: RegexComponent[]) {
@@ -598,7 +656,7 @@ class Sequence extends RegexComponent {
     }
 
     static jparse(obj: any): RegexComponent {
-        return new Sequence(obj.elems.map((elem: any) => RegexComponent.jparse(elem)));
+        return new RegexSequence(obj.elems.map((elem: any) => RegexComponent.jparse(elem)));
     }
 
     compileToJS(): string {
@@ -611,5 +669,7 @@ class Sequence extends RegexComponent {
 }
 
 export {
-    BSQRegex
+    BSQRegex,
+    RegexComponent,
+    RegexLiteral, RegexCharRange, RegexDotCharClass, RegexConstClass, RegexStarRepeat, RegexPlusRepeat, RegexRangeRepeat, RegexOptional, RegexAlternation, RegexSequence
 };

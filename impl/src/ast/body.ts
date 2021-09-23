@@ -4,10 +4,9 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo } from "./parser";
-import { TypeSignature, TemplateTypeSignature } from "./type_signature";
+import { AutoTypeSignature, TypeSignature } from "./type_signature";
 import { InvokeDecl, BuildLevel } from "./assembly";
 import { BSQRegex } from "./bsqregex";
-import { PCode } from "../compiler/mir_emitter";
 
 class InvokeArgument {
     readonly value: Expression;
@@ -75,25 +74,42 @@ class IfElse<T> {
     }
 }
 
-abstract class MatchGuard {
-    readonly optionalWhen: Expression | undefined;
+abstract class SwitchGuard {
+}
 
-    constructor(optionalWhen: Expression | undefined) {
-        this.optionalWhen = optionalWhen;
+class WildcardSwitchGuard extends SwitchGuard {
+}
+
+class LiteralSwitchGuard extends SwitchGuard {
+    readonly litmatch: LiteralExpressionValue;
+
+    constructor(litmatch: LiteralExpressionValue) {
+        super();
+        this.litmatch = litmatch;
     }
 }
 
-class WildcardMatchGuard extends MatchGuard {
-    constructor() {
-        super(undefined);
+class SwitchEntry<T> {
+    readonly check: SwitchGuard;
+    readonly action: T;
+
+    constructor(check: SwitchGuard, action: T) {
+        this.check = check;
+        this.action = action;
     }
+}
+
+abstract class MatchGuard {
+}
+
+class WildcardMatchGuard extends MatchGuard {
 }
 
 class TypeMatchGuard extends MatchGuard {
     readonly oftype: TypeSignature;
 
-    constructor(oftype: TypeSignature, optionalWhen: Expression | undefined) {
-        super(optionalWhen);
+    constructor(oftype: TypeSignature) {
+        super();
         this.oftype = oftype;
     }
 }
@@ -102,8 +118,8 @@ class StructureMatchGuard extends MatchGuard {
     readonly match: StructuredAssignment;
     readonly decls: Set<string>;
 
-    constructor(match: StructuredAssignment, decls: Set<string>, optionalWhen: Expression | undefined) {
-        super(optionalWhen);
+    constructor(match: StructuredAssignment, decls: Set<string>) {
+        super();
         this.match = match;
         this.decls = decls;
     }
@@ -124,6 +140,7 @@ enum ExpressionTag {
     InvalidExpresion = "[INVALID]",
 
     LiteralNoneExpression = "LiteralNoneExpression",
+    LiteralNothingExpression = "LiteralNothingExpression",
     LiteralBoolExpression = "LiteralBoolExpression",
     LiteralNumberinoExpression = "LiteralNumberinoExpression",
     LiteralIntegralExpression = "LiteralIntegralExpression",
@@ -131,10 +148,9 @@ enum ExpressionTag {
     LiteralFloatPointExpression = "LiteralFloatExpression",
     LiteralStringExpression = "LiteralStringExpression",
     LiteralRegexExpression = "LiteralRegexExpression",
-    LiteralParamerterValueExpression = "LiteralParamerterValueExpression",
     LiteralTypedStringExpression = "LiteralTypedStringExpression",
 
-    LiteralTypedNumericConstructorExpression = "LiteralTypedNumericConstructorExpression",
+    LiteralTypedPrimitiveConstructorExpression = "LiteralTypedPrimitiveConstructorExpression",
     LiteralTypedStringConstructorExpression = "LiteralTypedStringConstructorExpression",
 
     AccessNamespaceConstantExpression = "AccessNamespaceConstantExpression",
@@ -146,16 +162,15 @@ enum ExpressionTag {
     ConstructorTupleExpression = "ConstructorTupleExpression",
     ConstructorRecordExpression = "ConstructorRecordExpression",
     ConstructorEphemeralValueList = "ConstructorEphemeralValueList",
-    CombinatorPCodeExpression = "CombinatorPCodeExpression",
     ConstructorPCodeExpression = "ConstructorPCodeExpression",
 
-    PCodeDirectInvokeExpression = "PCodeDirectInvokeExpression",
     PCodeInvokeExpression = "PCodeInvokeExpression",
     SpecialConstructorExpression = "SpecialConstructorExpression",
     CallNamespaceFunctionOrOperatorExpression = "CallNamespaceFunctionOrOperatorExpression",
     CallStaticFunctionOrOperatorExpression = "CallStaticFunctionOrOperatorExpression",
 
-    OfTypeConvertExpression = "OfTypeConvertExpression",
+    IsTypeExpression = "IsTypeExpression",
+    AsTypeExpression = "AsTypeExpression",
 
     PostfixOpExpression = "PostfixOpExpression",
 
@@ -166,16 +181,13 @@ enum ExpressionTag {
 
     MapEntryConstructorExpression = "MapEntryConstructorExpression",
 
-    NonecheckExpression = "NonecheckExpression",
-    CoalesceExpression = "CoalesceExpression",
     SelectExpression = "SelectExpression",
-
     ExpOrExpression = "ExpOrExpression",
 
     BlockStatementExpression = "BlockStatementExpression",
     IfExpression = "IfExpression",
-    MatchExpression = "MatchExpression",
-    //    ProroguedExpression
+    SwitchExpression = "SwitchExpression",
+    MatchExpression = "MatchExpression"
 }
 
 abstract class Expression {
@@ -190,9 +202,13 @@ abstract class Expression {
     isCompileTimeInlineValue(): boolean {
         return false;
     }
+
+    isLiteralValueExpression(): boolean {
+        return false;
+    }
 }
 
-//This just holds an expression (for use in literal types) but not a subtype of Expression so we can distinguish as types
+//This just holds a constant expression that can be evaluated without any arguments but not a subtype of Expression so we can distinguish as types
 class LiteralExpressionValue {
     readonly exp: Expression;
 
@@ -201,8 +217,7 @@ class LiteralExpressionValue {
     }
 }
 
-
-//This just holds an expression (for use where we expect and constant -- or restricted constant expression) but not a subtype of Expression so we can distinguish as types
+//This just holds a constant expression (for use where we expect and constant -- or restricted constant expression) but not a subtype of Expression so we can distinguish as types
 class ConstantExpressionValue {
     readonly exp: Expression;
     readonly captured: Set<string>;
@@ -227,6 +242,24 @@ class LiteralNoneExpression extends Expression {
     isCompileTimeInlineValue(): boolean {
         return true;
     }
+
+    isLiteralValueExpression(): boolean {
+        return true;
+    }
+}
+
+class LiteralNothingExpression extends Expression {
+    constructor(sinfo: SourceInfo) {
+        super(ExpressionTag.LiteralNothingExpression, sinfo);
+    }
+
+    isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
+        return true;
+    }
 }
 
 class LiteralBoolExpression extends Expression {
@@ -238,6 +271,10 @@ class LiteralBoolExpression extends Expression {
     }
 
     isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
         return true;
     }
 }
@@ -266,6 +303,10 @@ class LiteralIntegralExpression extends Expression {
     }
 
     isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
         return true;
     }
 }
@@ -311,6 +352,10 @@ class LiteralStringExpression extends Expression {
     isCompileTimeInlineValue(): boolean {
         return true;
     }
+
+    isLiteralValueExpression(): boolean {
+        return true;
+    }
 }
 
 class LiteralRegexExpression extends Expression {
@@ -319,15 +364,6 @@ class LiteralRegexExpression extends Expression {
     constructor(sinfo: SourceInfo, value: BSQRegex) {
         super(ExpressionTag.LiteralRegexExpression, sinfo);
         this.value = value;
-    }
-}
-
-class LiteralParamerterValueExpression extends Expression {
-    readonly ltype: TemplateTypeSignature;
-
-    constructor(sinfo: SourceInfo, ltype: TemplateTypeSignature) {
-        super(ExpressionTag.LiteralParamerterValueExpression, sinfo);
-        this.ltype = ltype;
     }
 }
 
@@ -344,21 +380,29 @@ class LiteralTypedStringExpression extends Expression {
     isCompileTimeInlineValue(): boolean {
         return true;
     }
+
+    isLiteralValueExpression(): boolean {
+        return true;
+    }
 }
 
-class LiteralTypedNumericConstructorExpression extends Expression {
+class LiteralTypedPrimitiveConstructorExpression extends Expression {
     readonly value: string;
-    readonly ntype: TypeSignature;
+    readonly oftype: TypeSignature | undefined;
     readonly vtype: TypeSignature;
 
-    constructor(sinfo: SourceInfo, value: string, ntype: TypeSignature, vtype: TypeSignature) {
-        super(ExpressionTag.LiteralTypedNumericConstructorExpression, sinfo);
+    constructor(sinfo: SourceInfo, value: string, oftype: TypeSignature | undefined, vtype: TypeSignature) {
+        super(ExpressionTag.LiteralTypedPrimitiveConstructorExpression, sinfo);
         this.value = value;
-        this.ntype = ntype;
+        this.oftype = oftype;
         this.vtype = vtype;
     }
 
     isCompileTimeInlineValue(): boolean {
+        return true;
+    }
+
+    isLiteralValueExpression(): boolean {
         return true;
     }
 }
@@ -366,13 +410,11 @@ class LiteralTypedNumericConstructorExpression extends Expression {
 class LiteralTypedStringConstructorExpression extends Expression {
     readonly value: string;
     readonly stype: TypeSignature;
-    readonly isvalue: boolean;
     
-    constructor(sinfo: SourceInfo, isvalue: boolean, value: string, stype: TypeSignature) {
+    constructor(sinfo: SourceInfo, value: string, stype: TypeSignature) {
         super(ExpressionTag.LiteralTypedStringConstructorExpression, sinfo);
         this.value = value;
         this.stype = stype;
-        this.isvalue = isvalue;
     }
 }
 
@@ -408,29 +450,25 @@ class AccessVariableExpression extends Expression {
 }
 
 class ConstructorPrimaryExpression extends Expression {
-    readonly isvalue: boolean;
     readonly ctype: TypeSignature;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean, ctype: TypeSignature, args: Arguments) {
+    constructor(sinfo: SourceInfo, ctype: TypeSignature, args: Arguments) {
         super(ExpressionTag.ConstructorPrimaryExpression, sinfo);
-        this.isvalue = isvalue;
         this.ctype = ctype;
         this.args = args;
     }
 }
 
 class ConstructorPrimaryWithFactoryExpression extends Expression {
-    readonly isvalue: boolean;
     readonly ctype: TypeSignature;
     readonly factoryName: string;
     readonly terms: TemplateArguments;
     readonly rec: RecursiveAnnotation;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean,  ctype: TypeSignature, factory: string, rec: RecursiveAnnotation, terms: TemplateArguments, args: Arguments) {
+    constructor(sinfo: SourceInfo, ctype: TypeSignature, factory: string, rec: RecursiveAnnotation, terms: TemplateArguments, args: Arguments) {
         super(ExpressionTag.ConstructorPrimaryWithFactoryExpression, sinfo);
-        this.isvalue = isvalue;
         this.ctype = ctype;
         this.factoryName = factory;
         this.rec = rec;
@@ -440,23 +478,19 @@ class ConstructorPrimaryWithFactoryExpression extends Expression {
 }
 
 class ConstructorTupleExpression extends Expression {
-    readonly isvalue: boolean;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean, args: Arguments) {
+    constructor(sinfo: SourceInfo, args: Arguments) {
         super(ExpressionTag.ConstructorTupleExpression, sinfo);
-        this.isvalue = isvalue;
         this.args = args;
     }
 }
 
 class ConstructorRecordExpression extends Expression {
-    readonly isvalue: boolean;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isvalue: boolean, args: Arguments) {
+    constructor(sinfo: SourceInfo, args: Arguments) {
         super(ExpressionTag.ConstructorRecordExpression, sinfo);
-        this.isvalue = isvalue;
         this.args = args;
     }
 }
@@ -470,15 +504,6 @@ class ConstructorEphemeralValueList extends Expression {
     }
 }
 
-class CombinatorPCodeExpression extends Expression {
-    readonly cexp: Expression;
-
-    constructor(sinfo: SourceInfo, cexp: Expression) {
-        super(ExpressionTag.CombinatorPCodeExpression, sinfo);
-        this.cexp = cexp;
-    }
-}
-
 class ConstructorPCodeExpression extends Expression {
     readonly isAuto: boolean;
     readonly invoke: InvokeDecl;
@@ -487,22 +512,6 @@ class ConstructorPCodeExpression extends Expression {
         super(ExpressionTag.ConstructorPCodeExpression, sinfo);
         this.isAuto = isAuto;
         this.invoke = invoke;
-    }
-}
-
-
-class PCodeDirectInvokeExpression extends Expression {
-    readonly pc: PCode;
-    readonly captured: string[];
-    readonly args: Expression[];
-    readonly isrefok: boolean;
-
-    constructor(sinfo: SourceInfo, pc: PCode, captured: string[], args: Expression[], isrefok: boolean) {
-        super(ExpressionTag.PCodeDirectInvokeExpression, sinfo);
-        this.pc = pc;
-        this.captured = captured;
-        this.args = args;
-        this.isrefok = isrefok;
     }
 }
 
@@ -520,13 +529,11 @@ class PCodeInvokeExpression extends Expression {
 }
 
 class SpecialConstructorExpression extends Expression {
-    readonly rtype: TypeSignature;
-    readonly rop: "ok" | "err";
+    readonly rop: "ok" | "err" | "something";
     readonly arg: Expression;
 
-    constructor(sinfo: SourceInfo, rtype: TypeSignature, rop: "ok" | "err", arg: Expression) {
-        super(ExpressionTag.SpecialConstructorExpression, sinfo); 
-        this.rtype = rtype;
+    constructor(sinfo: SourceInfo, rop: "ok" | "err" | "something", arg: Expression) {
+        super(ExpressionTag.SpecialConstructorExpression, sinfo);
         this.rop = rop;
         this.arg = arg;
     }
@@ -570,12 +577,23 @@ class CallStaticFunctionOrOperatorExpression extends Expression {
     }
 }
 
-class OfTypeConvertExpression extends Expression {
+class IsTypeExpression extends Expression {
     readonly arg: Expression;
     readonly oftype: TypeSignature;
 
     constructor(sinfo: SourceInfo, arg: Expression, oftype: TypeSignature) {
-        super(ExpressionTag.OfTypeConvertExpression, sinfo);
+        super(ExpressionTag.IsTypeExpression, sinfo);
+        this.arg = arg;
+        this.oftype = oftype;
+    }
+}
+
+class AsTypeExpression extends Expression {
+    readonly arg: Expression;
+    readonly oftype: TypeSignature;
+
+    constructor(sinfo: SourceInfo, arg: Expression, oftype: TypeSignature) {
+        super(ExpressionTag.AsTypeExpression, sinfo);
         this.arg = arg;
         this.oftype = oftype;
     }
@@ -595,23 +613,20 @@ enum PostfixOpTag {
     PostfixHasIndex = "PostfixHasIndex",
     PostfixHasProperty = "PostfixHasProperty",
     PostfixGetIndexOrNone = "PostfixGetIndexOrNone",
+    PostfixGetIndexOption = "PostfixGetIndexOption",
     PostfixGetIndexTry = "PostfixGetIndexTry",
     PostfixGetPropertyOrNone = "PostfixGetPropertyOrNone",
+    PostfixGetPropertyOption = "PostfixGetPropertyOption",
     PostfixGetPropertyTry = "PostfixGetPropertyTry",
     PostfixInvoke = "PostfixInvoke"
 }
 
 abstract class PostfixOperation {
     readonly sinfo: SourceInfo;
-
-    readonly isElvis: boolean;
-    readonly customCheck: Expression | undefined;
     readonly op: PostfixOpTag;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, op: PostfixOpTag) {
+    constructor(sinfo: SourceInfo, op: PostfixOpTag) {
         this.sinfo = sinfo;
-        this.isElvis = isElvis;
-        this.customCheck = customCheck;
         this.op = op;
     }
 }
@@ -630,20 +645,18 @@ class PostfixOp extends Expression {
 class PostfixAccessFromIndex extends PostfixOperation {
     readonly index: number;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, index: number) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixAccessFromIndex);
+    constructor(sinfo: SourceInfo, index: number) {
+        super(sinfo, PostfixOpTag.PostfixAccessFromIndex);
         this.index = index;
     }
 }
 
 class PostfixProjectFromIndecies extends PostfixOperation {
-    readonly isValue: boolean;
     readonly isEphemeralListResult: boolean;
     readonly indecies: {index: number, reqtype: TypeSignature | undefined}[];
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, isValue: boolean, isEphemeralListResult: boolean, indecies: {index: number, reqtype: TypeSignature | undefined }[]) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixProjectFromIndecies);
-        this.isValue = isValue;
+    constructor(sinfo: SourceInfo, isEphemeralListResult: boolean, indecies: {index: number, reqtype: TypeSignature | undefined }[]) {
+        super(sinfo, PostfixOpTag.PostfixProjectFromIndecies);
         this.isEphemeralListResult = isEphemeralListResult
         this.indecies = indecies;
     }
@@ -652,20 +665,18 @@ class PostfixProjectFromIndecies extends PostfixOperation {
 class PostfixAccessFromName extends PostfixOperation {
     readonly name: string;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, name: string) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixAccessFromName);
+    constructor(sinfo: SourceInfo, name: string) {
+        super(sinfo, PostfixOpTag.PostfixAccessFromName);
         this.name = name;
     }
 }
 
 class PostfixProjectFromNames extends PostfixOperation {
-    readonly isValue: boolean;
     readonly isEphemeralListResult: boolean;
     readonly names: { name: string, reqtype: TypeSignature | undefined }[];
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, isValue: boolean, isEphemeralListResult: boolean, names: { name: string, reqtype: TypeSignature | undefined }[]) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixProjectFromNames);
-        this.isValue = isValue;
+    constructor(sinfo: SourceInfo, isEphemeralListResult: boolean, names: { name: string, reqtype: TypeSignature | undefined }[]) {
+        super(sinfo, PostfixOpTag.PostfixProjectFromNames);
         this.isEphemeralListResult = isEphemeralListResult;
         this.names = names;
     }
@@ -675,8 +686,8 @@ class PostfixModifyWithIndecies extends PostfixOperation {
     readonly isBinder: boolean;
     readonly updates: { index: number, value: Expression }[];
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, isBinder: boolean, updates: { index: number, value: Expression }[]) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixModifyWithIndecies);
+    constructor(sinfo: SourceInfo, isBinder: boolean, updates: { index: number, value: Expression }[]) {
+        super(sinfo, PostfixOpTag.PostfixModifyWithIndecies);
         this.isBinder = isBinder;
         this.updates = updates;
     }
@@ -686,8 +697,8 @@ class PostfixModifyWithNames extends PostfixOperation {
     readonly isBinder: boolean;
     readonly updates: { name: string, value: Expression }[];
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, isBinder: boolean, updates: { name: string, value: Expression }[]) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixModifyWithNames);
+    constructor(sinfo: SourceInfo, isBinder: boolean, updates: { name: string, value: Expression }[]) {
+        super(sinfo, PostfixOpTag.PostfixModifyWithNames);
         this.isBinder = isBinder;
         this.updates = updates;
     }
@@ -696,8 +707,8 @@ class PostfixModifyWithNames extends PostfixOperation {
 class PostfixIs extends PostfixOperation {
     readonly istype: TypeSignature;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, istype: TypeSignature) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixIs);
+    constructor(sinfo: SourceInfo, istype: TypeSignature) {
+        super(sinfo, PostfixOpTag.PostfixIs);
         this.istype = istype;
     }
 }
@@ -705,8 +716,8 @@ class PostfixIs extends PostfixOperation {
 class PostfixAs extends PostfixOperation {
     readonly astype: TypeSignature;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, astype: TypeSignature) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixAs);
+    constructor(sinfo: SourceInfo, astype: TypeSignature) {
+        super(sinfo, PostfixOpTag.PostfixAs);
         this.astype = astype;
     }
 }
@@ -714,8 +725,8 @@ class PostfixAs extends PostfixOperation {
 class PostfixHasIndex extends PostfixOperation {
     readonly idx: number;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, idx: number) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixHasIndex);
+    constructor(sinfo: SourceInfo, idx: number) {
+        super(sinfo, PostfixOpTag.PostfixHasIndex);
         this.idx = idx;
     }
 }
@@ -723,8 +734,8 @@ class PostfixHasIndex extends PostfixOperation {
 class PostfixHasProperty extends PostfixOperation {
     readonly pname: string;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, pname: string) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixHasProperty);
+    constructor(sinfo: SourceInfo, pname: string) {
+        super(sinfo, PostfixOpTag.PostfixHasProperty);
         this.pname = pname;
     }
 }
@@ -732,8 +743,17 @@ class PostfixHasProperty extends PostfixOperation {
 class PostfixGetIndexOrNone extends PostfixOperation {
     readonly idx: number;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, idx: number) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixGetIndexOrNone);
+    constructor(sinfo: SourceInfo, idx: number) {
+        super(sinfo, PostfixOpTag.PostfixGetIndexOrNone);
+        this.idx = idx;
+    }
+}
+
+class PostfixGetIndexOption extends PostfixOperation {
+    readonly idx: number;
+
+    constructor(sinfo: SourceInfo, idx: number) {
+        super(sinfo, PostfixOpTag.PostfixGetIndexOption);
         this.idx = idx;
     }
 }
@@ -742,8 +762,8 @@ class PostfixGetIndexTry extends PostfixOperation {
     readonly idx: number;
     readonly vname: string;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, idx: number, vname: string) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixGetIndexTry);
+    constructor(sinfo: SourceInfo, idx: number, vname: string) {
+        super(sinfo, PostfixOpTag.PostfixGetIndexTry);
         this.idx = idx;
         this.vname = vname;
     }
@@ -752,8 +772,18 @@ class PostfixGetIndexTry extends PostfixOperation {
 class PostfixGetPropertyOrNone extends PostfixOperation {
     readonly pname: string;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, pname: string) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixGetPropertyOrNone);
+    constructor(sinfo: SourceInfo, pname: string) {
+        super(sinfo, PostfixOpTag.PostfixGetPropertyOrNone);
+        this.pname = pname;
+    }
+}
+
+
+class PostfixGetPropertyOption extends PostfixOperation {
+    readonly pname: string;
+
+    constructor(sinfo: SourceInfo, pname: string) {
+        super(sinfo, PostfixOpTag.PostfixGetPropertyOption);
         this.pname = pname;
     }
 }
@@ -762,8 +792,8 @@ class PostfixGetPropertyTry extends PostfixOperation {
     readonly pname: string;
     readonly vname: string;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, pname: string, vname: string) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixGetPropertyTry);
+    constructor(sinfo: SourceInfo, pname: string, vname: string) {
+        super(sinfo, PostfixOpTag.PostfixGetPropertyTry);
         this.pname = pname;
         this.vname = vname;
     }
@@ -777,8 +807,8 @@ class PostfixInvoke extends PostfixOperation {
     readonly terms: TemplateArguments;
     readonly args: Arguments;
 
-    constructor(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, isBinder: boolean, specificResolve: TypeSignature | undefined, name: string, terms: TemplateArguments, rec: RecursiveAnnotation, args: Arguments) {
-        super(sinfo, isElvis, customCheck, PostfixOpTag.PostfixInvoke);
+    constructor(sinfo: SourceInfo, isBinder: boolean, specificResolve: TypeSignature | undefined, name: string, terms: TemplateArguments, rec: RecursiveAnnotation, args: Arguments) {
+        super(sinfo, PostfixOpTag.PostfixInvoke);
         this.isBinder = isBinder;
         this.specificResolve = specificResolve;
         this.name = name;
@@ -834,32 +864,6 @@ class MapEntryConstructorExpression extends Expression {
     }
 }
 
-class NonecheckExpression extends Expression {
-    readonly lhs: Expression;
-    readonly customCheck: Expression | undefined;
-    readonly rhs: Expression;
-
-    constructor(sinfo: SourceInfo, lhs: Expression, customCheck: Expression | undefined, rhs: Expression) {
-        super(ExpressionTag.NonecheckExpression, sinfo);
-        this.lhs = lhs;
-        this.customCheck = customCheck;
-        this.rhs = rhs;
-    }
-}
-
-class CoalesceExpression extends Expression {
-    readonly lhs: Expression;
-    readonly customCheck: Expression | undefined;
-    readonly rhs: Expression;
-
-    constructor(sinfo: SourceInfo, lhs: Expression, customCheck: Expression | undefined, rhs: Expression) {
-        super(ExpressionTag.CoalesceExpression, sinfo);
-        this.lhs = lhs;
-        this.customCheck = customCheck;
-        this.rhs = rhs;
-    }
-}
-
 class SelectExpression extends Expression {
     readonly test: Expression;
     readonly option1: Expression;
@@ -875,15 +879,11 @@ class SelectExpression extends Expression {
 
 class ExpOrExpression extends Expression {
     readonly exp: Expression;
-    readonly action: "return" | "yield";
-    readonly result: Expression[] | undefined;
-    readonly cond: Expression | "none" | "err";
+    readonly cond: "none" | "nothing" | "err";
 
-    constructor(sinfo: SourceInfo, exp: Expression, action: "return" | "yield", result: Expression[] | undefined, cond: Expression | "none" | "err") {
+    constructor(sinfo: SourceInfo, exp: Expression, cond: "none" | "nothing" | "err") {
         super(ExpressionTag.ExpOrExpression, sinfo);
         this.exp = exp;
-        this.action = action;
-        this.result = result;
         this.cond = cond;
     }
 }
@@ -902,6 +902,17 @@ class IfExpression extends Expression {
 
     constructor(sinfo: SourceInfo, flow: IfElse<Expression>) {
         super(ExpressionTag.IfExpression, sinfo);
+        this.flow = flow;
+    }
+}
+
+class SwitchExpression extends Expression {
+    readonly sval: Expression;
+    readonly flow: SwitchEntry<Expression>[];
+
+    constructor(sinfo: SourceInfo, sval: Expression, flow: SwitchEntry<Expression>[]) {
+        super(ExpressionTag.SwitchExpression, sinfo);
+        this.sval = sval;
         this.flow = flow;
     }
 }
@@ -933,6 +944,7 @@ enum StatementTag {
     YieldStatement = "YieldStatement",
 
     IfElseStatement = "IfElseStatement",
+    SwitchStatement = "SwitchStatement",
     MatchStatement = "MatchStatement",
 
     AbortStatement = "AbortStatement",
@@ -1021,85 +1033,72 @@ class VariablePackAssignmentStatement extends Statement {
 class StructuredAssignment {
 }
 
-class IgnoreTermStructuredAssignment extends StructuredAssignment {
-    readonly isOptional: boolean;
-    readonly termType: TypeSignature;
+class StructuredAssignementPrimitive extends StructuredAssignment {
+    readonly assigntype: TypeSignature;
 
-    constructor(isOptional: boolean, termType: TypeSignature) {
+    constructor(assigntype: TypeSignature) {
         super();
-        this.isOptional = isOptional;
-        this.termType = termType;
+        this.assigntype = assigntype;
     }
 }
 
-class ConstValueStructuredAssignment extends StructuredAssignment {
-    readonly constValue: ConstantExpressionValue;
-
-    constructor(constValue: ConstantExpressionValue) {
-        super();
-        this.constValue = constValue;
+class IgnoreTermStructuredAssignment extends StructuredAssignementPrimitive {
+    constructor(ignoretype: TypeSignature) {
+        super(ignoretype);
     }
 }
 
-class VariableDeclarationStructuredAssignment extends StructuredAssignment {
+class VariableDeclarationStructuredAssignment extends StructuredAssignementPrimitive {
     readonly vname: string;
-    readonly vtype: TypeSignature;
 
     constructor(vname: string, vtype: TypeSignature) {
-        super();
+        super(vtype);
         this.vname = vname;
-        this.vtype = vtype;
     }
 }
 
-class VariableAssignmentStructuredAssignment extends StructuredAssignment {
+class VariableAssignmentStructuredAssignment extends StructuredAssignementPrimitive {
     readonly vname: string;
 
     constructor(vname: string) {
-        super();
+        super(new AutoTypeSignature());
         this.vname = vname;
     }
 }
 
 class TupleStructuredAssignment extends StructuredAssignment {
-    readonly isvalue: boolean;
-    readonly assigns: StructuredAssignment[];
+    readonly assigns: StructuredAssignementPrimitive[];
 
-    constructor(isvalue: boolean, assigns: StructuredAssignment[]) {
+    constructor(assigns: StructuredAssignementPrimitive[]) {
         super();
-        this.isvalue = isvalue;
         this.assigns = assigns;
     }
 }
 
 class RecordStructuredAssignment extends StructuredAssignment {
-    readonly isvalue: boolean;
-    readonly assigns: [string, StructuredAssignment][];
+    readonly assigns: [string, StructuredAssignementPrimitive][];
 
-    constructor(isvalue: boolean, assigns: [string, StructuredAssignment][]) {
+    constructor(assigns: [string, StructuredAssignementPrimitive][]) {
         super();
-        this.isvalue = isvalue;
         this.assigns = assigns;
     }
 }
 
 class NominalStructuredAssignment extends StructuredAssignment {
-    readonly isvalue: boolean;
     readonly atype: TypeSignature;
-    readonly assigns: [string, StructuredAssignment][];
+    readonly assigns: [string | undefined, StructuredAssignementPrimitive][];
 
-    constructor(isvalue: boolean, atype: TypeSignature, assigns: [string, StructuredAssignment][]) {
+    constructor(atype: TypeSignature, assigns: [string | undefined, StructuredAssignementPrimitive][]) {
         super();
-        this.isvalue = isvalue;
         this.atype = atype;
         this.assigns = assigns;
     }
 }
 
 class ValueListStructuredAssignment extends StructuredAssignment {
-    readonly assigns: StructuredAssignment[];
+    readonly assigns: StructuredAssignementPrimitive[];
 
-    constructor(assigns: StructuredAssignment[]) {
+    constructor(assigns: StructuredAssignementPrimitive[]) {
         super();
         this.assigns = assigns;
     }
@@ -1141,6 +1140,17 @@ class IfElseStatement extends Statement {
 
     constructor(sinfo: SourceInfo, flow: IfElse<BlockStatement>) {
         super(StatementTag.IfElseStatement, sinfo);
+        this.flow = flow;
+    }
+}
+
+class SwitchStatement extends Statement {
+    readonly sval: Expression;
+    readonly flow: SwitchEntry<BlockStatement>[];
+
+    constructor(sinfo: SourceInfo, sval: Expression, flow: SwitchEntry<BlockStatement>[]) {
+        super(StatementTag.MatchStatement, sinfo);
+        this.sval = sval;
         this.flow = flow;
     }
 }
@@ -1235,30 +1245,30 @@ class BodyImplementation {
 export {
     InvokeArgument, NamedArgument, PositionalArgument, Arguments, TemplateArguments, RecursiveAnnotation, CondBranchEntry, IfElse,
     ExpressionTag, Expression, LiteralExpressionValue, ConstantExpressionValue, InvalidExpression,
-    LiteralNoneExpression, LiteralBoolExpression, 
+    LiteralNoneExpression, LiteralNothingExpression, LiteralBoolExpression, 
     LiteralNumberinoExpression, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression,
-    LiteralStringExpression, LiteralRegexExpression, LiteralParamerterValueExpression, LiteralTypedStringExpression, 
-    LiteralTypedNumericConstructorExpression, LiteralTypedStringConstructorExpression,
+    LiteralStringExpression, LiteralRegexExpression, LiteralTypedStringExpression, 
+    LiteralTypedPrimitiveConstructorExpression, LiteralTypedStringConstructorExpression,
     AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression,
     ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorEphemeralValueList, 
-    CombinatorPCodeExpression, ConstructorPCodeExpression, SpecialConstructorExpression,
+    ConstructorPCodeExpression, SpecialConstructorExpression,
     CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression,
-    OfTypeConvertExpression,
+    IsTypeExpression, AsTypeExpression,
     PostfixOpTag, PostfixOperation, PostfixOp,
     PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames,
-    PostfixIs, PostfixAs, PostfixHasIndex, PostfixHasProperty, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry,
-    PostfixInvoke, PCodeDirectInvokeExpression, PCodeInvokeExpression,
+    PostfixIs, PostfixAs, PostfixHasIndex, PostfixHasProperty, PostfixGetIndexOrNone, PostfixGetIndexOption , PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyOption, PostfixGetPropertyTry,
+    PostfixInvoke, PCodeInvokeExpression,
     PrefixNotOp, 
     BinKeyExpression, BinLogicExpression,
     MapEntryConstructorExpression,
-    NonecheckExpression, CoalesceExpression, SelectExpression, ExpOrExpression,
-    BlockStatementExpression, IfExpression, MatchExpression,
+    SelectExpression, ExpOrExpression,
+    BlockStatementExpression, IfExpression, SwitchExpression, MatchExpression,
     StatementTag, Statement, InvalidStatement, EmptyStatement,
     VariableDeclarationStatement, VariablePackDeclarationStatement, VariableAssignmentStatement, VariablePackAssignmentStatement,
-    StructuredAssignment, IgnoreTermStructuredAssignment, ConstValueStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, 
+    StructuredAssignment, StructuredAssignementPrimitive, IgnoreTermStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, 
     TupleStructuredAssignment, RecordStructuredAssignment, NominalStructuredAssignment, ValueListStructuredAssignment,
     ReturnStatement, YieldStatement,
     IfElseStatement, AbortStatement, AssertStatement, CheckStatement, ValidateStatement, DebugStatement, NakedCallStatement,
-    MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, MatchEntry, MatchStatement,
+    SwitchGuard, MatchGuard, WildcardSwitchGuard, LiteralSwitchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, SwitchEntry, MatchEntry, SwitchStatement, MatchStatement,
     BlockStatement, BodyImplementation
 };

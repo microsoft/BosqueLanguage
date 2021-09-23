@@ -3,16 +3,16 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIROOTypeDecl, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
-import { MIRFieldKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
 
 import * as assert from "assert";
-import { BSQRegex } from "../../ast/bsqregex";
 
 enum APIEmitTypeTag
 {
     NoneTag = 0x0,
+    NothingTag,
     BoolTag,
     NatTag,
     IntTag,
@@ -23,10 +23,10 @@ enum APIEmitTypeTag
     DecimalTag,
     StringTag,
     StringOfTag,
-    NumberOfTag,
+    PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
-    BufferTag,
+    BufferOfTag,
     DataBufferTag,
     ISOTag,
     LogicalTag,
@@ -34,47 +34,113 @@ enum APIEmitTypeTag
     ContentHashTag,
     TupleTag,
     RecordTag,
+    SomethingTag,
+    OkTag,
+    ErrTag,
     ListTag,
+    StackTag,
+    QueueTag,
+    SetTag,
+    MapTag,
     EnumTag,
-    UnionTag
+    EntityTag,
+    UnionTag,
+    ConceptTag
 };
 
 class SMTTypeEmitter {
     readonly assembly: MIRAssembly;
     readonly vopts: VerifierOptions;
 
-    private mangledNameMap: Map<string, string> = new Map<string, string>();
+    private namectr: number = 0;
+    private allshortnames = new Set<string>();
+    private mangledTypeNameMap: Map<string, string> = new Map<string, string>();
+    private mangledFunctionNameMap: Map<string, string> = new Map<string, string>();
+    private mangledGlobalNameMap: Map<string, string> = new Map<string, string>();
 
-    constructor(assembly: MIRAssembly, vopts: VerifierOptions, mangledNameMap?: Map<string, string>) {
+    constructor(assembly: MIRAssembly, vopts: VerifierOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>, mangledGlobalNameMap?: Map<string, string>) {
         this.assembly = assembly;
         this.vopts = vopts;
 
-        this.mangledNameMap = mangledNameMap || new Map<string, string>();
+        this.namectr = namectr || 0;
+        this.mangledTypeNameMap = mangledTypeNameMap || new Map<string, string>();
+        this.mangledFunctionNameMap = mangledFunctionNameMap || new Map<string, string>();
+        this.mangledGlobalNameMap = mangledGlobalNameMap || new Map<string, string>();
+
+        this.allshortnames = new Set<string>();
+        this.mangledTypeNameMap.forEach((sn) => this.allshortnames.add(sn));
+        this.mangledFunctionNameMap.forEach((sn) => this.allshortnames.add(sn));
+        this.mangledGlobalNameMap.forEach((sn) => this.allshortnames.add(sn));
     }
 
-    mangle(name: string): string {
-        if (!this.mangledNameMap.has(name)) {
-            const cleanname = name.replace(/\W/g, "_").toLowerCase() + "I" + this.mangledNameMap.size + "I";
-            this.mangledNameMap.set(name, cleanname);
-        }
+    internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
+        if (!this.mangledTypeNameMap.has(keyid)) {
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
 
-        return this.mangledNameMap.get(name) as string;
+            this.mangledTypeNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
+        }
+    }
+
+    lookupTypeName(keyid: MIRResolvedTypeKey): string {
+        assert(this.mangledTypeNameMap.has(keyid));
+
+        return this.mangledTypeNameMap.get(keyid) as string;
+    }
+
+    internFunctionName(keyid: MIRInvokeKey, shortname: string) {
+        if (!this.mangledFunctionNameMap.has(keyid)) {
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
+            this.mangledFunctionNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
+        }
+    }
+
+    lookupFunctionName(keyid: MIRInvokeKey): string {
+        assert(this.mangledFunctionNameMap.has(keyid));
+
+        return this.mangledFunctionNameMap.get(keyid) as string;
+    }
+
+    internGlobalName(keyid: MIRGlobalKey, shortname: string) {
+        if (!this.mangledGlobalNameMap.has(keyid)) {
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
+            this.mangledGlobalNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
+        }
+    }
+
+    lookupGlobalName(keyid: MIRGlobalKey): string {
+        assert(this.mangledGlobalNameMap.has(keyid));
+
+        return this.mangledGlobalNameMap.get(keyid) as string;
     }
 
     getMIRType(tkey: MIRResolvedTypeKey): MIRType {
         return this.assembly.typeMap.get(tkey) as MIRType;
     }
 
-    isType(tt: MIRType, tkey: string): boolean {
-        return tt.trkey === tkey;
+    isType(tt: MIRType, tkey: MIRResolvedTypeKey): boolean {
+        return tt.typeID === tkey;
     }
 
     isUniqueTupleType(tt: MIRType): boolean {
-        return tt.options.length === 1 && (tt.options[0] instanceof MIRTupleType) && !(tt.options[0] as MIRTupleType).entries.some((entry) => entry.isOptional);
+        return tt.options.length === 1 && (tt.options[0] instanceof MIRTupleType);
     }
 
     isUniqueRecordType(tt: MIRType): boolean {
-        return tt.options.length === 1 && (tt.options[0] instanceof MIRRecordType) && !(tt.options[0] as MIRRecordType).entries.some((entry) => entry.isOptional);
+        return tt.options.length === 1 && (tt.options[0] instanceof MIRRecordType);
     }
 
     isUniqueEntityType(tt: MIRType): boolean {
@@ -89,319 +155,282 @@ class SMTTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    private getSMTTypeForEntity(tt: MIREntityTypeDecl): SMTType {
-        if(tt.specialDecls.has(MIRSpecialTypeCategory.StringOfDecl)) {
-            return new SMTType("BString");
-        }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
-            return new SMTType("BString");
-        }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric) || tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclDecl)) {
-            const dkind = (tt.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[])[0].tkind;
+    private getSMTTypeForEntity(tt: MIRType, entity: MIREntityTypeDecl): SMTType {
+        if(entity instanceof MIRInternalEntityTypeDecl) {
+            if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
+                if (this.isType(tt, "NSCore::None")) {
+                    return new SMTType("bsq_none", "TypeTag_None", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::Nothing")) {
+                    return new SMTType("bsq_nothing", "TypeTag_Nothing", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::Bool")) {
+                    return new SMTType("Bool", "TypeTag_Bool", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::Int")) {
+                    return new SMTType("BInt", "TypeTag_Int", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::Nat")) {
+                    return new SMTType("BNat", "TypeTag_Nat", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::BigInt")) {
+                    return new SMTType("BBigInt", "TypeTag_BigInt", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::BigNat")) {
+                    return new SMTType("BBigNat", "TypeTag_BigInt", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::Float")) {
+                    return new SMTType("BFloat", "TypeTag_Float", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::Decimal")) {
+                    return new SMTType("BDecimal", "TypeTag_Decimal", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::Rational")) {
+                    return new SMTType("BRational", "TypeTag_Rational", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::StringPos")) {
+                    return new SMTType("BStringPos", "TypeTag_StringPos", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::String")) {
+                    return new SMTType("BString", "TypeTag_String", entity.tkey);
+                }
+                else if (tt.typeID.startsWith("NSCore::ByteBuffer")) {
+                    return new SMTType("BByteBuffer", "TypeTag_ByteBuffer", entity.tkey);
+                }
+                else if(this.isType(tt, "NSCore::ISOTime")) {
+                    return new SMTType("BISOTime", "TypeTag_ISOTime", entity.tkey);
+                }
+                else if(this.isType(tt, "NSCore::LogicalTime")) {
+                    return new SMTType("BLogicalTime", "TypeTag_LogicalTime", entity.tkey);
+                }
+                else if(this.isType(tt, "NSCore::UUID")) {
+                    return new SMTType("BUUID", "TypeTag_UUID", entity.tkey);
+                }
+                else if(this.isType(tt, "NSCore::ContentHash")) {
+                    return new SMTType("BHash", "TypeTag_ContentHash", entity.tkey);
+                }
+                else if(this.isType(tt, "NSCore::Regex")) {
+                    return new SMTType("bsq_regex", "TypeTag_Regex", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::ISequence")) {
+                    return new SMTType("ISequence", "TypeTag_ISequence", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::JSequence")) {
+                    return new SMTType("JSequence", "TypeTag_JSequence", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::SSequence")) {
+                    return new SMTType("SSequence", "TypeTag_SSequence", entity.tkey);
+                }
+                else if (this.isType(tt, "NSCore::HavocSequence")) {
+                    return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
+                }
+                else {
+                    if (this.isType(tt, "NSCore::NumericOps")) {
+                        return new SMTType("NumericOps", "TypeTag_NumericOps", entity.tkey);
+                    }
+                    else if (this.isType(tt, "NSCore::ListFlatOps")) {
+                        return new SMTType("ListFlatOps", "TypeTag_ListFlatOps", entity.tkey);
+                    }
+                    else if (this.isType(tt, "NSCore::ListConcatOps")) {
+                        return new SMTType("ListConcatOps", "TypeTag_ListConcatOps", entity.tkey);
+                    }
+                    else if (this.isType(tt, "NSCore::ListOps")) {
+                        return new SMTType("ListOps", "ListOps", entity.tkey);
+                    }
+                    else {
+                        assert(false, "Unknown primitive internal entity");
+                        return new SMTType("[UNKNOWN MIRPrimitiveInternalEntityTypeDecl]", "[UNKNOWN]", entity.tkey);
+                    }
+                }
+            }
+            else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
+                if (tt.typeID.startsWith("NSCore::StringOf")) {
+                    return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
+                else if (tt.typeID.startsWith("NSCore::DataString")) {
+                    return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
+                else if (tt.typeID.startsWith("NSCore::BufferOf")) {
+                    return new SMTType("BByteBuffer", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
+                else if (tt.typeID.startsWith("NSCore::DataBuffer")) {
+                    return new SMTType("BByteBuffer", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
+                else if (tt.typeID.startsWith("NSCore::Something")) {
+                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
+                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
+                else if (tt.typeID.startsWith("NSCore::Result::Ok")) {
+                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
+                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
+                else {
+                    assert(tt.typeID.startsWith("NSCore::Result::Err"));
+                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
+                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
+            }
+            else {
+                assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 
-            return this.getSMTTypeFor(this.getMIRType(dkind));
+                return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            }
         }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
-            const dkind = (tt.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[])[0].tkind;
-
-            return this.getSMTTypeFor(this.getMIRType(dkind));
+        else if (entity instanceof MIRConstructableEntityTypeDecl) {
+            const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
+            return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.BufferDecl)) {
-            //
-            //TODO: implement this representation in the C++ interpreter etc.
-            //
-            assert(false, "Buffer is not implemented yet");
-            return new SMTType(this.mangle(tt.tkey));
-        }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.DataBufferDecl)) {
-            //
-            //TODO: implement this representation in the C++ interpreter etc.
-            //
-            assert(false, "Buffer is not implemented yet");
-            return new SMTType(this.mangle(tt.tkey));
+        else if (entity instanceof MIREnumEntityTypeDecl) {
+            const sof = this.getSMTTypeFor(this.getMIRType("NSCore::Nat"));
+            return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
         else {
-            return new SMTType(this.mangle(tt.tkey));
+            return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
     }
 
     getSMTTypeFor(tt: MIRType): SMTType {
-        if (this.isType(tt, "NSCore::None")) {
-            return new SMTType("bsq_none");
-        }
-        else if (this.isType(tt, "NSCore::Bool")) {
-            return new SMTType("Bool");
-        }
-        else if (this.isType(tt, "NSCore::Int")) {
-            return new SMTType("BInt");
-        }
-        else if (this.isType(tt, "NSCore::Nat")) {
-            return new SMTType("BNat");
-        }
-        else if (this.isType(tt, "NSCore::BigInt")) {
-            return new SMTType("BBigInt");
-        }
-        else if (this.isType(tt, "NSCore::BigNat")) {
-            return new SMTType("BBigNat");
-        }
-        else if (this.isType(tt, "NSCore::Float")) {
-            return new SMTType("BFloat");
-        }
-        else if (this.isType(tt, "NSCore::Decimal")) {
-            return new SMTType("BDecimal");
-        }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            return new SMTType("BRational");
-        }
-        else if (this.isType(tt, "NSCore::StringPos")) {
-            return new SMTType("Int");
-        }
-        else if (this.isType(tt, "NSCore::String")) {
-            return new SMTType("BString");
-        }
-        else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            return new SMTType("BByteBuffer");
-        }
-        else if(this.isType(tt, "NSCore::ISOTime")) {
-            return new SMTType("Int");
-        }
-        else if(this.isType(tt, "NSCore::LogicalTime")) {
-            return new SMTType("Int");
-        }
-        else if(this.isType(tt, "NSCore::UUID")) {
-            return new SMTType("String");
-        }
-        else if(this.isType(tt, "NSCore::ContentHash")) {
-            return new SMTType("Int");
-        }
-        else if (this.isType(tt, "NSCore::Regex")) {
-            return new SMTType("bsq_regex");
-        }
-        else if (this.isType(tt, "NSCore::ISequence")) {
-            return new SMTType("ISequence");
-        }
-        else if(this.isUniqueTupleType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
+        this.internTypeName(tt.typeID, tt.shortname);
+
+        if(this.isUniqueTupleType(tt)) {
+            return new SMTType(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.isUniqueRecordType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
+            return new SMTType(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.isUniqueEntityType(tt)) {
-            return this.getSMTTypeForEntity(this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl);
+            return this.getSMTTypeForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
         }
         else if (this.isUniqueEphemeralType(tt)) {
-            return new SMTType(this.mangle(tt.trkey));
+            return new SMTType(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType"))) {
-            return new SMTType("BKey");
+            return new SMTType("BKey", "[BKEY]", tt.typeID);
         }
         else {
-            return new SMTType("BTerm");
-        }
-    }
-
-    getSMTTypeTag(tt: MIRType): string {
-        if (this.isType(tt, "NSCore::None")) {
-            return "TypeTag_None";
-        }
-        else if (this.isType(tt, "NSCore::Bool")) {
-            return "TypeTag_Bool";
-        }
-        else if (this.isType(tt, "NSCore::Int")) {
-            return "TypeTag_Int";
-        }
-        else if (this.isType(tt, "NSCore::Nat")) {
-            return "TypeTag_Nat";
-        }
-        else if (this.isType(tt, "NSCore::BigInt")) {
-            return "TypeTag_BigInt";
-        }
-        else if (this.isType(tt, "NSCore::BigNat")) {
-            return "TypeTag_BigNat";
-        }
-        else if (this.isType(tt, "NSCore::Float")) {
-            return "TypeTag_Float";
-        }
-        else if (this.isType(tt, "NSCore::Decimal")) {
-            return "TypeTag_Decimal";
-        }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            return "TypeTag_Rational";
-        }
-        else if (this.isType(tt, "NSCore::StringPos")) {
-            return "TypeTag_StringPos";
-        }
-        else if (this.isType(tt, "NSCore::String")) {
-            return "TypeTag_String";
-        }
-        else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            return "TypeTag_ByteBuffer";
-        }
-        else if(this.isType(tt, "NSCore::ISOTime")) {
-            return "TypeTag_ISOTime";
-        }
-        else if(this.isType(tt, "NSCore::LogicalTime")) {
-            return "TypeTag_LogicalTime";
-        }
-        else if(this.isType(tt, "NSCore::UUID")) {
-            return "TypeTag_UUID";
-        }
-        else if(this.isType(tt, "NSCore::ContentHash")) {
-            return "TypeTag_ContentHash";
-        }
-        else if (this.isType(tt, "NSCore::Regex")) {
-            return "TypeTag_Regex";
-        }
-        else if (this.isUniqueTupleType(tt)) {
-            return `TypeTag_${this.mangle(tt.trkey)}`;
-        }
-        else if (this.isUniqueRecordType(tt)) {
-            return `TypeTag_${this.mangle(tt.trkey)}`;
-        }
-        else {
-            assert(this.isUniqueEntityType(tt), "Should not be other options")
-            return `TypeTag_${this.mangle(tt.trkey)}`;
+            return new SMTType("BTerm", "[BTERM]", tt.typeID);
         }
     }
 
     getSMTConstructorName(tt: MIRType): { cons: string, box: string, bfield: string } {
+        assert(tt.options.length === 1);
+        this.internTypeName(tt.typeID, tt.shortname);
+
         const kfix = this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType")) ? "bsqkey_" : "bsqobject_"
         if (this.isUniqueTupleType(tt)) {
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}@cons`, box: `${this.lookupTypeName(tt.typeID)}@box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}_value` };
         }
         else if (this.isUniqueRecordType(tt)) {
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}@cons`, box: `${this.lookupTypeName(tt.typeID)}@box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}_value` };
         }
         else if (this.isUniqueEntityType(tt)) {
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}@cons`, box: `${this.lookupTypeName(tt.typeID)}@box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}_value` };
         }
         else {
             assert(this.isUniqueEphemeralType(tt), "should not be other options")
-            return { cons: `${this.mangle(tt.trkey)}@cons`, box: `${this.mangle(tt.trkey)}@box`, bfield: `${kfix}${this.mangle(tt.trkey)}_value` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}@cons`, box: "[UNDEF_EPHEMERAL_BOX]", bfield: "[UNDEF_EPHEMERAL_BOX]" };
         }
     }
 
     private coerceFromAtomicToKey(exp: SMTExp, from: MIRType): SMTExp  {
         assert(this.assembly.subtypeOf(from, this.getMIRType("NSCore::KeyType")));
 
-        if (from.trkey === "NSCore::None") {
+        if (from.typeID === "NSCore::None") {
             return new SMTConst("BKey@none");
         }
+        else if(from.typeID === "NSCore::Nothing") {
+            return new SMTConst("BKey@nothing");
+        }
         else {
+            const smtfrom = this.getSMTTypeFor(from);
             let objval: SMTExp | undefined = undefined;
-            let typetag = "[NOT SET]";
 
             if (this.isType(from, "NSCore::Bool")) {
                 objval = new SMTCallSimple("bsqkey_bool@box", [exp]);
-                typetag = "TypeTag_Bool";
             }
             else if (this.isType(from, "NSCore::Int")) {
                 objval = new SMTCallSimple("bsqkey_int@box", [exp]);
-                typetag = "TypeTag_Int";
             }
             else if (this.isType(from, "NSCore::Nat")) {
                 objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
-                typetag = "TypeTag_Nat";
             }
             else if (this.isType(from, "NSCore::BigInt")) {
                 objval = new SMTCallSimple("bsqkey_bigint@box", [exp]);
-                typetag = "TypeTag_BigInt";
             }
             else if (this.isType(from, "NSCore::BigNat")) {
                 objval = new SMTCallSimple("bsqkey_bignat@box", [exp]);
-                typetag = "TypeTag_BigNat";
             }
             else if (this.isType(from, "NSCore::String")) {
                 objval = new SMTCallSimple("bsqkey_string@box", [exp]);
-                typetag = "TypeTag_String";
             }
             else if(this.isType(from, "NSCore::LogicalTime")) {
                 objval = new SMTCallSimple("bsqkey_logicaltime@box", [exp]);
-                typetag = "TypeTag_LogicalTime";
             }
             else if(this.isType(from, "NSCore::UUID")) {
                 objval = new SMTCallSimple("bsqkey_uuid@box", [exp]);
-                typetag = "TypeTag_UUID";
             }
             else if(this.isType(from, "NSCore::ContentHash")) {
                 objval = new SMTCallSimple("bsqkey_contenthash@box", [exp]);
-                typetag = "TypeTag_ContentHash";
-            }
-            else if (this.isUniqueTupleType(from)) {
-                objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                typetag = this.getSMTTypeTag(from);
-            }
-            else if (this.isUniqueRecordType(from)) {
-                objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                typetag = this.getSMTTypeTag(from);
             }
             else {
                 assert(this.isUniqueEntityType(from));
 
                 objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                typetag = this.getSMTTypeTag(from);
             }
 
-            return new SMTCallSimple("BKey@box", [new SMTConst(typetag), objval as SMTExp]);
+            return new SMTCallSimple("BKey@box", [new SMTConst(smtfrom.smttypetag), objval as SMTExp]);
         }
     }
 
     private coerceFromAtomicToTerm(exp: SMTExp, from: MIRType): SMTExp {
-        if (from.trkey === "NSCore::None") {
+        if (from.typeID === "NSCore::None") {
             return new SMTConst(`BTerm@none`);
+        }
+        else if (from.typeID === "NSCore::None") {
+            return new SMTConst(`BTerm@nothing`);
         }
         else {
             if(this.assembly.subtypeOf(from, this.getMIRType("NSCore::KeyType"))) {
                 return new SMTCallSimple("BTerm@keybox", [this.coerceFromAtomicToKey(exp, from)]);
             }
             else {
+                const smtfrom = this.getSMTTypeFor(from);
                 let objval: SMTExp | undefined = undefined;
-                let typetag = "[NOT SET]";
 
                 if (this.isType(from, "NSCore::Float")) {
                     objval = new SMTCallSimple("bsq_float@box", [exp]);
-                    typetag = "TypeTag_Float";
                 }
                 else if (this.isType(from, "NSCore::Decimal")) {
                     objval = new SMTCallSimple("bsq_decimal@box", [exp]);
-                    typetag = "TypeTag_Decimal";
                 }
                 else if (this.isType(from, "NSCore::Rational")) {
                     objval = new SMTCallSimple("bsq_rational@box", [exp]);
-                    typetag = "TypeTag_Rational";
                 }
                 else if (this.isType(from, "NSCore::StringPos")) {
                     objval = new SMTCallSimple("bsq_stringpos@box", [exp]);
-                    typetag = "TypeTag_StringPos";
                 }
                 else if (this.isType(from, "NSCore::ByteBuffer")) {
                     objval = new SMTCallSimple("bsq_bytebuffer@box", [exp]);
-                    typetag = "TypeTag_ByteBuffer";
                 }
                 else if(this.isType(from, "NSCore::ISOTime")) {
                     objval = new SMTCallSimple("bsq_isotime@box", [exp]);
-                    typetag = "TypeTag_ISOTime";
                 }
                 else if (this.isType(from, "NSCore::Regex")) {
                     objval = new SMTCallSimple("bsq_regex@box", [exp]);
-                    typetag = "TypeTag_Regex";
                 }
                 else if (this.isUniqueTupleType(from)) {
                     objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                    typetag = this.getSMTTypeTag(from);
                 }
                 else if (this.isUniqueRecordType(from)) {
                     objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                    typetag = this.getSMTTypeTag(from);
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
 
                     objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
-                    typetag = this.getSMTTypeTag(from);
                 }
 
-                return new SMTCallSimple("BTerm@termbox", [new SMTConst(typetag), objval as SMTExp]);
+                return new SMTCallSimple("BTerm@termbox", [new SMTConst(smtfrom.smttypetag), objval as SMTExp]);
             }
         }
     }
@@ -553,23 +582,27 @@ class SMTTypeEmitter {
     }
 
     generateTupleIndexGetFunction(tt: MIRTupleType, idx: number): string {
-        return `${this.mangle(tt.trkey)}@_${idx}`;
+        this.internTypeName(tt.typeID, tt.shortname);
+        return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
     } 
 
     generateRecordPropertyGetFunction(tt: MIRRecordType, pname: string): string {
-        return `${this.mangle(tt.trkey)}@_${pname}`;
+        this.internTypeName(tt.typeID, tt.shortname);
+        return `${this.lookupTypeName(tt.typeID)}@_${pname}`;
     }
 
-    generateEntityFieldGetFunction(tt: MIREntityTypeDecl, field: MIRFieldKey): string {
-        return `${this.mangle(tt.tkey)}@_${this.mangle(field)}`;
+    generateEntityFieldGetFunction(tt: MIREntityTypeDecl, field: MIRFieldDecl): string {
+        this.internTypeName(tt.tkey, tt.shortname);
+        return `${this.lookupTypeName(tt.tkey)}@_${field.fname}`;
     }
 
     generateEphemeralListGetFunction(tt: MIREphemeralListType, idx: number): string {
-        return `${this.mangle(tt.trkey)}@_${idx}`;
+        this.internTypeName(tt.typeID, tt.shortname);
+        return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
     }
 
     generateResultType(ttype: MIRType): SMTType {
-        return new SMTType(`$Result_${this.getSMTTypeFor(ttype).name}`);
+        return new SMTType(`$Result_${this.getSMTTypeFor(ttype).name}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }
 
     generateResultTypeConstructorSuccess(ttype: MIRType, val: SMTExp): SMTExp {
@@ -601,7 +634,7 @@ class SMTTypeEmitter {
     }
     
     generateAccessWithSetGuardResultType(ttype: MIRType): SMTType {
-        return new SMTType(`$GuardResult_${this.getSMTTypeFor(ttype).name}`);
+        return new SMTType(`$GuardResult_${this.getSMTTypeFor(ttype).name}`, "[INTERNAL GUARD RESULT]", "[INTERNAL GUARD RESULT]");
     }
 
     generateAccessWithSetGuardResultTypeConstructorLoad(ttype: MIRType, value: SMTExp, flag: boolean): SMTExp {
@@ -618,7 +651,10 @@ class SMTTypeEmitter {
 
     private havocTypeInfoGen(tt: MIRType): [string, boolean] {
         if (this.isType(tt, "NSCore::None")) {
-            return ["BNone@UFCons_API", false];
+            return ["bsq_none@literal", false];
+        }
+        else if (this.isType(tt, "NSCore::Nothing")) {
+            return ["bsq_nothing@literal", false];
         }
         else if (this.isType(tt, "NSCore::Bool")) {
             return ["BBool@UFCons_API", false];
@@ -638,8 +674,11 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "NSCore::Decimal")) {
             return ["BDecimal@UFCons_API", false];
         }
+        else if (this.isType(tt, "NSCore::ContentHash")) {
+            return ["BContentHash@UFCons_API", false];
+        }
         else {
-            return [`_@@cons_${this.getSMTTypeFor(tt).name}_entrypoint`, true];
+            return [`_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`, true];
         }
     }
 
@@ -664,129 +703,175 @@ class SMTTypeEmitter {
         }
     }
 
-    getAPITypeFor(tt: MIRType): object {
-        if (this.isType(tt, "NSCore::None")) {
-            return {tag: APIEmitTypeTag.NoneTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::Bool")) {
-            return {tag: APIEmitTypeTag.BoolTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::Int")) {
-            return {tag: APIEmitTypeTag.IntTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::Nat")) {
-            return {tag: APIEmitTypeTag.NatTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::BigInt")) {
-            return {tag: APIEmitTypeTag.BigIntTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::BigNat")) {
-            return {tag: APIEmitTypeTag.BigNatTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::Float")) {
-            return {tag: APIEmitTypeTag.FloatTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::Decimal")) {
-            return {tag: APIEmitTypeTag.DecimalTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::Rational")) {
-            return {tag: APIEmitTypeTag.RationalTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::String")) {
-            return {tag: APIEmitTypeTag.StringTag, name: tt.trkey};
-        }
-        else if (this.isType(tt, "NSCore::ByteBuffer")) {
-            return {tag: APIEmitTypeTag.ByteBufferTag, name: tt.trkey};
-        }
-        else if(this.isType(tt, "NSCore::ISOTime")) {
-            return {tag: APIEmitTypeTag.ISOTag, name: tt.trkey};
-        }
-        else if(this.isType(tt, "NSCore::LogicalTime")) {
-            return {tag: APIEmitTypeTag.LogicalTag, name: tt.trkey};
-        }
-        else if(this.isType(tt, "NSCore::UUID")) {
-            return {tag: APIEmitTypeTag.UUIDTag, name: tt.trkey};
-        }
-        else if(this.isType(tt, "NSCore::ContentHash")) {
-            return {tag: APIEmitTypeTag.ContentHashTag, name: tt.trkey};
-        }
-        else if(this.isUniqueTupleType(tt)) {
-            const tdecl = this.assembly.tupleDecls.get(tt.trkey) as MIRTupleType;
+    private getAPITypeForEntity(tt: MIRType, entity: MIREntityTypeDecl): object {
+        if(entity instanceof MIRInternalEntityTypeDecl) {
+            if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
+                if (this.isType(tt, "NSCore::None")) {
+                    return {tag: APIEmitTypeTag.NoneTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::Nothing")) {
+                    return {tag: APIEmitTypeTag.NothingTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::Bool")) {
+                    return {tag: APIEmitTypeTag.BoolTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::Int")) {
+                    return {tag: APIEmitTypeTag.IntTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::Nat")) {
+                    return {tag: APIEmitTypeTag.NatTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::BigInt")) {
+                    return {tag: APIEmitTypeTag.BigIntTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::BigNat")) {
+                    return {tag: APIEmitTypeTag.BigNatTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::Float")) {
+                    return {tag: APIEmitTypeTag.FloatTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::Decimal")) {
+                    return {tag: APIEmitTypeTag.DecimalTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::Rational")) {
+                    return {tag: APIEmitTypeTag.RationalTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::String")) {
+                    return {tag: APIEmitTypeTag.StringTag, name: tt.typeID};
+                }
+                else if (this.isType(tt, "NSCore::ByteBuffer")) {
+                    return {tag: APIEmitTypeTag.ByteBufferTag, name: tt.typeID};
+                }
+                else if(this.isType(tt, "NSCore::ISOTime")) {
+                    return {tag: APIEmitTypeTag.ISOTag, name: tt.typeID};
+                }
+                else if(this.isType(tt, "NSCore::LogicalTime")) {
+                    return {tag: APIEmitTypeTag.LogicalTag, name: tt.typeID};
+                }
+                else if(this.isType(tt, "NSCore::UUID")) {
+                    return {tag: APIEmitTypeTag.UUIDTag, name: tt.typeID};
+                }
+                else if(this.isType(tt, "NSCore::ContentHash")) {
+                    return {tag: APIEmitTypeTag.ContentHashTag, name: tt.typeID};
+                }
+                else {
+                    assert(false);
+                    return {tag: APIEmitTypeTag.NoneTag, name: "[UNKNOWN API TYPE]"};
+                }
+            }
+            else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
+                if (tt.typeID.startsWith("NSCore::StringOf")) {
+                    return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: (entity.fromtype as MIRResolvedTypeKey)};
+                }
+                else if (tt.typeID.startsWith("NSCore::DataString")) {
+                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                }
+                else if (tt.typeID.startsWith("NSCore::BufferOf")) {
+                    return {tag: APIEmitTypeTag.BufferOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                }
+                else if (tt.typeID.startsWith("NSCore::DataBuffer")) {
+                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                }
+                else if (tt.typeID.startsWith("NSCore::Something")) {
+                    return {tag: APIEmitTypeTag.SomethingTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                }
+                else if (tt.typeID.startsWith("NSCore::Result::Ok")) {
+                    return {tag: APIEmitTypeTag.OkTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                }
+                else {
+                    assert(tt.typeID.startsWith("NSCore::Result::Err"));
+                    return {tag: APIEmitTypeTag.ErrTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                }
+            }
+            else {
+                assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 
+                if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.ListTag, name: tt.typeID, oftype: entity.oftype};
+                }
+                else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.StackTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
+                }
+                else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.QueueTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
+                }
+                else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
+                    return {tag: APIEmitTypeTag.SetTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype, unqchkinv: entity.unqchkinv, unqconvinv: entity.unqconvinv};
+                }
+                else {
+                    const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
+                    return {tag: APIEmitTypeTag.MapTag, name: tt.typeID, oftype: mentity.oftype, ultype: mentity.ultype, unqchkinv: mentity.unqchkinv};
+                }
+            }
+        }
+        else if(entity instanceof MIRConstructableEntityTypeDecl) {
+            return {tag: APIEmitTypeTag.PrimitiveOfTag, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons || "[NO CONSTRUCTOR]"};
+        }
+        else if(entity instanceof MIREnumEntityTypeDecl) {
+            return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, usinginv: entity.usingcons, enums: entity.enums};
+        }
+        else {
+            const oentity = entity as MIRObjectEntityTypeDecl;
+            
+            let fields: string[] = [];
+            let ttypes: string[] = [];
+            for(let i = 0; i < oentity.consfuncfields.length; ++i)
+            {
+                const ff = oentity.consfuncfields[i];
+                const mirff = this.assembly.fieldDecls.get(ff) as MIRFieldDecl;
+
+                fields.push(mirff.fname);
+                ttypes.push(mirff.declaredType);
+            }
+
+            return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, fields: fields, ttypes: ttypes};
+        }
+    }
+
+    getAPITypeFor(tt: MIRType): object {
+        this.internTypeName(tt.typeID, tt.shortname);
+
+        if(this.isUniqueTupleType(tt)) {
+            const tdecl = this.assembly.tupleDecls.get(tt.typeID) as MIRTupleType;
 
             let ttypes: string[] = [];
             for(let i = 0; i < tdecl.entries.length; ++i)
             {
-                const mirtt = tdecl.entries[i].type;
-
-                ttypes.push(mirtt.trkey);
+                const mirtt = tdecl.entries[i];
+                ttypes.push(mirtt.typeID);
             }
 
-            return {tag: APIEmitTypeTag.TupleTag, name: tt.trkey, isvalue: tdecl.isvalue, ttypes: ttypes};
+            return {tag: APIEmitTypeTag.TupleTag, name: tt.typeID, ttypes: ttypes};
         }
         else if(this.isUniqueRecordType(tt)) {
-            const rdecl = this.assembly.recordDecls.get(tt.trkey) as MIRRecordType;
+            const rdecl = this.assembly.recordDecls.get(tt.typeID) as MIRRecordType;
 
             let props: string[] = [];
             let ttypes: string[] = [];
             for(let i = 0; i < rdecl.entries.length; ++i)
             {
-                const prop = rdecl.entries[i].name;
-                const mirtt = rdecl.entries[i].type;
+                const prop = rdecl.entries[i].pname;
+                const mirtt = rdecl.entries[i].ptype;
 
                 props.push(prop);
-                ttypes.push(mirtt.trkey);
+                ttypes.push(mirtt.typeID);
             }
 
-            return {tag: APIEmitTypeTag.RecordTag, name: tt.trkey, isvalue: rdecl.isvalue, props: props, ttypes: ttypes};
+            return {tag: APIEmitTypeTag.RecordTag, name: tt.typeID, props: props, ttypes: ttypes};
         }
         else if(this.isUniqueEntityType(tt)) {
-            const edecl = this.assembly.entityDecls.get(tt.trkey) as MIREntityTypeDecl;
+            return this.getAPITypeForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
+        }
+        else if(tt instanceof MIRConceptType) {
+            const etypes = [...this.assembly.entityDecls].filter((edi) => this.assembly.subtypeOf(this.getMIRType(edi[1].tkey), this.getMIRType(tt.typeID)));
+            const opts: string[] = etypes.map((opt) => opt[1].tkey);
 
-            if(edecl.specialDecls.has(MIRSpecialTypeCategory.StringOfDecl)) {
-                const vtype = ((edecl.specialTemplateInfo as { tname: string, tkind: MIRResolvedTypeKey }[]).find((tke) => tke.tname === "T") as { tname: string, tkind: MIRResolvedTypeKey }).tkind;
-        
-                const vre = this.assembly.validatorRegexs.get(vtype) as BSQRegex;
-                const lre = vre.jemit();
-
-                return {tag: APIEmitTypeTag.StringOfTag, name: tt.trkey, validator: vtype, re_validate: lre};
-            }
-            else if(edecl.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric)) {
-                const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
-                return {tag: APIEmitTypeTag.NumberOfTag, name: tt.trkey, primitive: oftype, oftype: oftype};
-            }
-            else if(edecl.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
-                const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
-                const ofdecl = (this.assembly.entityDecls.get(oftype) || this.assembly.conceptDecls.get(oftype)) as MIROOTypeDecl; 
-                const isvalue = ofdecl.attributes.includes("struct");
-
-                return {tag: APIEmitTypeTag.DataStringTag, name: tt.trkey, oftype: oftype, isvalue: isvalue};
-            }
-            else if(edecl.specialDecls.has(MIRSpecialTypeCategory.BufferDecl)) {
-                return {tag: APIEmitTypeTag.BufferTag, name: tt.trkey};
-            }
-            else if(edecl.specialDecls.has(MIRSpecialTypeCategory.DataBufferDecl)) {
-                return {tag: APIEmitTypeTag.DataBufferTag, name: tt.trkey};
-            }
-            else if(edecl.specialDecls.has(MIRSpecialTypeCategory.ListTypeDecl)) {
-                const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
-
-                return {tag: APIEmitTypeTag.ListTag, name: tt.trkey, oftype: oftype};
-            }
-            else {
-                const oftype = (edecl.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind;
-                
-                const ddcls = [...this.assembly.constantDecls].filter((cdcl) => cdcl[1].enclosingDecl !== undefined && cdcl[1].enclosingDecl === tt.trkey);
-                const enuminvs = ddcls.map((cdcl) => [cdcl[1].gkey, this.mangle(cdcl[1].value)] as [string, string]);
-                            
-
-                return {tag: APIEmitTypeTag.EnumTag, name: tt.trkey, underlying: oftype, enuminvs: enuminvs};
-            }
+            return {tag: APIEmitTypeTag.ConceptTag, name: tt.typeID, opts: opts};
         }
         else {
-            const opts: string[] = tt.options.map((opt) => opt.trkey);
+            const opts: string[] = tt.options.map((opt) => opt.typeID);
             
-            return {tag: APIEmitTypeTag.UnionTag, name: tt.trkey, opts: opts};
+            return {tag: APIEmitTypeTag.UnionTag, name: tt.typeID, opts: opts};
         }
     }
 }

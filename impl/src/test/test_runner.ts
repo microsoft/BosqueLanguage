@@ -124,6 +124,7 @@ class IndividualInfeasibleTestInfo extends IndividualTestInfo {
 
 class IndividualWitnessTestInfo extends IndividualTestInfo {
     readonly line: number;
+    readonly dosmall: boolean;
 
     private static ctemplate = 
 "namespace NSMain;\n\
@@ -137,20 +138,21 @@ class IndividualWitnessTestInfo extends IndividualTestInfo {
 %%CODE%%\n\
 ";
 
-    constructor(name: string, fullname: string, code: string, line: number, extraSrc: string | undefined) {
+    constructor(name: string, fullname: string, code: string, line: number, dosmall: boolean, extraSrc: string | undefined) {
         super(name, fullname, code, extraSrc);
 
         this.line = line;
+        this.dosmall = dosmall;
     }
 
-    static create(name: string, fullname: string, sig: string, action: string, check: string, code: string, extraSrc: string | undefined): IndividualWitnessTestInfo {
+    static create(name: string, dosmall: boolean, fullname: string, sig: string, action: string, check: string, code: string, extraSrc: string | undefined): IndividualWitnessTestInfo {
         const rcode = IndividualWitnessTestInfo.ctemplate
             .replace("%%SIG%%", sig)
             .replace("%%ACTION%%", action)
             .replace("%%CHECK%%", check)
             .replace("%%CODE%%", code);
 
-        return new IndividualWitnessTestInfo(name, fullname, rcode, 5, extraSrc);
+        return new IndividualWitnessTestInfo(name, fullname, rcode, 5, dosmall, extraSrc);
     }
 }
 
@@ -219,6 +221,7 @@ class IndividualICPPTestInfo extends IndividualTestInfo {
 type APICheckTestBundle = {
     action: string,
     check: string
+    dosmall?: boolean
 };
 
 type APIExecTestBundle = {
@@ -252,9 +255,14 @@ class APITestGroup {
         const groupname = `${scopename}.${spec.test}`;
         const compiles = (spec.typechk || []).map((tt, i) => IndividualCompileWarnTest.create(`compiler#${i}`, `${groupname}.compiler#${i}`, spec.sig, tt, spec.code, spec.src || undefined));
         const infeasible = (spec.infeasible || []).map((tt, i) => IndividualInfeasibleTestInfo.create(`infeasible#${i}`, `${groupname}.infeasible#${i}`, spec.sig, tt.action, tt.check, spec.code, spec.src || undefined));
-        const witness = (spec.witness || []).map((tt, i) => IndividualWitnessTestInfo.create(`witness#${i}`, `${groupname}.witness#${i}`, spec.sig, tt.action, tt.check, spec.code, spec.src || undefined));
+        const witness = (spec.witness || []).map((tt, i) => IndividualWitnessTestInfo.create(`witness#${i}`, tt.dosmall || false, `${groupname}.witness#${i}`, spec.sig, tt.action, tt.check, spec.code, spec.src || undefined));
         const evaluate = (spec.evaluates || []).map((tt, i) => IndividualEvaluateTestInfo.create(`evaluate#${i}`, `${groupname}.evaluate#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
-        const icpp = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
+        
+        //
+        //TODO: ICPP TESTS
+        //
+        //const icpp = (spec.icpp || []).map((tt, i) => IndividualICPPTestInfo.create(`icpp#${i}`, `${groupname}.icpp#${i}`, spec.sig, tt.action, spec.code, tt.args, tt.result, spec.src || undefined));
+        const icpp: IndividualICPPTestInfo[] = [];
 
         return new APITestGroup(groupname, [...compiles, ...infeasible, ...witness, ...evaluate, ...icpp]);
     }
@@ -545,7 +553,7 @@ class TestRunner {
                 const handler = this.generateTestResultCallback(tt);
                 this.queued.push(tt.fullname);
                 try {
-                    enqueueSMTTestWitness(code, tt.line, handler);
+                    enqueueSMTTestWitness(code, tt.line, tt.dosmall, handler);
                 }
                 catch (ex) {
                     handler("error", new Date(), new Date(), `${ex}`);

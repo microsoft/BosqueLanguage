@@ -4,9 +4,9 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { ParserEnvironment, FunctionScope } from "./parser_env";
-import { FunctionParameter, TypeSignature, NominalTypeSignature, TemplateTypeSignature, ParseErrorTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, AutoTypeSignature, ProjectTypeSignature, EphemeralListTypeSignature, PlusTypeSignature, AndTypeSignature, LiteralTypeSignature } from "./type_signature";
-import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionOrOperatorExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixInvoke, PostfixOp, PrefixNotOp, BinLogicExpression, NonecheckExpression, CoalesceExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionOrOperatorExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, ConstValueStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, StructureMatchGuard, AbortStatement, BlockStatementExpression, IfExpression, MatchExpression, RecursiveAnnotation, CombinatorPCodeExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ValidateStatement, NakedCallStatement, ValueListStructuredAssignment, NominalStructuredAssignment, VariablePackDeclarationStatement, VariablePackAssignmentStatement, ConstructorEphemeralValueList, MapEntryConstructorExpression, LiteralParamerterValueExpression, SpecialConstructorExpression, TypeMatchGuard, PostfixIs, LiteralTypedNumericConstructorExpression, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralExpressionValue, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, OfTypeConvertExpression, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression } from "./body";
-import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, PreConditionDecl, PostConditionDecl, BuildLevel, TypeConditionRestriction, InvariantDecl, TemplateTypeRestriction, SpecialTypeCategory, StaticOperatorDecl, NamespaceOperatorDecl, OOPTypeDecl, TemplateTermSpecialRestriction } from "./assembly";
+import { FunctionParameter, TypeSignature, NominalTypeSignature, TemplateTypeSignature, ParseErrorTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, AutoTypeSignature, ProjectTypeSignature, EphemeralListTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
+import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionOrOperatorExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixInvoke, PostfixOp, PrefixNotOp, BinLogicExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionOrOperatorExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, StructureMatchGuard, AbortStatement, BlockStatementExpression, IfExpression, MatchExpression, RecursiveAnnotation, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ValidateStatement, NakedCallStatement, ValueListStructuredAssignment, NominalStructuredAssignment, VariablePackDeclarationStatement, VariablePackAssignmentStatement, ConstructorEphemeralValueList, MapEntryConstructorExpression, SpecialConstructorExpression, TypeMatchGuard, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralExpressionValue, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, IsTypeExpression, AsTypeExpression, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, PostfixGetIndexOption, PostfixGetPropertyOption, SwitchEntry, SwitchExpression, StructuredAssignementPrimitive, SwitchStatement, SwitchGuard, WildcardSwitchGuard, LiteralSwitchGuard } from "./body";
+import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, PreConditionDecl, PostConditionDecl, BuildLevel, TypeConditionRestriction, InvariantDecl, TemplateTypeRestriction, StaticOperatorDecl, NamespaceOperatorDecl, OOPTypeDecl } from "./assembly";
 import { BSQRegex } from "./bsqregex";
 
 const KeywordStrings = [
@@ -16,7 +16,7 @@ const KeywordStrings = [
     "_debug",
     "abort",
     "assert",
-    "case",
+    "astype",
     "check",
     "concept",
     "const",
@@ -26,24 +26,22 @@ const KeywordStrings = [
     "entity",
     "ensures",
     "err",
-    "literal",
     "false",
     "field",
     "fn",
     "pred",
     "function",
-    "grounded",
     "if",
     "invariant",
+    "istype",
     "let",
     "method",
     "namespace",
     "none",
+    "nothing",
     "of",
     "ok",
     "operator",
-    "parsable",
-    "private",
     "provides",
     "ref",
     "out",
@@ -51,17 +49,16 @@ const KeywordStrings = [
     "release",
     "return",
     "requires",
+    "something",
+    "spec",
     "switch",
     "test",
     "true",
     "type",
     "typedef",
     "typedecl",
-    "validate",
-    "validator",
     "var",
     "when",
-    "where",
     "yield"
 ].sort((a, b) => { return (a.length !== b.length) ? (b.length - a.length) : a.localeCompare(b); });
 
@@ -155,8 +152,9 @@ const LeftScanParens = ["[", "(", "{", "(|", "{|"];
 const RightScanParens = ["]", ")", "}", "|)", "|}"];
 
 const AttributeStrings = [
+    "algebraic",
+    "orderable",
     "entrypoint",
-    "struct",
     "hidden",
     "private",
     "factory",
@@ -165,29 +163,25 @@ const AttributeStrings = [
     "override",
     "recursive?",
     "recursive",
-    "parsable",
-    "validator",
     "derived",
     "lazy",
     "memoized",
-    "mixed",
     "interned",
     "inline",
     "prefix",
     "infix",
-    "numeric",
     "dynamic",
-    "grounded",
-    "unique",
-    "validator",
 
     "__internal",
+    "__typedeclable",
+    "__constructable",
     "__primitive",
     "__safe",
-    "__assume_safe"
+    "__assume_safe",
+    "__universal"
 ];
 
-const UnsafeFieldNames = ["is", "as", "isNone", "isSome", "asTry", "asOrNone", "hasProperty", "getPropertyOrNone", "getPropertyTry"]
+const UnsafeFieldNames = ["is", "as", "isNone", "isSome", "asTry", "asOrNone", "asOptional", "asResult", "hasProperty", "getPropertyOrNone", "getPropertyOption", "getPropertyTry"]
 
 const TokenStrings = {
     Clear: "[CLEAR]",
@@ -251,6 +245,7 @@ class SourceInfo {
 
 type CodeFileInfo = { 
     fpath: string, 
+    filepath: string,
     contents: string 
 };
 
@@ -480,7 +475,7 @@ class Lexer {
     }
 
     private static readonly _s_symbolRe = /[\W]+/y;
-    private static readonly _s_operatorRe = /_([^\w]+)_/y;
+    private static readonly _s_operatorRe = /_([\\a-zA-Z0-9]+)_/y;
     private tryLexSymbol() {
         Lexer._s_symbolRe.lastIndex = this.m_cpos;
         const ms = Lexer._s_symbolRe.exec(this.m_input);
@@ -679,7 +674,9 @@ class Parser {
     private m_errors: [string, number, string][];
     private m_recoverStack: number[];
 
-    constructor(assembly: Assembly) {
+    readonly sortedSrcFiles: {fullname: string, shortname: string}[]; 
+
+    constructor(assembly: Assembly, srcFileNames: {fullname: string, shortname: string}[]) {
         this.m_tokens = [];
         this.m_cpos = 0;
         this.m_epos = 0;
@@ -687,6 +684,8 @@ class Parser {
         this.m_penv = new ParserEnvironment(assembly);
         this.m_errors = [];
         this.m_recoverStack = [];
+
+        this.sortedSrcFiles = srcFileNames.sort((a, b) => a.fullname.localeCompare(b.fullname));
     }
 
     private initialize(toks: Token[]) {
@@ -697,6 +696,13 @@ class Parser {
 
     ////
     //Helpers
+
+    private generateBodyID(sinfo: SourceInfo, srcFile: string, etag?: string): string {
+        //Keep consistent with version in type checker!!!
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === srcFile);
+
+        return `${this.sortedSrcFiles[sfpos].shortname}#k${sfpos}${etag !== undefined ? ("_" + etag) : ""}::${sinfo.line}@${sinfo.pos}`;
+    }
 
     private static attributeSetContains(attr: string, attribs: string[]): boolean {
         return attribs.indexOf(attr) !== -1;
@@ -796,24 +802,6 @@ class Parser {
         }
 
         return true;
-    }
-
-    private testElvisFollows(ftoken: string): boolean {
-        if(this.testFollows("?", ftoken)) {
-            return true;
-        }
-
-        if(!this.testFollows("?", "(")) {
-            return false;
-        }
-        else {
-            const eepos = this.scanMatchingParens("(", ")", 1);
-            if(eepos === this.m_epos) {
-                return false;
-            }
-
-            return this.m_tokens[eepos].kind === ftoken;
-        }
     }
 
     private consumeToken() {
@@ -922,8 +910,8 @@ class Parser {
     }
 
     parseBuildInfo(cb: BuildLevel): BuildLevel {
-        if(this.testToken("debug") || this.testToken("test") || this.testToken("release")) {
-            return this.consumeTokenAndGetValue() as "debug" | "test" | "release";
+        if(this.testToken("spec") || this.testToken("debug") || this.testToken("test") || this.testToken("release")) {
+            return this.consumeTokenAndGetValue() as "spec" | "debug" | "test" | "release";
         }
         else {
             return cb;
@@ -937,6 +925,8 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const srcFile = this.m_penv.getCurrentFile();
         const line = this.getCurrentLine();
+
+        const bodyid = this.generateBodyID(sinfo, srcFile);
 
         let fparams: FunctionParameter[] = [];
         if (ikind === InvokableKind.Member) {
@@ -961,7 +951,7 @@ class Parser {
             let argtype = this.m_penv.SpecialAutoSignature;
 
             if (this.testAndConsumeTokenIf(":")) {
-                argtype = this.parseTypeSignature(ikind === InvokableKind.StaticOperator || ikind === InvokableKind.DynamicOperator);
+                argtype = this.parseTypeSignature();
             }
             else {
                 if (ikind !== InvokableKind.PCodeFn && ikind !== InvokableKind.PCodePred) {
@@ -981,10 +971,10 @@ class Parser {
             let litexp: LiteralExpressionValue | undefined = undefined;
             if(this.testAndConsumeTokenIf("==")) {
                 if(ikind !== InvokableKind.DynamicOperator) {
-                    this.raiseError(line, "Literal parameters are only allowed on dynamic operator definitions");
+                    this.raiseError(line, "Literal match parameters are only allowed on dynamic operator definitions");
                 }
 
-                litexp = this.parseConstExpression(false);
+                litexp = this.parseLiteralExpression();
             }
 
             if(ikind === InvokableKind.DynamicOperator || ikind === InvokableKind.StaticOperator) {
@@ -1047,7 +1037,6 @@ class Parser {
                 [preconds, postconds] = this.parsePreAndPostConditions(sinfo, argNames, resultInfo);
             }
 
-            const bodyid = `${srcFile}::${sinfo.pos}`;
             try {
                 this.m_penv.pushFunctionScope(new FunctionScope(argNames, resultInfo, ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred));
                 body = this.parseBody(bodyid, srcFile);
@@ -1062,35 +1051,16 @@ class Parser {
 
         if (ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred) {
             const bbody = body as {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]};
-            return InvokeDecl.createPCodeInvokeDecl(sinfo, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, bbody.impl, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
+            return InvokeDecl.createPCodeInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, bbody.impl, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
         }
         else {
             if(body !== undefined) {
-                return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body.impl, body.optscalarslots, body.optmixedslots);
+                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body.impl, body.optscalarslots, body.optmixedslots);
             }
             else {
-                return InvokeDecl.createStandardInvokeDecl(sinfo, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, undefined, [], []);
+                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, undefined, [], []);
             }
         }
-    }
-
-    parseElvisCheck(sinfo: SourceInfo): Expression | undefined {
-        let customCheck: Expression | undefined = undefined;
-        if (this.testToken("(")) {
-            this.consumeToken();
-            try {
-                this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                this.m_penv.getCurrentFunctionScope().defineLocalVar("$chkval", `$chkval_#${sinfo.pos}`, true);
-
-                customCheck = this.parseExpression();
-            }
-            finally {
-                this.m_penv.getCurrentFunctionScope().popLocalScope();
-            }
-            this.ensureAndConsumeToken(")");
-        }
-
-        return customCheck;
     }
 
     ////
@@ -1099,7 +1069,7 @@ class Parser {
     private parseResultType(parensreq: boolean): TypeSignature {
         if (this.testAndConsumeTokenIf("(|")) {
             const decls = this.parseEphemeralListOf(() => {
-                const tdecl = this.parseTypeSignature(false);
+                const tdecl = this.parseTypeSignature();
                 return tdecl;
             });
 
@@ -1108,11 +1078,11 @@ class Parser {
         }
         else {
             if(parensreq) {
-                return this.parseTypeSignature(false);
+                return this.parseTypeSignature();
             }
             else {
                 const decls = this.parseEphemeralListOf(() => {
-                    const tdecl = this.parseTypeSignature(false);
+                    const tdecl = this.parseTypeSignature();
                     return tdecl;
                 });
     
@@ -1121,28 +1091,24 @@ class Parser {
         }
     } 
 
-    private parseTypeSignature(literalTypeOk: boolean): TypeSignature {
-        return this.parseOrCombinatorType(literalTypeOk);
+    private parseTypeSignature(): TypeSignature {
+        return this.parseOrCombinatorType();
     }
 
-    private parseOrCombinatorType(literalTypeOk: boolean): TypeSignature {
-        const ltype = this.parsePostfixTypeReference(literalTypeOk);
+    private parseOrCombinatorType(): TypeSignature {
+        const ltype = this.parsePostfixTypeReference();
         if (!this.testToken("|")) {
             return ltype;
         }
         else {
             this.consumeToken();
-            return Parser.orOfTypeSignatures(ltype, this.parseOrCombinatorType(false));
+            return Parser.orOfTypeSignatures(ltype, this.parseOrCombinatorType());
         }
     }
 
-    private parsePostfixTypeReference(literalTypeOk: boolean): TypeSignature {
-        let roottype = this.parseCombineCombinatorType(literalTypeOk);
+    private parsePostfixTypeReference(): TypeSignature {
+        let roottype = this.parseCombineCombinatorType();
         while (this.testToken("?")) {
-            if(roottype instanceof LiteralTypeSignature) {
-                this.raiseError(this.getCurrentLine(), "Cannot have nonable literal type");
-            }
-
             roottype = this.parseNoneableType(roottype);
         }
         return roottype;
@@ -1153,25 +1119,25 @@ class Parser {
         return Parser.orOfTypeSignatures(basetype, this.m_penv.SpecialNoneSignature);
     }
 
-    private parseCombineCombinatorType(literalTypeOk: boolean): TypeSignature {
-        const ltype = this.parseProjectType(literalTypeOk);
+    private parseCombineCombinatorType(): TypeSignature {
+        const ltype = this.parseProjectType();
         if (!this.testToken("&") && !this.testToken("+")) {
             return ltype;
         }
         else {
             if(this.testToken("&")) {
                 this.consumeToken();
-                return this.andOfTypeSignatures(ltype, this.parseCombineCombinatorType(false));
+                return this.andOfTypeSignatures(ltype, this.parseCombineCombinatorType());
             }
             else {
                 this.consumeToken();
-                return this.plusOfTypeSignatures(ltype, this.parseCombineCombinatorType(false));
+                return this.plusOfTypeSignatures(ltype, this.parseCombineCombinatorType());
             }
         }
     }
 
-    private parseProjectType(literalTypeOk: boolean): TypeSignature {
-        const ltype = this.parseBaseTypeReference(literalTypeOk);
+    private parseProjectType(): TypeSignature {
+        const ltype = this.parseBaseTypeReference();
         if (!this.testToken("!")) {
             return ltype;
         }
@@ -1183,42 +1149,28 @@ class Parser {
         }
     }
 
-    private parseBaseTypeReference(literalTypeOk: boolean): TypeSignature {
+    private parseBaseTypeReference(): TypeSignature {
         switch (this.peekToken()) {
             case TokenStrings.Template:
                 return this.parseTemplateTypeReference();
             case TokenStrings.Namespace:
             case TokenStrings.Type:
                 return this.parseNominalType();
-            case "@":
-            case "#": { 
-                const isvalue = this.testToken("#");
-                this.consumeToken();
-                if(this.testToken("[")) {
-                    return this.parseTupleType(isvalue);
-                }
-                else {
-                    return this.parseRecordType(isvalue);
-                }
-            }
+            case "[":
+                return this.parseTupleType();
+            case "{":
+                return this.parseRecordType();
             case "fn":
             case "pred":
             case "recursive?":
             case "recursive":
                 return this.parsePCodeType();
-            case "(": {
+            default: {
                 this.ensureAndConsumeToken("(");
-                const ptype = this.parseTypeSignature(literalTypeOk);
+                const ptype = this.parseTypeSignature();
                 this.ensureAndConsumeToken(")");
 
                 return ptype;
-            }
-            default: {
-                if(!literalTypeOk) {
-                    this.raiseError(this.getCurrentLine(), "Unknown type option");
-                }
-
-                return this.parseLiteralType();
             }
         }
     }
@@ -1233,7 +1185,7 @@ class Parser {
             try {
                 this.setRecover(this.scanMatchingParens("<", ">"));
                 terms = this.parseListOf<TypeSignature>("<", ">", ",", () => {
-                    return this.parseTypeSignature(true);
+                    return this.parseTypeSignature();
                 })[0];
 
                 this.clearRecover();
@@ -1275,39 +1227,19 @@ class Parser {
         return new NominalTypeSignature(ns as string, tnames, terms);
     }
 
-    private parseLiteralType(): TypeSignature {
-        this.ensureAndConsumeToken("type");
-        this.ensureAndConsumeToken("(");
-        const vv = this.parseLiteralExpression();
-        this.ensureAndConsumeToken(")");
-
-        return new LiteralTypeSignature(vv);
-    }
-
-    private parseTupleType(isvalue: boolean): TypeSignature {
-        const line = this.getCurrentLine();
-        let entries: [TypeSignature, boolean][] = [];
+    private parseTupleType(): TypeSignature {
+        let entries: TypeSignature[] = [];
 
         try {
             this.setRecover(this.scanMatchingParens("[", "]"));
-            entries = this.parseListOf<[TypeSignature, boolean]>("[", "]", ",", () => {
-                const isopt = this.testAndConsumeTokenIf("?");
-                if (isopt) {
-                    this.ensureAndConsumeToken(":");
-                }
+            entries = this.parseListOf<TypeSignature>("[", "]", ",", () => {
+                const rtype = this.parseTypeSignature();
 
-                const rtype = this.parseTypeSignature(false);
-
-                return [rtype, isopt];
+                return rtype;
             })[0];
 
-            const firstOpt = entries.findIndex((entry) => entry[1]);
-            if (entries.slice(firstOpt).findIndex((entry) => !entry[0]) !== -1) {
-                this.raiseError(line, "Optional entries must all come at end of tuple");
-            }
-
             this.clearRecover();
-            return new TupleTypeSignature(isvalue, entries);
+            return new TupleTypeSignature(entries);
         }
         catch (ex) {
             this.processRecover();
@@ -1315,14 +1247,14 @@ class Parser {
         }
     }
 
-    private parseRecordType(isvalue: boolean): TypeSignature {
-        let entries: [string, TypeSignature, boolean][] = [];
+    private parseRecordType(): TypeSignature {
+        let entries: [string, TypeSignature][] = [];
 
         try {
             this.setRecover(this.scanMatchingParens("{", "}"));
 
             let pnames = new Set<string>();
-            entries = this.parseListOf<[string, TypeSignature, boolean]>("{", "}", ",", () => {
+            entries = this.parseListOf<[string, TypeSignature]>("{", "}", ",", () => {
                 this.ensureToken(TokenStrings.Identifier);
 
                 const name = this.consumeTokenAndGetValue();
@@ -1335,15 +1267,14 @@ class Parser {
                 }
                 pnames.add(name);
 
-                const isopt = this.testAndConsumeTokenIf("?");
                 this.ensureAndConsumeToken(":");
-                const rtype = this.parseTypeSignature(false);
+                const rtype = this.parseTypeSignature();
 
-                return [name, rtype, isopt];
+                return [name, rtype];
             })[0];
 
             this.clearRecover();
-            return new RecordTypeSignature(isvalue, entries);
+            return new RecordTypeSignature(entries);
         }
         catch (ex) {
             this.processRecover();
@@ -1383,7 +1314,7 @@ class Parser {
                 const isopt = this.testAndConsumeTokenIf("?");
                
                 this.ensureAndConsumeToken(":");
-                const argtype = this.parseTypeSignature(false);
+                const argtype = this.parseTypeSignature();
 
                 if (rref !== undefined && (isopt || isrest)) {
                     this.raiseError(this.getCurrentLine(), "Cannot use ref/borrow parameters here");
@@ -1524,7 +1455,7 @@ class Parser {
 
             this.ensureAndConsumeToken("<");
             while (!this.testAndConsumeTokenIf(">")) {
-                targs.push(this.parseTypeSignature(true));
+                targs.push(this.parseTypeSignature());
 
                 if (this.testAndConsumeTokenIf(",")) {
                     this.ensureNotToken(">");
@@ -1581,27 +1512,16 @@ class Parser {
     private parseConstructorPrimary(otype: TypeSignature): Expression {
         const sinfo = this.getCurrentSrcInfo();
 
-        if(!this.testToken("@") && !this.testToken("#")) {
-            this.raiseError(sinfo.line, "Expected either @ or #");
-        }
-
-        const isvalue = this.testToken("#");
-        this.consumeToken();
-
+        this.ensureAndConsumeToken("@");
         const args = this.parseArguments("{", "}");
 
-        return new ConstructorPrimaryExpression(sinfo, isvalue, otype, args);
+        return new ConstructorPrimaryExpression(sinfo, otype, args);
     }
 
     private parseConstructorPrimaryWithFactory(otype: TypeSignature): Expression {
         const sinfo = this.getCurrentSrcInfo();
 
-        if(!this.testToken("@") && !this.testToken("#")) {
-            this.raiseError(sinfo.line, "Expected either @ or #");
-        }
-
-        const isvalue = this.testToken("#");
-        this.consumeToken();
+        this.ensureAndConsumeToken("@");
         this.ensureToken(TokenStrings.Identifier);
 
         const fname = this.consumeTokenAndGetValue();
@@ -1609,54 +1529,28 @@ class Parser {
         const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
         const args = this.parseArguments("(", ")");
 
-        return new ConstructorPrimaryWithFactoryExpression(sinfo, isvalue, otype, fname, rec, targs, args);
-    }
-
-    private parsePCodeCombinator(): Expression {
-        const sinfo = this.getCurrentSrcInfo();
-
-        this.ensureAndConsumeToken("pred");
-        if(this.testAndConsumeTokenIf("!")) {
-            const cexp = this.parseOrExpression();
-            return new CombinatorPCodeExpression(sinfo, new PrefixNotOp(sinfo, cexp));
-        }
-        else {
-            const op = this.consumeTokenAndGetValue();
-            const cops = this.parseListOf("(", ")", ",", () => {
-                return this.parseOrExpression();
-            });
-
-            if(cops[0].length === 0) {
-                this.raiseError(sinfo.line, "Missing operators to combine");
-            }
-
-            if(cops[0].length === 1) {
-                return cops[0][0];
-            }
-            else {
-                const opc = cops[0].length;
-                let ble = new BinLogicExpression(sinfo, cops[0][opc - 1], op, cops[0][opc - 2]);
-
-                for(let i = opc - 3; i >= 0; --i) {
-                    ble = new BinLogicExpression(sinfo, cops[0][opc - i], op, ble);
-                }
-
-                return new CombinatorPCodeExpression(sinfo, ble);
-            }
-
-        }
+        return new ConstructorPrimaryWithFactoryExpression(sinfo, otype, fname, rec, targs, args);
     }
 
     private parsePCodeTerm(): Expression {
         const line = this.getCurrentLine();
         const sinfo = this.getCurrentSrcInfo();
 
-        const isrecursive = this.testAndConsumeTokenIf("recursive");
+        let isrecursive: "yes" | "no" | "cond" = "no";
+        if(this.testAndConsumeTokenIf("recursive")) {
+            isrecursive = "yes";
+        }
+        else if(this.testAndConsumeTokenIf("recursive?")) {
+            isrecursive = "cond";
+        }
+        else {
+            isrecursive = "no";
+        }
 
         const ispred = this.testToken("pred");
         this.consumeToken();
 
-        const sig = this.parseInvokableCommon(ispred ? InvokableKind.PCodePred : InvokableKind.PCodeFn, false, [], isrecursive ? "yes" : "no", [], undefined);
+        const sig = this.parseInvokableCommon(ispred ? InvokableKind.PCodePred : InvokableKind.PCodeFn, false, [], isrecursive, [], undefined);
         const someAuto = sig.params.some((param) => param.type instanceof AutoTypeSignature) || (sig.optRestType !== undefined && sig.optRestType instanceof AutoTypeSignature) || (sig.resultType instanceof AutoTypeSignature);
         const allAuto = sig.params.every((param) => param.type instanceof AutoTypeSignature) && (sig.optRestType === undefined || sig.optRestType instanceof AutoTypeSignature) && (sig.resultType instanceof AutoTypeSignature);
         if (someAuto && !allAuto) {
@@ -1671,11 +1565,7 @@ class Parser {
     }
 
     private parseFollowTypeTag(): TypeSignature {
-        const name = this.consumeTokenAndGetValue();
-        if(name !== "_") {
-            this.raiseError(this.getCurrentLine(), "Expected type value specifier");
-        }
-        this.consumeToken();
+        this.ensureAndConsumeToken("#");
 
         if (this.testToken(TokenStrings.Template)) {
             return this.parseTemplateTypeReference();
@@ -1695,58 +1585,18 @@ class Parser {
                 this.raiseError(line, "Could not resolve namespace");
             }
 
-            let tnames: string[] = [tname];
-            let terms: TypeSignature[] = [];
-
-            //
-            //TODO: follow types -- used for stringof, datastring, and unit types cannot be template types
-            //      maybe this is ok but we might want to allow it (at least for stringof/datastring)
-            //
-
-            return new NominalTypeSignature(ns as string, tnames, terms);
+            return new NominalTypeSignature(ns as string, [tname], []);
         }
     }
 
-    private parseFollowTypeConstructor(): ["@" | "#" | undefined, TypeSignature] {
-        let constype: "@" | "#" | undefined = undefined;
-        if (this.testToken("@") || this.testToken("#")) {
-            constype = this.consumeTokenAndGetValue() as "@" | "#";
-        }
-
-        if(constype === undefined) {
-            if(this.peekTokenData() !== "_") {
-                this.raiseError(this.getCurrentLine(), "Expected typed StringOf validator or DataString constructor");
-            }
-            this.consumeToken();
-        }
-
+    private parseFollowTypeConstructor(): TypeSignature {
         if (this.testToken(TokenStrings.Template)) {
-            return [constype, this.parseTemplateTypeReference()];
+            return this.parseTemplateTypeReference();
         }
         else {
-            const line = this.getCurrentLine();
+            const ostype = this.parseNominalType();
 
-            let ns: string | undefined = undefined;
-            if (this.testToken(TokenStrings.Namespace)) {
-                ns = this.consumeTokenAndGetValue();
-                this.ensureAndConsumeToken("::");
-            }
-
-            const tname = this.consumeTokenAndGetValue();
-            ns = this.m_penv.tryResolveNamespace(ns, tname);
-            if (ns === undefined) {
-                this.raiseError(line, "Could not resolve namespace");
-            }
-
-            let tnames: string[] = [tname];
-            let terms: TypeSignature[] = [];
-
-            //
-            //TODO: follow types -- used for stringof, datastring, and unit types cannot be template types
-            //      maybe this is ok but we might want to allow it (at least for stringof/datastring)
-            //
-
-            return [constype, new NominalTypeSignature(ns as string, tnames, terms)];
+            return ostype;
         }
     }
 
@@ -1797,147 +1647,34 @@ class Parser {
         }
     }
 
-    private parseLiteralExpressionPrimary(): Expression {
-        const line = this.getCurrentLine();
-        const sinfo = this.getCurrentSrcInfo();
-
-        const tk = this.peekToken();
-        if (tk === "true" || tk === "false") {
-            this.consumeToken();
-            return new LiteralBoolExpression(sinfo, tk === "true");
-        }
-        else if(tk === TokenStrings.Numberino) {
-            const niostr = this.consumeTokenAndGetValue();
-            return new LiteralNumberinoExpression(sinfo, niostr);
-        }
-        else if (tk === TokenStrings.Int) {
-            const istr = this.consumeTokenAndGetValue();
-            return new LiteralIntegralExpression(sinfo, istr, this.m_penv.SpecialIntSignature);
-        }
-        else if (tk === TokenStrings.Nat) {
-            const istr = this.consumeTokenAndGetValue();
-            return new LiteralIntegralExpression(sinfo, istr.slice(0, istr.length - 1), this.m_penv.SpecialNatSignature);
-        }
-        else if (tk === "(") {
-            try {
-                this.setRecover(this.scanMatchingParens("(", ")"));
-
-                this.consumeToken();
-                const lexp = this.parseLiteralExpression();
-                this.ensureAndConsumeToken(")");
-
-                this.clearRecover();
-                return lexp.exp;
-            }
-            catch (ex) {
-                this.processRecover();
-                return new InvalidExpression(sinfo);
-            }
-        }
-        else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Identifier)) {
-            //it is a namespace access of some type
-            const ns = this.consumeTokenAndGetValue();
-            this.consumeToken();
-            const name = this.consumeTokenAndGetValue();
-
-            if (this.testToken("<") || this.testToken("[") || this.testToken("(")) {
-                this.raiseError(line, "Expected an namespace constant");
-            }
-            
-            return new AccessNamespaceConstantExpression(sinfo, ns, name);
-        }
-        else {
-            const ttype = this.parseTypeSignature(false);
-            if (this.testFollows("::", TokenStrings.Identifier)) {
-                this.consumeToken();
-                const name = this.consumeTokenAndGetValue();
-                
-                if (this.testToken("<") || this.testToken("[") || this.testToken("(")) {
-                    this.raiseError(line, "Expected an namespace constant");
-                }
-
-                return new AccessStaticFieldExpression(sinfo, ttype, name);
-            }
-            else {
-                this.raiseError(line, "Unknown token sequence in parsing expression");
-                return new InvalidExpression(sinfo);
-            }
-        }
-    }
-
-    private parseLiteralExpressionPrefix(): Expression {
-        const sinfo = this.getCurrentSrcInfo();
-
-        if (this.testAndConsumeTokenIf("!")) {
-            const ee = this.parseLiteralExpressionPrefix();
-            const [done, exp] = this.processPrefixOnLiteralExpressionsIfNeeded(ee, "!");
-            if(!done) {
-                return exp;
-            }
-            else {
-                return new PrefixNotOp(sinfo, exp);
-            }
-        }
-        else if(this.testToken("+") || this.testToken("-")) {
-            const op = this.consumeTokenAndGetValue();
-            const ee = this.parseLiteralExpressionPrefix();
-            const [done, exp] = this.processPrefixOnLiteralExpressionsIfNeeded(ee, op as "+" | "-");
-            
-            if (done) {
-                return exp;
-            }
-            else {
-                const ons = this.m_penv.tryResolveAsPrefixUnaryOperator(op, 1);
-                if (ons === undefined) {
-                    this.raiseError(sinfo.line, "Could not resolve operator");
-                }
-
-                const arg = new PositionalArgument(undefined, false, exp);
-                return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([arg]), "prefix");
-            }
-        }
-        else {
-            return this.parseLiteralExpressionPrimary();
-        }
-    }
-
-    private parseLiteralTypedExpression(): Expression {
-        const sinfo = this.getCurrentSrcInfo();
-
-        const exp = this.parseLiteralExpressionPrefix();
-        if (this.peekTokenData() === "_") {
-            const ttype = this.parseFollowTypeTag();
-
-            if (exp instanceof LiteralIntegralExpression) {
-                return new LiteralTypedNumericConstructorExpression(sinfo, exp.value, exp.itype, ttype);
-            }
-            else if (exp instanceof LiteralFloatPointExpression) {
-                return new LiteralTypedNumericConstructorExpression(sinfo, exp.value, exp.fptype, ttype);
-            }
-            else {
-                if (!(exp instanceof LiteralRationalExpression)) {
-                    this.raiseError(sinfo.line, "Expected literal value -- int, float, or rational");
-                }
-
-                const rexp = exp as LiteralRationalExpression;
-                return new LiteralTypedNumericConstructorExpression(sinfo, rexp.value, rexp.rtype, ttype);
-            }
-        }
-        else {
-            return exp;
-        }
-    }
-
     private parseLiteralExpression(): LiteralExpressionValue {
-        return new LiteralExpressionValue(this.parseLiteralTypedExpression());
-    }
-
-    private parseConstExpression(capturesok: boolean, disallowMapEntry?: boolean): ConstantExpressionValue {
         const sinfo = this.getCurrentSrcInfo();
 
         try {
             this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), this.m_penv.SpecialAutoSignature, true));
-            const exp = this.parseSelectExpression(disallowMapEntry);
+            const exp = this.parseOfExpression();
+            const captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
+
+            if(captured.size !== 0) {
+                this.raiseError(sinfo.line, "Cannot reference local variables in constant expression");
+            }
+
+            this.m_penv.popFunctionScope();
+
+            return new LiteralExpressionValue(exp);
+        }
+        catch (ex) {
+            this.m_penv.popFunctionScope();
+            throw ex;
+        }
+    }
+
+    private parseConstExpression(capturesok: boolean): ConstantExpressionValue {
+        const sinfo = this.getCurrentSrcInfo();
+
+        try {
+            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), this.m_penv.SpecialAutoSignature, true));
+            const exp = this.parseOfExpression();
             const captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
 
             if(!capturesok && captured.size !== 0) {
@@ -1970,16 +1707,13 @@ class Parser {
             this.consumeToken();
             return new LiteralNoneExpression(sinfo);
         }
+        else if (tk === "nothing") {
+            this.consumeToken();
+            return new LiteralNothingExpression(sinfo);
+        }
         else if (tk === "true" || tk === "false") {
             this.consumeToken();
             return new LiteralBoolExpression(sinfo, tk === "true");
-        }
-        else if (tk === "literal") {
-            this.consumeToken();
-            this.ensureAndConsumeToken("(")
-            const ttype = this.parseTemplateTypeReference() as TemplateTypeSignature;
-            this.ensureAndConsumeToken(")");
-            return new LiteralParamerterValueExpression(sinfo, ttype);
         }
         else if(tk === TokenStrings.Numberino) {
             const niostr = this.consumeTokenAndGetValue();
@@ -2019,7 +1753,7 @@ class Parser {
         }
         else if (tk === TokenStrings.Regex) {
             const restr = this.consumeTokenAndGetValue(); //keep in escaped format
-            const re = BSQRegex.parse(restr);
+            const re = BSQRegex.parse(this.m_penv.getCurrentNamespace(), restr);
             if(typeof(re) === "string") {
                 this.raiseError(line, re);
             }
@@ -2027,13 +1761,13 @@ class Parser {
             this.m_penv.assembly.addLiteralRegex(re as BSQRegex);
             return new LiteralRegexExpression(sinfo, re as BSQRegex);
         }
-        else if (tk === "ok" || tk === "err") {
+        else if (tk === "ok" || tk === "err" || tk === "something") {
             this.consumeToken();
             this.ensureAndConsumeToken("(");
             const arg = this.parseExpression();
             this.ensureAndConsumeToken(")");
 
-            return new SpecialConstructorExpression(sinfo, this.m_penv.getCurrentFunctionScope().getReturnType(), tk, arg);
+            return new SpecialConstructorExpression(sinfo, tk, arg);
         }
         else if (tk === TokenStrings.Identifier) {
             let namestr = this.consumeTokenAndGetValue();
@@ -2046,10 +1780,12 @@ class Parser {
                 if (this.testToken("[")) {
                     const rec = this.parseRecursiveAnnotation();
                     const args = this.parseArguments("(", ")");
+
                     return new PCodeInvokeExpression(sinfo, istr, rec, args);
                 }
                 else if (this.testToken("(")) {
                     const args = this.parseArguments("(", ")");
+
                     return new PCodeInvokeExpression(sinfo, istr, "no", args);
                 }
                 else {
@@ -2080,10 +1816,7 @@ class Parser {
 
             return new CallNamespaceFunctionOrOperatorExpression(sinfo, ns as string, istr, new TemplateArguments([]), rec, args, "std");
         }
-        else if (tk === "pred" && (this.testFollows("pred", "!") || this.testFollows("pred", "&") || this.testFollows("pred", "|") || this.testFollows("pred", "&&") || this.testFollows("pred", "||"))) {
-            return this.parsePCodeCombinator();
-        }
-        else if (tk === "fn" || this.testFollows("recursive", "fn") || tk === "pred" || this.testFollows("recursive", "pred")) {
+        else if (tk === "fn" || this.testFollows("recursive", "fn") || this.testFollows("recursive?", "fn") || tk === "pred" || this.testFollows("recursive", "pred") || this.testFollows("recursive?", "pred")) {
             return this.parsePCodeTerm();
         }
         else if (tk === "(" && !this.checkTypeBasedExpressionFollowsParens()) {
@@ -2102,18 +1835,13 @@ class Parser {
                 return new InvalidExpression(sinfo);
             }
         }
-        else if (this.testToken("#") || this.testToken("@")) {
-            const isvalue = this.testToken("#");
-            this.consumeToken();
-
-            if (this.testToken("[")) {
-                const args = this.parseArguments("[", "]");
-                return new ConstructorTupleExpression(sinfo, isvalue, args);
-            }
-            else {
-                const args = this.parseArguments("{", "}");
-                return new ConstructorRecordExpression(sinfo, isvalue, args);
-            }
+        else if (this.testToken("[")) {
+            const args = this.parseArguments("[", "]");
+            return new ConstructorTupleExpression(sinfo, args);
+        }
+        else if  (this.testToken("{")) {
+            const args = this.parseArguments("{", "}");
+            return new ConstructorRecordExpression(sinfo, args);
         }
         else if (this.testToken("(|")) {
             const args = this.parseArguments("(|", "|)");
@@ -2149,7 +1877,7 @@ class Parser {
             return new CallNamespaceFunctionOrOperatorExpression(sinfo, ns, name, new TemplateArguments([]), rec, args, "std");
         }
         else {
-            const ttype = this.parseTypeSignature(false);
+            const ttype = this.parseTypeSignature();
             if (this.testFollows("::", TokenStrings.Identifier)) {
                 this.consumeToken();
                 const name = this.consumeTokenAndGetValue();
@@ -2165,10 +1893,10 @@ class Parser {
                     return new CallStaticFunctionOrOperatorExpression(sinfo, ttype, name, targs, rec, args, "std");
                 }
             }
-            else if (this.testFollows("@", TokenStrings.Identifier) || this.testFollows("#", TokenStrings.Identifier)) {
+            else if (this.testFollows("@", TokenStrings.Identifier)) {
                 return this.parseConstructorPrimaryWithFactory(ttype);
             }
-            else if (this.testFollows("@", "{") || this.testFollows("#", "{")) {
+            else if (this.testFollows("@", "{")) {
                 return this.parseConstructorPrimary(ttype);
             }
             else {
@@ -2183,13 +1911,16 @@ class Parser {
 
         if (this.testToken(TokenStrings.TypedString)) {
             const tstring = this.consumeTokenAndGetValue();
-            const [cinfo, ttype] = this.parseFollowTypeConstructor();
 
-            if (cinfo === undefined) {
+            if (this.testAndConsumeTokenIf("#")) {
+                const ttype = this.parseFollowTypeConstructor();
                 return [new LiteralTypedStringExpression(sinfo, tstring, ttype), ops];
             }
             else {
-                return [new LiteralTypedStringConstructorExpression(sinfo, cinfo === "#", tstring, ttype), ops];
+                this.ensureAndConsumeToken("(");
+                const ttype = this.parseFollowTypeConstructor();
+                this.ensureAndConsumeToken(")");
+                return [new LiteralTypedStringConstructorExpression(sinfo, tstring, ttype), ops];
             }
         }
         else {
@@ -2209,22 +1940,25 @@ class Parser {
             }
             
             const rops = ops.slice(cpos);
-            if (this.peekTokenData() === "_") {
+            if (this.peekTokenData() === "#") {
                 const ttype = this.parseFollowTypeTag();
 
                 if(exp instanceof LiteralIntegralExpression) {
-                    return [new LiteralTypedNumericConstructorExpression(sinfo, exp.value, exp.itype, ttype), rops];
+                    return [new LiteralTypedPrimitiveConstructorExpression(sinfo, exp.value, exp.itype, ttype), rops];
                 }
                 else if(exp instanceof LiteralFloatPointExpression) {
-                    return [new LiteralTypedNumericConstructorExpression(sinfo, exp.value, exp.fptype, ttype), rops];
+                    return [new LiteralTypedPrimitiveConstructorExpression(sinfo, exp.value, exp.fptype, ttype), rops];
+                }
+                else if(exp instanceof LiteralRationalExpression) {
+                    return [new LiteralTypedPrimitiveConstructorExpression(sinfo, exp.value, exp.rtype, ttype), rops];
                 }
                 else {
-                    if(!(exp instanceof LiteralRationalExpression)) {
-                        this.raiseError(sinfo.line, "Expected literal value -- int, float, or rational");
+                    if(!(exp instanceof LiteralNumberinoExpression)) {
+                        this.raiseError(sinfo.line, "Expected literal value -- int, float, rational, or numberino");
                     }
 
-                    const rexp = exp as LiteralRationalExpression;
-                    return [new LiteralTypedNumericConstructorExpression(sinfo, rexp.value, rexp.rtype, ttype), rops];
+                    const rexp = exp as LiteralNumberinoExpression;
+                    return [new LiteralTypedPrimitiveConstructorExpression(sinfo, rexp.value, undefined, ttype), rops];
                 }
             }
             else {
@@ -2252,7 +1986,7 @@ class Parser {
         }
     }
 
-    private handleSpecialCaseMethods(sinfo: SourceInfo, isElvis: boolean, customCheck: Expression | undefined, specificResolve: TypeSignature | undefined, name: string): PostfixOperation {
+    private handleSpecialCaseMethods(sinfo: SourceInfo, specificResolve: TypeSignature | undefined, name: string): PostfixOperation {
         if (specificResolve !== undefined) {
             this.raiseError(this.getCurrentLine(), "Cannot use specific resolve on special methods");
         }
@@ -2260,33 +1994,33 @@ class Parser {
         const line = sinfo.line;
         if (name === "is") {
             this.ensureAndConsumeToken("<");
-            const istype = this.parseTypeSignature(true);
+            const istype = this.parseTypeSignature();
             this.ensureAndConsumeToken(">");
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
 
-            return new PostfixIs(sinfo, isElvis, customCheck, istype);
+            return new PostfixIs(sinfo, istype);
         }
         else if (name === "isSome") {
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
 
-            return new PostfixIs(sinfo, isElvis, customCheck, this.m_penv.SpecialSomeSignature);
+            return new PostfixIs(sinfo, this.m_penv.SpecialSomeSignature);
         }
         else if (name === "isNone") {
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
 
-            return new PostfixIs(sinfo, isElvis, customCheck, this.m_penv.SpecialNoneSignature);
+            return new PostfixIs(sinfo, this.m_penv.SpecialNoneSignature);
         }
         else if (name === "as") {
             this.ensureAndConsumeToken("<");
-            const astype = this.parseTypeSignature(true);
+            const astype = this.parseTypeSignature();
             this.ensureAndConsumeToken(">");
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
 
-            return new PostfixAs(sinfo, isElvis, customCheck, astype);
+            return new PostfixAs(sinfo, astype);
         }
         else if (name === "hasIndex") {
             this.ensureAndConsumeToken("<");
@@ -2294,7 +2028,7 @@ class Parser {
             this.ensureAndConsumeToken(">");
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
-            return new PostfixHasIndex(sinfo, isElvis, customCheck, idx);
+            return new PostfixHasIndex(sinfo, idx);
         }
         else if (name === "hasProperty") {
             this.ensureAndConsumeToken("<");
@@ -2303,7 +2037,7 @@ class Parser {
             this.ensureAndConsumeToken(">");
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
-            return new PostfixHasProperty(sinfo, isElvis, customCheck, pname);
+            return new PostfixHasProperty(sinfo, pname);
         }
         else if (name === "getIndexOrNone") {
             this.ensureAndConsumeToken("<");
@@ -2311,7 +2045,15 @@ class Parser {
             this.ensureAndConsumeToken(">");
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
-            return new PostfixGetIndexOrNone(sinfo, isElvis, customCheck, idx);
+            return new PostfixGetIndexOrNone(sinfo, idx);
+        }
+        else if (name === "getIndexOption") {
+            this.ensureAndConsumeToken("<");
+            const idx = this.parseTupleIndex();
+            this.ensureAndConsumeToken(">");
+            this.ensureAndConsumeToken("(");
+            this.ensureAndConsumeToken(")");
+            return new PostfixGetIndexOption(sinfo, idx);
         }
         else if (name === "getIndexTry") {
             this.ensureAndConsumeToken("<");
@@ -2322,7 +2064,7 @@ class Parser {
             this.ensureToken(TokenStrings.Identifier);
             const exp = this.consumeTokenAndGetValue();
             this.ensureAndConsumeToken(")");
-            return new PostfixGetIndexTry(sinfo, isElvis, customCheck, idx, exp);
+            return new PostfixGetIndexTry(sinfo, idx, exp);
         }
         else if (name === "getPropertyOrNone") {
             this.ensureAndConsumeToken("<");
@@ -2331,7 +2073,16 @@ class Parser {
             this.ensureAndConsumeToken(">");
             this.ensureAndConsumeToken("(");
             this.ensureAndConsumeToken(")");
-            return new PostfixGetPropertyOrNone(sinfo, isElvis, customCheck, pname);
+            return new PostfixGetPropertyOrNone(sinfo, pname);
+        }
+        else if (name === "getPropertyOption") {
+            this.ensureAndConsumeToken("<");
+            this.ensureToken(TokenStrings.Identifier);
+            const pname = this.consumeTokenAndGetValue(); 
+            this.ensureAndConsumeToken(">");
+            this.ensureAndConsumeToken("(");
+            this.ensureAndConsumeToken(")");
+            return new PostfixGetPropertyOption(sinfo, pname);
         }
         else if (name === "getPropertyTry") {
             this.ensureAndConsumeToken("<");
@@ -2343,7 +2094,7 @@ class Parser {
             this.ensureToken(TokenStrings.Identifier);
             const exp = this.consumeTokenAndGetValue();
             this.ensureAndConsumeToken(")");
-            return new PostfixGetPropertyTry(sinfo, isElvis, customCheck, pname, exp);
+            return new PostfixGetPropertyTry(sinfo, pname, exp);
         }
         else {
             this.raiseError(line, "unknown special operation");
@@ -2359,10 +2110,7 @@ class Parser {
         while (true) {
             const sinfo = this.getCurrentSrcInfo();
 
-            if (this.testFollows(".") || this.testElvisFollows(".") || this.testFollows(".$") || this.testElvisFollows(".$")) {
-                const isElvis = this.testAndConsumeTokenIf("?");
-                const customCheck = isElvis ? this.parseElvisCheck(sinfo) : undefined;
-
+            if (this.testToken(".") || this.testToken(".$")) {
                 const isBinder = this.testToken(".$");
                 this.consumeToken();
 
@@ -2372,10 +2120,9 @@ class Parser {
                     }
 
                     const index = this.parseTupleIndex();
-                    ops.push(new PostfixAccessFromIndex(sinfo, isElvis, customCheck, index));
+                    ops.push(new PostfixAccessFromIndex(sinfo, index));
                 }
-                else if (this.testFollows("#", "[") || this.testFollows("@", "[")) {
-                    const isvalue = this.testToken("#");
+                else if (this.testToken("[")) {
                     this.consumeToken();
 
                     if (this.testFollows("[", TokenStrings.Numberino, "=") ||this.testFollows("[", TokenStrings.Int, "=") || this.testFollows("[", TokenStrings.Nat, "=")) {
@@ -2399,7 +2146,7 @@ class Parser {
                             }
                         })[0].sort((a, b) => a.index - b.index);
 
-                        ops.push(new PostfixModifyWithIndecies(sinfo, isElvis, customCheck, isBinder, updates));
+                        ops.push(new PostfixModifyWithIndecies(sinfo, isBinder, updates));
                     }
                     else {
                         if (isBinder) {
@@ -2413,7 +2160,7 @@ class Parser {
                                 return { index: idx, reqtype: undefined };
                             }
                             else {
-                                return { index: idx, reqtype: this.parseTypeSignature(false) };
+                                return { index: idx, reqtype: this.parseTypeSignature() };
                             }
                         })[0];
 
@@ -2421,11 +2168,10 @@ class Parser {
                             this.raiseError(sinfo.line, "You must have at least one index when projecting");
                         }
 
-                        ops.push(new PostfixProjectFromIndecies(sinfo, isElvis, undefined, isvalue, false, indecies));
+                        ops.push(new PostfixProjectFromIndecies(sinfo, false, indecies));
                     }
                 }
-                else if (this.testFollows("#", "{") || this.testFollows("@", "{")) {
-                    const isvalue = this.testToken("#");
+                else if (this.testToken("{")) {
                     this.consumeToken();
 
                     if (this.testFollows("{", TokenStrings.Identifier, "=")) {
@@ -2452,7 +2198,7 @@ class Parser {
                             }
                         })[0].sort((a, b) => a.name.localeCompare(b.name));
 
-                        ops.push(new PostfixModifyWithNames(sinfo, isElvis, customCheck, isBinder, updates));
+                        ops.push(new PostfixModifyWithNames(sinfo, isBinder, updates));
                     }
                     else {
                         if (isBinder) {
@@ -2467,7 +2213,7 @@ class Parser {
                                 return { name: nn, reqtype: undefined };
                             }
                             else {
-                                return { name: nn, reqtype: this.parseTypeSignature(false) };
+                                return { name: nn, reqtype: this.parseTypeSignature() };
                             }
                         })[0];
 
@@ -2475,7 +2221,7 @@ class Parser {
                             this.raiseError(sinfo.line, "You must have at least one name when projecting");
                         }
 
-                        ops.push(new PostfixProjectFromNames(sinfo, isElvis, customCheck, isvalue, false, names));
+                        ops.push(new PostfixProjectFromNames(sinfo, false, names));
                     }
                 }
                 else if(this.testToken("(|")) {
@@ -2491,7 +2237,7 @@ class Parser {
                                 return { index: idx, reqtype: undefined};
                             }
                             else {
-                                return { index: idx, reqtype: this.parseTypeSignature(false) };
+                                return { index: idx, reqtype: this.parseTypeSignature() };
                             }
                         })[0];
 
@@ -2499,7 +2245,7 @@ class Parser {
                             this.raiseError(sinfo.line, "You must have at least two indecies when projecting out a Ephemeral value pack (otherwise just access the index directly)");
                         }
 
-                        ops.push(new PostfixProjectFromIndecies(sinfo, isElvis, customCheck, false, true, indecies));
+                        ops.push(new PostfixProjectFromIndecies(sinfo, true, indecies));
                     }
                     else {
                         const names = this.parseListOf<{ name: string, isopt: boolean, reqtype: TypeSignature | undefined }>("(|", "|)", ",", () => {
@@ -2513,7 +2259,7 @@ class Parser {
                                 return { name: nn, isopt: false, reqtype: undefined };
                             }
                             else {
-                                return { name: nn, isopt: false, reqtype: this.parseTypeSignature(false) };
+                                return { name: nn, isopt: false, reqtype: this.parseTypeSignature() };
                             }
                         })[0];
 
@@ -2521,23 +2267,23 @@ class Parser {
                             this.raiseError(sinfo.line, "You must have at least two names when projecting out a Ephemeral value pack (otherwise just access the property/field directly)");
                         }
 
-                        ops.push(new PostfixProjectFromNames(sinfo, isElvis, customCheck, false, true, names));
+                        ops.push(new PostfixProjectFromNames(sinfo, true, names));
                     }
                 }
                 else {
                     let specificResolve: TypeSignature | undefined = undefined;
                     if (this.testToken(TokenStrings.Namespace) || this.testToken(TokenStrings.Type) || this.testToken(TokenStrings.Template)) {
-                        specificResolve = this.parseTypeSignature(false);
+                        specificResolve = this.parseTypeSignature();
                         this.ensureAndConsumeToken("::");
                     }
 
                     this.ensureToken(TokenStrings.Identifier);
                     const name = this.consumeTokenAndGetValue();
 
-                    if (name === "as" || name === "is" || name === "isSome" || name === "isNone" 
-                        || name === "hasIndex" || name === "getIndexOrNone" || name === "getIndexTry" 
-                        || name === "hasProperty" || name === "getPropertyOrNone" || name === "getPropertyTry") {
-                        ops.push(this.handleSpecialCaseMethods(sinfo, isElvis, customCheck, specificResolve, name));
+                    if (name === "as" || name === "is" || name === "isSome" || name === "isNone"
+                        || name === "hasIndex" || name === "getIndexOrNone" || name === "getIndexOption" || name === "getIndexTry" 
+                        || name === "hasProperty" || name === "getPropertyOrNone" || name === "getPropertyOption" || name === "getPropertyTry") {
+                        ops.push(this.handleSpecialCaseMethods(sinfo, specificResolve, name));
                     }
                     else if (!(this.testToken("<") || this.testToken("[") || this.testToken("("))) {
                         if (isBinder) {
@@ -2548,7 +2294,7 @@ class Parser {
                             this.raiseError(this.getCurrentLine(), "Encountered named access but given type resolver (only valid on method calls)");
                         }
 
-                        ops.push(new PostfixAccessFromName(sinfo, isElvis, customCheck, name));
+                        ops.push(new PostfixAccessFromName(sinfo, name));
                     }
                     else {
                         //ugly ambiguity with < -- the follows should be a NS, Type, or T token
@@ -2568,7 +2314,7 @@ class Parser {
                                     }
 
                                     const args = this.parseArguments("(", ")");
-                                    ops.push(new PostfixInvoke(sinfo, isElvis, customCheck, isBinder, specificResolve, name, terms, rec, args));
+                                    ops.push(new PostfixInvoke(sinfo, isBinder, specificResolve, name, terms, rec, args));
                                 }
                                 finally {
                                     if (isBinder) {
@@ -2585,7 +2331,7 @@ class Parser {
                                     this.raiseError(this.getCurrentLine(), "Encountered named access but given type resolver (only valid on method calls)");
                                 }
 
-                                ops.push(new PostfixAccessFromName(sinfo, isElvis, customCheck, name));
+                                ops.push(new PostfixAccessFromName(sinfo, name));
                             }
                         }
                         else {
@@ -2598,7 +2344,7 @@ class Parser {
                                 }
 
                                 const args = this.parseArguments("(", ")");
-                                ops.push(new PostfixInvoke(sinfo, isElvis, customCheck, isBinder, specificResolve, name, new TemplateArguments([]), rec, args));
+                                ops.push(new PostfixInvoke(sinfo, isBinder, specificResolve, name, new TemplateArguments([]), rec, args));
                             }
                             finally {
                                 if (isBinder) {
@@ -2628,6 +2374,9 @@ class Parser {
             return [this.parseIfExpression(), ops];
         }
         else if (this.testToken("switch")) {
+            return [this.parseSwitchExpression(), ops];
+        }
+        else if (this.testToken("match")) {
             return [this.parseMatchExpression(), ops];
         }
         else {
@@ -2757,39 +2506,9 @@ class Parser {
         }
     }
 
-    private parseNonecheckExpression(): Expression {
-        const exp = this.parseRelationalExpression();
-
-        if (this.testElvisFollows("&")) {
-            const sinfo = this.getCurrentSrcInfo();
-            this.consumeToken();
-            const customCheck = this.parseElvisCheck(sinfo);
-            this.consumeToken();
-            return new NonecheckExpression(sinfo, exp, customCheck, this.parseNonecheckExpression());
-        }
-        else {
-            return exp;
-        }
-    }
-
-    private parseCoalesceExpression(): Expression {
-        const exp = this.parseNonecheckExpression();
-
-        if (this.testElvisFollows("|")) {
-            const sinfo = this.getCurrentSrcInfo();
-            this.consumeToken();
-            const customCheck = this.parseElvisCheck(sinfo);
-            this.consumeToken();
-            return new CoalesceExpression(sinfo, exp, customCheck, this.parseCoalesceExpression());
-        }
-        else {
-            return exp;
-        }
-    }
-
     private parseImpliesExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
-        const exp = this.parseCoalesceExpression();
+        const exp = this.parseRelationalExpression();
 
         if (this.testAndConsumeTokenIf("==>")) {
             return new BinLogicExpression(sinfo, exp, "==>", this.parseImpliesExpression());
@@ -2803,10 +2522,7 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseImpliesExpression();
 
-        if (this.testAndConsumeTokenIf("&")) {
-            return new BinLogicExpression(sinfo, exp, "&", this.parseAndExpression());
-        }
-        else if (this.testAndConsumeTokenIf("&&")) {
+        if (this.testAndConsumeTokenIf("&&")) {
             return new BinLogicExpression(sinfo, exp, "&&", this.parseAndExpression());
         }
         else {
@@ -2818,10 +2534,7 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseAndExpression();
 
-        if (this.testAndConsumeTokenIf("|")) {
-            return new BinLogicExpression(sinfo, exp, "|", this.parseOrExpression());
-        }
-        else if (this.testAndConsumeTokenIf("||")) {
+        if (this.testAndConsumeTokenIf("||")) {
             return new BinLogicExpression(sinfo, exp, "||", this.parseOrExpression());
         }
         else {
@@ -2829,71 +2542,28 @@ class Parser {
         }
     }
 
-    private parseMapEntryConstructorExpression(disallowMapEntry?: boolean): Expression {
+    private parseMapEntryConstructorExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
 
-        if(disallowMapEntry) {
-            return this.parseOrExpression();
+        const lexp = this.parseOrExpression();   
+        if(this.testAndConsumeTokenIf("=>")) {
+            const rexp = this.parseOrExpression();
+        
+            return new MapEntryConstructorExpression(sinfo, lexp, rexp);
         }
         else {
-            let lexp = this.parseOrExpression();
-            let leftof: TypeSignature | undefined = undefined;
-            if(this.testToken("of")) {
-                leftof = this.parseTypeSignature(true);
-
-                if(lexp instanceof OfTypeConvertExpression) {
-                    this.raiseError(sinfo.line, "Nested 'of' expression here");
-                }
-            }
-            
-            if(this.testAndConsumeTokenIf("=>")) {
-                let rexp = this.parseOrExpression();
-                let rightof: TypeSignature | undefined = undefined;
-                if (this.testToken("of")) {
-                    rightof = this.parseTypeSignature(true);
-
-                    if(rexp instanceof OfTypeConvertExpression) {
-                        this.raiseError(sinfo.line, "Nested 'of' expression here");
-                    }
-                }
-
-                return new MapEntryConstructorExpression(sinfo, leftof !== undefined ? new OfTypeConvertExpression(lexp.sinfo, lexp, leftof) : lexp, rightof !== undefined ? new OfTypeConvertExpression(rexp.sinfo, rexp, rightof) : rexp);
-            }
-            else {
-                if(leftof !== undefined) {
-                    this.raiseError(sinfo.line, "Cannot use expression 'of' in this position");
-                }
-
-                return lexp;
-            }
+            return lexp;
         }
     }
 
-    private parseOfExpression(disallowMapEntry: boolean): Expression {
-        let exp = this.parseMapEntryConstructorExpression(disallowMapEntry);
-
-        if (this.testAndConsumeTokenIf("of")) {
-            const sinfo = this.getCurrentSrcInfo();
-
-            //
-            //TODO: This will have an ugly parse if we do -- x of Int < 3
-            //      It will try to parse as Int<3, ... as a type which fails
-            //
-            const oftype = this.parseTypeSignature(true);
-            exp = new OfTypeConvertExpression(sinfo, exp, oftype);
-        }
-
-        return exp;
-    }
-
-    private parseSelectExpression(disallowMapEntry?: boolean): Expression {
+    private parseSelectExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
-        const texp = this.parseOfExpression(disallowMapEntry || false);
+        const texp = this.parseMapEntryConstructorExpression();
 
         if (this.testAndConsumeTokenIf("?")) {
-            const exp1 = this.parseOfExpression(disallowMapEntry || false);
+            const exp1 = this.parseMapEntryConstructorExpression();
             this.ensureAndConsumeToken(":");
-            const exp2 = this.parseSelectExpression(disallowMapEntry);
+            const exp2 = this.parseSelectExpression();
 
             return new SelectExpression(sinfo, texp, exp1, exp2);
         }
@@ -2902,44 +2572,41 @@ class Parser {
         }
     }
 
-    private parseExpOrExpression(): Expression {
-        const texp = this.parseSelectExpression();
+    private parseOfExpression(): Expression {
+        const sinfo = this.getCurrentSrcInfo();
 
-        if (this.testFollows("?", "none", "?") || this.testFollows("?", "err", "?") || this.testElvisFollows("?")) {
+        //
+        //TODO: This will have an ugly parse if we do -- x of Int < 3
+        //      It will try to parse as Int<3, ... as a type which fails
+        //
+
+        let exp = this.parseSelectExpression();
+        if (this.testAndConsumeTokenIf("istype")) {
+            const oftype = this.parseTypeSignature();
+
+            return new IsTypeExpression(sinfo, exp, oftype);
+        }
+        else if(this.testAndConsumeTokenIf("astype")) {
+            const oftype = this.parseTypeSignature();
+
+            return new AsTypeExpression(sinfo, exp, oftype);
+        }
+        else {
+            return exp;
+        }
+    }
+
+    private parseExpOrExpression(): Expression {
+        const texp = this.parseOfExpression();
+
+        if (this.testFollows("?", "none", "?") || this.testFollows("?", "nothing", "?") || this.testFollows("?", "err", "?")) {
             const ffsinfo = this.getCurrentSrcInfo();
             this.consumeToken();
 
-            try {
-                this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                this.m_penv.getCurrentFunctionScope().defineLocalVar("$value", `$value_#${ffsinfo.pos}`, true);
+            let cond: "none" | "nothing" | "err" = this.consumeTokenAndGetValue() as "none" | "nothing" | "err";
+            this.consumeToken();
 
-                let cond: Expression | "none" | "err" = "none";
-                let action: "return" | "yield" = "return";
-                if (this.testAndConsumeTokenIf("none")) {
-                    cond = "none";
-                }
-                else if (this.testAndConsumeTokenIf("err")) {
-                    cond = "err";
-                }
-                else {
-                    cond = this.parseElvisCheck(ffsinfo) as Expression;
-                }
-                this.consumeToken();
-
-                if (this.testToken("return") || this.testToken("yield")) {
-                    action = this.consumeTokenAndGetValue() as "return" | "yield";
-                }
-
-                let value: Expression[] | undefined = undefined;
-                if (!this.testToken(";")) {
-                    value = this.parseEphemeralListOf(() => this.parseExpression());
-                }
-
-                return new ExpOrExpression(ffsinfo, texp, action, value, cond);
-            }
-            finally {
-                this.m_penv.popFunctionScope();
-            }
+            return new ExpOrExpression(ffsinfo, texp, cond);
         }
         else {
             return texp;
@@ -2999,10 +2666,38 @@ class Parser {
         return new IfExpression(sinfo, new IfElse<Expression>(conds, elsebody));
     }
 
-    private parseMatchExpression(): Expression {
+    private parseSwitchExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
 
         this.ensureAndConsumeToken("switch");
+
+        this.ensureAndConsumeToken("(");
+        const mexp = this.parseExpression();
+        this.ensureAndConsumeToken(")");
+
+        try {
+            this.m_penv.getCurrentFunctionScope().pushLocalScope();
+            this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_#${sinfo.pos}`, true);
+            
+            let entries: SwitchEntry<Expression>[] = [];
+            this.ensureAndConsumeToken("{");
+            entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+            while (this.testToken("|")) {
+                entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+            }
+            this.ensureAndConsumeToken("}");
+
+            return new SwitchExpression(sinfo, mexp, entries);
+        }
+        finally {
+            this.m_penv.getCurrentFunctionScope().popLocalScope();
+        }
+    }
+
+    private parseMatchExpression(): Expression {
+        const sinfo = this.getCurrentSrcInfo();
+
+        this.ensureAndConsumeToken("match");
 
         this.ensureAndConsumeToken("(");
         const mexp = this.parseExpression();
@@ -3014,13 +2709,9 @@ class Parser {
             
             let entries: MatchEntry<Expression>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("type") || this.testToken("case")) {
-                if (this.testToken("type")) {
-                    entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), "type", () => this.parseExpression()));
-                }
-                else {
-                    entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), "case", () => this.parseExpression()));
-                }
+            entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+            while (this.testToken("|")) {
+                entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
             }
             this.ensureAndConsumeToken("}");
 
@@ -3038,124 +2729,98 @@ class Parser {
     ////
     //Statement parsing
 
-    parseSimpleStructuredAssignment(sinfo: SourceInfo, vars: "let" | "var" | undefined, decls: Set<string>): StructuredAssignment {
-        if (!this.testToken(TokenStrings.Identifier)) {
-            const expr = this.parseConstExpression(false, true);
-            return new ConstValueStructuredAssignment(expr);
+    parsePrimitiveStructuredAssignment(sinfo: SourceInfo, vars: "let" | "var" | undefined, decls: Set<string>): StructuredAssignementPrimitive {
+        this.ensureToken(TokenStrings.Identifier);
+        const name = this.consumeTokenAndGetValue();
+
+        if (name === "_") {
+            let itype = this.m_penv.SpecialAnySignature;
+            if (this.testAndConsumeTokenIf(":")) {
+                itype = this.parseTypeSignature();
+            }
+
+            return new IgnoreTermStructuredAssignment(itype);
         }
         else {
-            this.ensureToken(TokenStrings.Identifier);
-            const name = this.consumeTokenAndGetValue();
+            let itype = this.m_penv.SpecialAutoSignature;
+            if (this.testAndConsumeTokenIf(":")) {
+                itype = this.parseTypeSignature();
+            }
 
-            if (name === "_") {
-                const isopt = this.testAndConsumeTokenIf("?");
-
-                let itype = this.m_penv.SpecialAnySignature;
-                if (this.testAndConsumeTokenIf(":")) {
-                    itype = this.parseTypeSignature(false);
+            if (vars !== undefined) {
+                if (decls.has(name)) {
+                    this.raiseError(sinfo.line, "Variable is already defined in scope");
                 }
+                decls.add(name);
 
-                return new IgnoreTermStructuredAssignment(isopt, itype);
+                return new VariableDeclarationStructuredAssignment(name, itype);
             }
             else {
-                let itype = this.m_penv.SpecialAutoSignature;
-                if (this.testAndConsumeTokenIf(":")) {
-                    itype = this.parseTypeSignature(false);
+                if (!this.m_penv.getCurrentFunctionScope().isVarNameDefined(name)) {
+                    this.raiseError(sinfo.line, "Variable is not defined in scope");
                 }
 
-                if (vars !== undefined) {
-                    if (decls.has(name)) {
-                        this.raiseError(sinfo.line, "Variable is already defined in scope");
-                    }
-                    decls.add(name);
-
-                    return new VariableDeclarationStructuredAssignment(name, itype);
+                if (!(itype instanceof AutoTypeSignature)) {
+                    this.raiseError(sinfo.line, "Cannot redeclare type of variable on assignment");
                 }
-                else {
-                    if (!this.m_penv.getCurrentFunctionScope().isVarNameDefined(name)) {
-                        this.raiseError(sinfo.line, "Variable is not defined in scope");
-                    }
 
-                    if (!(itype instanceof AutoTypeSignature)) {
-                        this.raiseError(sinfo.line, "Cannot redeclare type of variable on assignment");
-                    }
-
-                    return new VariableAssignmentStructuredAssignment(name);
-                }
+                return new VariableAssignmentStructuredAssignment(name);
             }
         }
     }
 
     parseStructuredAssignment(sinfo: SourceInfo, vars: "let" | "var" | undefined, decls: Set<string>): StructuredAssignment {
-        if (this.testToken("#") || this.testToken("@")) {
-            const isvalue = this.testToken("#");
-            this.consumeToken();
+        if (this.testToken("[")) {
+            const assigns = this.parseListOf<StructuredAssignementPrimitive>("[", "]", ",", () => {
+                return this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+            })[0];
 
-            if (this.testToken("[")) {
-                const assigns = this.parseListOf<StructuredAssignment>("[", "]", ",", () => {
-                    return this.parseSimpleStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
-                })[0];
+            return new TupleStructuredAssignment(assigns);
+        }
+        else if (this.testToken("{")) {
+            const assigns = this.parseListOf<[string, StructuredAssignementPrimitive]>("{", "}", ",", () => {
+                this.ensureToken(TokenStrings.Identifier);
+                const name = this.consumeTokenAndGetValue();
 
-                return new TupleStructuredAssignment(isvalue, assigns);
-            }
-            else {
-                const assigns = this.parseListOf<[string, StructuredAssignment]>("{", "}", ",", () => {
-                    this.ensureToken(TokenStrings.Identifier);
-                    const name = this.consumeTokenAndGetValue();
+                this.ensureAndConsumeToken("=");
+                const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
 
-                    this.ensureAndConsumeToken("=");
-                    const subg = this.parseSimpleStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+                return [name, subg];
+            })[0];
 
-                    return [name, subg];
-                })[0];
-
-                return new RecordStructuredAssignment(isvalue, assigns);
-            }
+            return new RecordStructuredAssignment(assigns);
         }
         else if (this.testToken("(|")) {
-            const assigns = this.parseListOf<StructuredAssignment>("(|", "|)", ",", () => {
-                return this.parseSimpleStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+            const assigns = this.parseListOf<StructuredAssignementPrimitive>("(|", "|)", ",", () => {
+                return this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
             })[0];
 
             return new ValueListStructuredAssignment(assigns);
         }
         else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Type ) || this.testToken(TokenStrings.Type)) {
-            const ttype = this.parseTypeSignature(true);
-            if (this.testFollows("::", TokenStrings.Identifier)) {
-                this.consumeToken();
-                const name = this.consumeTokenAndGetValue();
-                if (this.testToken("<") || this.testToken("[") || this.testToken("(")) {
-                    this.raiseError(sinfo.line, "Expected a static field expression");
-                }
-
-                return new ConstValueStructuredAssignment(new ConstantExpressionValue(new AccessStaticFieldExpression(sinfo, ttype, name), new Set<string>()));
-            }
-            else {
-                const isvalue = this.testToken("#");
-                this.consumeToken();
-
-                const assigns = this.parseListOf<[string, StructuredAssignment]>("{", "}", ",", () => {
-                    if(this.testFollows(TokenStrings.Identifier, "=")) {
+            const ttype = this.parseTypeSignature();
+            this.ensureAndConsumeToken("@");
+            const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
+                if (this.testFollows(TokenStrings.Identifier, "=")) {
                     this.ensureToken(TokenStrings.Identifier);
                     const name = this.consumeTokenAndGetValue();
-    
+
                     this.ensureAndConsumeToken("=");
-                    const subg = this.parseSimpleStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
+                    const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
 
                     return [name, subg];
-                    }
-                    else {
-                        this.raiseError(this.getCurrentLine(), "TODO: we should allow positional assignment here as well");
+                }
+                else {
+                    const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), vars, decls);
 
-                        return ["[ERROR]", (undefined as any) as StructuredAssignment];
-                    }
-                })[0];
+                    return [undefined, subg];
+                }
+            })[0];
 
-                return new NominalStructuredAssignment(isvalue, ttype, assigns);
-            }
+            return new NominalStructuredAssignment(ttype, assigns);
         }
         else {
-            return this.parseSimpleStructuredAssignment(sinfo, vars, decls);
+            return this.parsePrimitiveStructuredAssignment(sinfo, vars, decls);
         }
     }
 
@@ -3172,8 +2837,7 @@ class Parser {
             this.consumeToken();
             const isConst = tk === "let";
 
-            if (this.testFollows("#", "[") || this.testFollows("#", "{") || this.testFollows("@", "[") || this.testFollows("@", "{")
-                || this.testToken("(|")  || this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Type) || this.testToken(TokenStrings.Type)) {
+            if (this.testToken("[") || this.testToken("{") || this.testToken("(|") || this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Type) || this.testToken(TokenStrings.Type)) {
                 let decls = new Set<string>();
                 const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), isConst ? "let" : "var", decls);
                 decls.forEach((dv) => {
@@ -3202,7 +2866,7 @@ class Parser {
                 let vars: {name: string, vtype: TypeSignature}[] = [];
                 for(let i = 0; i < assigns.length; ++i) {
                     if (assigns[i] instanceof IgnoreTermStructuredAssignment) {
-                        vars.push({name: "_", vtype: (assigns[i] as IgnoreTermStructuredAssignment).termType});
+                        vars.push({name: "_", vtype: (assigns[i] as IgnoreTermStructuredAssignment).assigntype});
                     }
                     else if(assigns[i] instanceof VariableDeclarationStructuredAssignment) {
                         const dv = assigns[i] as VariableDeclarationStructuredAssignment;
@@ -3212,7 +2876,7 @@ class Parser {
                         }
                         this.m_penv.getCurrentFunctionScope().defineLocalVar(dv.vname, dv.vname, false);
 
-                        vars.push({name: dv.vname, vtype: dv.vtype});
+                        vars.push({name: dv.vname, vtype: dv.assigntype});
                     }
                     else {
                         this.raiseError(sinfo.line, "Cannot have structured multi-decls");
@@ -3245,8 +2909,7 @@ class Parser {
                 }
             }
         }
-        else if (this.testFollows("#", "[") || this.testFollows("#", "{") || this.testFollows("@", "[") || this.testFollows("@", "{")
-                || this.testToken("(|")) {
+        else if (this.testToken("[") || this.testToken("{") || this.testToken("(|")) {
             let decls = new Set<string>();
             const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
             
@@ -3351,7 +3014,7 @@ class Parser {
         else if (tk === "validate") {
             this.consumeToken();
 
-            const exp = this.parseSelectExpression();
+            const exp = this.parseOfExpression();
             let err = new LiteralNoneExpression(sinfo);
             if (this.testFollows("else")) {
                 err = this.parseExpression();
@@ -3398,24 +3061,30 @@ class Parser {
         }
         else {
             //we should find a type (nominal here) and it is a static invoke or a structured assign
-            const ttype = this.parseTypeSignature(false);
+            const ttype = this.parseTypeSignature();
 
-            if (this.testFollows("@", "{") || this.testFollows("#", "{")) {
-                const isvalue = this.testToken("#");
+            if (this.testFollows("@", "{")) {
                 this.consumeToken();
 
                 let decls = new Set<string>();
-                const assigns = this.parseListOf<[string, StructuredAssignment]>("{", "}", ",", () => {
-                    this.ensureToken(TokenStrings.Identifier);
-                    const name = this.consumeTokenAndGetValue();
+                const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
+                    if (this.testFollows(TokenStrings.Identifier, "=")) {
+                        this.ensureToken(TokenStrings.Identifier);
+                        const name = this.consumeTokenAndGetValue();
     
-                    this.ensureAndConsumeToken("=");
-                    const subg = this.parseStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+                        this.ensureAndConsumeToken("=");
+                        const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
     
-                    return [name, subg];
+                        return [name, subg];
+                    }
+                    else {
+                        const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+    
+                        return [undefined, subg];
+                    }
                 })[0];
 
-                const assign = new NominalStructuredAssignment(isvalue, ttype, assigns);
+                const assign = new NominalStructuredAssignment(ttype, assigns);
                 decls.forEach((dv) => {
                     if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
                         this.raiseError(line, "Variable name is already defined");
@@ -3510,7 +3179,22 @@ class Parser {
         return new IfElseStatement(sinfo, new IfElse<BlockStatement>(conds, elsebody));
     }
 
-    private parseMatchGuard(sinfo: SourceInfo, matchtype: "type" | "case"): MatchGuard {
+    private parseSwitchGuard(sinfo: SourceInfo): SwitchGuard {
+        if (this.testToken(TokenStrings.Identifier)) {
+            const tv = this.consumeTokenAndGetValue();
+            if (tv !== "_") {
+                this.raiseError(sinfo.line, "Expected wildcard match");
+            }
+
+            return new WildcardSwitchGuard();
+        }
+        else {
+            const lexp = this.parseLiteralExpression();
+            return new LiteralSwitchGuard(lexp);
+        }
+    }
+
+    private parseMatchGuard(sinfo: SourceInfo): MatchGuard {
         if (this.testToken(TokenStrings.Identifier)) {
             const tv = this.consumeTokenAndGetValue();
             if (tv !== "_") {
@@ -3519,44 +3203,124 @@ class Parser {
 
             return new WildcardMatchGuard();
         }
-
-        let typecheck: TypeSignature | undefined = undefined;
-        let layoutcheck: StructuredAssignment | undefined = undefined;
-        let decls = new Set<string>();
-        if (matchtype !== "case") {
-            typecheck = this.parseTypeSignature(true);
-        }
         else {
-            //always let bind the match variables
-            layoutcheck = this.parseStructuredAssignment(sinfo, "let", decls);
-        }
+            const line = sinfo.line;
 
-        let whencheck = undefined;
-        if (this.testAndConsumeTokenIf("when")) {
-            whencheck = this.parseSelectExpression(true);
-        }
+            if(this.testFollows("[", TokenStrings.Identifier) || this.testFollows("{", TokenStrings.Identifier)) {
+                let decls = new Set<string>();
+                const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), "let", decls);
+                decls.forEach((dv) => {
+                    if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
+                        this.raiseError(line, "Variable name is already defined");
+                    }
+                    this.m_penv.getCurrentFunctionScope().defineLocalVar(dv, dv, false);
+                });
 
-        if (matchtype === "type") {
-            return new TypeMatchGuard(typecheck as TypeSignature, whencheck);
-        }
-        else {
-            return new StructureMatchGuard(layoutcheck as StructuredAssignment, decls, whencheck);
+                return new StructureMatchGuard(assign, decls);
+            }
+            else {
+                const oftype = this.parseTypeSignature();
+                if (this.testFollows("@", "{")) {
+                    let decls = new Set<string>();
+                    const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
+                        if (this.testFollows(TokenStrings.Identifier, "=")) {
+                            this.ensureToken(TokenStrings.Identifier);
+                            const name = this.consumeTokenAndGetValue();
+
+                            this.ensureAndConsumeToken("=");
+                            const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+
+                            return [name, subg];
+                        }
+                        else {
+                            const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+
+                            return [undefined, subg];
+                        }
+                    })[0];
+
+                    const assign = new NominalStructuredAssignment(oftype, assigns);
+                    decls.forEach((dv) => {
+                        if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
+                            this.raiseError(line, "Variable name is already defined");
+                        }
+                        this.m_penv.getCurrentFunctionScope().defineLocalVar(dv, dv, false);
+                    });
+
+                    return new StructureMatchGuard(assign, decls);
+                }
+                else {
+                    return new TypeMatchGuard(oftype);
+                }
+            }
         }
     }
 
-    private parseMatchEntry<T>(sinfo: SourceInfo, matchtype: "type" | "case", actionp: () => T): MatchEntry<T> {
+    private parseSwitchEntry<T>(sinfo: SourceInfo, actionp: () => T): MatchEntry<T> {
         this.consumeToken();
 
-        const guard = this.parseMatchGuard(sinfo, matchtype);
+        const guard = this.parseSwitchGuard(sinfo);
         this.ensureAndConsumeToken("=>");
         const action = actionp();
 
-        const isokfollow = this.testToken("}") || this.testToken("type") || this.testToken("case");
+        const isokfollow = this.testToken("}") || this.testToken("|");
+        if(!isokfollow) {
+            this.raiseError(this.getCurrentLine(), "Unknown token at end of match entry");
+        }
+
+        return new SwitchEntry<T>(guard, action);
+    }
+
+    private parseMatchEntry<T>(sinfo: SourceInfo, actionp: () => T): MatchEntry<T> {
+        this.consumeToken();
+
+        const guard = this.parseMatchGuard(sinfo);
+        this.ensureAndConsumeToken("=>");
+        const action = actionp();
+
+        const isokfollow = this.testToken("}") || this.testToken("|");
         if(!isokfollow) {
             this.raiseError(this.getCurrentLine(), "Unknown token at end of match entry");
         }
 
         return new MatchEntry<T>(guard, action);
+    }
+
+    private parseStatementActionInBlock(): BlockStatement {
+        if(this.testToken("{")) {
+            return this.parseBlockStatement();
+        }
+        else {
+            return new BlockStatement(this.getCurrentSrcInfo(), [this.parseLineStatement()]);
+        }
+    }
+
+    private parseSwitchStatement(): Statement {
+        const sinfo = this.getCurrentSrcInfo();
+
+        this.ensureAndConsumeToken("switch");
+
+        this.ensureAndConsumeToken("(");
+        const mexp = this.parseExpression();
+        this.ensureAndConsumeToken(")");
+
+        try {
+            this.m_penv.getCurrentFunctionScope().pushLocalScope();
+            this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_#${sinfo.pos}`, true);
+
+            let entries: MatchEntry<BlockStatement>[] = [];
+            this.ensureAndConsumeToken("{");
+            entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+            while (this.testToken("|")) {
+                entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+            }
+            this.ensureAndConsumeToken("}");
+
+            return new SwitchStatement(sinfo, mexp, entries);
+        }
+        finally {
+            this.m_penv.getCurrentFunctionScope().popLocalScope();
+        }
     }
 
     private parseMatchStatement(): Statement {
@@ -3574,13 +3338,9 @@ class Parser {
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
-            while (this.testToken("type") || this.testToken("case")) {
-                if (this.testToken("type")) {
-                    entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), "type", () => this.parseBlockStatement()));
-                }
-                else {
-                    entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), "case", () => this.parseBlockStatement()));
-                }
+            entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+            while (this.testToken("|")) {
+                entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
             }
             this.ensureAndConsumeToken("}");
 
@@ -3596,6 +3356,9 @@ class Parser {
             return this.parseIfElseStatement();
         }
         else if (this.testToken("switch")) {
+            return this.parseSwitchStatement();
+        }
+        else if (this.testToken("match")) {
             return this.parseMatchStatement();
         }
         else {
@@ -3612,7 +3375,7 @@ class Parser {
                     this.ensureToken(TokenStrings.Identifier);
                     const vname = this.consumeTokenAndGetValue();
                     this.ensureAndConsumeToken(":");
-                    const vtype = this.parseTypeSignature(true);
+                    const vtype = this.parseTypeSignature();
 
                     return { vname: vname, vtype: vtype };
                 })[0]
@@ -3623,7 +3386,7 @@ class Parser {
                     this.ensureToken(TokenStrings.Identifier);
                     const vname = this.consumeTokenAndGetValue();
                     this.ensureAndConsumeToken(":");
-                    const vtype = this.parseTypeSignature(true);
+                    const vtype = this.parseTypeSignature();
 
                     return { vname: vname, vtype: vtype };
                 })[0]
@@ -3665,7 +3428,7 @@ class Parser {
             return this.m_penv.SpecialAnySignature;
         }
         else {
-            return this.parseTypeSignature(false);
+            return this.parseTypeSignature();
         }
     }
 
@@ -3673,9 +3436,20 @@ class Parser {
         let terms: TemplateTermDecl[] = [];
         if (this.testToken("<")) {
             terms = this.parseListOf<TemplateTermDecl>("<", ">", ",", () => {
-                const isliteral = this.testAndConsumeTokenIf("literal");
                 this.ensureToken(TokenStrings.Template);
                 const templatename = this.consumeTokenAndGetValue();
+
+                const isunique = this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "unique";
+                if(isunique) {
+                    this.consumeToken();
+                }
+
+                const isgrounded = this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "grounded";
+                if(isgrounded) {
+                    this.consumeToken();
+                }
+
+                const tconstraint = this.parseTemplateConstraint(!this.testToken(",") && !this.testToken(">") && !this.testToken("="));
 
                 let isinfer = false;
                 let defaulttype: TypeSignature | undefined = undefined;
@@ -3684,49 +3458,11 @@ class Parser {
                         isinfer = true;
                     }
                     else {
-                        defaulttype = this.parseTypeSignature(false);
+                        defaulttype = this.parseTypeSignature();
                     }
                 }
 
-                this.testAndConsumeTokenIf("where");
-                let specialConstraints = new Set<TemplateTermSpecialRestriction>();
-                if(isliteral) {
-                    specialConstraints.add(TemplateTermSpecialRestriction.Literal);
-                }
-
-                while (this.testToken("parsable") || this.testToken("validator") || this.testToken("grounded") || this.testToken("unique") || this.testToken("struct") || this.testToken("entity")) {
-                    if(this.testToken("parsable")) {
-                        this.consumeToken();
-                        specialConstraints.add(TemplateTermSpecialRestriction.Parsable);
-                    }
-                    else if (this.testToken("validator")) {
-                        this.consumeToken();
-                        specialConstraints.add(TemplateTermSpecialRestriction.Validator);
-                    }
-                    else if(this.testToken("grounded")) {
-                        this.consumeToken();
-                        specialConstraints.add(TemplateTermSpecialRestriction.Grounded);
-                    }
-                    else if(this.testToken("unique")) {
-                        this.consumeToken();
-                        specialConstraints.add(TemplateTermSpecialRestriction.Unique);
-                    }
-                    else if (this.testToken("struct")) {
-                        this.consumeToken();
-                        specialConstraints.add(TemplateTermSpecialRestriction.Struct);
-                    }
-                    else {
-                        if(!this.testToken("entity")) {
-                            this.raiseError(this.getCurrentLine(), "Unknown template type constraint");
-                        }
-
-                        this.consumeToken();
-                        specialConstraints.add(TemplateTermSpecialRestriction.Entity);
-                    } 
-                }
-
-                const tconstraint = this.parseTemplateConstraint(!this.testToken(",") && !this.testToken(">"));
-                return new TemplateTermDecl(templatename, specialConstraints, tconstraint, isinfer, defaulttype);
+                return new TemplateTermDecl(templatename, isunique, isgrounded, tconstraint, isinfer, defaulttype);
             })[0];
         }
         return terms;
@@ -3736,16 +3472,19 @@ class Parser {
         this.ensureToken(TokenStrings.Template);
         const templatename = this.consumeTokenAndGetValue();
 
-        //
-        //TODO: we need to actually do something with this info -- how to we want to have instantiation traits working???
-        //
-        while (this.testToken("parsable") || this.testToken("validator") || this.testToken("grounded") || this.testToken("unique") || this.testToken("struct") || this.testToken("entity")) {
+        const isunique = this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "unique";
+        if(isunique) {
             this.consumeToken();
         }
         
+        const isgrounded = this.testToken(TokenStrings.Identifier) && this.peekTokenData() === "grounded";
+        if(isgrounded) {
+            this.consumeToken();
+        }
+
         const tconstraint = this.parseTemplateConstraint(true);
 
-        return new TemplateTypeRestriction(new TemplateTypeSignature(templatename), tconstraint);
+        return new TemplateTypeRestriction(new TemplateTypeSignature(templatename), isunique, isgrounded, tconstraint);
     }
 
     private parseTermRestrictionList(): TemplateTypeRestriction[] {
@@ -3791,7 +3530,7 @@ class Parser {
                     level = this.parseBuildInfo(level);
                 }
 
-                const exp = this.parseSelectExpression();
+                const exp = this.parseOfExpression();
 
                 let err = new LiteralNoneExpression(sinfo);
                 if (this.testFollows("else")) {
@@ -3848,9 +3587,8 @@ class Parser {
     }
 
     private parseNamespaceTypedef(currentDecl: NamespaceDeclaration) {
-        //typedef NAME<T where C...> = TypeConstraint;
+        //typedef NAME<T...> = TypeConstraint;
 
-        const sinfo = this.getCurrentSrcInfo();
         this.ensureAndConsumeToken("typedef");
         this.ensureToken(TokenStrings.Type);
         const tyname = this.consumeTokenAndGetValue();
@@ -3867,44 +3605,19 @@ class Parser {
             this.raiseError(this.getCurrentLine(), "Missing ; on typedef");
         }
 
-        if(this.testToken(TokenStrings.Regex)) {
-            const vregex = this.consumeTokenAndGetValue();
-            this.consumeToken();
+        const btype = this.parseTypeSignature();
+        this.consumeToken();
 
-            const re = BSQRegex.parse(vregex);
-            if(typeof(re) === "string") {
-                this.raiseError(this.getCurrentLine(), re);
-            }
-
-            const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("NSCore", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
-            const param = new FunctionParameter("arg", new NominalTypeSignature("NSCore", ["String"]), false, undefined, undefined, undefined);
-            const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
-            const acceptsinvoke = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["validator_accepts", "__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
-            const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
-            const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
-            const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), [], [SpecialTypeCategory.ValidatorTypeDecl], currentDecl.ns, tyname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
-
-            currentDecl.objects.set(tyname, validatortype);
-            this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + tyname, currentDecl.objects.get(tyname) as EntityTypeDecl);
-            this.m_penv.assembly.addValidatorRegex(currentDecl.ns + "::" + tyname, re as BSQRegex);
-        }
-        else {
-            const btype = this.parseTypeSignature(true);
-            this.consumeToken();
-
-            currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(currentDecl.ns, tyname, terms, btype));
-        }
+        currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(currentDecl.ns, tyname, terms, btype));
     }
 
-    private parseProvides(iscorens: boolean): [TypeSignature, TypeConditionRestriction | undefined][] {
+    private parseProvides(iscorens: boolean, endtoken: string): [TypeSignature, TypeConditionRestriction | undefined][] {
         let provides: [TypeSignature, TypeConditionRestriction | undefined][] = [];
-        if (this.testToken("provides")) {
-            this.consumeToken();
-
-            while (!this.testToken("{")) {
+        if (this.testAndConsumeTokenIf("provides")) {
+            while (!this.testToken(endtoken)) {
                 this.consumeTokenIf(",");
 
-                const pv = this.parseTypeSignature(false);
+                const pv = this.parseTypeSignature();
                 let res: TypeConditionRestriction | undefined = undefined;
                 if(this.testAndConsumeTokenIf("when")) {
                     res = this.parseTermRestriction(false);
@@ -3929,7 +3642,7 @@ class Parser {
         this.ensureToken(TokenStrings.Identifier);
         const sname = this.consumeTokenAndGetValue();
         this.ensureAndConsumeToken(":");
-        const stype = this.parseTypeSignature(false);
+        const stype = this.parseTypeSignature();
 
         this.ensureAndConsumeToken("=");
         const value = this.parseConstExpression(false);
@@ -4005,7 +3718,7 @@ class Parser {
         this.ensureToken(TokenStrings.Identifier);
         const fname = this.consumeTokenAndGetValue();
         this.ensureAndConsumeToken(":");
-        const stype = this.parseTypeSignature(false);
+        const stype = this.parseTypeSignature();
         let value: ConstantExpressionValue | undefined = undefined;
 
         if (this.testAndConsumeTokenIf("=")) {
@@ -4111,7 +3824,7 @@ class Parser {
 
         const cname = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore");
+        const provides = this.parseProvides(currentDecl.ns === "NSCore", "{");
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -4136,19 +3849,19 @@ class Parser {
 
             this.clearRecover();
 
-            let tc: SpecialTypeCategory[] = [];
-            if(OOPTypeDecl.attributeSetContains("parsable", attributes)) {
-                tc.push(SpecialTypeCategory.ParsableTypeDecl);
-            }
-
             if(currentDecl.ns === "NSCore") {
                 if(cname === "Result") {
-                    tc.push(SpecialTypeCategory.ResultDecl);
+                    attributes.push("__result_type");
+                }
+                else if(cname === "Option") {
+                    attributes.push("__option_type");
+                }
+                else {
+                    //not special
                 }
             }
 
-
-            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, tc, currentDecl.ns, cname, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
+            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, cname, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
             currentDecl.concepts.set(cname, cdecl);
             this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + cname, cdecl);
         }
@@ -4169,7 +3882,7 @@ class Parser {
 
         const ename = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore");
+        const provides = this.parseProvides(currentDecl.ns === "NSCore", "{");
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -4192,51 +3905,42 @@ class Parser {
                 this.raiseError(line, "Collision between object and other names");
             }
 
-            let specialinfo: SpecialTypeCategory[] = [];
-            if(OOPTypeDecl.attributeSetContains("parsable", attributes)) {
-                specialinfo.push(SpecialTypeCategory.ParsableTypeDecl);
-            }
-
             if(currentDecl.ns === "NSCore") {
-                if(OOPTypeDecl.attributeSetContains("grounded", attributes)) {
-                    specialinfo.push(SpecialTypeCategory.GroundedTypeDecl);
-                }
-
                 if(ename === "StringOf") {
-                    specialinfo.push(SpecialTypeCategory.StringOfDecl);
+                    attributes.push("__stringof_type");
                 }
                 else if(ename === "DataString") {
-                    specialinfo.push(SpecialTypeCategory.DataStringDecl);
+                    attributes.push("__datastring_type");
                 }
-                else if(ename === "Buffer") {
-                    specialinfo.push(SpecialTypeCategory.BufferDecl);
+                if(ename === "BufferOf") {
+                    attributes.push("__bufferof_type");
                 }
                 else if(ename === "DataBuffer") {
-                    specialinfo.push(SpecialTypeCategory.DataBufferDecl);
+                    attributes.push("__databuffer_type");
                 }
                 else if(ename === "Ok") {
-                    specialinfo.push(SpecialTypeCategory.ResultOkDecl);
+                    attributes.push("__ok_type");
                 }
                 else if(ename === "Err") {
-                    specialinfo.push(SpecialTypeCategory.ResultErrDecl);
+                    attributes.push("__err_type");
                 }
-                else if(ename === "Vector") {
-                    specialinfo.push(SpecialTypeCategory.VectorTypeDecl);
+                else if(ename === "Something") {
+                    attributes.push("__something_type");
                 }
                 else if(ename === "List") {
-                    specialinfo.push(SpecialTypeCategory.ListTypeDecl);
+                    attributes.push("__list_type");
                 }
                 else if(ename === "Stack") {
-                    specialinfo.push(SpecialTypeCategory.StackTypeDecl);
+                    attributes.push("__stack_type");
                 }
                 else if(ename === "Queue") {
-                    specialinfo.push(SpecialTypeCategory.QueueTypeDecl);
+                    attributes.push("__queue_type");
                 }
                 else if(ename === "Set") {
-                    specialinfo.push(SpecialTypeCategory.SetTypeDecl);
+                    attributes.push("__set_type");
                 }
                 else if(ename === "Map") {
-                    specialinfo.push(SpecialTypeCategory.MapTypeDecl);
+                    attributes.push("__map_type");
                 }
                 else {
                     //not special
@@ -4248,7 +3952,7 @@ class Parser {
             const fename = [...currentTypeNest, ename].join("::");
             const feterms = [...currentTermNest, ...terms];
 
-            const edecl = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, specialinfo, currentDecl.ns, fename, feterms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
+            const edecl = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, fename, feterms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
             this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + fename, edecl);
             currentDecl.objects.set(ename, edecl);
             
@@ -4265,9 +3969,15 @@ class Parser {
         const line = this.getCurrentLine();
 
         //[attr] enum NAME {...} [& {...}]
-        const attributes = ["struct", ...this.parseAttributes()];
+        const attributes = this.parseAttributes();
 
         const sinfo = this.getCurrentSrcInfo();
+
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === this.m_penv.getCurrentFile());
+        if(sfpos === -1) {
+            this.raiseError(sinfo.line, "Source name not registered");
+        }   
+
         this.ensureAndConsumeToken("enum");
         this.ensureToken(TokenStrings.Type);
 
@@ -4281,20 +3991,9 @@ class Parser {
         try {
             this.setRecover(this.scanCodeParens());
 
-            let oftype: TypeSignature | undefined = new NominalTypeSignature("NSCore", ["Nat"]);
-            if(this.testAndConsumeTokenIf(":")) {
-                oftype = this.parseTypeSignature(false);
-            }
-
-            const enums = this.parseListOf<[string, ConstantExpressionValue | undefined]>("{", "}", ",", () => {
+            const enums = this.parseListOf<string>("{", "}", ",", () => {
                 this.ensureToken(TokenStrings.Identifier);
-                const ename = this.consumeTokenAndGetValue();
-                let dvalue: ConstantExpressionValue | undefined = undefined;
-                if (this.testAndConsumeTokenIf("=")) {
-                    dvalue = this.parseConstExpression(false);
-                }
-
-                return [ename, dvalue];
+                return this.consumeTokenAndGetValue();
             })[0];
             
             const provides = [
@@ -4303,23 +4002,20 @@ class Parser {
                 [new NominalTypeSignature("NSCore", ["APIType"]), undefined]
             ] as [TypeSignature, TypeConditionRestriction | undefined][];
 
-            //
-            //TODO: maybe want to make this parsable too!
-            //
-
-            const fparam = new FunctionParameter("v", oftype, false, undefined, undefined, undefined);
-        
-            const createbody = new BodyImplementation(`s_create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "enum_create");
-            const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, etype, [], [], false, false, new Set<string>(), createbody, [], []);
-            const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_create", createdecl);
-
             const invariants: InvariantDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
-            const staticFunctions: StaticFunctionDecl[] = [create];
+            const staticFunctions: StaticFunctionDecl[] = [];
             const staticOperators: StaticOperatorDecl[] = [];
             const memberFields: MemberFieldDecl[] = [];
             const memberMethods: MemberMethodDecl[] = [];
     
+            for(let i = 0; i < enums.length; ++i) {
+                const exp = new LiteralIntegralExpression(sinfo, i.toString() + "n", this.m_penv.SpecialNatSignature);
+                const enminit = new ConstructorPrimaryExpression(sinfo, etype, new Arguments([new PositionalArgument(undefined, false, exp)]));
+                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["__enum"], enums[i], etype, new ConstantExpressionValue(enminit, new Set<string>()));
+                staticMembers.push(enm);
+            }
+
             if(this.testAndConsumeTokenIf("&")) {
                 this.setRecover(this.scanCodeParens());
                 this.ensureAndConsumeToken("{");
@@ -4334,41 +4030,18 @@ class Parser {
                 this.clearRecover();
             }
 
-            if(staticMembers.length !== 0) {
-                this.raiseError(line, "Cannot have explicit static fields on enum");
-            }
-
-            const explicitvalues = enums.some((env) => env[1] !== undefined);
-            for(let i = 0; i < enums.length; ++i) {
-                if(explicitvalues && enums[i][1] === undefined) {
-                    this.raiseError(line, "When using explicit enum values they must all be provided for every entry");
-                }
-
-                const exp = enums[i][1] !== undefined ? (enums[i][1] as ConstantExpressionValue).exp : new LiteralIntegralExpression(sinfo, (i + 1).toString(), this.m_penv.SpecialNatSignature);
-                const enminit = new CallStaticFunctionOrOperatorExpression(sinfo, etype, "s_create", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, exp)]), "std");
-                const enm = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), ["enum"], enums[i][0], etype, new ConstantExpressionValue(enminit, new Set<string>()));
-                staticMembers.push(enm);
-            }
-        
-            const ennamebody = new BodyImplementation(`name_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
-                new BlockStatement(sinfo, [
-                    new AssertStatement(sinfo, new LiteralBoolExpression(sinfo, false), "debug"),
-                    new ReturnStatement(sinfo, [new LiteralStringExpression(sinfo, "[INFEASIBLE]")])
-                ])
-            );
-
-            const eparam = new FunctionParameter("self", etype, false, undefined, undefined, undefined);
-            const ennameinv = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [eparam], undefined, undefined, this.m_penv.SpecialStringSignature, [], [], false, false, new Set<string>(), ennamebody, [], []);
-            const enname = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "nameof", ennameinv);
-                
-            staticFunctions.push(enname);
-
             if (currentDecl.checkDeclNameClash(currentDecl.ns, ename)) {
                 this.raiseError(line, "Collision between object and other names");
             }
 
+            if(invariants.length !== 0) {
+                this.raiseError(line, "Cannot have invariant function on Enum types");
+            }
+
+            attributes.push("__enum_type", "__constructable");
+
             this.clearRecover();
-            currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, [SpecialTypeCategory.EnumTypeDecl, SpecialTypeCategory.GroundedTypeDecl], currentDecl.ns, ename, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
+            currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, ename, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
             this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
         }
         catch (ex) {
@@ -4378,98 +4051,229 @@ class Parser {
 
     private parseTypeDecl(currentDecl: NamespaceDeclaration) {
         const line = this.getCurrentLine();
-
-        //[attr] typedecl NAME = Type (& {...} | ;)
-        const attributes = ["_internal", "struct", ...this.parseAttributes()];
+        const attributes = this.parseAttributes();
 
         const sinfo = this.getCurrentSrcInfo();
        
         this.ensureAndConsumeToken("typedecl");
 
-        this.ensureToken(TokenStrings.Type);
         const iname = this.consumeTokenAndGetValue();
+        const terms = this.parseTermDeclarations();
         if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
             this.raiseError(line, "Collision between object and other names");
         }
 
-        const itype = new NominalTypeSignature(currentDecl.ns, [iname]);
+        const isassigntype = this.testAndConsumeTokenIf("=");
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === this.m_penv.getCurrentFile());
+        if(sfpos === -1) {
+            this.raiseError(sinfo.line, "Source name not registered");
+        }
+        
+        const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
 
-        this.ensureAndConsumeToken("=");
-        const idval = this.parseTypeSignature(false);
+        if (isassigntype) {
+            if (this.testToken(TokenStrings.Regex)) {
+                //[attr] typedecl NAME = regex;
+                if (terms.length !== 0) {
+                    this.raiseError(line, "Cannot have template terms on Validator type");
+                }
 
-        let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][]
-        provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
-        provides.push([new NominalTypeSignature("NSCore", ["APIType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, new NominalTypeSignature("NSCore", ["APIType"]))])]);
+                const vregex = this.consumeTokenAndGetValue();
+                this.consumeToken();
 
-        //
-        //TODO: this is a bit broken and really only works for 1-level numeric types -- needs to be cleaned up
-        //
+                const re = BSQRegex.parse(this.m_penv.getCurrentNamespace(), vregex);
+                if (typeof (re) === "string") {
+                    this.raiseError(this.getCurrentLine(), re);
+                }
 
-        //
-        //TODO: maybe want to make this parsable too!
-        //
+                const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("NSCore", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
+                const param = new FunctionParameter("arg", new NominalTypeSignature("NSCore", ["String"]), false, undefined, undefined, undefined);
+                
+                const acceptsid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "accepts");
+                const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
+                const acceptsinvoke = new InvokeDecl(sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
+                const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
+                const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+                const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type", ...attributes], currentDecl.ns, iname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
 
-        //
-        //TODO: this should work for other API/Key types as well -- we need to cleanup to make that work + the handling of invariants and the struct/entity bit too
-        //      maybe for tuples/records we let the underlying . accessors work automagically
-        //
-
-        const invariants: InvariantDecl[] = [];
-        const staticMembers: StaticMemberDecl[] = [];
-        const staticFunctions: StaticFunctionDecl[] = [];
-        const staticOperators: StaticOperatorDecl[] = [];
-        const memberFields: MemberFieldDecl[] = [];
-        const memberMethods: MemberMethodDecl[] = [];
-
-        if(this.testAndConsumeTokenIf("&")) {
-            this.setRecover(this.scanCodeParens());
-            this.ensureAndConsumeToken("{");
-
-            const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
-
-            const nestedEntities = new Map<string, EntityTypeDecl>();
-            this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
-
-            this.ensureAndConsumeToken("}");
-
-            if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
-                this.raiseError(line, "Collision between concept and other names");
+                currentDecl.objects.set(iname, validatortype);
+                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+                this.m_penv.assembly.addValidatorRegex(currentDecl.ns + "::" + iname, re as BSQRegex);
             }
+            else {
+                //[attr] typedecl NAME = PRIMITIVE [& {...}];
 
-            this.clearRecover();
+                if (terms.length !== 0) {
+                    this.raiseError(line, "Cannot have template terms on Typed Primitive type");
+                }
+                const idval = this.parseNominalType();
+
+                let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+                provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
+                
+                if(attributes.includes("algebraic")) {
+                    provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
+                }
+
+                if(attributes.includes("orderable")) {
+                    provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
+                }
+
+                //
+                //TODO: [using {+, -, *, /, ==, !=, >, < , <=, >=}]
+                //
+
+                const invariants: InvariantDecl[] = [];
+                const staticMembers: StaticMemberDecl[] = [];
+                const staticFunctions: StaticFunctionDecl[] = [];
+                const staticOperators: StaticOperatorDecl[] = [];
+                const memberFields: MemberFieldDecl[] = [];
+                const memberMethods: MemberMethodDecl[] = [];
+
+                if (this.testAndConsumeTokenIf("&")) {
+                    this.setRecover(this.scanCodeParens());
+                    this.ensureAndConsumeToken("{");
+
+                    const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    const nestedEntities = new Map<string, EntityTypeDecl>();
+                    this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+
+                    this.ensureAndConsumeToken("}");
+
+                    if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
+                        this.raiseError(line, "Collision between concept and other names");
+                    }
+
+                    this.clearRecover();
+                }
+                else {
+                    this.ensureAndConsumeToken(";");
+                }
+
+                const vparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
+
+                const valueid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "value");
+                const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
+                const valuedecl = new InvokeDecl(sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), valuebody, [], []);
+                const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
+
+                memberMethods.push(value);
+
+                attributes.push("__typedprimitive", "__constructable");
+
+                currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
+                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+            }
         }
         else {
-            this.ensureAndConsumeToken(";");
+            //[attr] typedecl NAME<...> [using {...}] [provides ... ] of
+            // Foo {...}
+            // | ...
+            // [& {...}] | ;
+
+            const concepttype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
+
+            let cusing: MemberFieldDecl[] = [];
+            if(this.testAndConsumeTokenIf("using")) {
+                cusing = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
+                    const mfinfo = this.getCurrentSrcInfo();
+
+                    this.ensureToken(TokenStrings.Identifier);
+                    const name = this.consumeTokenAndGetValue();
+                    this.ensureAndConsumeToken(":");
+
+                    const ttype = this.parseTypeSignature();
+            
+                    let dvalue: ConstantExpressionValue | undefined = undefined;
+                    if (this.testAndConsumeTokenIf("=")) {
+                        dvalue = this.parseConstExpression(false);
+                    }
+    
+                    return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
+                })[0];
+            }
+
+            const provides = this.parseProvides(currentDecl.ns === "NSCore", "of");
+            this.ensureAndConsumeToken("of");
+
+            const edecls: EntityTypeDecl[] = [];
+            while(!this.testToken(";") && !this.testToken("&")) {
+                if(this.testToken("|")) {
+                    this.consumeToken();
+                }
+                let esinfo = this.getCurrentSrcInfo();
+
+                this.ensureToken(TokenStrings.Type);
+                const ename = this.consumeTokenAndGetValue();
+                if (currentDecl.checkDeclNameClash(currentDecl.ns, ename)) {
+                    this.raiseError(line, "Collision between object and other names");
+                }
+
+                let musing: MemberFieldDecl[] = [];
+                if (this.testToken("{")) {
+                    musing = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
+                        const mfinfo = this.getCurrentSrcInfo();
+
+                        this.ensureToken(TokenStrings.Identifier);
+                        const name = this.consumeTokenAndGetValue();
+                        this.ensureAndConsumeToken(":");
+
+                        const ttype = this.parseTypeSignature();
+
+                        let dvalue: ConstantExpressionValue | undefined = undefined;
+                        if (this.testAndConsumeTokenIf("=")) {
+                            dvalue = this.parseConstExpression(false);
+                        }
+
+                        return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
+                    })[0];
+                }
+
+                const eprovides = [[concepttype, undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+                const edecl = new EntityTypeDecl(esinfo, this.m_penv.getCurrentFile(), ["__adt_entity_type"], currentDecl.ns, ename, terms, eprovides, [], [], [], [], musing, [], new Map<string, EntityTypeDecl>());
+                
+                edecls.push(edecl);
+                currentDecl.objects.set(ename, edecl);
+                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
+            }
+
+            const invariants: InvariantDecl[] = [];
+            const staticMembers: StaticMemberDecl[] = [];
+            const staticFunctions: StaticFunctionDecl[] = [];
+            const staticOperators: StaticOperatorDecl[] = [];
+            const memberFields: MemberFieldDecl[] = [];
+            const memberMethods: MemberMethodDecl[] = [];
+
+            if (this.testAndConsumeTokenIf("&")) {
+                this.setRecover(this.scanCodeParens());
+                this.ensureAndConsumeToken("{");
+
+                const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                const nestedEntities = new Map<string, EntityTypeDecl>();
+                this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+
+                this.ensureAndConsumeToken("}");
+
+                if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
+                    this.raiseError(line, "Collision between concept and other names");
+                }
+
+                this.clearRecover();
+            }
+            else {
+                this.ensureAndConsumeToken(";");
+            }
+
+            if(memberFields.length !== 0) {
+                this.raiseError(sinfo.line, "Cannot declare additional member fields on ADT");
+            }
+
+            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__adt_concept_type"], currentDecl.ns, iname, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, cusing, memberMethods, new Map<string, EntityTypeDecl>());
+            currentDecl.concepts.set(iname, cdecl);
+            this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + iname, cdecl);
         }
-
-        const vparam = new FunctionParameter("self", itype, false, undefined, undefined, undefined);
-        const fparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
-        
-        const createbody = new BodyImplementation(`create_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_create");
-        const createdecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [fparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), createbody, [], []);
-        const create = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "create", createdecl);
-
-        const valuebuiltinbody = new BodyImplementation(`s_value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "typedecl_value");
-        const valuebuiltindecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebuiltinbody, [], []);
-        const valuebuiltin = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "s_value", valuebuiltindecl);
-
-        const valuebody = new BodyImplementation(`value_${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(),
-            new CallStaticFunctionOrOperatorExpression(sinfo, itype, "s_value", new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, new AccessVariableExpression(sinfo, "self"))]), "std")
-        );
-        const valuedecl = new InvokeDecl(sinfo, this.m_penv.getCurrentFile(), [], "no", [], undefined, [vparam], undefined, undefined, itype, [], [], false, false, new Set<string>(), valuebody, [], []);
-        const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
-
-        staticFunctions.push(create);
-        staticFunctions.push(valuebuiltin);
-        memberMethods.push(value);
-
-        let categories = [SpecialTypeCategory.TypeDeclDecl, SpecialTypeCategory.GroundedTypeDecl];
-        if(OOPTypeDecl.attributeSetContains("numeric", attributes)) {
-            categories.push(SpecialTypeCategory.TypeDeclNumeric);
-        }
-
-        currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, categories, currentDecl.ns, iname, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
-        this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
     }
 
     private parseNamespaceConst(currentDecl: NamespaceDeclaration) {
@@ -4482,7 +4286,7 @@ class Parser {
         this.ensureToken(TokenStrings.Identifier);
         const gname = this.consumeTokenAndGetValue();
         this.ensureAndConsumeToken(":");
-        const gtype = this.parseTypeSignature(false);
+        const gtype = this.parseTypeSignature();
 
         this.ensureAndConsumeToken("=");
         const value = this.parseConstExpression(false);
@@ -4666,22 +4470,68 @@ class Parser {
 
                     nsdecl.declaredNames.add(ns + "::" + tname);
                 }
-                else if (this.testToken("typedecl")) {
+                else if (this.testToken("typedecl")) {            
                     this.consumeToken();
+
                     this.ensureToken(TokenStrings.Type);
                     const tname = this.consumeTokenAndGetValue();
+
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-
-                    this.ensureAndConsumeToken("=");
-                    this.ensureAndConsumeToken(TokenStrings.Type);
-
                     nsdecl.declaredNames.add(ns + "::" + tname);
 
-                    if (this.testToken("&")) {
-                        this.ensureToken("{"); //we should be at the opening left paren 
-                        this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                    const isassigntype = this.testAndConsumeTokenIf("=");
+                    if (isassigntype) {
+                        if (this.testToken(TokenStrings.Regex)) {
+                            this.consumeToken();
+                            this.ensureAndConsumeToken(";");
+                        }
+                        else {
+                            if (this.testAndConsumeTokenIf("&")) {
+                                this.ensureToken("{"); //we should be at the opening left paren 
+                                this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                            }
+                        }
+                    }
+                    else {
+                        //[attr] typedecl NAME<...> [using {...}] [provides ... ] of
+                        // Foo {...}
+                        // | ...
+                        // [& {...}] | ;
+
+                        if (this.testAndConsumeTokenIf("using")) {
+                            this.ensureToken("{"); //we should be at the opening left paren 
+                            this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                        }
+
+                        this.parseProvides(false /*Doesn't matter since we arejust scanning*/, "of");
+                        this.ensureAndConsumeToken("of");
+
+                        while (!this.testToken(";") && !this.testToken("&")) {
+                            if (this.testToken("|")) {
+                                this.consumeToken();
+                            }
+
+                            this.ensureToken(TokenStrings.Type);
+                            const ename = this.consumeTokenAndGetValue();
+                            if (nsdecl.declaredNames.has(tname)) {
+                                this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
+                            }
+                            nsdecl.declaredNames.add(ns + "::" + ename);
+
+                            if (this.testToken("{")) {
+                                this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                            }
+                        }
+
+                        if (this.testAndConsumeTokenIf("&")) {
+                            this.ensureToken("{"); //we should be at the opening left paren 
+                            this.m_cpos = this.scanCodeParens(); //scan to the closing paren
+                        }
+                        else {
+                            this.ensureAndConsumeToken(";");
+                        }
                     }
                 }
                 else if (this.testToken("enum")) {
@@ -4717,7 +4567,7 @@ class Parser {
                     nsdecl.declaredNames.add(ns + "::" + tname);
 
                     this.parseTermDeclarations();
-                    this.parseProvides(ns === "NSCore");
+                    this.parseProvides(ns === "NSCore", "{");
             
                     this.ensureToken("{"); //we should be at the opening left paren 
                     this.m_cpos = this.scanCodeParens(); //scan to the closing paren

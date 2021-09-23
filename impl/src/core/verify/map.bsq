@@ -6,49 +6,104 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-entity Map<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>>, PODType when K PODType && V PODType, APIType when K APIType && V APIType {
-    __safe private function s_size(m: Map<K, V>): Nat # map_size
-    __safe private function s_has_key(m: Map<K, V>, key: K): Bool # map_has_key
-    __safe private function s_at_val(m: Map<K, V>, key: K): V # map_at_val
-    
-    method size(): Nat {
-        return Map<K, V>::s_size(this);
+__internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType {
+    __safe private method value(): List<[K, V]> # map_get_list_repr
+    __safe private function s_safecreate(v: List<[K, V]>): Map<K, V> # map_safe_create
+
+    private function s_uniqinv(m: Map<K, V>): Bool {
+        return ListOps::s_chk_kv_unique<K, V>(m.value()); 
     }
 
     method empty(): Bool {
-        return Map<K, V>::s_size(this) == 0n;
+        return ListFlatOps::s_empty<[K, V]>(this.value());
     }
 
     method has(key: K): Bool {
-        return Map<K, V>::s_has_key(this, key);
+        return ListOps::s_has_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
     }
 
-    method get(key: K): V 
-        requires release Map<K, V>::s_has_key(this, key);
-    {
-        return Map<K, V>::s_at_val(this, key);
+    method get(key: K): V {
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+
+        check idx !== none;
+        return ListOps::s_safe_get<[K, V]>(this.value(), idx);
     }
 
     method getOrNone(k: K): V? {
-        return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : none;
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        if(idx === none) {
+            return none;
+        }
+        else {
+            return ListOps::s_safe_get<[K, V]>(this.value(), idx);
+        }
     }
 
-    method getOrDefault(k: K, d: V): V {
-        return Map<K, V>::s_has_key(this, k) ? Map<K, V>::s_at_val(this, k) : d;
+    method getOption(k: K): Option<V> {
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        if(idx === none) {
+            return nothing;
+        }
+        else {
+            return something(ListOps::s_safe_get<[K, V]>(this.value(), idx));
+        }
     }
 
     method getTry(k: K, out? v: V): Bool {
-        if(Map<K, V>::s_has_key(this, k)) {
-            v = Map<K, V>::s_at_val(this, k);
-            return true;
-        }
-        else {
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        if(idx === none) {
             return false;
         }
+        else {
+            v = ListOps::s_safe_get<[K, V]>(this.value(), idx);
+            return true;
+        }
     }
-}
 
-entity DynamicMap<K where KeyType, V> provides Object, Expandoable<MapEntry<K, V>> {
-}
+    method union(m: Map<K, V>): Map<K, V> {
+        let am = ListOps::s_concat2<[K, V]>(this.value(), m.value());
+        check ListOps::s_chk_kv_unique<K, V>(am);
+        
+        return Map<K, V>::s_safecreate(am);
+    }
 
+    recursive? method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
+        let sm = ListOps::s_filter<[K, V]>(this.value(), p);
+        return Map<K, V>::s_safecreate(sm);
+    }
+
+    recursive? method remap(f: recursive? fn(v: [K, V]) -> V): Map<K, V> {
+        let rm = ListOps::s_map<[K, V]>(this.value(), recursive? fn(v: [K, V]): [K, V] => [v.0, f[recursive?](v)]);
+        return Map<K, V>::s_safecreate(rm);
+    }
+
+    method add(k: K, v: V): Map<K, V> {
+        check !ListOps::s_has_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        
+        let am = ListOps::s_concat2<[K, V]>(this.value(), List<[K, V]>@{[k, v]});
+        return Map<K, V>::s_safecreate(am);
+    }
+
+    method set(k: K, v: V): Map<K, V> {
+        let idx = ListOps::s_find_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        check idx !== none;
+
+        let sm = this.value().set(idx, [k, v]);
+        return Map<K, V>::s_safecreate(sm);
+    }
+
+    method remove(k: K): Map<K, V> {
+        let idx = ListOps::s_find_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        check idx !== none;
+
+        let rm = this.value().remove(idx);
+        return Map<K, V>::s_safecreate(rm);
+    }
+
+    
+
+    //
+    //TODO: ref versions of the add/remove/set operators
+    //
+}
 
