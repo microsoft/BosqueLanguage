@@ -14,59 +14,31 @@ The Bosque Programming Language project is a ground up language & tooling co-des
 
 ### The Role of Intermediate Representations
 
-Compiler intermediate representations (IRs) are traditionally thought of, and designed with, a specific source language (or languages) in mind. Their historical use has primarily been as an intermediate step in the process of lowering a source language program, with all of the associated syntactic sugar, into a final executable binary. However, over time they have become increasingly important in supporting program analysis and IDE tooling tasks. In these scenarios choices which did not matter in the context of the compilation workflow can have major negative impacts.
-
-In the Bosque project we ask the question of what happens if the IR is designed explicitly to support the rich needs of automated code reasoning, IDE tooling, etc. With this novel IR first perspective we are exploring a new way to think about and build a language intermediate representation and tools that utilize it. Our initial experiments show that this empowers a range of next-generation experiences including symbolic-testing, enhanced fuzzing, soft-realtime compilation with stable GC support, API auto-marshaling, and more!
+Compiler intermediate representations (IRs) are traditionally thought of, and designed with, a specific source language (or languages) in mind. Their historical use has mainly been an intermediate step in lowering a source language program, with all of the associated syntactic sugar, into a final executable binary. Over time they have become increasingly important in supporting program analysis and IDE tooling tasks. 
+In the Bosque project we ask what happens if the IR is designed explicitly to support the rich needs of automated code reasoning, IDE tooling, etc. With this novel IR first perspective we are exploring a new way to think about and build a language intermediate representation and tools that utilize it.
 
 ### Regularized Programming
 
 Many features that make the Bosque IR amenable for automated reasoning involve simplifying and removing sources of irregularity in the semantics. These regularizations also simplify the task of understanding and writing code for the human developer. Inspired by this idea the Bosque project is building a new regularized programming language that takes advantage of the features of the IR.
 
-The Bosque Programming Language builds on the strengths of classical Functional Programming,  modern TypeScript/Node.js, and the power of the new IR. The result is a language that simultaneously supports the kind of high productivity development experience available to modern developers while also providing a resource efficient and predictable runtime, scaling from small IoT up to heavily loaded cloud services. In addition to bringing all the expressive power expected from a modern language, the Bosque language also introduces several novel features like Typed Strings and API Types, that directly address challenges faced by developers working in a distributed cloud based world.
+The result is a language that simultaneously supports the kind of high productivity development experience available to modern developers while also providing a resource efficient and predictable runtime, scaling from small IoT up to heavily loaded cloud services. In addition to bringing the expressive power expected from a modern language, the Bosque language also introduces several novel features like Typed Strings and API Types, that directly address challenges faced by developers working in a distributed cloud based world.
 
 ### Cloud First Development
 The move into cloud based development, with architectures based around microservices, serverless functions, and RESTful APIs, brings new challenges for development. In this environment an program may interoperate with many other (remote) services which are maintained by different teams (and maybe implemented in different languages). This forces APIs to use least-common denominator types for interop and creates the need for extensive serialize/deserialize/validate logic. Further, issues like cold-service startups, 95% response times, resiliency and diagnostics, all become critical but have not been design considerations in most traditional languages.
 
-The Bosque project takes a cloud and IoT first view of programming languages. Thus, it includes features like API Types to simplify the construction and deployment of REST style APIs. Application initialization design provides 0-cost loading for lighting fast (cold) startup. Choices like fully determinized language semantics, keys and ordering, and memory behavior result in a runtime with minimal performance variability and enable ultra-low overhead tracing.
-
-### Powering the Future of Programming
-An overarching theme of the Bosque project is increasing the ability of automated tools to reason about and transform code. This mechanization is a foundational part of unlocking the future of using AI and Synthesis in the development pipeline. The ability to mechanically reason about the semantics of a program via symbolic means is a key enabler to synthesizing novel and useful code components using examples or conditions. Bosque’s fully determinized and loop free design can also help facilitate the development and application of automated program differentiation. These are open problems but, just as we saw how Bosque unlocks value in classical tooling/compilation scenarios, we are excited to see what it can do to power the AI and Synthesis programming revolution.
-
-**Note:** This repository and code are currently still experimental. This means that the language is subject to revision, there are bugs and missing functionality, and the performance is limited. 
+The Bosque project takes a cloud and IoT first view of programming languages. It includes features like API Types to simplify the construction and deployment of REST style APIs. Application initialization design provides 0-cost loading for lighting fast (cold) startup. Choices like fully determinized language semantics, keys and ordering, and memory behavior result in a runtime with minimal performance variability and enable ultra-low overhead tracing.
 
 ## News
+**September 2021:** Upcoming talk at Linux Foundation Open Source Summit in collaboration with folks from Morgan Stanley! [Agile and Dependable Service Development with Bosque and Morphir](https://events.linuxfoundation.org/open-source-summit-north-america/program/schedule/). 
+
 **June 2021**
 Pushing version 0.8.0 as new master -- this update obsoletes the previous prototype version and lays the ground work for an eventual stable release. Major rework was done in the language, type-checker, validator implementation, and runtime. More details will be posted soon but the headline is exciting improvements in all areas.
 
 However, this also means many many things are broken. Fixes and tests are coming online continuously and I will be opening a number of issues that are suitable for community contributions. Looking forward to seeing Bosque move from an exciting concept and toward a practical language!
 
-**March 2021** 
-Update on road to 1.0 -- this branch now builds and runs a small set of tests for the verifier and model checker! Progress on this work has been slow and hard but it looks to be paying off.
-
-**December 2020** 
-Big news on our road to a 1.0 version of Bosque!
-
-While there are many things we liked about the initial experiments with the language there were some features missing that we really wanted to add and some things that, in hindsight, we knew could be done much better. I have been working extensively in a side branch, and while there is still much to do, wanted to get [this code](https://github.com/microsoft/BosqueLanguage/tree/road_to_1_0) into the main repo for anyone interested.
-
-Some highlights of the work include:
-- Operators with static and dynamic dispatch forms (plus overloading of builtins). With support for literal expression (literal Bools, Ints, Typed Ints, and Enums) dispatching this brings powerful ways to express computations -- `operator op(cond: Bool==true, data: string) {...} operator op(cond: Bool==false, data: string) {...}`.
-- Typed Numbers (aka unit types) to support type safe and expressive code -- `let speed = 2.0_MetersPerSecond`
-- Reworked Tuples/Records and equality to allow Tuples/Records as key types and simplify the encoding of equality in SMT.
-- Literal Template Types -- `typedef Point2D = Vector<2, Float>;`
-- Support for derived and default values of fields as well as improved optional type support.
-- Greatly improved type (and template type) inference.
-- Overall design simplifications that allow us to produce simpler SMT encodings and target specialized theories in [Z3](https://rise4fun.com/z3/tutorial) as well as to apply more aggressive compiler optimizations.
-- A new and novel reference counting GC design.
-- Binders and default variable introduction -- `switch(x.f) { type Int => $match + 1; _ => $match; }` or `x.{f=$f+1}`.
-
-There is still a lot of work to complete all of these changes but I am very excited at what the resulting language looks like and the impact is has on the verification/validation/compilation tooling story. I want to thank everyone who has contributed on this journey either through PRs, issues, comments, new ideas, and other miscellaneous feedback. 
-
-**May 2020:** We will be running a Bosque Webinar with Live Q&A on May 27th (registration is [here](https://note.microsoft.com/MSR-Webinar-Programming-Languages-Bosque-Registration-Live.html)). An on demand recording will be available as well for those that cannot make the live event. 
-
 ## Documentation
 
 Small samples of code and unique Bosque tooling are below in the [Code Snippets](#Code-Snippets) and [Tooling](#Tooling) sections. A rundown of notable and/or unique features in the Bosque language is provided in the [language overview section 0](docs/language/overview.md#0-Highlight-Features).
-For a look at how the language works and flows _in the large_ please see the code for a [simple tic-tac-toe](impl/src/test/apps/tictactoe/main.bsq) program.
 
 Detailed Documentation, Tutorials, and Technical Information:
 * [Language Docs](docs/language/overview.md)
@@ -297,13 +269,16 @@ getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
 
 [TODO]
 
-## Tooling
+## Application Validation
 
-**Note: If you are running examples from the "Learn Bosque Programming" book please use the [LearnBosqueProgramming](https://github.com/microsoft/BosqueLanguage/tree/LearnBosqueProgramming) branch which is sync'd with the version of code used in the book.**
+A unique feature of the Bosque systems is the `bsqcheck` tool. This tool combines verification and bug triggering input generation tools in a unique configuration. For each possible failure in the program it first attempts to prove that a given failure is impossible under all inputs or generate a debuggable input that will trigger the error. If it cannot do either of these, which can happen due to the computational cost of theorem proving, then it will try to prove that, under a variety of simplifying assumptions, that the error cannot occur. 
 
-**Symbolic Testing**
+Thus, the tool will output one of the following results for each possible program failure:
+- (1a) Proof that the error is infeasible in all possible executions
+- (1b) Feasibility witness input that reaches target error state
+- (2a) Proof that the error is infeasible on a simplified set of executions
+- (2b) No witness input found before search time exhausted
 
-Bosque provides a powerful new way to test your applications. Unit-testing is a great way to ensure that code works as expected and to prevent accidental changes to behavior when adding new features or fixing bugs. However, writing and maintaining large numbers of tests can be a tedious and time consuming task. To help with this Bosque provides a *symbolic testing* harness that augments unit-testing and provides high coverage for bugs that result in runtime failures -- arising either as builtin language errors or from failed user provided pre/post/invariant/assert conditions.
 
 The **symtest** tool implements the symbolic testing algorithm and works as follows. Given the application shown below:
 ```
@@ -359,37 +334,15 @@ Note: we recommend specifying preconditions as always checked, `requires release
 
 More details on this symbolic checker can be found in the [readme](./impl/src/runtimes/symtest/README.md).
 
-**Ahead-of-Time Compilation**
+## Execution
 
-To provide the best performance Bosque supports the generation of standalone command-line executables via the `ExeGen` tool. This tool, and the design of the Bosque runtime, are designed to provide:
+**Interpreter:** 
 
-1. Fast cold start response time by precompiling startup logic directly into constant values whenever possible and minimizing the number of operations required to start handling user input.
-2. Stable execution behavior over time and possible inputs. 
-    - The GC is a novel reference counting with eager free implementation to minimize memory footprint and prevent any indeterminate GC jitter. 
-    - The runtime itself uses sorted container implementations for Sets/Maps so that the variance between average and worst case costs of operations is minimized and to protect against pathological behaviors (like extreme hash-code collisions).
-3. Safe recursion is available with the [TODO] flag. This compiles recursive functions into a CPS form that uses constant stack space, eliminating any possible Out-of-Stack issues, and allows us to preserve the full call-stack in all debug builds. 
+An interpreter is under-development. See the [icpp](https://github.com/microsoft/BosqueLanguage/tree/master/impl/src/tooling/icpp) sources in the `impl` repository.
 
-A simple example use is to create a file called "max.bsq" with the following code:
-```
-namespace NSMain;
+**Evaluation with Solver:**
 
-entrypoint function main(x: Int, y: Int): Int {
-    return (x > y) ? x : y;
-}
-```
-Then run the following command to produce the `max.exe` (on Windows executable) which can then be invoked with:
-```
-> node impl\bin\runtimes\exegen\exegen.js -o max.exe max.bsq
-```
-Which will create an executable named `max.exe` in the current directory.
-
-Running this executable:
-```
-> max.exe 1 5
-```
-Will output `5`.
-
-More details on the `exeGen` tool can be found in the [readme](./impl/src/runtimes/exegen/README.md).
+[TODO]
 
 ## Using the Bosque Language
 
@@ -404,7 +357,8 @@ In order to build the language the following are needed:
 - 64 bit Operating System
 - The LTS version of [node.js](https://nodejs.org/en/download/) ( According to your OS )
 - Typescript (install with: `npm i typescript -g`)
-- A C++ compiler -- by default `clang` on Windows/Linux/Mac
+- Git and [git-lfs](https://git-lfs.github.com/) setup
+- A C++ compiler -- by default `clang` on Linux/Mac and `cl.exe` on Windows
 
 ### Build & Test
 
@@ -414,8 +368,7 @@ The `impl` directory contains the reference implementation parser, type checker,
 npm install && npm test
 ```
 
-Note: the Z3 theorem prover is provided as a binary dependency in the repo via git LFS. To ensure these are present you will need to have [git LFS](https://git-lfs.github.com/) installed, run `git lfs install` to setup the needed hooks, and pull. 
-
+The Z3 theorem prover is provided as a binary dependency in the repo via git LFS. To ensure these are present you will need to have [git-lfs](https://git-lfs.github.com/) installed, run `git lfs install` to setup the needed hooks, and pull. 
 
 ### Visual Studio Code Integration
 

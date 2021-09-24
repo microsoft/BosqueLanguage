@@ -104,7 +104,7 @@ class SMTTypeEmitter {
     }
 
     lookupFunctionName(keyid: MIRInvokeKey): string {
-        assert(this.mangledFunctionNameMap.has(keyid));
+        assert(this.mangledFunctionNameMap.has(keyid), `Missing -- ${keyid}`);
 
         return this.mangledFunctionNameMap.get(keyid) as string;
     }
