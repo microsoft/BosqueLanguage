@@ -829,7 +829,7 @@ class SMTBodyEmitter {
             return new SMTConst("bsq_none@literal");
         }
         else if (cval instanceof MIRConstantNothing) {
-            return new SMTConst("bsq_none@literal");
+            return new SMTConst("bsq_nothing@literal");
         }
         else if (cval instanceof MIRConstantTrue) {
             return new SMTConst("true");

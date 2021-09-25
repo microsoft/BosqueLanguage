@@ -363,6 +363,14 @@
 ;;
 ;;Free constructors for entrypoint initialization
 ;;
+(define-fun BNone@UFCons_API ((hs (Seq BNat))) bsq_none
+  bsq_none@literal
+)
+
+(define-fun BNothing@UFCons_API ((hs (Seq BNat))) bsq_nothing
+  bsq_nothing@literal
+)
+
 (declare-fun BBool@UFCons_API ((Seq BNat)) Bool)
 (declare-fun BInt@UFCons_API ((Seq BNat)) BInt )
 (declare-fun BNat@UFCons_API ((Seq BNat)) BNat)

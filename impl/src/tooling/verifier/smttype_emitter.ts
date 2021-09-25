@@ -75,7 +75,7 @@ class SMTTypeEmitter {
 
     internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
         if (!this.mangledTypeNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=]/g, "_");
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=\|]/g, "_");
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "$" + this.namectr++;
             }
@@ -93,7 +93,7 @@ class SMTTypeEmitter {
 
     internFunctionName(keyid: MIRInvokeKey, shortname: string) {
         if (!this.mangledFunctionNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=]/g, "_");
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=\|]/g, "_");
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "$" + this.namectr++;
             }
@@ -111,7 +111,7 @@ class SMTTypeEmitter {
 
     internGlobalName(keyid: MIRGlobalKey, shortname: string) {
         if (!this.mangledGlobalNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=]/g, "_");
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\#\=\|]/g, "_");
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "$" + this.namectr++;
             }
@@ -386,7 +386,7 @@ class SMTTypeEmitter {
         if (from.typeID === "NSCore::None") {
             return new SMTConst(`BTerm@none`);
         }
-        else if (from.typeID === "NSCore::None") {
+        else if (from.typeID === "NSCore::Nothing") {
             return new SMTConst(`BTerm@nothing`);
         }
         else {
@@ -486,6 +486,9 @@ class SMTTypeEmitter {
     private coerceTermIntoAtomic(exp: SMTExp, into: MIRType): SMTExp {
         if (this.isType(into, "NSCore::None")) {
             return new SMTConst("bsq_none@literal");
+        }
+        else if (this.isType(into, "NSCore::Nothing")) {
+            return new SMTConst("bsq_nothing@literal");
         }
         else {
             if(this.assembly.subtypeOf(into, this.getMIRType("NSCore::KeyType"))) {
@@ -651,10 +654,10 @@ class SMTTypeEmitter {
 
     private havocTypeInfoGen(tt: MIRType): [string, boolean] {
         if (this.isType(tt, "NSCore::None")) {
-            return ["bsq_none@literal", false];
+            return ["BNone@UFCons_API", false];
         }
         else if (this.isType(tt, "NSCore::Nothing")) {
-            return ["bsq_nothing@literal", false];
+            return ["BNothing@UFCons_API", false];
         }
         else if (this.isType(tt, "NSCore::Bool")) {
             return ["BBool@UFCons_API", false];
