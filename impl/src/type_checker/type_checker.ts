@@ -2974,7 +2974,14 @@ class TypeChecker {
 
         if (tsplits.tenvs.length === 0) {
             this.m_emitter.emitAbort(sinfo, "Never of required type");
-            return [env.setAbort()];
+
+            //
+            //TODO: we would like to set the flow as infeasible -- but exps don't like that so do abort w/ dummy assign for now 
+            //[env.setAbort()]
+            //
+
+            this.m_emitter.emitLoadUninitVariableValue(sinfo, this.m_emitter.registerResolvedTypeReference(oftype), trgt);
+            return [env.setUniformResultExpression(oftype)];
         }
         else {
             if (tsplits.fenvs.length !== 0) {
@@ -3320,7 +3327,14 @@ class TypeChecker {
 
         if (tsplits.tenvs.length === 0) {
             this.m_emitter.emitAbort(op.sinfo, "Never of required type");
-            return env.setAbort();
+
+                        //
+            //TODO: we would like to set the flow as infeasible -- but exps don't like that so do abort w/ dummy assign for now 
+            //[env.setAbort()]
+            //
+
+            this.m_emitter.emitLoadUninitVariableValue(op.sinfo, this.m_emitter.registerResolvedTypeReference(astype), trgt);
+            return env.setUniformResultExpression(astype);
         }
         else {
             if (tsplits.fenvs.length !== 0) {
@@ -3876,11 +3890,11 @@ class TypeChecker {
             etgrt = ntgrt;
         }
 
-        const lasttype = ValueType.join(this.m_assembly, ...lenv.map((ee) => ee.getExpressionResult().valtype));
         if (lenv.length === 0) {
             return [];
         }
         else {
+            const lasttype = ValueType.join(this.m_assembly, ...lenv.map((ee) => ee.getExpressionResult().valtype));
             this.m_emitter.emitRegisterStore(exp.sinfo, etgrt, trgt, this.m_emitter.registerResolvedTypeReference(lasttype.layout), undefined);
 
             return lenv;
@@ -4606,7 +4620,7 @@ class TypeChecker {
         if (hasfalseflow) {
             this.m_emitter.emitAbort(exp.sinfo, "exhaustive");
         }
-        this.raiseErrorIf(exp.sinfo, results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
+        this.raiseErrorIf(exp.sinfo, !results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
 
         const etype = this.m_assembly.typeUpperBound(results.map((eev) => eev.getExpressionResult().valtype.flowtype));
         for (let i = 0; i < rblocks.length; ++i) {
@@ -4682,7 +4696,7 @@ class TypeChecker {
         if (hasfalseflow) {
             this.m_emitter.emitAbort(exp.sinfo, "exhaustive");
         }
-        this.raiseErrorIf(exp.sinfo, results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
+        this.raiseErrorIf(exp.sinfo, !results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
 
         const etype = this.m_assembly.typeUpperBound(results.map((eev) => eev.getExpressionResult().valtype.flowtype));
         for (let i = 0; i < rblocks.length; ++i) {
@@ -5401,8 +5415,7 @@ class TypeChecker {
             this.raiseErrorIf(sinfo, lexpx === undefined);
 
             const lexp = lexpx as [Expression, ResolvedType, string];
-            const eqreg = this.m_emitter.generateTmpRegister();
-            const eqs = this.strongEQ(sinfo, env, lexp[0], new AccessVariableExpression(sinfo, switchvname), eqreg);
+            const eqs = this.strongEQ(sinfo, env, lexp[0], new AccessVariableExpression(sinfo, switchvname), mreg);
 
             const fflows = TypeEnvironment.convertToBoolFlowsOnResult(this.m_assembly, eqs);
             opts = {
