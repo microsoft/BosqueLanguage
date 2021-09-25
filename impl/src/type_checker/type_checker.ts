@@ -4018,7 +4018,7 @@ class TypeChecker {
         else if (action === "lhsnone") {
             //note use of negation here
             const oftypereg = this.m_emitter.generateTmpRegister();
-            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), rhsreg, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.flowtype), undefined);
+            this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), rhsreg, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.flowtype), undefined);
             this.m_emitter.emitPrefixNotOp(sinfo, oftypereg, trgt);
 
             const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [rhs]);
@@ -4030,7 +4030,7 @@ class TypeChecker {
         else if (action === "rhsnone") {
             //note use of negation here
             const oftypereg = this.m_emitter.generateTmpRegister();
-            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), lhsreg, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.flowtype), undefined);
+            this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), lhsreg, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.flowtype), undefined);
             this.m_emitter.emitPrefixNotOp(sinfo, oftypereg, trgt);
 
             const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [lhs]);
@@ -4561,7 +4561,7 @@ class TypeChecker {
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
         let rblocks: [string, MIRRegisterArgument, ValueType][] = [];
-        for (let i = 0; i < exp.flow.length && !hasfalseflow; ++i) {
+        for (let i = 0; i < exp.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}action`);
 
@@ -4637,7 +4637,7 @@ class TypeChecker {
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
         let rblocks: [string, MIRRegisterArgument, ValueType, string[]][] = [];
-        for (let i = 0; i < exp.flow.length && !hasfalseflow; ++i) {
+        for (let i = 0; i < exp.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}action`);
 
@@ -5506,20 +5506,19 @@ class TypeChecker {
     private checkSwitchStatement(env: TypeEnvironment, stmt: SwitchStatement): TypeEnvironment {
         const vreg = this.m_emitter.generateTmpRegister();
         const venv = this.checkExpression(env, stmt.sval, vreg, undefined, { refok: true, orok: false });
-        const cvname = venv.getExpressionResult().expvar;
-
+        
         const doneblck = this.m_emitter.createNewBlock("Lswitchstmt_done");
         const matchvar = `$switch_@${stmt.sinfo.pos}`;
         let cenv = this.checkDeclareSingleVariableBinder(stmt.sinfo, venv.pushLocalScope(), matchvar, ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), vreg);
 
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
-        let rblocks: [string, string[]][] = [];
-        for (let i = 0; i < stmt.flow.length && !hasfalseflow; ++i) {
+        let rblocks: string[] = [];
+        for (let i = 0; i < stmt.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}action`);
 
-            const test = this.checkMatchGuard(stmt.sinfo, i, cenv, matchvar, cvname, stmt.flow[i].check, nextlabel, actionlabel);
+            const test = this.checkSwitchGuard(stmt.sinfo, cenv, matchvar, stmt.flow[i].check, nextlabel, actionlabel);
 
             if(test.tenv === undefined) {
                 this.m_emitter.setActiveBlock(actionlabel);
@@ -5536,7 +5535,7 @@ class TypeChecker {
 
                 results.push(truestate);
                 if(truestate.hasNormalFlow()) {
-                    rblocks.push([actionlabel, test.newlive]);
+                    rblocks.push(actionlabel);
                 }
 
                 this.m_emitter.setActiveBlock(nextlabel);
@@ -5551,7 +5550,7 @@ class TypeChecker {
 
                 results.push(truestate);
                 if(truestate.hasNormalFlow()) {
-                    rblocks.push([actionlabel, test.newlive]);
+                    rblocks.push(actionlabel);
                 }
 
                 this.m_emitter.setActiveBlock(nextlabel);
@@ -5565,12 +5564,7 @@ class TypeChecker {
 
         for (let i = 0; i < rblocks.length; ++i) {
             const rcb = rblocks[i];
-            this.m_emitter.setActiveBlock(rcb[0]);
-
-            this.m_emitter.localLifetimeEnd(stmt.sinfo, matchvar);
-            for (let i = 0; i < rcb[1].length; ++i) {
-                this.m_emitter.localLifetimeEnd(stmt.sinfo, rcb[1][i]);
-            }
+            this.m_emitter.setActiveBlock(rcb);
 
             this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
         }
@@ -5596,7 +5590,7 @@ class TypeChecker {
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
         let rblocks: [string, string[]][] = [];
-        for (let i = 0; i < stmt.flow.length && !hasfalseflow; ++i) {
+        for (let i = 0; i < stmt.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}action`);
 

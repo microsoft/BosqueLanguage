@@ -1149,7 +1149,7 @@ class SwitchStatement extends Statement {
     readonly flow: SwitchEntry<BlockStatement>[];
 
     constructor(sinfo: SourceInfo, sval: Expression, flow: SwitchEntry<BlockStatement>[]) {
-        super(StatementTag.MatchStatement, sinfo);
+        super(StatementTag.SwitchStatement, sinfo);
         this.sval = sval;
         this.flow = flow;
     }
