@@ -284,48 +284,31 @@ The **symtest** tool implements the symbolic testing algorithm and works as foll
 ```
 namespace NSMain;
 
-global ops: Set<String> = Set<String>@{
-    "negate",
-    "add",
-    "sub"
-};
-
-function checkIntBounds(arg: Int?): Bool {
-    //our calculator is for small numbers -- maybe use BigInt later
-    return arg == none || ((-100 <= arg) && (arg <= 100)); 
+enum CalcOp {
+    negate,
+    add,
+    sub
 }
 
-entrypoint function processOp(op: String, arg1: Int, arg2: Int?): Int 
-    requires release NSMain::ops.has(op);
-    requires release checkIntBounds(arg1) && checkIntBounds(arg2);
-    //requires release (op == "add" || op == "sub") ==> arg2 != none;
+function main(op: CalcOp, arg1: BigInt, arg2: BigInt?): BigInt 
+    //requires op !== CalcOp::negate ==> arg2 !== none;
 {
-    if(op == "negate") {
-        return -arg1;
-    }
-    else {
-        assert(arg2 != none);
-
-        if(op == "add") {
-            return arg1 + arg2;
-        }
-        else {
-            return arg1 - arg2;
-        }
+    switch (op) {
+        CalcOp::negate => return -arg1;
+        | CalcOp::add => return arg1 + arg2.as<BigInt>();
+        | CalcOp::sub => return arg1 - arg2.as<BigInt>();
     }
 }
 ```
 
-Assuming this code is in a file called `process_op.bsq` then we can run the following command to check for errors:
+Assuming this code is in a file called `calc.bsq` then we can run the following command to check for errors:
 ```
-> node bin\runtimes\symtest\symtest.js process_op.bsq
+> node bin/runtimes/bsqcheck.js --check calc.bsq
 ```
-Which will report that an error is possible.
+Which will report that errors are possible and generate a set of inputs that will trigger each error.
 
-Re-running the symbolic tested with model generation on as follows:
-```
-> node bin\runtimes\symtest\symtest.js -m division.bsq
-```
+xxxx;
+
 Will report that an error is possible when `op == "negate"` and `arg2 == none`. Note that the tester was aware of the precondition `requires _ops.has(op)` and so did not generate any *spurious* failing test inputs (such as `op=""`).
 
 Un-commenting the second requires line tells the tester that this, and similar errors are excluded by the API definition, and re-running the tester will now report that the code has been verified up to the bound.
