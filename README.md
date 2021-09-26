@@ -74,11 +74,11 @@ allPositive(1, 3, 4) //true
 **Tuples and Records:**
 
 ```none
-function doit(tup: #[Int, Bool], rec: #{f: String, g: Int}): Int {
+function doit(tup: [Int, Bool], rec: {f: String, g: Int}): Int {
     return tup.0 + rec.g;
 }
 
-doit(#[1, false], #{f="ok", g=3}) //4
+doit([1, false], {f="ok", g=3}) //4
 ```
 
 **Sign (with default argument):**
@@ -103,6 +103,8 @@ sign()     //0
 ```
 
 **Nominal Types Data Invariants:**
+
+[MAY BE OUT OF DATE]
 ```
 concept WithName {
     invariant $name != "";
@@ -141,6 +143,8 @@ NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 ```
 
 **Validated and Typed Strings:**
+
+[MAY BE OUT OF DATE]
 ```
 typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
 typedef CSSpt = /[0-9]+pt/;
@@ -191,6 +195,8 @@ assert(ec.code == 1); //true
 ```
 
 **Structural, Nominal, and Union Types (plus optional arguments)**
+
+[MAY BE OUT OF DATE]
 ```
 entity Person {
     field name: String; 
@@ -220,6 +226,8 @@ foo({g=1, n="Bob"})      //Type error - Missing f property
 ```
 
 **Pre/Post Conditions**
+
+[MAY BE OUT OF DATE]
 ```
 entity Animal {
     invariant $says != "";
@@ -305,17 +313,20 @@ Assuming this code is in a file called `calc.bsq` then we can run the following 
 ```
 > node bin/runtimes/bsqcheck.js --check calc.bsq
 ```
-Which will report that errors are possible and generate a set of inputs that will trigger each error.
+Which will report that errors are possible and generate a set of inputs that will trigger each error. In this case both the `CalcOp::add` and `CalcOp::sub` cases may fail on the type cast if the `arg2` argument is `none`. The output for the add case is:
+```
+[
+    "CalcOp::add",
+    0,
+    null
+]
+```
 
-xxxx;
+However, if we uncomment the requires clause, which asserts that the `arg2` parameter is only `none` if the op is `CalcOp::negate`, when we run the `bsqcheck` tool it will be able to successfully _prove_ that no runtime errors can ever occur.
 
-Will report that an error is possible when `op == "negate"` and `arg2 == none`. Note that the tester was aware of the precondition `requires _ops.has(op)` and so did not generate any *spurious* failing test inputs (such as `op=""`).
-
-Un-commenting the second requires line tells the tester that this, and similar errors are excluded by the API definition, and re-running the tester will now report that the code has been verified up to the bound.
+More details on this checking systems can be found in our [technical report](https://www.microsoft.com/en-us/research/uploads/prod/2021/08/BosqueIR.pdf).
 
 Note: we recommend specifying preconditions as always checked, `requires release`, on entrypoint functions to ensure that these externally exposed API endpdoints are not misused.
-
-More details on this symbolic checker can be found in the [readme](./impl/src/runtimes/symtest/README.md).
 
 ## Execution
 
