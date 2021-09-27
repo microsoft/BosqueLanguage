@@ -348,6 +348,7 @@ When prompted we can enter the arguments as a JSON array:
 ["NSMain::CalcOp::add", 2, 3]
 ```
 
+The solver will take these values along with the logical encoding of the program and will infer that the only valid output value is `5`.
 
 
 ## Using the Bosque Language
