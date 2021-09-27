@@ -1652,7 +1652,7 @@ class Parser {
 
         try {
             this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), this.m_penv.SpecialAutoSignature, true));
-            const exp = this.parseOfExpression();
+            const exp = this.parsePrefixExpression();
             const captured = this.m_penv.getCurrentFunctionScope().getCaptureVars();
 
             if(captured.size !== 0) {
@@ -2132,10 +2132,10 @@ class Parser {
 
                             try {
                                 this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                                this.m_penv.getCurrentFunctionScope().defineLocalVar(`$${idx}`, `$${idx}_#${sinfo.pos}`, true);
+                                this.m_penv.getCurrentFunctionScope().defineLocalVar(`$${idx}`, `$${idx}_@${sinfo.pos}`, true);
                                 
                                 if (isBinder) {    
-                                    this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_#${sinfo.pos}`, true);
+                                    this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_@${sinfo.pos}`, true);
                                 }
 
                                 const value = this.parseExpression();
@@ -2182,10 +2182,10 @@ class Parser {
 
                             try {
                                 this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                                this.m_penv.getCurrentFunctionScope().defineLocalVar(`$${uname}`, `$${uname}_#${sinfo.pos}`, true);
+                                this.m_penv.getCurrentFunctionScope().defineLocalVar(`$${uname}`, `$${uname}_@${sinfo.pos}`, true);
 
                                 if (isBinder) {    
-                                    this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_#${sinfo.pos}`, true);
+                                    this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_@${sinfo.pos}`, true);
                                 }
 
                                 const value = this.parseExpression();
@@ -2310,7 +2310,7 @@ class Parser {
                                 try {
                                     if (isBinder) {
                                         this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                                        this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_#${sinfo.pos}`, true);
+                                        this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_@${sinfo.pos}`, true);
                                     }
 
                                     const args = this.parseArguments("(", ")");
@@ -2340,7 +2340,7 @@ class Parser {
                             try {
                                 if (isBinder) {
                                     this.m_penv.getCurrentFunctionScope().pushLocalScope();
-                                    this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_#${sinfo.pos}`, true);
+                                    this.m_penv.getCurrentFunctionScope().defineLocalVar(`$this`, `$this_@${sinfo.pos}`, true);
                                 }
 
                                 const args = this.parseArguments("(", ")");
@@ -2677,12 +2677,12 @@ class Parser {
 
         try {
             this.m_penv.getCurrentFunctionScope().pushLocalScope();
-            this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_#${sinfo.pos}`, true);
+            this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_@${sinfo.pos}`, true);
             
             let entries: SwitchEntry<Expression>[] = [];
             this.ensureAndConsumeToken("{");
             entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
-            while (this.testToken("|")) {
+            while (this.testAndConsumeTokenIf("|")) {
                 entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
             }
             this.ensureAndConsumeToken("}");
@@ -2705,12 +2705,12 @@ class Parser {
 
         try {
             this.m_penv.getCurrentFunctionScope().pushLocalScope();
-            this.m_penv.getCurrentFunctionScope().defineLocalVar("$match", `$match_#${sinfo.pos}`, true);
+            this.m_penv.getCurrentFunctionScope().defineLocalVar("$match", `$match_@${sinfo.pos}`, true);
             
             let entries: MatchEntry<Expression>[] = [];
             this.ensureAndConsumeToken("{");
             entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
-            while (this.testToken("|")) {
+            while (this.testAndConsumeTokenIf("|")) {
                 entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
             }
             this.ensureAndConsumeToken("}");
@@ -3257,8 +3257,6 @@ class Parser {
     }
 
     private parseSwitchEntry<T>(sinfo: SourceInfo, actionp: () => T): MatchEntry<T> {
-        this.consumeToken();
-
         const guard = this.parseSwitchGuard(sinfo);
         this.ensureAndConsumeToken("=>");
         const action = actionp();
@@ -3272,8 +3270,6 @@ class Parser {
     }
 
     private parseMatchEntry<T>(sinfo: SourceInfo, actionp: () => T): MatchEntry<T> {
-        this.consumeToken();
-
         const guard = this.parseMatchGuard(sinfo);
         this.ensureAndConsumeToken("=>");
         const action = actionp();
@@ -3306,12 +3302,12 @@ class Parser {
 
         try {
             this.m_penv.getCurrentFunctionScope().pushLocalScope();
-            this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_#${sinfo.pos}`, true);
+            this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_@${sinfo.pos}`, true);
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
             entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
-            while (this.testToken("|")) {
+            while (this.testAndConsumeTokenIf("|")) {
                 entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
             }
             this.ensureAndConsumeToken("}");
@@ -3334,12 +3330,12 @@ class Parser {
 
         try {
             this.m_penv.getCurrentFunctionScope().pushLocalScope();
-            this.m_penv.getCurrentFunctionScope().defineLocalVar("$match", `$match_#${sinfo.pos}`, true);
+            this.m_penv.getCurrentFunctionScope().defineLocalVar("$match", `$match_@${sinfo.pos}`, true);
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
             entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
-            while (this.testToken("|")) {
+            while (this.testAndConsumeTokenIf("|")) {
                 entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
             }
             this.ensureAndConsumeToken("}");

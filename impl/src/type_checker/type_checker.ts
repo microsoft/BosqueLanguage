@@ -2974,7 +2974,14 @@ class TypeChecker {
 
         if (tsplits.tenvs.length === 0) {
             this.m_emitter.emitAbort(sinfo, "Never of required type");
-            return [env.setAbort()];
+
+            //
+            //TODO: we would like to set the flow as infeasible -- but exps don't like that so do abort w/ dummy assign for now 
+            //[env.setAbort()]
+            //
+
+            this.m_emitter.emitLoadUninitVariableValue(sinfo, this.m_emitter.registerResolvedTypeReference(oftype), trgt);
+            return [env.setUniformResultExpression(oftype)];
         }
         else {
             if (tsplits.fenvs.length !== 0) {
@@ -3203,16 +3210,16 @@ class TypeChecker {
             const etreg = this.m_emitter.generateTmpRegister();
             const itype = this.getInfoForLoadFromSafeIndex(op.sinfo, texp.flowtype, update.index);
 
-            let eev = this.checkDeclareSingleVariable(op.sinfo, env, `$${update.index}_#${op.sinfo.pos}`, true, itype, {etype: ValueType.createUniform(itype), etreg: etreg});
+            let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.index}_@${op.sinfo.pos}`, ValueType.createUniform(itype), etreg);
             if (op.isBinder) {
-                eev = this.checkDeclareSingleVariable(op.sinfo, eev, `$this_#${op.sinfo.pos}`, true, texp.layout, {etype: texp, etreg: arg});
+                eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev, `$this_@${op.sinfo.pos}`, texp, arg);
             }
 
             const utype = this.checkExpression(eev, update.value, etreg, itype).getExpressionResult().valtype;
 
-            this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.index}_#${op.sinfo.pos}`);
+            this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.index}_@${op.sinfo.pos}`);
             if (op.isBinder) {
-                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_#${op.sinfo.pos}`);
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
             }
 
             return [update.index, itype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, itype)];
@@ -3234,16 +3241,16 @@ class TypeChecker {
                 const etreg = this.m_emitter.generateTmpRegister();
                 const itype = this.getInfoForLoadFromSafeProperty(op.sinfo, texp.flowtype, update.name);
 
-                let eev = this.checkDeclareSingleVariable(op.sinfo, env, `$${update.name}_#${op.sinfo.pos}`, true, itype, { etype: ValueType.createUniform(itype), etreg: etreg });
+                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(itype), etreg);
                 if (op.isBinder) {
-                    eev = this.checkDeclareSingleVariable(op.sinfo, eev, `$this_#${op.sinfo.pos}`, true, texp.layout, { etype: texp, etreg: arg });
+                    eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev, `$this_@${op.sinfo.pos}`, texp, arg);
                 }
 
                 const utype = this.checkExpression(eev, update.value, etreg, itype).getExpressionResult().valtype;
 
-                this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_#${op.sinfo.pos}`);
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_@${op.sinfo.pos}`);
                 if (op.isBinder) {
-                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_#${op.sinfo.pos}`);
+                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
                 }
 
                 return [update.name, itype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, itype)];
@@ -3263,16 +3270,16 @@ class TypeChecker {
                 const finfo = tryfinfo as OOMemberLookupInfo<MemberFieldDecl>;
                 const ftype = this.resolveAndEnsureTypeOnly(op.sinfo, finfo.decl.declaredType, finfo.binds);
 
-                let eev = this.checkDeclareSingleVariable(op.sinfo, env,`$${update.name}_#${op.sinfo.pos}`, true, ftype, {etype: ValueType.createUniform(ftype), etreg: etreg});
+                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env,`$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(ftype), etreg);
                 if (op.isBinder) {
-                    eev = this.checkDeclareSingleVariable(op.sinfo, eev,`$${update.name}_#${op.sinfo.pos}`, true, texp.layout, {etype: texp, etreg: arg});
+                    eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev,`$${update.name}_@${op.sinfo.pos}`,texp, arg);
                 }
 
                 const utype = this.checkExpression(eev, update.value, etreg, ftype).getExpressionResult().valtype;
 
-                this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_#${op.sinfo.pos}`);
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_@${op.sinfo.pos}`);
                 if (op.isBinder) {
-                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_#${op.sinfo.pos}`);
+                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
                 }
 
                 return [finfo, ftype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, ftype)];
@@ -3320,7 +3327,14 @@ class TypeChecker {
 
         if (tsplits.tenvs.length === 0) {
             this.m_emitter.emitAbort(op.sinfo, "Never of required type");
-            return env.setAbort();
+
+                        //
+            //TODO: we would like to set the flow as infeasible -- but exps don't like that so do abort w/ dummy assign for now 
+            //[env.setAbort()]
+            //
+
+            this.m_emitter.emitLoadUninitVariableValue(op.sinfo, this.m_emitter.registerResolvedTypeReference(astype), trgt);
+            return env.setUniformResultExpression(astype);
         }
         else {
             if (tsplits.fenvs.length !== 0) {
@@ -3648,7 +3662,7 @@ class TypeChecker {
 
             let eev = env;
             if (op.isBinder) {
-                eev = this.checkDeclareSingleVariable(op.sinfo, env, `$this_#${op.sinfo.pos}`, true, texp.layout, { etype: texp, etreg: arg });
+                eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
             }
 
             const hackpc = this.getLambdaArgCount_Hack(env, op.args);
@@ -3673,7 +3687,7 @@ class TypeChecker {
             this.m_emitter.emitInvokeFixedFunction(op.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
 
             if (op.isBinder) {
-                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_#${op.sinfo.pos}`)
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`)
             }
 
             return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
@@ -3707,7 +3721,7 @@ class TypeChecker {
                 else {
                     let eev = env;
                     if (op.isBinder) {
-                        eev = this.checkDeclareSingleVariable(op.sinfo, env, `$this_#${op.sinfo.pos}`, true, texp.layout, { etype: texp, etreg: arg });
+                        eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
                     }
 
                     const selfvar = [texp, knownimpl.decl.refRcvr ? env.getExpressionResult().expvar : undefined, arg] as [ValueType, string | undefined, MIRRegisterArgument];
@@ -3724,7 +3738,7 @@ class TypeChecker {
                     this.m_emitter.emitInvokeFixedFunction(op.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
 
                     if (op.isBinder) {
-                        this.m_emitter.localLifetimeEnd(op.sinfo, `$this_#${op.sinfo.pos}`)
+                        this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`)
                     }
 
                     return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
@@ -3735,7 +3749,7 @@ class TypeChecker {
 
                 let eev = env;
                 if (op.isBinder) {
-                    eev = this.checkDeclareSingleVariable(op.sinfo, env, `$this_#${op.sinfo.pos}`, true, texp.layout, { etype: texp, etreg: arg });
+                    eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
                 }
 
                 const vinfo = vinfo_multi as OOMemberLookupInfo<MemberMethodDecl[]>;
@@ -3754,7 +3768,7 @@ class TypeChecker {
                 this.m_emitter.emitInvokeVirtualFunction(op.sinfo, ckey.keyid, ckey.shortname, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), rargs.args, rargs.fflag, refinfo, trgt);
 
                 if (op.isBinder) {
-                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_#${op.sinfo.pos}`)
+                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`)
                 }
 
                 return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
@@ -3876,11 +3890,11 @@ class TypeChecker {
             etgrt = ntgrt;
         }
 
-        const lasttype = ValueType.join(this.m_assembly, ...lenv.map((ee) => ee.getExpressionResult().valtype));
         if (lenv.length === 0) {
             return [];
         }
         else {
+            const lasttype = ValueType.join(this.m_assembly, ...lenv.map((ee) => ee.getExpressionResult().valtype));
             this.m_emitter.emitRegisterStore(exp.sinfo, etgrt, trgt, this.m_emitter.registerResolvedTypeReference(lasttype.layout), undefined);
 
             return lenv;
@@ -4018,7 +4032,7 @@ class TypeChecker {
         else if (action === "lhsnone") {
             //note use of negation here
             const oftypereg = this.m_emitter.generateTmpRegister();
-            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), rhsreg, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.flowtype), undefined);
+            this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), rhsreg, this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(rhs.getExpressionResult().valtype.flowtype), undefined);
             this.m_emitter.emitPrefixNotOp(sinfo, oftypereg, trgt);
 
             const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [rhs]);
@@ -4030,7 +4044,7 @@ class TypeChecker {
         else if (action === "rhsnone") {
             //note use of negation here
             const oftypereg = this.m_emitter.generateTmpRegister();
-            this.m_emitter.emitTypeOf(sinfo, trgt, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), lhsreg, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.flowtype), undefined);
+            this.m_emitter.emitTypeOf(sinfo, oftypereg, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialNoneType()), lhsreg, this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.layout), this.m_emitter.registerResolvedTypeReference(lhs.getExpressionResult().valtype.flowtype), undefined);
             this.m_emitter.emitPrefixNotOp(sinfo, oftypereg, trgt);
 
             const renvs = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, this.m_assembly.getSpecialNoneType(), [lhs]);
@@ -4555,13 +4569,13 @@ class TypeChecker {
         const venv = this.checkExpression(env, exp.sval, vreg, undefined, { refok: refok, orok: false });
 
         const doneblck = this.m_emitter.createNewBlock("Lswitchexp_done");
-        const matchvar = `$switch_#${exp.sinfo.pos}`;
-        let cenv = this.checkDeclareSingleVariable(exp.sinfo, venv.pushLocalScope(), matchvar, true, venv.getExpressionResult().valtype.flowtype, {etype: ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), etreg: vreg});
+        const matchvar = `$switch_@${exp.sinfo.pos}`;
+        let cenv = this.checkDeclareSingleVariableBinder(exp.sinfo, venv.pushLocalScope(), matchvar, ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), vreg);
 
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
         let rblocks: [string, MIRRegisterArgument, ValueType][] = [];
-        for (let i = 0; i < exp.flow.length && !hasfalseflow; ++i) {
+        for (let i = 0; i < exp.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}action`);
 
@@ -4606,7 +4620,7 @@ class TypeChecker {
         if (hasfalseflow) {
             this.m_emitter.emitAbort(exp.sinfo, "exhaustive");
         }
-        this.raiseErrorIf(exp.sinfo, results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
+        this.raiseErrorIf(exp.sinfo, !results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
 
         const etype = this.m_assembly.typeUpperBound(results.map((eev) => eev.getExpressionResult().valtype.flowtype));
         for (let i = 0; i < rblocks.length; ++i) {
@@ -4631,13 +4645,13 @@ class TypeChecker {
         const cvname = venv.getExpressionResult().expvar;
 
         const doneblck = this.m_emitter.createNewBlock("Lswitchexp_done");
-        const matchvar = `$match_#${exp.sinfo.pos}`;
-        let cenv = this.checkDeclareSingleVariable(exp.sinfo, venv.pushLocalScope(), matchvar, true, venv.getExpressionResult().valtype.flowtype, {etype: ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), etreg: vreg});
+        const matchvar = `$match_@${exp.sinfo.pos}`;
+        let cenv = this.checkDeclareSingleVariableBinder(exp.sinfo, venv.pushLocalScope(), matchvar, ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), vreg);
 
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
         let rblocks: [string, MIRRegisterArgument, ValueType, string[]][] = [];
-        for (let i = 0; i < exp.flow.length && !hasfalseflow; ++i) {
+        for (let i = 0; i < exp.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchexp_${i}action`);
 
@@ -4682,7 +4696,7 @@ class TypeChecker {
         if (hasfalseflow) {
             this.m_emitter.emitAbort(exp.sinfo, "exhaustive");
         }
-        this.raiseErrorIf(exp.sinfo, results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
+        this.raiseErrorIf(exp.sinfo, !results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
 
         const etype = this.m_assembly.typeUpperBound(results.map((eev) => eev.getExpressionResult().valtype.flowtype));
         for (let i = 0; i < rblocks.length; ++i) {
@@ -4847,7 +4861,7 @@ class TypeChecker {
         }
     }
 
-    private checkDeclareSingleVariable(sinfo: SourceInfo, env: TypeEnvironment, vname: string, isConst: boolean, decltype: TypeSignature, venv: { etype: ValueType, etreg: MIRRegisterArgument } | undefined): TypeEnvironment {
+    private checkDeclareSingleVariableExplicit(sinfo: SourceInfo, env: TypeEnvironment, vname: string, isConst: boolean, decltype: TypeSignature, venv: { etype: ValueType, etreg: MIRRegisterArgument } | undefined): TypeEnvironment {
         this.raiseErrorIf(sinfo, env.isVarNameDefined(vname), "Cannot shadow previous definition");
 
         this.raiseErrorIf(sinfo, venv === undefined && isConst, "Must define const var at declaration site");
@@ -4867,6 +4881,18 @@ class TypeChecker {
         return env.addVar(vname, isConst, vtype.layout, venv !== undefined, venv !== undefined ? venv.etype.flowtype : vtype.flowtype);
     }
 
+    private checkDeclareSingleVariableBinder(sinfo: SourceInfo, env: TypeEnvironment, vname: string, vtype: ValueType, etreg: MIRRegisterArgument): TypeEnvironment {
+        this.raiseErrorIf(sinfo, env.isVarNameDefined(vname), "Cannot shadow previous definition");
+
+        const mirvtype = this.m_emitter.registerResolvedTypeReference(vtype.flowtype);
+        this.m_emitter.localLifetimeStart(sinfo, vname, mirvtype);
+
+        const convreg = this.emitInlineConvertIfNeeded(sinfo, etreg, vtype, vtype.flowtype);
+        this.m_emitter.emitRegisterStore(sinfo, convreg, new MIRRegisterArgument(vname), mirvtype, undefined);
+
+        return env.addVar(vname, true, vtype.flowtype, true, vtype.flowtype);
+    }
+
     private checkVariableDeclarationStatement(env: TypeEnvironment, stmt: VariableDeclarationStatement): TypeEnvironment {
         const infertype = stmt.vtype instanceof AutoTypeSignature ? undefined : this.resolveAndEnsureTypeOnly(stmt.sinfo, stmt.vtype, env.terms);
 
@@ -4878,14 +4904,14 @@ class TypeChecker {
         }
 
         const vv = venv !== undefined ? { etype: venv.getExpressionResult().valtype, etreg: etreg } : undefined;
-        return this.checkDeclareSingleVariable(stmt.sinfo, venv || env, stmt.name, stmt.isConst, stmt.vtype, vv);
+        return this.checkDeclareSingleVariableExplicit(stmt.sinfo, venv || env, stmt.name, stmt.isConst, stmt.vtype, vv);
     }
 
     private checkVariablePackDeclarationStatement(env: TypeEnvironment, stmt: VariablePackDeclarationStatement): TypeEnvironment {
         let cenv = env;
         if (stmt.exp === undefined) {
             for (let i = 0; i < stmt.vars.length; ++i) {
-                cenv = this.checkDeclareSingleVariable(stmt.sinfo, env, stmt.vars[i].name, stmt.isConst, stmt.vars[i].vtype, undefined);
+                cenv = this.checkDeclareSingleVariableExplicit(stmt.sinfo, env, stmt.vars[i].name, stmt.isConst, stmt.vars[i].vtype, undefined);
             }
         }
         else {
@@ -4931,7 +4957,7 @@ class TypeChecker {
                         const tlreg = this.m_emitter.generateTmpRegister();
                         this.m_emitter.emitLoadFromEpehmeralList(stmt.sinfo, etreg, this.m_emitter.registerResolvedTypeReference(elt.types[i]), i, this.m_emitter.registerResolvedTypeReference(eetype), tlreg);
 
-                        cenv = this.checkDeclareSingleVariable(stmt.sinfo, cenv, stmt.vars[i].name, stmt.isConst, stmt.vars[i].vtype, { etype: ValueType.createUniform(elt.types[i]), etreg: tlreg });
+                        cenv = this.checkDeclareSingleVariableExplicit(stmt.sinfo, cenv, stmt.vars[i].name, stmt.isConst, stmt.vars[i].vtype, { etype: ValueType.createUniform(elt.types[i]), etreg: tlreg });
                     }
                 }
             }
@@ -4944,7 +4970,7 @@ class TypeChecker {
                     const etreg = this.m_emitter.generateTmpRegister();
                     const venv = this.checkExpression(env, stmt.exp[i], etreg, infertype);
 
-                    cenv = this.checkDeclareSingleVariable(stmt.sinfo, venv, stmt.vars[i].name, stmt.isConst, stmt.vars[i].vtype, { etype: venv.getExpressionResult().valtype, etreg: etreg });
+                    cenv = this.checkDeclareSingleVariableExplicit(stmt.sinfo, venv, stmt.vars[i].name, stmt.isConst, stmt.vars[i].vtype, { etype: venv.getExpressionResult().valtype, etreg: etreg });
                 }
             }
         }
@@ -5389,8 +5415,7 @@ class TypeChecker {
             this.raiseErrorIf(sinfo, lexpx === undefined);
 
             const lexp = lexpx as [Expression, ResolvedType, string];
-            const eqreg = this.m_emitter.generateTmpRegister();
-            const eqs = this.strongEQ(sinfo, env, lexp[0], new AccessVariableExpression(sinfo, switchvname), eqreg);
+            const eqs = this.strongEQ(sinfo, env, lexp[0], new AccessVariableExpression(sinfo, switchvname), mreg);
 
             const fflows = TypeEnvironment.convertToBoolFlowsOnResult(this.m_assembly, eqs);
             opts = {
@@ -5494,20 +5519,19 @@ class TypeChecker {
     private checkSwitchStatement(env: TypeEnvironment, stmt: SwitchStatement): TypeEnvironment {
         const vreg = this.m_emitter.generateTmpRegister();
         const venv = this.checkExpression(env, stmt.sval, vreg, undefined, { refok: true, orok: false });
-        const cvname = venv.getExpressionResult().expvar;
-
+        
         const doneblck = this.m_emitter.createNewBlock("Lswitchstmt_done");
-        const matchvar = `$switch_#${stmt.sinfo.pos}`;
-        let cenv = this.checkDeclareSingleVariable(stmt.sinfo, venv.pushLocalScope(), matchvar, true, venv.getExpressionResult().valtype.flowtype, {etype: ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), etreg: vreg});
+        const matchvar = `$switch_@${stmt.sinfo.pos}`;
+        let cenv = this.checkDeclareSingleVariableBinder(stmt.sinfo, venv.pushLocalScope(), matchvar, ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), vreg);
 
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
-        let rblocks: [string, string[]][] = [];
-        for (let i = 0; i < stmt.flow.length && !hasfalseflow; ++i) {
+        let rblocks: string[] = [];
+        for (let i = 0; i < stmt.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}action`);
 
-            const test = this.checkMatchGuard(stmt.sinfo, i, cenv, matchvar, cvname, stmt.flow[i].check, nextlabel, actionlabel);
+            const test = this.checkSwitchGuard(stmt.sinfo, cenv, matchvar, stmt.flow[i].check, nextlabel, actionlabel);
 
             if(test.tenv === undefined) {
                 this.m_emitter.setActiveBlock(actionlabel);
@@ -5524,7 +5548,7 @@ class TypeChecker {
 
                 results.push(truestate);
                 if(truestate.hasNormalFlow()) {
-                    rblocks.push([actionlabel, test.newlive]);
+                    rblocks.push(actionlabel);
                 }
 
                 this.m_emitter.setActiveBlock(nextlabel);
@@ -5539,7 +5563,7 @@ class TypeChecker {
 
                 results.push(truestate);
                 if(truestate.hasNormalFlow()) {
-                    rblocks.push([actionlabel, test.newlive]);
+                    rblocks.push(actionlabel);
                 }
 
                 this.m_emitter.setActiveBlock(nextlabel);
@@ -5553,12 +5577,7 @@ class TypeChecker {
 
         for (let i = 0; i < rblocks.length; ++i) {
             const rcb = rblocks[i];
-            this.m_emitter.setActiveBlock(rcb[0]);
-
-            this.m_emitter.localLifetimeEnd(stmt.sinfo, matchvar);
-            for (let i = 0; i < rcb[1].length; ++i) {
-                this.m_emitter.localLifetimeEnd(stmt.sinfo, rcb[1][i]);
-            }
+            this.m_emitter.setActiveBlock(rcb);
 
             this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
         }
@@ -5578,13 +5597,13 @@ class TypeChecker {
         const cvname = venv.getExpressionResult().expvar;
 
         const doneblck = this.m_emitter.createNewBlock("Lswitchstmt_done");
-        const matchvar = `$match_#${stmt.sinfo.pos}`;
-        let cenv = this.checkDeclareSingleVariable(stmt.sinfo, venv.pushLocalScope(), matchvar, true, venv.getExpressionResult().valtype.flowtype, {etype: ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), etreg: vreg});
+        const matchvar = `$match_@${stmt.sinfo.pos}`;
+        let cenv = this.checkDeclareSingleVariableBinder(stmt.sinfo, venv.pushLocalScope(), matchvar, ValueType.createUniform(venv.getExpressionResult().valtype.flowtype), vreg);
 
         let hasfalseflow = true;
         let results: TypeEnvironment[] = [];
         let rblocks: [string, string[]][] = [];
-        for (let i = 0; i < stmt.flow.length && !hasfalseflow; ++i) {
+        for (let i = 0; i < stmt.flow.length && hasfalseflow; ++i) {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}action`);
 

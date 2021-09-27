@@ -690,7 +690,7 @@ class Assembly {
     
             const cdecl = cdecltry as OOMemberLookupInfo<StaticMemberDecl>;
             if(cdecl.contiainingType.attributes.includes("__enum_type")) {
-                return (cdecl.decl.value as ConstantExpressionValue).exp //must be an enum which cannot have template terms so don't care about binds;
+                return exp;
             }
             else {
                 return cdecl.decl.value !== undefined ? this.compileTimeReduceConstantExpression(cdecl.decl.value.exp, cdecl.binds, this.normalizeTypeOnly(cdecl.decl.declaredType, cdecl.binds)) : undefined;

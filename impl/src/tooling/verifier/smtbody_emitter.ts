@@ -829,7 +829,7 @@ class SMTBodyEmitter {
             return new SMTConst("bsq_none@literal");
         }
         else if (cval instanceof MIRConstantNothing) {
-            return new SMTConst("bsq_none@literal");
+            return new SMTConst("bsq_nothing@literal");
         }
         else if (cval instanceof MIRConstantTrue) {
             return new SMTConst("true");
@@ -2048,7 +2048,7 @@ class SMTBodyEmitter {
 
     processGenerateSafeMult_Int(args: SMTExp[]): SMTExp {
         return new SMTIf(
-            SMTCallSimple.makeAndOf(new SMTCallSimple("bvsmul_noovfl", args), new SMTCallSimple("bvumul_noudfl", args)),
+            SMTCallSimple.makeAndOf(new SMTCallSimple("bvsmul_noovfl", args), new SMTCallSimple("bvsmul_noudfl", args)),
             this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvsub", args)),
             this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int"))
         );
