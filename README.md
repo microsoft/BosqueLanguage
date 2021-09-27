@@ -350,7 +350,6 @@ When prompted we can enter the arguments as a JSON array:
 
 The solver will take these values along with the logical encoding of the program and will infer that the only valid output value is `5`.
 
-
 ## Using the Bosque Language
 
 The current focus of the Bosque project is core language design. As a result there is _no_ support for packaging, deployment, lifecycle management, etc.
