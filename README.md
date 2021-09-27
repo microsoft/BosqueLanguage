@@ -316,7 +316,7 @@ Assuming this code is in a file called `calc.bsq` then we can run the following 
 Which will report that errors are possible and generate a set of inputs that will trigger each error. In this case both the `CalcOp::add` and `CalcOp::sub` cases may fail on the type cast if the `arg2` argument is `none`. The output for the add case is:
 ```
 [
-    "CalcOp::add",
+    "NSMain::CalcOp::add",
     0,
     null
 ]
@@ -336,7 +336,19 @@ An interpreter is under-development. See the [icpp](https://github.com/microsoft
 
 **Evaluation with Solver:**
 
-[TODO]
+In addition to using symbolic solvers to prove correctness or to find bugs we can also use them to _symbolically execute_ Bosque programs. The `bsqcheck.js` script has an `--evaluate` mode that takes (small) inputs and can compute the output value.
+
+If we take the calculator example that we previously ran validation on we can use the evaluator mode to compute the sum of 2 and 3 as follows:
+```
+> node bin/runtimes/bsqcheck.js --evaluate calc.bsq
+```
+
+When prompted we can enter the arguments as a JSON array:
+```
+["NSMain::CalcOp::add", 2, 3]
+```
+
+
 
 ## Using the Bosque Language
 
