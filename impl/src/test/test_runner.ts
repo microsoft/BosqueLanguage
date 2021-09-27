@@ -479,13 +479,13 @@ class TestRunner {
             this.results.passed.push(new TestResult(test, start, end, "pass", undefined));
             this.inccb(test.fullname + ": " + chalk.green("pass") + "\n");
         }
-        else if (result === "fail") {
+        else if (result === "fail" || result === "error") {
             this.results.failed.push(new TestResult(test, start, end, "fail", info));
             const failinfo = info !== undefined ? ` with: \n${info.slice(0, 80)}${info.length > 80 ? "..." : ""}` : "";
             this.inccb(test.fullname + ": " + chalk.red("fail") + failinfo + "\n");
         }
         else {
-            this.results.failed.push(new TestResult(test, start, end, "error", info));
+            this.results.errors.push(new TestResult(test, start, end, "error", info));
             const errinfo = info !== undefined ? ` with ${info.slice(0, 80)}${info.length > 80 ? "..." : ""}` : "";
             this.inccb(test.fullname + ": " + chalk.magenta("error") + errinfo + "\n");
         }
@@ -652,8 +652,13 @@ runner.run(
     (results: TestRunResults) => {
         const gresults = results.getOverallResults();
         process.stdout.write(`Completed ${gresults.total} tests...\n`);
-        if(gresults.failed === 0 && gresults.errors === 0) {
+        if(gresults.failed === 0) {
             process.stdout.write(chalk.bold(`${gresults.passed}`) + " " + chalk.green("ok") + "\n");
+
+            if(gresults.errors !== 0) {
+                process.stdout.write(chalk.bold(`${gresults.errors}`) + " " + chalk.magenta("errors") + "\n");    
+            }
+
             process.exit(0);
         }
         else {
