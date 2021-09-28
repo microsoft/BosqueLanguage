@@ -2041,7 +2041,7 @@ class SMTBodyEmitter {
     processGenerateSafeMult_Nat(args: SMTExp[]): SMTExp {
         return new SMTIf(
             new SMTCallSimple("bvumul_noovfl", args),
-            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Nat"), new SMTCallSimple("bvsub", args)),
+            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Nat"), new SMTCallSimple("bvmul", args)),
             this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Nat"))
         );
     }
@@ -2049,7 +2049,7 @@ class SMTBodyEmitter {
     processGenerateSafeMult_Int(args: SMTExp[]): SMTExp {
         return new SMTIf(
             SMTCallSimple.makeAndOf(new SMTCallSimple("bvsmul_noovfl", args), new SMTCallSimple("bvsmul_noudfl", args)),
-            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvsub", args)),
+            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("NSCore::Int"), new SMTCallSimple("bvmul", args)),
             this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int"))
         );
     }

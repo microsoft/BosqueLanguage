@@ -127,6 +127,62 @@
             ]
         },
         {
+            "test": "allPositiveCapture",
+            "src": null,
+            "sig": "function main(x: Int): Bool",
+            "code": "function allPositive(v: Int, ...args: List<Int>): Bool { return args.allOf(pred(x) => x >= v); }",
+            "typechk": [
+            ],
+            "infeasible": [
+                {
+                    "action": "allPositive(0i)",
+                    "check": "res"
+                }
+            ],
+            "witness": [
+                {
+                    "action": "allPositive(0i, 2i, x)",
+                    "check": "res"
+                }
+            ]
+        },
+        {
+            "test": "recordtuple",
+            "src": null,
+            "sig": "function main(x: Int): Int",
+            "code": "function doit(tup: [Int, Bool], rec: {f: String, g: Int}): Int { return tup.0 + rec.g; }",
+            "typechk": [
+                "doit([1n], {f=\"yes\", g=0i}) == 1i",
+                "doit([1n, true], {g=0i}) == 1i",
+                "doit([1n, true], {f=\"yes\", g=0i}) == 1i",
+                "doit([1i, true], {f=true, g=0i}) == 1i"
+            ],
+            "infeasible": [
+                {
+                    "action": "doit([1i, true], {f=\"yes\", g=0i})",
+                    "check": "res == 1i"
+                },
+                {
+                    "action": "doit([0, true], {f=\"yes\", g=1})",
+                    "check": "res == 1i"
+                },
+                {
+                    "action": "doit([x, true], {f=\"yes\", g=x})",
+                    "check": "(x > 4i) || res == 2i * x"
+                }
+            ],
+            "witness": [
+                {
+                    "action": "doit([x, true], {f=\"yes\", g=x})",
+                    "check": "res == x"
+                },
+                {
+                    "action": "doit([x, true], {f=\"yes\", g=x + 1i})",
+                    "check": "x < 4i && res == 5i"
+                }
+            ]
+        },
+        {
             "test": "sign",
             "src": null,
             "sig": "function main(x: Int): Int",
