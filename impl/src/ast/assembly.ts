@@ -2419,10 +2419,6 @@ class Assembly {
             return false; //need to have same pred spec
         }
 
-        if(t1.recursive !== t2.recursive) {
-            return false;
-        }
-
         if (t2.params.length !== t1.params.length) {
             return false; //need to have the same number of parameters
         }

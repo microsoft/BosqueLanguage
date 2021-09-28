@@ -10,7 +10,7 @@ import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstru
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
-import { ListOpsInfo, SMTConstructorGenCode, SMTDestructorGenCode } from "./smtcollection_emitter";
+import { SMTConstructorGenCode, SMTDestructorGenCode } from "./smtcollection_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTAssembly, SMTConstantDecl, SMTEntityDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTListDecl, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { BVEmitter, SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTType, SMTVar, VerifierOptions } from "./smt_exp";
@@ -578,7 +578,7 @@ class SMTEmitter {
         const ctype = this.temitter.getMIRType(ldecl.oftype);
         const nattype = this.temitter.getSMTTypeFor(this.temitter.getMIRType("NSCore::Nat"));
         
-        const linfo = this.bemitter.lopsManager.ops.get(ldecl.tkey) as ListOpsInfo;
+        const linfo = this.bemitter.lopsManager.ops.get(ldecl.tkey);
         const constructors: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[] = [];
 
         ////
@@ -603,70 +603,76 @@ class SMTEmitter {
         const cconcat2 = this.bemitter.lopsManager.emitConstructorConcat2(mtype, ltype);
         this.processConstructorGenInfo(cconcat2, constructors);
 
-        if(linfo.consops.fill) {
-            const cfill = this.bemitter.lopsManager.emitConstructorFill(mtype, ltype, ctype);
-            this.processConstructorGenInfo(cfill, constructors);
-        }
-
-        if(linfo.consops.havoc) {
-            const chavoc = this.bemitter.lopsManager.emitConstructorHavoc(mtype, ltype, ctype);
-            this.processConstructorGenInfo(chavoc, constructors);
-        }
-            
         for (let i = 1; i <= 3; ++i) {
             const ck = this.bemitter.lopsManager.emitConstructorLiteralK(mtype, ltype, ctype, i);
             this.processConstructorGenInfo(ck, constructors);
         }
 
-        linfo.consops.filter.forEach((pcode, code) => {
-            const cfilter = this.bemitter.lopsManager.emitConstructorFilter(ltype, mtype, code);
-            this.processConstructorGenInfo(cfilter, constructors);
-        });
+        if(linfo !== undefined) {
+            //large consops
 
-        linfo.consops.map.forEach((minfo, code) => {
-            const cmap = this.bemitter.lopsManager.emitConstructorMap(this.temitter.getSMTTypeFor(minfo.fromtype), minfo.totype, minfo.isidx, code, minfo.code);
-            this.processConstructorGenInfo(cmap, constructors);
-        });
+            if(linfo.consops.fill) {
+                const cfill = this.bemitter.lopsManager.emitConstructorFill(mtype, ltype, ctype);
+                this.processConstructorGenInfo(cfill, constructors);
+            }
+    
+            if(linfo.consops.havoc) {
+                const chavoc = this.bemitter.lopsManager.emitConstructorHavoc(mtype, ltype, ctype);
+                this.processConstructorGenInfo(chavoc, constructors);
+            }
+
+            if(linfo.consops.filter) {
+                const cfilter = this.bemitter.lopsManager.emitConstructorFilter(ltype, mtype);
+                this.processConstructorGenInfo(cfilter, constructors);
+            }
+    
+            linfo.consops.map.forEach((minfo, code) => {
+                const cmap = this.bemitter.lopsManager.emitConstructorMap(this.temitter.getSMTTypeFor(minfo.fromtype), minfo.totype, minfo.isidx, code, minfo.code);
+                this.processConstructorGenInfo(cmap, constructors);
+            });
+        }
             
         ////
         //des ops
 
-        const dget = this.bemitter.lopsManager.emitDestructorGet(ltype, ctype, linfo.consops);
+        const dget = this.bemitter.lopsManager.emitDestructorGet(ltype, ctype, linfo !== undefined ? linfo.consops : undefined);
         this.processDestructorGenInfo(dget);
 
-        linfo.dops.safecheckpred.forEach((pcode, code) => {
-            const dsafe = this.bemitter.lopsManager.emitSafeCheckPred(ltype, mtype, pcode.isidx, code, pcode.code);
-            this.processDestructorGenInfo(dsafe);
-        });
+        if (linfo !== undefined) {
+            linfo.dops.safecheckpred.forEach((pcode, code) => {
+                const dsafe = this.bemitter.lopsManager.emitSafeCheckPred(ltype, mtype, pcode.isidx, code, pcode.code);
+                this.processDestructorGenInfo(dsafe);
+            });
 
-        linfo.dops.safecheckfn.forEach((cinfo, code) => {
-            const dsafe = this.bemitter.lopsManager.emitSafeCheckFn(ltype, mtype, cinfo.rtype, cinfo.isidx, code, cinfo.code);
-            this.processDestructorGenInfo(dsafe);
-        });
+            linfo.dops.safecheckfn.forEach((cinfo, code) => {
+                const dsafe = this.bemitter.lopsManager.emitSafeCheckFn(ltype, mtype, cinfo.rtype, cinfo.isidx, code, cinfo.code);
+                this.processDestructorGenInfo(dsafe);
+            });
 
-        linfo.dops.isequence.forEach((pcode, code) => {
-            const disq = this.bemitter.lopsManager.emitDestructorISequence(ltype, pcode.isidx, code, pcode.code);
-            this.processDestructorGenInfo(disq);
-        });
+            linfo.dops.isequence.forEach((pcode, code) => {
+                const disq = this.bemitter.lopsManager.emitDestructorISequence(ltype, pcode.isidx, code, pcode.code);
+                this.processDestructorGenInfo(disq);
+            });
 
-        linfo.dops.haspredcheck.forEach((pcode, code) => {
-            const disq = this.bemitter.lopsManager.emitDestructorHasPredCheck(ltype, pcode.isidx, code, pcode.code);
-            this.processDestructorGenInfo(disq);
-        });
+            linfo.dops.haspredcheck.forEach((pcode, code) => {
+                const disq = this.bemitter.lopsManager.emitDestructorHasPredCheck(ltype, pcode.isidx, code, pcode.code);
+                this.processDestructorGenInfo(disq);
+            });
 
-        linfo.dops.findIndexOf.forEach((pcode, code) => {
-            const disq = this.bemitter.lopsManager.emitDestructorFindIndexOf(ltype, pcode.isidx, code, pcode.code);
-            this.processDestructorGenInfo(disq);
-        });
+            linfo.dops.findIndexOf.forEach((pcode, code) => {
+                const disq = this.bemitter.lopsManager.emitDestructorFindIndexOf(ltype, pcode.isidx, code, pcode.code);
+                this.processDestructorGenInfo(disq);
+            });
 
-        linfo.dops.findLastIndexOf.forEach((pcode, code) => {
-            const disq = this.bemitter.lopsManager.emitDestructorFindIndexOfLast(ltype, pcode.isidx, code, pcode.code);
-            this.processDestructorGenInfo(disq);
-        });
+            linfo.dops.findLastIndexOf.forEach((pcode, code) => {
+                const disq = this.bemitter.lopsManager.emitDestructorFindIndexOfLast(ltype, pcode.isidx, code, pcode.code);
+                this.processDestructorGenInfo(disq);
+            });
 
-        if(linfo.dops.sum) {
-            const disq = this.bemitter.lopsManager.emitDestructorSum(ltype, ctype);
-            this.processDestructorGenInfo(disq);
+            if (linfo.dops.sum) {
+                const disq = this.bemitter.lopsManager.emitDestructorSum(ltype, ctype);
+                this.processDestructorGenInfo(disq);
+            }
         }
 
         const ttag = `TypeTag_${ltype.name}`;
