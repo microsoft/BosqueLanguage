@@ -531,8 +531,8 @@ class ListOpsManager {
 
         const iseqtype = this.temitter.getSMTTypeFor(this.temitter.getMIRType("NSCore::ISequence"));
         return {
-            cons: { cname: this.generateConsCallNameUsing_Direct(ltype, "filter", code), cargs: [{ fname: this.generateULIFieldUsingFor(ltype, "filter", code, "l"), ftype: ltype }, { fname: this.generateULIFieldUsingFor(ltype, "filter", code, "isq"), ftype: iseqtype }] },
-            if: [new SMTFunction(this.generateConsCallNameUsing(ltype, "filter", code), [{ vname: "l", vtype: ltype }, { vname: "isq", vtype: iseqtype }, { vname: "osize", vtype: this.nattype }], undefined, 0, this.temitter.generateResultType(mtype), ffunc)],
+            cons: { cname: this.generateConsCallName_Direct(ltype, "filter"), cargs: [{ fname: this.generateULIFieldFor(ltype, "filter", "l"), ftype: ltype }, { fname: this.generateULIFieldFor(ltype, "filter", "isq"), ftype: iseqtype }] },
+            if: [new SMTFunction(this.generateConsCallName(ltype, "filter"), [{ vname: "l", vtype: ltype }, { vname: "isq", vtype: iseqtype }, { vname: "osize", vtype: this.nattype }], undefined, 0, this.temitter.generateResultType(mtype), ffunc)],
             uf: []
         };
     }
@@ -611,9 +611,9 @@ class ListOpsManager {
         }
     }
 
-    emitDestructorGet_Filter(getop: string, ltype: SMTType, code: string, ll: SMTVar, n: SMTVar): SMTExp {
-        return new SMTLet("_@olist", this.generateGetULIFieldUsingFor(ltype, "filter", code, "l", ll),
-            new SMTCallSimple(getop, [new SMTVar("_@olist"), new SMTCallSimple("ISequence@get", [this.generateGetULIFieldUsingFor(ltype, "filter", code, "isq", ll), n])])
+    emitDestructorGet_Filter(getop: string, ltype: SMTType, ll: SMTVar, n: SMTVar): SMTExp {
+        return new SMTLet("_@olist", this.generateGetULIFieldFor(ltype, "filter", "l", ll),
+            new SMTCallSimple(getop, [new SMTVar("_@olist"), new SMTCallSimple("ISequence@get", [this.generateGetULIFieldFor(ltype, "filter", "isq", ll), n])])
         );
     }
 
@@ -686,8 +686,8 @@ class ListOpsManager {
         
         consopts.filter.forEach((pcode, code) => {
             tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallNameUsing_Direct(ltype, "filter", code), llv),
-                result: this.emitDestructorGet_Filter(getop, ltype, code, llv, new SMTVar("n"))
+                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "filter"), llv),
+                result: this.emitDestructorGet_Filter(getop, ltype, llv, new SMTVar("n"))
             });
         });
 
