@@ -209,7 +209,7 @@ class MIREmitter {
             this.m_capturedNameIDMap.set(bodyid, this.m_capturedNameIDMap.size);
         }
 
-        return `#c_${this.m_capturedNameIDMap.get(bodyid)}_` + name;
+        return `@@c_${this.m_capturedNameIDMap.get(bodyid)}_` + name;
     }
 
     createNewBlock(pfx: string): string {
