@@ -19,7 +19,9 @@ class RequiredListConstructors {
     havoc: boolean = false;
 
     fill: boolean = false;
-    filter: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
+    
+    filter: boolean = false;
+
     map: Map<string, {code: MIRPCode, fromtype: MIRType, totype: MIRType, isidx: boolean}> = new Map<string, {code: MIRPCode, fromtype: MIRType, totype: MIRType, isidx: boolean}>();
 }
 
@@ -235,7 +237,7 @@ class ListOpsManager {
         const ops = this.ensureOpsFor(ltype);
         const op = this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "filter" + (isidx ? "_idx" : ""));
 
-        ops.consops.filter.set(code, {code: pcode, isidx: isidx});
+        ops.consops.filter = true;
         return new SMTCallGeneral(op, [l, isq, count, ...this.generateCapturedArgs(pcode)]);
     }
 
@@ -519,7 +521,7 @@ class ListOpsManager {
 
     ////////
     //Filter
-    emitConstructorFilter(ltype: SMTType, mtype: MIRType, code: string): SMTConstructorGenCode {
+    emitConstructorFilter(ltype: SMTType, mtype: MIRType): SMTConstructorGenCode {
         const lcons = this.temitter.getSMTConstructorName(mtype).cons;
 
         const ffunc: SMTExp = this.temitter.generateResultTypeConstructorSuccess(mtype,
@@ -631,11 +633,18 @@ class ListOpsManager {
         );
     }
 
-    emitDestructorGet(ltype: SMTType, ctype: MIRType, consopts: RequiredListConstructors): SMTDestructorGenCode {
+    emitDestructorGet(ltype: SMTType, ctype: MIRType, consopts: RequiredListConstructors | undefined): SMTDestructorGenCode {
         const getop = this.generateDesCallName(ltype, "get");
         const llv = new SMTVar("_@list_contents");
 
         let tsops: { test: SMTExp, result: SMTExp }[] = [];
+
+        for(let i = 1; i <= 3; ++i) {
+            tsops.push({
+                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, `list_${i}`), llv),
+                result: this.emitDestructorGet_K(ltype, llv, new SMTVar("n"), i)
+            });
+        }
 
         //always slice
         tsops.push({
@@ -649,54 +658,49 @@ class ListOpsManager {
             result: this.emitDestructorGet_Concat2(getop, ltype, llv, new SMTVar("n"))
         });
 
-        if(consopts.havoc) {
-            tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "havoc"), llv),
-                result: this.temitter.generateResultGetSuccess(ctype, this.temitter.generateHavocConstructorCall(ctype, this.generateGetULIFieldFor(ltype, "havoc", "path", llv), new SMTVar("n")))
-            }); 
-        }
+        if (consopts !== undefined) {
+            if (consopts.havoc) {
+                tsops.push({
+                    test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "havoc"), llv),
+                    result: this.temitter.generateResultGetSuccess(ctype, this.temitter.generateHavocConstructorCall(ctype, this.generateGetULIFieldFor(ltype, "havoc", "path", llv), new SMTVar("n")))
+                });
+            }
 
-        if(consopts.fill) {
-            tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "fill"), llv),
-                result: this.generateGetULIFieldFor(ltype, "fill", "v", llv)
+            if (consopts.fill) {
+                tsops.push({
+                    test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "fill"), llv),
+                    result: this.generateGetULIFieldFor(ltype, "fill", "v", llv)
+                });
+            }
+
+            if (this.rangenat && ctype.typeID === "NSCore::Nat") {
+                tsops.push({
+                    test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "rangeOfNat"), llv),
+                    result: new SMTCallSimple("bvadd", [this.generateGetULIFieldFor(ltype, "rangeOfNat", "start", llv), new SMTVar("n")])
+                });
+            }
+
+            if (this.rangeint && ctype.typeID === "NSCore::Int") {
+                tsops.push({
+                    test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "rangeOfInt"), llv),
+                    result: new SMTCallSimple("bvadd", [this.generateGetULIFieldFor(ltype, "rangeOfInt", "start", llv), new SMTVar("n")])
+                });
+            }
+
+            if(consopts.filter) {
+                tsops.push({
+                    test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "filter"), llv),
+                    result: this.emitDestructorGet_Filter(getop, ltype, llv, new SMTVar("n"))
+                });
+            }
+
+            consopts.map.forEach((omi, code) => {
+                tsops.push({
+                    test: SMTCallSimple.makeIsTypeOp(this.generateConsCallNameUsing_Direct(ltype, omi.isidx ? "map_idx" : "map", code), llv),
+                    result: this.emitDestructorGet_Map(ctype, this.temitter.getSMTTypeFor(omi.fromtype), llv, new SMTVar("n"), omi.isidx, code, omi.code)
+                });
             });
         }
-
-        if (this.rangenat && ctype.typeID === "NSCore::Nat") {
-            tsops.push({ 
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "rangeOfNat"), llv), 
-                result: new SMTCallSimple("bvadd", [this.generateGetULIFieldFor(ltype, "rangeOfNat", "start", llv), new SMTVar("n")])
-            });
-        }
-
-        if (this.rangeint && ctype.typeID === "NSCore::Int") {
-            tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "rangeOfInt"), llv),
-                result: new SMTCallSimple("bvadd", [this.generateGetULIFieldFor(ltype, "rangeOfInt", "start", llv), new SMTVar("n")])
-            });
-        }
-
-        for(let i = 1; i <= 3; ++i) {
-            tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, `list_${i}`), llv),
-                result: this.emitDestructorGet_K(ltype, llv, new SMTVar("n"), i)
-            });
-        }
-        
-        consopts.filter.forEach((pcode, code) => {
-            tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallName_Direct(ltype, "filter"), llv),
-                result: this.emitDestructorGet_Filter(getop, ltype, llv, new SMTVar("n"))
-            });
-        });
-
-        consopts.map.forEach((omi, code) => {
-            tsops.push({
-                test: SMTCallSimple.makeIsTypeOp(this.generateConsCallNameUsing_Direct(ltype, omi.isidx ? "map_idx" : "map", code), llv),
-                result: this.emitDestructorGet_Map(ctype, this.temitter.getSMTTypeFor(omi.fromtype), llv, new SMTVar("n"), omi.isidx, code, omi.code)
-            });
-        });
 
         const ffunc = new SMTLetMulti([{ vname: "_@list_contents", value: this.generateListContentsCall(new SMTVar("l"), ltype) }],
             new SMTCond(tsops.slice(0, tsops.length - 1), tsops[tsops.length - 1].result)
