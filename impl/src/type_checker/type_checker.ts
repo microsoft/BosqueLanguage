@@ -545,7 +545,7 @@ class TypeChecker {
         });
 
         const pikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
-        const pcenv = TypeEnvironment.createInitialEnvForCall(pikey, exp.invoke.bodyID, bodybinds, new Map<string, { pcode: PCode, captured: string[] }>(), cargs, undefined);
+        const pcenv = TypeEnvironment.createInitialEnvForCall(pikey, exp.invoke.bodyID, bodybinds, capturedpcode, cargs, undefined);
 
         if ((exp.invoke.body as BodyImplementation).body instanceof Expression) {
             const dummyreg = this.m_emitter.generateTmpRegister();
@@ -649,7 +649,7 @@ class TypeChecker {
         const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
         this.m_emitter.registerPCode(ikey, ikey, exp.invoke, ltypetry as ResolvedFunctionType, bodybinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])), [...capturedpcode].sort((a, b) => a[0].localeCompare(b[0])));
 
-        return { code: exp.invoke, ikey: ikey, captured: capturedMap, ftype: ltypetry as ResolvedFunctionType };
+        return { code: exp.invoke, ikey: ikey, captured: capturedMap, capturedpcode: capturedpcode, ftype: ltypetry as ResolvedFunctionType };
     }
 
     private checkArgumentsEvaluationWSig(sinfo: SourceInfo, env: TypeEnvironment, sig: ResolvedFunctionType, sigbinds: Map<string, ResolvedType>, args: Arguments, optSelfValue: [ValueType, string | undefined, MIRRegisterArgument] | undefined, refallowed: boolean): ExpandedArgument[] {
@@ -1738,6 +1738,8 @@ class TypeChecker {
                         cinfo.push([cnames[i], vinfo.flowType]);
                     }
                 }
+
+                xxxx;
             }
         }
 
@@ -1913,6 +1915,8 @@ class TypeChecker {
                         cinfo.push([cnames[i], vinfo.flowType]);
                     }
                 }
+
+                xxxx;
             }
         }
 
@@ -2939,6 +2943,8 @@ class TypeChecker {
 
             return rreg;
         });
+
+        xxxx;
 
         this.checkRecursion(exp.sinfo, pcode.ftype, margs.pcodes, exp.rec);
 
@@ -6687,6 +6693,8 @@ class TypeChecker {
             if (pdecltype instanceof ResolvedFunctionType) {
                 const pcarg = { pcode: pcodes[fargs.size], captured: [...pcodes[fargs.size].captured].map((cc) => cc[0]).sort() };
                 fargs.set(p.name, pcarg);
+
+                xxxx;
             }
             else {
                 if (p.refKind !== undefined) {
@@ -6806,6 +6814,8 @@ class TypeChecker {
                 let mpc = new Map<string, MIRPCode>();
                 fargs.forEach((v, k) => mpc.set(k, { code: MIRKeyGenerator.generatePCodeKey(v.pcode.code.isPCodeFn, v.pcode.code.bodyID), cargs: [...v.captured].map((cname) => this.m_emitter.generateCapturedVarName(cname, v.pcode.code.bodyID)) }));
 
+                xxxx;
+
                 let mbinds = new Map<string, MIRResolvedTypeKey>();
                 binds.forEach((v, k) => mbinds.set(k, this.m_emitter.registerResolvedTypeReference(v).typeID));
 
@@ -6902,6 +6912,8 @@ class TypeChecker {
             ? new BlockStatement(sinfo, [new ReturnStatement(sinfo, [(pci.body as BodyImplementation).body as Expression])])
             : ((pci.body as BodyImplementation).body as BlockStatement);
 
+
+        xxxx;
 
         let pcodes = new Map<string, { pcode: PCode, captured: string[] }>();
         capturedpcodes.forEach((cpc) => {

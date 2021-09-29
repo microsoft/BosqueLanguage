@@ -23,6 +23,7 @@ type PCode = {
     code: InvokeDecl,
     ikey: MIRInvokeKey,
     captured: Map<string, ResolvedType>,
+    capturedpcode: Map<string, { pcode: PCode, captured: string[] }>,
     ftype: ResolvedFunctionType
 };
 
