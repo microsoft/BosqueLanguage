@@ -1717,7 +1717,7 @@ class TypeChecker {
             const scodes = [...pcodes].sort((a, b) => a.ikey.localeCompare(b.ikey));
 
             for(let j = 0; j < scodes.length; ++j) {
-                const cnames = [...pcodes[j].captured].map((cn) => cn[0]).sort();
+                const cnames = [...scodes[j].captured].map((cn) => cn[0]).sort();
                 for (let i = 0; i < cnames.length; ++i) {
                     const vinfo = env.lookupVar(cnames[i]);
                     if (vinfo === null) {
@@ -1739,7 +1739,12 @@ class TypeChecker {
                     }
                 }
 
-                xxxx;
+                if(scodes[j].capturedpcode.size !== 0) {
+                    //
+                    //TODO: pcode capture
+                    //
+                    assert(false);
+                }
             }
         }
 
@@ -1894,7 +1899,7 @@ class TypeChecker {
             const scodes = [...pcodes].sort((a, b) => a.ikey.localeCompare(b.ikey));
 
             for(let j = 0; j < scodes.length; ++j) {
-                const cnames = [...pcodes[j].captured].map((cn) => cn[0]).sort();
+                const cnames = [...scodes[j].captured].map((cn) => cn[0]).sort();
                 for (let i = 0; i < cnames.length; ++i) {
                     const vinfo = env.lookupVar(cnames[i]);
                     if (vinfo === null) {
@@ -1916,7 +1921,12 @@ class TypeChecker {
                     }
                 }
 
-                xxxx;
+                if(scodes[j].capturedpcode.size !== 0) {
+                    //
+                    //TODO: pcode capture
+                    //
+                    assert(false);
+                }
             }
         }
 
@@ -2943,8 +2953,6 @@ class TypeChecker {
 
             return rreg;
         });
-
-        xxxx;
 
         this.checkRecursion(exp.sinfo, pcode.ftype, margs.pcodes, exp.rec);
 
@@ -6691,10 +6699,15 @@ class TypeChecker {
         invoke.params.forEach((p) => {
             const pdecltype = this.m_assembly.normalizeTypeGeneral(p.type, binds);
             if (pdecltype instanceof ResolvedFunctionType) {
+                if(pcodes[fargs.size].capturedpcode.size !== 0) {
+                    //
+                    //TODO: pcode capture
+                    //
+                    assert(false);
+                }
+
                 const pcarg = { pcode: pcodes[fargs.size], captured: [...pcodes[fargs.size].captured].map((cc) => cc[0]).sort() };
                 fargs.set(p.name, pcarg);
-
-                xxxx;
             }
             else {
                 if (p.refKind !== undefined) {
@@ -6814,8 +6827,6 @@ class TypeChecker {
                 let mpc = new Map<string, MIRPCode>();
                 fargs.forEach((v, k) => mpc.set(k, { code: MIRKeyGenerator.generatePCodeKey(v.pcode.code.isPCodeFn, v.pcode.code.bodyID), cargs: [...v.captured].map((cname) => this.m_emitter.generateCapturedVarName(cname, v.pcode.code.bodyID)) }));
 
-                xxxx;
-
                 let mbinds = new Map<string, MIRResolvedTypeKey>();
                 binds.forEach((v, k) => mbinds.set(k, this.m_emitter.registerResolvedTypeReference(v).typeID));
 
@@ -6911,9 +6922,6 @@ class TypeChecker {
         const realbody = ((pci.body as BodyImplementation).body instanceof Expression) 
             ? new BlockStatement(sinfo, [new ReturnStatement(sinfo, [(pci.body as BodyImplementation).body as Expression])])
             : ((pci.body as BodyImplementation).body as BlockStatement);
-
-
-        xxxx;
 
         let pcodes = new Map<string, { pcode: PCode, captured: string[] }>();
         capturedpcodes.forEach((cpc) => {
