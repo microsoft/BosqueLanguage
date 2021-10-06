@@ -518,7 +518,7 @@ class TypeChecker {
             cargs.set(exp.invoke.optRestName as string, new VarInfo(fsig.optRestParamType, true, false, true, fsig.optRestParamType));
         }
 
-        let capturedpcode = new Map<string, { pcode: PCode, captured: string[] }>();
+        let capturedpcode = new Map<string, PCode>();
         exp.invoke.captureSet.forEach((v) => {
             if (v === "%this_captured" && env.lookupVar(v) === null) {
                 const vinfo = env.lookupVar("this") as VarInfo;
@@ -526,7 +526,7 @@ class TypeChecker {
             }
             else {
                 if (env.pcodes.has(v)) {
-                    capturedpcode.set(v, env.pcodes.get(v) as { pcode: PCode, captured: string[] });
+                    capturedpcode.set(v, env.pcodes.get(v) as PCode);
                 }
                 else {
                     const vinfo = env.lookupVar(v) as VarInfo;
@@ -583,7 +583,7 @@ class TypeChecker {
             else if (arg.value instanceof AccessVariableExpression && env.pcodes.has(arg.value.name)) {
                 this.raiseErrorIf(arg.value.sinfo, !(ptype instanceof ResolvedFunctionType), "Must have function type for function arg");
 
-                const pcode =  (env.pcodes.get(arg.value.name) as { pcode: PCode, captured: string[] }).pcode;
+                const pcode =  env.pcodes.get(arg.value.name) as PCode;
                 this.m_assembly.typeUnify((ptype as ResolvedFunctionType).resultType, pcode.ftype.resultType, resbinds);
             }
             else {
@@ -613,7 +613,7 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, expectedFunction !== undefined && !this.m_assembly.functionSubtypeOf(ltypetry as ResolvedFunctionType, expectedFunction), "Mismatch in expected and provided function signature");
 
         let capturedMap: Map<string, ResolvedType> = new Map<string, ResolvedType>();
-        let capturedpcode = new Map<string, { pcode: PCode, captured: string[] }>();
+        let capturedpcode = new Map<string, PCode>();
 
         let captures: string[] = [];
         exp.invoke.captureSet.forEach((v) => captures.push(v));
@@ -627,7 +627,7 @@ class TypeChecker {
             }
             else {
                 if (env.pcodes.has(v)) {
-                    capturedpcode.set(v, env.pcodes.get(v) as { pcode: PCode, captured: string[] });
+                    capturedpcode.set(v, env.pcodes.get(v) as PCode);
                 }
                 else {
                     const vinfo = env.lookupVar(v) as VarInfo;
@@ -708,7 +708,7 @@ class TypeChecker {
                     this.raiseErrorIf(narg.value.sinfo, !(param.type instanceof ResolvedFunctionType), "Must have function type for function arg");
                     this.raiseErrorIf(narg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                    const pcode = (env.pcodes.get(narg.value.name) as { pcode: PCode, captured: string[] }).pcode;
+                    const pcode = env.pcodes.get(narg.value.name) as PCode;
                     eargs[i + ridx] = { name: narg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
                 }
                 else {
@@ -768,7 +768,7 @@ class TypeChecker {
                     this.raiseErrorIf(parg.value.sinfo, !(oftype instanceof ResolvedFunctionType), "Must have function type for function arg");
                     this.raiseErrorIf(parg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                    const pcode = (env.pcodes.get(parg.value.name) as { pcode: PCode, captured: string[] }).pcode;
+                    const pcode = env.pcodes.get(parg.value.name) as PCode;
                     eargs[i + ridx] = { name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
                 }
                 else {
@@ -828,7 +828,7 @@ class TypeChecker {
                 else if (arg.value instanceof AccessVariableExpression && env.pcodes.has(arg.value.name)) {
                     this.raiseErrorIf(arg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                    const pcode = (env.pcodes.get(arg.value.name) as { pcode: PCode, captured: string[] }).pcode;
+                    const pcode = env.pcodes.get(arg.value.name) as PCode;
 
                     if (arg instanceof NamedArgument) {
                         eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
@@ -944,7 +944,7 @@ class TypeChecker {
             else if (arg.value instanceof AccessVariableExpression && env.pcodes.has(arg.value.name)) {
                 this.raiseErrorIf(arg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                const pcode = (env.pcodes.get(arg.value.name) as { pcode: PCode, captured: string[] }).pcode;
+                const pcode = env.pcodes.get(arg.value.name) as PCode;
 
                 if (arg instanceof NamedArgument) {
                     eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
@@ -1716,6 +1716,7 @@ class TypeChecker {
         if (pcodes.length !== 0) {
             const scodes = [...pcodes].sort((a, b) => a.ikey.localeCompare(b.ikey));
 
+            const indirectcapture = new Set<string>();
             for(let j = 0; j < scodes.length; ++j) {
                 const cnames = [...scodes[j].captured].map((cn) => cn[0]).sort();
                 for (let i = 0; i < cnames.length; ++i) {
@@ -1740,12 +1741,19 @@ class TypeChecker {
                 }
 
                 if(scodes[j].capturedpcode.size !== 0) {
-                    //
-                    //TODO: pcode capture
-                    //
-                    assert(false);
+                    const pcc = this.m_emitter.flattenCapturedPCodeVarCaptures(scodes[j].capturedpcode);
+                    pcc.forEach((vv) => {
+                        indirectcapture.add(vv);
+                    });
                 }
             }
+
+            [...indirectcapture].sort().forEach((vv) => {
+                const vinfo = env.lookupVar(vv) as VarInfo;
+
+                margs.push(new MIRRegisterArgument(vv));
+                cinfo.push([vv, vinfo.flowType]);
+            });
         }
 
         return { args: margs, fflag: fflag, refs: refs, pcodes: pcodes, cinfo: cinfo };
@@ -2940,8 +2948,8 @@ class TypeChecker {
     private checkPCodeInvokeExpression(env: TypeEnvironment, exp: PCodeInvokeExpression, trgt: MIRRegisterArgument, refok: boolean): TypeEnvironment[] {
         const pco = env.lookupPCode(exp.pcode);
         this.raiseErrorIf(exp.sinfo, pco === undefined, "Code name not defined");
-        const pcode = (pco as { pcode: PCode, captured: string[] }).pcode;
-        const captured = (pco as { pcode: PCode, captured: string[] }).captured;
+        const pcode = pco as PCode;
+        const captured = [...(pco as PCode).captured].map((cc) => cc[0]).sort();
 
         const callargs = [...exp.args.argList];
         const eargs = this.checkArgumentsEvaluationWSig(exp.sinfo, env, pcode.ftype, new Map<string, ResolvedType>(), new Arguments(callargs), undefined, refok);
@@ -3649,7 +3657,7 @@ class TypeChecker {
         for(let i = 0; i < args.argList.length; ++i) {
             const arg = args.argList[i].value;
             if(arg instanceof AccessVariableExpression && env.pcodes.has(arg.name)) {
-                return (env.pcodes.get(arg.name) as {pcode: PCode, captured: string[]}).pcode.code.params.length;
+                return (env.pcodes.get(arg.name) as PCode).code.params.length;
             }
             else if(arg instanceof ConstructorPCodeExpression) {
                 return arg.invoke.params.length;
@@ -6225,7 +6233,7 @@ class TypeChecker {
                     return { name: cp, refKind: undefined, ptype: cptype as ResolvedType };
                 });
 
-                const idecl = this.processInvokeInfo_ExpressionGeneral(bodyid, srcFile, cexp.exp, ikeyinfo.keyid, ikeyinfo.shortname, cexp.exp.sinfo, ["dynamic_initializer", "private"], fparams, ptype, binds, new Map<string, { pcode: PCode, captured: string[] }>(), []);
+                const idecl = this.processInvokeInfo_ExpressionGeneral(bodyid, srcFile, cexp.exp, ikeyinfo.keyid, ikeyinfo.shortname, cexp.exp.sinfo, ["dynamic_initializer", "private"], fparams, ptype, binds, new Map<string, PCode>(), []);
                 this.m_emitter.masm.invokeDecls.set(ikeyinfo.keyid, idecl as MIRInvokeBodyDecl);
 
                 return new InitializerEvaluationCallAction(ikeyinfo.keyid, ikeyinfo.shortname, [...cexp.captured].sort().map((cp) => new MIRRegisterArgument(cp !== "%this_captured" ? cp : "this")));
@@ -6390,7 +6398,7 @@ class TypeChecker {
         }
     }
 
-    private processGenerateSpecialPreFunction_FailFast(invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], pcodes: Map<string, { pcode: PCode, captured: string[] }>, pargs: [string, ResolvedType][], exps: PreConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
+    private processGenerateSpecialPreFunction_FailFast(invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], pcodes: Map<string, PCode>, pargs: [string, ResolvedType][], exps: PreConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
         try {
             const clauses = exps
             .filter((cev) => isBuildLevelEnabled(cev.level, this.m_buildLevel))
@@ -6423,7 +6431,7 @@ class TypeChecker {
         return new BodyImplementation(body.id, body.file, new BlockStatement(sinfo, [ite]));
     }
 
-    private processGenerateSpecialPostFunction(invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], pcodes: Map<string, { pcode: PCode, captured: string[] }>, pargs: [string, ResolvedType][], exps: PostConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
+    private processGenerateSpecialPostFunction(invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], pcodes: Map<string, PCode>, pargs: [string, ResolvedType][], exps: PostConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
         try {
             const clauses = exps
             .filter((cev) => isBuildLevelEnabled(cev.level, this.m_buildLevel))
@@ -6588,7 +6596,7 @@ class TypeChecker {
                     });
                     const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
 
-                    const consenv = TypeEnvironment.createInitialEnvForCall(conskey.keyid, consbodyid, binds, new Map<string, { pcode: PCode, captured: string[] }>(), consenvargs, undefined);
+                    const consenv = TypeEnvironment.createInitialEnvForCall(conskey.keyid, consbodyid, binds, new Map<string, PCode>(), consenvargs, undefined);
                     this.generateConstructor(consbodyid, consenv, conskey.keyid, conskey.shortname, tdecl, binds);
 
                     const fields: MIRFieldDecl[] = [];
@@ -6628,7 +6636,7 @@ class TypeChecker {
     private processInvokeInfo_ExpressionIsolated(bodyID: string, srcFile: string, exp: Expression, ikey: MIRInvokeKey, ishort: string, sinfo: SourceInfo, attributes: string[], declaredResult: ResolvedType, binds: Map<string, ResolvedType>): MIRInvokeDecl {
         const resultType = this.generateExpandedReturnSig(sinfo, declaredResult, []);
 
-        const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, new Map<string, { pcode: PCode, captured: string[] }>(), new Map<string, VarInfo>(), declaredResult);
+        const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, new Map<string, PCode>(), new Map<string, VarInfo>(), declaredResult);
             
         const mirbody = this.checkBodyExpression(srcFile, env, exp, declaredResult, []);
         return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, this.m_file, [], 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
@@ -6648,14 +6656,14 @@ class TypeChecker {
         });
 
         const resultType = this.generateExpandedReturnSig(sinfo, declaredResult, invkparams);
-        const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, new Map<string, { pcode: PCode, captured: string[] }>(), cargs, declaredResult);
+        const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, new Map<string, PCode>(), cargs, declaredResult);
         
         const mirbody = this.checkBodyExpression(srcFile, env, exp, declaredResult, []);
         return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, this.m_file, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
     }
 
     //e.g. things like pre and post conditions
-    private processInvokeInfo_ExpressionGeneral(bodyID: string, srcFile: string, exp: Expression, ikey: MIRInvokeKey, ishort: string, sinfo: SourceInfo, attributes: string[], invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], declaredResult: ResolvedType, binds: Map<string, ResolvedType>, pcodes: Map<string, { pcode: PCode, captured: string[] }>, pargs: [string, ResolvedType][]): MIRInvokeDecl {
+    private processInvokeInfo_ExpressionGeneral(bodyID: string, srcFile: string, exp: Expression, ikey: MIRInvokeKey, ishort: string, sinfo: SourceInfo, attributes: string[], invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], declaredResult: ResolvedType, binds: Map<string, ResolvedType>, pcodes: Map<string, PCode>, pargs: [string, ResolvedType][]): MIRInvokeDecl {
         let cargs = new Map<string, VarInfo>();
         let params: MIRFunctionParameter[] = [];
 
@@ -6690,7 +6698,7 @@ class TypeChecker {
         const recursive = invoke.recursive === "yes" || (invoke.recursive === "cond" && pcodes.some((pc) => pc.code.recursive === "yes"));
         
         let cargs = new Map<string, VarInfo>();
-        let fargs = new Map<string, { pcode: PCode, captured: string[] }>();
+        let fargs = new Map<string, PCode>();
         let refnames: string[] = [];
         let outparaminfo: {pname: string, defonentry: boolean, ptype: ResolvedType}[] = [];
         let entrycallparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[] = [];
@@ -6706,7 +6714,7 @@ class TypeChecker {
                     assert(false);
                 }
 
-                const pcarg = { pcode: pcodes[fargs.size], captured: [...pcodes[fargs.size].captured].map((cc) => cc[0]).sort() };
+                const pcarg = pcodes[fargs.size]
                 fargs.set(p.name, pcarg);
             }
             else {
@@ -6825,7 +6833,7 @@ class TypeChecker {
         if (typeof ((invoke.body as BodyImplementation).body) === "string") {
             if ((invoke.body as BodyImplementation).body !== "default" || OOPTypeDecl.attributeSetContains("__primitive", invoke.attributes)) {
                 let mpc = new Map<string, MIRPCode>();
-                fargs.forEach((v, k) => mpc.set(k, { code: MIRKeyGenerator.generatePCodeKey(v.pcode.code.isPCodeFn, v.pcode.code.bodyID), cargs: [...v.captured].map((cname) => this.m_emitter.generateCapturedVarName(cname, v.pcode.code.bodyID)) }));
+                fargs.forEach((v, k) => mpc.set(k, { code: MIRKeyGenerator.generatePCodeKey(v.code.isPCodeFn, v.code.bodyID), cargs: [...v.captured].map((cname) => this.m_emitter.generateCapturedVarName(cname[0], v.code.bodyID)) }));
 
                 let mbinds = new Map<string, MIRResolvedTypeKey>();
                 binds.forEach((v, k) => mbinds.set(k, this.m_emitter.registerResolvedTypeReference(v).typeID));
@@ -6868,8 +6876,8 @@ class TypeChecker {
         }
     }
 
-    private processPCodeInfo(ikey: MIRInvokeKey, shortname: string, sinfo: SourceInfo, pci: InvokeDecl, binds: Map<string, ResolvedType>, fsig: ResolvedFunctionType, pargs: [string, ResolvedType][], capturedpcodes: [string, { pcode: PCode, captured: string[] }][]): MIRInvokeDecl {
-        this.checkPCodeDecl(sinfo, fsig, pci.recursive, capturedpcodes.map((cpc) => cpc[1].pcode));
+    private processPCodeInfo(ikey: MIRInvokeKey, shortname: string, sinfo: SourceInfo, pci: InvokeDecl, binds: Map<string, ResolvedType>, fsig: ResolvedFunctionType, pargs: [string, ResolvedType][], capturedpcodes: [string, PCode][]): MIRInvokeDecl {
+        this.checkPCodeDecl(sinfo, fsig, pci.recursive, capturedpcodes.map((cpc) => cpc[1]));
 
         let cargs = new Map<string, VarInfo>();
         let refnames: string[] = [];
@@ -6923,7 +6931,7 @@ class TypeChecker {
             ? new BlockStatement(sinfo, [new ReturnStatement(sinfo, [(pci.body as BodyImplementation).body as Expression])])
             : ((pci.body as BodyImplementation).body as BlockStatement);
 
-        let pcodes = new Map<string, { pcode: PCode, captured: string[] }>();
+        let pcodes = new Map<string, PCode>();
         capturedpcodes.forEach((cpc) => {
             pcodes.set(cpc[0], cpc[1]);
         });
@@ -6970,7 +6978,7 @@ class TypeChecker {
         }
     }
 
-    processLambdaFunction(lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, { pcode: PCode, captured: string[] }][]) {
+    processLambdaFunction(lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, PCode][]) {
         try {
             this.m_file = invoke.srcFile;
             const invinfo = this.processPCodeInfo(lkey, lshort, invoke.sourceLocation, invoke, bodybinds, sigt, cargs, capturedpcodes);
