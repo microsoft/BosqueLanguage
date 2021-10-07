@@ -6818,7 +6818,12 @@ class TypeChecker {
         if (typeof ((invoke.body as BodyImplementation).body) === "string") {
             if ((invoke.body as BodyImplementation).body !== "default" || OOPTypeDecl.attributeSetContains("__primitive", invoke.attributes)) {
                 let mpc = new Map<string, MIRPCode>();
-                fargs.forEach((v, k) => mpc.set(k, { code: MIRKeyGenerator.generatePCodeKey(v.code.isPCodeFn, v.code.bodyID), cargs: [...v.captured].map((cname) => this.m_emitter.generateCapturedVarName(cname[0], v.code.bodyID)) }));
+                fargs.forEach((v, k) => {
+                    const dcapture = [...v.captured].map((cname) => cname[0]);
+                    const icapture = v.capturedpcode.size !== 0 ? this.m_emitter.flattenCapturedPCodeVarCaptures(v.capturedpcode) : [];
+
+                    mpc.set(k, { code: MIRKeyGenerator.generatePCodeKey(v.code.isPCodeFn, v.code.bodyID), cargs: [...dcapture, ...icapture] })
+                });
 
                 let mbinds = new Map<string, MIRResolvedTypeKey>();
                 binds.forEach((v, k) => mbinds.set(k, this.m_emitter.registerResolvedTypeReference(v).typeID));
