@@ -23,6 +23,7 @@ type PCode = {
     code: InvokeDecl,
     ikey: MIRInvokeKey,
     captured: Map<string, ResolvedType>,
+    capturedpcode: Map<string, PCode>,
     ftype: ResolvedFunctionType
 };
 
@@ -128,7 +129,7 @@ class MIRKeyGenerator {
 type PendingConstExprProcessingInfo = { gkey: MIRGlobalKey, shortname: string, name: string, srcFile: string, containingType: [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, cexp: ConstantExpressionValue, attribs: string[], binds: Map<string, ResolvedType>, ddecltype: ResolvedType };
 type PendingFunctionProcessingInfo = { fkey: MIRInvokeKey, shortname: string, name: string, enclosingdecl: [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, invoke: InvokeDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
 type PendingOOMethodProcessingInfo = { vkey: MIRVirtualMethodKey, mkey: MIRInvokeKey, shortname: string, name: string, enclosingDecl: [MIRType, OOPTypeDecl, Map<string, ResolvedType>], mdecl: MemberMethodDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
-type PendingPCodeProcessingInfo = { lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, { pcode: PCode, captured: string[] }][] };
+type PendingPCodeProcessingInfo = { lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, PCode][] };
 type PendingOPVirtualProcessingInfo = { vkey: MIRVirtualMethodKey, optns: string | undefined, optenclosingType: [ResolvedType, MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
 
 type EntityInstantiationInfo = { tkey: MIRResolvedTypeKey, shortname: string, ootype: OOPTypeDecl, binds: Map<string, ResolvedType> };
@@ -209,7 +210,16 @@ class MIREmitter {
             this.m_capturedNameIDMap.set(bodyid, this.m_capturedNameIDMap.size);
         }
 
-        return `@@c_${this.m_capturedNameIDMap.get(bodyid)}_` + name;
+        return `@@c_${this.m_capturedNameIDMap.get(bodyid)}_${name}`;
+    }
+
+    
+    flattenCapturedPCodeVarCaptures(cc: Map<string, PCode>): string[] {
+        const ccopts = [...cc].map((ccx) => {
+           return [...ccx[1].captured].map((cv) => this.generateCapturedVarName(cv[0], ccx[1].code.bodyID));
+        });
+
+        return ([] as string[]).concat(...ccopts).sort();
     }
 
     createNewBlock(pfx: string): string {
@@ -1232,7 +1242,7 @@ class MIREmitter {
         return key;
     }
 
-    registerPCode(ikey: MIRInvokeKey, shortname: string, idecl: InvokeDecl, fsig: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cinfo: [string, ResolvedType][], capturedpcode: [string, { pcode: PCode, captured: string[] }][]) {
+    registerPCode(ikey: MIRInvokeKey, shortname: string, idecl: InvokeDecl, fsig: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cinfo: [string, ResolvedType][], capturedpcode: [string, PCode][]) {
         if (!this.emitEnabled || this.masm.invokeDecls.has(ikey) || this.masm.primitiveInvokeDecls.has(ikey) || this.pendingPCodeProcessing.findIndex((fp) => fp.lkey === ikey) !== -1) {
             return;
         }
