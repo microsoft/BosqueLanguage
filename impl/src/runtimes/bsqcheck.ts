@@ -216,19 +216,19 @@ else if(mode === "--check") {
 
         if(jres === undefined) {
             if(!quiet) {
-                process.stdout.write(`Failed with internal errors :(\n`);
+                process.stdout.write(chalk.red(`Failed with internal errors :(\n`));
             }
             fcount++;
         }
         else if(jres.result === "unreachable") {
             if(!quiet) {
-                process.stdout.write(`Proved unreachable in ${jres.time}s!\n`);
+                process.stdout.write(chalk.green(`Proved unreachable in ${jres.time}s!\n`));
             }
             icount++;
         }
         else if(jres.result === "witness") {
             if(!quiet) {
-                process.stdout.write(`Generated witness input in ${jres.time}s!\n`);
+                process.stdout.write(chalk.magenta(`Generated witness input in ${jres.time}s!\n`));
                 //process.stdout.write(`${jres.input}\n`);
             }
             wcount++;
@@ -236,7 +236,13 @@ else if(mode === "--check") {
         }
         else if(jres.result === "partial") {
             if(!quiet) {
-                process.stdout.write(`Proved unreachable on limited space.\n`);
+                process.stdout.write(chalk.blue(`Proved unreachable on partial space.\n`));
+            }
+            pcount++;
+        }
+        else if(jres.result === "nosmall") {
+            if(!quiet) {
+                process.stdout.write(chalk.blue(`No errors possible on partial space.\n`));
             }
             pcount++;
         }

@@ -29,7 +29,7 @@ const DEFAULT_TIMEOUT = 5000;
 type CheckerResult = "unreachable" | "witness" | "possible" | "timeout";
 
 //ocrresponds to 1a, 1b, 2a, 2b in paper
-type ChkWorkflowOutcome = "unreachable" | "witness" | "partial" | "exhaustive";
+type ChkWorkflowOutcome = "unreachable" | "witness" | "partial" | "nosmall" | "exhaustive";
 
 enum AssemblyFlavor
 {
@@ -649,8 +649,12 @@ function workflowBSQCheck(usercode: CodeFileInfo[], timeout: number, errorTrgtPo
         return undefined;
     }
 
+    let nosmallerror = false;
+    let nolimitederror = false;
     if (smis.result !== "unreachable" || smil.result !== "unreachable") {
         const smws = wfWitnessSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress, true);
+        nosmallerror = smws !== undefined && smws.result === "unreachable";
+
         if (smws !== undefined && smws.result === "witness") {
             if (printprogress) {
                 process.stderr.write(`  witness input generation successful (1b)!\n`);
@@ -660,6 +664,8 @@ function workflowBSQCheck(usercode: CodeFileInfo[], timeout: number, errorTrgtPo
         }
 
         const smwl = wfWitnessSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress, false);
+        nolimitederror = smwl !== undefined && smwl.result === "unreachable";
+
         if (smwl !== undefined && smwl.result === "witness") {
             if (printprogress) {
                 process.stderr.write(`  witness input generation successful (1b)!\n`);
@@ -695,6 +701,12 @@ function workflowBSQCheck(usercode: CodeFileInfo[], timeout: number, errorTrgtPo
             process.stderr.write(`  unreachable on ${smis.result === "unreachable" ? "small" : "restricted"} inputs (2a)!\n`);
         }
         return { result: "partial", time: elapsed };
+    }
+    else if(nosmallerror || nolimitederror) {
+        if (printprogress) {
+            process.stderr.write(`  unreachable on ${!nolimitederror ? "small" : "restricted"} inputs (2a)!\n`);
+        }
+        return { result: "nosmall", time: elapsed };
     }
     else {
         if (printprogress) {
