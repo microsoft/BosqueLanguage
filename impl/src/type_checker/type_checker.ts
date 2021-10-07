@@ -2600,7 +2600,7 @@ class TypeChecker {
                 return env.setUniformResultExpression(okconstype);
             }
             else {
-                this.raiseErrorIf(exp.sinfo, infertype !== undefined, "No default type known for T -- must explicitly construct or specify")
+                this.raiseErrorIf(exp.sinfo, infertype === undefined, "No default type known for T -- must explicitly construct or specify")
                 const errenv = this.checkExpression(env, exp.arg, treg, E);
                 
                 const ttype = T as ResolvedType;

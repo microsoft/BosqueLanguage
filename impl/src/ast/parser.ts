@@ -2418,31 +2418,62 @@ class Parser {
         return this.prefixStackApplicationHandler(sinfo, ops.reverse());
     }
 
+    private isMultiplicativeFollow(): boolean {
+        if(this.testToken("*") || this.testToken("/")) {
+            return true;
+        }
+        else if(this.testToken(TokenStrings.Operator) && this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 2) !== undefined) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
     private parseMultiplicativeExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parsePrefixExpression();
 
-        if(this.testToken("*") || this.testToken("/")) {
-            const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 2);
-            if(ons === undefined) {
-                this.raiseError(sinfo.line, "Could not resolve operator");
-            }
-
-            const op = this.consumeTokenAndGetValue();
-            const lhs = new PositionalArgument(undefined, false, exp);
-            const rhs = new PositionalArgument(undefined, false, this.parseMultiplicativeExpression());
-            return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
-        }
-        else if(this.testToken(TokenStrings.Operator) && this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 2) !== undefined) {
-            const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 2) as string;
-
-            const op = this.consumeTokenAndGetValue();
-            const lhs = new PositionalArgument(undefined, false, exp);
-            const rhs = new PositionalArgument(undefined, false, this.parseMultiplicativeExpression());
-            return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
+        if(!this.isMultiplicativeFollow()) {
+            return exp;
         }
         else {
-            return exp;
+            let aexp: Expression = exp;
+            while (this.isMultiplicativeFollow()) {
+                if (this.testToken("*") || this.testToken("/")) {
+                    const op = this.consumeTokenAndGetValue();
+                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(op, 2);
+                    if (ons === undefined) {
+                        this.raiseError(sinfo.line, "Could not resolve operator");
+                    }
+
+                    const lhs = new PositionalArgument(undefined, false, aexp);
+                    const rhs = new PositionalArgument(undefined, false, this.parsePrefixExpression());
+                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
+                }
+                else {
+                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 2) as string;
+
+                    const op = this.consumeTokenAndGetValue();
+                    const lhs = new PositionalArgument(undefined, false, aexp);
+                    const rhs = new PositionalArgument(undefined, false, this.parsePrefixExpression());
+                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
+                }
+            }
+
+            return aexp;
+        }
+    }
+
+    private isAdditiveFollow(): boolean {
+        if(this.testToken("+") || this.testToken("-")) {
+            return true;
+        }
+        else if(this.testToken(TokenStrings.Operator) && this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 3) !== undefined) {
+            return true;
+        }
+        else {
+            return false;
         }
     }
 
@@ -2450,27 +2481,34 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
         const exp = this.parseMultiplicativeExpression();
 
-        if(this.testToken("+") || this.testToken("-")) {
-            const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 3);
-            if (ons === undefined) {
-                this.raiseError(sinfo.line, "Could not resolve operator");
-            }
-
-            const op = this.consumeTokenAndGetValue();
-            const lhs = new PositionalArgument(undefined, false, exp);
-            const rhs = new PositionalArgument(undefined, false, this.parseAdditiveExpression());
-            return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
-        }
-        else if(this.testToken(TokenStrings.Operator) && this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 3) !== undefined) {
-            const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 3) as string;
-
-            const op = this.consumeTokenAndGetValue();
-            const lhs = new PositionalArgument(undefined, false, exp);
-            const rhs = new PositionalArgument(undefined, false, this.parseAdditiveExpression());
-            return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
+        if(!this.isAdditiveFollow()) {
+            return exp;
         }
         else {
-            return exp;
+            let aexp: Expression = exp;
+            while (this.isAdditiveFollow()) {
+                if (this.testToken("+") || this.testToken("-")) {
+                    const op = this.consumeTokenAndGetValue();
+                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(op, 3);
+                    if (ons === undefined) {
+                        this.raiseError(sinfo.line, "Could not resolve operator");
+                    }
+
+                    const lhs = new PositionalArgument(undefined, false, aexp);
+                    const rhs = new PositionalArgument(undefined, false, this.parseMultiplicativeExpression());
+                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
+                }
+                else {
+                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 3) as string;
+
+                    const op = this.consumeTokenAndGetValue();
+                    const lhs = new PositionalArgument(undefined, false, aexp);
+                    const rhs = new PositionalArgument(undefined, false, this.parseMultiplicativeExpression());
+                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
+                }
+            }
+
+            return aexp;
         }
     }
 
@@ -2506,21 +2544,9 @@ class Parser {
         }
     }
 
-    private parseImpliesExpression(): Expression {
-        const sinfo = this.getCurrentSrcInfo();
-        const exp = this.parseRelationalExpression();
-
-        if (this.testAndConsumeTokenIf("==>")) {
-            return new BinLogicExpression(sinfo, exp, "==>", this.parseImpliesExpression());
-        }
-        else {
-            return exp;
-        }
-    }
-
     private parseAndExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
-        const exp = this.parseImpliesExpression();
+        const exp = this.parseRelationalExpression();
 
         if (this.testAndConsumeTokenIf("&&")) {
             return new BinLogicExpression(sinfo, exp, "&&", this.parseAndExpression());
@@ -2542,12 +2568,24 @@ class Parser {
         }
     }
 
+    private parseImpliesExpression(): Expression {
+        const sinfo = this.getCurrentSrcInfo();
+        const exp = this.parseOrExpression();
+
+        if (this.testAndConsumeTokenIf("==>")) {
+            return new BinLogicExpression(sinfo, exp, "==>", this.parseImpliesExpression());
+        }
+        else {
+            return exp;
+        }
+    }
+
     private parseMapEntryConstructorExpression(): Expression {
         const sinfo = this.getCurrentSrcInfo();
 
-        const lexp = this.parseOrExpression();   
+        const lexp = this.parseImpliesExpression();   
         if(this.testAndConsumeTokenIf("=>")) {
-            const rexp = this.parseOrExpression();
+            const rexp = this.parseImpliesExpression();
         
             return new MapEntryConstructorExpression(sinfo, lexp, rexp);
         }

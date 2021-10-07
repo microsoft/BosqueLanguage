@@ -442,23 +442,23 @@ concept Result<T, E=None> provides Some, APIType when T grounded APIType && E gr
     }
 
     method isOk(): Bool {
-        return this.is<Ok>();
+        return this.is<Result<T, E>::Ok>();
     }
 
     method isErr(): Bool {
-        return this.is<Err>();
+        return this.is<Result<T, E>::Err>();
     }
 
     method result(): T {
-        return this.as<Ok>().value();
+        return this.as<Result<T, E>::Ok>().value();
     }
 
     method error(): E {
-        return this.as<Err>().value();
+        return this.as<Result<T, E>::Err>().value();
     }
 
     method convert<U=?, V=?>(): Result<U, V> {
-        if(this.is<Ok>()) {
+        if(this.is<Result<T, E>::Ok>()) {
             return Result<U, V>::Ok@{this.result().as<U>()};
         }
         else {
