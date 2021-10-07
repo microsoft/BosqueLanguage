@@ -141,7 +141,7 @@ class TypeEnvironment {
     readonly bodyid: string;
     readonly terms: Map<string, ResolvedType>;
 
-    readonly pcodes: Map<string, { pcode: PCode, captured: string[] }>;
+    readonly pcodes: Map<string, PCode>;
 
     readonly args: Map<string, VarInfo> | undefined;
     readonly locals: Map<string, VarInfo>[] | undefined;
@@ -155,7 +155,7 @@ class TypeEnvironment {
 
     readonly frozenVars: Set<string>;
 
-    private constructor(ikey: MIRInvokeKey, bodyid: string, terms: Map<string, ResolvedType>, pcodes: Map<string, { pcode: PCode, captured: string[] }>,
+    private constructor(ikey: MIRInvokeKey, bodyid: string, terms: Map<string, ResolvedType>, pcodes: Map<string, PCode>,
         args: Map<string, VarInfo> | undefined, locals: Map<string, VarInfo>[] | undefined, result: ResolvedType | undefined, inferYield: (ResolvedType | undefined)[],
         expressionResult: ExpressionReturnResult | undefined, rflow: ResolvedType | undefined, yflow: ResolvedType | undefined,
         frozenVars: Set<string>) {
@@ -190,7 +190,7 @@ class TypeEnvironment {
         }
     }
 
-    static createInitialEnvForCall(ikey: MIRInvokeKey, bodyid: string, terms: Map<string, ResolvedType>, pcodes: Map<string, { pcode: PCode, captured: string[] }>, args: Map<string, VarInfo>, inferResult: ResolvedType | undefined): TypeEnvironment {
+    static createInitialEnvForCall(ikey: MIRInvokeKey, bodyid: string, terms: Map<string, ResolvedType>, pcodes: Map<string, PCode>, args: Map<string, VarInfo>, inferResult: ResolvedType | undefined): TypeEnvironment {
         return new TypeEnvironment(ikey, bodyid, terms, pcodes, args, [new Map<string, VarInfo>()], inferResult, [], undefined, undefined, undefined, new Set<string>());
     }
 
@@ -386,7 +386,7 @@ class TypeEnvironment {
         return this.getLocalVarInfo(name) || (this.args as Map<string, VarInfo>).get(name) || null;
     }
 
-    lookupPCode(pc: string): { pcode: PCode, captured: string[] } | undefined {
+    lookupPCode(pc: string): PCode | undefined {
         return this.pcodes.get(pc);
     }
 
