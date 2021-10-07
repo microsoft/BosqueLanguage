@@ -38,7 +38,7 @@ type ExpandedArgument = {
     argtype: ValueType | ResolvedFunctionType,
     expando: boolean,
     ref: ["ref" | "out" | "out?", MIRRegisterArgument] | undefined,
-    pcode: PCode | undefined,
+    pcode: {code: PCode, islocal: boolean} | undefined,
     treg: MIRRegisterArgument | undefined
 };
 
@@ -47,7 +47,7 @@ type FilledLocation = {
     mustDef: boolean,
     fflagchk: boolean,
     ref: ["ref" | "out" | "out?", MIRRegisterArgument] | undefined,
-    pcode: PCode | undefined,
+    pcode: {code: PCode, islocal: boolean} | undefined,
     trgt: MIRArgument | undefined
 };
 
@@ -520,19 +520,19 @@ class TypeChecker {
 
         let capturedpcode = new Map<string, PCode>();
         exp.invoke.captureSet.forEach((v) => {
-            if (v === "%this_captured" && env.lookupVar(v) === null) {
-                const vinfo = env.lookupVar("this") as VarInfo;
-                cargs.set(v, vinfo);
+            if (env.pcodes.has(v)) {
+                const pcc = env.pcodes.get(v) as PCode;
+                capturedpcode.set(v, pcc);
+
+                if(pcc.capturedpcode.size !== 0) {
+                    const cvars = this.m_emitter.flattenCapturedPCodeVarCaptures(pcc.capturedpcode);
+                    cvars.forEach((cv) => cargs.set(cv, env.lookupVar(cv) as VarInfo));
+                }
             }
             else {
-                if (env.pcodes.has(v)) {
-                    capturedpcode.set(v, env.pcodes.get(v) as PCode);
-                }
-                else {
-                    const vinfo = env.lookupVar(v) as VarInfo;
-                    this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
-                    cargs.set(v, vinfo);
-                }
+                const vinfo = env.lookupVar(v) as VarInfo;
+                this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
+                cargs.set(v, vinfo);
             }
         });
 
@@ -613,6 +613,7 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, expectedFunction !== undefined && !this.m_assembly.functionSubtypeOf(ltypetry as ResolvedFunctionType, expectedFunction), "Mismatch in expected and provided function signature");
 
         let capturedMap: Map<string, ResolvedType> = new Map<string, ResolvedType>();
+        let implicitCapturedMap: Map<string, ResolvedType> = new Map<string, ResolvedType>();
         let capturedpcode = new Map<string, PCode>();
 
         let captures: string[] = [];
@@ -620,23 +621,22 @@ class TypeChecker {
         captures.sort();
 
         captures.forEach((v) => {
-            if (v === "%this_captured" && env.lookupVar(v) === null) {
-                const vinfo = env.lookupVar("this") as VarInfo;
+            if (env.pcodes.has(v)) {
+                capturedpcode.set(v, env.pcodes.get(v) as PCode);
+            }
+            else {
+                const vinfo = env.lookupVar(v) as VarInfo;
+                this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
 
                 capturedMap.set(v, vinfo.flowType);
             }
-            else {
-                if (env.pcodes.has(v)) {
-                    capturedpcode.set(v, env.pcodes.get(v) as PCode);
-                }
-                else {
-                    const vinfo = env.lookupVar(v) as VarInfo;
-                    this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
-
-                    capturedMap.set(v, vinfo.flowType);
-                }
-            }
         });
+
+
+        if(capturedpcode.size !== 0) {
+            const cvars = this.m_emitter.flattenCapturedPCodeVarCaptures(capturedpcode);
+            cvars.forEach((cv) => implicitCapturedMap.set(cv, (env.lookupVar(cv) as VarInfo).flowType));
+        }
 
         //TODO: this may capture too many types that are not strictly needed -- maybe want to parse scope track captured types like we do for captured variables
         let bodybinds = new Map<string, ResolvedType>(cbinds);
@@ -647,7 +647,12 @@ class TypeChecker {
         });
 
         const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
-        this.m_emitter.registerPCode(ikey, ikey, exp.invoke, ltypetry as ResolvedFunctionType, bodybinds, [...capturedMap].sort((a, b) => a[0].localeCompare(b[0])), [...capturedpcode].sort((a, b) => a[0].localeCompare(b[0])));
+        const cinfo = [
+            ...[...capturedMap].sort((a, b) => a[0].localeCompare(b[0])),
+            ...[...implicitCapturedMap].sort((a, b) => a[0].localeCompare(b[0]))
+        ];
+
+        this.m_emitter.registerPCode(ikey, ikey, exp.invoke, ltypetry as ResolvedFunctionType, bodybinds, cinfo, [...capturedpcode].sort((a, b) => a[0].localeCompare(b[0])));
 
         return { code: exp.invoke, ikey: ikey, captured: capturedMap, capturedpcode: capturedpcode, ftype: ltypetry as ResolvedFunctionType };
     }
@@ -702,14 +707,15 @@ class TypeChecker {
                     this.raiseErrorIf(narg.value.sinfo, isref, "Cannot use ref params on function argument");
 
                     const pcode = this.checkPCodeExpression(env, narg.value, sigbinds, param.type as ResolvedFunctionType);
-                    eargs[i + ridx] = { name: narg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
+
+                    eargs[i + ridx] = { name: narg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: {code: pcode, islocal: true}, treg: treg };
                 }
                 else if (narg.value instanceof AccessVariableExpression && env.pcodes.has(narg.value.name)) {
                     this.raiseErrorIf(narg.value.sinfo, !(param.type instanceof ResolvedFunctionType), "Must have function type for function arg");
                     this.raiseErrorIf(narg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                    const pcode = env.pcodes.get(narg.value.name) as PCode;
-                    eargs[i + ridx] = { name: narg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
+                    const pcode = {code: env.pcodes.get(narg.value.name) as PCode, islocal: false};
+                    eargs[i + ridx] = { name: narg.name, argtype: pcode.code.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
                 }
                 else {
                     if (isref) {
@@ -762,14 +768,15 @@ class TypeChecker {
                     this.raiseErrorIf(parg.value.sinfo, isref, "Cannot use ref params on function argument");
 
                     const pcode = this.checkPCodeExpression(env, parg.value, sigbinds, oftype as ResolvedFunctionType);
-                    eargs[i + ridx] = { name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
+
+                    eargs[i + ridx] = { name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: {code: pcode, islocal: true}, treg: treg };
                 }
                 else if (parg.value instanceof AccessVariableExpression && env.pcodes.has(parg.value.name)) {
                     this.raiseErrorIf(parg.value.sinfo, !(oftype instanceof ResolvedFunctionType), "Must have function type for function arg");
                     this.raiseErrorIf(parg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                    const pcode = env.pcodes.get(parg.value.name) as PCode;
-                    eargs[i + ridx] = { name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
+                    const pcode = {code: env.pcodes.get(parg.value.name) as PCode, islocal: false};
+                    eargs[i + ridx] = { name: undefined, argtype: pcode.code.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg };
                 }
                 else {
                     if (isref) {
@@ -817,26 +824,26 @@ class TypeChecker {
                     const pcode = this.checkPCodeExpression(env, arg.value, sigbinds, undefined);
 
                     if (arg instanceof NamedArgument) {
-                        eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                        eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: {code: pcode, islocal: true}, treg: treg });
                     }
                     else {
                         this.raiseErrorIf(arg.value.sinfo, (arg as PositionalArgument).isSpread, "Cannot have spread on pcode argument");
 
-                        eargs.push({ name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                        eargs.push({ name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: {code: pcode, islocal: true}, treg: treg });
                     }
                 }
                 else if (arg.value instanceof AccessVariableExpression && env.pcodes.has(arg.value.name)) {
                     this.raiseErrorIf(arg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                    const pcode = env.pcodes.get(arg.value.name) as PCode;
+                    const pcode = {code: env.pcodes.get(arg.value.name) as PCode, islocal: false};
 
                     if (arg instanceof NamedArgument) {
-                        eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                        eargs.push({ name: arg.name, argtype: pcode.code.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
                     }
                     else {
                         this.raiseErrorIf(arg.value.sinfo, (arg as PositionalArgument).isSpread, "Cannot have spread on pcode argument");
 
-                        eargs.push({ name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                        eargs.push({ name: undefined, argtype: pcode.code.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
                     }
                 }
                 else {
@@ -933,26 +940,26 @@ class TypeChecker {
                 const pcode = this.checkPCodeExpression(env, arg.value, binds, undefined);
 
                 if (arg instanceof NamedArgument) {
-                    eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                    eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: {code: pcode, islocal: true}, treg: treg });
                 }
                 else {
                     this.raiseErrorIf(arg.value.sinfo, (arg as PositionalArgument).isSpread, "Cannot have spread on pcode argument");
 
-                    eargs.push({ name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                    eargs.push({ name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: {code: pcode, islocal: true}, treg: treg });
                 }
             }
             else if (arg.value instanceof AccessVariableExpression && env.pcodes.has(arg.value.name)) {
                 this.raiseErrorIf(arg.value.sinfo, isref, "Cannot use ref params on function argument");
 
-                const pcode = env.pcodes.get(arg.value.name) as PCode;
+                const pcode = {code: env.pcodes.get(arg.value.name) as PCode, islocal: false};
 
                 if (arg instanceof NamedArgument) {
-                    eargs.push({ name: arg.name, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                    eargs.push({ name: arg.name, argtype: pcode.code.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
                 }
                 else {
                     this.raiseErrorIf(arg.value.sinfo, (arg as PositionalArgument).isSpread, "Cannot have spread on pcode argument");
 
-                    eargs.push({ name: undefined, argtype: pcode.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
+                    eargs.push({ name: undefined, argtype: pcode.code.ftype, ref: undefined, expando: false, pcode: pcode, treg: treg });
                 }
             }
             else {
@@ -1637,7 +1644,7 @@ class TypeChecker {
         //go through names and fill out info for any that should use the default value -- raise error if any are missing
         //check ref, pcode, and regular arg types -- plus build up emit data
         let margs: MIRArgument[] = [];
-        let pcodes: PCode[] = [];
+        let pcodes: {code: PCode, islocal: boolean}[] = [];
         let refs: ["ref" | "out" | "out?", MIRRegisterArgument, ResolvedType][] = [];
         for (let j = 0; j < sig.params.length; ++j) {
             const paramtype = sig.params[j].type;
@@ -1655,7 +1662,7 @@ class TypeChecker {
                 this.raiseErrorIf(sinfo, filledLocations[j].pcode === undefined, `Parameter ${sig.params[j].name} expected a function`);
                 this.raiseErrorIf(sinfo, !this.m_assembly.functionSubtypeOf(filledLocations[j].vtype as ResolvedFunctionType, paramtype as ResolvedFunctionType), `Parameter ${sig.params[j].name} expected function of type ${paramtype.typeID}`);
 
-                pcodes.push(filledLocations[j].pcode as PCode);
+                pcodes.push(filledLocations[j].pcode as {code: PCode, islocal: boolean});
             }
             else {
                 this.raiseErrorIf(sinfo, filledLocations[j].pcode !== undefined, `Parameter ${sig.params[j].name} cannot take a function`);
@@ -1714,34 +1721,30 @@ class TypeChecker {
         //take all the pcodes and pass the "captured" variables in as arguments in pcode/alpha order
         let cinfo: [string, ResolvedType][] = [];
         if (pcodes.length !== 0) {
-            const scodes = [...pcodes].sort((a, b) => a.ikey.localeCompare(b.ikey));
+            const scodes = [...pcodes].sort((a, b) => a.code.ikey.localeCompare(b.code.ikey));
 
             const indirectcapture = new Set<string>();
             for(let j = 0; j < scodes.length; ++j) {
-                const cnames = [...scodes[j].captured].map((cn) => cn[0]).sort();
+                const cnames = [...scodes[j].code.captured].map((cn) => cn[0]).sort();
                 for (let i = 0; i < cnames.length; ++i) {
-                    const vinfo = env.lookupVar(cnames[i]);
-                    if (vinfo === null) {
-                        //This is the first place we capture $$this_captured so we sould pass "this" as the arg for it
-                        const tinfo = env.lookupVar("this") as VarInfo;
-                        margs.push(new MIRRegisterArgument("this"));
+                    const cname = this.m_emitter.generateCapturedVarName(cnames[i], scodes[j].code.code.bodyID);
 
-                        cinfo.push([cnames[i], tinfo.flowType]);
+                    if(scodes[j].islocal) {
+                        const vinfo = env.lookupVar(cnames[i]) as VarInfo;
+
+                        margs.push(new MIRRegisterArgument(cnames[i]));
+                        cinfo.push([cname, vinfo.flowType]);
                     }
                     else {
-                        if (env.getLocalVarInfo(cnames[i]) !== undefined) {
-                            margs.push(new MIRRegisterArgument(cnames[i]));
-                        }
-                        else {
-                            margs.push(new MIRRegisterArgument(vinfo.isCaptured ? this.m_emitter.generateCapturedVarName(cnames[i], scodes[j].code.bodyID) : cnames[i]));
-                        }
+                        const vtype = scodes[j].code.captured.get(cnames[i]) as ResolvedType;
 
-                        cinfo.push([cnames[i], vinfo.flowType]);
+                        margs.push(new MIRRegisterArgument(cname));
+                        cinfo.push([cname, vtype]);
                     }
                 }
 
-                if(scodes[j].capturedpcode.size !== 0) {
-                    const pcc = this.m_emitter.flattenCapturedPCodeVarCaptures(scodes[j].capturedpcode);
+                if(scodes[j].code.capturedpcode.size !== 0) {
+                    const pcc = this.m_emitter.flattenCapturedPCodeVarCaptures(scodes[j].code.capturedpcode);
                     pcc.forEach((vv) => {
                         indirectcapture.add(vv);
                     });
@@ -1756,7 +1759,7 @@ class TypeChecker {
             });
         }
 
-        return { args: margs, fflag: fflag, refs: refs, pcodes: pcodes, cinfo: cinfo };
+        return { args: margs, fflag: fflag, refs: refs, pcodes: pcodes.map((pci) => pci.code), cinfo: cinfo };
     }
 
     private checkArgumentsWOperator(sinfo: SourceInfo, env: TypeEnvironment, opnames: string[], hasrest: boolean, args: ExpandedArgument[]): { args: MIRArgument[], types: ValueType[], refs: ["ref" | "out" | "out?", MIRRegisterArgument, ResolvedType][], pcodes: PCode[], cinfo: [string, ResolvedType][] } {
@@ -1849,13 +1852,13 @@ class TypeChecker {
         //check ref, pcode, and regular arg types -- plus build up emit data
         let margs: MIRArgument[] = [];
         let mtypes: ValueType[] = [];
-        let pcodes: PCode[] = [];
+        let pcodes: {code: PCode, islocal: boolean}[] = [];
         let refs: ["ref" | "out" | "out?", MIRRegisterArgument, ResolvedType][] = [];
         for (let j = 0; j < opnames.length; ++j) {
             this.raiseErrorIf(sinfo, filledLocations[j] === undefined, `Parameter ${opnames[j]} was not provided`);
 
             if (filledLocations[j].vtype instanceof ResolvedFunctionType) {
-                pcodes.push(filledLocations[j].pcode as PCode);
+                pcodes.push(filledLocations[j].pcode as {code: PCode, islocal: boolean});
             }
             else {
                 this.raiseErrorIf(sinfo, filledLocations[j].pcode !== undefined, `Parameter ${opnames[j]} cannot take a function`);
@@ -1904,41 +1907,45 @@ class TypeChecker {
         //take all the pcodes and pass the "captured" variables in as arguments in pcode/alpha order
         let cinfo: [string, ResolvedType][] = [];
         if (pcodes.length !== 0) {
-            const scodes = [...pcodes].sort((a, b) => a.ikey.localeCompare(b.ikey));
+            const scodes = [...pcodes].sort((a, b) => a.code.ikey.localeCompare(b.code.ikey));
 
+            const indirectcapture = new Set<string>();
             for(let j = 0; j < scodes.length; ++j) {
-                const cnames = [...scodes[j].captured].map((cn) => cn[0]).sort();
+                const cnames = [...scodes[j].code.captured].map((cn) => cn[0]).sort();
                 for (let i = 0; i < cnames.length; ++i) {
-                    const vinfo = env.lookupVar(cnames[i]);
-                    if (vinfo === null) {
-                        //This is the first place we capture $$this_captured so we sould pass "this" as the arg for it
-                        const tinfo = env.lookupVar("this") as VarInfo;
-                        margs.push(new MIRRegisterArgument("this"));
+                    const cname = this.m_emitter.generateCapturedVarName(cnames[i], scodes[j].code.code.bodyID);
 
-                        cinfo.push([cnames[i], tinfo.flowType]);
+                    if(scodes[j].islocal) {
+                        const vinfo = env.lookupVar(cnames[i]) as VarInfo;
+
+                        margs.push(new MIRRegisterArgument(cnames[i]));
+                        cinfo.push([cname, vinfo.flowType]);
                     }
                     else {
-                        if (env.getLocalVarInfo(cnames[i]) !== undefined) {
-                            margs.push(new MIRRegisterArgument(cnames[i]));
-                        }
-                        else {
-                            margs.push(new MIRRegisterArgument(vinfo.isCaptured ? this.m_emitter.generateCapturedVarName(cnames[i], scodes[j].code.bodyID) : cnames[i]));
-                        }
+                        const vtype = scodes[j].code.captured.get(cnames[i]) as ResolvedType;
 
-                        cinfo.push([cnames[i], vinfo.flowType]);
+                        margs.push(new MIRRegisterArgument(cname));
+                        cinfo.push([cname, vtype]);
                     }
                 }
 
-                if(scodes[j].capturedpcode.size !== 0) {
-                    //
-                    //TODO: pcode capture
-                    //
-                    assert(false);
+                if(scodes[j].code.capturedpcode.size !== 0) {
+                    const pcc = this.m_emitter.flattenCapturedPCodeVarCaptures(scodes[j].code.capturedpcode);
+                    pcc.forEach((vv) => {
+                        indirectcapture.add(vv);
+                    });
                 }
             }
+
+            [...indirectcapture].sort().forEach((vv) => {
+                const vinfo = env.lookupVar(vv) as VarInfo;
+
+                margs.push(new MIRRegisterArgument(vv));
+                cinfo.push([vv, vinfo.flowType]);
+            });
         }
 
-        return { args: margs, types: mtypes, refs: refs, pcodes: pcodes, cinfo: cinfo };
+        return { args: margs, types: mtypes, refs: refs, pcodes: pcodes.map((pci) => pci.code), cinfo: cinfo };
     }
 
     private generateExpandedReturnSig(sinfo: SourceInfo, declaredType: ResolvedType, params: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[]): MIRType {
@@ -2437,12 +2444,7 @@ class TypeChecker {
 
         const vinfo = env.lookupVar(exp.name) as VarInfo;
         this.raiseErrorIf(exp.sinfo, !vinfo.mustDefined, "Var may not have been assigned a value");
-        if(vinfo.isCaptured) {
-            this.m_emitter.emitRegisterStore(exp.sinfo, new MIRRegisterArgument(this.m_emitter.generateCapturedVarName(exp.name, env.bodyid)), trgt, this.m_emitter.registerResolvedTypeReference(vinfo.declaredType), undefined);    
-        }
-        else {
-            this.m_emitter.emitRegisterStore(exp.sinfo, new MIRRegisterArgument(exp.name), trgt, this.m_emitter.registerResolvedTypeReference(vinfo.declaredType), undefined);    
-        }
+        this.m_emitter.emitRegisterStore(exp.sinfo, new MIRRegisterArgument(exp.name), trgt, this.m_emitter.registerResolvedTypeReference(vinfo.declaredType), undefined);    
 
         return env.setVarResultExpression(vinfo.declaredType, vinfo.flowType, exp.name);
     }
@@ -2955,17 +2957,13 @@ class TypeChecker {
         const eargs = this.checkArgumentsEvaluationWSig(exp.sinfo, env, pcode.ftype, new Map<string, ResolvedType>(), new Arguments(callargs), undefined, refok);
 
         const margs = this.checkArgumentsSignature(exp.sinfo, env, "pcode", pcode.ftype, eargs);
-        const cargsext = captured.map((carg) => {
-            const rreg = this.m_emitter.generateTmpRegister();
-            this.checkAccessVariable(env, new AccessVariableExpression(exp.sinfo, carg), rreg);
-
-            return rreg;
-        });
-
+        const cargsext = captured.map((carg) => new MIRRegisterArgument(this.m_emitter.generateCapturedVarName(carg, pcode.code.bodyID)));
+        const iargsext = this.m_emitter.flattenCapturedPCodeVarCaptures(pcode.capturedpcode).map((iarg) => new MIRRegisterArgument(iarg));
+ 
         this.checkRecursion(exp.sinfo, pcode.ftype, margs.pcodes, exp.rec);
 
         const refinfo = this.generateRefInfoForCallEmit((pcode as PCode).ftype, margs.refs);
-        this.m_emitter.emitInvokeFixedFunction(exp.sinfo, (pcode as PCode).ikey, [...margs.args, ...cargsext], undefined, refinfo, trgt);   
+        this.m_emitter.emitInvokeFixedFunction(exp.sinfo, (pcode as PCode).ikey, [...margs.args, ...cargsext, ...iargsext], undefined, refinfo, trgt);   
 
         return this.updateEnvForOutParams(env.setUniformResultExpression(pcode.ftype.resultType), margs.refs);
     }
@@ -6217,16 +6215,10 @@ class TypeChecker {
                 const ppnames = [...cexp.captured].sort();
                 const fparams = ppnames.map((cp) => {
                     let cptype: ResolvedType | undefined = undefined;
-                    if (cp === "%this_captured") {
-                        if (enclosingDecl !== undefined) {
-                            cptype = this.resolveOOTypeFromDecls(enclosingDecl[1], enclosingDecl[2]);
-                        }
-                    }
-                    else {
-                        const cparam = invoke.params.find((ip) => ip.name === cp);
-                        if (cparam !== undefined) {
-                            cptype = this.resolveAndEnsureTypeOnly(cexp.exp.sinfo, cparam.type as TypeSignature, binds);
-                        }
+
+                    const cparam = invoke.params.find((ip) => ip.name === cp);
+                    if (cparam !== undefined) {
+                        cptype = this.resolveAndEnsureTypeOnly(cexp.exp.sinfo, cparam.type as TypeSignature, binds);
                     }
 
                     this.raiseErrorIf(cexp.exp.sinfo, cptype === undefined, "Unbound variable in initializer expression");
@@ -6236,7 +6228,7 @@ class TypeChecker {
                 const idecl = this.processInvokeInfo_ExpressionGeneral(bodyid, srcFile, cexp.exp, ikeyinfo.keyid, ikeyinfo.shortname, cexp.exp.sinfo, ["dynamic_initializer", "private"], fparams, ptype, binds, new Map<string, PCode>(), []);
                 this.m_emitter.masm.invokeDecls.set(ikeyinfo.keyid, idecl as MIRInvokeBodyDecl);
 
-                return new InitializerEvaluationCallAction(ikeyinfo.keyid, ikeyinfo.shortname, [...cexp.captured].sort().map((cp) => new MIRRegisterArgument(cp !== "%this_captured" ? cp : "this")));
+                return new InitializerEvaluationCallAction(ikeyinfo.keyid, ikeyinfo.shortname, [...cexp.captured].sort().map((cp) => new MIRRegisterArgument(cp)));
             }
         }
         catch (ex) {
@@ -6679,7 +6671,7 @@ class TypeChecker {
             cargs.set(pargs[i][0], new VarInfo(pargs[i][1], true, true, true, pargs[i][1]));
 
             const ctype = this.m_emitter.registerResolvedTypeReference(pargs[i][1]);
-            params.push(new MIRFunctionParameter(this.m_emitter.generateCapturedVarName(bodyID, pargs[i][0]), ctype.typeID));
+            params.push(new MIRFunctionParameter(pargs[i][0], ctype.typeID));
         }
 
         const resultType = this.generateExpandedReturnSig(sinfo, declaredResult, invkparams);
@@ -6707,13 +6699,6 @@ class TypeChecker {
         invoke.params.forEach((p) => {
             const pdecltype = this.m_assembly.normalizeTypeGeneral(p.type, binds);
             if (pdecltype instanceof ResolvedFunctionType) {
-                if(pcodes[fargs.size].capturedpcode.size !== 0) {
-                    //
-                    //TODO: pcode capture
-                    //
-                    assert(false);
-                }
-
                 const pcarg = pcodes[fargs.size]
                 fargs.set(p.name, pcarg);
             }
@@ -6754,9 +6739,9 @@ class TypeChecker {
             cargs.set(pargs[i][0], new VarInfo(pargs[i][1], true, true, true, pargs[i][1]));
 
             const ctype = this.m_emitter.registerResolvedTypeReference(pargs[i][1]);
-            params.push(new MIRFunctionParameter(this.m_emitter.generateCapturedVarName(pargs[i][0], invoke.bodyID), ctype.typeID));
+            params.push(new MIRFunctionParameter(pargs[i][0], ctype.typeID));
 
-            prepostcapturednames.push(this.m_emitter.generateCapturedVarName(pargs[i][0], invoke.bodyID));
+            prepostcapturednames.push(pargs[i][0]);
         }
 
         let optparaminfo: {pname: string, ptype: ResolvedType, maskidx: number, initaction: InitializerEvaluationAction}[] = [];
@@ -6921,7 +6906,7 @@ class TypeChecker {
             cargs.set(pargs[i][0], new VarInfo(pargs[i][1], true, true, true, pargs[i][1]));
 
             const ctype = this.m_emitter.registerResolvedTypeReference(pargs[i][1]);
-            params.push(new MIRFunctionParameter(this.m_emitter.generateCapturedVarName(pargs[i][0], pci.bodyID), ctype.typeID));
+            params.push(new MIRFunctionParameter(pargs[i][0], ctype.typeID));
         }
 
         let resolvedResult = fsig.resultType;
