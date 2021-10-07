@@ -263,9 +263,12 @@ function workflowBSQWitnessSingle(usercode: CodeFileInfo[], vopts: VerifierOptio
     }
 }
 
-function wfInfeasibleSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number} | undefined {
-    const SMALL_MODEL = [
-        { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: false, StringOpt: "ASCII" },
+function wfInfeasibleSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean, smallopsonly: boolean): {result: CheckerResult, time: number} | undefined {
+    const SMALL_MODEL = smallopsonly 
+    ? [
+        { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: false, StringOpt: "ASCII" } 
+    ]
+    : [
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: true, EnableCollection_SmallOps: false, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
     ];
@@ -359,9 +362,12 @@ function wfInfeasibleSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtP
     return {result: "unreachable", time: (end - start) / 1000};
 }
 
-function wfWitnessSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
-    const SMALL_MODEL = [
-        { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: false, StringOpt: "ASCII" },
+function wfWitnessSmall(usercode: CodeFileInfo[], timeout: number, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey, printprogress: boolean, smallopsonly: boolean): {result: CheckerResult, time: number, input?: any} | undefined {
+    const SMALL_MODEL = smallopsonly 
+    ? [
+        { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: false, StringOpt: "ASCII" }
+    ]
+    : [
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: false, EnableCollection_SmallOps: true, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
         { EnableCollection_SmallHavoc: true, EnableCollection_LargeHavoc: true, EnableCollection_SmallOps: true, EnableCollection_LargeOps: true, StringOpt: "ASCII" },
     ];
@@ -634,24 +640,45 @@ function workflowBSQCheck(usercode: CodeFileInfo[], timeout: number, errorTrgtPo
 
     const start = Date.now();
 
-    const smi = wfInfeasibleSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress);
-    if(smi === undefined) {
+    const smis = wfInfeasibleSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress, true);
+    const smil = wfInfeasibleSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress, false);
+    if(smis === undefined || smil === undefined) {
         if(printprogress) {
             process.stderr.write(`  blocked on small model unreachability -- moving on :(\n`);
         }
         return undefined;
     }
 
-    let smw = smi.result != "unreachable" ? wfWitnessSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
-    if(smw !== undefined && smw.result === "witness") {
-        if(printprogress) {
-            process.stderr.write(`  witness input generation successful (1b)!\n`);
+    if (smis.result !== "unreachable" || smil.result !== "unreachable") {
+        const smws = wfWitnessSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress, true);
+        if (smws !== undefined && smws.result === "witness") {
+            if (printprogress) {
+                process.stderr.write(`  witness input generation successful (1b)!\n`);
+            }
+            const end = Date.now();
+            return { result: "witness", time: (end - start) / 1000, input: smws.input };
         }
-        const end = Date.now();
-        return {result: "witness", time: (end - start) / 1000, input: smw.input};
+
+        const smwl = wfWitnessSmall(usercode, timeout, errorTrgtPos, entrypoint, printprogress, false);
+        if (smwl !== undefined && smwl.result === "witness") {
+            if (printprogress) {
+                process.stderr.write(`  witness input generation successful (1b)!\n`);
+            }
+            const end = Date.now();
+            return { result: "witness", time: (end - start) / 1000, input: smwl.input };
+        }
     }
 
-    let lmw = smi.result != "unreachable" ? wfWitnessLarge(usercode, timeout, errorTrgtPos, entrypoint, printprogress) : undefined;
+    const lmr = wfInfeasibleLarge(usercode, timeout, errorTrgtPos, entrypoint, printprogress);
+    if(lmr !== undefined && lmr.result === "unreachable") {
+        if(printprogress) {
+            process.stderr.write(`  unreachable on all inputs (1a)!\n`);
+        }
+        const end = Date.now();
+        return {result: "unreachable", time: (end - start) / 1000};
+    }
+    
+    let lmw = wfWitnessLarge(usercode, timeout, errorTrgtPos, entrypoint, printprogress);
     if(lmw !== undefined && lmw.result === "witness") {
         if(printprogress) {
             process.stderr.write(`  witness input generation successful (1b)!\n`);
@@ -660,36 +687,20 @@ function workflowBSQCheck(usercode: CodeFileInfo[], timeout: number, errorTrgtPo
         return {result: "witness", time: (end - start) / 1000, input: lmw.input};
     }
 
-    const lmr = wfInfeasibleLarge(usercode, timeout, errorTrgtPos, entrypoint, printprogress);
-    if(lmr === undefined) {
-        if(printprogress) {
-            process.stderr.write(`  blocked on large model unreachability -- no result :(\n`);
-        }
-        return undefined;
-    }
-
     const end = Date.now();
     const elapsed = (end - start) / 1000;
 
-    if(lmr.result === "unreachable") {
-        if(printprogress) {
-            process.stderr.write(`  unreachable on all inputs (1a)!\n`);
+    if (smis.result === "unreachable" || smil.result === "unreachable") {
+        if (printprogress) {
+            process.stderr.write(`  unreachable on ${smis.result === "unreachable" ? "small" : "restricted"} inputs (2a)!\n`);
         }
-        return {result: "unreachable", time: elapsed};
+        return { result: "partial", time: elapsed };
     }
     else {
-        if(smi.result === "unreachable") {
-            if(printprogress) {
-                process.stderr.write(`  unreachable on restricted inputs (2a)!\n`);
-            }
-            return {result: "partial", time: elapsed};
+        if (printprogress) {
+            process.stderr.write(`  exhastive exploration (2b)!\n`);
         }
-        else {
-            if(printprogress) {
-                process.stderr.write(`  exhastive exploration (2b)!\n`);
-            }
-            return {result: "exhaustive", time: elapsed};
-        }
+        return { result: "exhaustive", time: elapsed };
     }
 }
 
