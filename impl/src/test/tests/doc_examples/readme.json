@@ -257,6 +257,35 @@
                     "result": "-1i"
                 }
             ]
+        },
+        {
+            "test": "invariants",
+            "src": "doc_examples/data_invariants.txt",
+            "sig": "function main(x: String): String",
+            "code": "",
+            "typechk": [
+                "NamedGreeting@{}.sayHello() === \"[type error]\""
+            ],
+            "infeasible": [
+                {
+                    "action": "GenericGreeting@{}.sayHello()",
+                    "check": "res === \"hello world\""
+                },
+                {
+                    "action": "GenericGreeting::instance.sayHello()",
+                    "check": "res === \"hello world\""
+                },
+                {
+                    "action": "NamedGreeting@{name=\"bob\"}.sayHello()",
+                    "check": "res === \"hello bob\""
+                }
+            ],
+            "witness": [
+                {
+                    "action": "NamedGreeting@{name=x}.sayHello()",
+                    "check": "res === \"hello bob\""
+                }
+            ]
         }
     ]
 }

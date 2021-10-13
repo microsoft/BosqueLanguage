@@ -22,6 +22,6 @@ entity GenericGreeting provides Greeting {
 
 entity NamedGreeting provides WithName, Greeting {
     override method sayHello(): String {
-        return String::concat3("hello", " ", this.name);
+        return String::concat("hello ", this.name);
     }
 }
