@@ -165,7 +165,7 @@ entity StatusCode provides Parsable {
     field code: Int;
     field name: String;
 
-    function tryParse(name: String): Result<StatusCode, String> {
+    function parse(name: String): Result<StatusCode, String> {
         return switch(name) {
             "IO"        => ok(StatusCode@{1, name})
             | "Network" => ok(StatusCode@{2, name})
@@ -182,15 +182,15 @@ function isIOCode(s: DataString<StatusCode>): Bool {
     return s === 'IO'#StatusCode;
 }
 
-isIOCode("IO");                               //type error not a DataString<StatusCode>
-isIOCode('Input'#StatusCode)                  //type error not a valid StatusCode string
-isIOCode(StringOf<StatusCode>::from("Input")) //runtime error not a valid StatusCode string
+isIOCode("IO");               //type error not a DataString<StatusCode>
+isIOCode('Input'#StatusCode)  //type error not a valid StatusCode string
+StatusCode::parse("Input") //runtime error not a valid StatusCode string
 
-isIOCode(StatusCode'Assert')               //false
-isIOCode(StringOf<StatusCode>::from("IO")) //true
+isIOCode('Network'#StatusCode)               //false
+isIOCode('IO'#StatusCode)                    //true
 
-let ec: StatusCode = StatusCode@'IO';
-assert(ec.code == 1); //true
+let ec: StatusCode = 'IO'(StatusCode);
+assert(ec.code == 1i); //true
 ```
 
 **Structural, Nominal, and Union Types (plus optional arguments)**

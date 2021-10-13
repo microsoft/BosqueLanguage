@@ -199,7 +199,7 @@ function convertEMToPX(emsize: Int): Int {
 }
 ```
 
-The `StringOf<T>` type is much richer at the cost of using customized logic and exposing internal information from the codebase. It is parameterized by any type implementing the `Parsable` concept. The contents of the string are then restricted to the language of strings accepted by the static `T::tryParse` method -- which may be arbitrarily complex code. This makes them ideal for working with data that comes in a custom format or simply for light validation and then to *tag* strings with a type to avoid confusion in code or APIs with multiple string valued parameters.
+The `StringOf<T>` type is much richer at the cost of using customized logic and exposing internal information from the codebase. It is parameterized by any type implementing the `Parsable` concept. The contents of the string are then restricted to the language of strings accepted by the static `T::parse` method -- which may be arbitrarily complex code. This makes them ideal for working with data that comes in a custom format or simply for light validation and then to *tag* strings with a type to avoid confusion in code or APIs with multiple string valued parameters.
 
 **[TODO: needs regex implementation, fill in regex parsing, and test]**
 
@@ -219,7 +219,7 @@ entity EMailAddress provides Parsable {
         ...
     }
 
-    override static tryParse(str: String): Result<Any, String> {
+    override static parse(str: String): Result<Any, String> {
         let localResult = EMailAddress::parseLocal(str);
         let domainResult = EMailAddress::parseDomain(str);
 
@@ -237,7 +237,7 @@ entity EMailAddress provides Parsable {
 entity UserName provides Parsable {
     field name: String;
 
-    override static tryParse(str: String): Result<Any, String> {
+    override static parse(str: String): Result<Any, String> {
         if(str == "") {
             return Result<Any, String>::err("User name cannot be empty"); 
         }
@@ -561,7 +561,7 @@ function convertEMToPX(emsize: Int): Int {
 }
 ```
 
-The `StringOf<T>` type is much richer at the cost of using customized logic and exposing internal information from the codebase. It is parameterized by any type implementing the `Parsable` concept. The contents of the string are then restricted to the language of strings accepted by the static `T::tryParse` method -- which may be arbitrarily complex code. This makes them ideal for working with data that comes in a custom format or simply for light validation and then to *tag* strings with a type to avoid confusion in code or APIs with multiple string valued parameters.
+The `StringOf<T>` type is much richer at the cost of using customized logic and exposing internal information from the codebase. It is parameterized by any type implementing the `Parsable` concept. The contents of the string are then restricted to the language of strings accepted by the static `T::parse` method -- which may be arbitrarily complex code. This makes them ideal for working with data that comes in a custom format or simply for light validation and then to *tag* strings with a type to avoid confusion in code or APIs with multiple string valued parameters.
 ```
 //Represent an EMail address + specify parsing of format
 entity EMailAddress provides Parsable {
@@ -578,7 +578,7 @@ entity EMailAddress provides Parsable {
         ...
     }
 
-    override static tryParse(str: String): Result<Any, String> {
+    override static parse(str: String): Result<Any, String> {
         let localResult = EMailAddress::parseLocal(str);
         let domainResult = EMailAddress::parseDomain(str);
 
@@ -596,7 +596,7 @@ entity EMailAddress provides Parsable {
 entity UserName provides Parsable {
     field name: String;
 
-    override static tryParse(str: String): Result<Any, String> {
+    override static parse(str: String): Result<Any, String> {
         if(str == "") {
             return Result<Any, String>::err("User name cannot be empty"); 
         }
@@ -814,7 +814,7 @@ true
 Int'5'       //String<Int>
 ```
 
-Most of these literal expressions are familiar from other languages but Bosque introduces the concept of _Typed Strings_ ([1.1.2 Typed Strings](#1.1.2-Typed-Strings)). The constant notation includes `Type'...'` to introduce a literal typed string and `Type@'...'` to introduce a literal object that the string represents. Semantically the expression `Type@'...'` is equivalent to the expression `Type::tryParse(Type'...')`. Similarly for `SafeString` where `Type` is a validator then `Type'...'` is a literal safe string of type `SafeString<Type>`.
+Most of these literal expressions are familiar from other languages but Bosque introduces the concept of _Typed Strings_ ([1.1.2 Typed Strings](#1.1.2-Typed-Strings)). The constant notation includes `Type'...'` to introduce a literal typed string and `Type@'...'` to introduce a literal object that the string represents. Semantically the expression `Type@'...'` is equivalent to the expression `Type::parse(Type'...')`. Similarly for `SafeString` where `Type` is a validator then `Type'...'` is a literal safe string of type `SafeString<Type>`.
 
 ## <a name="5.3-Variable-and-Scoped-Access"></a>5.3 Variable and Scoped Access
 

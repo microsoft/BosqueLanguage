@@ -10,7 +10,7 @@ entity StatusCode provides Parsable {
     field code: Int;
     field name: String;
 
-    function tryParse(name: String): Result<StatusCode, String> {
+    function parse(name: String): Result<StatusCode, String> {
         return switch(name) {
             "IO"        => ok(StatusCode@{1, name})
             | "Network" => ok(StatusCode@{2, name})

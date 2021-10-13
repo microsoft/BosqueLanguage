@@ -310,6 +310,26 @@
                 {
                     "action": "is3pt('3pt'#CSSpt)",
                     "check": "res"
+                },
+                {
+                    "action": "isIOCode('Input'#StatusCode)",
+                    "check": "res"
+                },
+                {
+                    "action": "StatusCode::parse(\"Input\").isErr()",
+                    "check": "res"
+                },
+                {
+                    "action": "isIOCode('Network'#StatusCode)",
+                    "check": "!res"
+                },
+                {
+                    "action": "isIOCode('IO'#StatusCode)",
+                    "check": "res"
+                },
+                {
+                    "action": "('IO'(StatusCode)).code == 1i",
+                    "check": "res"
                 }
             ],
             "witness": [
@@ -328,6 +348,18 @@
                 {
                     "action": "is3pt(StringOf<CSSpt>::parse(s))",
                     "check": "res"
+                },
+                {
+                    "action": "StatusCode::parse(s).isOk()",
+                    "check": "res"
+                },
+                {
+                    "action": "StatusCode::parse(s).result().code == 1i",
+                    "check": "res"
+                },
+                {
+                    "action": "StatusCode::parse(s).result().code == 1i",
+                    "check": "!res"
                 }
             ]
         }

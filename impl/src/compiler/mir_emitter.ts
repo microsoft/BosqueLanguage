@@ -1049,6 +1049,11 @@ class MIREmitter {
             if (!this.masm.entityDecls.has(okkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === okkey.keyid) === -1) {
                 this.pendingOOProcessing.push(okentry);
                 this.entityInstantiationInfo.push(okentry);
+
+                if(this.emitEnabled) {
+                    const ft = MIREntityType.create(okkey.keyid, okkey.shortname);
+                    this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
+                }
             }
 
             const errdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
@@ -1057,6 +1062,11 @@ class MIREmitter {
             if (!this.masm.entityDecls.has(errkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === errkey.keyid) === -1) {
                 this.pendingOOProcessing.push(errentry);
                 this.entityInstantiationInfo.push(errentry);
+
+                if(this.emitEnabled) {
+                    const ft = MIREntityType.create(errkey.keyid, errkey.shortname);
+                    this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
+                }
             }
         }
 
@@ -1067,6 +1077,11 @@ class MIREmitter {
             if (!this.masm.entityDecls.has(somethngkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === somethngkey.keyid) === -1) {
                 this.pendingOOProcessing.push(somethingentry);
                 this.entityInstantiationInfo.push(somethingentry);
+
+                if(this.emitEnabled) {
+                    const ft = MIREntityType.create(somethngkey.keyid, somethngkey.shortname);
+                    this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
+                }
             }
         }
 
@@ -1091,7 +1106,10 @@ class MIREmitter {
             let rt: MIRTypeOption | undefined = undefined;
 
             if (sopt instanceof ResolvedEntityAtomType) {
-                this.registerTypeInstantiation(rtt, sopt.object, sopt.binds);
+                if(this.emitEnabled) {
+                    this.registerTypeInstantiation(rtt, sopt.object, sopt.binds);
+                }
+
                 const ekey = MIRKeyGenerator.generateTypeKey(rtt);
                 rt = MIREntityType.create(ekey.keyid, ekey.shortname);
             }
