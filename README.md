@@ -104,7 +104,6 @@ sign()     //0
 
 **Nominal Types Data Invariants:**
 
-[MAY BE OUT OF DATE]
 ```
 concept WithName {
     invariant $name != "";
@@ -130,7 +129,7 @@ entity GenericGreeting provides Greeting {
 
 entity NamedGreeting provides WithName, Greeting {
     override method sayHello(): String {
-        return String::concat("hello", " ", this.name);
+        return String::concat("hello ", this.name);
     }
 }
 
