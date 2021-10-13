@@ -228,6 +228,10 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     method toBigInt(): BigInt { return NumericOps::s_floatToBigInt(this); }
     method toDecimal(): Decimal { return NumericOps::s_floatToDecimal(this); }
     method toRational(): Rational { return NumericOps::s_floatToRational(this); }
+
+    method floor(): BigInt { return NumericOps::s_floatFloor(this); }
+    method ceil(): BigInt { return NumericOps::s_floatCeil(this); }
+    method truncate(): BigInt { return NumericOps::s_floatTruncate(this); }
 }
 __safe __primitive inline prefix operator +(a: Float): Float = default;
 __safe __primitive inline prefix operator -(a: Float): Float = default;
@@ -252,6 +256,10 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     method toBigInt(): BigInt { return NumericOps::s_decimalToBigInt(this); }
     method toFloat(): Float { return NumericOps::s_decimalToFloat(this); }
     method toRational(): Rational { return NumericOps::s_decimalToRational(this); }
+
+    method floor(): BigInt { return NumericOps::s_decimalFloor(this); }
+    method ceil(): BigInt { return NumericOps::s_decimalCeil(this); }
+    method truncate(): BigInt { return NumericOps::s_decimalTruncate(this); }
 }
 __safe __primitive inline prefix operator +(a: Decimal): Decimal = default;
 __safe __primitive inline prefix operator -(a: Decimal): Decimal = default;
@@ -297,7 +305,23 @@ __internal entity String provides Some, KeyType, APIType {
 
 //<summary>Primitive safe string value.</summary>
 __internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
+    __assume_safe private function s_into(s: String): StringOf<T> # stringof_into
+
     method value(): String # special_extract
+
+    function parse(s: String): StringOf<T> {
+        check T::accepts(s);
+        return StringOf<T>::s_into(s);
+    } 
+
+    function tryParse(s: String): StringOf<T>? {
+        if(!T::accepts(s)) {
+            return none;
+        } 
+        else {
+            return StringOf<T>::s_into(s);
+        }
+    }
 }
 
 //<summary>Primitive DataString value.</summary>

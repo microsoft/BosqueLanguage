@@ -285,7 +285,7 @@ class BSQRegex {
         //
         //TODO: we actually have NFA semantics for our regex -- JS matching is a subset so we need to replace this!!!
         //
-        return "$" + this.re.compileToJS() + "^";
+        return "^" + this.re.compileToJS() + "$";
     }
 
     compileToPatternToSMT(ascii: boolean): string {

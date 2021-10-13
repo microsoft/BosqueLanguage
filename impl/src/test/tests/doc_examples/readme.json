@@ -286,6 +286,50 @@
                     "check": "res === \"hello bob\""
                 }
             ]
+        },
+        {
+            "test": "validators",
+            "src": "doc_examples/validators.txt",
+            "sig": "function main(s: String): Bool",
+            "code": "",
+            "typechk": [
+                "is3pt(\"12\")",
+                "is3pt('98052'#ZipcodeUS)",
+                "is3pt('3'#CSSpt)",
+                "isIOCode(\"IO\")"
+            ],
+            "infeasible": [
+                {
+                    "action": "ZipcodeUS::accepts(\"98052-0000\")",
+                    "check": "res"
+                },
+                {
+                    "action": "ZipcodeUS::accepts(\"98052\")",
+                    "check": "res"
+                },
+                {
+                    "action": "is3pt('3pt'#CSSpt)",
+                    "check": "res"
+                }
+            ],
+            "witness": [
+                {
+                    "action": "ZipcodeUS::accepts(\"98052-\")",
+                    "check": "res"
+                },
+                {
+                    "action": "ZipcodeUS::accepts(s)",
+                    "check": "res"
+                },
+                {
+                    "action": "!ZipcodeUS::accepts(s)",
+                    "check": "res"
+                },
+                {
+                    "action": "is3pt(StringOf<CSSpt>::parse(s))",
+                    "check": "res"
+                }
+            ]
         }
     ]
 }

@@ -142,48 +142,48 @@ NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 ```
 
 **Validated and Typed Strings:**
-
-[MAY BE OUT OF DATE]
 ```
-typedef ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
-typedef CSSpt = /[0-9]+pt/;
+typedecl ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
+typedecl CSSpt = /[0-9]+pt/;
 
 function is3pt(s1: StringOf<CSSpt>): Bool {
-    return s1.string() === "3pt";
+    return s1.value() === "3pt";
 }
 
 ZipcodeUS::accepts("98052-0000") //true
-ZipcodeUS::accepts("98052-")     //false
-ZipcodeUS::accepts("abc")        //false
+ZipcodeUS::accepts("1234")       //false
 
-is3pt("12")                        //type error String is not a StringOf
-is3pt('98052' of ZipcodeUS)        //type error StringOf<ZipcodeUS> not StringOf<CSSpt>
+is3pt("12")              //type error not a StringOf<CSSpt>
+is3pt('98052'#ZipcodeUS) //type error not a StringOf<CSSpt>
 
-is3pt(StringOf<CSSpt>::from("a"))  //error not a StringOf<CSSpt> value
-is3pt('3' of CSSpt)                //type error '3' is incompatible with CSSpt 
-is3pt('3pt' of CSSpt)              //true
+is3pt('3pt'#CSSpt) //true
+is3pt('4pt'#CSSpt) //false
 ```
 
 ```
-parsable entity StatusCode {
+entity StatusCode provides Parsable {
     field code: Int;
     field name: String;
 
     function tryParse(name: String): Result<StatusCode, String> {
         return switch(name) {
-            case "IO"      => ok(StatusCode@{1, name})
-            case "Network" => ok(StatusCode@{2, name})
-            case _         => err("Unknown code")
+            "IO"        => ok(StatusCode@{1, name})
+            | "Network" => ok(StatusCode@{2, name})
+            | _         => err("Unknown code")
         };
+    }
+
+    function accepts(name: String): Bool {
+        return name === "IO" || name === "Network";
     }
 }
 
 function isIOCode(s: DataString<StatusCode>): Bool {
-    return s === 'IO' of StatusCode;
+    return s === 'IO'#StatusCode;
 }
 
-isIOCode("IO");                               //type error not a StringOf<StatusCode>
-isIOCode(StatusCode'Input')                   //type error not a valid StatusCode string
+isIOCode("IO");                               //type error not a DataString<StatusCode>
+isIOCode('Input'#StatusCode)                  //type error not a valid StatusCode string
 isIOCode(StringOf<StatusCode>::from("Input")) //runtime error not a valid StatusCode string
 
 isIOCode(StatusCode'Assert')               //false

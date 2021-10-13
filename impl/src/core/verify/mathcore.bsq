@@ -36,4 +36,12 @@ __internal entity NumericOps provides Some {
     __safe function s_rationalToBigInt(r: Rational): BigInt # number_rationaltobigint
     __safe function s_rationalToFloat(r: Rational): Float # number_rationaltofloat
     __safe function s_rationalToDeciaml(r: Rational): Decimal # number_rationaltodecimal
+
+    function s_floatFloor(f: Float): BigInt # float_floor
+    function s_floatCeil(f: Float): BigInt # float_ceil
+    function s_floatTruncate(f: Float): BigInt # float_truncate
+
+    function s_decimalFloor(d: Decimal): BigInt # decimal_floor
+    function s_decimalCeil(d: Decimal): BigInt # decimal_ceil
+    function s_decimalTruncate(f: Decimal): BigInt # decimal_truncate
 }
