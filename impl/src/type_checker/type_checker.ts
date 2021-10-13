@@ -2202,13 +2202,13 @@ class TypeChecker {
     private checkDataStringCommon(sinfo: SourceInfo, env: TypeEnvironment, ttype: TypeSignature): { oftype: [OOPTypeDecl, Map<string, ResolvedType>], ofresolved: ResolvedType, stringtype: ResolvedType, parsetype: ResolvedType } {
         const oftype = this.resolveAndEnsureTypeOnly(sinfo, ttype, env.terms);
         this.raiseErrorIf(sinfo, oftype.options.length !== 1, "Cannot have union of parsable types");
-        this.raiseErrorIf(sinfo, (oftype.options[0] instanceof ResolvedEntityAtomType) || (oftype.options[0] instanceof ResolvedConceptAtomType && (oftype.options[0] as ResolvedConceptAtomType).conceptTypes.length !== 1), "Cannot have & of concepts");
+        this.raiseErrorIf(sinfo, !((oftype.options[0] instanceof ResolvedEntityAtomType) || (oftype.options[0] instanceof ResolvedConceptAtomType && (oftype.options[0] as ResolvedConceptAtomType).conceptTypes.length !== 1)), "Cannot have & of concepts");
         
         const aoftype = oftype.options[0];
         const oodecl = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.object : (aoftype as ResolvedConceptAtomType).conceptTypes[0].concept;
         const oobinds = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.binds : (aoftype as ResolvedConceptAtomType).conceptTypes[0].binds;
 
-        const fdecltry = oodecl.staticFunctions.find((sf) => sf.name === "tryParse");
+        const fdecltry = oodecl.staticFunctions.find((sf) => sf.name === "parse");
         this.raiseErrorIf(sinfo, fdecltry === undefined, `Constant value not defined for type '${oftype.typeID}'`);
 
         //ensure full DataString<T> type is registered
@@ -2261,7 +2261,8 @@ class TypeChecker {
             const skey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(aoftype.oftype[0], aoftype.oftype[1]), [ctype, aoftype.oftype[0], aoftype.oftype[1]], sdecl as StaticFunctionDecl, "accepts", sbinds, [], []);
 
             const tmps = this.m_emitter.generateTmpRegister();
-            this.m_emitter.emitInvokeFixedFunction(exp.sinfo, skey, [new MIRConstantString(exp.value)], undefined, presult, tmps);
+            const argstr = "\"" + unescapeLiteralString(exp.value.substring(1, exp.value.length - 1)) + "\"";
+            this.m_emitter.emitInvokeFixedFunction(exp.sinfo, skey, [new MIRConstantString(argstr)], undefined, presult, tmps);
             this.m_emitter.emitAssertCheck(exp.sinfo, "String not parsable as given type", tmps);
             
             this.m_emitter.emitLoadConstDataString(exp.sinfo, exp.value, stype.typeID, trgt);
@@ -2279,10 +2280,11 @@ class TypeChecker {
 
         const sbinds = this.m_assembly.resolveBindsForCallComplete([], [], (aoftype.stringtype.options[0] as ResolvedEntityAtomType).binds, new Map<string, ResolvedType>(), new Map<string, ResolvedType>()) as Map<string, ResolvedType>;
         const ctype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(aoftype.oftype[0], aoftype.oftype[1]));
-        const skey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(aoftype.oftype[0], aoftype.oftype[1]), [ctype, aoftype.oftype[0], aoftype.oftype[1]], sdecl as StaticFunctionDecl, "tryParse", sbinds, [], []);
+        const skey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(aoftype.oftype[0], aoftype.oftype[1]), [ctype, aoftype.oftype[0], aoftype.oftype[1]], sdecl as StaticFunctionDecl, "parse", sbinds, [], []);
 
         const tmps = this.m_emitter.generateTmpRegister();
-        this.m_emitter.emitInvokeFixedFunction(exp.sinfo, skey, [new MIRConstantString(exp.value)], undefined, presult, tmps);
+        const argstr = "\"" + unescapeLiteralString(exp.value.substring(1, exp.value.length - 1)) + "\"";
+        this.m_emitter.emitInvokeFixedFunction(exp.sinfo, skey, [new MIRConstantString(argstr)], undefined, presult, tmps);
 
         const oktype = this.m_assembly.getOkType(aoftype.ofresolved, this.m_assembly.getSpecialStringType());
         const miroktype = this.m_emitter.registerResolvedTypeReference(oktype);
@@ -6495,9 +6497,13 @@ class TypeChecker {
 
                     let optparse: MIRInvokeKey | undefined = undefined;
                     if (tdecl.attributes.includes("__datastring_type")) {
-                        const sf = (tdecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
-                        const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(tdecl, binds));
-                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(tdecl, binds), [mirencltype, tdecl, binds], sf, "accepts", binds, [], []);
+                        const aoftype = (binds.get("T") as ResolvedType).options[0];
+                        const oodecl = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.object : (aoftype as ResolvedConceptAtomType).conceptTypes[0].concept;
+                        const oobinds = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.binds : (aoftype as ResolvedConceptAtomType).conceptTypes[0].binds;
+
+                        const sf = (oodecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
+                        const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(oodecl, oobinds));
+                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
                     }
 
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, optparse);
@@ -6509,9 +6515,13 @@ class TypeChecker {
 
                     let optparse: MIRInvokeKey | undefined = undefined;
                     if (tdecl.attributes.includes("__databuffer_type")) {
-                        const sf = (tdecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
-                        const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(tdecl, binds));
-                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(tdecl, binds), [mirencltype, tdecl, binds], sf, "accepts", binds, [], []);
+                        const aoftype = (binds.get("T") as ResolvedType).options[0];
+                        const oodecl = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.object : (aoftype as ResolvedConceptAtomType).conceptTypes[0].concept;
+                        const oobinds = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.binds : (aoftype as ResolvedConceptAtomType).conceptTypes[0].binds;
+
+                        const sf = (oodecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
+                        const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(oodecl, oobinds));
+                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
                     }
 
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, optparse);
