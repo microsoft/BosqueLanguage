@@ -193,7 +193,7 @@ let ec: StatusCode = 'IO'(StatusCode);
 assert(ec.code == 1i); //true
 ```
 
-**Structural, Nominal, and Union Types (plus optional arguments)**
+**Algebraic and Union Types**
 
 [MAY BE OUT OF DATE]
 ```
