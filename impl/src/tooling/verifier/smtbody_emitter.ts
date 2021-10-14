@@ -2674,7 +2674,7 @@ class SMTBodyEmitter {
                     new SMTCallSimple("<=", [new SMTVar(args[0].vname), new SMTConst(this.numgen.int.intmax.toString())])
                 );
                 const bce = new SMTIf(bchk, 
-                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("int2bv", [new SMTVar(args[0].vname)])),
+                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple(`(_ int2bv ${this.numgen.int.bvsize})`, [new SMTVar(args[0].vname)])),
                     this.typegen.generateErrorResultAssert(mirrestype)
                 );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
