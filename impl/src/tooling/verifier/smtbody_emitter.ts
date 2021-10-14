@@ -1201,7 +1201,7 @@ class SMTBodyEmitter {
         else {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
             const fdecl = this.assembly.fieldDecls.get(op.field) as MIRFieldDecl;
-            const idxr = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(this.assembly.entityDecls.get(arglayouttype.typeID) as MIREntityTypeDecl, fdecl), [argpp]);
+            const idxr = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(this.assembly.entityDecls.get(argflowtype.typeID) as MIREntityTypeDecl, fdecl), [argpp]);
             return new SMTLet(this.varToSMTName(op.trgt).vname, idxr, continuation);
         }
     }

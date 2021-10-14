@@ -166,11 +166,11 @@ entity StatusCode provides Parsable {
     field name: String;
 
     function parse(name: String): Result<StatusCode, String> {
-        return switch(name) {
+        return switch(name) {|
             "IO"        => ok(StatusCode@{1, name})
             | "Network" => ok(StatusCode@{2, name})
             | _         => err("Unknown code")
-        };
+        |};
     }
 
     function accepts(name: String): Bool {

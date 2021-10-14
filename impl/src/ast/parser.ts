@@ -35,6 +35,7 @@ const KeywordStrings = [
     "invariant",
     "istype",
     "let",
+    "match",
     "method",
     "namespace",
     "none",
@@ -2718,12 +2719,12 @@ class Parser {
             this.m_penv.getCurrentFunctionScope().defineLocalVar("$switch", `$switch_@${sinfo.pos}`, true);
             
             let entries: SwitchEntry<Expression>[] = [];
-            this.ensureAndConsumeToken("{");
-            entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+            this.ensureAndConsumeToken("{|");
+            entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), "|}", () => this.parseExpression()));
             while (this.testAndConsumeTokenIf("|")) {
-                entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+                entries.push(this.parseSwitchEntry<Expression>(this.getCurrentSrcInfo(), "|}", () => this.parseExpression()));
             }
-            this.ensureAndConsumeToken("}");
+            this.ensureAndConsumeToken("|}");
 
             return new SwitchExpression(sinfo, mexp, entries);
         }
@@ -2746,12 +2747,12 @@ class Parser {
             this.m_penv.getCurrentFunctionScope().defineLocalVar("$match", `$match_@${sinfo.pos}`, true);
             
             let entries: MatchEntry<Expression>[] = [];
-            this.ensureAndConsumeToken("{");
-            entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+            this.ensureAndConsumeToken("{|");
+            entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), "|}", () => this.parseExpression()));
             while (this.testAndConsumeTokenIf("|")) {
-                entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), () => this.parseExpression()));
+                entries.push(this.parseMatchEntry<Expression>(this.getCurrentSrcInfo(), "|}", () => this.parseExpression()));
             }
-            this.ensureAndConsumeToken("}");
+            this.ensureAndConsumeToken("|}");
 
             return new MatchExpression(sinfo, mexp, entries);
         }
@@ -3294,12 +3295,12 @@ class Parser {
         }
     }
 
-    private parseSwitchEntry<T>(sinfo: SourceInfo, actionp: () => T): MatchEntry<T> {
+    private parseSwitchEntry<T>(sinfo: SourceInfo, tailToken: string, actionp: () => T): MatchEntry<T> {
         const guard = this.parseSwitchGuard(sinfo);
         this.ensureAndConsumeToken("=>");
         const action = actionp();
 
-        const isokfollow = this.testToken("}") || this.testToken("|");
+        const isokfollow = this.testToken(tailToken) || this.testToken("|");
         if(!isokfollow) {
             this.raiseError(this.getCurrentLine(), "Unknown token at end of match entry");
         }
@@ -3307,12 +3308,12 @@ class Parser {
         return new SwitchEntry<T>(guard, action);
     }
 
-    private parseMatchEntry<T>(sinfo: SourceInfo, actionp: () => T): MatchEntry<T> {
+    private parseMatchEntry<T>(sinfo: SourceInfo, tailToken: string, actionp: () => T): MatchEntry<T> {
         const guard = this.parseMatchGuard(sinfo);
         this.ensureAndConsumeToken("=>");
         const action = actionp();
 
-        const isokfollow = this.testToken("}") || this.testToken("|");
+        const isokfollow = this.testToken(tailToken) || this.testToken("|");
         if(!isokfollow) {
             this.raiseError(this.getCurrentLine(), "Unknown token at end of match entry");
         }
@@ -3344,9 +3345,9 @@ class Parser {
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
-            entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+            entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), "}", () => this.parseStatementActionInBlock()));
             while (this.testAndConsumeTokenIf("|")) {
-                entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+                entries.push(this.parseSwitchEntry<BlockStatement>(this.getCurrentSrcInfo(), "}", () => this.parseStatementActionInBlock()));
             }
             this.ensureAndConsumeToken("}");
 
@@ -3360,7 +3361,7 @@ class Parser {
     private parseMatchStatement(): Statement {
         const sinfo = this.getCurrentSrcInfo();
 
-        this.ensureAndConsumeToken("switch");
+        this.ensureAndConsumeToken("match");
 
         this.ensureAndConsumeToken("(");
         const mexp = this.parseExpression();
@@ -3372,9 +3373,9 @@ class Parser {
 
             let entries: MatchEntry<BlockStatement>[] = [];
             this.ensureAndConsumeToken("{");
-            entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+            entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), "}", () => this.parseStatementActionInBlock()));
             while (this.testAndConsumeTokenIf("|")) {
-                entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), () => this.parseStatementActionInBlock()));
+                entries.push(this.parseMatchEntry<BlockStatement>(this.getCurrentSrcInfo(), "}", () => this.parseStatementActionInBlock()));
             }
             this.ensureAndConsumeToken("}");
 
