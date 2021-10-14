@@ -146,7 +146,7 @@ __internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, Key
     const one: BigInt = 1I;
     const negativeone: BigInt = -1I;
 
-    method toNat(): Int { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(this); }
     method toInt(): Int { return NumericOps::s_bigIntToInt(this); }
     method toFloat(): Float { return NumericOps::s_bigIntToFloat(this); }
@@ -230,7 +230,7 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     method toRational(): Rational { return NumericOps::s_floatToRational(this); }
 
     method floor(): BigInt { return NumericOps::s_floatFloor(this); }
-    method ceil(): BigInt { return NumericOps::s_floatCeil(this); }
+    method ceiling(): BigInt { return NumericOps::s_floatCeil(this); }
     method truncate(): BigInt { return NumericOps::s_floatTruncate(this); }
 }
 __safe __primitive inline prefix operator +(a: Float): Float = default;
@@ -258,7 +258,7 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     method toRational(): Rational { return NumericOps::s_decimalToRational(this); }
 
     method floor(): BigInt { return NumericOps::s_decimalFloor(this); }
-    method ceil(): BigInt { return NumericOps::s_decimalCeil(this); }
+    method ceiling(): BigInt { return NumericOps::s_decimalCeil(this); }
     method truncate(): BigInt { return NumericOps::s_decimalTruncate(this); }
 }
 __safe __primitive inline prefix operator +(a: Decimal): Decimal = default;

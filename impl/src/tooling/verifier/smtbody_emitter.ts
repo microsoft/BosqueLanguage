@@ -2663,7 +2663,7 @@ class SMTBodyEmitter {
             case "number_bignattonat": {
                 const bchk = new SMTCallSimple("<=", [new SMTVar(args[0].vname), new SMTConst(this.numgen.int.natmax.toString())]);
                 const bce = new SMTIf(bchk, 
-                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("nat2bv", [new SMTVar(args[0].vname)])),
+                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple(`(_ int2bv ${this.numgen.int.bvsize})`, [new SMTVar(args[0].vname)])),
                     this.typegen.generateErrorResultAssert(mirrestype)
                 );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);

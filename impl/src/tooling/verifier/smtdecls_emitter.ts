@@ -754,91 +754,93 @@ class SMTEmitter {
         else if (tt.options.length !== 1) {
             this.generateAPITypeConstructorFunction_Union(tt, havocfuncs, ufuncs);
         }
-        else if (this.temitter.isUniqueTupleType(tt)) {
-            this.generateAPITypeConstructorFunction_Tuple(tt, havocfuncs, ufuncs);
-        }
-        else if (this.temitter.isUniqueRecordType(tt)) {
-            this.generateAPITypeConstructorFunction_Record(tt, havocfuncs, ufuncs);
-        }
-        else if (this.temitter.isUniqueEntityType(tt)) {
-            const etype = tt.options[0] as MIREntityType;
-            const edecl = this.temitter.assembly.entityDecls.get(etype.typeID) as MIREntityTypeDecl;
+        else {
+            if (this.temitter.isUniqueTupleType(tt)) {
+                this.generateAPITypeConstructorFunction_Tuple(tt, havocfuncs, ufuncs);
+            }
+            else if (this.temitter.isUniqueRecordType(tt)) {
+                this.generateAPITypeConstructorFunction_Record(tt, havocfuncs, ufuncs);
+            }
+            else if (this.temitter.isUniqueEntityType(tt)) {
+                const etype = tt.options[0] as MIREntityType;
+                const edecl = this.temitter.assembly.entityDecls.get(etype.typeID) as MIREntityTypeDecl;
 
-            if(edecl instanceof MIRObjectEntityTypeDecl) {
-                this.generateAPITypeConstructorFunction_Object(tt, havocfuncs, ufuncs);
+                if (edecl instanceof MIRObjectEntityTypeDecl) {
+                    this.generateAPITypeConstructorFunction_Object(tt, havocfuncs, ufuncs);
+                }
+                else if (this.temitter.isType(tt, "NSCore::BigNat")) {
+                    this.generateAPITypeConstructorFunction_BigNat(havocfuncs);
+                }
+                else if (this.temitter.isType(tt, "NSCore::String")) {
+                    this.generateAPITypeConstructorFunction_String(havocfuncs);
+                }
+                else if (this.temitter.isType(tt, "NSCore::ISOTime")) {
+                    this.generateAPITypeConstructorFunction_ISOTime(havocfuncs);
+                }
+                else if (this.temitter.isType(tt, "NSCore::LogicalTime")) {
+                    this.generateAPITypeConstructorFunction_LogicalTime(havocfuncs);
+                }
+                else if (this.temitter.isType(tt, "NSCore::UUID")) {
+                    this.generateAPITypeConstructorFunction_UUID(havocfuncs);
+                }
+                else if (this.temitter.isType(tt, "NSCore::ByteBuffer")) {
+                    this.generateAPITypeConstructorFunction_ByteBuffer(havocfuncs);
+                }
+                else if (edecl.attributes.includes("__stringof_type")) {
+                    this.generateAPITypeConstructorFunction_ValidatedString(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__datastring_type")) {
+                    this.generateAPITypeConstructorFunction_DataString(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__bufferof_type")) {
+                    this.generateAPITypeConstructorFunction_ValidatedBuffer(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__databuffer_type")) {
+                    this.generateAPITypeConstructorFunction_DataBuffer(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__typedprimitive")) {
+                    this.generateAPITypeConstructorFunction_TypedPrimitive(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__enum_type")) {
+                    this.generateAPITypeConstructorFunction_Enum(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__ok_type")) {
+                    this.generateAPITypeConstructorFunction_Ok(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__err_type")) {
+                    this.generateAPITypeConstructorFunction_Err(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__something_type")) {
+                    this.generateAPITypeConstructorFunction_Something(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__list_type")) {
+                    this.generateAPITypeConstructorFunction_List(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__stack_type")) {
+                    this.generateAPITypeConstructorFunction_Stack(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__queue_type")) {
+                    this.generateAPITypeConstructorFunction_Queue(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__set_type")) {
+                    this.generateAPITypeConstructorFunction_Set(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl.attributes.includes("__map_type")) {
+                    this.generateAPITypeConstructorFunction_Map(tt, havocfuncs, ufuncs);
+                }
+                else {
+                    //Don't need to do anything
+                }
             }
-            else if (this.temitter.isType(tt, "NSCore::BigNat")) {
-                this.generateAPITypeConstructorFunction_BigNat(havocfuncs);
-            }
-            else if (this.temitter.isType(tt, "NSCore::String")) {
-                this.generateAPITypeConstructorFunction_String(havocfuncs);
-            }
-            else if (this.temitter.isType(tt, "NSCore::ISOTime")) {
-                this.generateAPITypeConstructorFunction_ISOTime(havocfuncs);
-            }
-            else if (this.temitter.isType(tt, "NSCore::LogicalTime")) {
-                this.generateAPITypeConstructorFunction_LogicalTime(havocfuncs);
-            }
-            else if (this.temitter.isType(tt, "NSCore::UUID")) {
-                this.generateAPITypeConstructorFunction_UUID(havocfuncs);
-            }
-            else if (this.temitter.isType(tt, "NSCore::ByteBuffer")) {
-                this.generateAPITypeConstructorFunction_ByteBuffer(havocfuncs);
-            }
-            else if (edecl.attributes.includes("__stringof_type")) {
-                this.generateAPITypeConstructorFunction_ValidatedString(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__datastring_type")) {
-                this.generateAPITypeConstructorFunction_DataString(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__bufferof_type")) {
-                this.generateAPITypeConstructorFunction_ValidatedBuffer(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__databuffer_type")) {
-                this.generateAPITypeConstructorFunction_DataBuffer(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__typedprimitive")) {
-                this.generateAPITypeConstructorFunction_TypedPrimitive(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__enum_type")) {
-                this.generateAPITypeConstructorFunction_Enum(tt, havocfuncs, ufuncs);
-            }
-            else if(edecl.attributes.includes("__ok_type")) {
-                this.generateAPITypeConstructorFunction_Ok(tt, havocfuncs, ufuncs);
-            }
-            else if(edecl.attributes.includes("__err_type")) {
-                this.generateAPITypeConstructorFunction_Err(tt, havocfuncs, ufuncs);
-            }
-            else if(edecl.attributes.includes("__something_type")) {
-                this.generateAPITypeConstructorFunction_Something(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__list_type")) {
-                this.generateAPITypeConstructorFunction_List(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__stack_type")) {
-                this.generateAPITypeConstructorFunction_Stack(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__queue_type")) {
-                this.generateAPITypeConstructorFunction_Queue(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__set_type")) {
-                this.generateAPITypeConstructorFunction_Set(tt, havocfuncs, ufuncs);
-            }
-            else if (edecl.attributes.includes("__map_type")) {
-                this.generateAPITypeConstructorFunction_Map(tt, havocfuncs, ufuncs);
+            else if (tt.options[0] instanceof MIRConceptType) {
+                const etypes = [...this.temitter.assembly.entityDecls].filter((edi) => this.temitter.assembly.subtypeOf(this.temitter.getMIRType(edi[1].tkey), this.temitter.getMIRType(tt.typeID)));
+                const opts: MIRType[] = etypes.map((opt) => this.temitter.getMIRType(opt[1].tkey));
+
+                this.generateAPITypeConstructorFunction_Concept(tt, opts, havocfuncs, ufuncs);
             }
             else {
                 //Don't need to do anything
             }
-        }
-        else if (tt instanceof MIRConceptType) {
-            const etypes = [...this.temitter.assembly.entityDecls].filter((edi) => this.temitter.assembly.subtypeOf(this.temitter.getMIRType(edi[1].tkey), this.temitter.getMIRType(tt.typeID)));
-            const opts: MIRType[] = etypes.map((opt) => this.temitter.getMIRType(opt[1].tkey));
-
-            this.generateAPITypeConstructorFunction_Concept(tt, opts, havocfuncs, ufuncs);
-        }
-        else {
-            //Don't need to do anything
         }
     }
 
