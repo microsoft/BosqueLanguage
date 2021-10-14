@@ -58,6 +58,7 @@ const KeywordStrings = [
     "type",
     "typedef",
     "typedecl",
+    "using",
     "var",
     "when",
     "yield"
@@ -3646,10 +3647,10 @@ class Parser {
         currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(currentDecl.ns, tyname, terms, btype));
     }
 
-    private parseProvides(iscorens: boolean, endtoken: string): [TypeSignature, TypeConditionRestriction | undefined][] {
+    private parseProvides(iscorens: boolean, endtoken: string[]): [TypeSignature, TypeConditionRestriction | undefined][] {
         let provides: [TypeSignature, TypeConditionRestriction | undefined][] = [];
         if (this.testAndConsumeTokenIf("provides")) {
-            while (!this.testToken(endtoken)) {
+            while (!endtoken.some((tok) => this.testToken(tok))) {
                 this.consumeTokenIf(",");
 
                 const pv = this.parseTypeSignature();
@@ -3859,7 +3860,7 @@ class Parser {
 
         const cname = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore", "{");
+        const provides = this.parseProvides(currentDecl.ns === "NSCore", ["{"]);
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -3917,7 +3918,7 @@ class Parser {
 
         const ename = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore", "{");
+        const provides = this.parseProvides(currentDecl.ns === "NSCore", ["{"]);
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -4202,12 +4203,14 @@ class Parser {
             }
         }
         else {
-            //[attr] typedecl NAME<...> [using {...}] [provides ... ] of
+            //[attr] typedecl NAME<...> [provides ... ] [using {...}] of
             // Foo {...}
             // | ...
             // [& {...}] | ;
 
             const concepttype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
+
+            const provides = this.parseProvides(currentDecl.ns === "NSCore", ["of", "using"]);
 
             let cusing: MemberFieldDecl[] = [];
             if(this.testAndConsumeTokenIf("using")) {
@@ -4229,7 +4232,6 @@ class Parser {
                 })[0];
             }
 
-            const provides = this.parseProvides(currentDecl.ns === "NSCore", "of");
             this.ensureAndConsumeToken("of");
 
             const edecls: EntityTypeDecl[] = [];
@@ -4530,17 +4532,18 @@ class Parser {
                         }
                     }
                     else {
-                        //[attr] typedecl NAME<...> [using {...}] [provides ... ] of
+                        //[attr] typedecl NAME<...> [provides ... ] [using {...}] of
                         // Foo {...}
                         // | ...
                         // [& {...}] | ;
+
+                        this.parseProvides(false /*Doesn't matter since we arejust scanning*/, ["of", "using"]);
 
                         if (this.testAndConsumeTokenIf("using")) {
                             this.ensureToken("{"); //we should be at the opening left paren 
                             this.m_cpos = this.scanCodeParens(); //scan to the closing paren
                         }
 
-                        this.parseProvides(false /*Doesn't matter since we arejust scanning*/, "of");
                         this.ensureAndConsumeToken("of");
 
                         while (!this.testToken(";") && !this.testToken("&")) {
@@ -4602,7 +4605,7 @@ class Parser {
                     nsdecl.declaredNames.add(ns + "::" + tname);
 
                     this.parseTermDeclarations();
-                    this.parseProvides(ns === "NSCore", "{");
+                    this.parseProvides(ns === "NSCore", ["{"]);
             
                     this.ensureToken("{"); //we should be at the opening left paren 
                     this.m_cpos = this.scanCodeParens(); //scan to the closing paren

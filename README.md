@@ -141,58 +141,6 @@ NamedGreeting@{name=""}.sayHello()    //invariant error
 NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 ```
 
-**Validated and Typed Strings:**
-```
-typedecl ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
-typedecl CSSpt = /[0-9]+pt/;
-
-function is3pt(s1: StringOf<CSSpt>): Bool {
-    return s1.value() === "3pt";
-}
-
-ZipcodeUS::accepts("98052-0000") //true
-ZipcodeUS::accepts("1234")       //false
-
-is3pt("12")              //type error not a StringOf<CSSpt>
-is3pt('98052'#ZipcodeUS) //type error not a StringOf<CSSpt>
-
-is3pt('3pt'#CSSpt) //true
-is3pt('4pt'#CSSpt) //false
-```
-
-```
-entity StatusCode provides Parsable {
-    field code: Int;
-    field name: String;
-
-    function parse(name: String): Result<StatusCode, String> {
-        return switch(name) {|
-            "IO"        => ok(StatusCode@{1, name})
-            | "Network" => ok(StatusCode@{2, name})
-            | _         => err("Unknown code")
-        |};
-    }
-
-    function accepts(name: String): Bool {
-        return name === "IO" || name === "Network";
-    }
-}
-
-function isIOCode(s: DataString<StatusCode>): Bool {
-    return s === 'IO'#StatusCode;
-}
-
-isIOCode("IO");               //type error not a DataString<StatusCode>
-isIOCode('Input'#StatusCode)  //type error not a valid StatusCode string
-StatusCode::parse("Input") //runtime error not a valid StatusCode string
-
-isIOCode('Network'#StatusCode)               //false
-isIOCode('IO'#StatusCode)                    //true
-
-let ec: StatusCode = 'IO'(StatusCode);
-assert(ec.code == 1i); //true
-```
-
 **Algebraic and Union Types**
 
 [MAY BE OUT OF DATE]
@@ -268,6 +216,58 @@ createAnimalPreSafe("")   //fails precondition in all build flavors
 getSays("dog", "woof") //Ok<String, ErrData>@{value="The dog says woof"}
 getSays("", "woof") //Err<String, ErrData>@{error={ msg="Invalid animal" }}
 getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
+```
+
+**Validated and Typed Strings:**
+```
+typedecl ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
+typedecl CSSpt = /[0-9]+pt/;
+
+function is3pt(s1: StringOf<CSSpt>): Bool {
+    return s1.value() === "3pt";
+}
+
+ZipcodeUS::accepts("98052-0000") //true
+ZipcodeUS::accepts("1234")       //false
+
+is3pt("12")              //type error not a StringOf<CSSpt>
+is3pt('98052'#ZipcodeUS) //type error not a StringOf<CSSpt>
+
+is3pt('3pt'#CSSpt) //true
+is3pt('4pt'#CSSpt) //false
+```
+
+```
+entity StatusCode provides Parsable {
+    field code: Int;
+    field name: String;
+
+    function parse(name: String): Result<StatusCode, String> {
+        return switch(name) {|
+            "IO"        => ok(StatusCode@{1, name})
+            | "Network" => ok(StatusCode@{2, name})
+            | _         => err("Unknown code")
+        |};
+    }
+
+    function accepts(name: String): Bool {
+        return name === "IO" || name === "Network";
+    }
+}
+
+function isIOCode(s: DataString<StatusCode>): Bool {
+    return s === 'IO'#StatusCode;
+}
+
+isIOCode("IO");               //type error not a DataString<StatusCode>
+isIOCode('Input'#StatusCode)  //type error not a valid StatusCode string
+StatusCode::parse("Input") //runtime error not a valid StatusCode string
+
+isIOCode('Network'#StatusCode)               //false
+isIOCode('IO'#StatusCode)                    //true
+
+let ec: StatusCode = 'IO'(StatusCode);
+assert(ec.code == 1i); //true
 ```
 
 **Numeric Types**

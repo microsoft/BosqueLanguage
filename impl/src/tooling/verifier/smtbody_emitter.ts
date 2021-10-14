@@ -1684,8 +1684,8 @@ class SMTBodyEmitter {
             eqcmp = SMTCallSimple.makeEq(this.argToSMT(op.lhs), this.argToSMT(op.rhs));
         }
         else {
-            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.cmptype));
-            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.cmptype));
+            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.lhslayouttype));
+            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.rhslayouttype));
 
             eqcmp = SMTCallSimple.makeEq(lhs, rhs);
         }
