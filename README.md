@@ -87,7 +87,7 @@ doit([1, false], {f="ok", g=3}) //4
 function sign(x?: Int=0): Int {
     var y: Int;
 
-    if(x == none || x == 0) {
+    if(x == 0) {
         y = 0;
     }
     else {
@@ -139,6 +139,90 @@ GenericGreeting::instance.sayHello()  //"hello world"
 NamedGreeting@{}.sayHello()           //type error no value provided for "name" field
 NamedGreeting@{name=""}.sayHello()    //invariant error
 NamedGreeting@{name="bob"}.sayHello() //"hello bob"
+```
+
+**(Algebraic Data Types)++ and Union Types**
+```
+typedecl BoolOp provides APIType using {
+    line: Nat
+} of
+LConst { val: Bool }
+| NotOp { arg: BoolOp }
+| AndOp { larg: BoolOp, rarg: BoolOp }
+| OrOp { larg: BoolOp, rarg: BoolOp }
+& {
+    recursive method evaluate(): Bool {
+        match(this) {
+            LConst                  => return this.val;
+            | NotOp                 => return !this.arg.evaluate[recursive]();
+            | AndOp@{_, larg, rarg} => return larg.evaluate[recursive]() && rarg.evaluate[recursive]();
+            | OrOp@{_, larg, rarg}  => return larg.evaluate[recursive]() || rarg.evaluate[recursive]();
+        }
+    } 
+}
+
+AndOp@{2, LConst@{1, true}, LConst@{1, false}}.evaluate[recursive]() //false
+OrOp@{2, LConst@{1, true}, LConst@{1, false}}.evaluate[recursive]()  //true
+
+function printType(x: Bool | Int | String | None ): String {
+    return match(x) {|
+        Bool     => "b"
+        | Int    => "i"
+        | String => "s"
+        _        => "n"
+    |};
+}
+
+printType(1.0f) //type error
+printType(true) //"b"
+printType(none) //"n"
+
+```
+
+**Pre/Post Conditions**
+
+[MAY BE OUT OF DATE]
+```
+entity Animal {
+    invariant $says != "";
+
+    field says: String;
+}
+
+function createAnimal(catchPhrase: String): Animal
+{
+    return Animal@{says=catchPhrase};
+}
+
+function createAnimalPre(catchPhrase: String): Animal
+    requires catchPhrase != "";
+{
+    return Animal@{says=catchPhrase};
+}
+
+function createAnimalPreSafe(catchPhrase: String): Animal
+    requires release catchPhrase != "";
+{
+    return Animal@{says=catchPhrase};
+}
+
+typedef ErrData = {msg: String, data?: Any};
+
+entrypoint function getSays(animal: String, catchPhrase: String): Result<String, ErrData?>
+    validate animal != "" or return err({ msg="Invalid animal" });
+    validate catchPhrase != "" or return err({ msg="Invalid catchPhrase" });
+{
+    return String::concat("The ", animal, " says ", createAnimal::(catchPhrase).says);
+}
+
+createAnimal("woof woof") //ok always
+createAnimal("")          //fails invariant in debug
+createAnimalPre("")       //fails precondition in debug *but not* release
+createAnimalPreSafe("")   //fails precondition in all build flavors
+
+getSays("dog", "woof") //Ok<String, ErrData>@{value="The dog says woof"}
+getSays("", "woof") //Err<String, ErrData>@{error={ msg="Invalid animal" }}
+getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
 ```
 
 **Validated and Typed Strings:**
@@ -193,86 +277,9 @@ let ec: StatusCode = 'IO'(StatusCode);
 assert(ec.code == 1i); //true
 ```
 
-**Algebraic and Union Types**
-
-[MAY BE OUT OF DATE]
-```
-entity Person {
-    field name: String; 
-}
-
-function foo(arg?: {f: Int, n?: String} | String | Person): String {
-    if(arg == none) {
-        return "Blank";
-    }
-    else {
-        return switch(arg) {
-            type Record => arg.n ?| "Blank"
-            type String => arg
-            type Person => arg.name
-        };
-    }
-}
-
-foo()                    //"Blank"
-foo(none)                //Type error - none not allowed
-foo("Bob")               //Bob
-foo(Person@{name="Bob"}) //Bob
-foo({f=5})               //"Blank"
-
-foo({f=1, n="Bob"})      //"Bob"
-foo({g=1, n="Bob"})      //Type error - Missing f property
-```
-
-**Pre/Post Conditions**
-
-[MAY BE OUT OF DATE]
-```
-entity Animal {
-    invariant $says != "";
-
-    field says: String;
-}
-
-function createAnimal(catchPhrase: String): Animal
-{
-    return Animal@{says=catchPhrase};
-}
-
-function createAnimalPre(catchPhrase: String): Animal
-    requires catchPhrase != "";
-{
-    return Animal@{says=catchPhrase};
-}
-
-function createAnimalPreSafe(catchPhrase: String): Animal
-    requires release catchPhrase != "";
-{
-    return Animal@{says=catchPhrase};
-}
-
-typedef ErrData = {msg: String, data?: Any};
-
-entrypoint function getSays(animal: String, catchPhrase: String): Result<String, ErrData?>
-    validate animal != "" or return err({ msg="Invalid animal" });
-    validate catchPhrase != "" or return err({ msg="Invalid catchPhrase" });
-{
-    return String::concat("The ", animal, " says ", createAnimal::(catchPhrase).says);
-}
-
-createAnimal("woof woof") //ok always
-createAnimal("")          //fails invariant in debug
-createAnimalPre("")       //fails precondition in debug *but not* release
-createAnimalPreSafe("")   //fails precondition in all build flavors
-
-getSays("dog", "woof") //Ok<String, ErrData>@{value="The dog says woof"}
-getSays("", "woof") //Err<String, ErrData>@{error={ msg="Invalid animal" }}
-getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
-```
-
 **Numeric Types**
 
-**API Types**
+## API Types
 
 [TODO]
 
