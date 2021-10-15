@@ -87,7 +87,7 @@ doit([1, false], {f="ok", g=3}) //4
 function sign(x?: Int=0): Int {
     var y: Int;
 
-    if(x == none || x == 0) {
+    if(x == 0) {
         y = 0;
     }
     else {
@@ -141,35 +141,42 @@ NamedGreeting@{name=""}.sayHello()    //invariant error
 NamedGreeting@{name="bob"}.sayHello() //"hello bob"
 ```
 
-**Algebraic and Union Types**
-
-[MAY BE OUT OF DATE]
+**(Algebraic Data Types)++ and Union Types**
 ```
-entity Person {
-    field name: String; 
+typedecl BoolOp provides APIType using {
+    line: Nat
+} of
+LConst { val: Bool }
+| NotOp { arg: BoolOp }
+| AndOp { larg: BoolOp, rarg: BoolOp }
+| OrOp { larg: BoolOp, rarg: BoolOp }
+& {
+    recursive method evaluate(): Bool {
+        match(this) {
+            LConst                  => return this.val;
+            | NotOp                 => return !this.arg.evaluate[recursive]();
+            | AndOp@{_, larg, rarg} => return larg.evaluate[recursive]() && rarg.evaluate[recursive]();
+            | OrOp@{_, larg, rarg}  => return larg.evaluate[recursive]() || rarg.evaluate[recursive]();
+        }
+    } 
 }
 
-function foo(arg?: {f: Int, n?: String} | String | Person): String {
-    if(arg == none) {
-        return "Blank";
-    }
-    else {
-        return switch(arg) {
-            type Record => arg.n ?| "Blank"
-            type String => arg
-            type Person => arg.name
-        };
-    }
+AndOp@{2, LConst@{1, true}, LConst@{1, false}}.evaluate[recursive]() //false
+OrOp@{2, LConst@{1, true}, LConst@{1, false}}.evaluate[recursive]()  //true
+
+function printType(x: Bool | Int | String | None ): String {
+    return match(x) {|
+        Bool     => "b"
+        | Int    => "i"
+        | String => "s"
+        _        => "n"
+    |};
 }
 
-foo()                    //"Blank"
-foo(none)                //Type error - none not allowed
-foo("Bob")               //Bob
-foo(Person@{name="Bob"}) //Bob
-foo({f=5})               //"Blank"
+printType(1.0f) //type error
+printType(true) //"b"
+printType(none) //"n"
 
-foo({f=1, n="Bob"})      //"Bob"
-foo({g=1, n="Bob"})      //Type error - Missing f property
 ```
 
 **Pre/Post Conditions**
@@ -272,7 +279,7 @@ assert(ec.code == 1i); //true
 
 **Numeric Types**
 
-**API Types**
+## API Types
 
 [TODO]
 

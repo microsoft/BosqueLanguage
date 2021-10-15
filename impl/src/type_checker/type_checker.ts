@@ -5100,10 +5100,14 @@ class TypeChecker {
 
     private getTypeOfStructuredAssignForMatch(sinfo: SourceInfo, env: TypeEnvironment, assign: StructuredAssignment): ResolvedType {
         if(assign instanceof TupleStructuredAssignment) {
+            this.raiseErrorIf(sinfo, assign.assigns.some((asg) => asg.assigntype instanceof AutoTypeSignature), "Must specify all entry types on Tuple match destructure");
+
             const ttypes = assign.assigns.map((asg) => this.resolveAndEnsureTypeOnly(sinfo, asg.assigntype, env.terms));
             return ResolvedType.createSingle(ResolvedTupleAtomType.create(ttypes));
         }
         else if(assign instanceof RecordStructuredAssignment) {
+            this.raiseErrorIf(sinfo, assign.assigns.some((asg) => asg[1].assigntype instanceof AutoTypeSignature), "Must specify all property types on Record match destructure");
+
             const entries = assign.assigns.map((asg) => {
                 return { pname: asg[0], ptype: this.resolveAndEnsureTypeOnly(sinfo, asg[1].assigntype, env.terms) };
             });
@@ -5211,7 +5215,7 @@ class TypeChecker {
                     eltypes.push(aptype);
                     declaredvars.push([true, ap.vname, aptype, aptype]);
                     rindecies.push(i);
-                    trgts.push({pos: i, into: new MIRRegisterArgument(ap.vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
+                    trgts.push({pos: trgts.length, into: new MIRRegisterArgument(ap.vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
                 }
             });
 
@@ -5230,7 +5234,7 @@ class TypeChecker {
                     eltypes.push(aptype);
                     declaredvars.push([true, ap[1].vname, aptype, aptype]);
                     pnames.push(ap[0]);
-                    trgts.push({pos: i, into: new MIRRegisterArgument(ap[1].vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
+                    trgts.push({pos: trgts.length, into: new MIRRegisterArgument(ap[1].vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
                 }
             });
 
@@ -5247,7 +5251,7 @@ class TypeChecker {
                 if(ap instanceof VariableDeclarationStructuredAssignment) {
                     eltypes.push(aptype);
                     declaredvars.push([true, ap.vname, aptype, aptype]);
-                    trgts.push({pos: i, into: new MIRRegisterArgument(ap.vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
+                    trgts.push({pos: trgts.length, into: new MIRRegisterArgument(ap.vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
                 }
             });
 
@@ -5288,7 +5292,7 @@ class TypeChecker {
 
                 let usenames = nassign.assigns.every((ap) => ap[0] !== undefined);
                 let usepos = nassign.assigns.every((ap) => ap[0] === undefined);
-                this.raiseErrorIf(sinfo, !usenames || usepos, "Cannot mix named and positional destructor vars -- may want to allow later though");
+                this.raiseErrorIf(sinfo, (usenames && usepos), "Cannot mix named and positional destructor vars -- may want to allow later though");
 
                 //
                 //TODO: need to do checks that we are not hitting private or hidden fields here unless our scope is otherwise ok
@@ -5307,7 +5311,7 @@ class TypeChecker {
                             eltypes.push(aptype);
                             declaredvars.push([true, ap[1].vname, aptype, aptype]);
                             pnames.push(fkey);
-                            trgts.push({pos: i, into: new MIRRegisterArgument(ap[1].vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
+                            trgts.push({pos: trgts.length, into: new MIRRegisterArgument(ap[1].vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
                         }
                     });
                 }
@@ -5324,7 +5328,7 @@ class TypeChecker {
                             eltypes.push(aptype);
                             declaredvars.push([true, ap[1].vname, aptype, aptype]);
                             pnames.push(fkey);
-                            trgts.push({pos: i, into: new MIRRegisterArgument(ap[1].vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
+                            trgts.push({pos: trgts.length, into: new MIRRegisterArgument(ap[1].vname), oftype: this.m_emitter.registerResolvedTypeReference(aptype)});
                         }
                     });
                 }
@@ -5501,10 +5505,9 @@ class TypeChecker {
             const sguard = guard as StructureMatchGuard;
 
             const assigntype = this.getTypeOfStructuredAssignForMatch(sinfo, env, sguard.match);
-            const tmatch = this.resolveAndEnsureTypeOnly(sinfo, assigntype, env.terms);
-            this.m_emitter.emitTypeOf(sinfo, mreg, this.m_emitter.registerResolvedTypeReference(tmatch), vspecial, this.m_emitter.registerResolvedTypeReference(vspecialinfo.declaredType), this.m_emitter.registerResolvedTypeReference(vspecialinfo.flowType), undefined);
+            this.m_emitter.emitTypeOf(sinfo, mreg, this.m_emitter.registerResolvedTypeReference(assigntype), vspecial, this.m_emitter.registerResolvedTypeReference(vspecialinfo.declaredType), this.m_emitter.registerResolvedTypeReference(vspecialinfo.flowType), undefined);
             
-            const fflows = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, tmatch, [env]);
+            const fflows = TypeEnvironment.convertToTypeNotTypeFlowsOnResult(this.m_assembly, assigntype, [env]);
             const okenvs = fflows.tenvs.map((eev) => eev.inferVarsOfType(eev.getExpressionResult().valtype.flowtype, matchvname, cvname).setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True));
             const failenvs = fflows.fenvs.map((eev) => eev.inferVarsOfType(eev.getExpressionResult().valtype.flowtype, matchvname, cvname).setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.False));
 
@@ -5527,7 +5530,7 @@ class TypeChecker {
                 lifetimes = [...sguard.decls].sort();
                 this.m_emitter.setActiveBlock(actionlabel);
 
-                this.generateStructuredAssignOperations(sinfo, opts.tenv, sguard.match, vspecial, vspecialinfo.declaredType, assigntype);
+                opts.tenv = this.generateStructuredAssignOperations(sinfo, opts.tenv, sguard.match, vspecial, vspecialinfo.declaredType, assigntype);
             }
         }
 

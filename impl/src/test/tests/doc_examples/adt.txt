@@ -1,0 +1,17 @@
+typedecl BoolOp provides APIType using {
+    line: Nat
+} of
+LConst { val: Bool }
+| NotOp { arg: BoolOp }
+| AndOp { larg: BoolOp, rarg: BoolOp }
+| OrOp { larg: BoolOp, rarg: BoolOp }
+& {
+    recursive method evaluate(): Bool {
+        match(this) {
+            LConst => return this.val;
+            | NotOp => return !this.arg.evaluate[recursive]();
+            | AndOp@{_, larg, rarg} => return larg.evaluate[recursive]() && rarg.evaluate[recursive]();
+            | OrOp@{_, larg, rarg} => return larg.evaluate[recursive]() || rarg.evaluate[recursive]();
+        }
+    } 
+}

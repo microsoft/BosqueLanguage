@@ -3234,63 +3234,67 @@ class Parser {
         }
     }
 
-    private parseMatchGuard(sinfo: SourceInfo): MatchGuard {
+    private parseMatchGuard(sinfo: SourceInfo): [MatchGuard, Set<string>] {
         if (this.testToken(TokenStrings.Identifier)) {
             const tv = this.consumeTokenAndGetValue();
             if (tv !== "_") {
                 this.raiseError(sinfo.line, "Expected wildcard match");
             }
 
-            return new WildcardMatchGuard();
+            return [new WildcardMatchGuard(), new Set<string>()];
         }
         else {
-            const line = sinfo.line;
-
-            if(this.testFollows("[", TokenStrings.Identifier) || this.testFollows("{", TokenStrings.Identifier)) {
+            if(this.testToken("[")) {
                 let decls = new Set<string>();
-                const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), "let", decls);
-                decls.forEach((dv) => {
-                    if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
-                        this.raiseError(line, "Variable name is already defined");
-                    }
-                    this.m_penv.getCurrentFunctionScope().defineLocalVar(dv, dv, false);
-                });
-
-                return new StructureMatchGuard(assign, decls);
+                if (this.testFollows("[", TokenStrings.Identifier)) {
+                    const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), "let", decls);
+                    return [new StructureMatchGuard(assign, decls), decls];
+                }
+                else {
+                    const oftype = this.parseTupleType();
+                    return [new TypeMatchGuard(oftype), decls];
+                }
+            }
+            else if(this.testToken("{")) {
+                let decls = new Set<string>();
+                if (this.testFollows("{", TokenStrings.Identifier, "=")) {
+                    const assign = this.parseStructuredAssignment(this.getCurrentSrcInfo(), "let", decls);
+                    return [new StructureMatchGuard(assign, decls), decls];
+                }
+                else {
+                    const oftype = this.parseRecordType();
+                    return [new TypeMatchGuard(oftype), decls];
+                }
             }
             else {
+                let decls = new Set<string>();
                 const oftype = this.parseTypeSignature();
+
                 if (this.testFollows("@", "{")) {
-                    let decls = new Set<string>();
+                    this.consumeToken();
+
                     const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
                         if (this.testFollows(TokenStrings.Identifier, "=")) {
                             this.ensureToken(TokenStrings.Identifier);
                             const name = this.consumeTokenAndGetValue();
 
                             this.ensureAndConsumeToken("=");
-                            const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+                            const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), "let", decls);
 
                             return [name, subg];
                         }
                         else {
-                            const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), undefined, decls);
+                            const subg = this.parsePrimitiveStructuredAssignment(this.getCurrentSrcInfo(), "let", decls);
 
                             return [undefined, subg];
                         }
                     })[0];
 
                     const assign = new NominalStructuredAssignment(oftype, assigns);
-                    decls.forEach((dv) => {
-                        if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
-                            this.raiseError(line, "Variable name is already defined");
-                        }
-                        this.m_penv.getCurrentFunctionScope().defineLocalVar(dv, dv, false);
-                    });
-
-                    return new StructureMatchGuard(assign, decls);
+                    return [new StructureMatchGuard(assign, decls), decls];
                 }
                 else {
-                    return new TypeMatchGuard(oftype);
+                    return [new TypeMatchGuard(oftype), decls];
                 }
             }
         }
@@ -3310,9 +3314,23 @@ class Parser {
     }
 
     private parseMatchEntry<T>(sinfo: SourceInfo, tailToken: string, actionp: () => T): MatchEntry<T> {
-        const guard = this.parseMatchGuard(sinfo);
+        const [guard, decls] = this.parseMatchGuard(sinfo);
         this.ensureAndConsumeToken("=>");
+
+        if (decls.size !== 0) {
+            decls.forEach((dv) => {
+                if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
+                    this.raiseError(sinfo.line, "Variable name is already defined");
+                }
+                this.m_penv.getCurrentFunctionScope().defineLocalVar(dv, dv, false);
+            });
+        }
+
         const action = actionp();
+
+        if(decls.size !== 0) {
+            this.m_penv.getCurrentFunctionScope().popLocalScope();
+        }
 
         const isokfollow = this.testToken(tailToken) || this.testToken("|");
         if(!isokfollow) {
@@ -3794,7 +3812,11 @@ class Parser {
 
     private parseInvariantsInto(invs: InvariantDecl[]) {
         try {
-            
+
+            //
+            //TODO: we should support release/test/debug/spec attributes on invariants as well
+            //
+
             this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), new NominalTypeSignature("NSCore", ["Bool"]), false));
             while (this.testToken("invariant")) {
                 this.consumeToken();
@@ -4247,9 +4269,14 @@ class Parser {
                     this.raiseError(line, "Collision between object and other names");
                 }
 
-                let musing: MemberFieldDecl[] = [];
-                if (this.testToken("{")) {
-                    musing = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
+                const invariants: InvariantDecl[] = [];
+                const staticMembers: StaticMemberDecl[] = [];
+                const staticFunctions: StaticFunctionDecl[] = [];
+                const staticOperators: StaticOperatorDecl[] = [];
+                let memberFields: MemberFieldDecl[] = [];
+                const memberMethods: MemberMethodDecl[] = [];
+                if (this.testFollows("{", TokenStrings.Identifier)) {
+                    memberFields = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
                         const mfinfo = this.getCurrentSrcInfo();
 
                         this.ensureToken(TokenStrings.Identifier);
@@ -4266,9 +4293,15 @@ class Parser {
                         return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
                     })[0];
                 }
+                else {
+                    const thisType = new NominalTypeSignature(currentDecl.ns, [ename], []);
+
+                    const nestedEntities = new Map<string, EntityTypeDecl>();
+                    this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                }
 
                 const eprovides = [[concepttype, undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
-                const edecl = new EntityTypeDecl(esinfo, this.m_penv.getCurrentFile(), ["__adt_entity_type"], currentDecl.ns, ename, terms, eprovides, [], [], [], [], musing, [], new Map<string, EntityTypeDecl>());
+                const edecl = new EntityTypeDecl(esinfo, this.m_penv.getCurrentFile(), ["__adt_entity_type"], currentDecl.ns, ename, terms, eprovides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>());
                 
                 edecls.push(edecl);
                 currentDecl.objects.set(ename, edecl);

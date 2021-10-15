@@ -288,6 +288,67 @@
             ]
         },
         {
+            "test": "adtpp",
+            "src": "doc_examples/adt.txt",
+            "sig": "function main(cv: LConst): Bool",
+            "code": "",
+            "typechk": [
+            ],
+            "infeasible": [
+                {
+                    "action": "AndOp@{2, cv, LConst@{1, false}}.evaluate[recursive]()",
+                    "check": "!res"
+                },
+                {
+                    "action": "OrOp@{2, cv, NotOp@{1, cv}}.evaluate[recursive]()",
+                    "check": "res"
+                }
+            ],
+            "witness": [
+                {
+                    "action": "NotOp@{2, cv}.evaluate[recursive]()",
+                    "check": "res"
+                },
+                {
+                    "action": "OrOp@{2, cv, LConst@{1, false}}.evaluate[recursive]()",
+                    "check": "res"
+                }
+            ]
+        },
+        {
+            "test": "uniontypes",
+            "src": null,
+            "sig": "function main(y: Bool | Int): String",
+            "code": "function printType(x: Bool | Int | String | None): String { return match(x) {| Bool   => \"b\" | Int => \"i\" | String => \"s\" | _ => \"n\" |}; }",
+            "typechk": [
+                "printType(5I)"
+            ],
+            "infeasible": [
+                {
+                    "action": "printType(5i)",
+                    "check": "res === \"i\""
+                },
+                {
+                    "action": "printType(true)",
+                    "check": "res === \"b\""
+                },
+                {
+                    "action": "printType(none)",
+                    "check": "res === \"n\""
+                }
+            ],
+            "witness": [
+                {
+                    "action": "printType(y)",
+                    "check": "res === \"i\""
+                },
+                {
+                    "action": "printType(y)",
+                    "check": "res !== \"i\""
+                }
+            ]
+        },
+        {
             "test": "validators",
             "src": "doc_examples/validators.txt",
             "sig": "function main(s: String): Bool",
