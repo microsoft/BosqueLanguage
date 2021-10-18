@@ -44,6 +44,8 @@ class RequiredListDestructors {
     findLastIndexOf: Map<string, {code: MIRPCode, isidx: boolean}> = new Map<string, {code: MIRPCode, isidx: boolean}>();
 
     sum: boolean = false;
+    strconcat: boolean = false;
+    strjoin: boolean = false;
 }
 
 type SMTDestructorGenCode = {
@@ -247,6 +249,22 @@ class ListOpsManager {
 
         ops.dops.sum = true;
         return new SMTCallGeneral(op, [l]);
+    }
+
+    processStrConcat(ltype: MIRType, l: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "strconcat");
+
+        ops.dops.strconcat = true;
+        return new SMTCallGeneral(op, [l]);
+    }
+
+    processStrJoin(ltype: MIRType, l: SMTExp, sep: SMTExp): SMTExp {
+        const ops = this.ensureOpsFor(ltype);
+        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "strjoin");
+
+        ops.dops.strjoin = true;
+        return new SMTCallGeneral(op, [l, sep]);
     }
 
     generateConsCallName(ltype: SMTType, opname: string): string {
@@ -1057,6 +1075,41 @@ class ListOpsManager {
 
         return {
             if: [new SMTFunction(this.generateDesCallName(ltype, "sum"), [{ vname: "l", vtype: ltype }], undefined, 0, restype, ffunc)],
+            uf: ufops
+        };
+    }
+
+
+    ////////
+    //StrConcat
+    emitDestructorStrConcat(ltype: SMTType): SMTDestructorGenCode {
+        const mirstrtype = this.temitter.getMIRType("NSCore::String");
+        const restype = this.temitter.generateResultType(mirstrtype);
+        
+        const ufconsname = "@UFStrConcatCons";
+        const ufops = [new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ufconsname), [ltype], this.temitter.getSMTTypeFor(mirstrtype))];
+        
+        const ffunc = this.temitter.generateResultTypeConstructorSuccess(mirstrtype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l")]));
+
+        return {
+            if: [new SMTFunction(this.generateDesCallName(ltype, "strconcat"), [{ vname: "l", vtype: ltype }], undefined, 0, restype, ffunc)],
+            uf: ufops
+        };
+    }
+
+    ////////
+    //StrJoin
+    emitDestructorStrJoin(ltype: SMTType): SMTDestructorGenCode {
+        const mirstrtype = this.temitter.getMIRType("NSCore::String");
+        const restype = this.temitter.generateResultType(mirstrtype);
+        
+        const ufconsname = "@UFStrJoinCons";
+        const ufops = [new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ufconsname), [ltype, this.temitter.getSMTTypeFor(mirstrtype)], this.temitter.getSMTTypeFor(mirstrtype))];
+        
+        const ffunc = this.temitter.generateResultTypeConstructorSuccess(mirstrtype, new SMTCallSimple(this.generateDesCallName(ltype, ufconsname), [new SMTVar("l"), new SMTVar("sep")]));
+
+        return {
+            if: [new SMTFunction(this.generateDesCallName(ltype, "strjoin"), [{ vname: "l", vtype: ltype }, { vname: "sep", vtype: this.temitter.getSMTTypeFor(mirstrtype) }], undefined, 0, restype, ffunc)],
             uf: ufops
         };
     }

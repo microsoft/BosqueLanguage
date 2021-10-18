@@ -950,7 +950,7 @@ enum StatementTag {
     AbortStatement = "AbortStatement",
     AssertStatement = "AssertStatement", //assert(x > 0)
     CheckStatement = "CheckStatement", //check(x > 0)
-    ValidateStatement = "ValidateStatement", //validate exp or err -> if (!exp) return Result<INVOKE_RESULT>@error(err);
+    ValidateStatement = "ValidateStatement", //validate exp else err -> if (!exp) return Result<INVOKE_RESULT>@error(err);
 
     DebugStatement = "DebugStatement", //print an arg or if empty attach debugger
     NakedCallStatement = "NakedCallStatement",

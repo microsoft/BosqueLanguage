@@ -743,6 +743,58 @@ __internal entity ListFlatOps provides Some {
     }
 
     ////
+    //s_strconcat
+    function s_strconcat_1(l: List<String>): String {
+        return ListFlatOps::s_1at0<String>(l);
+    }
+    function s_strconcat_2(l: List<String>): String {
+        return String::s_concat2(ListFlatOps::s_2at0<String>(l), ListFlatOps::s_2at1<String>(l));
+    }
+    function s_strconcat_3(l: List<String>): String {
+        return String::s_concat2(ListFlatOps::s_3at0<String>(l), String::s_concat2(ListFlatOps::s_3at1<String>(l), ListFlatOps::s_3at2<String>(l)));
+    }
+    function s_strconcat(l: List<String>): String {
+        if(ListFlatOps::s_empty<String>(l)) {
+            return "";
+        }
+        elif(ListFlatOps::s_is1<String>(l)) {
+            return ListFlatOps::s_strconcat_1(l);
+        }
+        elif(ListFlatOps::s_is2<String>(l)) {
+            return ListFlatOps::s_strconcat_2(l);
+        }
+        else {
+            return ListFlatOps::s_strconcat_3(l);
+        }
+    }
+
+    ////
+    //s_strjoin
+    function s_strjoin_1(l: List<String>, sep: String): String {
+        return ListFlatOps::s_1at0<String>(l);
+    }
+    function s_strjoin_2(l: List<String>, sep: String): String {
+        return String::s_concat2(ListFlatOps::s_2at0<String>(l), String::s_concat2(sep, ListFlatOps::s_2at1<String>(l)));
+    }
+    function s_strjoin_3(l: List<String>): String {
+        return String::s_concat2(ListFlatOps::s_3at0<String>(l), String::s_concat2(sep, String::s_concat2(ListFlatOps::s_3at1<String>(l), String::s_concat2(sep, ListFlatOps::s_3at2<String>(l)))));
+    }
+    function s_strjoin(l: List<String>, sep: String): String {
+        if(ListFlatOps::s_empty<String>(l)) {
+            return "";
+        }
+        elif(ListFlatOps::s_is1<String>(l)) {
+            return ListFlatOps::s_strjoin_1(l);
+        }
+        elif(ListFlatOps::s_is2<String>(l)) {
+            return ListFlatOps::s_strjoin_2(l);
+        }
+        else {
+            return ListFlatOps::s_strjoin_3(l);
+        }
+    }
+
+    ////
     //s_zip_index
     function s_zip_index_1<T>(l: List<T>, bidx: Nat): List<[Nat, T]> {
         return List<[Nat, T]>@{[bidx, ListFlatOps::s_1at0<T>(l)]};
@@ -1574,6 +1626,44 @@ __internal entity ListConcatOps provides Some {
         return llm + rlm;
     }
 
+    recursive function s_concat_lropt_strconcat(l: List<String>): String {
+        if(ListFlatOps::s_isFlatList<String>(l)) {
+            return ListFlatOps::s_strconcat(l);
+        }
+        elif(ListConcatOps::s_isConcatList<String>(l)) {
+            return ListConcatOps::s_strconcat[recursive](l);
+        }
+        else {
+            return ListOps::s_strconcat_base(l);
+        }
+    }
+
+    recursive function s_strconcat(l: List<String>): String {
+        let llm = ListConcatOps::s_concat_lropt_strconcat[recursive](ListConcatOps::s_left<String>(l));
+        let rlm = ListConcatOps::s_concat_lropt_strconcat[recursive](ListConcatOps::s_right<String>(l));
+
+        return String::s_concat2(llm, rlm);
+    }
+
+    recursive function s_concat_lropt_strjoin(l: List<String>, sep: String): String {
+        if(ListFlatOps::s_isFlatList<String>(l)) {
+            return ListFlatOps::s_strjoin(l, sep);
+        }
+        elif(ListConcatOps::s_isConcatList<String>(l)) {
+            return ListConcatOps::s_strjoin[recursive](l, sep);
+        }
+        else {
+            return ListOps::s_strjoin_base(l, sep);
+        }
+    }
+
+    recursive function s_strjoin(l: List<String>, sep: String): String {
+        let llm = ListConcatOps::s_concat_lropt_strjoin[recursive](ListConcatOps::s_left<String>(l), sep);
+        let rlm = ListConcatOps::s_concat_lropt_strjoin[recursive](ListConcatOps::s_right<String>(l), sep);
+
+        return String::s_concat2(llm, String::s_concat2(sep, rlm));
+    }
+
     recursive function s_concat_lropt_zip_index<T>(l: List<T>, bidx: Nat): List<[Nat, T]> {
         if(ListFlatOps::s_isFlatList<T>(l)) {
             return ListFlatOps::s_zip_index<T>(l, bidx);
@@ -2109,6 +2199,42 @@ __internal entity ListOps provides Some {
             }
         }
     }
+
+    function s_strconcat_impl(l: List<String>): String # list_strconcat
+
+    function s_strconcat_base(l: List<String>): String {
+        return ListOps::s_strconcat_impl(l);
+    }
+
+    function s_strconcat(l: List<String>): String {
+        if(ListFlatOps::s_isFlatList<String>(l)) {
+            return ListFlatOps::s_strconcat(l);
+        }
+        else {
+            return ListOps::s_strconcat_base(l);
+        }
+    }
+
+    function s_strjoin_impl(l: List<String>, sep: String): String # list_strjoin
+
+    function s_strjoin_base(l: List<String>, sep: String): String {
+        return ListOps::s_strjoin_impl(l, sep);
+    }
+
+    function s_strjoin(l: List<String>, sep: String): String {
+        if(String::s_empty(sep)) {
+            return ListOps::s_strconcat(l);
+        }
+        else {
+            if(ListFlatOps::s_isFlatList<String>(l)) {
+                return ListFlatOps::s_strjoin(l, sep);
+            }
+            else {
+                return ListOps::s_strjoin_base(l, sep);
+            }
+        }
+    }
+
 #else
     recursive function s_sum_rec<T unique Algebraic>(l: List<T>, acc: T, cpos: Nat, count: Nat): T {
         if(cpos == count) {
@@ -2147,6 +2273,73 @@ __internal entity ListOps provides Some {
             }
         }
     }
+
+    recursive function s_strconcat_rec(l: List<String>, acc: String, cpos: Nat, count: Nat): String {
+        if(cpos == count) {
+            return acc;
+        }
+        else {
+            let nacc = String::s_concat2(acc, ListOps::s_safe_get<String>(l, cpos));
+            return ListOps::s_strconcat_rec[recursive](l, nacc, cpos + 1n, count);
+        }
+    }
+
+    function s_strconcat_base(l: List<String>): String {
+        return ListOps::s_strconcat_rec[recursive](l, "", 0n, ListOps::s_size<String>(l));
+    }
+
+    function s_strconcat(l: List<String>): String {
+        if(ListFlatOps::s_empty<String>(l)) {
+            return "";
+        }
+        else {
+            if(ListFlatOps::s_isFlatList<String>(l)) {
+                return ListFlatOps::s_strconcat(l);
+            }
+#if SMALL_MODEL_ENABLED
+            elif(ListConcatOps::s_isConcatList<String>(l)) {
+                return ListConcatOps::s_strconcat[recursive](l);
+            }
+#endif
+            else {
+                return ListOps::s_strconcat_base(l);
+            }
+        }
+    }
+
+    recursive function s_strjoin_rec(l: List<T>, sep: String, acc: T, cpos: Nat, count: Nat): String {
+        if(cpos == count) {
+            return acc;
+        }
+        else {
+            let nacc = String::s_concat2(acc, String::s_concat2(sep, ListOps::s_safe_get<Strng>(l, cpos)));
+            return ListOps::s_strjoin_rec[recursive](l, sep, nacc, cpos + 1n, count);
+        }
+    }
+
+    function s_strjoin_base(l: List<String>, sep: String): String {
+        return ListOps::s_strjoin_rec[recursive](l, sep, "", 0n, ListOps::s_size<T>(l));
+    }
+
+    function s_strjoin(l: List<String>, sep: String): String {
+        if(ListFlatOps::s_empty<String>(l)) {
+            return "";
+        }
+        else {
+            if(ListFlatOps::s_isFlatList<String>(l)) {
+                return ListFlatOps::s_strjoin(l, sep);
+            }
+#if SMALL_MODEL_ENABLED
+            elif(ListConcatOps::s_isConcatList<T>(l)) {
+                return ListConcatOps::s_strjoin[recursive](l, sep);
+            }
+#endif
+            else {
+                return ListOps::s_strjoin_base(l, sep);
+            }
+        }
+    }
+
 #endif
 
    

@@ -2801,8 +2801,8 @@ class SMTBodyEmitter {
                 const flat_uli = this.lopsManager.generateListContentsCall(new SMTVar(args[0].vname), smtarg0typekey);
                 const emptylist = new SMTConst(`${this.typegen.lookupTypeName(arg0typekey)}@empty_const`);
                 const check_uli1 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_1");
-                const check_uli2 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_1");
-                const check_uli3 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_1");
+                const check_uli2 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_2");
+                const check_uli3 = this.lopsManager.generateConsCallName_Direct(smtarg0typekey, "list_3");
 
                 const orof = SMTCallSimple.makeOrOf(
                     SMTCallSimple.makeEq(new SMTVar(args[0].vname), emptylist),
@@ -3191,6 +3191,26 @@ class SMTBodyEmitter {
                 else {
                     const [l] = args.map((arg) => new SMTVar(arg.vname));
                     const fbody = this.lopsManager.processSum(this.typegen.getMIRType(arg0typekey), l);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
+            }
+            case "list_strconcat": {
+                if (!this.vopts.EnableCollection_LargeOps) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const [l] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processStrConcat(this.typegen.getMIRType(arg0typekey), l);
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
+                }
+            }
+            case "list_strjoin": {
+                if (!this.vopts.EnableCollection_LargeOps) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                }
+                else {
+                    const [l, sep] = args.map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processStrJoin(this.typegen.getMIRType(arg0typekey), l, sep);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }

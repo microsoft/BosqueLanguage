@@ -106,7 +106,7 @@ sign()     //0
 
 ```
 concept WithName {
-    invariant $name != "";
+    invariant $name !== "";
 
     field name: String;
 }
@@ -179,52 +179,6 @@ printType(none) //"n"
 
 ```
 
-**Pre/Post Conditions and Invariants**
-
-[MAY BE OUT OF DATE]
-```
-entity Animal {
-    invariant $says != "";
-
-    field says: String;
-}
-
-function createAnimal(catchPhrase: String): Animal
-{
-    return Animal@{says=catchPhrase};
-}
-
-function createAnimalPre(catchPhrase: String): Animal
-    requires catchPhrase != "";
-{
-    return Animal@{says=catchPhrase};
-}
-
-function createAnimalPreSafe(catchPhrase: String): Animal
-    requires release catchPhrase != "";
-{
-    return Animal@{says=catchPhrase};
-}
-
-typedef ErrData = {msg: String, data?: Any};
-
-entrypoint function getSays(animal: String, catchPhrase: String): Result<String, ErrData?>
-    validate animal != "" or return err({ msg="Invalid animal" });
-    validate catchPhrase != "" or return err({ msg="Invalid catchPhrase" });
-{
-    return String::concat("The ", animal, " says ", createAnimal::(catchPhrase).says);
-}
-
-createAnimal("woof woof") //ok always
-createAnimal("")          //fails invariant in debug
-createAnimalPre("")       //fails precondition in debug *but not* release
-createAnimalPreSafe("")   //fails precondition in all build flavors
-
-getSays("dog", "woof") //Ok<String, ErrData>@{value="The dog says woof"}
-getSays("", "woof") //Err<String, ErrData>@{error={ msg="Invalid animal" }}
-getSays("dog", "") //Err<String, ErrData>@{error={ msg="Invalid catchPhrase" }}
-```
-
 **Validated and Typed Strings:**
 ```
 typedecl ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
@@ -278,6 +232,8 @@ assert(ec.code == 1i); //true
 ```
 
 **Numeric Types**
+
+[TODO]
 
 ## API Types
 
