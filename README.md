@@ -179,7 +179,7 @@ printType(none) //"n"
 
 ```
 
-**Pre/Post Conditions**
+**Pre/Post Conditions and Invariants**
 
 [MAY BE OUT OF DATE]
 ```

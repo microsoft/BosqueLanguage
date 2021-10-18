@@ -48,9 +48,16 @@ fsx.removeSync(outfile);
 
 console.log(command);
 
-const outstr = proc.execSync(command).toString();
-console.log(`${outstr}`);
+try {
+    const outstr = proc.execSync(command).toString();
+    console.log(`${outstr}`);
 
-if(process.platform === "win32") {
-    fsx.copyFileSync(path.join(includebase, "win/z3/bin/libz3.dll"), path.join(outbase, "libz3.dll"));
+    
+    if(process.platform === "win32") {
+        fsx.copyFileSync(path.join(includebase, "win/z3/bin/libz3.dll"), path.join(outbase, "libz3.dll"));
+    }
+}
+catch (ex) {
+    console.log(ex.toString());
+    process.exit(1);
 }
