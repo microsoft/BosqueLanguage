@@ -1956,7 +1956,6 @@ class SMTBodyEmitter {
         const chkzero = SMTCallSimple.makeEq(new SMTConst("BInt@zero"), args[1]);
         const checkovf = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(bvmin, args[0]), SMTCallSimple.makeEq(this.numgen.int.emitSimpleInt(-1), args[1]));
 
-
         return new SMTIf(
             checkovf,
             this.typegen.generateErrorResultAssert(this.typegen.getMIRType("NSCore::Int")),

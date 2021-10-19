@@ -380,11 +380,12 @@ class ListOpsManager {
         const size = "_@size";
         const sizev = new SMTVar(size);
 
+        const emptyopt = {
+            test: SMTCallSimple.makeEq(sizev, new SMTConst("BNat@zero")),
+            result: this.temitter.generateResultTypeConstructorSuccess(mtype, new SMTConst(`${this.temitter.lookupTypeName(mtype.typeID)}@empty_const`))
+        };
+
         const smallmodeopts = [
-            {
-                test: SMTCallSimple.makeEq(sizev, new SMTConst("BNat@zero")),
-                result: this.temitter.generateResultTypeConstructorSuccess(mtype, new SMTConst(`${this.temitter.lookupTypeName(mtype.typeID)}@empty_const`))
-            },
             {
                 test: SMTCallSimple.makeEq(sizev, this.numgen.emitSimpleNat(1)),
                 result: new SMTLetMulti([
@@ -454,15 +455,17 @@ class ListOpsManager {
         let ffunc: SMTExp = new SMTConst("[UNINIT]");
         if(this.vopts.EnableCollection_SmallHavoc && !this.vopts.EnableCollection_LargeHavoc) {
             ffunc = new SMTLet(size, new SMTCallSimple("ListSize@UFCons_API", [new SMTVar("path")]),
-                new SMTCond(smallmodeopts.slice(0, smallmodeopts.length - 1), smallmodeopts[smallmodeopts.length - 1].result)
+                new SMTCond([emptyopt, ...smallmodeopts.slice(0, smallmodeopts.length - 1)], smallmodeopts[smallmodeopts.length - 1].result)
             );
         }
         else if (!this.vopts.EnableCollection_SmallHavoc && this.vopts.EnableCollection_LargeHavoc) {
-            ffunc = new SMTLet(size, new SMTCallSimple("ListSize@UFCons_API", [new SMTVar("path")]), largemodeopts);
+            ffunc = new SMTLet(size, new SMTCallSimple("ListSize@UFCons_API", [new SMTVar("path")]),
+                new SMTIf(emptyopt.test, emptyopt.result, largemodeopts)
+            );
         }
         else {
             ffunc = new SMTLet(size, new SMTCallSimple("ListSize@UFCons_API", [new SMTVar("path")]), 
-                new SMTCond(smallmodeopts, largemodeopts)
+                new SMTCond([emptyopt, ...smallmodeopts], largemodeopts)
             );
         }
 
