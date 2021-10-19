@@ -47,22 +47,40 @@ class BVEmitter {
             return new SMTConst("BInt@zero");
         }
         else {
-            if (val > 0) {
+            if (val > 0n) {
                 assert(BigInt(val) <= imax);
-                let bits = BigInt(val).toString(2);
 
-                while(bits.length < bvsize) {
-                    bits = "0" + bits;
-                }
-                return new SMTConst(`#b${bits}`);
+                return new SMTConst(`(_ bv${val} ${bvsize})`);
             }
             else {
-                assert(imin <= BigInt(val));
+                assert(imin <= val);
 
-                let bits = (~BigInt(val) + 1n).toString(2).slice(0, Number(bvsize));
+                let bitstr = (-val).toString(2);
+                let bits = "";
+                let carry = true;
+                for(let i = bitstr.length - 1; i >= 0; --i) {
+                    const bs = (bitstr[i] === "0" ? "1" : "0");
+
+                    if(bs === "0") {
+                        bits = (carry ? "1": "0") + bits;
+                        carry = false;
+                    }
+                    else {
+                        if(!carry) {
+                            bits = "1" + bits;
+                            //carry stays false
+                        }
+                        else {
+                            bits = "0" + bits;
+                            carry = true;
+                        }
+                    }
+                }
+
                 while(bits.length < bvsize) {
                     bits = "1" + bits;
                 }
+
                 return new SMTConst(`#b${bits}`);
             }
         }
@@ -73,7 +91,7 @@ class BVEmitter {
             return new SMTConst("BNat@zero");
         }
         else {
-            assert(0 < val && BigInt(val) <= nmax);
+            assert(0n < val && val <= nmax);
             return new SMTConst(`(_ bv${val} ${bvsize})`);
         }
     }
