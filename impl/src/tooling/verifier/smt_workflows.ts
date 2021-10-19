@@ -487,7 +487,7 @@ function wfInfeasibleLarge(usercode: CodeFileInfo[], timeout: number, errorTrgtP
     }
 
     try {
-        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, false);
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.UFOverApproximate, vopts.EnableCollection_SmallOps);
         if (masm === undefined) {
             if (printprogress) {
                 process.stderr.write(`    compile errors\n`);
@@ -565,7 +565,7 @@ function wfWitnessLarge(usercode: CodeFileInfo[], timeout: number, errorTrgtPos:
     }
 
     try {
-        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, false);
+        const { masm } = generateMASM(usercode, entrypoint, AssemblyFlavor.RecuriveImpl, vopts.EnableCollection_SmallOps);
         if (masm === undefined) {
             if (printprogress) {
                 process.stderr.write(`    compile errors\n`);
