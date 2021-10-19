@@ -59,6 +59,7 @@ const KeywordStrings = [
     "typedef",
     "typedecl",
     "using",
+    "validate",
     "var",
     "when",
     "yield"
@@ -3587,7 +3588,7 @@ class Parser {
                 const exp = this.parseOfExpression();
 
                 let err = new LiteralNoneExpression(sinfo);
-                if (this.testFollows("else")) {
+                if (this.testAndConsumeTokenIf("else")) {
                     err = this.parseExpression();
                 }
 

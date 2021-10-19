@@ -673,6 +673,16 @@ class SMTEmitter {
                 const disq = this.bemitter.lopsManager.emitDestructorSum(ltype, ctype);
                 this.processDestructorGenInfo(disq);
             }
+
+            if (linfo.dops.strconcat) {
+                const disq = this.bemitter.lopsManager.emitDestructorStrConcat(ltype);
+                this.processDestructorGenInfo(disq);
+            }
+
+            if (linfo.dops.strjoin) {
+                const disq = this.bemitter.lopsManager.emitDestructorStrJoin(ltype);
+                this.processDestructorGenInfo(disq);
+            }
         }
 
         const ttag = `TypeTag_${ltype.name}`;
