@@ -28,9 +28,9 @@ const args = process.argv.slice(3);
 const vopts_unreachable = {
     ISize: 8,
     StringOpt: "ASCII",
-    EnableCollection_SmallHavoc: true,
+    EnableCollection_SmallHavoc: false,
     EnableCollection_LargeHavoc: true,
-    EnableCollection_SmallOps: false,
+    EnableCollection_SmallOps: true,
     EnableCollection_LargeOps: true
 } as VerifierOptions;
 
