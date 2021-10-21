@@ -63,7 +63,6 @@
 (define-sort BFloat () Real)
 (define-sort BDecimal () Real)
 (define-sort BRational () Real)
-(define-sort BStringPos () Int)
 ;;BSTRING_TYPE_ALIAS;;
 (define-sort BByteBuffer () (Seq (_ BitVec 8)))
 (define-sort BISOTime () Int)
@@ -190,7 +189,6 @@
       ; Float -> Real 
       ; Decimal -> Real
       ; Rational -> Real
-      ; StringPos -> Int
       ; String -> String | (Seq (_ BitVec 64))
       ; ByteBuffer -> (Seq (_ BitVec 8))
       ; ISOTime -> Int
@@ -299,7 +297,6 @@
       (bsqobject_float@box (bsqobject_float_value BFloat))
       (bsqobject_decimal@box (bsqobject_decimal_value BDecimal))
       (bsqobject_rational@box (bsqobject_rational_value BRational))
-      (bsqobject_stringpos@box (bsqobject_stringpos_value Int))
       (bsqobject_bytebuffer@box (bsqobject_bytebuffer_value BByteBuffer))
       (bsqobject_isotime@box (bsqobject_isotime_value Int))
       (bsqobject_regex@box (bsqobject_regex_value bsq_regex))

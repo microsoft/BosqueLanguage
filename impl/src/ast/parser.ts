@@ -3319,6 +3319,7 @@ class Parser {
         this.ensureAndConsumeToken("=>");
 
         if (decls.size !== 0) {
+            this.m_penv.getCurrentFunctionScope().pushLocalScope();
             decls.forEach((dv) => {
                 if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
                     this.raiseError(sinfo.line, "Variable name is already defined");
@@ -4170,17 +4171,86 @@ class Parser {
                 let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
                 
-                if(attributes.includes("algebraic")) {
-                    provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
-                }
+                provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
+                provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
 
-                if(attributes.includes("orderable")) {
-                    provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
-                }
+                [["+", "t", "t"], ["t", "+", "t", "t"], ["-", "t", "t"], ["t", "-", "t", "t"], ["t", "*", "u", "t"], ["u", "*", "t", "t"], ["t", "/", "t", "u"],
+                ["t", "==", "t", "NSCore::Bool"], ["t", "!=", "t", "NSCore::Bool"], 
+                ["t", "<", "t", "NSCore::Bool"], ["t", ">", "t", "NSCore::Bool"], ["t", "<=", "t", "NSCore::Bool"], ["t", ">=", "t", "NSCore::Bool"]].forEach((op) => {
+                    const ns = this.m_penv.assembly.getNamespace("NSCore");
 
-                //
-                //TODO: [using {+, -, *, /, ==, !=, >, < , <=, >=}]
-                //
+                    const isprefix = op[0] !== "t" && op[0] !== "u";
+                    const opstr = isprefix ? op[0] : op[1];
+
+                    const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    let params: FunctionParameter[] = [];
+                    let bexp: Expression = new LiteralNoneExpression(sinfo);
+
+                    if(isprefix) {
+                        const ptype = op[1] === "t" ? ttype : idval;
+                        params = [new FunctionParameter("l", ptype, false, undefined, undefined, undefined)];
+                        const laccess = new AccessVariableExpression(sinfo, "l");
+                        const aexp = (op[1] === "t") ? 
+                            new PostfixOp(sinfo, laccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
+                            : laccess;
+
+                        bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "NSCore", op[0], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, aexp)]), "prefix");
+                    }
+                    else {
+                        const lptype = op[0] === "t" ? ttype : idval;
+                        const rptype = op[2] === "t" ? ttype : idval;
+                        params = [new FunctionParameter("l", lptype, false, undefined, undefined, undefined), new FunctionParameter("r", rptype, false, undefined, undefined, undefined)];
+                        
+                        const laccess = new AccessVariableExpression(sinfo, "l");
+                        const lexp = (op[0] === "t") ? 
+                            new PostfixOp(sinfo, laccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
+                            : laccess;
+
+                        const raccess = new AccessVariableExpression(sinfo, "r");
+                        const rexp = (op[2] === "t") ? 
+                            new PostfixOp(sinfo, raccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
+                            : raccess;
+
+                        bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "NSCore", op[1], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, lexp), new PositionalArgument(undefined, false, rexp)]), "infix");
+                    }
+
+                    let resultType: TypeSignature = new NominalTypeSignature("NSCore", ["Bool"]);
+                    const resstr = op[op.length - 1];
+                    if(resstr === "t") {
+                        resultType = ttype;
+                    }
+                    else if(resstr === "u") {
+                        resultType = idval;
+                    }
+                    else {
+                        //already set to bool
+                    }
+                    
+                    if(resstr === "t") {
+                        bexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([new PositionalArgument(undefined, false, bexp)]));
+                    }
+
+                    const bodyid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), opstr);
+                    const body = new BodyImplementation(bodyid, this.m_penv.getCurrentFile(), new BlockStatement(sinfo, [new ReturnStatement(sinfo, [bexp])]));
+                    const sig = InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, this.m_penv.getCurrentFile(), [isprefix ? "prefix" : "infix"], "no", [], undefined, params, undefined, undefined, resultType, [], [], body, [], []);
+
+                    let level = -1;
+                    if (opstr === "+" || opstr === "-") {
+                        level = isprefix ? 1 : 3;
+                    }
+                    else if (opstr === "*" || opstr === "/") {
+                        level = 2;
+                    }
+                    else {
+                        level = 4;
+                    }
+
+                    if (!ns.operators.has(opstr)) {
+                        ns.operators.set(opstr, []);
+                    }
+                    (ns.operators.get(opstr) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "NSCore", opstr, sig, level));
+                });
 
                 const invariants: InvariantDecl[] = [];
                 const staticMembers: StaticMemberDecl[] = [];
@@ -4188,6 +4258,15 @@ class Parser {
                 const staticOperators: StaticOperatorDecl[] = [];
                 const memberFields: MemberFieldDecl[] = [];
                 const memberMethods: MemberMethodDecl[] = [];
+
+                ["zero", "one"].forEach((sf) => {
+                    const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    const cexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([ new PositionalArgument(undefined, false, new AccessStaticFieldExpression(sinfo, idval, "zero"))]));
+                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "zero", ttype, new ConstantExpressionValue(cexp, new Set<string>())); 
+
+                    staticMembers.push(sfdecl);
+                });
 
                 if (this.testAndConsumeTokenIf("&")) {
                     this.setRecover(this.scanCodeParens());
@@ -4235,8 +4314,15 @@ class Parser {
 
             const provides = this.parseProvides(currentDecl.ns === "NSCore", ["of", "using"]);
 
+            let complexheader = false;
+            const cinvariants: InvariantDecl[] = [];
+            const cstaticMembers: StaticMemberDecl[] = [];
+            const cstaticFunctions: StaticFunctionDecl[] = [];
+            const cstaticOperators: StaticOperatorDecl[] = [];
             let cusing: MemberFieldDecl[] = [];
+            const cmemberMethods: MemberMethodDecl[] = [];
             if(this.testAndConsumeTokenIf("using")) {
+                if (this.testFollows("{", TokenStrings.Identifier) && !Lexer.isAttributeKW(this.peekTokenData(1))) {
                 cusing = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
                     const mfinfo = this.getCurrentSrcInfo();
 
@@ -4253,6 +4339,14 @@ class Parser {
     
                     return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
                 })[0];
+                }
+                else {
+                    complexheader = true;
+                    const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    const nestedEntities = new Map<string, EntityTypeDecl>();
+                    this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, cinvariants, cstaticMembers, cstaticFunctions, cstaticOperators, cusing, cmemberMethods);
+                }
             }
 
             this.ensureAndConsumeToken("of");
@@ -4276,29 +4370,31 @@ class Parser {
                 const staticOperators: StaticOperatorDecl[] = [];
                 let memberFields: MemberFieldDecl[] = [];
                 const memberMethods: MemberMethodDecl[] = [];
-                if (this.testFollows("{", TokenStrings.Identifier)) {
-                    memberFields = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
-                        const mfinfo = this.getCurrentSrcInfo();
+                if (this.testToken("{")) {
+                    if (this.testFollows("{", TokenStrings.Identifier) && !Lexer.isAttributeKW(this.peekTokenData(1))) {
+                        memberFields = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
+                            const mfinfo = this.getCurrentSrcInfo();
 
-                        this.ensureToken(TokenStrings.Identifier);
-                        const name = this.consumeTokenAndGetValue();
-                        this.ensureAndConsumeToken(":");
+                            this.ensureToken(TokenStrings.Identifier);
+                            const name = this.consumeTokenAndGetValue();
+                            this.ensureAndConsumeToken(":");
 
-                        const ttype = this.parseTypeSignature();
+                            const ttype = this.parseTypeSignature();
 
-                        let dvalue: ConstantExpressionValue | undefined = undefined;
-                        if (this.testAndConsumeTokenIf("=")) {
-                            dvalue = this.parseConstExpression(false);
-                        }
+                            let dvalue: ConstantExpressionValue | undefined = undefined;
+                            if (this.testAndConsumeTokenIf("=")) {
+                                dvalue = this.parseConstExpression(false);
+                            }
 
-                        return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
-                    })[0];
-                }
-                else {
-                    const thisType = new NominalTypeSignature(currentDecl.ns, [ename], []);
+                            return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
+                        })[0];
+                    }
+                    else {
+                        const thisType = new NominalTypeSignature(currentDecl.ns, [ename], []);
 
-                    const nestedEntities = new Map<string, EntityTypeDecl>();
-                    this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                        const nestedEntities = new Map<string, EntityTypeDecl>();
+                        this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                    }
                 }
 
                 const eprovides = [[concepttype, undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
@@ -4309,21 +4405,24 @@ class Parser {
                 this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
             }
 
-            const invariants: InvariantDecl[] = [];
-            const staticMembers: StaticMemberDecl[] = [];
-            const staticFunctions: StaticFunctionDecl[] = [];
-            const staticOperators: StaticOperatorDecl[] = [];
-            const memberFields: MemberFieldDecl[] = [];
-            const memberMethods: MemberMethodDecl[] = [];
-
             if (this.testAndConsumeTokenIf("&")) {
                 this.setRecover(this.scanCodeParens());
                 this.ensureAndConsumeToken("{");
 
+                if(complexheader) {
+                    this.raiseError(this.getCurrentLine(), "Cannot define complex ADT++ concept in multiple parts");
+                }
+
                 const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
 
                 const nestedEntities = new Map<string, EntityTypeDecl>();
-                this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                const memberFields: MemberFieldDecl[] = [];
+                this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, cinvariants, cstaticMembers, cstaticFunctions, cstaticOperators, memberFields, cmemberMethods);
+
+                if(cusing.length !== 0 && memberFields.length !== 0) {
+                    this.raiseError(this.getCurrentLine(), "Cannot define fields in multiple places in ADT++ decl");
+                }
+                cusing = [...cusing, ...memberFields];
 
                 this.ensureAndConsumeToken("}");
 
@@ -4337,11 +4436,7 @@ class Parser {
                 this.ensureAndConsumeToken(";");
             }
 
-            if(memberFields.length !== 0) {
-                this.raiseError(sinfo.line, "Cannot declare additional member fields on ADT");
-            }
-
-            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__adt_concept_type"], currentDecl.ns, iname, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, cusing, memberMethods, new Map<string, EntityTypeDecl>());
+            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__adt_concept_type"], currentDecl.ns, iname, terms, provides, cinvariants, cstaticMembers, cstaticFunctions, cstaticOperators, cusing, cmemberMethods, new Map<string, EntityTypeDecl>());
             currentDecl.concepts.set(iname, cdecl);
             this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + iname, cdecl);
         }

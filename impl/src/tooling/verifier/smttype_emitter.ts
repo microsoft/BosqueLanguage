@@ -188,9 +188,6 @@ class SMTTypeEmitter {
                 else if (this.isType(tt, "NSCore::Rational")) {
                     return new SMTType("BRational", "TypeTag_Rational", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::StringPos")) {
-                    return new SMTType("BStringPos", "TypeTag_StringPos", entity.tkey);
-                }
                 else if (this.isType(tt, "NSCore::String")) {
                     return new SMTType("BString", "TypeTag_String", entity.tkey);
                 }
@@ -406,9 +403,6 @@ class SMTTypeEmitter {
                 else if (this.isType(from, "NSCore::Rational")) {
                     objval = new SMTCallSimple("bsq_rational@box", [exp]);
                 }
-                else if (this.isType(from, "NSCore::StringPos")) {
-                    objval = new SMTCallSimple("bsq_stringpos@box", [exp]);
-                }
                 else if (this.isType(from, "NSCore::ByteBuffer")) {
                     objval = new SMTCallSimple("bsq_bytebuffer@box", [exp]);
                 }
@@ -505,9 +499,6 @@ class SMTTypeEmitter {
                 }
                 else if (this.isType(into, "NSCore::Rational")) {
                     return new SMTCallSimple("bsqobject_rational_value", [oexp]);
-                }
-                else if (this.isType(into, "NSCore::StringPos")) {
-                    return new SMTCallSimple("bsqobject_stringpos_value", [oexp]);
                 }
                 else if (this.isType(into, "NSCore::ByteBuffer")) {
                     return new SMTCallSimple("bsqobject_bytebuffer_value", [oexp]);

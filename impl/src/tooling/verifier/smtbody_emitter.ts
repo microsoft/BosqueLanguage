@@ -2413,30 +2413,6 @@ class SMTBodyEmitter {
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "__i__NSCore::===infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = SMTCallSimple.makeEq(args[0], args[1]);
-                break;
-            }
-            case "__i__NSCore::!==infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = SMTCallSimple.makeNotEq(args[0], args[1]);
-                break;
-            }
-            case "__i__NSCore::<=infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = new SMTCallSimple("<", args);
-                break;
-            }
-            case "__i__NSCore::>=infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = new SMTCallSimple(">", args);
-                break;
-            }
-            case "__i__NSCore::<==infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = new SMTCallSimple("<=", args);
-                break;
-            }
-            case "__i__NSCore::>==infix=(NSCore::StringPos, NSCore::StringPos)":{
-                smte = new SMTCallSimple(">=", args);
-                break;
-            }
             default: {
                 assert(false);
             }
