@@ -1425,7 +1425,6 @@ class Assembly {
     getSpecialRationalType(): ResolvedType { return this.internSpecialObjectType(["Rational"]); }
     getSpecialFloatType(): ResolvedType { return this.internSpecialObjectType(["Float"]); }
     getSpecialDecimalType(): ResolvedType { return this.internSpecialObjectType(["Decimal"]); }
-    getSpecialStringPosType(): ResolvedType { return this.internSpecialObjectType(["StringPos"]); }
     getSpecialStringType(): ResolvedType { return this.internSpecialObjectType(["String"]); }
     getSpecialBufferFormatType(): ResolvedType { return this.internSpecialObjectType(["BufferFormat"]); }
     getSpecialBufferCompressionType(): ResolvedType { return this.internSpecialObjectType(["BufferCompression"]); }
