@@ -272,14 +272,6 @@ __safe __primitive inline infix operator >(a: Decimal, b: Decimal): Bool = defau
 __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
-//<summary>Primitive string position value.</summary>
-__internal entity StringPos provides Some {
-}
-__primitive inline infix operator <(a: StringPos, b: StringPos): Bool = default;
-__primitive inline infix operator >(a: StringPos, b: StringPos): Bool = default;
-__primitive inline infix operator <=(a: StringPos, b: StringPos): Bool = default;
-__primitive inline infix operator >=(a: StringPos, b: StringPos): Bool = default;
-
 //<summary>Primitive string value.</summary>
 __internal entity String provides Some, KeyType, APIType {
     __safe private function s_empty(s: String): Bool # string_empty

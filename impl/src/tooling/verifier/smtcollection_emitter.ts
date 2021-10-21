@@ -1026,6 +1026,11 @@ class ListOpsManager {
             ufconsname = "@UFSumConsDecimal";
         }
 
+        //
+        //TODO: what about typed numbers -- also min/max
+        //
+        assert(!(cdecl instanceof MIRConstructableEntityTypeDecl) || cdecl.usingcons === undefined, "Yikes this has invariants so we need to havoc");
+
         let ufops = [new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ufconsname), [ltype], this.temitter.getSMTTypeFor(ctype))];
         if(ovfname !== undefined) {
             ufops.push(new SMTFunctionUninterpreted(this.generateDesCallName(ltype, ovfname), [ltype], this.booltype))

@@ -306,7 +306,6 @@ class SMTAssembly {
         "TypeTag_Float",
         "TypeTag_Decimal",
         "TypeTag_Rational",
-        "TypeTag_StringPos",
         "TypeTag_String",
         "TypeTag_ByteBuffer",
         "TypeTag_ISOTime",
