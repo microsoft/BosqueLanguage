@@ -746,23 +746,23 @@ class Assembly {
         }
     }
 
-    private splitConceptTypes(ofc: ResolvedConceptAtomType, withc: ResolvedConceptAtomType): {tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined} {
+    private splitConceptTypes(ofc: ResolvedConceptAtomType, withc: ResolvedConceptAtomType): {tp: ResolvedType | undefined, fp: ResolvedType | undefined} {
         if (ofc.typeID === "NSCore::Any" && withc.typeID === "NSCore::Some") {
-            return { tp: withc, fp: this.getSpecialNoneType() };
+            return { tp: ResolvedType.createSingle(withc), fp: this.getSpecialNoneType() };
         }
         else if (ofc.typeID.startsWith("NSCore::Option<") && withc.typeID === "NSCore::ISomething") {
             const somthingres = ResolvedEntityAtomType.create(this.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl, ofc.conceptTypes[0].binds)
-            return { tp: somthingres, fp: this.getSpecialNothingType() };
+            return { tp: ResolvedType.createSingle(somthingres), fp: this.getSpecialNothingType() };
         }
         else if (ofc.typeID === "NSCore::IOption" && withc.typeID === "NSCore::ISomething") {
-            return { tp: withc, fp: this.getSpecialNothingType() };
+            return { tp: ResolvedType.createSingle(withc), fp: this.getSpecialNothingType() };
         }
         else {
-            return { tp: withc, fp: ofc };
+            return { tp: ResolvedType.createSingle(withc), fp: ResolvedType.createSingle(ofc) };
         }
     }
 
-    private splitConceptEntityTypes(ofc: ResolvedConceptAtomType, withe: ResolvedEntityAtomType): { tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined } {
+    private splitConceptEntityTypes(ofc: ResolvedConceptAtomType, withe: ResolvedEntityAtomType): { tp: ResolvedType | undefined, fp: ResolvedType | undefined } {
         const somethingdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl;
         const okdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
         const errdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
@@ -772,25 +772,40 @@ class Assembly {
         //
 
         if (ofc.typeID === "NSCore::Any" && withe.typeID === "NSCore::None") {
-            return { tp: withe, fp: this.getSpecialSomeConceptType() };
+            return { tp: ResolvedType.createSingle(withe), fp: this.getSpecialSomeConceptType() };
         }
         else if (ofc.typeID.startsWith("NSCore::Option<") && withe.typeID === "NSCore::Nothing") {
-            return { tp: withe, fp: ResolvedEntityAtomType.create(somethingdecl, ofc.conceptTypes[0].binds) };
+            return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(somethingdecl, ofc.conceptTypes[0].binds)) };
         }
         else if (ofc.typeID.startsWith("NSCore::Option<") && withe.typeID === "NSCore::Something<") {
-            return { tp: withe, fp: this.getSpecialNothingType() };
+            return { tp: ResolvedType.createSingle(withe), fp: this.getSpecialNothingType() };
         }
         else if (ofc.typeID.startsWith("NSCore::Result<") && withe.typeID.startsWith("NSCore::Result::Ok<")) {
-            return { tp: withe, fp: ResolvedEntityAtomType.create(errdecl, ofc.conceptTypes[0].binds) };
+            return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(errdecl, ofc.conceptTypes[0].binds)) };
         }
         else if (ofc.typeID.startsWith("NSCore::Result<") && withe.typeID.startsWith("NSCore::Result::Err<")) {
-            return { tp: withe, fp: ResolvedEntityAtomType.create(okdecl, ofc.conceptTypes[0].binds) };
+            return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(okdecl, ofc.conceptTypes[0].binds)) };
         }
         else if(this.atomSubtypeOf(withe, ofc)) {
-            return { tp: withe, fp: ofc };
+            if(ofc.conceptTypes.length === 1 && ofc.conceptTypes[0].concept.attributes.includes("__adt_concept_type")) {
+                const splits = [...this.m_objectMap]
+                    .filter((tt) => tt[1].terms.length === 0)
+                    .map((tt) => ResolvedEntityAtomType.create(tt[1], new Map<string, ResolvedType>()))
+                    .filter((tt) => { 
+                        const issubtype = this.atomSubtypeOf(tt, ofc);
+                        const notwithe = tt.typeID !== withe.typeID;
+
+                        return issubtype && notwithe;
+                    });
+                
+                return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.create(splits) };
+            }
+            else {
+                return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ofc) };
+            }
         }
         else {
-            return { tp: undefined, fp: ofc };
+            return { tp: undefined, fp: ResolvedType.createSingle(ofc) };
         }
     }
 
@@ -812,29 +827,29 @@ class Assembly {
         return ResolvedConceptAtomType.create(tci);
     }
 
-    private splitConceptTuple(ofc: ResolvedConceptAtomType, witht: ResolvedTupleAtomType): { tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined } {
+    private splitConceptTuple(ofc: ResolvedConceptAtomType, witht: ResolvedTupleAtomType): { tp: ResolvedType | undefined, fp: ResolvedType | undefined } {
         const withc = this.getConceptsProvidedByTuple(witht);
         if (this.atomSubtypeOf(withc, ofc)) {
-            return { tp: witht, fp: ofc };
+            return { tp: ResolvedType.createSingle(witht), fp: ResolvedType.createSingle(ofc) };
         }
         else {
-            return { tp: undefined, fp: ofc };
+            return { tp: undefined, fp: ResolvedType.createSingle(ofc) };
         }
     }
 
-    private splitConceptRecord(ofc: ResolvedConceptAtomType, withr: ResolvedRecordAtomType): { tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined } {
+    private splitConceptRecord(ofc: ResolvedConceptAtomType, withr: ResolvedRecordAtomType): { tp: ResolvedType | undefined, fp: ResolvedType | undefined } {
         const withc = this.getConceptsProvidedByRecord(withr);
         if (this.atomSubtypeOf(withc, ofc)) {
-            return { tp: withr, fp: ofc };
+            return { tp: ResolvedType.createSingle(withr), fp: ResolvedType.createSingle(ofc) };
         }
         else {
-            return { tp: undefined, fp: ofc };
+            return { tp: undefined, fp: ResolvedType.createSingle(ofc) };
         }
     }
 
-    private splitAtomTypes(ofa: ResolvedAtomType, witha: ResolvedAtomType): { tp: ResolvedAtomType | undefined, fp: ResolvedAtomType | undefined } {
+    private splitAtomTypes(ofa: ResolvedAtomType, witha: ResolvedAtomType): { tp: ResolvedType | undefined, fp: ResolvedType | undefined } {
         if (this.atomSubtypeOf(ofa, witha)) {
-            return { tp: ofa, fp: undefined };
+            return { tp: ResolvedType.createSingle(ofa), fp: undefined };
         }
 
         if(ofa instanceof ResolvedConceptAtomType) {
@@ -851,37 +866,37 @@ class Assembly {
                 return this.splitConceptRecord(ofa, witha);
             }
             else {
-                return { tp: undefined, fp: ofa };
+                return { tp: undefined, fp: ResolvedType.createSingle(ofa) };
             }
         }
         else if (ofa instanceof ResolvedTupleAtomType) {
             if (witha instanceof ResolvedTupleAtomType) {
                 if(ofa.typeID === witha.typeID) {
-                    return { tp: witha, fp: undefined };
+                    return { tp: ResolvedType.createSingle(witha), fp: undefined };
                 }
                 else {
-                    return { tp: undefined, fp: ofa };
+                    return { tp: undefined, fp: ResolvedType.createSingle(ofa) };
                 }
             }
             else {
-                return { tp: undefined, fp: ofa };
+                return { tp: undefined, fp: ResolvedType.createSingle(ofa) };
             }
         }
         else if (ofa instanceof ResolvedRecordAtomType) {
             if (witha instanceof ResolvedRecordAtomType) {
                 if(ofa.typeID === witha.typeID) {
-                    return { tp: witha, fp: undefined };
+                    return { tp: ResolvedType.createSingle(witha), fp: undefined };
                 }
                 else {
-                    return { tp: undefined, fp: ofa };
+                    return { tp: undefined, fp: ResolvedType.createSingle(ofa) };
                 }
             }
             else {
-                return { tp: undefined, fp: ofa };
+                return { tp: undefined, fp: ResolvedType.createSingle(ofa) };
             }
         }
         else {
-            return { tp: undefined, fp: ofa };
+            return { tp: undefined, fp: ResolvedType.createSingle(ofa) };
         }
     }
 
@@ -892,10 +907,10 @@ class Assembly {
             .map((opt) => this.splitAtomTypes(ofa, opt))
             .forEach((rr) => {
                 if(rr.tp !== undefined) {
-                    tp.push(ResolvedType.createSingle(rr.tp));
+                    tp.push(rr.tp);
                 }
                 if(rr.fp !== undefined) {
-                    fp.push(ResolvedType.createSingle(rr.fp));
+                    fp.push(rr.fp);
                 }
             });
 

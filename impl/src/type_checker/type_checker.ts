@@ -3688,6 +3688,8 @@ class TypeChecker {
             }
 
             const hackpc = this.getLambdaArgCount_Hack(env, op.args);
+            this.raiseErrorIf(op.sinfo, hackpc === -1, "Could not get specialization info for resolution");
+            
             const knownimpl_find = knownimpl_multi.decl.find((ki) => {
                 const lp = ki.invoke.params.find((pp) => pp.type instanceof FunctionTypeSignature);
                 return lp !== undefined && (lp.type as FunctionTypeSignature).params.length === hackpc;
@@ -4552,10 +4554,10 @@ class TypeChecker {
                 const ttreg = this.m_emitter.generateTmpRegister();
                 const truestate = this.checkExpression(TypeEnvironment.join(this.m_assembly, ...cflow.tenvs), exp.flow.conds[i].action, ttreg, infertype);
                 
-                this.m_emitter.setActiveBlock(falseblck);
-                
                 results.push(truestate);
                 rblocks.push([this.m_emitter.getActiveBlockName(), ttreg, truestate.getExpressionResult().valtype]);
+
+                this.m_emitter.setActiveBlock(falseblck);
                 cenv = TypeEnvironment.join(this.m_assembly, ...cflow.fenvs);
             }
         }
@@ -4568,7 +4570,7 @@ class TypeChecker {
             rblocks.push([this.m_emitter.getActiveBlockName(), ttreg, aenv.getExpressionResult().valtype]);
         }
 
-        this.raiseErrorIf(exp.sinfo, results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
+        this.raiseErrorIf(exp.sinfo, !results.some((eev) => eev.hasNormalFlow()), "No feasible path in this conditional expression");
 
         const fulltype = this.m_assembly.typeUpperBound(results.map((eev) => eev.getExpressionResult().valtype.flowtype));
         for (let i = 0; i < rblocks.length; ++i) {
@@ -6854,7 +6856,7 @@ class TypeChecker {
             }
             else {
                 //
-                //TODO: support typed numbers with defaule
+                //TODO: support typed numbers with default
                 //
                 assert(false, "We only handle default ops on primitive types -- need to do better to support TypedNumbers");
                 

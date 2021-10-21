@@ -3319,6 +3319,7 @@ class Parser {
         this.ensureAndConsumeToken("=>");
 
         if (decls.size !== 0) {
+            this.m_penv.getCurrentFunctionScope().pushLocalScope();
             decls.forEach((dv) => {
                 if (this.m_penv.getCurrentFunctionScope().isVarNameDefined(dv)) {
                     this.raiseError(sinfo.line, "Variable name is already defined");
@@ -4258,6 +4259,15 @@ class Parser {
                 const memberFields: MemberFieldDecl[] = [];
                 const memberMethods: MemberMethodDecl[] = [];
 
+                ["zero", "one"].forEach((sf) => {
+                    const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    const cexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([ new PositionalArgument(undefined, false, new AccessStaticFieldExpression(sinfo, idval, "zero"))]));
+                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "zero", ttype, new ConstantExpressionValue(cexp, new Set<string>())); 
+
+                    staticMembers.push(sfdecl);
+                });
+
                 if (this.testAndConsumeTokenIf("&")) {
                     this.setRecover(this.scanCodeParens());
                     this.ensureAndConsumeToken("{");
@@ -4360,29 +4370,31 @@ class Parser {
                 const staticOperators: StaticOperatorDecl[] = [];
                 let memberFields: MemberFieldDecl[] = [];
                 const memberMethods: MemberMethodDecl[] = [];
-                if (this.testFollows("{", TokenStrings.Identifier) && !Lexer.isAttributeKW(this.peekTokenData(1))) {
-                    memberFields = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
-                        const mfinfo = this.getCurrentSrcInfo();
+                if (this.testToken("{")) {
+                    if (this.testFollows("{", TokenStrings.Identifier) && !Lexer.isAttributeKW(this.peekTokenData(1))) {
+                        memberFields = this.parseListOf<MemberFieldDecl>("{", "}", ",", () => {
+                            const mfinfo = this.getCurrentSrcInfo();
 
-                        this.ensureToken(TokenStrings.Identifier);
-                        const name = this.consumeTokenAndGetValue();
-                        this.ensureAndConsumeToken(":");
+                            this.ensureToken(TokenStrings.Identifier);
+                            const name = this.consumeTokenAndGetValue();
+                            this.ensureAndConsumeToken(":");
 
-                        const ttype = this.parseTypeSignature();
+                            const ttype = this.parseTypeSignature();
 
-                        let dvalue: ConstantExpressionValue | undefined = undefined;
-                        if (this.testAndConsumeTokenIf("=")) {
-                            dvalue = this.parseConstExpression(false);
-                        }
+                            let dvalue: ConstantExpressionValue | undefined = undefined;
+                            if (this.testAndConsumeTokenIf("=")) {
+                                dvalue = this.parseConstExpression(false);
+                            }
 
-                        return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
-                    })[0];
-                }
-                else {
-                    const thisType = new NominalTypeSignature(currentDecl.ns, [ename], []);
+                            return new MemberFieldDecl(mfinfo, this.m_penv.getCurrentFile(), [], name, ttype, dvalue);
+                        })[0];
+                    }
+                    else {
+                        const thisType = new NominalTypeSignature(currentDecl.ns, [ename], []);
 
-                    const nestedEntities = new Map<string, EntityTypeDecl>();
-                    this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                        const nestedEntities = new Map<string, EntityTypeDecl>();
+                        this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                    }
                 }
 
                 const eprovides = [[concepttype, undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
