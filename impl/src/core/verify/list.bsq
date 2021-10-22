@@ -1087,13 +1087,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method popBack(): List<T> {
         check !ListFlatOps::s_empty<T>(this);
 
-        return ListOps::s_slice<T>(this, 0, ListOps::s_size<T>(this) - 1);
+        return ListOps::s_slice<T>(this, 0, ListOps::s_size<T>(this) - 1n);
     }
 
     method popFront(): List<T> {
         check !ListFlatOps::s_empty<T>(this);
 
-        return ListOps::s_slice<T>(this, 1, ListOps::s_size<T>(this));
+        return ListOps::s_slice<T>(this, 1n, ListOps::s_size<T>(this));
     }
 
     method set(i: Nat, v: T): List<T> {
@@ -1102,19 +1102,19 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         let count = ListOps::s_size<T>(this);
         let vl = List<T>@{v};
 
-        if(count == 1) {
+        if(count == 1n) {
             return vl;
         }
         else {
-            if(i == 0) {
-                return ListOps::s_concat2<T>(vl, ListOps::s_slice<T>(this, 1, count));
+            if(i == 0n) {
+                return ListOps::s_concat2<T>(vl, ListOps::s_slice<T>(this, 1n, count));
             }
-            elif(i == count - 1) {
-                return ListOps::s_concat2<T>(ListOps::s_slice<T>(this, 0, count - 1), vl);
+            elif(i == count - 1n) {
+                return ListOps::s_concat2<T>(ListOps::s_slice<T>(this, 0, count - 1n), vl);
             }
             else {
-                let front = ListOps::s_slice<T>(this, 0, i);
-                let back = ListOps::s_slice<T>(this, i + 1, count);
+                let front = ListOps::s_slice<T>(this, 0n, i);
+                let back = ListOps::s_slice<T>(this, i + 1n, count);
 
                 return ListOps::s_concat2<T>(ListOps::s_concat2<T>(front, vl), back);
             }
@@ -1126,19 +1126,19 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
         let count = ListOps::s_size<T>(this);
 
-        if(count == 1) {
+        if(count == 1n) {
             return List<T>@{};
         }
         else {
-            if(i == 0) {
-                return ListOps::s_slice<T>(this, 1, count);
+            if(i == 0n) {
+                return ListOps::s_slice<T>(this, 1n, count);
             }
-            elif(i == count - 1) {
-                return ListOps::s_slice<T>(this, 0, count - 1);
+            elif(i == count - 1n) {
+                return ListOps::s_slice<T>(this, 0, count - 1n);
             }
             else {
-                let front = ListOps::s_slice<T>(this, 0, i);
-                let back = ListOps::s_slice<T>(this, i + 1, count);
+                let front = ListOps::s_slice<T>(this, 0n, i);
+                let back = ListOps::s_slice<T>(this, i + 1n, count);
 
                 return ListOps::s_concat2<T>(front, back);
             }

@@ -1075,33 +1075,33 @@ __internal entity ListFlatOps provides Some {
 
     ////
     //s_small_chk_kv_unique
-    function s_small_chk_kv_unique_1<K grounded KeyType, V>(l: List<T>): Bool {
+    function s_small_chk_kv_unique_1<K grounded KeyType, V>(l: List<[K, V]>): Bool {
         return true;
     }
-    recursive? function s_small_chk_kv_unique_2<K grounded KeyType, V>(l: List<T>): Bool {
-        let at0 = ListFlatOps::s_2at0<T>(l);
-        let at1 = ListFlatOps::s_2at1<T>(l);
+    recursive? function s_small_chk_kv_unique_2<K grounded KeyType, V>(l: List<[K, V]>): Bool {
+        let at0 = ListFlatOps::s_2at0<[K, V]>(l);
+        let at1 = ListFlatOps::s_2at1<[K, V]>(l);
         return !KeyType::equal<K>(at0.0, at1.0);
     }
-    recursive? function s_small_chk_kv_unique_3<K grounded KeyType, V>(l: List<T>): Bool {
-        let at0 = ListFlatOps::s_3at0<T>(l);
-        let at1 = ListFlatOps::s_3at1<T>(l);
-        let at2 = ListFlatOps::s_3at1<T>(l);
+    recursive? function s_small_chk_kv_unique_3<K grounded KeyType, V>(l: List<[K, V]>): Bool {
+        let at0 = ListFlatOps::s_3at0<[K, V]>(l);
+        let at1 = ListFlatOps::s_3at1<[K, V]>(l);
+        let at2 = ListFlatOps::s_3at1<[K, V]>(l);
 
        return ListOps::s_and3(!KeyType::equal<K>(at0.0, at1.0), !KeyType::equal<K>(at0.0, at2.0), !KeyType::equal<K>(at1.0, at2.0));
     }
-    recursive? function s_small_chk_kv_unique<K grounded KeyType, V>(l: List<T>): Bool {
-        if(ListFlatOps::s_empty<T>(l)) {
+    recursive? function s_small_chk_kv_unique<K grounded KeyType, V>(l: List<[K, V]>): Bool {
+        if(ListFlatOps::s_empty<[K, V]>(l)) {
             return true;
         }
-        elif(ListFlatOps::s_is1<T>(l)) {
-            return ListFlatOps::s_small_chk_kv_unique_1<T>[recursive?](l, cmp);
+        elif(ListFlatOps::s_is1<[K, V]>(l)) {
+            return ListFlatOps::s_small_chk_kv_unique_1<K, V>[recursive?](l);
         }
-        elif(ListFlatOps::s_is2<T>(l)) {
-            return ListFlatOps::s_small_chk_kv_unique_2<T>[recursive?](l, cmp);
+        elif(ListFlatOps::s_is2<[K, V]>(l)) {
+            return ListFlatOps::s_small_chk_kv_unique_2<K, V>[recursive?](l);
         }
         else {
-            return ListFlatOps::s_small_chk_kv_unique_3<T>[recursive?](l, cmp);
+            return ListFlatOps::s_small_chk_kv_unique_3<K, V>[recursive?](l);
         }
     }
 
@@ -1409,7 +1409,7 @@ __internal entity ListConcatOps provides Some {
             return ff;
         }
         else {
-            return ListFlatOps::s_concat_lropt_find_pred<T>[recursive](ListConcatOps::s_right<T>(l), bidx + ListOps::s_size<T>(ListConcatOps::s_left<T>(l)), p);
+            return ListConcatOps::s_concat_lropt_find_pred<T>[recursive](ListConcatOps::s_right<T>(l), bidx + ListOps::s_size<T>(ListConcatOps::s_left<T>(l)), p);
         }
     }
 
@@ -2010,12 +2010,12 @@ __internal entity ListOps provides Some {
             return ListFlatOps::s_slice<T>(l, start, end);
         }
         elif(ListConcatOps::s_isConcatList<T>(l)) {
-            let ff = ListConcatOps::s_slice_front(l, start);
+            let ff = ListConcatOps::s_slice_front<T>[recursive](l, start);
             if(ListFlatOps::s_isFlatList<T>(ff)) {
                 return ListFlatOps::s_slice_back<T>(ff, end - start);
             }
             elif(ListConcatOps::s_isConcatList<T>(ff)) {
-                return ListConcatOps::s_slice_back<T>(ff, end - start);
+                return ListConcatOps::s_slice_back<T>[recursive](ff, end - start);
             }
             else {
                 return ListOps::s_slice_impl<T>(l, 0, end - start, end - start);    
@@ -2466,7 +2466,7 @@ __internal entity ListOps provides Some {
         if(ListFlatOps::s_empty<[K ,V]>(l)) {
             return true;
         }
-        elif(ListOps::s_size<[K, V]>(l) == 1) {
+        elif(ListOps::s_size<[K, V]>(l) == 1n) {
             return true;
         }
 #if SMALL_MODEL_ENABLED
@@ -2477,7 +2477,7 @@ __internal entity ListOps provides Some {
         else {
             return !ListOps::s_has_pred_idx<[K, V]>(l, pred(v: [K, V], i: Nat): Bool => {
                 return ListOps::s_has_pred_idx<[K, V]>(l, pred(u: [K, V], j: Nat): Bool => {
-                    ListOps::s_and2(i != j, KeyType::equal<K>(u.0, v.0));
+                    return ListOps::s_and2(i != j, KeyType::equal<K>(u.0, v.0));
                 });
             });
         }
