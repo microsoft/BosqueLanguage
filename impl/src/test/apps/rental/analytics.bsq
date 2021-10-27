@@ -1,0 +1,8 @@
+namespace NSMain;
+
+function probableReservations(averageReservationRequests: Nat, averageCancelations: Nat, currentReservationCount: Nat): Nat {
+    let cancelationRatio: Float = averageCancelations.toFloat() / averageReservationRequests.toFloat();
+    let result = (currentReservationCount.toFloat() * (1.0f - cancelationRatio)).ceiling();
+    
+    return result.toNat();
+}

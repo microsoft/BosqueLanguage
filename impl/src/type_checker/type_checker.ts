@@ -6,7 +6,7 @@
 import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedRecordAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
 import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl } from "../ast/assembly";
 import { TypeEnvironment, VarInfo, FlowTypeTruthValue, ValueType } from "./type_environment";
-import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, TupleTypeSignature, FunctionTypeSignature } from "../ast/type_signature";
+import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, FunctionTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, IsTypeExpression, AsTypeExpression, PostfixGetPropertyOption, PostfixGetIndexOption, SwitchExpression, WildcardSwitchGuard, LiteralSwitchGuard, SwitchGuard, SwitchStatement } from "../ast/body";
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing, MIRConstantArgument } from "../compiler/mir_ops";
@@ -606,7 +606,15 @@ class TypeChecker {
     private checkPCodeExpression(env: TypeEnvironment, exp: ConstructorPCodeExpression, cbinds: Map<string, ResolvedType>, expectedFunction: ResolvedFunctionType | undefined): PCode {
         this.raiseErrorIf(exp.sinfo, exp.isAuto && expectedFunction === undefined, "Could not infer auto function type");
 
-        const ltypetry = exp.isAuto ? expectedFunction : this.m_assembly.normalizeTypeFunction(exp.invoke.generateSig(), cbinds);
+        //TODO: this may capture too many types that are not strictly needed -- maybe want to parse scope track captured types like we do for captured variables
+        let bodybinds = new Map<string, ResolvedType>(cbinds);
+        env.terms.forEach((ttype, ttname) => {
+            if (!bodybinds.has(ttname)) {
+                bodybinds.set(ttname, ttype);
+            }
+        });
+
+        const ltypetry = exp.isAuto ? expectedFunction : this.m_assembly.normalizeTypeFunction(exp.invoke.generateSig(), bodybinds);
         this.raiseErrorIf(exp.sinfo, ltypetry === undefined, "Invalid lambda type");
 
         this.raiseErrorIf(exp.sinfo, exp.invoke.params.length !== (ltypetry as ResolvedFunctionType).params.length, "Mismatch in expected parameter count and provided function parameter count");
@@ -625,10 +633,11 @@ class TypeChecker {
                 capturedpcode.set(v, env.pcodes.get(v) as PCode);
             }
             else {
-                const vinfo = env.lookupVar(v) as VarInfo;
-                this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
+                const vinfo = env.lookupVar(v);
+                this.raiseErrorIf(exp.sinfo, vinfo === null, `Could not resolve captured variable: ${v}`);
+                this.raiseErrorIf(exp.sinfo, (vinfo as VarInfo).declaredType instanceof ResolvedFunctionType, `Cannot capture function typed argument: ${v}`);
 
-                capturedMap.set(v, vinfo.flowType);
+                capturedMap.set(v, (vinfo as VarInfo).flowType);
             }
         });
 
@@ -637,14 +646,6 @@ class TypeChecker {
             const cvars = this.m_emitter.flattenCapturedPCodeVarCaptures(capturedpcode);
             cvars.forEach((cv) => implicitCapturedMap.set(cv, (env.lookupVar(cv) as VarInfo).flowType));
         }
-
-        //TODO: this may capture too many types that are not strictly needed -- maybe want to parse scope track captured types like we do for captured variables
-        let bodybinds = new Map<string, ResolvedType>(cbinds);
-        env.terms.forEach((ttype, ttname) => {
-            if (!bodybinds.has(ttname)) {
-                bodybinds.set(ttname, ttype);
-            }
-        });
 
         const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
         const cinfo = [
@@ -2453,6 +2454,8 @@ class TypeChecker {
 
     private checkConstructorPrimary(env: TypeEnvironment, exp: ConstructorPrimaryExpression, trgt: MIRRegisterArgument): TypeEnvironment {
         const ctype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.ctype, env.terms);
+        this.m_emitter.registerResolvedTypeReference(ctype);
+
         const objtype = ResolvedType.tryGetOOTypeInfo(ctype);
         this.raiseErrorIf(exp.sinfo, objtype === undefined || !(objtype instanceof ResolvedEntityAtomType), "Invalid constructor type");
 
@@ -2481,7 +2484,7 @@ class TypeChecker {
             const kvtypes = this.getKVBinds(oobinds);
             this.raiseErrorIf(exp.sinfo, !kvtypes.K.isGroundedType() || !this.m_assembly.subtypeOf(kvtypes.K, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Map key");
 
-            const entryobj = this.resolveAndEnsureTypeOnly(exp.sinfo, new TupleTypeSignature([kvtypes.K, kvtypes.V]), new Map<string, ResolvedType>());
+            const entryobj = ResolvedType.createSingle(ResolvedTupleAtomType.create([kvtypes.K, kvtypes.V]));
             const eargs = this.checkArgumentsEvaluationCollection(env, exp.args, entryobj);
             const atype = this.checkArgumentsCollectionConstructor(exp.sinfo, oftype, entryobj, eargs, trgt);
 
@@ -3226,26 +3229,29 @@ class TypeChecker {
         this.raiseErrorIf(op.sinfo, !texp.flowtype.isTupleTargetType());
 
         const maxupdl = texp.flowtype.getTupleTargetTypeIndexRange().req;
+        if (op.isBinder) {
+            env = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
+        }
+
         const updates = op.updates.map<[number, ResolvedType, MIRArgument]>((update) => {
             this.raiseErrorIf(op.sinfo, update.index >= maxupdl, "Updates can only be applied to known indecies (i.e. cannot change the types of tuples)");
 
             const etreg = this.m_emitter.generateTmpRegister();
+
             const itype = this.getInfoForLoadFromSafeIndex(op.sinfo, texp.flowtype, update.index);
+            const bindreg = this.m_emitter.generateTmpRegister();
+            this.m_emitter.emitLoadTupleIndex(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), update.index, !texp.flowtype.isUniqueTupleTargetType(), this.m_emitter.registerResolvedTypeReference(itype), bindreg);
 
-            let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.index}_@${op.sinfo.pos}`, ValueType.createUniform(itype), etreg);
-            if (op.isBinder) {
-                eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev, `$this_@${op.sinfo.pos}`, texp, arg);
-            }
-
+            let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.index}_@${op.sinfo.pos}`, ValueType.createUniform(itype), bindreg);
             const utype = this.checkExpression(eev, update.value, etreg, itype).getExpressionResult().valtype;
-
             this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.index}_@${op.sinfo.pos}`);
-            if (op.isBinder) {
-                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
-            }
-
+           
             return [update.index, itype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, itype)];
         });
+
+        if (op.isBinder) {
+            this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
+        }
 
         this.m_emitter.emitTupleUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updates, !texp.flowtype.isUniqueTupleTargetType(), trgt);
         
@@ -3257,32 +3263,40 @@ class TypeChecker {
 
         if (texp.flowtype.isRecordTargetType()) {
             const maxupdn = texp.flowtype.getRecordTargetTypePropertySets().req;
+
+            if (op.isBinder) {
+                env = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
+            }
+
             const updates = op.updates.map<[string, ResolvedType, MIRArgument]>((update) => {
                 this.raiseErrorIf(op.sinfo, !maxupdn.has(update.name), "Updates can only be applied to known properties (i.e. cannot change the types of records)");
 
                 const etreg = this.m_emitter.generateTmpRegister();
+
                 const itype = this.getInfoForLoadFromSafeProperty(op.sinfo, texp.flowtype, update.name);
+                const bindreg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitLoadProperty(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), update.name, !texp.flowtype.isUniqueRecordTargetType(), this.m_emitter.registerResolvedTypeReference(itype), bindreg);
 
-                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(itype), etreg);
-                if (op.isBinder) {
-                    eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev, `$this_@${op.sinfo.pos}`, texp, arg);
-                }
-
+                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(itype), bindreg);
                 const utype = this.checkExpression(eev, update.value, etreg, itype).getExpressionResult().valtype;
-
                 this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_@${op.sinfo.pos}`);
-                if (op.isBinder) {
-                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
-                }
 
                 return [update.name, itype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, itype)];
             });
+
+            if (op.isBinder) {
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
+            }
 
             this.m_emitter.emitRecordUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updates, !texp.flowtype.isUniqueRecordTargetType(), trgt);
 
             return env.setUniformResultExpression(texp.flowtype);
         }
         else {
+            if (op.isBinder) {
+                env = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
+            }
+
             const updates = op.updates.map<[OOMemberLookupInfo<MemberFieldDecl>, ResolvedType, MIRArgument]>((update) => {
                 const etreg = this.m_emitter.generateTmpRegister();
 
@@ -3292,20 +3306,21 @@ class TypeChecker {
                 const finfo = tryfinfo as OOMemberLookupInfo<MemberFieldDecl>;
                 const ftype = this.resolveAndEnsureTypeOnly(op.sinfo, finfo.decl.declaredType, finfo.binds);
 
-                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env,`$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(ftype), etreg);
-                if (op.isBinder) {
-                    eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev,`$${update.name}_@${op.sinfo.pos}`,texp, arg);
-                }
+                const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(finfo.contiainingType, finfo.binds), update.name);
+                const bindreg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitLoadField(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), fkey, !texp.flowtype.isUniqueCallTargetType(), this.m_emitter.registerResolvedTypeReference(ftype), bindreg);
 
+                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env,`$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(ftype), bindreg);
                 const utype = this.checkExpression(eev, update.value, etreg, ftype).getExpressionResult().valtype;
-
                 this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_@${op.sinfo.pos}`);
-                if (op.isBinder) {
-                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
-                }
+                
 
                 return [finfo, ftype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, ftype)];
             });
+
+            if (op.isBinder) {
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
+            }
 
             const updateinfo = updates.map((upd) => {
                 const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(upd[0].contiainingType, upd[0].binds), upd[0].decl.name);
@@ -3317,7 +3332,7 @@ class TypeChecker {
             //      This is potentially recursive but it won't show up now -- do we want to add recursive annotations here or is there a better idea??
             //      Maybe require all default params and invariant checks be non-recursive? -- offhand I favor this option since I don't think you want these to be expensive (overly complex) anyway -- same with other default values (but not pre/post conds).
             //
-            this.m_emitter.emitEntityUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updateinfo, !texp.flowtype.isUniqueRecordTargetType(), trgt);
+            this.m_emitter.emitEntityUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updateinfo, !texp.flowtype.isUniqueCallTargetType(), trgt);
 
             return env.setUniformResultExpression(texp.flowtype);
         }
@@ -6327,7 +6342,7 @@ class TypeChecker {
             const ttarg = this.m_emitter.generateTmpRegister();
             const chkargs = clauses[i].args.map((cv) => new MIRRegisterArgument(cv));
             this.m_emitter.emitInvokeFixedFunction(clauses[i].sinfo, clauses[i].ikey, chkargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), ttarg);
-            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant on line ${clauses[i].srcFile}::${clauses[i].sinfo.line}`, ttarg);
+            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant ${i} at line ${clauses[i].sinfo.line}`, ttarg);
         }
 
         let consargs: MIRArgument[] = [];
@@ -6375,7 +6390,7 @@ class TypeChecker {
             const ttarg = this.m_emitter.generateTmpRegister();
             const chkargs = clauses[i].args.map((cv) => new MIRRegisterArgument(cv));
             this.m_emitter.emitInvokeFixedFunction(clauses[i].sinfo, clauses[i].ikey, chkargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), ttarg);
-            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant on line ${clauses[i].srcFile}::${clauses[i].sinfo.line}`, ttarg);
+            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant ${i} at ${clauses[i].sinfo.line}`, ttarg);
         }
         
         const trgt = this.m_emitter.generateTmpRegister();
@@ -6575,14 +6590,16 @@ class TypeChecker {
                     //MIRPrimitiveSetEntityTypeDecl
                 }
                 else if(tdecl.attributes.includes("__map_type")) {
-                    const maptype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(tdecl, binds));
                     const oftype = ResolvedType.createSingle(ResolvedTupleAtomType.create([binds.get("K") as ResolvedType, binds.get("V") as ResolvedType]));
                     const miroftype = this.m_emitter.registerResolvedTypeReference(oftype);
                     const mirbinds = new Map<string, MIRType>().set("K", this.m_emitter.registerResolvedTypeReference(binds.get("K") as ResolvedType)).set("V", this.m_emitter.registerResolvedTypeReference(binds.get("V") as ResolvedType));
                     const ultype = this.m_assembly.getListType(oftype);
                     const mirultype = this.m_emitter.registerResolvedTypeReference(ultype);
-                    const funq = (ultype.options[0] as ResolvedEntityAtomType).object.staticFunctions.find((ff) => ff.name === "s_uniqinv") as StaticFunctionDecl;
-                    const unqchkinv = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(tdecl, binds), [maptype, tdecl, binds], funq, "s_uniqinv", binds, [], []);
+
+                    const lopstype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("NSCore", ["ListOps"]), new Map<string, ResolvedType>());
+                    const mirlopstype = this.m_emitter.registerResolvedTypeReference(lopstype);
+                    const funq = (lopstype.options[0] as ResolvedEntityAtomType).object.staticFunctions.find((ff) => ff.name === "s_chk_kv_unique") as StaticFunctionDecl;
+                    const unqchkinv = this.m_emitter.registerStaticCall(lopstype, [mirlopstype, (lopstype.options[0] as ResolvedEntityAtomType).object, new Map<string, ResolvedType>()], funq, "s_chk_kv_unique", binds, [], []);
                     
                     const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, mirultype.typeID, unqchkinv);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);

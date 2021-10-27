@@ -2126,8 +2126,6 @@ class Parser {
                     ops.push(new PostfixAccessFromIndex(sinfo, index));
                 }
                 else if (this.testToken("[")) {
-                    this.consumeToken();
-
                     if (this.testFollows("[", TokenStrings.Numberino, "=") ||this.testFollows("[", TokenStrings.Int, "=") || this.testFollows("[", TokenStrings.Nat, "=")) {
                         const updates = this.parseListOf<{ index: number, value: Expression }>("[", "]", ",", () => {
                             const idx = this.parseTupleIndex();
@@ -2175,8 +2173,6 @@ class Parser {
                     }
                 }
                 else if (this.testToken("{")) {
-                    this.consumeToken();
-
                     if (this.testFollows("{", TokenStrings.Identifier, "=")) {
                         const updates = this.parseListOf<{ name: string, value: Expression }>("{", "}", ",", () => {
                             this.ensureToken(TokenStrings.Identifier);

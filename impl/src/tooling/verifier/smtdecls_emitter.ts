@@ -1105,7 +1105,15 @@ class SMTEmitter {
                 optenumname = [cdecl.enclosingDecl as string, cdecl.gkey];
             }
 
-            this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf));
+            if((callsafety.get(cdecl.ivalue) as {safe: boolean, trgt: boolean}).safe) {
+                this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf, new SMTConst(consf), undefined));
+            }
+            else {
+                const rconsf = this.temitter.generateResultGetSuccess(this.temitter.getMIRType(cdecl.declaredType), new SMTConst(consf));
+                const rcheck = this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType(cdecl.declaredType), new SMTConst(consf));
+
+                this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf, rconsf, rcheck));
+            }
         });
 
         this.assembly.maskSizes = this.bemitter.maskSizes;

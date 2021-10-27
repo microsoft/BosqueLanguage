@@ -1,0 +1,30 @@
+namespace NSMain;
+
+enum Reason {
+    insufficientAvailability,
+    closedDueToConditions
+}
+
+enum ExpertiseLevel {
+    novice,
+    intermediate,
+    expert
+}
+
+function decide(windCategory: WindCategory, forecastDetail: ForecastDetail, inventory: Nat, reservations: Nat, returns: Nat, requestedQuantity: Nat, allowPartials: Bool): Result<Nat, Reason> {
+    let isClosed = windCategory === WindCategory::dangerous || forecastDetail === ForecastDetail::thunderstorms;
+    let availability = (inventory - reservations) + returns;
+    
+    if(isClosed) {
+        return err(Reason::closedDueToConditions);
+    }
+    elif(requestedQuantity <= availability) {
+        return ok(requestedQuantity);
+    }
+    elif(allowPartials) {
+        return ok(availability);
+    }
+    else {
+        return err(Reason::insufficientAvailability);
+    }
+}
