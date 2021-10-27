@@ -195,7 +195,7 @@ class ListOpsManager {
 
     processSlice(ltype: MIRType, l1: SMTExp, start: SMTExp, end: SMTExp, count: SMTExp): SMTExp {
         this.ensureOpsFor(ltype);
-        const op = this.generateDesCallName(this.temitter.getSMTTypeFor(ltype), "slice");
+        const op = this.generateConsCallName(this.temitter.getSMTTypeFor(ltype), "slice");
         //slice always registered 
 
         return new SMTCallSimple(op, [l1, start, end, count]);
@@ -934,24 +934,27 @@ class ListOpsManager {
         const getcall = new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")]);
         const largs = isidx ? [getcall, new SMTVar("_@j")] : [getcall];
 
+        const mirbool = this.temitter.getMIRType("NSCore::Bool");
+        const mirnat = this.temitter.getMIRType("NSCore::Nat");
+
         const ffunc = new SMTLet("_@n", nn,
-            new SMTIf(this.temitter.generateResultIsErrorTest(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")),
+            new SMTIf(this.temitter.generateResultIsErrorTest(mirnat, new SMTVar("_@n")),
                 new SMTVar("_@n"),
                 new SMTIf(
                     new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
                         new SMTCallSimple("=>", [
-                            new SMTCallSimple("bvult", [new SMTVar("_@j"), this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n"))]),
-                            SMTCallSimple.makeNot(this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), largs, capturedargs))
+                            new SMTCallSimple("bvult", [new SMTVar("_@j"), this.temitter.generateResultGetSuccess(mirnat, new SMTVar("_@n"))]),
+                            SMTCallSimple.makeNot(this.generateLambdaCallKnownSafe(code, mirbool, largs, capturedargs))
                         ])
                     ),
-                    new SMTVar("_@n"),
-                    this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+                    this.temitter.generateResultTypeConstructorSuccess(mirnat, new SMTCallSimple("bvadd", [new SMTVar("bidx"), this.temitter.generateResultGetSuccess(mirnat,new SMTVar("_@n"))])),
+                    this.temitter.generateErrorResultAssert(mirnat)
                 )
             )
         );
 
         return {
-            if: [new SMTFunction(this.generateDesCallNameUsing(ltype, "findIndexOf" + (isidx ? "_idx" : ""), code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype}, ...capturedparams], undefined, 0, this.temitter.generateResultType(this.temitter.getMIRType("NSCore::Nat")), ffunc)],
+            if: [new SMTFunction(this.generateDesCallNameUsing(ltype, "findIndexOf" + (isidx ? "_idx" : ""), code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype}, { vname: "bidx", vtype: this.nattype}, ...capturedparams], undefined, 0, this.temitter.generateResultType(this.temitter.getMIRType("NSCore::Nat")), ffunc)],
             uf: [suf]
         };
     }
@@ -966,24 +969,27 @@ class ListOpsManager {
         const getcall = new SMTCallSimple(getop, [new SMTVar("l"), new SMTVar("_@j")]);
         const largs = isidx ? [getcall, new SMTVar("_@j")] : [getcall];
 
+        const mirbool = this.temitter.getMIRType("NSCore::Bool");
+        const mirnat = this.temitter.getMIRType("NSCore::Nat");
+
         const ffunc = new SMTLet("_@n", nn,
-            new SMTIf(this.temitter.generateResultIsErrorTest(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")),
+            new SMTIf(this.temitter.generateResultIsErrorTest(mirnat, new SMTVar("_@n")),
                 new SMTVar("_@n"),
                 new SMTIf(
                     new SMTForAll([{ vname: "_@j", vtype: this.nattype }],
                         new SMTCallSimple("=>", [
-                            new SMTCallSimple("bvult", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::Nat"), new SMTVar("_@n")), new SMTVar("_@j")]),
-                            SMTCallSimple.makeNot(this.generateLambdaCallKnownSafe(code, this.temitter.getMIRType("NSCore::Bool"), largs, capturedargs))
+                            new SMTCallSimple("bvult", [this.temitter.generateResultGetSuccess(mirnat, new SMTVar("_@n")), new SMTVar("_@j")]),
+                            SMTCallSimple.makeNot(this.generateLambdaCallKnownSafe(code, mirbool, largs, capturedargs))
                         ])
                     ),
-                    new SMTVar("_@n"),
-                    this.temitter.generateErrorResultAssert(this.temitter.getMIRType("NSCore::Nat"))
+                    this.temitter.generateResultTypeConstructorSuccess(mirnat, new SMTCallSimple("bvadd", [new SMTVar("bidx"), this.temitter.generateResultGetSuccess(mirnat,new SMTVar("_@n"))])),
+                    this.temitter.generateErrorResultAssert(mirnat)
                 )
             )
         );
 
         return {
-            if: [new SMTFunction(this.generateDesCallNameUsing(ltype, "findIndexOfLast" + (isidx ? "_idx" : ""), code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype}, ...capturedparams], undefined, 0, this.temitter.generateResultType(this.temitter.getMIRType("NSCore::Nat")), ffunc)],
+            if: [new SMTFunction(this.generateDesCallNameUsing(ltype, "findIndexOfLast" + (isidx ? "_idx" : ""), code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype}, { vname: "bidx", vtype: this.nattype}, ...capturedparams], undefined, 0, this.temitter.generateResultType(this.temitter.getMIRType("NSCore::Nat")), ffunc)],
             uf: [suf]
         };
     }

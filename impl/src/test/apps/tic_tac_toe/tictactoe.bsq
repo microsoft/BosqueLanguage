@@ -65,8 +65,7 @@ entity Board {
     method markCellWith(cell: BoardCell, mark: PlayerMark): Board
         requires !this.isCellOccupied(cell);
     {
-        let ncells = this.cells.set(cell, mark);
-        return this.{cells=ncells};
+        return this.{cells=$cells.set(cell, mark)};
     }
 
     method checkAnyWinner(): PlayerMark? {

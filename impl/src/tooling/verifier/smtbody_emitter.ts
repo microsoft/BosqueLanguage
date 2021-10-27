@@ -1368,13 +1368,11 @@ class SMTBodyEmitter {
             }
 
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            const ccall = new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallGeneral(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
-
             if (allsafe) {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, ccall, continuation);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
             }
             else {
-                return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, ccall, op.trgt, continuation);
+                return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, new SMTCallGeneral(this.typegen.lookupFunctionName(icall), [argpp]), op.trgt, continuation);
             }
         }
         else {
@@ -1386,7 +1384,7 @@ class SMTBodyEmitter {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
             let cargs: SMTExp[] = [];
             for (let i = 0; i < consfields.length; ++i) {
-                const upd = op.updates.find((vv) => vv[0] === consfields[i].fname);
+                const upd = op.updates.find((vv) => vv[0] === consfields[i].fkey);
                 if (upd === undefined) {
                     cargs.push(new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(ttdecl, consfields[i]), [argpp]));
                 }
@@ -1582,8 +1580,33 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: SMTExp): SMTExp {
-        const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
-        return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
+
+        if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
+            const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        }
+        else {
+            if(constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else if(constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else if(constype instanceof MIRPrimitiveSetEntityTypeDecl) {
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else {
+                assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
+                const mapconstype = constype as MIRPrimitiveMapEntityTypeDecl;
+
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(mapconstype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+        }
     }
 
     processConstructorPrimaryCollectionSingletons_Helper(ltype: MIRType, exps: SMTExp[]): SMTExp {

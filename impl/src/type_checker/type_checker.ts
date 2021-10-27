@@ -3229,26 +3229,29 @@ class TypeChecker {
         this.raiseErrorIf(op.sinfo, !texp.flowtype.isTupleTargetType());
 
         const maxupdl = texp.flowtype.getTupleTargetTypeIndexRange().req;
+        if (op.isBinder) {
+            env = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
+        }
+
         const updates = op.updates.map<[number, ResolvedType, MIRArgument]>((update) => {
             this.raiseErrorIf(op.sinfo, update.index >= maxupdl, "Updates can only be applied to known indecies (i.e. cannot change the types of tuples)");
 
             const etreg = this.m_emitter.generateTmpRegister();
+
             const itype = this.getInfoForLoadFromSafeIndex(op.sinfo, texp.flowtype, update.index);
+            const bindreg = this.m_emitter.generateTmpRegister();
+            this.m_emitter.emitLoadTupleIndex(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), update.index, !texp.flowtype.isUniqueTupleTargetType(), this.m_emitter.registerResolvedTypeReference(itype), bindreg);
 
-            let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.index}_@${op.sinfo.pos}`, ValueType.createUniform(itype), etreg);
-            if (op.isBinder) {
-                eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev, `$this_@${op.sinfo.pos}`, texp, arg);
-            }
-
+            let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.index}_@${op.sinfo.pos}`, ValueType.createUniform(itype), bindreg);
             const utype = this.checkExpression(eev, update.value, etreg, itype).getExpressionResult().valtype;
-
             this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.index}_@${op.sinfo.pos}`);
-            if (op.isBinder) {
-                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
-            }
-
+           
             return [update.index, itype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, itype)];
         });
+
+        if (op.isBinder) {
+            this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
+        }
 
         this.m_emitter.emitTupleUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updates, !texp.flowtype.isUniqueTupleTargetType(), trgt);
         
@@ -3260,32 +3263,40 @@ class TypeChecker {
 
         if (texp.flowtype.isRecordTargetType()) {
             const maxupdn = texp.flowtype.getRecordTargetTypePropertySets().req;
+
+            if (op.isBinder) {
+                env = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
+            }
+
             const updates = op.updates.map<[string, ResolvedType, MIRArgument]>((update) => {
                 this.raiseErrorIf(op.sinfo, !maxupdn.has(update.name), "Updates can only be applied to known properties (i.e. cannot change the types of records)");
 
                 const etreg = this.m_emitter.generateTmpRegister();
+
                 const itype = this.getInfoForLoadFromSafeProperty(op.sinfo, texp.flowtype, update.name);
+                const bindreg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitLoadProperty(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), update.name, !texp.flowtype.isUniqueRecordTargetType(), this.m_emitter.registerResolvedTypeReference(itype), bindreg);
 
-                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(itype), etreg);
-                if (op.isBinder) {
-                    eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev, `$this_@${op.sinfo.pos}`, texp, arg);
-                }
-
+                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(itype), bindreg);
                 const utype = this.checkExpression(eev, update.value, etreg, itype).getExpressionResult().valtype;
-
                 this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_@${op.sinfo.pos}`);
-                if (op.isBinder) {
-                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
-                }
 
                 return [update.name, itype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, itype)];
             });
+
+            if (op.isBinder) {
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
+            }
 
             this.m_emitter.emitRecordUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updates, !texp.flowtype.isUniqueRecordTargetType(), trgt);
 
             return env.setUniformResultExpression(texp.flowtype);
         }
         else {
+            if (op.isBinder) {
+                env = this.checkDeclareSingleVariableBinder(op.sinfo, env, `$this_@${op.sinfo.pos}`, texp, arg);
+            }
+
             const updates = op.updates.map<[OOMemberLookupInfo<MemberFieldDecl>, ResolvedType, MIRArgument]>((update) => {
                 const etreg = this.m_emitter.generateTmpRegister();
 
@@ -3295,20 +3306,21 @@ class TypeChecker {
                 const finfo = tryfinfo as OOMemberLookupInfo<MemberFieldDecl>;
                 const ftype = this.resolveAndEnsureTypeOnly(op.sinfo, finfo.decl.declaredType, finfo.binds);
 
-                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env,`$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(ftype), etreg);
-                if (op.isBinder) {
-                    eev = this.checkDeclareSingleVariableBinder(op.sinfo, eev,`$${update.name}_@${op.sinfo.pos}`,texp, arg);
-                }
+                const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(finfo.contiainingType, finfo.binds), update.name);
+                const bindreg = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitLoadField(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), fkey, !texp.flowtype.isUniqueCallTargetType(), this.m_emitter.registerResolvedTypeReference(ftype), bindreg);
 
+                let eev = this.checkDeclareSingleVariableBinder(op.sinfo, env,`$${update.name}_@${op.sinfo.pos}`, ValueType.createUniform(ftype), bindreg);
                 const utype = this.checkExpression(eev, update.value, etreg, ftype).getExpressionResult().valtype;
-
                 this.m_emitter.localLifetimeEnd(op.sinfo, `$${update.name}_@${op.sinfo.pos}`);
-                if (op.isBinder) {
-                    this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
-                }
+                
 
                 return [finfo, ftype, this.emitInlineConvertIfNeeded(op.sinfo, etreg, utype, ftype)];
             });
+
+            if (op.isBinder) {
+                this.m_emitter.localLifetimeEnd(op.sinfo, `$this_@${op.sinfo.pos}`);
+            }
 
             const updateinfo = updates.map((upd) => {
                 const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(upd[0].contiainingType, upd[0].binds), upd[0].decl.name);
@@ -3320,7 +3332,7 @@ class TypeChecker {
             //      This is potentially recursive but it won't show up now -- do we want to add recursive annotations here or is there a better idea??
             //      Maybe require all default params and invariant checks be non-recursive? -- offhand I favor this option since I don't think you want these to be expensive (overly complex) anyway -- same with other default values (but not pre/post conds).
             //
-            this.m_emitter.emitEntityUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updateinfo, !texp.flowtype.isUniqueRecordTargetType(), trgt);
+            this.m_emitter.emitEntityUpdate(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), updateinfo, !texp.flowtype.isUniqueCallTargetType(), trgt);
 
             return env.setUniformResultExpression(texp.flowtype);
         }
