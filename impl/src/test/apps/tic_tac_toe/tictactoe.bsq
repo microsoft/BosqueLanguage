@@ -65,7 +65,7 @@ entity Board {
     method markCellWith(cell: BoardCell, mark: PlayerMark): Board
         requires !this.isCellOccupied(cell);
     {
-        return this.{cells=$cells.set(cell, mark)};
+        return this.{cells=$cells.add(cell, mark)};
     }
 
     method checkAnyWinner(): PlayerMark? {
@@ -165,7 +165,7 @@ function canIWinIn5(moves: [Move, Move, Move, Move, Move]): Result<Bool, None> {
 }
 */
 
-entrypoint function nowinner3(): Bool {
+function nowinner3(): Bool {
     var game = Game@{};
 
     game = game.makeExplicitMove(0, 0, PlayerMark::x);
@@ -175,7 +175,7 @@ entrypoint function nowinner3(): Bool {
     return game.hasWinner();
 }
 
-entrypoint function winner3(): Bool {
+function winner3(): Bool {
     var game = Game@{};
 
     game = game.makeExplicitMove(0, 0, PlayerMark::x);
@@ -185,7 +185,7 @@ entrypoint function winner3(): Bool {
     return game.hasWinner();
 }
 
-entrypoint function moveerr(): Bool {
+function moveerr(): Bool {
     var game = Game@{};
 
     game = game.makeExplicitMove(0, 0, PlayerMark::x);
@@ -195,7 +195,7 @@ entrypoint function moveerr(): Bool {
     return game.hasWinner();
 }
 
-entrypoint function finderr(x: Int, y: Int): Bool 
+function finderr(x: Int, y: Int): Bool 
     requires release 0 <= x && x < 3;
     requires release 0 <= y && y < 3;
 {
