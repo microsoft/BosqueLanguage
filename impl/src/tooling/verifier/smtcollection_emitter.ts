@@ -838,8 +838,8 @@ class ListOpsManager {
         const iseqtype = this.temitter.getMIRType("NSCore::ISequence");
         const smtiseqtype = this.temitter.getSMTTypeFor(iseqtype);
 
-        const [capturedargs, capturedparams, ufpickargs] = this.generateCapturedInfoFor(pcode, isidx ? 3 : 2, [ltype, this.nattype]);
-        const cff = new SMTFunctionUninterpreted(this.generateConsCallNameUsing(smtiseqtype, "ISequence@@cons", code), [...ufpickargs], smtiseqtype);
+        const [capturedargs, capturedparams, ufpickargs] = this.generateCapturedInfoFor(pcode, isidx ? 3 : 2);
+        const cff = new SMTFunctionUninterpreted(this.generateConsCallNameUsing(smtiseqtype, "ISequence@@cons", code), [ltype, this.nattype, ...ufpickargs], smtiseqtype);
 
         const cvar = "_@cseq";
         const getop = this.generateDesCallName(ltype, "get");
@@ -1119,7 +1119,7 @@ class ListOpsManager {
     }
 
     private emitDestructorFindIndexOf_Shared(ltype: SMTType, isidx: boolean, code: string, pcode: MIRPCode, sl: SMTVar, osize: SMTVar, k: SMTExp): [SMTExp, SMTFunctionUninterpreted] {
-        const [capturedargs, , ufpickargs] = this.generateCapturedInfoFor(pcode, isidx ? 2 : 1, [ltype, this.nattype]);
+        const [capturedargs, , ufpickargs] = this.generateCapturedInfoFor(pcode, isidx ? 2 : 1);
 
         const skloemcc = this.generateConsCallNameUsing(ltype, "skolem_list_index" + (isidx ? "_idx" : ""), code);
 
@@ -1144,11 +1144,11 @@ class ListOpsManager {
         ];
     }
 
-    private generateCapturedInfoFor(pcode: MIRPCode, k: number, ufpicktypes?: SMTType[]): [SMTVar[], {vname: string, vtype: SMTType}[], SMTType[]] {
+    private generateCapturedInfoFor(pcode: MIRPCode, k: number): [SMTVar[], {vname: string, vtype: SMTType}[], SMTType[]] {
         const lambdainfo = this.temitter.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl;
         let capturedargs: SMTVar[] = [];
         let capturedparams: {vname: string, vtype: SMTType}[] = [];
-        let ufpickargs: SMTType[] = ufpicktypes || [];
+        let ufpickargs: SMTType[] = [];
 
         lambdainfo.params.slice(k).forEach((p) => {
             capturedargs.push(new SMTVar(p.name));
