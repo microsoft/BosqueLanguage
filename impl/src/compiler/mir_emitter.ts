@@ -1085,6 +1085,15 @@ class MIREmitter {
             }
         }
 
+        if (decl.ns === "NSCore" && decl.name === "Map") {
+            const tatoms = [this.registerResolvedTypeReference(binds.get("K") as ResolvedType), this.registerResolvedTypeReference(binds.get("V") as ResolvedType)];
+            const rt = MIRTupleType.create(tatoms);
+            
+            if(!this.masm.tupleDecls.has(rt.typeID) && this.emitEnabled) {
+                this.masm.tupleDecls.set(rt.typeID, rt as MIRTupleType);
+            }
+        }
+
         this.pendingOOProcessing.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
         this.entityInstantiationInfo.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
     }

@@ -268,9 +268,25 @@ class SMTTypeEmitter {
                 }
             }
             else {
-                assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
+                assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
-                return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
+                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
+                }
+                else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
+                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
+                }
+                else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
+                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
+                }
+                else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
+                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
+                }
+                else {
+                    assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
+
+                    return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
             }
         }
         else if (entity instanceof MIRConstructableEntityTypeDecl) {

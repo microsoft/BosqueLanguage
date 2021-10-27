@@ -239,14 +239,20 @@ class SMTConstantDecl {
     readonly optenumname: [MIRResolvedTypeKey, string] | undefined;
     readonly ctype: SMTType;
 
-    readonly consf: string;
+    readonly consfinv: string;
 
-    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: SMTType, consf: string) {
+    readonly consfexp: SMTExp;
+    readonly checkf: SMTExp | undefined;
+
+    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: SMTType, consfinv: string, consfexp: SMTExp, checkf: SMTExp | undefined) {
         this.gkey = gkey;
         this.optenumname = optenumname;
         this.ctype = ctype;
 
-        this.consf = consf;
+        this.consfinv = consfinv;
+
+        this.consfexp = consfexp;
+        this.checkf = checkf;
     }
 }
 
@@ -414,8 +420,8 @@ class SMTAssembly {
         });
 
         assembly.constantDecls.forEach((cdecl) => {
-            roots.push(invokes.get(cdecl.consf) as SMTCallGNode);
-            SMTAssembly.topoVisit(invokes.get(cdecl.consf) as SMTCallGNode, [], tordered, invokes);
+            roots.push(invokes.get(cdecl.consfinv) as SMTCallGNode);
+            SMTAssembly.topoVisit(invokes.get(cdecl.consfinv) as SMTCallGNode, [], tordered, invokes);
         });
 
         tordered = tordered.reverse();
@@ -571,7 +577,14 @@ class SMTAssembly {
 
         const gdefs = this.constantDecls
             .sort((c1, c2) => c1.gkey.localeCompare(c2.gkey))
-            .map((c) => `(assert (= ${c.gkey} ${c.consf}))`);
+            .map((c) => {
+                if (c.checkf === undefined) {
+                    return `(assert (= ${c.gkey} ${c.consfexp.emitSMT2(undefined)}))`;
+                }
+                else {
+                    return `(assert ${c.checkf.emitSMT2(undefined)}) (assert (= ${c.gkey} ${c.consfexp.emitSMT2(undefined)}))`;
+                }
+            });
 
         let action: string[] = [];
         this.model.arginits.map((iarg) => {

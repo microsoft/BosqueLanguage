@@ -1368,13 +1368,11 @@ class SMTBodyEmitter {
             }
 
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            const ccall = new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallGeneral(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
-
             if (allsafe) {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, ccall, continuation);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
             }
             else {
-                return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, ccall, op.trgt, continuation);
+                return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, new SMTCallGeneral(this.typegen.lookupFunctionName(icall), [argpp]), op.trgt, continuation);
             }
         }
         else {
@@ -1386,7 +1384,7 @@ class SMTBodyEmitter {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
             let cargs: SMTExp[] = [];
             for (let i = 0; i < consfields.length; ++i) {
-                const upd = op.updates.find((vv) => vv[0] === consfields[i].fname);
+                const upd = op.updates.find((vv) => vv[0] === consfields[i].fkey);
                 if (upd === undefined) {
                     cargs.push(new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(ttdecl, consfields[i]), [argpp]));
                 }
@@ -1582,8 +1580,33 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: SMTExp): SMTExp {
-        const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
-        return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
+
+        if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
+            const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        }
+        else {
+            if(constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else if(constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else if(constype instanceof MIRPrimitiveSetEntityTypeDecl) {
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+            else {
+                assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
+                const mapconstype = constype as MIRPrimitiveMapEntityTypeDecl;
+
+                const consexp = new SMTConst(`${this.typegen.lookupTypeName(mapconstype.ultype)}@empty_const`);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+            }
+        }
     }
 
     processConstructorPrimaryCollectionSingletons_Helper(ltype: MIRType, exps: SMTExp[]): SMTExp {
@@ -1660,7 +1683,7 @@ class SMTBodyEmitter {
                             erropt,
                             new SMTIf(SMTCallSimple.makeNot(this.typegen.generateResultGetSuccess(this.typegen.getMIRType("NSCore::Bool"), new SMTVar(uvar))),
                                 this.generateErrorCreate(op.sinfo, this.typegen.getMIRType(op.tkey), "Key collision in Map constructor"),
-                                new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.generateResultGetSuccess(ultype, new SMTVar(uvar)), continuation)
+                                new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.generateResultGetSuccess(ultype, new SMTVar(cvar)), continuation)
                             )
                         )
                     )
@@ -2848,8 +2871,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2859,8 +2883,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafePredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2871,8 +2896,9 @@ class SMTBodyEmitter {
                 else {
                     const pcode = idecl.pcodes.get("f") as MIRPCode;
                     const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, false, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, false, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2883,8 +2909,9 @@ class SMTBodyEmitter {
                 else {
                     const pcode = idecl.pcodes.get("f") as MIRPCode;
                     const pcrtype = this.typegen.getMIRType((this.assembly.invokeDecls.get(pcode.code) as MIRInvokeBodyDecl).resultType);
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, true, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processSafeFnCheck(this.typegen.getMIRType(arg0typekey), pcrtype, true, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2912,8 +2939,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2923,8 +2951,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processHasPredCheck(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2934,8 +2963,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2945,8 +2975,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2956,8 +2987,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -2967,8 +2999,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFindLastIndexOf(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -3045,8 +3078,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -3056,8 +3090,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processISequence(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -3085,8 +3120,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("f") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, false, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, false, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -3096,8 +3132,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("f") as MIRPCode;
-                    const [l, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, true, pcode.code, pcode, l, count);
+                    const [l, count] = args.slice(0, 2).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(2).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processMap(this.typegen.getMIRType(arg0typekey), mirrestype, true, pcode.code, pcode, l, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -3107,8 +3144,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, isq, count);
+                    const [l, isq, count] = args.slice(0, 3).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(3).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), false, pcode.code, pcode, l, isq, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }
@@ -3118,8 +3156,9 @@ class SMTBodyEmitter {
                 }
                 else {
                     const pcode = idecl.pcodes.get("p") as MIRPCode;
-                    const [l, isq, count] = args.map((arg) => new SMTVar(arg.vname));
-                    const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, isq, count);
+                    const [l, isq, count] = args.slice(0, 3).map((arg) => new SMTVar(arg.vname));
+                    const captures = args.slice(3).map((arg) => new SMTVar(arg.vname));
+                    const fbody = this.lopsManager.processFilter(this.typegen.getMIRType(arg0typekey), true, pcode.code, pcode, l, isq, count, captures);
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, fbody);
                 }
             }

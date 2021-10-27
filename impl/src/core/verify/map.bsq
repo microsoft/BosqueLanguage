@@ -7,8 +7,12 @@
 namespace NSCore;
 
 __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType {
-    __safe private method value(): List<[K, V]> # map_get_list_repr
+    __safe private function s_value(m: Map<K, V>): List<[K, V]> # map_get_list_repr
     __safe private function s_safecreate(v: List<[K, V]>): Map<K, V> # map_safe_create
+
+    private method value(): List<[K, V]> {
+        return Map<K, V>::s_value(this);
+    }
 
     private function s_uniqinv(m: Map<K, V>): Bool {
         return ListOps::s_chk_kv_unique<K, V>(m.value()); 
@@ -18,44 +22,48 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
         return ListFlatOps::s_empty<[K, V]>(this.value());
     }
 
+    method size(): Nat {
+        return ListOps::s_size<[K, V]>(this.value());
+    }
+
     method has(key: K): Bool {
-        return ListOps::s_has_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        return ListOps::s_has_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
     }
 
     method get(key: K): V {
         let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
 
         check idx !== none;
-        return ListOps::s_safe_get<[K, V]>(this.value(), idx);
+        return ListOps::s_safe_get<[K, V]>(this.value(), idx).1;
     }
 
-    method getOrNone(k: K): V? {
+    method getOrNone(key: K): V? {
         let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         if(idx === none) {
             return none;
         }
         else {
-            return ListOps::s_safe_get<[K, V]>(this.value(), idx);
+            return ListOps::s_safe_get<[K, V]>(this.value(), idx).1;
         }
     }
 
-    method getOption(k: K): Option<V> {
+    method getOption(key: K): Option<V> {
         let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<[K, V]>(this.value(), idx));
+            return something(ListOps::s_safe_get<[K, V]>(this.value(), idx).1);
         }
     }
 
-    method getTry(k: K, out? v: V): Bool {
+    method getTry(key: K, out? v: V): Bool {
         let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
         if(idx === none) {
             return false;
         }
         else {
-            v = ListOps::s_safe_get<[K, V]>(this.value(), idx);
+            v = ListOps::s_safe_get<[K, V]>(this.value(), idx).1;
             return true;
         }
     }
@@ -78,14 +86,14 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method add(k: K, v: V): Map<K, V> {
-        check !ListOps::s_has_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        check !ListOps::s_has_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(k, v.0));
         
         let am = ListOps::s_concat2<[K, V]>(this.value(), List<[K, V]>@{[k, v]});
         return Map<K, V>::s_safecreate(am);
     }
 
     method set(k: K, v: V): Map<K, V> {
-        let idx = ListOps::s_find_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        let idx = ListOps::s_find_pred<[K, V]>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(k, v.0));
         check idx !== none;
 
         let sm = this.value().set(idx, [k, v]);
@@ -93,7 +101,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method remove(k: K): Map<K, V> {
-        let idx = ListOps::s_find_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(key, v.0));
+        let idx = ListOps::s_find_pred<K, V>(this.value(), pred(v: [K, V]): Bool => KeyType::equal<K>(k, v.0));
         check idx !== none;
 
         let rm = this.value().remove(idx);
