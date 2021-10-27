@@ -6342,7 +6342,7 @@ class TypeChecker {
             const ttarg = this.m_emitter.generateTmpRegister();
             const chkargs = clauses[i].args.map((cv) => new MIRRegisterArgument(cv));
             this.m_emitter.emitInvokeFixedFunction(clauses[i].sinfo, clauses[i].ikey, chkargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), ttarg);
-            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant on line ${clauses[i].srcFile}::${clauses[i].sinfo.line}`, ttarg);
+            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant ${i} at line ${clauses[i].sinfo.line}`, ttarg);
         }
 
         let consargs: MIRArgument[] = [];
@@ -6390,7 +6390,7 @@ class TypeChecker {
             const ttarg = this.m_emitter.generateTmpRegister();
             const chkargs = clauses[i].args.map((cv) => new MIRRegisterArgument(cv));
             this.m_emitter.emitInvokeFixedFunction(clauses[i].sinfo, clauses[i].ikey, chkargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), ttarg);
-            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant on line ${clauses[i].srcFile}::${clauses[i].sinfo.line}`, ttarg);
+            this.m_emitter.emitAssertCheck(clauses[i].sinfo, `Failed invariant ${i} at ${clauses[i].sinfo.line}`, ttarg);
         }
         
         const trgt = this.m_emitter.generateTmpRegister();

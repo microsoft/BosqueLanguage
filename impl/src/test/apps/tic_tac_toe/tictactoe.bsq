@@ -111,6 +111,8 @@ function main(cell: BoardCell): Bool {
     var game = Game@{}.makeExplicitMove(cell, PlayerMark::x);
     check game.board.isCellOccupied(cell);
 
+    check !game.hasWinner();
+
     return game.hasWinner();
 }
 

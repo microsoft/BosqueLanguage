@@ -1,0 +1,36 @@
+namespace NSMain;
+
+enum WindDirection {
+    north,
+    south,
+    east,
+    west
+}
+
+typedecl MPH = Nat;
+typedecl Fahrenheit = Int;
+
+typedecl Percentage = Float & {
+    invariant 0.0f <= $value && $value <= 100.0f;
+}
+
+enum ForecastDetail {
+    showers,
+    thunderstorms,
+    snow,
+    fog
+}
+
+entity Forecast provides APIType {
+    field temp: {low: Fahrenheit, high: Fahrenheit};
+    field windSpeed: {min: MPH, max: MPH};
+    field windDirection: WindDirection;
+    field shortForecast: ForecastDetail;
+    field forecastPercentage: Percentage;
+
+    invariant $temp.low <= $temp.high;
+    invariant $windSpeed.min <= $windSpeed.max; 
+}
+
+
+
