@@ -10,107 +10,157 @@
 
 namespace NSMain;
 
-function sigmaSum(args: List<Float>): Float # misc_sigmasum
-
-entity Body {
-   const solar_mass: Float = Float::mult(Float@'4.0', Float::pi, Float::pi);
-   const days_per_year: Float = Float@'365.24';
-
-   field name: String;
-   field mass: Float;
+entity Position {
    field x: Float;
    field y: Float;
    field z: Float;
+}
 
+entity Velocity {
    field vx: Float;
    field vy: Float;
    field vz: Float;
+}
 
-   const jupiter: Body = Body{
-      name="jupiter",
-      x=Float@'4.84143144246472090e+00',
-      y=Float@'-1.16032004402742839e+00',
-      z=Float@'-1.03622044471123109e-01',
-      vx=Float::mult(Float@'1.66007664274403694e-03', Body::days_per_year),
-      vy=Float::mult(Float@'7.69901118419740425e-03', Body::days_per_year),
-      vz=Float::mult(Float@'-6.90460016972063023e-05', Body::days_per_year),
-      mass=Float::mult(Float@'9.54791938424326609e-04', Body::solar_mass)
+entity Body {
+   const solar_mass: Float = 4.0f * Float::pi * Float::pi;
+   const days_per_year: Float = 365.24f;
+
+   field name: String;
+   field mass: Float;
+   field pos: Position;
+   field vel: Velocity;
+
+   const jupiter: Body = Body@{
+      "jupiter",
+      0.000954791938424326609 * Body::solar_mass,
+      Position@{
+         4.84143144246472090f,
+         -1.16032004402742839f,
+         -0.103622044471123109f
+      },
+      Velocity@ {
+         0.00166007664274403694f * Body::days_per_year,
+         0.00769901118419740425f * Body::days_per_year,
+         -0.0000690460016972063023f * Body::days_per_year
+      }
    };
 
-   const saturn: Body = Body{
-      name="saturn",
-      x=Float@'8.34336671824457987e+00',
-      y=Float@'4.12479856412430479e+00',
-      z=Float@'-4.03523417114321381e-01',
-      vx=Float::mult(Float@'-2.76742510726862411e-03', Body::days_per_year),
-      vy=Float::mult(Float@'4.99852801234917238e-03', Body::days_per_year),
-      vz=Float::mult(Float@'2.30417297573763929e-05', Body::days_per_year),
-      mass=Float::mult(Float@'2.85885980666130812e-04', Body::solar_mass)
+   const saturn: Body = Body@{
+      "saturn",
+      -0.0000690460016972063023f * Body::days_per_year,
+      Position@{
+         8.34336671824457987f,
+         4.12479856412430479f,
+         -0.403523417114321381f
+      },
+      Velocity@{
+         -0.00276742510726862411f * Body::days_per_year,
+         0.00499852801234917238ef * Body::days_per_year,
+         0.0000230417297573763929f * Body::days_per_year
+      }
    };
 
-   const uranus: Body = Body{
-      name="uranus",
-      x=Float@'1.28943695621391310e+01',
-      y=Float@'-1.51111514016986312e+01',
-      z=Float@'-2.23307578892655734e-01',
-      vx=Float::mult(Float@'2.96460137564761618e-03', Body::days_per_year),
-      vy=Float::mult(Float@'2.37847173959480950e-03', Body::days_per_year),
-      vz=Float::mult(Float@'-2.96589568540237556e-05', Body::days_per_year),
-      mass=Float::mult(Float@'4.36624404335156298e-05', Body::solar_mass)
+   const uranus: Body = Body@{
+      "uranus",
+      0.0000436624404335156298f * Body::solar_mass,
+      Position@{
+         12.8943695621391310f,
+         -15.1111514016986312f,
+         -0.223307578892655734f
+      },
+      Velocity@{
+         0.00296460137564761618f * Body::days_per_year,
+         0.00237847173959480950f * Body::days_per_year,
+         -0.0000296589568540237556f * Body::days_per_years
+      }
    };
 
-   const neptune: Body = Body{
+   const neptune: Body = Body*{
       name="neptune",
-      x=Float@'1.53796971148509165e+01',
-      y=Float@'-2.59193146099879641e+01',
-      z=Float@'1.79258772950371181e-01',
-      vx=Float::mult(Float@'2.68067772490389322e-03', Body::days_per_year),
-      vy=Float::mult(Float@'1.62824170038242295e-03', Body::days_per_year),
-      vz=Float::mult(Float@'-9.51592254519715870e-05', Body::days_per_year),
-      mass=Float::mult(Float@'5.15138902046611451e-05', Body::solar_mass)
+      0.0000515138902046611451f * Body::solar_mass,
+      Position@{
+         15.3796971148509165f,
+         -25.9193146099879641f,
+         0.179258772950371181f
+      },
+      Velocity@{
+         0.00268067772490389322f * Body::days_per_year,
+         0.00162824170038242295f * Body::days_per_year,
+         -0.0000951592254519715870f * Body::days_per_year
+      }
    };
 
    const sun: Body = Body{
       name="sun",
-      x=Float@'0.0',
-      y=Float@'0.0',
-      z=Float@'0.0',
-      vx=Float@'0.0',
-      vy=Float@'0.0',
-      vz=Float@'0.0',
-      mass=Body::solar_mass
+      solar_mass,
+      Position@{
+         0.0f,
+         0.0f,
+         0.0f
+      },
+      Velocity@{
+         0.0f,
+         0.0f,
+         0.0f
+      }
    };
 
    method offsetMomentum(px: Float, py: Float, pz: Float): Body {
-      return this->update(vx=Float::div(px->negate(), Body::solar_mass), vy=Float::div(py->negate(), Body::solar_mass), vz=Float::div(pz->negate(), Body::solar_mass));
+      this.{ vel=Velocity@{-px / Body::solar_mass, -py / Body::solar_mass, -pz / Body::solar_mass} };
+   }
+
+   method kineticEnergy(): Float {
+      return 0.5f * b.mass * (this.vel.vx.square() + this.vel.vy.square() + this.vel.vz.square());
    }
 }
 
 entity NBodySystem {
    field bodies: List<Body>;
+   
+   const advidxs: List<List<Nat>> = List<List<Nat>>{
+      List<Nat>@{1, 2, 3, 4},
+      List<Nat>@{0, 2, 3, 4},
+      List<Nat>@{0, 1, 3, 4},
+      List<Nat>@{0, 1, 2, 4},
+      List<Nat>@{0, 1, 2, 3}
+   };
+
+   const energypairs: List<[Nat, Nat]> = List<[Nat, Nat]>@{
+      [0, 1], [0, 2], [0, 3], [0, 4],
+      [1, 2], [1, 3], [1, 4],
+      [2, 3], [2, 4],
+      [3, 4]
+   };
 
    factory static create(): { bodies: List<Body> } {
-      var planets = List<Body>{
+      let planets = List<Body>{
          Body::jupiter,
          Body::saturn,
          Body::uranus,
          Body::neptune
       };
 
-      var px = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vx, p.mass)));
-      var py = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vy, p.mass)));
-      var pz = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vz, p.mass)));
+      let px = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vx, p.mass)));
+      let py = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vy, p.mass)));
+      let pz = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vz, p.mass)));
 
-      return { bodies=List<Body>{ Body::sun->offsetMomentum(px, py, pz), ...planets} };
+      let allbodies = List<Body>@{
+         Body::sun->offsetMomentum(px, py, pz),
+         Body::jupiter,
+         Body::saturn,
+         Body::uranus,
+         Body::neptune
+      };
+
+      return { bodies=allbodies };
    }
 
    method energy(): Float {
-      var keneticEnergies = this.bodies->map<Float>(fn(b: Body): Float => {
-         return Float::mult(Float@'0.5', b.mass, Float::add(b.vx->square(), b.vy->square(), b.vz->square()));
-      });
+      let keneticEnergies = this.bodies.map(fn(b: Body): Float => b.kineticEnergy());
 
-      var potentialEnergies = this.bodies->pairs(true)
-         ->map<Float>(fn(bp: [Body, Body]): Float => {
+      let potentialEnergies = NBodySystem::energypairs
+         .map(fn(bp: [Body, Body]): Float => {
             var dx = Float::sub(bp.0.x, bp.1.x);
             var dy = Float::sub(bp.0.y, bp.1.y);
             var dz = Float::sub(bp.0.z, bp.1.z);
@@ -119,7 +169,7 @@ entity NBodySystem {
             return Float::div(Float::mult(bp.0.mass, bp.1.mass), distance);
          });
 
-      return Float::sub(sigmaSum(keneticEnergies), sigmaSum(potentialEnergies));
+      return keneticEnergies.sum() - potentialEnergies.sum();
    }
 
    method advance(dt: Float): NBodySystem {
@@ -161,8 +211,8 @@ entity NBodySystem {
 }
 
 entrypoint function main(): Float {
-   var! system = NBodySystem@create();
-   var step = Float@'0.01';
+   var system = NBodySystem@create();
+   let step = 0.01f;
 
    system = system->advance(step);
    system = system->advance(step);
