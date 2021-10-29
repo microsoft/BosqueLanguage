@@ -2302,7 +2302,8 @@ class Parser {
                         //TODO: in theory it could also be a "(" and we need to do a tryParseType thing OR just disallow () in this position
                         //
                         if (this.testToken("<")) {
-                            if (this.testFollows("<", TokenStrings.Namespace) || this.testFollows("<", TokenStrings.Type) || this.testFollows("<", TokenStrings.Template)) {
+                            if (this.testFollows("<", TokenStrings.Namespace) || this.testFollows("<", TokenStrings.Type) || this.testFollows("<", TokenStrings.Template) 
+                                || this.testFollows("<", "[") || this.testFollows("<", "{") || this.testFollows("<", "(|")) {
                                 const terms = this.parseTemplateArguments();
                                 const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
 

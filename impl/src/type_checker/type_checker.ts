@@ -2420,7 +2420,7 @@ class TypeChecker {
         const oftype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.stype, env.terms);
 
         const cdecltry = this.m_assembly.tryGetConstMemberUniqueDeclFromType(oftype, exp.name);
-        this.raiseErrorIf(exp.sinfo, cdecltry === undefined, `Constant value not defined (or not uniquely defined) for type ${oftype.typeID}`);
+        this.raiseErrorIf(exp.sinfo, cdecltry === undefined, `Constant value "${exp.name}" not defined (or not uniquely defined) for type ${oftype.typeID}`);
 
         const cdecl = cdecltry as OOMemberLookupInfo<StaticMemberDecl>;
         

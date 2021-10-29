@@ -33,7 +33,7 @@ entity Body {
 
    const jupiter: Body = Body@{
       "jupiter",
-      0.000954791938424326609 * Body::solar_mass,
+      0.000954791938424326609f * Body::solar_mass,
       Position@{
          4.84143144246472090f,
          -1.16032004402742839f,
@@ -56,7 +56,7 @@ entity Body {
       },
       Velocity@{
          -0.00276742510726862411f * Body::days_per_year,
-         0.00499852801234917238ef * Body::days_per_year,
+         0.00499852801234917238f * Body::days_per_year,
          0.0000230417297573763929f * Body::days_per_year
       }
    };
@@ -72,12 +72,12 @@ entity Body {
       Velocity@{
          0.00296460137564761618f * Body::days_per_year,
          0.00237847173959480950f * Body::days_per_year,
-         -0.0000296589568540237556f * Body::days_per_years
+         -0.0000296589568540237556f * Body::days_per_year
       }
    };
 
-   const neptune: Body = Body*{
-      name="neptune",
+   const neptune: Body = Body@{
+      "neptune",
       0.0000515138902046611451f * Body::solar_mass,
       Position@{
          15.3796971148509165f,
@@ -91,9 +91,9 @@ entity Body {
       }
    };
 
-   const sun: Body = Body{
-      name="sun",
-      solar_mass,
+   const sun: Body = Body@{
+      "sun",
+      Body::solar_mass,
       Position@{
          0.0f,
          0.0f,
@@ -107,46 +107,46 @@ entity Body {
    };
 
    method offsetMomentum(px: Float, py: Float, pz: Float): Body {
-      this.{ vel=Velocity@{-px / Body::solar_mass, -py / Body::solar_mass, -pz / Body::solar_mass} };
+      return this.{ vel=Velocity@{-px / Body::solar_mass, -py / Body::solar_mass, -pz / Body::solar_mass} };
    }
 
    method kineticEnergy(): Float {
       return 0.5f * b.mass * (this.vel.vx.square() + this.vel.vy.square() + this.vel.vz.square());
+   }
+
+   function distance(b0: Body, b1: Body): Float {
+      let dx = b0.pos.x - b1.pos.x;
+      let dy = b0.pos.y - b1.pos.y;
+      let dz = b0.pos.z - b1.pos.z;
+
+      return (dx.square() + dy.square() + dz.square()).sqrt();
    }
 }
 
 entity NBodySystem {
    field bodies: List<Body>;
    
-   const advidxs: List<List<Nat>> = List<List<Nat>>{
-      List<Nat>@{1, 2, 3, 4},
-      List<Nat>@{0, 2, 3, 4},
-      List<Nat>@{0, 1, 3, 4},
-      List<Nat>@{0, 1, 2, 4},
-      List<Nat>@{0, 1, 2, 3}
-   };
-
    const energypairs: List<[Nat, Nat]> = List<[Nat, Nat]>@{
-      [0, 1], [0, 2], [0, 3], [0, 4],
-      [1, 2], [1, 3], [1, 4],
-      [2, 3], [2, 4],
-      [3, 4]
+      [0n, 1n], [0n, 2n], [0n, 3n], [0n, 4n],
+      [1n, 2n], [1n, 3n], [1n, 4n],
+      [2n, 3n], [2n, 4n],
+      [3n, 4n]
    };
 
-   factory static create(): { bodies: List<Body> } {
-      let planets = List<Body>{
+   factory function create(): { bodies: List<Body> } {
+      let planets = List<Body>@{
          Body::jupiter,
          Body::saturn,
          Body::uranus,
          Body::neptune
       };
 
-      let px = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vx, p.mass)));
-      let py = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vy, p.mass)));
-      let pz = sigmaSum(planets->map<Float>(fn(p: Body): Float => Float::mult(p.vz, p.mass)));
+      let px = planets.map<Float>(fn(p: Body): Float => p.vel.vx * p.mass).sum();
+      let py = planets.map<Float>(fn(p: Body): Float => p.vel.vy * p.mass).sum();
+      let pz = planets.map<Float>(fn(p: Body): Float => p.vel.vz * p.mass).sum();
 
       let allbodies = List<Body>@{
-         Body::sun->offsetMomentum(px, py, pz),
+         Body::sun.offsetMomentum(px, py, pz),
          Body::jupiter,
          Body::saturn,
          Body::uranus,
@@ -161,69 +161,65 @@ entity NBodySystem {
 
       let potentialEnergies = NBodySystem::energypairs
          .map(fn(bp: [Body, Body]): Float => {
-            var dx = Float::sub(bp.0.x, bp.1.x);
-            var dy = Float::sub(bp.0.y, bp.1.y);
-            var dz = Float::sub(bp.0.z, bp.1.z);
+            let b0 = this.bodies.get(bp.0);
+            let b1 = this.bodies.get(bp.1);
 
-            var distance = Float::add(dx->square(), dy->square(), dz->square())->sqrt();
-            return Float::div(Float::mult(bp.0.mass, bp.1.mass), distance);
+            return (b0.mass * b1.mass) / Body::distance(b0, b1);
          });
 
       return keneticEnergies.sum() - potentialEnergies.sum();
    }
 
    method advance(dt: Float): NBodySystem {
-      var deltav = this.bodies->map<[Body, Float, Float, Float]>(fn(b: Body): [Body, Float, Float, Float] => {
-         var obodies = this.bodies->filter(fn(ob: Body): Bool => b.name != ob.name);
-         var forces = obodies->map<[Float, Float, Float]>(fn(ob: Body): [Float, Float, Float] => {
-            var dx = Float::sub(ob.x, b.x);
-            var dy = Float::sub(ob.y, b.y);
-            var dz = Float::sub(ob.z, b.z);
+      let deltav = this.bodies.map<[Body, Float, Float, Float]>(fn(b: Body): [Body, Float, Float, Float] => {
+         let forces = this.bodies.map<[Float, Float, Float]>(fn(ob: Body): [Float, Float, Float] => {
+            if(b.name === ob.name) {
+               return [0.0f, 0.0f, 0.0f];
+            }
+            else {
+               let dx = ob.pos.x - b.pos.x;
+               let dy = ob.pos.y - b.pos.y;
+               let dz = ob.pos.z - b.pos.z;
 
-            var distance = Float::add(dx->square(), dy->square(), dz->square())->sqrt();
-            var mag = Float::div(dt, Float::mult(distance, distance, distance));
+               let distance = Body::distance(ob, b);
+               let mag = dt / (distance * distance * distance);
 
-            return [ Float::mult(dx, ob.mass, mag), Float::mult(dy, ob.mass, mag), Float::mult(dz, ob.mass, mag) ];
+               return [ dx * ob.mass * mag, dy * ob.mass * mag, dz * ob.mass * mag ];
+            }
          });
 
-         var fx = sigmaSum(List<Float>{ b.vx, ...forces->map<Float>(fn(fv: [Float, Float, Float]): Float => fv.0) });
-         var fy = sigmaSum(List<Float>{ b.vy, ...forces->map<Float>(fn(fv: [Float, Float, Float]): Float => fv.1) });
-         var fz = sigmaSum(List<Float>{ b.vz, ...forces->map<Float>(fn(fv: [Float, Float, Float]): Float => fv.2) });
+         let fx = b.vx + forces.map(fn(fv: [Float, Float, Float]): Float => fv.0).sum();
+         let fy = b.vy + forces.map(fn(fv: [Float, Float, Float]): Float => fv.1).sum();
+         let fz = b.vz + forces.map(fn(fv: [Float, Float, Float]): Float => fv.2).sum();
 
          return [ b, fx, fy, fz ];
       });
 
-      var bodies = deltav->map<Body>(fn(utuple: [Body, Float, Float, Float]): Body => {
-         var b = utuple.0;
-         var nvx = utuple.1;
-         var nvy = utuple.2;
-         var nvz = utuple.3;
+      let bodies = deltav.map<Body>(fn(utuple: [Body, Float, Float, Float]): Body => {
+         let b = utuple.0;
 
-         var nx = Float::add(b.x, Float::mult(nvx, dt));
-         var ny = Float::add(b.y, Float::mult(nvy, dt));
-         var nz = Float::add(b.z, Float::mult(nvz, dt));
+         let nvx = utuple.1;
+         let nvy = utuple.2;
+         let nvz = utuple.3;
+         let nvel = Velocity@{nvx, nvy, nvz};
 
-         return b->update(x=nx, y=ny, z=nz, vx=nvx, vy=nvy, vz=nvz);
+         let nx = b.pos.x + (nvx * dt);
+         let ny = b.pos.y + (nvy * dt);
+         let nz = b.pos.z + (nvz * dt);
+         let npos = Position@{nx, ny, nz};
+
+         return b.{pos=npos, vel=nvel};
       });
 
-      return NBodySystem{ bodies=bodies };
+      return NBodySystem@{ bodies };
    }
 }
 
-entrypoint function main(): Float {
+function main(): Float {
    var system = NBodySystem@create();
    let step = 0.01f;
 
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
-   system = system->advance(step);
+   system = system.advance(step);
 
-   return system->energy();
+   return system.energy();
 }
