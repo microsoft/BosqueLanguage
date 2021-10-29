@@ -1,0 +1,153 @@
+namespace NSMain;
+
+typedef ID = String;
+
+typedecl Quantity = Nat;
+
+typedecl Price = Decimal;
+
+typedecl OrderPrice provides APIType 
+of
+    Market
+    | Limit { price: Price }
+;
+
+typedecl Request provides APIType using {
+    id: ID, 
+    requestPrice: OrderPrice
+} of
+    BuyRequest { quantity: Quantity, product: ID }
+    | SellRequest { dealId: String }
+; 
+
+typedecl Violations provides APIType 
+of
+    InvalidPrice { price: Price }
+    | InvalidQuantity { quantity: Quantity }
+;
+
+enum RejectReason {
+    insufficientInventory,
+    disagreeablePrice
+}
+
+typedecl BuyResponse provides APIType using {
+    id: ID
+} of
+    BuyAccepted { product: ID, price: Price, quantity: Quantity }
+    | BuyInvalid { violations: List<Violations> }
+    | BuyRejected { reasons: List<RejectReason> }
+;
+
+typedecl SellResponse provides APIType using {
+    id: ID
+} of
+    SellAccepted { price: Price }
+;
+
+entity Deal provides APIType { 
+    field id: ID;
+    field product: ID;
+    field price: Price;
+    field quantity: Quantity;
+}
+
+typedef Response = BuyResponse | SellResponse;
+
+function validateRequest(request: BuyRequest): List<Violations> {
+    let priceCheck = 
+        match(request.requestPrice) {|
+            Market      => List<Violations>@{}
+            | Limit@{p} => if(p < 0#Price) 
+                                List<Violations>@{ InvalidPrice@{p} }
+                            else 
+                                List<Violations>@{}
+    |};
+        
+    let quantityCheck = 
+            if(request.quantity <= 0#Quantity) 
+                List<Violations>@{ InvalidQuantity@{request.quantity} } 
+            else 
+                List<Violations>@{}
+    ;
+    
+    return priceCheck.append(quantityCheck);
+}
+
+function lockinPrice(requestPrice: OrderPrice, marketPrice: Price): Price {
+    match(requestPrice) {
+        Market => return marketPrice;
+        | Limit@{p} => return p;
+    }
+}
+
+function acceptability(request: BuyRequest, marketPrice: Price, availableInventory: Quantity): List<RejectReason> {
+    let availabilityCheck = 
+            if(availableInventory < request.quantity) 
+                List<RejectReason>@{RejectReason::insufficientInventory}
+            else
+                List<RejectReason>@{}
+    ;
+
+    let priceCheck = 
+            if(lockinPrice(request.requestPrice, marketPrice) < marketPrice * 0.9d)
+                List<RejectReason>@{RejectReason::disagreeablePrice}
+            else
+                List<RejectReason>@{}
+    ;
+    
+    return availabilityCheck.append(priceCheck);
+}
+
+function processBuy(request: BuyRequest, marketPrice: Price, availableInventory: Quantity): BuyResponse {
+    let violations = validateRequest(request);
+    let rejections = acceptability(request, marketPrice, availableInventory);
+    let lockPrice = lockinPrice(request.requestPrice, marketPrice);
+
+    if (!violations.empty()) { 
+        return BuyInvalid@{request.id, violations};
+    }
+    elif(!rejections.empty()) { 
+        return BuyRejected@{request.id, rejections};
+    }
+    else {
+        return BuyAccepted@{request.id, request.product, lockPrice, request.quantity};
+    }
+}
+
+function processSell(request: SellRequest, marketPrice: Price): SellResponse {
+    let lockPrice = lockinPrice(request.requestPrice, marketPrice);
+
+    return SellAccepted@{request.id, lockPrice};
+}
+
+function availability(startOfDayPosition: Quantity, buys: List<BuyResponse>): Quantity {
+    let sumOfBuys = buys
+        .map(fn(response) => match(response) {|
+            BuyAccepted => response.quantity
+            | _         => 0#Quantity
+        |})
+        .sum()
+    ;
+
+    return startOfDayPosition - sumOfBuys;
+}
+
+
+function main(request: Request, marketPrice: Price, startOfDayPosition: Quantity): Response {
+    var responses = List<BuyResponse>@{};
+
+    if(request.is<BuyRequest>()) {
+        let availableInventory = availability(startOfDayPosition, responses);
+        return processBuy(request, marketPrice, availableInventory);
+    }
+    else {
+        return processSell(request, marketPrice);
+    }
+}
+
+/*
+function main(requests: List<Request>): Nat {
+    //process requests iteratively then count the number of accepted sales
+}
+*/
