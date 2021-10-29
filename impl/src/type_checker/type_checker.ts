@@ -3108,7 +3108,7 @@ class TypeChecker {
 
         if (texp.flowtype.isRecordTargetType()) {
             this.raiseErrorIf(op.sinfo, !texp.flowtype.isRecordTargetType(), "Base of property access expression must be of Record type");
-            this.raiseErrorIf(op.sinfo, this.getInfoForHasProperty(op.sinfo, texp.flowtype, op.name) !== "yes", "Property may not be defined for record");
+            this.raiseErrorIf(op.sinfo, this.getInfoForHasProperty(op.sinfo, texp.flowtype, op.name) !== "yes", `Property "${op.name}" may not be defined for record`);
 
             const rtype = this.getInfoForLoadFromSafeProperty(op.sinfo, texp.flowtype, op.name);
             this.m_emitter.emitLoadProperty(op.sinfo, arg, this.m_emitter.registerResolvedTypeReference(texp.layout), this.m_emitter.registerResolvedTypeReference(texp.flowtype), op.name, !texp.flowtype.isUniqueRecordTargetType(), this.m_emitter.registerResolvedTypeReference(rtype), trgt);
@@ -3117,7 +3117,7 @@ class TypeChecker {
         }
         else {
             const tryfinfo = this.m_assembly.tryGetFieldUniqueDeclFromType(texp.flowtype, op.name);
-            this.raiseErrorIf(op.sinfo, tryfinfo === undefined, "Field name is not defined (or is multiply) defined");
+            this.raiseErrorIf(op.sinfo, tryfinfo === undefined, `Field name "${op.name}" is not defined (or is multiply) defined`);
 
             const finfo = tryfinfo as OOMemberLookupInfo<MemberFieldDecl>;
             const ftype = this.resolveAndEnsureTypeOnly(op.sinfo, finfo.decl.declaredType, finfo.binds);
@@ -3269,7 +3269,7 @@ class TypeChecker {
             }
 
             const updates = op.updates.map<[string, ResolvedType, MIRArgument]>((update) => {
-                this.raiseErrorIf(op.sinfo, !maxupdn.has(update.name), "Updates can only be applied to known properties (i.e. cannot change the types of records)");
+                this.raiseErrorIf(op.sinfo, !maxupdn.has(update.name), `Updates can only be applied to known properties (i.e. cannot change the types of records) -- "${update.name}"`);
 
                 const etreg = this.m_emitter.generateTmpRegister();
 
@@ -3301,7 +3301,7 @@ class TypeChecker {
                 const etreg = this.m_emitter.generateTmpRegister();
 
                 const tryfinfo = this.m_assembly.tryGetFieldUniqueDeclFromType(texp.flowtype, update.name);
-                this.raiseErrorIf(op.sinfo, tryfinfo === undefined, "Field name is not defined (or is multiply) defined");
+                this.raiseErrorIf(op.sinfo, tryfinfo === undefined, `Field name "${update.name}" is not defined (or is multiply) defined`);
 
                 const finfo = tryfinfo as OOMemberLookupInfo<MemberFieldDecl>;
                 const ftype = this.resolveAndEnsureTypeOnly(op.sinfo, finfo.decl.declaredType, finfo.binds);

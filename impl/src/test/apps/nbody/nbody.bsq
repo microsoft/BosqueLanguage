@@ -111,7 +111,7 @@ entity Body {
    }
 
    method kineticEnergy(): Float {
-      return 0.5f * b.mass * (this.vel.vx.square() + this.vel.vy.square() + this.vel.vz.square());
+      return 0.5f * this.mass * (this.vel.vx.square() + this.vel.vy.square() + this.vel.vz.square());
    }
 
    function distance(b0: Body, b1: Body): Float {
@@ -160,7 +160,7 @@ entity NBodySystem {
       let keneticEnergies = this.bodies.map(fn(b: Body): Float => b.kineticEnergy());
 
       let potentialEnergies = NBodySystem::energypairs
-         .map(fn(bp: [Body, Body]): Float => {
+         .map(fn(bp: [Nat, Nat]): Float => {
             let b0 = this.bodies.get(bp.0);
             let b1 = this.bodies.get(bp.1);
 
@@ -188,9 +188,9 @@ entity NBodySystem {
             }
          });
 
-         let fx = b.vx + forces.map(fn(fv: [Float, Float, Float]): Float => fv.0).sum();
-         let fy = b.vy + forces.map(fn(fv: [Float, Float, Float]): Float => fv.1).sum();
-         let fz = b.vz + forces.map(fn(fv: [Float, Float, Float]): Float => fv.2).sum();
+         let fx = b.vel.vx + forces.map(fn(fv: [Float, Float, Float]): Float => fv.0).sum();
+         let fy = b.vel.vy + forces.map(fn(fv: [Float, Float, Float]): Float => fv.1).sum();
+         let fz = b.vel.vz + forces.map(fn(fv: [Float, Float, Float]): Float => fv.2).sum();
 
          return [ b, fx, fy, fz ];
       });
