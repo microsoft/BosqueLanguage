@@ -558,23 +558,24 @@ class ListOpsManager {
 
     ////////
     //Map
-    emitConstructorMap(ltype: SMTType, mtype: MIRType, isidx: boolean, code: string, pcode: MIRPCode): SMTConstructorGenCode {
+    emitConstructorMap(ltype: SMTType, mtype: MIRType, fromtype: MIRType, isidx: boolean, code: string, pcode: MIRPCode): SMTConstructorGenCode {
         const lcons = this.temitter.getSMTConstructorName(mtype).cons;
         const constype = this.temitter.getSMTTypeFor(mtype);
         const mapname = "map" + (isidx ? "_idx" : "");
 
         const capturedfields = this.generateCapturedFieldInfoFor(ltype, mapname, isidx ? 2 : 1, code, pcode);
+        const [capturedargs, capturedparams] = this.generateCapturedInfoFor(pcode, isidx ? 2 : 1);
 
         const ffunc = this.temitter.generateResultTypeConstructorSuccess(mtype,
             new SMTCallSimple(lcons, [
                 new SMTVar("count"),
-                new SMTCallSimple(this.generateConsCallNameUsing_Direct(constype, mapname, code), [new SMTVar("l")])
+                new SMTCallSimple(this.generateConsCallNameUsing_Direct(constype, mapname, code), [new SMTVar("l"), ...capturedargs])
             ])
         );
 
         return {
-            cons: { cname: this.generateConsCallNameUsing_Direct(constype, mapname, code), cargs: [{ fname: this.generateULIFieldUsingFor(ltype, mapname, code, "l"), ftype: ltype }, ...capturedfields] },
-            if: [new SMTFunction(this.generateConsCallNameUsing(constype, mapname, code), [{ vname: "l", vtype: ltype }, { vname: "count", vtype: this.nattype }], undefined, 0, this.temitter.generateResultType(mtype), ffunc)],
+            cons: { cname: this.generateConsCallNameUsing_Direct(constype, mapname, code), cargs: [{ fname: this.generateULIFieldUsingFor(ltype, mapname, code, "l"), ftype: this.temitter.getSMTTypeFor(fromtype) }, ...capturedfields] },
+            if: [new SMTFunction(this.generateConsCallNameUsing(constype, mapname, code), [{ vname: "l", vtype: this.temitter.getSMTTypeFor(fromtype) }, { vname: "count", vtype: this.nattype }, ...capturedparams], undefined, 0, this.temitter.generateResultType(mtype), ffunc)],
             uf: []
         };
     }
@@ -714,7 +715,7 @@ class ListOpsManager {
             consopts.map.forEach((omi, code) => {
                 tsops.push({
                     test: SMTCallSimple.makeIsTypeOp(this.generateConsCallNameUsing_Direct(ltype, omi.isidx ? "map_idx" : "map", code), llv),
-                    result: this.emitDestructorGet_Map(ctype, this.temitter.getSMTTypeFor(omi.fromtype), llv, new SMTVar("n"), omi.isidx, code, omi.code)
+                    result: this.emitDestructorGet_Map(ctype, ltype, llv, new SMTVar("n"), omi.isidx, code, omi.code)
                 });
             });
         }
