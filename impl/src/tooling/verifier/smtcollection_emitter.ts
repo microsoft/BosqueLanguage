@@ -637,8 +637,8 @@ class ListOpsManager {
         );
     }
 
-    emitDestructorGet_Map(ctype: MIRType, srcltype: SMTType, ll: SMTVar, n: SMTVar, isidx: boolean, code: string, pcode: MIRPCode): SMTExp {
-        const getop = this.generateDesCallName(srcltype, "get");
+    emitDestructorGet_Map(ctype: MIRType, srcltype: SMTType, fromtype: MIRType, ll: SMTVar, n: SMTVar, isidx: boolean, code: string, pcode: MIRPCode): SMTExp {
+        const getop = this.generateDesCallName(this.temitter.getSMTTypeFor(fromtype), "get");
         const mapname = "map" + (isidx ? "_idx" : "");
 
         const capturedfieldlets = this.generateCapturedFieldLetsInfoFor(srcltype, mapname, isidx ? 2 : 1, code, pcode, ll);
@@ -715,7 +715,7 @@ class ListOpsManager {
             consopts.map.forEach((omi, code) => {
                 tsops.push({
                     test: SMTCallSimple.makeIsTypeOp(this.generateConsCallNameUsing_Direct(ltype, omi.isidx ? "map_idx" : "map", code), llv),
-                    result: this.emitDestructorGet_Map(ctype, ltype, llv, new SMTVar("n"), omi.isidx, code, omi.code)
+                    result: this.emitDestructorGet_Map(ctype, ltype, omi.fromtype, llv, new SMTVar("n"), omi.isidx, code, omi.code)
                 });
             });
         }
