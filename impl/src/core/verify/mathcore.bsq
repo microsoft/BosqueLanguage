@@ -44,4 +44,10 @@ __internal entity NumericOps provides Some {
     __safe function s_decimalFloor(d: Decimal): BigInt # decimal_floor
     __safe function s_decimalCeil(d: Decimal): BigInt # decimal_ceil
     __safe function s_decimalTruncate(f: Decimal): BigInt # decimal_truncate
+
+    //
+    //TODO: there are some failure cases here we may want to include checks for (like x = 0, y = -2)
+    //
+    function s_floatPower(x: Float, y: Float): Float # float_power
+    function s_decimalPower(x: Decimal, y: Decimal): Decimal # decimal_power
 }

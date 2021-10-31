@@ -2737,6 +2737,11 @@ class SMTBodyEmitter {
                 );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, truncate);
             }
+            case "float_power":
+            case "decimal_power": {
+                const rr = this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
+            }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));
             }

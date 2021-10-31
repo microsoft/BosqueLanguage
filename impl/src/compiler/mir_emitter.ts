@@ -42,7 +42,7 @@ class MIRKeyGenerator {
         binds.forEach((v, k) => terms.push(`${k}=${v.typeID}`));
 
         let shortterms: string[] = [];
-        binds.forEach((v, k) => terms.push(`${k}=${v.shortID}`));
+        binds.forEach((v, k) => shortterms.push(`${k}=${v.shortID}`));
 
         return [`<${terms.sort().join(", ")}>`, `<${shortterms.sort().join(", ")}>`];
     }

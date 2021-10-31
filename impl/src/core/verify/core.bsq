@@ -222,6 +222,9 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     const one: Float = 1.0f;
     const negativeone: Float = -1.0f;
 
+    const pi: Float = 3.1415926535897931f;
+    const e: Float = 2.7182818284590451f;
+
     method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this))); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this)); }
     method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_floatToBigInt(this)); }
@@ -232,6 +235,18 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     method floor(): BigInt { return NumericOps::s_floatFloor(this); }
     method ceiling(): BigInt { return NumericOps::s_floatCeil(this); }
     method truncate(): BigInt { return NumericOps::s_floatTruncate(this); }
+
+    method pow(x: Float): Float {
+        return NumericOps::s_floatPower(this, x);
+    }
+
+    method square(): Float {
+        return this * this;
+    }
+
+    method sqrt(): Float {
+        return NumericOps::s_floatPower(this, 0.5f);
+    }
 }
 __safe __primitive inline prefix operator +(a: Float): Float = default;
 __safe __primitive inline prefix operator -(a: Float): Float = default;
@@ -250,6 +265,9 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     const one: Decmial = 1.0d;
     const negativeone: Decmial = -1.0d;
 
+    const pi: Decimal = 3.1415926535897931d;
+    const e: Decimal = 2.7182818284590451d;
+
     method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this))); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this)); }
     method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_decimalToBigInt(this)); }
@@ -260,6 +278,18 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     method floor(): BigInt { return NumericOps::s_decimalFloor(this); }
     method ceiling(): BigInt { return NumericOps::s_decimalCeil(this); }
     method truncate(): BigInt { return NumericOps::s_decimalTruncate(this); }
+
+    method pow(x: Decimal): Decimal {
+        return NumericOps::s_decimalPower(this, x);
+    }
+
+    method square(): Decimal {
+        return this * this;
+    }
+
+    method sqrt(): Decimal {
+        return NumericOps::s_decimalPower(this, 0.5f);
+    }
 }
 __safe __primitive inline prefix operator +(a: Decimal): Decimal = default;
 __safe __primitive inline prefix operator -(a: Decimal): Decimal = default;
