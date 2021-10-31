@@ -627,7 +627,7 @@ class SMTEmitter {
             }
     
             linfo.consops.map.forEach((minfo, code) => {
-                const cmap = this.bemitter.lopsManager.emitConstructorMap(this.temitter.getSMTTypeFor(minfo.fromtype), minfo.totype, minfo.isidx, code, minfo.code);
+                const cmap = this.bemitter.lopsManager.emitConstructorMap(this.temitter.getSMTTypeFor(minfo.totype), minfo.totype, minfo.fromtype, minfo.isidx, code, minfo.code);
                 this.processConstructorGenInfo(cmap, constructors);
             });
         }

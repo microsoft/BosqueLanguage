@@ -122,7 +122,7 @@ class ResolvedTupleAtomType extends ResolvedAtomType {
 
     static create(types: ResolvedType[]): ResolvedTupleAtomType {
         const name = types.map((entry) => entry.typeID).join(", ");
-        const shortname = types.map((entry) => entry.typeID).join(",");
+        const shortname = types.map((entry) => entry.shortID).join(",");
 
         return new ResolvedTupleAtomType("[" + name + "]", "[" + shortname + "]", types);
     }

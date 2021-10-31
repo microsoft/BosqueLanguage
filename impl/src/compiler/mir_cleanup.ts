@@ -43,7 +43,6 @@ function cleanDeadBlocks(b: MIRBody) {
 }
 
 function propagateAssign_Bind(treg: MIRRegisterArgument, arg: MIRArgument, propMap: Map<string, MIRArgument>) {
-    assert(!propMap.has(treg.nameID));
     propMap.set(treg.nameID, arg);
 }
 
