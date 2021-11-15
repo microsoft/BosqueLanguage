@@ -74,11 +74,7 @@
 
 ;;BINT_CONSTANTS;;
 
-(define-sort HavocSequence () (Seq BNat))
-
 (declare-sort NumericOps 0)
-(declare-sort ListFlatOps 0)
-(declare-sort ListConcatOps 0)
 (declare-sort ListOps 0)
 
 (declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))
@@ -102,79 +98,6 @@
 
 (declare-fun BByteBuffer@expandstr ((BByteBuffer)) BString)
 
-;;Define the ISequence datatype and operators
-(declare-sort ISequence 0)
-
-(declare-fun ISequence@size (ISequence) BNat)
-(declare-fun ISequence@get (ISequence BNat) BNat)
-
-(define-fun ISequence@assertSorted ((s ISequence)) Bool
-  (let ((len (ISequence@size s)))
-    (forall ((i BNat) (j BNat))
-      (=> (and (bvult i j) (bvult j len))
-          (bvult (ISequence@get s i) (ISequence@get s j))))
-  )
-)
-
-(define-fun ISequence@assertValuesRange ((s ISequence) (limit BNat)) Bool
-  (let ((len (ISequence@size s)))
-    (forall ((i BNat))
-      (=> (bvult i len)
-          (bvult (ISequence@get s i) limit)))
-  )
-)
-
-(declare-const ISequence@empty ISequence)
-(assert (= (ISequence@size ISequence@empty) BNat@zero))
-
-;;Define the JSequence datatype
-(declare-datatype JSequencePair ((JSequencePair@cons (JSequencePair@a BNat) (JSequencePair@b BNat))))
-(declare-sort JSequence 0)
-
-(declare-fun JSequence@size (JSequence) BNat)
-(declare-fun JSequence@get (JSequence BNat) JSequencePair)
-
-(define-fun JSequence@assertSorted ((s JSequence)) Bool
-  (let ((len (JSequence@size s)))
-    (forall ((i BNat) (j BNat))
-      (=> (and (bvult i j) (bvult j len))
-          (or 
-            (bvult (JSequencePair@a (JSequence@get s i)) (JSequencePair@a (JSequence@get s j)))
-            (and (= (JSequencePair@a (JSequence@get s i)) (JSequencePair@a (JSequence@get s j))) (bvult (JSequencePair@b (JSequence@get s i)) (JSequencePair@b (JSequence@get s j))))
-          )
-      )
-    )
-  )
-)
-
-(define-fun JSequence@assertValuesRange ((s JSequence) (limita BNat) (limitb BNat)) Bool
-  (let ((len (JSequence@size s)))
-    (forall ((i BNat))
-      (=> (bvult i len)
-          (and (bvult (JSequencePair@a (JSequence@get s i)) limita) (bvult (JSequencePair@b (JSequence@get s i)) limitb))))
-  )
-)
-
-(declare-const JSequence@empty JSequence)
-(assert (= (JSequence@size JSequence@empty) BNat@zero))
-
-;;Define the SSequence datatype
-(declare-sort SSequence 0)
-
-(declare-fun SSequence@size (SSequence) BNat)
-(declare-fun SSequence@get (SSequence BNat) BNat)
-
-(define-fun SSequence@assertValuesRange ((s SSequence) (limit BNat)) Bool
-  (let ((len (SSequence@size s)))
-    (forall ((i BNat))
-      (=> (bvult i len)
-          (bvult (SSequence@get s i) limit)))
-  )
-)
-
-(declare-const SSequence@empty SSequence)
-(assert (= (SSequence@size SSequence@empty) BNat@zero))
-
 ;;
 ;; Primitive datatypes 
 ;;
@@ -195,9 +118,11 @@
       ; LogicalTime -> Int
       ; UUID -> ?? need to investigate
       ; ContentHash -> (_ BitVec X)
+      (HavocSequence 0)
     ) (
       ( (bsq_none@literal) ) 
-      ( (bsq_nothing@literal) ) 
+      ( (bsq_nothing@literal) )
+      ( (HavocSequence@cons (Int) (Seq BNat)) )
 ))
 
 ;;

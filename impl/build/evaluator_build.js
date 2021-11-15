@@ -21,14 +21,14 @@ let outfile = "";
 let z3lib = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -Wall -Wno-reorder-ctor -std=c++17 -arch x86_64";
+    ccflags = "-O0 -g -Wall -std=c++20 -arch x86_64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
     outfile = "-o " + outbase + "/chkworkflow";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = "-O0 -g -Wall -Wno-reorder-ctor -std=c++17 -pthread";
+    ccflags = "-O0 -g -Wall -std=c++20 -pthread";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/linux/z3/bin/libz3.a")
     outfile = "-o " + outbase + "/chkworkflow";

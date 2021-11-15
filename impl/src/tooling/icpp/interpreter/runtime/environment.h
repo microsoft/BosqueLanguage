@@ -7,7 +7,6 @@
 
 #include "../common.h"
 #include "bsqvalue.h"
-#include "bsqcollections.h"
 
 #include "../assembly/bsqassembly.h"
 
