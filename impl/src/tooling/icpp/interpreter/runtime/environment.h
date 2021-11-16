@@ -14,7 +14,6 @@ class Environment
 {
 public:
     static jmp_buf g_entrybuff;
-    static bool g_small_model_gen;
 
     //Constant storage locations
     static uint8_t* g_constantbuffer;

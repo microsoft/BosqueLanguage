@@ -22,13 +22,15 @@ public:
 
     inline static void pushFrame(void** framep, RefMask mask)
     {
-        if (GCStack::stackp >= BSQ_MAX_STACK)
+        if (GCStack::stackp < BSQ_MAX_STACK) [[likely]]
+        {
+            GCStack::frames[GCStack::stackp++] = { framep, mask };
+        }
+        else [[unlikely]]
         {
             printf("Out-Of-Stack\n");
             exit(1);
         }
-
-        GCStack::frames[GCStack::stackp++] = { framep, mask };
     }
 
     inline static void popFrame()
@@ -37,7 +39,6 @@ public:
     }
 };
 
-template <size_t bsize>
 class GCRefListIterator
 {
 public:
@@ -58,7 +59,6 @@ public:
     }
 };
 
-template <size_t bsize>
 class GCRefList
 {
 private:
@@ -70,7 +70,7 @@ private:
 public:
     GCRefList() : headrl(nullptr), tailrl(nullptr), spos(1), epos(1) 
     {
-        this->headrl = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        this->headrl = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         this->tailrl = this->headrl;
     }
 
@@ -102,7 +102,7 @@ public:
         this->spos = other.spos;
         this->epos = other.epos;
 
-        other.headrl = this->headrl = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        other.headrl = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         other.tailrl = other.headrl;
         other.spos = 1;
         other.epos = 1;
@@ -118,7 +118,7 @@ public:
             mi_free(tmp);
         }
 
-        this->headrl = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        this->headrl = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         this->tailrl = this->headrl;
         this->spos = 1;
         this->epos = 1;
@@ -131,7 +131,7 @@ public:
 
     void enqueSlow(void* v)
     {
-        void** tmp = (void**)mi_zalloc_small(bsize * sizeof(void*));
+        void** tmp = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         this->tailrl[0] = tmp;
         this->tailrl = tmp;
         this->epos = 1;
@@ -139,11 +139,11 @@ public:
 
     inline void enque(void* v)
     {
-        if(this->epos < bsize)
+        if(this->epos < GC_REF_LIST_BLOCK_SIZE_DEFAULT) [[likely]]
         {
             this->tailrl[this->epos++] = v;
         }
-        else
+        else [[unlikely]]
         {
             this->enqueSlow(v);
         }
@@ -164,40 +164,40 @@ public:
     {
         assert(!this->empty());
 
-        if(this->spos < bsize)
+        if(this->spos < GC_REF_LIST_BLOCK_SIZE_DEFAULT) [[likely]]
         {
             return this->tailrl[this->spos++];
         }
-        else
+        else [[unlikely]]
         {
             return this->dequeSlow();
         }
     }
 
-    void iterBegin(GCRefListIterator<bsize>& iter) const
+    void iterBegin(GCRefListIterator& iter) const
     {
         iter.crl = this->headrl;
         iter.cpos = this->spos;
     }
 
-    inline bool iterHasMore(const GCRefListIterator<bsize>& iter) const
+    inline bool iterHasMore(const GCRefListIterator& iter) const
     {
         return (iter.crl != this->tailrl) | (iter.cpos != this->epos);
     }
 
-    void iterAdvanceSlow(GCRefListIterator<bsize>& iter) const
+    void iterAdvanceSlow(GCRefListIterator& iter) const
     {
-        iter.crl = iter.crl[0];
+        iter.crl = (void**)iter.crl[0];
         iter.cpos = 1;
     }
 
-    inline void iterAdvance(GCRefListIterator<bsize>& iter) const
+    inline void iterAdvance(GCRefListIterator& iter) const
     {
-        if(iter.cpos < bsize)
+        if(iter.cpos < GC_REF_LIST_BLOCK_SIZE_DEFAULT) [[likely]]
         {
-            return iter.cpos++;
+            iter.cpos++;
         }
-        else
+        else [[unlikely]]
         {
             this->iterAdvanceSlow(iter);
         }
@@ -214,9 +214,6 @@ private:
 
     size_t m_allocsize;
     uint8_t *m_block;
-
-    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> m_bigallocs;
-    size_t m_bigallocsCount;
 
 #ifdef ENABLE_MEM_STATS
     size_t totalbumpalloc;
@@ -256,7 +253,7 @@ private:
     }
 
 public:
-    NewSpaceAllocator() : m_block(nullptr), m_bigallocs(), m_bigallocsCount(0)
+    NewSpaceAllocator() : m_block(nullptr)
     {
         MEM_STATS_OP(this->totalbumpalloc = 0);
         MEM_STATS_OP(this->totalbigalloc = 0);
@@ -275,28 +272,6 @@ public:
 
         this->m_currPos = this->m_block;
         this->m_endPos = this->m_block + this->m_allocsize;
-
-        this->m_bigallocs.reset();
-        this->m_bigallocsCount = 0;
-    }
-
-    size_t currentBigAllocCount() const
-    {
-        return this->m_bigallocsCount;
-    }
-
-    size_t currentAllocatedBigBytes() const
-    {
-        size_t bigalloc = 0;
-
-        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_DEFAULT> iter;
-        this->m_bigallocs.iterBegin(iter);
-        while(this->m_bigallocs.iterHasMore(iter))
-        {
-            bigalloc += (GET_TYPE_META_DATA(iter.get()))->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-        }
-        
-        return bigalloc;
     }
 
     size_t currentAllocatedSlabBytes() const
@@ -304,33 +279,27 @@ public:
         return (size_t)(this->m_currPos - this->m_block);
     }
 
-    //Return do a GC and return uint8_t* of given rsize from the bumplist implementation
-    uint8_t* allocateDynamicSizeSlow(size_t rsize);
+    void ensureSpace_slow();
 
     //Return uint8_t* of given asize + sizeof(MetaData*)
     inline uint8_t* allocateDynamicSize(size_t asize)
     {
         size_t rsize = asize + sizeof(GC_META_DATA_WORD);
 
-        //Note this is technically UB!!!!
-        if((rsize <= BSQ_ALLOC_MAX_BLOCK_SIZE) & (this->m_currPos <= this->m_endPos))
+        if(this->m_currPos + rsize > this->m_endPos) [[unlikely]]
         {
-            uint8_t *res = this->m_currPos;
-            this->m_currPos += rsize;
+             this->ensureSpace_slow();
+        }
 
-            return res;
-        }
-        else
-        {
-            return this->allocateDynamicSizeSlow(rsize);
-        }
+        uint8_t* res = this->m_currPos;
+        this->m_currPos += rsize;
+
+        return res;
     }
-
-    void ensureSpace_slow();
 
     inline void ensureSpace(size_t required)
     {
-        if (this->m_currPos + required > this->m_endPos)
+        if (this->m_currPos + required > this->m_endPos) [[unlikely]]
         {
             this->ensureSpace_slow();
         }
@@ -341,7 +310,7 @@ public:
         size_t rsize = asize + sizeof(GC_META_DATA_WORD);
         assert(this->m_currPos + rsize <= this->m_endPos);
 
-        uint8_t *res = this->m_currPos;
+        uint8_t* res = this->m_currPos;
         this->m_currPos += rsize;
 
         return res;
@@ -355,13 +324,13 @@ public:
 
 private:
     NewSpaceAllocator nsalloc;
+    GCRefList heapallocs;
 
-    GCRefList<GC_REF_LIST_BLOCK_SIZE_SMALL> tempRoots;
-    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> maybeZeroCounts;
-    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> newMaybeZeroCounts;
+    GCRefList maybeZeroCounts;
+    GCRefList newMaybeZeroCounts;
 
-    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> worklist;
-    GCRefList<GC_REF_LIST_BLOCK_SIZE_DEFAULT> releaselist;
+    GCRefList worklist;
+    GCRefList releaselist;
 
     size_t liveoldspace;
 
@@ -373,6 +342,20 @@ private:
     size_t promotedbytes;
     size_t maxheap;
 #endif
+
+    size_t currentHeapAllocsBytes() const
+    {
+        size_t bigalloc = 0;
+
+        GCRefListIterator iter;
+        this->heapallocs.iterBegin(iter);
+        while(this->heapallocs.iterHasMore(iter))
+        {
+            bigalloc += (GET_TYPE_META_DATA(iter.get()))->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+        }
+        
+        return bigalloc;
+    }
 
     template <bool isRoot>
     void* moveBumpObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
@@ -407,7 +390,7 @@ private:
     }
 
     template <bool isRoot>
-    void moveLargeAllocObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
+    void moveHeapAllocObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
     {
         this->liveoldspace += osize;
 
@@ -416,14 +399,21 @@ private:
             this->worklist.enque(obj);
         }
 
-        if constexpr (isRoot)
+        if(GC_TEST_IS_STRICT(w))
         {
-            GC_INIT_OLD_ROOT(obj, w);
-            this->newMaybeZeroCounts.enque(obj);
+            GC_INIT_OLD_STRICT(obj, w);
         }
         else
         {
-            GC_INIT_OLD_HEAP(obj, w);
+            if constexpr (isRoot)
+            {
+                GC_INIT_OLD_ROOT(obj, w);
+                this->newMaybeZeroCounts.enque(obj);
+            }
+            else
+            {
+                GC_INIT_OLD_HEAP(obj, w);
+            }
         }
     }
 
@@ -783,7 +773,7 @@ private:
     }
 
 public:
-    Allocator() : nsalloc(), tempRoots(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
+    Allocator() : nsalloc(), heapallocs(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->promotedbytes = 0);
@@ -877,6 +867,7 @@ public:
 
         //Adjust the new space size if needed and reset/free the newspace allocators
         this->nsalloc.postGCProcess(this->liveoldspace);
+        this->heapallocs.reset();
 
         if(this->globals_mem != nullptr)
         {

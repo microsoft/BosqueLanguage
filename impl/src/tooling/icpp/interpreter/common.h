@@ -19,31 +19,7 @@
 #include "json.hpp"
 typedef nlohmann::json json;
 
-//TODO: mimalloc
-//#include <mimalloc.h>
-
-#define MI_SMALL_SIZE_MAX 2048
-
-inline void* mi_zalloc(size_t bytes)
-{
-    void* res = malloc(bytes);
-    std::fill((uint8_t*)res, ((uint8_t*)res) + bytes, (uint8_t)0);
-
-    return res;
-}
-
-inline void* mi_zalloc_small(size_t bytes)
-{
-    void* res = malloc(bytes);
-    std::fill((uint8_t*)res, ((uint8_t*)res) + bytes, (uint8_t)0);
-
-    return res;
-}
-
-inline void mi_free(void* mem)
-{
-    free(mem);
-}
+#include <mimalloc.h>
 
 ////////////////////////////////
 //Various sizes
@@ -91,8 +67,6 @@ inline void mi_free(void* mem)
 #define BSQ_MIN_NURSERY_SIZE 1048576
 #define BSQ_MAX_NURSERY_SIZE 16777216
 
-#define BSQ_MAX_BIG_ALLOC_COUNT 500
-
 //Allocation routines
 #ifdef _WIN32
 #define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
@@ -103,48 +77,54 @@ inline void mi_free(void* mem)
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_zalloc(SIZE)
 #define BSQ_BUMP_SPACE_RELEASE(M) mi_free(M)
 
-#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_zalloc_small(SIZE)
-#define BSQ_FREE_LIST_ALLOC(SIZE) mi_zalloc(SIZE)
+#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_alloc_small(SIZE)
 #define BSQ_FREE_LIST_RELEASE(SIZE, M) mi_free(M)
 
-#define GC_REF_LIST_BLOCK_SIZE_SMALL 32
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 128
 
 //Header word layout
-//high [RC - 40 bits] [MARK - 1 bit] [YOUNG - 1 bit] [TYPEID - 22 bits]
+//high [RC - 40 bits] [MARK - 1 bit] [YOUNG - 1 bit] [STRICT - 1 bit] [UNUSED - 1 bit] [TYPEID - 20 bits]
 
 #define GC_MARK_BIT 0x800000
 #define GC_YOUNG_BIT 0x400000
-#define GC_MARK_MASK 0xFFFFFFFFFF7FFFFF
+#define GC_STRICT_BIT 0x200000
 #define GC_RC_MASK 0xFFFFFFFFFF000000
-#define GC_TYPE_ID_MASK 0x3FFFFF
+#define GC_TYPE_ID_MASK 0x1FFFFF
 #define GC_REACHABLE_MASK (GC_RC_MASK | GC_MARK_BIT)
 #define GC_CLEAR_MARK_MASK (GC_RC_MASK | GC_TYPE_ID_MASK)
 
 typedef uint64_t GC_META_DATA_WORD;
-#define GC_MASK_RC(W) (W & GC_RC_MASK)
+#define GC_EXTRACT_RC(W) (W & GC_RC_MASK)
 #define GC_EXTRACT_MARK(W) (W & GC_MARK_BIT)
-#define GC_MASK_MARK(W) (W & GC_MARK_MASK)
 #define GC_EXTRACT_TYPEID(W) (W & GC_TYPE_ID_MASK)
 
 #define GC_GET_META_DATA_ADDR(M) ((GC_META_DATA_WORD*)((uint8_t*)M - sizeof(GC_META_DATA_WORD)))
 #define GC_LOAD_META_DATA_WORD(ADDR) (*((GC_META_DATA_WORD*)ADDR))
 #define GC_SET_META_DATA_WORD(ADDR, W) (*((GC_META_DATA_WORD*)ADDR) = W)
 
+#define GC_RC_ETERNAL_INIT ((GC_META_DATA_WORD)0x1000000)
+#define GC_RC_ZERO ((GC_META_DATA_WORD)0x0)
+#define GC_RC_ONE ((GC_META_DATA_WORD)0x1000000)
+
 #define GC_TEST_IS_UNREACHABLE(W) (W & GC_REACHABLE_MASK)
-#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_MASK) == 0)
+#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_MASK) == GC_RC_ZERO)
+#define GC_TEST_IS_ONE_RC(W) ((W & GC_RC_MASK) == GC_RC_ONE)
 #define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
+#define GC_TEST_IS_STRICT(W) (W & GC_STRICT_BIT)
+
 #define GC_CLEAR_MARK_BIT(W) (W & GC_CLEAR_MARK_MASK)
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
 
-#define GC_RC_ETERNAL_INIT ((GC_META_DATA_WORD)0x1000000)
-#define GC_RC_ONE ((GC_META_DATA_WORD)0x1000000)
 #define GC_INC_RC(W) (W + GC_RC_ONE)
 #define GC_DEC_RC(W) (W - GC_RC_ONE)
 
 #define GC_INIT_YOUNG(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | TID)
+#define GC_INIT_STRICT_YOUNG(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_RC_ONE | GC_YOUNG_BIT | GC_STRICT_BIT | TID)
+#define GC_MAKE_NON_STRICT(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | TID)
+
 #define GC_INIT_OLD_ROOT(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_MARK_BIT | GC_EXTRACT_TYPEID(W))
 #define GC_INIT_OLD_HEAP(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_RC_ONE | GC_EXTRACT_TYPEID(W))
+#define GC_INIT_OLD_STRICT(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_EXTRACT_RC(W) | GC_STRICT_BIT | GC_EXTRACT_TYPEID(W))
 
 //Access type info + special forwarding pointer mark
 #define GET_TYPE_META_DATA_FROM_WORD(W) (*(BSQType::g_typetable + GC_EXTRACT_TYPEID(W)))
@@ -189,7 +169,8 @@ enum class BSQTypeKind : uint32_t
     UnionRef
 };
 
-#define MAX_STRUCT_SIZE 40
+#define MAX_STRUCT_INLINE_SIZE 32
+#define MAX_UNION_INLINE_SIZE 40
 
 #define PTR_FIELD_MASK_SCALAR '1'
 #define PTR_FIELD_MASK_PTR '2'
@@ -215,33 +196,29 @@ typedef uint32_t BSQVirtualInvokeID;
 typedef uint32_t BSQConstantID;
 
 #define BSQ_TYPE_ID_NONE 0
-#define BSQ_TYPE_ID_BOOL 1
-#define BSQ_TYPE_ID_NAT 2
-#define BSQ_TYPE_ID_INT 3
-#define BSQ_TYPE_ID_BIGNAT 4
-#define BSQ_TYPE_ID_BIGINT 5
-#define BSQ_TYPE_ID_FLOAT 6
-#define BSQ_TYPE_ID_DECIMAL 7
-#define BSQ_TYPE_ID_RATIONAL 8
-#define BSQ_TYPE_ID_STRINGITERATOR 9
+#define BSQ_TYPE_ID_NOTHING 1
+#define BSQ_TYPE_ID_BOOL 2
+#define BSQ_TYPE_ID_NAT 3
+#define BSQ_TYPE_ID_INT 4
+#define BSQ_TYPE_ID_BIGNAT 5
+#define BSQ_TYPE_ID_BIGINT 6
+#define BSQ_TYPE_ID_FLOAT 7
+#define BSQ_TYPE_ID_DECIMAL 8
+#define BSQ_TYPE_ID_RATIONAL 9
 #define BSQ_TYPE_ID_STRING 10
 #define BSQ_TYPE_ID_BYTEBUFFER 11
-#define BSQ_TYPE_ID_BUFFER 12
-#define BSQ_TYPE_ID_DATABUFFER 13
-#define BSQ_TYPE_ID_ISOTIME 14
-#define BSQ_TYPE_ID_LOGICALTIME 15
-#define BSQ_TYPE_ID_UUID 16
-#define BSQ_TYPE_ID_CONTENTHASH 17
-#define BSQ_TYPE_ID_REGEX 18
+#define BSQ_TYPE_ID_ISOTIME 12
+#define BSQ_TYPE_ID_LOGICALTIME 13
+#define BSQ_TYPE_ID_UUID 14
+#define BSQ_TYPE_ID_CONTENTHASH 15
+#define BSQ_TYPE_ID_REGEX 16
 
-#define BSQ_TYPE_ID_STRINGREPR_K16 19
-#define BSQ_TYPE_ID_STRINGREPR_K32 20
-#define BSQ_TYPE_ID_STRINGREPR_K64 21
-#define BSQ_TYPE_ID_STRINGREPR_K96 22
-#define BSQ_TYPE_ID_STRINGREPR_K128 23
-#define BSQ_TYPE_ID_STRINGREPR_K256 24
-#define BSQ_TYPE_ID_STRINGREPR_SLICE 25
-#define BSQ_TYPE_ID_STRINGREPR_CONCAT 26
+#define BSQ_TYPE_ID_STRINGREPR_K16 17
+#define BSQ_TYPE_ID_STRINGREPR_K32 18
+#define BSQ_TYPE_ID_STRINGREPR_K64 19
+#define BSQ_TYPE_ID_STRINGREPR_K96 20
+#define BSQ_TYPE_ID_STRINGREPR_K128 21
+#define BSQ_TYPE_ID_STRINGREPR_ROPE 22
 
 enum class BSQPrimitiveImplTag
 {
@@ -250,28 +227,5 @@ enum class BSQPrimitiveImplTag
     validator_accepts,
 
     string_empty,
-    string_append,
-
-    stringof_string,
-    stringof_from,
-
-    list_size,
-    list_empty,
-    list_unsafe_get,
-    list_fill,
-    list_concat2,
-    list_haspredcheck,
-    list_haspredcheck_idx,
-    list_findindexof,
-    list_findindexoflast,
-    list_findindexof_idx,
-    list_findindexoflast_idx,
-    list_minidx,
-    list_maxidx,
-    list_sum,
-    list_filter,
-    list_filter_idx,
-    list_slice,
-    list_map,
-    list_map_idx
+    string_append
 };
