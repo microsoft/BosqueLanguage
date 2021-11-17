@@ -40,25 +40,36 @@
 
 ////
 //Standard memory function pointer definitions
-void** gcDecOperator_registerImpl(const BSQType* btype, void** data);
-void** gcDecOperator_maskImpl(const BSQType* btype, void** data);
-void** gcDecOperator_stringImpl(const BSQType* btype, void** data);
-void** gcDecOperator_bignumImpl(const BSQType* btype, void** data);
 
-void** gcClearOperator_registerImpl(const BSQType* btype, void** data);
-void** gcClearOperator_maskImpl(const BSQType* btype, void** data);
-void** gcClearOperator_stringImpl(const BSQType* btype, void** data);
-void** gcClearOperator_bignumImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_inlineImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_refImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data);
 
-void** gcProcessRootOperator_registerImpl(const BSQType* btype, void** data);
-void** gcProcessRootOperator_maskImpl(const BSQType* btype, void** data);
-void** gcProcessRootOperator_stringImpl(const BSQType* btype, void** data);
-void** gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_nopImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_inlineImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_refImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data);
 
-void** gcProcessHeapOperator_registerImpl(const BSQType* btype, void** data);
-void** gcProcessHeapOperator_maskImpl(const BSQType* btype, void** data);
-void** gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data);
-void** gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data);
+void gcDecOperator_nopImpl(const BSQType* btype, void** data);
+void gcDecOperator_inlineImpl(const BSQType* btype, void** data);
+void gcDecOperator_refImpl(const BSQType* btype, void** data);
+void gcDecOperator_stringImpl(const BSQType* btype, void** data);
+void gcDecOperator_bignumImpl(const BSQType* btype, void** data);
+
+void gcClearOperator_nopImpl(const BSQType* btype, void** data);
+void gcClearOperator_inlineImpl(const BSQType* btype, void** data);
+void gcClearOperator_refImpl(const BSQType* btype, void** data);
+void gcClearOperator_stringImpl(const BSQType* btype, void** data);
+void gcClearOperator_bignumImpl(const BSQType* btype, void** data);
+
+void gcMakeImmortalOperator_nopImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_inlineImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_refImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_stringImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_bignumImpl(const BSQType* btype, void** data);
 
 struct BSQTypeSizeInfo
 {
@@ -67,18 +78,20 @@ struct BSQTypeSizeInfo
     const uint64_t assigndatasize; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
 
     const RefMask heapmask; //The mask to used to traverse this object during gc (if it is heap allocated) -- null if this is a leaf object -- partial if tailing scalars
-    const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must traverse full object
+    const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object)
 };
 
 struct GCFunctorSet
 {
-    GCDecOperatorFP fpDecObj;
-    GCClearMarkOperatorFP fpClearObj;
     GCProcessOperatorFP fpProcessObjRoot;
     GCProcessOperatorFP fpProcessObjHeap;
+    GCProcessOperatorFP fpDecObj;
+    GCProcessOperatorFP fpClearObj;
+    GCProcessOperatorFP fpMakeImmortal;
 };
 
-constexpr GCFunctorSet LEAF_GC_FUNCTOR_SET{ nullptr, nullptr, nullptr, nullptr };
+constexpr GCFunctorSet REF_LEAF_GC_FUNCTOR_SET{ gcProcessRootOperator_refImpl, gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcClearOperator_refImpl, gcMakeImmortalOperator_refImpl };
+constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessRootOperator_nopImpl, gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcClearOperator_nopImpl, gcMakeImmortalOperator_nopImpl };
 constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcDecOperator_registerImpl, gcClearOperator_registerImpl, gcProcessRootOperator_registerImpl, gcProcessHeapOperator_registerImpl };
 constexpr GCFunctorSet MASK_GC_FUNCTOR_SET{ gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl };
 

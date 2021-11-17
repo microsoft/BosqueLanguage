@@ -205,7 +205,7 @@ public:
 };
 
 //A class that implements our bump pointer nursery space
-class NewSpaceAllocator
+class BumpSpaceAllocator
 {
 private:
     //We inline the fields for the current/end of the block that we are allocating from
@@ -253,7 +253,7 @@ private:
     }
 
 public:
-    NewSpaceAllocator() : m_block(nullptr)
+    BumpSpaceAllocator() : m_block(nullptr)
     {
         MEM_STATS_OP(this->totalbumpalloc = 0);
         MEM_STATS_OP(this->totalbigalloc = 0);
@@ -261,7 +261,7 @@ public:
         this->setAllocBlock(BSQ_MIN_NURSERY_SIZE);
     }
 
-    ~NewSpaceAllocator()
+    ~BumpSpaceAllocator()
     {
         BSQ_BUMP_SPACE_RELEASE(this->m_block);
     }
@@ -323,8 +323,8 @@ public:
     static Allocator GlobalAllocator;
 
 private:
-    NewSpaceAllocator nsalloc;
-    GCRefList heapallocs;
+    BumpSpaceAllocator bumpalloc;
+    size_t rcalloc;
 
     GCRefList maybeZeroCounts;
     GCRefList newMaybeZeroCounts;
@@ -343,22 +343,8 @@ private:
     size_t maxheap;
 #endif
 
-    size_t currentHeapAllocsBytes() const
-    {
-        size_t bigalloc = 0;
-
-        GCRefListIterator iter;
-        this->heapallocs.iterBegin(iter);
-        while(this->heapallocs.iterHasMore(iter))
-        {
-            bigalloc += (GET_TYPE_META_DATA(iter.get()))->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-        }
-        
-        return bigalloc;
-    }
-
     template <bool isRoot>
-    void* moveBumpObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
+    void* moveYoungBumpObjectToOldRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
     {
         void* nobj = BSQ_FREE_LIST_ALLOC_SMALL(osize);
 
@@ -373,12 +359,12 @@ private:
 
         if constexpr (isRoot)
         {
-            GC_INIT_OLD_ROOT(nobj, w);
+            GC_INIT_OLD_RC_ROOT_REF(nobj, w);
             this->newMaybeZeroCounts.enque(nobj);
         }
         else
         {
-            GC_INIT_OLD_HEAP(nobj, w);
+            GC_INIT_OLD_RC_HEAP_REF(nobj, w);
         }
 
         GC_SET_TYPE_META_DATA_FORWARD_SENTINAL(addr);
@@ -390,7 +376,7 @@ private:
     }
 
     template <bool isRoot>
-    void moveHeapAllocObjectToRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
+    void moveYoungRCAllocObjectToOldRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
     {
         this->liveoldspace += osize;
 
@@ -399,20 +385,19 @@ private:
             this->worklist.enque(obj);
         }
 
-        if(GC_TEST_IS_STRICT(w))
+        if(GC_TEST_IS_EAGER_RC(w))
         {
-            GC_INIT_OLD_STRICT(obj, w);
+            GC_UPDATE_OLD_RC_EAGER(obj, w);
         }
         else
         {
             if constexpr (isRoot)
             {
-                GC_INIT_OLD_ROOT(obj, w);
-                this->newMaybeZeroCounts.enque(obj);
+                GC_UPDATE_OLD_RC_ROOT_REF(obj, w);
             }
             else
             {
-                GC_INIT_OLD_HEAP(obj, w);
+                GC_UPDATE_OLD_RC_HEAP_REF(obj, w);
             }
         }
     }
@@ -431,13 +416,13 @@ public:
                 const BSQType* ometa = GET_TYPE_META_DATA_FROM_WORD(w);
                 size_t osize = ometa->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
 
-                if(osize <= BSQ_ALLOC_MAX_BLOCK_SIZE)
+                if(GC_TEST_IS_BUMP_SPACE(w))
                 {
-                    *slot = Allocator::GlobalAllocator.moveBumpObjectToRCSpace<isRoot>(v, addr, w, ometa, osize);
+                    *slot = Allocator::GlobalAllocator.moveYoungBumpObjectToOldRCSpace<isRoot>(v, addr, w, ometa, osize);
                 }
                 else
                 {
-                    Allocator::GlobalAllocator.moveLargeAllocObjectToRCSpace<isRoot>(v, addr, w, ometa, osize);
+                    Allocator::GlobalAllocator.moveYoungRCAllocObjectToOldRCSpace<isRoot>(v, addr, w, ometa, osize);
                 }
             }
             else
@@ -455,7 +440,10 @@ public:
                 }
                 else
                 {
-                    GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+                    if(!GC_TEST_IS_STRICT(w))
+                    { 
+                        GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+                    }
                 }
             }
         }
@@ -480,14 +468,14 @@ public:
     }
 
     template <bool isRoot>
-    inline static void** gcProcessSlotsWithUnion(void** slots)
+    inline static void gcProcessSlotsWithUnion(void** slots)
     {
         const BSQType* umeta = ((const BSQType*)(*slots));
         return (getProcessFP<isRoot>(umeta))(umeta, slots + 1);
     }
 
     template <bool isRoot>
-    inline static void** gcProcessSlotsWithMask(void** slots, RefMask mask)
+    inline static void gcProcessSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
 
@@ -497,25 +485,23 @@ public:
             char op = *cmaskop++;
             switch(op)
             {
-                case PTR_FIELD_MASK_SCALAR:
-                    cslot++;
+                case PTR_FIELD_MASK_NOP:
                     break;
                 case PTR_FIELD_MASK_PTR:
-                    Allocator::gcProcessSlot<isRoot>(cslot++);
+                    Allocator::gcProcessSlot<isRoot>(cslot);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::gcProcessSlotWithString<isRoot>(cslot++);
+                    Allocator::gcProcessSlotWithString<isRoot>(cslot);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcProcessSlotWithBigNum<isRoot>(cslot++);
+                    Allocator::gcProcessSlotWithBigNum<isRoot>(cslot);
                     break;
                 default:
-                    cslot = Allocator::gcProcessSlotsWithUnion<isRoot>(cslot);
+                    Allocator::gcProcessSlotsWithUnion<isRoot>(cslot);
                     break;
             }
+            cslot++;
         }
-
-        return cslot;
     }
 
     ////////
@@ -525,9 +511,10 @@ public:
         if (v != nullptr)
         {
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
-            GC_META_DATA_WORD w = GC_DEC_RC(GC_LOAD_META_DATA_WORD(addr));
-            GC_SET_META_DATA_WORD(addr, w);
+            GC_META_DATA_WORD waddr = GC_LOAD_META_DATA_WORD(addr);
 
+            GC_META_DATA_WORD w = GC_DEC_RC(waddr);
+            GC_SET_META_DATA_WORD(addr, w);
             if (GC_TEST_IS_UNREACHABLE(w))
             {
                 Allocator::GlobalAllocator.releaselist.enque(v);
@@ -551,13 +538,13 @@ public:
         }
     }
 
-    inline static void** gcDecrementSlotsWithUnion(void** slots)
+    inline static void gcDecrementSlotsWithUnion(void** slots)
     {
         const BSQType* umeta = ((const BSQType*)(*slots));
         return umeta->gcops.fpDecObj(umeta, slots + 1);
     }
 
-    inline static void** gcDecSlotsWithMask(void** slots, RefMask mask)
+    inline static void gcDecSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
 
@@ -567,25 +554,23 @@ public:
             char op = *cmaskop++;
             switch(op)
             {
-                case PTR_FIELD_MASK_SCALAR:
-                    cslot++;
+                case PTR_FIELD_MASK_NOP:
                     break;
                 case PTR_FIELD_MASK_PTR:
-                    Allocator::gcDecrement(*cslot++);
+                    Allocator::gcDecrement(*cslot);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::gcDecrementString(*cslot++);
+                    Allocator::gcDecrementString(*cslot);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcDecrementBigNum(*cslot++);
+                    Allocator::gcDecrementBigNum(*cslot);
                     break;
                 default:
-                    cslot = Allocator::gcDecrementSlotsWithUnion(cslot);
+                    Allocator::gcDecrementSlotsWithUnion(cslot);
                     break;
             }
+            cslot++;
         }
-
-        return cslot;
     }
 
     ////////
@@ -616,13 +601,13 @@ public:
         }
     }
 
-    inline static void** gcClearMarkSlotsWithUnion(void** slots)
+    inline static void gcClearMarkSlotsWithUnion(void** slots)
     {
-        const BSQType *umeta = ((const BSQType*)(*slots));
+        const BSQType* umeta = ((const BSQType*)(*slots));
         return umeta->gcops.fpClearObj(umeta, slots + 1);
     }
 
-    inline static void** gcClearMarkSlotsWithMask(void** slots, RefMask mask)
+    inline static void gcClearMarkSlotsWithMask(void** slots, RefMask mask)
     {
         void** cslot = slots;
 
@@ -632,25 +617,87 @@ public:
             char op = *cmaskop++;
             switch(op)
             {
-                case PTR_FIELD_MASK_SCALAR:
-                    cslot++;
+                case PTR_FIELD_MASK_NOP:
                     break;
                 case PTR_FIELD_MASK_PTR:
-                    Allocator::gcClearMark(*cslot++);
+                    Allocator::gcClearMark(*cslot);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::gcClearMarkString(*cslot++);
+                    Allocator::gcClearMarkString(*cslot);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcClearMarkBigNum(*cslot++);
+                    Allocator::gcClearMarkBigNum(*cslot);
                     break;
                 default:
-                    cslot = Allocator::gcClearMarkSlotsWithUnion(cslot);
+                    Allocator::gcClearMarkSlotsWithUnion(cslot);
                     break;
             }
+            cslot++;
         }
+    }
 
-        return cslot;
+    ////////
+    //Operations Make Immortal
+    inline static void gcMakeImmortal(void* v)
+    {
+        if (v != nullptr)
+        {
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
+            GC_META_DATA_WORD waddr = GC_LOAD_META_DATA_WORD(addr);
+
+            GC_SET_META_DATA_WORD(addr, GC_INC_RC(waddr));
+        }
+    }
+
+    inline static void gcMakeImmortalString(void* v)
+    {
+        if (!IS_INLINE_STRING(v))
+        {
+            Allocator::gcMakeImmortal(v);
+        }
+    }
+
+    inline static void gcMakeImmortalBigNum(void* v)
+    {
+        if (!IS_INLINE_BIGNUM(v))
+        {
+            Allocator::gcMakeImmortal(v);
+        }
+    }
+
+    inline static void gcMakeImmortalSlotsWithUnion(void** slots)
+    {
+        const BSQType* umeta = ((const BSQType*)(*slots));
+        return umeta->gcops.fpMakeImmortal(umeta, slots + 1);
+    }
+
+    inline static void gcMakeImmortalSlotsWithMask(void** slots, RefMask mask)
+    {
+        void** cslot = slots;
+
+        RefMask cmaskop = mask;
+        while (*cmaskop)
+        {
+            char op = *cmaskop++;
+            switch(op)
+            {
+                case PTR_FIELD_MASK_NOP:
+                    break;
+                case PTR_FIELD_MASK_PTR:
+                    Allocator::gcMakeImmortal(*cslot);
+                    break;
+                case PTR_FIELD_MASK_STRING:
+                    Allocator::gcMakeImmortalString(*cslot);
+                    break;
+                case PTR_FIELD_MASK_BIGNUM:
+                    Allocator::gcMakeImmortalBigNum(*cslot);
+                    break;
+                default:
+                    Allocator::gcMakeImmortalSlotsWithUnion(cslot);
+                    break;
+            }
+            cslot++;
+        }
     }
 
 private:
@@ -661,13 +708,6 @@ private:
         for(size_t i = 0; i < GCStack::stackp; ++i)
         {
             Allocator::gcProcessSlotsWithMask<true>(GCStack::frames[i].framep, GCStack::frames[i].mask);
-        }
-
-        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_SMALL> iter;
-        Allocator::GlobalAllocator.tempRoots.iterBegin(iter);
-        while(Allocator::GlobalAllocator.tempRoots.iterHasMore(iter))
-        {
-            Allocator::gcProcessSlot<true>((void**)iter.get());
         }
 
         if(Allocator::GlobalAllocator.globals_mem != nullptr)
@@ -691,7 +731,7 @@ private:
 
     void checkMaybeZeroCountList()
     {
-        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_DEFAULT> iter;
+        GCRefListIterator iter;
         this->maybeZeroCounts.iterBegin(iter);
         while(this->maybeZeroCounts.iterHasMore(iter))
         {
@@ -717,14 +757,12 @@ private:
 
     void processRelease()
     {
-        size_t freelimit = (3 * (this->nsalloc.currentAllocatedSlabBytes() + this->nsalloc.currentAllocatedBigBytes()) / 2);
-        size_t biglimit = (3 * this->nsalloc.currentBigAllocCount()) / 2;
-
+        size_t freelimit = (3 * (this->bumpalloc.currentAllocatedSlabBytes() + rcalloc)) / 2;
         size_t freecount = 0;
-        size_t bigcount = 0;
+
         while (!this->releaselist.empty())
         {
-            if((freelimit <= freecount) | (biglimit <= bigcount))
+            if(freelimit <= freecount) [[unlikely]]
             {
                 break;
             } 
@@ -738,14 +776,7 @@ private:
             }
 
             size_t asize = umeta->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-            if(asize <= BSQ_ALLOC_MAX_BLOCK_SIZE)
-            {
-                freecount += asize;
-            }
-            else
-            {
-                bigcount++;
-            }
+            freecount += asize;
 
             this->liveoldspace -= asize;
             BSQ_FREE_LIST_RELEASE(asize, GC_GET_META_DATA_ADDR(obj));
@@ -759,13 +790,6 @@ private:
             Allocator::gcClearMarkSlotsWithMask(GCStack::frames[i].framep, GCStack::frames[i].mask);
         }
 
-        GCRefListIterator<GC_REF_LIST_BLOCK_SIZE_SMALL> iter;
-        Allocator::GlobalAllocator.tempRoots.iterBegin(iter);
-        while(Allocator::GlobalAllocator.tempRoots.iterHasMore(iter))
-        {
-            Allocator::gcClearMark(*((void**)iter.get()));
-        }
-
         if(Allocator::GlobalAllocator.globals_mem != nullptr)
         {
             Allocator::gcClearMarkSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
@@ -773,7 +797,7 @@ private:
     }
 
 public:
-    Allocator() : nsalloc(), heapallocs(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
+    Allocator() : bumpalloc(), rcalloc(0), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->promotedbytes = 0);
@@ -788,69 +812,72 @@ public:
     inline uint8_t* allocateDynamic(const BSQType* mdata)
     {
         size_t asize = mdata->allocinfo.heapsize;
-        uint8_t* alloc = this->nsalloc.allocateDynamicSize(asize);
+        uint8_t* alloc = this->bumpalloc.allocateDynamicSize(asize);
 
-        GC_INIT_YOUNG(alloc, mdata->tid);
-        uint8_t* res = (alloc + sizeof(GC_META_DATA_WORD));
-
-        return res;
+        GC_INIT_BUMP_SPACE_ALLOC(alloc, mdata->tid);
+        return (alloc + sizeof(GC_META_DATA_WORD));
     }
 
     inline void ensureSpace(size_t required)
     {
-        this->nsalloc.ensureSpace(required);
+        this->bumpalloc.ensureSpace(required);
     }
 
     inline void ensureSpace(const BSQType* mdata)
     {
-        this->nsalloc.ensureSpace(mdata->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
+        this->bumpalloc.ensureSpace(mdata->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
     }
 
     inline uint8_t* allocateSafe(const BSQType* mdata)
     {
-        uint8_t* alloc = this->nsalloc.allocateSafe(mdata->allocinfo.heapsize);
+        uint8_t* alloc = this->bumpalloc.allocateSafe(mdata->allocinfo.heapsize);
 
-        GC_INIT_YOUNG(alloc, mdata->tid);
-        uint8_t* res = (alloc + sizeof(GC_META_DATA_WORD));
-
-        return res;
+        GC_INIT_BUMP_SPACE_ALLOC(alloc, mdata->tid);
+        return (alloc + sizeof(GC_META_DATA_WORD));
     }
 
-    void makeEternal(void* v)
+    template <bool eager>
+    inline uint8_t* allocateDynamicRC(const BSQType* mdata)
+    {
+        size_t asize = mdata->allocinfo.heapsize;
+        uint8_t* alloc = mi_zalloc_small(asize);
+
+        if constexpr (eager)
+        {
+            GC_INIT_EAGER_RC(alloc, mdata->tid);
+        }
+        else
+        {
+            GC_INIT_RC(alloc, mdata->tid);
+        }
+        
+        return (alloc + sizeof(GC_META_DATA_WORD));
+    }
+
+    template <typename T>
+    inline T* eagerRCInc(T* v)
     {
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
-        GC_META_DATA_WORD w = GC_DEC_RC(GC_LOAD_META_DATA_WORD(addr));
+        GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
 
-        //this should only be called on objects after promotion
-        assert(!GC_TEST_IS_YOUNG(w));
-
-        GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
+        GC_SET_META_DATA_WORD(addr, GC_INIT_RC(w));
+        return v;
     }
 
-    template<typename T>
-    void pushRoot(T** mem)
+    template <typename T>
+    inline T* eagerRCRelax(T* v)
     {
-        this->tempRoots.enque((void**)((void*)mem));
-    }
+        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
+        GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
 
-    void popRoot()
-    {
-        this->tempRoots.deque();
-    }
-
-    template<size_t ct>
-    void popRoots()
-    {
-        for(size_t i = 0; i < ct; ++i)
-        {
-            this->tempRoots.deque();
-        }
+        GC_SET_META_DATA_WORD(addr, GC_CLEAR_EAGER_RC_BIT(w));
+        return v;
     }
 
     void collect()
     {
         MEM_STATS_OP(this->gccount++);
-        MEM_STATS_OP(this->maxheap = std::max(this->maxheap, this->nsalloc.currentAllocatedSlabBytes() + this->nsalloc.currentAllocatedBigBytes() + this->liveoldspace));
+        MEM_STATS_OP(this->maxheap = std::max(this->maxheap, this->bumpalloc.currentAllocatedSlabBytes() + this->rcalloc + this->liveoldspace));
 
         //mark and move all live objects out of new space
         this->processRoots();
@@ -866,14 +893,15 @@ public:
         this->clearAllMarkRoots();
 
         //Adjust the new space size if needed and reset/free the newspace allocators
-        this->nsalloc.postGCProcess(this->liveoldspace);
-        this->heapallocs.reset();
+        this->bumpalloc.postGCProcess(this->liveoldspace);
+        this->rcalloc = 0;
 
         if(this->globals_mem != nullptr)
         {
-            //
-            //TODO: as an optimization we should mark all these roots as immortal and detach this so we don't repeatedly do (unneeded) GC work on it
-            //
+            Allocator::gcMakeImmortalSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
+
+            mi_free(Allocator::GlobalAllocator.globals_mem);
+            Allocator::GlobalAllocator.globals_mem = nullptr;
         }
     }
 
