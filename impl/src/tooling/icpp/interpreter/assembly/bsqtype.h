@@ -78,7 +78,7 @@ struct BSQTypeSizeInfo
     const uint64_t assigndatasize; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
 
     const RefMask heapmask; //The mask to used to traverse this object during gc (if it is heap allocated) -- null if this is a leaf object -- partial if tailing scalars
-    const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object)
+    const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must cover full size of data
 };
 
 struct GCFunctorSet
@@ -90,22 +90,21 @@ struct GCFunctorSet
     GCProcessOperatorFP fpMakeImmortal;
 };
 
-constexpr GCFunctorSet REF_LEAF_GC_FUNCTOR_SET{ gcProcessRootOperator_refImpl, gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcClearOperator_refImpl, gcMakeImmortalOperator_refImpl };
+constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessRootOperator_refImpl, gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcClearOperator_refImpl, gcMakeImmortalOperator_refImpl };
 constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessRootOperator_nopImpl, gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcClearOperator_nopImpl, gcMakeImmortalOperator_nopImpl };
-constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcDecOperator_registerImpl, gcClearOperator_registerImpl, gcProcessRootOperator_registerImpl, gcProcessHeapOperator_registerImpl };
-constexpr GCFunctorSet MASK_GC_FUNCTOR_SET{ gcDecOperator_maskImpl, gcClearOperator_maskImpl, gcProcessRootOperator_maskImpl, gcProcessHeapOperator_maskImpl };
+constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessRootOperator_inlineImpl, gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcClearOperator_inlineImpl, gcMakeImmortalOperator_inlineImpl };
+constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessRootOperator_nopImpl, gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcClearOperator_nopImpl, gcMakeImmortalOperator_nopImpl };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
 constexpr KeyCmpFP EMPTY_KEY_CMP = nullptr;
 
 typedef bool (*JSONParseFP)(const BSQType* btype, json, StorageLocationPtr);
+constexpr JSONParseFP NOT_API_TYPE_JSON_PARSE = nullptr;
 
 struct ConsFunctorSet
 {
     JSONParseFP fpJSONParse;
 };
-
-constexpr JSONParseFP NOT_API_TYPE = nullptr;
 
 ////
 //BSQType abstract base class
@@ -114,10 +113,11 @@ class BSQType
 public:
     static const BSQType** g_typetable;
     static std::map<BSQRecordPropertyID, std::string> g_propertymap;
-    static std::map<BSQFieldID, std::string> g_fieldmap;
+    static std::map<BSQFieldID, std::string> g_fieldshortnamemap;
 
     //Well known types
     static const BSQType* g_typeNone;
+    static const BSQType* g_typeNothing;
     static const BSQType* g_typeBool;
     static const BSQType* g_typeNat;
     static const BSQType* g_typeInt;
@@ -132,15 +132,12 @@ public:
     static const BSQType* g_typeStringKRepr64;
     static const BSQType* g_typeStringKRepr96;
     static const BSQType* g_typeStringKRepr128;
-    static const BSQType* g_typeStringKRepr256;
-    static const std::pair<size_t, const BSQType*> g_typeStringKCons[6];
+    static const std::pair<size_t, const BSQType*> g_typeStringKCons[5];
 
-    static const BSQType* g_typeStringConcatRepr;
-    static const BSQType* g_typeStringSliceRepr;
+    static const BSQType* g_typeStringRopeRepr;
 
     static const BSQType* g_typeString;
 
-    static const BSQType* g_typeStringPos;
     static const BSQType* g_typeByteBuffer;
     static const BSQType* g_typeISOTime;
     static const BSQType* g_typeLogicalTime;
@@ -149,7 +146,7 @@ public:
     static const BSQType* g_typeRegex;
 
     const BSQTypeID tid;
-    const BSQTypeKind tkind;
+    const BSQTypeLayoutKind tkind;
     
     const BSQTypeSizeInfo allocinfo;
     const GCFunctorSet gcops;
@@ -163,7 +160,7 @@ public:
     const std::string name;
 
     //Constructor that everyone delegates to
-    BSQType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
+    BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
         tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), vtable(vtable), fpkeycmp(fpkeycmp), fpDisplay(fpDisplay), name(name), consops(consops)
     {;}
 
@@ -178,82 +175,8 @@ public:
     virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const = 0;
 
-    virtual void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
-    virtual void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
-};
-
-class BSQStructType : public BSQType
-{
-public:
-    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
-        BSQType(tid, BSQTypeKind::Struct, { datasize, datasize, datasize, nullptr, imask }, MASK_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops)
-    {;}
-
-    virtual ~BSQStructType() {;}
-
-    void clearValue(StorageLocationPtr trgt) const override final
-    {
-        BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
-    }
-
-    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
-    }
-
-    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final 
-    {
-        return SLPTR_INDEX_DATAPTR(src, offset);
-    }
-
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
-        BSQ_MEM_COPY(trgt, udata, this->allocinfo.assigndatasize);
-    }
-
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
-    }
-};
-
-class BSQRefType : public BSQType
-{
-public:
-    BSQRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops):  
-        BSQType(tid, BSQTypeKind::Ref, { heapsize, sizeof(void*), sizeof(void*), heapmask, "2" }, heapmask == nullptr ? LEAF_GC_FUNCTOR_SET : MASK_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops)
-    {;}
-
-    virtual ~BSQRefType() {;}
-
-    void clearValue(StorageLocationPtr trgt) const override final
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
-    }
-
-    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
-    }
-
-    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
-    {
-        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
-    }
-
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
-    }
-
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
-    }
+    virtual void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
+    virtual void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
 };
 
 template <typename T>
@@ -261,7 +184,7 @@ class BSQRegisterType : public BSQType
 {
 public:
     BSQRegisterType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
-        BSQType(tid, BSQTypeKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name, consops)
+        BSQType(tid, BSQTypeLayoutKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name, consops)
     {;}
 
     virtual ~BSQRegisterType() {;}
@@ -287,16 +210,105 @@ public:
         return nullptr;
     }
 
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         SLPTR_STORE_CONTENTS_AS(T, trgt, SLPTR_LOAD_CONTENTS_AS(T, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(T, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(T, src));
     }
+};
+
+
+class BSQRefType : public BSQType
+{
+public:
+    BSQRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops):  
+        BSQType(tid, BSQTypeLayoutKind::Ref, { heapsize, sizeof(void*), sizeof(void*), heapmask, "2" }, REF_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops)
+    {;}
+
+    virtual ~BSQRefType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
+};
+
+class BSQBoxedStructType : public BSQType
+{
+public:
+    BSQBoxedStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeLayoutKind::BoxedStruct, { datasize, sizeof(void*), sizeof(void*), imask, "2" }, REF_GC_FUNCTOR_SET, {}, nullptr, fpDisplay, name, {NOT_API_TYPE_JSON_PARSE})
+    {;}
+
+    virtual ~BSQBoxedStructType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final 
+    {
+        //YOU SHOULD ALWAYS EXTRACT BEFORE YOU INDEX ON A UNION
+        BSQ_INTERNAL_ASSERT(false);
+        return nullptr;
+    }
+
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
+};
+
+class BSQStructType : public BSQType
+{
+public:
+    const BSQBoxedStructType* boxtype;
+
+    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops, bool norefs, const BSQBoxedStructType* boxtype): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops), boxtype(boxtype)
+    {;}
+
+    virtual ~BSQStructType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final 
+    {
+        return SLPTR_INDEX_DATAPTR(src, offset);
+    }
+
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
 };
 
 template <typename T>
@@ -326,7 +338,7 @@ public:
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
     {
-        assert(false);
+        BSQ_INTERNAL_ASSERT(false);
         return nullptr;
     }
 
@@ -348,7 +360,7 @@ public:
 template <bool isRoot>
 GCProcessOperatorFP getProcessFP(const BSQType* tt)
 {
-    assert(false);
+    BSQ_INTERNAL_ASSERT(false);
     return nullptr;
 }
 
@@ -368,9 +380,6 @@ inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
 //Concrete types
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-int tupleStructKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
-int tupleRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
-
 bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQTupleInfo
@@ -391,7 +400,7 @@ class BSQTupleRefType : public BSQRefType, public BSQTupleInfo
 {
 public:
     BSQTupleRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, tupleRefKeyCmp_impl, tupleDisplay_impl, name, {tupleJSONParse_impl}),
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, {tupleJSONParse_impl}),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -401,8 +410,8 @@ public:
 class BSQTupleStructType : public BSQStructType, public BSQTupleInfo
 {
 public:
-    BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
-        BSQStructType(tid, datasize, imask, vtable, tupleStructKeyCmp_impl, tupleDisplay_impl, name, {tupleJSONParse_impl}),
+    BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets, bool norefs, const BSQBoxedStructType* boxtype):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, {tupleJSONParse_impl}, norefs, boxtype),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -410,9 +419,6 @@ public:
 };
 
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-int recordStructKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
-int recordRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
-
 bool recordJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQRecordInfo
@@ -433,7 +439,7 @@ class BSQRecordRefType : public BSQRefType, public BSQRecordInfo
 {
 public:
     BSQRecordRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, recordRefKeyCmp_impl, recordDisplay_impl, name, {recordJSONParse_impl}),
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, {recordJSONParse_impl}),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
@@ -443,8 +449,8 @@ public:
 class BSQRecordStructType : public BSQStructType, public BSQRecordInfo
 {
 public:
-    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
-        BSQStructType(tid, datasize, imask, vtable, recordRefKeyCmp_impl, recordDisplay_impl, name, {recordJSONParse_impl}),
+    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets, bool norefs, const BSQBoxedStructType* boxtype):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, {recordJSONParse_impl}, norefs, boxtype),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 

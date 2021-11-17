@@ -163,11 +163,12 @@ typedef void* StorageLocationPtr;
 
 class BSQType;
 
-enum class BSQTypeKind : uint32_t
+enum class BSQTypeLayoutKind : uint32_t
 {
     Invalid = 0x0,
     Register,
     Struct,
+    BoxedStruct,
     String,
     BigNum,
     Ref,

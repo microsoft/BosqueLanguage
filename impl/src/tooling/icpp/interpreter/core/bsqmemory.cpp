@@ -8,7 +8,7 @@
 GCStackEntry GCStack::frames[BSQ_MAX_STACK];
 uint32_t GCStack::stackp = 0;
 
-void NewSpaceAllocator::ensureSpace_slow()
+void BumpSpaceAllocator::ensureSpace_slow()
 {
     Allocator::GlobalAllocator.collect();
 }

@@ -470,8 +470,11 @@ public:
     template <bool isRoot>
     inline static void gcProcessSlotsWithUnion(void** slots)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots));
-        return (getProcessFP<isRoot>(umeta))(umeta, slots + 1);
+        if(*slots != nullptr)
+        {
+            const BSQType* umeta = ((const BSQType*)(*slots));
+            return (getProcessFP<isRoot>(umeta))(umeta, slots + 1);
+        }
     }
 
     template <bool isRoot>
@@ -540,8 +543,11 @@ public:
 
     inline static void gcDecrementSlotsWithUnion(void** slots)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots));
-        return umeta->gcops.fpDecObj(umeta, slots + 1);
+        if(*slots != nullptr)
+        {
+            const BSQType* umeta = ((const BSQType*)(*slots));
+            return umeta->gcops.fpDecObj(umeta, slots + 1);
+        }
     }
 
     inline static void gcDecSlotsWithMask(void** slots, RefMask mask)
@@ -603,8 +609,11 @@ public:
 
     inline static void gcClearMarkSlotsWithUnion(void** slots)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots));
-        return umeta->gcops.fpClearObj(umeta, slots + 1);
+        if(*slots != nullptr)
+        {
+            const BSQType* umeta = ((const BSQType*)(*slots));
+            return umeta->gcops.fpClearObj(umeta, slots + 1);
+        }
     }
 
     inline static void gcClearMarkSlotsWithMask(void** slots, RefMask mask)
@@ -667,8 +676,11 @@ public:
 
     inline static void gcMakeImmortalSlotsWithUnion(void** slots)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots));
-        return umeta->gcops.fpMakeImmortal(umeta, slots + 1);
+        if(*slots != nullptr)
+        {
+            const BSQType* umeta = ((const BSQType*)(*slots));
+            return umeta->gcops.fpMakeImmortal(umeta, slots + 1);
+        }
     }
 
     inline static void gcMakeImmortalSlotsWithMask(void** slots, RefMask mask)
@@ -849,6 +861,7 @@ public:
         else
         {
             GC_INIT_RC(alloc, mdata->tid);
+            this->maybeZeroCounts.enque(alloc);
         }
         
         return (alloc + sizeof(GC_META_DATA_WORD));
@@ -871,6 +884,8 @@ public:
         GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
 
         GC_SET_META_DATA_WORD(addr, GC_CLEAR_EAGER_RC_BIT(w));
+        this->maybeZeroCounts.enque(v);
+
         return v;
     }
 
