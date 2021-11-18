@@ -8,8 +8,8 @@
 #include "../runtime/environment.h"
 
 const BSQType** BSQType::g_typetable = nullptr;
-std::map<BSQRecordPropertyID, std::string> BSQType::g_propertymap;
-std::map<BSQFieldID, std::string> BSQType::g_fieldmap;
+std::map<BSQRecordPropertyID, std::string> BSQType::g_propertynamemap;
+std::map<BSQFieldID, std::string> BSQType::g_fieldshortnamemap;
 
 void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data)
 {
@@ -148,18 +148,6 @@ void BSQRefType::injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationP
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
 }
 
-void BSQBoxedStructType::extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-{
-    auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
-    BSQ_MEM_COPY(trgt, udata, this->allocinfo.assigndatasize);
-}
-
-void BSQBoxedStructType::injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-{
-    //YOU SHOULD NOT BE DUPLICATE INJECTING -- e.g. this should always be stored in a union
-    BSQ_INTERNAL_ASSERT(false);
-}
-
 void BSQStructType::extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
 {
     auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
@@ -168,19 +156,8 @@ void BSQStructType::extractFromInlineUnion(StorageLocationPtr trgt, StorageLocat
 
 void BSQStructType::injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
 {
-    if(this->allocinfo.assigndatasize <= MAX_STRUCT_INLINE_SIZE)
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
-    }
-    else
-    {
-        void* boxobj = Allocator::GlobalAllocator.allocateDynamicRC<false>(this->boxtype);
-        GC_MEM_COPY(boxobj, src, this->allocinfo.assigndatasize);
-
-        SLPTR_STORE_UNION_INLINE_TYPE(this->boxtype, trgt);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, boxobj);
-    }
+    SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+    BSQ_MEM_COPY(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src, this->allocinfo.assigndatasize);
 }
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -227,20 +204,26 @@ bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
     }
     else
     {
+        auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.assigndatasize);
+        GCStack::pushFrame(&vbuff, btype->allocinfo.heapmask);
+
         for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
         {
             assert(i < j.size());
 
             auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            bool ok = etype->consops.fpJSONParse(etype, j[i], SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), tupinfo->idxoffsets[i]));
+            bool ok = etype->consops.fpJSONParse(etype, j[i], SLPTR_INDEX_DATAPTR(vbuff, tupinfo->idxoffsets[i]));
             if(!ok)
             {
                 return false;
             }
         }
 
-        auto tt = Allocator::GlobalAllocator.allocateDynamicRC<false>(btype);
+        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
+        GC_MEM_COPY(tt, vbuff, btype->allocinfo.assigndatasize);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
+
+        GCStack::popFrame();
     }
 
     return true;
@@ -257,7 +240,7 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQType::g_propertymap[ttype->properties[i]] + ":";
+        res += BSQType::g_propertynamemap[ttype->properties[i]] + ":";
 
         auto itype = BSQType::g_typetable[ttype->rtypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
@@ -271,58 +254,55 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 bool recordJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {
     auto recinfo = dynamic_cast<const BSQRecordInfo*>(btype);
-    auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-
     if(!j.is_object() || recinfo->rtypes.size() != j.size())
     {
         return false;
     }
 
     auto allprops = std::all_of(recinfo->properties.cbegin(), recinfo->properties.cend(), [&j](const BSQRecordPropertyID prop){
-                return j.contains(BSQType::g_propertymap[prop]);
+                return j.contains(BSQType::g_propertynamemap[prop]);
             });
     if(!allprops)
     {
         return false;
     }
 
-    if(btype->tkind == BSQTypeKind::Struct)
+    if(btype->tkind == BSQTypeLayoutKind::Struct)
     {
         for(size_t i = 0; i < recinfo->properties.size(); ++i)
         {
             auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertymap[recinfo->properties[i]];
+            auto pname = BSQType::g_propertynamemap[recinfo->properties[i]];
 
-            bool ok = etype->consops.fpJSONParse(etype, j[pname], &vbuff);
+            bool ok = etype->consops.fpJSONParse(etype, j[pname], SLPTR_INDEX_DATAPTR(sl, recinfo->propertyoffsets[i]));
             if(!ok)
             {
                 return false;
             }
-
-            etype->storeValue(SLPTR_INDEX_DATAPTR(sl, recinfo->propertyoffsets[i]), &vbuff);
         }
     }
     else
     {
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
-        Allocator::GlobalAllocator.pushRoot(&tt);
+        auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
+        GCStack::pushFrame(&vbuff, btype->allocinfo.heapmask);
 
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
         for(size_t i = 0; i < recinfo->properties.size(); ++i)
         {
             auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertymap[recinfo->properties[i]];
+            auto pname = BSQType::g_propertynamemap[recinfo->properties[i]];
 
-            bool ok = etype->consops.fpJSONParse(etype, j[pname], &vbuff);
+            bool ok = etype->consops.fpJSONParse(etype, j[pname], SLPTR_INDEX_DATAPTR(vbuff, recinfo->propertyoffsets[i]));
             if(!ok)
             {
                 return false;
             }
-
-            etype->storeValue(SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(&tt), recinfo->propertyoffsets[i]), &vbuff);
         }
 
-        Allocator::GlobalAllocator.popRoot();
+        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
+        GC_MEM_COPY(tt, vbuff, btype->allocinfo.assigndatasize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
+
+        GCStack::popFrame();
     }
 
     return true;
@@ -331,8 +311,7 @@ bool recordJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     const BSQEntityInfo* ttype = dynamic_cast<const BSQEntityInfo*>(btype);
-    bool isstruct = btype->tkind == BSQTypeKind::Struct;
-    std::string res = btype->name + (isstruct ? "#{" : "@{");
+    std::string res = btype->name + "@{";
     for(size_t i = 0; i < ttype->fields.size(); ++i)
     {
         if(i != 0)
@@ -340,7 +319,7 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQType::g_fieldmap[ttype->fields[i]] + ":";
+        res += BSQType::g_fieldshortnamemap[ttype->fields[i]] + ":";
 
         auto itype = BSQType::g_typetable[ttype->ftypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);

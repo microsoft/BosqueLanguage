@@ -217,7 +217,6 @@ private:
 
 #ifdef ENABLE_MEM_STATS
     size_t totalbumpalloc;
-    size_t totalbigalloc;
 #endif
 
     void setAllocBlock(size_t asize)
@@ -324,7 +323,6 @@ public:
 
 private:
     BumpSpaceAllocator bumpalloc;
-    size_t rcalloc;
 
     GCRefList maybeZeroCounts;
     GCRefList newMaybeZeroCounts;
@@ -344,7 +342,7 @@ private:
 #endif
 
     template <bool isRoot>
-    void* moveYoungBumpObjectToOldRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
+    void* moveBumpObjectToOldRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
     {
         void* nobj = BSQ_FREE_LIST_ALLOC_SMALL(osize);
 
@@ -375,33 +373,6 @@ private:
         return robj;
     }
 
-    template <bool isRoot>
-    void moveYoungRCAllocObjectToOldRCSpace(void* obj, GC_META_DATA_WORD* addr, GC_META_DATA_WORD w, const BSQType* ometa, size_t osize)
-    {
-        this->liveoldspace += osize;
-
-        if (!ometa->isLeaf())
-        {
-            this->worklist.enque(obj);
-        }
-
-        if(GC_TEST_IS_EAGER_RC(w))
-        {
-            GC_UPDATE_OLD_RC_EAGER(obj, w);
-        }
-        else
-        {
-            if constexpr (isRoot)
-            {
-                GC_UPDATE_OLD_RC_ROOT_REF(obj, w);
-            }
-            else
-            {
-                GC_UPDATE_OLD_RC_HEAP_REF(obj, w);
-            }
-        }
-    }
-
 public:
     template <bool isRoot>
     inline static void gcProcessSlot(void** slot)
@@ -416,11 +387,11 @@ public:
                 const BSQType* ometa = GET_TYPE_META_DATA_FROM_WORD(w);
                 size_t osize = ometa->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
 
-                if(GC_TEST_IS_BUMP_SPACE(w))
+                if(GC_TEST_IS_BUMP_SPACE(w)) [[likely]]
                 {
                     *slot = Allocator::GlobalAllocator.moveYoungBumpObjectToOldRCSpace<isRoot>(v, addr, w, ometa, osize);
                 }
-                else
+                else [[unlikely]]
                 {
                     Allocator::GlobalAllocator.moveYoungRCAllocObjectToOldRCSpace<isRoot>(v, addr, w, ometa, osize);
                 }
@@ -440,10 +411,7 @@ public:
                 }
                 else
                 {
-                    if(!GC_TEST_IS_STRICT(w))
-                    { 
-                        GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
-                    }
+                    GC_SET_META_DATA_WORD(addr, GC_INC_RC(w));
                 }
             }
         }
@@ -769,7 +737,7 @@ private:
 
     void processRelease()
     {
-        size_t freelimit = (3 * (this->bumpalloc.currentAllocatedSlabBytes() + rcalloc)) / 2;
+        size_t freelimit = (3 * this->bumpalloc.currentAllocatedSlabBytes()) / 2;
         size_t freecount = 0;
 
         while (!this->releaselist.empty())
@@ -809,7 +777,7 @@ private:
     }
 
 public:
-    Allocator() : bumpalloc(), rcalloc(0), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
+    Allocator() : bumpalloc(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->promotedbytes = 0);
@@ -848,47 +816,6 @@ public:
         return (alloc + sizeof(GC_META_DATA_WORD));
     }
 
-    template <bool eager>
-    inline uint8_t* allocateDynamicRC(const BSQType* mdata)
-    {
-        size_t asize = mdata->allocinfo.heapsize;
-        uint8_t* alloc = mi_zalloc_small(asize);
-
-        if constexpr (eager)
-        {
-            GC_INIT_EAGER_RC(alloc, mdata->tid);
-        }
-        else
-        {
-            GC_INIT_RC(alloc, mdata->tid);
-            this->maybeZeroCounts.enque(alloc);
-        }
-        
-        return (alloc + sizeof(GC_META_DATA_WORD));
-    }
-
-    template <typename T>
-    inline T* eagerRCInc(T* v)
-    {
-        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
-        GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
-
-        GC_SET_META_DATA_WORD(addr, GC_INIT_RC(w));
-        return v;
-    }
-
-    template <typename T>
-    inline T* eagerRCRelax(T* v)
-    {
-        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
-        GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
-
-        GC_SET_META_DATA_WORD(addr, GC_CLEAR_EAGER_RC_BIT(w));
-        this->maybeZeroCounts.enque(v);
-
-        return v;
-    }
-
     void collect()
     {
         MEM_STATS_OP(this->gccount++);
@@ -901,7 +828,7 @@ public:
         //Sweep young roots and look possible unreachable old roots in the old with collect them as needed -- new zero counts are rotated in
         this->checkMaybeZeroCountList();
 
-        //Process release recursively
+        //Process release of RC space objects as needed
         this->processRelease();
 
         //Clear any marks
@@ -909,7 +836,6 @@ public:
 
         //Adjust the new space size if needed and reset/free the newspace allocators
         this->bumpalloc.postGCProcess(this->liveoldspace);
-        this->rcalloc = 0;
 
         if(this->globals_mem != nullptr)
         {

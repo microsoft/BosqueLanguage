@@ -112,7 +112,7 @@ class BSQType
 {
 public:
     static const BSQType** g_typetable;
-    static std::map<BSQRecordPropertyID, std::string> g_propertymap;
+    static std::map<BSQRecordPropertyID, std::string> g_propertynamemap;
     static std::map<BSQFieldID, std::string> g_fieldshortnamemap;
 
     //Well known types
@@ -251,43 +251,11 @@ public:
     void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
 };
 
-class BSQBoxedStructType : public BSQType
-{
-public:
-    BSQBoxedStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, DisplayFP fpDisplay, std::string name): 
-        BSQType(tid, BSQTypeLayoutKind::BoxedStruct, { datasize, sizeof(void*), sizeof(void*), imask, "2" }, REF_GC_FUNCTOR_SET, {}, nullptr, fpDisplay, name, {NOT_API_TYPE_JSON_PARSE})
-    {;}
-
-    virtual ~BSQBoxedStructType() {;}
-
-    void clearValue(StorageLocationPtr trgt) const override final
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
-    }
-
-    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
-    }
-
-    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final 
-    {
-        //YOU SHOULD ALWAYS EXTRACT BEFORE YOU INDEX ON A UNION
-        BSQ_INTERNAL_ASSERT(false);
-        return nullptr;
-    }
-
-    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
-    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final;
-};
-
 class BSQStructType : public BSQType
 {
 public:
-    const BSQBoxedStructType* boxtype;
-
-    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops, bool norefs, const BSQBoxedStructType* boxtype): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops), boxtype(boxtype)
+    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops, bool norefs): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops)
     {;}
 
     virtual ~BSQStructType() {;}
@@ -410,8 +378,8 @@ public:
 class BSQTupleStructType : public BSQStructType, public BSQTupleInfo
 {
 public:
-    BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets, bool norefs, const BSQBoxedStructType* boxtype):
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, {tupleJSONParse_impl}, norefs, boxtype),
+    BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets, bool norefs):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, {tupleJSONParse_impl}, norefs),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -449,8 +417,8 @@ public:
 class BSQRecordStructType : public BSQStructType, public BSQRecordInfo
 {
 public:
-    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets, bool norefs, const BSQBoxedStructType* boxtype):
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, {recordJSONParse_impl}, norefs, boxtype),
+    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets, bool norefs):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, {recordJSONParse_impl}, norefs),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
@@ -558,7 +526,7 @@ public:
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
     {
-       return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
+       return (SLPTR_LOAD_UNION_INLINE_TYPE(src))->indexStorageLocationOffset(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
     }
 
     void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
