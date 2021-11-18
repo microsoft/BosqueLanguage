@@ -98,12 +98,19 @@ constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessRootOperator_nopImpl, g
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
 constexpr KeyCmpFP EMPTY_KEY_CMP = nullptr;
 
-typedef bool (*JSONParseFP)(const BSQType* btype, json, StorageLocationPtr);
-constexpr JSONParseFP NOT_API_TYPE_JSON_PARSE = nullptr;
-
-struct ConsFunctorSet
+class BSQField
 {
-    JSONParseFP fpJSONParse;
+public:
+    static const BSQField** g_fieldtable;
+
+    const BSQFieldID fkey;
+    const std::string fname;
+
+    const BSQTypeID declaredType;
+
+    BSQField(BSQFieldID fkey, std::string fname, BSQTypeID declaredType): 
+        fkey(fkey), fname(fname), declaredType(declaredType)
+    {;}
 };
 
 ////
@@ -113,7 +120,6 @@ class BSQType
 public:
     static const BSQType** g_typetable;
     static std::map<BSQRecordPropertyID, std::string> g_propertynamemap;
-    static std::map<BSQFieldID, std::string> g_fieldshortnamemap;
 
     //Well known types
     static const BSQType* g_typeNone;
@@ -153,8 +159,6 @@ public:
 
     KeyCmpFP fpkeycmp;
     const std::map<BSQVirtualInvokeID, BSQInvokeID> vtable; //TODO: This is slow indirection but nice and simple
-
-    ConsFunctorSet consops;
 
     DisplayFP fpDisplay;
     const std::string name;
@@ -221,7 +225,6 @@ public:
         SLPTR_STORE_CONTENTS_AS(T, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(T, src));
     }
 };
-
 
 class BSQRefType : public BSQType
 {
@@ -425,9 +428,36 @@ public:
     virtual ~BSQRecordStructType() {;}
 };
 
+
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQEntityInfo
+{
+public:
+    const std::vector<BSQFieldID> fields;
+    const std::vector<size_t> fieldoffsets;
+
+    BSQEntityInfo(std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfuncfields, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
+        consfunc(consfunc), consfuncfields(consfuncfields), fields(fields), fieldoffsets(fieldoffsets)
+    {;}
+
+    virtual ~BSQEntityInfo() {;}
+};
+
+
+
+
+
+
+
+
+
+
+std::string entityStdDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+bool entityStdJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
+
+class BSQEntityStdInfo
 {
 public:
     const std::vector<BSQFieldID> fields;
@@ -440,7 +470,6 @@ public:
 
     virtual ~BSQEntityInfo() {;}
 };
-
 
 class BSQEntityRefType : public BSQRefType, public BSQEntityInfo
 {

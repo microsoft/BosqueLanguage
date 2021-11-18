@@ -815,10 +815,10 @@ class SMTTypeEmitter {
             }
         }
         else if(entity instanceof MIRConstructableEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.PrimitiveOfTag, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons || "[NO CONSTRUCTOR]"};
+            return {tag: APIEmitTypeTag.PrimitiveOfTag, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons || null};
         }
         else if(entity instanceof MIREnumEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, usinginv: entity.usingcons, enums: entity.enums};
+            return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, enums: entity.enums};
         }
         else {
             const oentity = entity as MIRObjectEntityTypeDecl;

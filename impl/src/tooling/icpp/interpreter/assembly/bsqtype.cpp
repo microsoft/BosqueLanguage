@@ -8,8 +8,9 @@
 #include "../runtime/environment.h"
 
 const BSQType** BSQType::g_typetable = nullptr;
+const BSQField** BSQField::g_fieldtable = nullptr;
+
 std::map<BSQRecordPropertyID, std::string> BSQType::g_propertynamemap;
-std::map<BSQFieldID, std::string> BSQType::g_fieldshortnamemap;
 
 void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data)
 {
