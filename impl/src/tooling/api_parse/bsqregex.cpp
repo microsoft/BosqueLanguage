@@ -1,5 +1,9 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
 
-
+#include "bsqregex.h"
 
 BSQRegexOpt* BSQRegexOpt::parse(json j)
 {
@@ -8,9 +12,9 @@ BSQRegexOpt* BSQRegexOpt::parse(json j)
     {
         return BSQLiteralRe::parse(j);
     }
-    else if(tag == "CharClass")
+    else if(tag == "CharClassDot")
     {
-        return BSQCharClassRe::parse(j);
+        return BSQCharClassDotRe::parse(j);
     }
     else if(tag == "CharRange")
     {
@@ -42,194 +46,58 @@ BSQRegexOpt* BSQRegexOpt::parse(json j)
     }
 }
 
-bool BSQLiteralRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if(!iteratorIsValid(&iter))
-    {
-        return false;
-    }
-
-
-    auto curr = this->litstr.cbegin();
-    while(iteratorIsValid(&iter) && curr != this->litstr.cend())
-    {
-        if(iteratorGetUTF8Byte(&iter) != *curr)
-        {
-            return false;
-        }
-
-        incrementStringIterator_utf8byte(&iter);
-        curr++;
-    }
-
-    if(curr != this->litstr.cend())
-    {
-        return false;
-    }
-    else
-    {
-        if(continuation.empty())
-        {
-            return !iteratorIsValid(&iter);
-        }
-        else 
-        {
-            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-            return continuation[0]->match(iter, ncontinue);
-        }
-    }
-}
-
-size_t BSQLiteralRe::mconsume() const
-{
-    return this->litstr.size();
-}
-
 BSQLiteralRe* BSQLiteralRe::parse(json j)
 {
     auto litstr = j["litstr"].get<std::string>();
     std::vector<uint8_t> utf8;
     std::transform(litstr.cbegin(), litstr.cend(), std::back_inserter(utf8), [](const char cc) {
+        //TODO: this is ascii only
         return (uint8_t)cc;
     });
 
-    return new BSQLiteralRe(j["restr"].get<std::string>(), j["escstr"].get<std::string>(), utf8);
+    return new BSQLiteralRe(litstr, utf8);
 }
 
-bool BSQCharRangeRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
+StateID BSQLiteralRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    if(!iteratorIsValid(&iter))
+    for(int64_t i = this->utf8codes.size() - 1; i >= 0; --i)
     {
-        return false;
-    }
-    
-    auto cp = iteratorGetCodePoint(&iter);
-    incrementStringIterator_codePoint(&iter);
-    if(this->low <= (uint32_t)cp && (uint32_t)cp <= this->high)
-    {
-        if(continuation.empty())
-        {
-            return !iteratorIsValid(&iter);
-        }
-        else
-        {
-            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-            return continuation[0]->match(iter, ncontinue);
-        }
-    }
-    else
-    {
-        return false;
-    }
-}
+        auto thisstate = (StateID)states.size();
+        states.push_back(new NFAOptCharCode(thisstate, this->utf8codes[i], follows));
 
-size_t BSQCharRangeRe::mconsume() const
-{
-    return 1;
+        follows = thisstate;
+    }
+
+    return follows;
 }
 
 BSQCharRangeRe* BSQCharRangeRe::parse(json j)
 {
-    auto lb = j["lb"].get<uint64_t>();
-    auto ub = j["ub"].get<uint64_t>();
+    auto lb = j["lb"].get<CharCode>();
+    auto ub = j["ub"].get<CharCode>();
 
     return new BSQCharRangeRe(lb, ub);
 }
 
-bool BSQCharClassRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
+StateID BSQCharRangeRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    if(!iteratorIsValid(&iter))
-    {
-        return false;
-    }
+    auto thisstate = (StateID)states.size();
+    states.push_back(new NFAOptRange(thisstate, this->low, this->high, follows));
 
-    auto cp = iteratorGetCodePoint(&iter);
-    incrementStringIterator_codePoint(&iter);
-
-    if(this->kind == SpecialCharKind::Wildcard)
-    {
-        if(continuation.empty())
-        {
-            return !iteratorIsValid(&iter);
-        }
-        else
-        {
-            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-            return continuation[0]->match(iter, ncontinue);
-        }
-    }
-    else
-    {
-        char ws_char[] = {' ', '\n', '\r', '\t' };
-        if((cp == ' ') | (cp == '\n') | (cp == '\r') | (cp == '\t'))
-        {
-            if(continuation.empty())
-            {
-                return !iteratorIsValid(&iter);
-            }
-            else
-            {
-                std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-                return continuation[0]->match(iter, ncontinue);
-            }
-        }
-        else
-        {
-            return false;
-        }
-    }
+    return thisstate;
 }
 
-size_t BSQCharClassRe::mconsume() const
+BSQCharClassDotRe* BSQCharClassDotRe::parse(json j)
 {
-    return 1;
+    return new BSQCharClassDotRe();
 }
 
-BSQCharClassRe* BSQCharClassRe::parse(json j)
+StateID BSQCharRangeRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    auto kind = j["kind"].get<SpecialCharKind>();
+    auto thisstate = (StateID)states.size();
+    states.push_back(new NFAOptDot(thisstate, follows));
 
-    return new BSQCharClassRe(kind);
-}
-
-bool BSQStarRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if(continuation.empty())
-    {
-        if(!iteratorIsValid(&iter))
-        {
-            return true; //empty match at end 
-        }
-    }
-    else
-    {
-        std::vector<const BSQRegexOpt*> nextcontinue(continuation.cbegin() + 1, continuation.cend());
-        if(continuation[0]->match(iter, nextcontinue))
-        {
-            return true;
-        }
-    }
-
-    auto mxiter = (BSQStringType::utf8ByteCount(iter.str) - iter.strpos) / std::max((size_t)1, this->mconsume());
-    std::vector<const BSQRegexOpt*> matchcontinue;
-    for(size_t i = 1; i < mxiter; ++i)
-    {
-        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
-        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
-
-        if(this->opt->match(iter, rcontinue))
-        {
-            return true;
-        }
-        matchcontinue.push_back(this->opt);
-    }
-        
-    return false;
-}
-
-size_t BSQStarRepeatRe::mconsume() const
-{
-    return 0;
+    return thisstate;
 }
 
 BSQStarRepeatRe* BSQStarRepeatRe::parse(json j)
@@ -239,28 +107,15 @@ BSQStarRepeatRe* BSQStarRepeatRe::parse(json j)
     return new BSQStarRepeatRe(repeat);
 }
 
-bool BSQPlusRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
+StateID BSQStarRepeatRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    auto mxiter = (BSQStringType::utf8ByteCount(iter.str) - iter.strpos) / std::max((size_t)1, this->mconsume());
-    std::vector<const BSQRegexOpt*> matchcontinue;
-    for(size_t i = 1; i < mxiter; ++i)
-    {
-        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
-        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
+    auto thisstate = (StateID)states.size();
+    states.push_back(nullptr); //placeholder
 
-        if(this->opt->match(iter, rcontinue))
-        {
-            return true;
-        }
-        matchcontinue.push_back(this->opt);
-    }
-        
-    return false;
-}
+    auto optfollows = this->opt->compile(follows, states);
+    states[thisstate] = new NFAOptStar(thisstate, optfollows, follows);
 
-size_t BSQPlusRepeatRe::mconsume() const
-{
-    return this->opt->mconsume();
+    return thisstate;
 }
 
 BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
@@ -270,81 +125,45 @@ BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
     return new BSQPlusRepeatRe(repeat);
 }
 
-bool BSQRangeRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
+StateID BSQPlusRepeatRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    if (this->low == 0)
-    {
-        if (continuation.empty())
-        {
-            if (!iteratorIsValid(&iter))
-            {
-                return true; //empty match at end
-            }
-        }
-        else
-        {
-            std::vector<const BSQRegexOpt *> nextcontinue(continuation.cbegin() + 1, continuation.cend());
-            if (continuation[0]->match(iter, nextcontinue))
-            {
-                return true;
-            }
-        }
-    }
+    auto thisstate = (StateID)states.size();
+    states.push_back(nullptr); //placeholder
 
-    std::vector<const BSQRegexOpt*> matchcontinue;
-    for(size_t i = (size_t)this->low; i <= (size_t)this->high; ++i)
-    {
-        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
-        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
+    auto optfollows = this->opt->compile(follows, states);
+    states[thisstate] = new NFAOptStar(thisstate, optfollows, follows);
 
-        if(this->opt->match(iter, rcontinue))
-        {
-            return true;
-        }
-        matchcontinue.push_back(this->opt);
-    }
-        
-    return false;
-}
-
-size_t BSQRangeRepeatRe::mconsume() const
-{
-    return this->opt->mconsume() * (size_t)this->low;
+    return this->opt->compile(thisstate, states);
 }
 
 BSQRangeRepeatRe* BSQRangeRepeatRe::parse(json j)
 {
-    auto min = j["min"].get<uint64_t>();
-    auto max = j["max"].get<uint64_t>();
+    auto min = j["min"].get<uint8_t>();
+    auto max = j["max"].get<uint8_t>();
     auto repeat = BSQRegexOpt::parse(j["repeat"]);
 
     return new BSQRangeRepeatRe(min, max, repeat);
 }
 
-bool BSQOptionalRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
+StateID BSQRangeRepeatRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    if(continuation.empty())
+    auto followfinal = follows;
+    for(int64_t i = this->high; i > this->low; --i)
     {
-        if(!iteratorIsValid(&iter))
-        {
-            return true; //empty match at end 
-        }
-    }
-    else
-    {
-        std::vector<const BSQRegexOpt*> nextcontinue(continuation.cbegin() + 1, continuation.cend());
-        if(continuation[0]->match(iter, nextcontinue))
-        {
-            return true;
-        }
+        auto followopt = this->opt->compile(follows, states);
+
+        auto thisstate = (StateID)states.size();
+        states.push_back(new NFAOptAlternate(thisstate, { followopt, followfinal }));
+
+        follows = thisstate;
     }
 
-    return this->opt->match(iter, continuation);
-}
+    for(int64_t i = this->low; i > 0; --i)
+    {
+        follows = this->opt->compile(follows, states);
+    }
 
-size_t BSQOptionalRe::mconsume() const
-{
-    return 0;
+    return follows;
 }
 
 BSQOptionalRe* BSQOptionalRe::parse(json j)
@@ -354,28 +173,14 @@ BSQOptionalRe* BSQOptionalRe::parse(json j)
     return new BSQOptionalRe(opt);
 }
 
-bool BSQAlternationRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
+StateID BSQOptionalRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    for(size_t i = 0; i < this->opts.size(); ++i)
-    {
-        if(this->opts[i]->match(iter, continuation))
-        {
-            return true;
-        }
-    }
+    auto followopt = this->opt->compile(follows, states);
 
-    return false;
-}
+    auto thisstate = (StateID)states.size();
+    states.push_back(new NFAOptAlternate(thisstate, { followopt, follows }));
 
-size_t BSQAlternationRe::mconsume() const
-{
-    std::vector<size_t> ml;
-    std::transform(this->opts.cbegin(), this->opts.cend(), std::back_inserter(ml), [](const BSQRegexOpt* opt) {
-        return opt->mconsume();
-    });
-
-    std::sort(ml.begin(), ml.end());
-    return ml[0];
+    return thisstate;
 }
 
 BSQAlternationRe* BSQAlternationRe::parse(json j)
@@ -389,22 +194,18 @@ BSQAlternationRe* BSQAlternationRe::parse(json j)
     return new BSQAlternationRe(opts);
 }
 
-bool BSQSequenceRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
+StateID BSQAlternationRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
-    std::vector<const BSQRegexOpt*> rcontinuation(this->opts.cbegin() + 1, this->opts.cend());
-    std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinuation));
+    std::vector<StateID> followopts;
+    for(size_t i = 0; i < this->opts.size(); ++i)
+    {
+        followopts.push_back(this->opts[i]->compile(follows, states));
+    }
 
-    return this->opts[0]->match(iter, rcontinuation);
-}
+    auto thisstate = (StateID)states.size();
+    states.push_back(new NFAOptAlternate(thisstate, followopts));
 
-size_t BSQSequenceRe::mconsume() const
-{
-    std::vector<size_t> ml;
-    std::transform(this->opts.cbegin(), this->opts.cend(), std::back_inserter(ml), [](const BSQRegexOpt* opt) {
-        return opt->mconsume();
-    });
-
-    return std::accumulate(ml.begin(), ml.end(), (size_t)0);
+    return thisstate;
 }
 
 BSQSequenceRe* BSQSequenceRe::parse(json j)
@@ -416,4 +217,14 @@ BSQSequenceRe* BSQSequenceRe::parse(json j)
     });
 
     return new BSQSequenceRe(elems);
+}
+
+StateID BSQSequenceRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
+{
+    for(int64_t i = this->opts.size() - 1; i >= 0; --i)
+    {
+        follows = this->opts[i]->compile(follows, states);
+    }
+
+    return follows;
 }

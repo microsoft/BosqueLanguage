@@ -79,18 +79,18 @@ template <typename ObjModel, typename ParseContext, typename ExtractContext>
 class ApiManagerJSON
 {
 public:
-    virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseBoolImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseNatImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseIntImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseBigNatImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseBigIntImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseFloatImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseStringOfImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseStringOfImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parsePrimitiveOfImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseDataStringImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
@@ -214,7 +214,7 @@ public:
             return false;
         }
         
-        return apimgr.parseNoneImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseNoneImpl(apimodule, this, value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -248,7 +248,7 @@ public:
             return false;
         }
         
-        return apimgr.parseNothingImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseNothingImpl(apimodule, this, value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -283,7 +283,7 @@ public:
             return false;
         }
         
-        return apimgr.parseBoolImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseBoolImpl(apimodule, this, j.get<bool>(), value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -319,7 +319,7 @@ public:
             return false;
         }
         
-        return apimgr.parseNatImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseNatImpl(apimodule, this, nval.value(), value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -355,7 +355,7 @@ public:
             return false;
         }
         
-        return apimgr.parseIntImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseIntImpl(apimodule, this, nval.value(), value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -391,7 +391,7 @@ public:
             return false;
         }
         
-        return apimgr.parseBigNatImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseBigNatImpl(apimodule, this, nval.value(), value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -427,7 +427,7 @@ public:
             return false;
         }
         
-        return apimgr.parseBigIntImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseBigIntImpl(apimodule, this, nval.value(), value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -465,7 +465,7 @@ public:
             return false;
         }
         
-        return apimgr.parseRationalImpl(apimodule, this, j, value, ctx);
+        return apimgr.parseRationalImpl(apimodule, this, nval.value().first, nval.value().second, value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -478,36 +478,132 @@ public:
 class FloatType : public IGroundedType
 {
 public:
-    FloatType() : IGroundedType("NSCore::Float") {;}
+    FloatType() : IGroundedType(TypeTag::FloatTag, "NSCore::Float") {;}
     virtual ~FloatType() {;}
 
-    static FloatType* jparse(json j);
+    static FloatType* jparse(json j)
+    {
+        return new FloatType();
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual json jfuzz(RandGenerator& rnd) const override final
+    {
+        std::uniform_real_distribution<double> fgen(-128.0, 128.0);
+        
+        return fgen(rnd);
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        std::optional<std::string> nval = JSONParseHelper::parseToRealNumber(j);
+        if(!nval.has_value())
+        {
+            return false;
+        }
+        
+        return apimgr.parseFloatImpl(apimodule, this, nval.value(), value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractFloatImpl(apimodule, this, value, ctx);
+    }
 };
 
 class DecimalType : public IGroundedType
 {
 public:
-    DecimalType() : IGroundedType("NSCore::Decimal") {;}
+    DecimalType() : IGroundedType(TypeTag::DecimalTag, "NSCore::Decimal") {;}
     virtual ~DecimalType() {;}
 
-    static DecimalType* jparse(json j);
+    static DecimalType* jparse(json j)
+    {
+        return new DecimalType();
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual json jfuzz(RandGenerator& rnd) const override final
+    {
+        std::uniform_real_distribution<float> fgen(-128.0, 128.0);
+        
+        return std::to_string(fgen(rnd));
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        std::optional<std::string> nval = JSONParseHelper::parseToRealNumber(j);
+        if(!nval.has_value())
+        {
+            return false;
+        }
+        
+        return apimgr.parseDecimalImpl(apimodule, this, nval.value(), value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractDecimalImpl(apimodule, this, value, ctx);
+    }
 };
 
 class StringType : public IGroundedType
 {
 public:
-    StringType() : IGroundedType("NSCore::String") {;}
+    StringType() : IGroundedType(TypeTag::StringTag, "NSCore::String") {;}
     virtual ~StringType() {;}
 
-    static StringType* jparse(json j);
+    static StringType* jparse(json j)
+    {
+        return new StringType();
+    }
+
+    virtual json jfuzz(RandGenerator& rnd) const override final
+    {
+        std::uniform_int_distribution<size_t> lgen(0, 64);
+        std::uniform_int_distribution<uint8_t> cgen(32, 126);
+        
+        auto slen = lgen(rnd);
+        std::vector<uint8_t> res;
+        res.reserve(slen);
+
+        for(size_t i = 0; i < slen; ++i)
+        {
+            res.push_back(cgen(rnd));
+        }
+
+        return std::string(res.cbegin(), res.cend());
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        if(!j.is_string())
+        {
+            return false;
+        }
+        
+        return apimgr.parseStringImpl(apimodule, this, j.get<std::string>(), value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractStringImpl(apimodule, this, value, ctx);
+    }
+};
+
+class StringOfType : public IGroundedType
+{
+public:
+    const std::string validator;
+
+    StringOfType(std::string name, std::string validator) : IGroundedType(name), validator(validator) {;}
+    virtual ~StringOfType() {;}
+
+    static StringOfType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
 
@@ -524,21 +620,6 @@ public:
     virtual ~PrimitiveOfType() {;}
 
     static PrimitiveOfType* jparse(json j);
-
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
-
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
-};
-
-class StringOfType : public IGroundedType
-{
-public:
-    const std::string validator;
-
-    StringOfType(std::string name, std::string validator) : IGroundedType(name), validator(validator) {;}
-    virtual ~StringOfType() {;}
-
-    static StringOfType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
 
