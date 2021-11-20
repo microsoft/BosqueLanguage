@@ -116,6 +116,11 @@ public:
     UnionTag,
     ConceptTag
 
+    xxxx
+    apimgr.conscall(apimodule, this, value, ctx);
+
+
+
     virtual std::optional<json> extractNoneImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractNothingImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractBoolImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
@@ -180,7 +185,13 @@ public:
 
     static IType* jparse(json j);
 
-    virtual json jfuzz(RandGenerator& rnd) const = 0;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const = 0;
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    static bool tparse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx);
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> textract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const;
 };
 
 class IGroundedType : public IType
@@ -201,7 +212,7 @@ public:
         return new NoneType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         return "null";
     }
@@ -235,7 +246,7 @@ public:
         return new NothingType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         return "null";
     }
@@ -269,7 +280,7 @@ public:
         return new BoolType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<size_t> bgen(0, 1);
         return bgen(rnd) == 1;
@@ -304,7 +315,7 @@ public:
         return new NatType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<uint64_t> ngen(0, 32);
         return ngen(rnd);
@@ -340,7 +351,7 @@ public:
         return new IntType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<int64_t> igen(-32, 32);
         return igen(rnd);
@@ -376,7 +387,7 @@ public:
         return new BigNatType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<uint64_t> ngen(0, 128);
         return ngen(rnd);
@@ -412,7 +423,7 @@ public:
         return new BigIntType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<int64_t> igen(-128, 128);
         return igen(rnd);
@@ -448,7 +459,7 @@ public:
         return new RationalType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<int64_t> ngen(-128, 128);
         std::uniform_int_distribution<uint64_t> dgen(1, 32);
@@ -486,7 +497,7 @@ public:
         return new FloatType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_real_distribution<double> fgen(-128.0, 128.0);
         
@@ -523,7 +534,7 @@ public:
         return new DecimalType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_real_distribution<float> fgen(-128.0, 128.0);
         
@@ -560,7 +571,7 @@ public:
         return new StringType();
     }
 
-    virtual json jfuzz(RandGenerator& rnd) const override final
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<size_t> lgen(0, 64);
         std::uniform_int_distribution<uint8_t> cgen(32, 126);
@@ -598,32 +609,105 @@ public:
 class StringOfType : public IGroundedType
 {
 public:
-    const std::string validator;
+    const BSQRegex* validator;
 
-    StringOfType(std::string name, std::string validator) : IGroundedType(name), validator(validator) {;}
-    virtual ~StringOfType() {;}
+    StringOfType(std::string name, BSQRegex* validator) : IGroundedType(TypeTag::StringOfTag, name), validator(validator) {;}
+    
+    virtual ~StringOfType()
+    {
+        delete this->validator;
+    }
 
-    static StringOfType* jparse(json j);
+    static StringOfType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto validator = BSQRegex::jparse(j["validator"]);
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+        return new StringOfType(name, validator);
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return this->validator->nfare->generate(rnd);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        if(!j.is_string())
+        {
+            return false;
+        }
+
+        auto sstr = j.get<std::string>();
+
+        auto siter = StdStringCodeIterator(sstr);
+        bool match = this->validator->nfare->match(siter);
+        if(!match)
+        {
+            return false;
+        }
+        
+        return apimgr.parseStringOfImpl(apimodule, this, sstr, value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractStringOfImpl(apimodule, this, value, ctx);
+    }
 };
 
 class PrimitiveOfType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::string usinginv; //may be sentinal "[NO CONSTRUCTOR]"
+    const std::optional<std::string> usinginv; 
 
-    PrimitiveOfType(std::string name, std::string oftype, std::string usinginv) : IGroundedType(name), oftype(oftype), usinginv(usinginv) {;}
+    PrimitiveOfType(std::string name, std::string oftype, std::string usinginv) : IGroundedType(TypeTag::PrimitiveOfTag, name), oftype(oftype), usinginv(usinginv) {;}
     virtual ~PrimitiveOfType() {;}
 
-    static PrimitiveOfType* jparse(json j);
+    static PrimitiveOfType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto oftype = j["oftype"].get<std::string>();
+        auto usinginv = j["usinginv"].get<std::string>();
+    
+        return new PrimitiveOfType(name, oftype, usinginv);
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find(this->oftype)->second->jfuzz(apimodule, rnd);
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        auto ptype = apimodule->typemap.find(this->oftype)->second;
+        bool okparse = IType::tparse(apimgr, apimodule, ptype, j, value, ctx);
+        if(!okparse)
+        {
+            return false;
+        }
+
+        if(this->usinginv.has_value())
+        {
+            bool okcons = apimgr.conscall(apimodule, this, value, ctx);
+            if(!okcons)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractPrimitiveOfImpl(apimodule, this, value, ctx);
+    }
 };
 
 class DataStringType : public IGroundedType

@@ -228,3 +228,16 @@ StateID BSQSequenceRe::compile(StateID follows, std::vector<NFAOpt*>& states) co
 
     return follows;
 }
+
+BSQRegex* BSQRegex::jparse(json j)
+{
+    auto restr = j["regexstr"].get<std::string>();
+    auto bsqre = BSQRegexOpt::parse(j["bsqregex"]);
+
+    std::vector<NFAOpt*> nfastates = { new NFAOptAccept(0) };
+    auto nfastart = bsqre->compile(0, nfastates);
+
+    auto nfare = new NFA(nfastart, 0, nfastates);
+
+    return new BSQRegex(restr, bsqre, nfare);
+}

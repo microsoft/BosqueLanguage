@@ -323,7 +323,11 @@ public:
     const BSQRegexOpt* opt;
 
     BSQStarRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
-    virtual ~BSQStarRepeatRe() {;}
+
+    virtual ~BSQStarRepeatRe() 
+    {
+        delete this->opt;
+    }
 
     static BSQStarRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
@@ -335,7 +339,11 @@ public:
     const BSQRegexOpt* opt;
 
     BSQPlusRepeatRe(const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt) {;}
-    virtual ~BSQPlusRepeatRe() {;}
+    
+    virtual ~BSQPlusRepeatRe()
+    {
+        delete this->opt;
+    }
 
     static BSQPlusRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
@@ -349,7 +357,11 @@ public:
     const uint8_t high;
 
     BSQRangeRepeatRe(uint8_t low, uint8_t high, const BSQRegexOpt* opt) : BSQRegexOpt(), opt(opt), low(low), high(high) {;}
-    virtual ~BSQRangeRepeatRe() {;}
+    
+    virtual ~BSQRangeRepeatRe() 
+    {
+        delete this->opt;
+    }
 
     static BSQRangeRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
@@ -373,7 +385,14 @@ public:
     const std::vector<const BSQRegexOpt*> opts;
 
     BSQAlternationRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
-    virtual ~BSQAlternationRe() {;}
+
+    virtual ~BSQAlternationRe()
+    {
+        for(size_t i = 0; i < this->opts.size(); ++i)
+        {
+            delete this->opts[i];
+        }
+    }
 
     static BSQAlternationRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
@@ -385,7 +404,14 @@ public:
     const std::vector<const BSQRegexOpt*> opts;
 
     BSQSequenceRe(std::vector<const BSQRegexOpt*> opts) : BSQRegexOpt(), opts(opts) {;}
-    virtual ~BSQSequenceRe() {;}
+
+    virtual ~BSQSequenceRe()
+    {
+        for(size_t i = 0; i < this->opts.size(); ++i)
+        {
+            delete this->opts[i];
+        }
+    }
 
     static BSQSequenceRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
@@ -400,6 +426,8 @@ public:
 
     BSQRegex(std::string restr, const BSQRegexOpt* re, NFA* nfare): restr(restr), re(re), nfare(nfare) {;}
     ~BSQRegex() {;}
+
+    static BSQRegex* jparse(json j);
 
     bool match(CharCodeIterator& cci)
     {
