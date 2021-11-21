@@ -26,7 +26,6 @@ enum APIEmitTypeTag
     PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
-    BufferOfTag,
     DataBufferTag,
     ISOTag,
     LogicalTag,
@@ -246,9 +245,6 @@ class SMTTypeEmitter {
                 }
                 else if (tt.typeID.startsWith("NSCore::DataString")) {
                     return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("NSCore::BufferOf")) {
-                    return new SMTType("BByteBuffer", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
                 else if (tt.typeID.startsWith("NSCore::DataBuffer")) {
                     return new SMTType("BByteBuffer", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
@@ -775,9 +771,6 @@ class SMTTypeEmitter {
                 }
                 else if (tt.typeID.startsWith("NSCore::DataString")) {
                     return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else if (tt.typeID.startsWith("NSCore::BufferOf")) {
-                    return {tag: APIEmitTypeTag.BufferOfTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
                 else if (tt.typeID.startsWith("NSCore::DataBuffer")) {
                     return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};

@@ -1473,7 +1473,6 @@ class Assembly {
 
     getStringOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::StringOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     getDataStringType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::DataString") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getBufferOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::BufferOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     getDataBufferType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::DataBuffer") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
 
     getSomethingType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Something") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }

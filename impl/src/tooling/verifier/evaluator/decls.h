@@ -46,7 +46,6 @@ enum class TypeTag
     PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
-    BufferOfTag,
     DataBufferTag,
     ISOTag,
     LogicalTag,
@@ -345,19 +344,6 @@ public:
     virtual ~ByteBufferType() {;}
 
     static ByteBufferType* jparse(json j);
-
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
-
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
-};
-
-class BufferOfType : public IGroundedType
-{
-public:
-    BufferOfType(std::string name) : IGroundedType(name) {;}
-    virtual ~BufferOfType() {;}
-
-    static BufferOfType* jparse(json j);
 
     virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
 

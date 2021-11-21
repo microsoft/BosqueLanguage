@@ -376,11 +376,6 @@ __internal entity ByteBuffer provides Some, APIType {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-__internal __constructable entity BufferOf<T grounded APIType> provides Some, APIType {
-    method value(): ByteBuffer # special_extract
-}
-
-//<summary>An efficient buffer encoding for data.</summary>
 __internal __constructable entity DataBuffer<T unique Parsable> provides Some, APIType when T grounded APIType {
     method value(): ByteBuffer # special_extract
 }

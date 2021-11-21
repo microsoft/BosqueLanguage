@@ -18,6 +18,8 @@ static std::regex re_numberino_r("^[-+]?(0|[1-9][0-9]*)/([1-9][0-9]*)$");
 static std::regex re_bv_binary("^#b([0|1]+)$");
 static std::regex re_bv_hex("^#x([0-9a-f]+)$");
 
+static std::regex re_iso("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]{3})?Z$");
+
 std::optional<uint64_t> JSONParseHelper::parseToUnsignedNumber(json j)
 {
     std::optional<uint64_t> nval = std::nullopt;
@@ -214,6 +216,66 @@ std::optional<std::pair<std::string, uint64_t>> JSONParseHelper::parseToRational
     }
 }
 
+std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    std::string sstr = j.get<std::string>();
+    if(std::regex_match(sstr, re_iso))
+    {
+        return std::nullopt;
+    }
+
+    TimeData t;
+    t.millis = std::strtol(&sstr[20], nullptr, 10);
+    if(t.millis > 999)
+    {
+        return std::nullopt;
+    }
+    
+    uint16_t yy = std::strtol(&sstr[0], nullptr, 10);
+    if(yy < 1900)
+    {
+        return std::nullopt;
+    }
+    t.year = yy - 1900;
+
+    t.month = std::strtol(&sstr[5], nullptr, 10) - 1;
+    if(t.month > 11)
+    {
+        return std::nullopt;
+    }
+
+    t.day = std::strtol(&sstr[8], nullptr, 10);
+    if(t.day == 0 || t.day > 31)
+    {
+        return std::nullopt;
+    }
+
+    t.hour = std::strtol(&sstr[11], nullptr, 10);
+    if(t.hour > 23)
+    {
+        return std::nullopt;
+    }
+
+    t.min = std::strtol(&sstr[14], nullptr, 10);
+    if(t.min > 59)
+    {
+        return std::nullopt;
+    }
+
+    t.sec = std::strtol(&sstr[17], nullptr, 10);
+    if(t.sec > 60)
+    {
+        return std::nullopt;
+    }
+    
+    return std::make_optional(t);
+}
+
 IType* IType::jparse(json j)
 {
     switch(j["tag"].get<TypeTag>())
@@ -248,18 +310,19 @@ IType* IType::jparse(json j)
             return DataStringType::jparse(j);
         case TypeTag::ByteBufferTag:
             return ByteBufferType::jparse(j);
-        case TypeTag::BufferOfTag:
-            return BufferOfType::jparse(j);
         case TypeTag::DataBufferTag:
             return DataBufferType::jparse(j);
-        case TypeTag::ISOTag:
+        case TypeTag::ISOTimeTag:
             return ISOTimeType::jparse(j);
-        case TypeTag::LogicalTag:
+        case TypeTag::LogicalTimeTag:
             return LogicalTimeType::jparse(j);
         case TypeTag::UUIDTag:
             return UUIDType::jparse(j);
         case TypeTag::ContentHashTag:
             return ContentHashType::jparse(j);
+
+        xxxx
+
         case TypeTag::TupleTag:
             return TupleType::jparse(j);
         case TypeTag::RecordTag:

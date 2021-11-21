@@ -1282,8 +1282,6 @@ IType* IType::jparse(json j)
             return DataStringType::jparse(j);
         case TypeTag::ByteBufferTag:
             return ByteBufferType::jparse(j);
-        case TypeTag::BufferOfTag:
-            return BufferOfType::jparse(j);
         case TypeTag::DataBufferTag:
             return DataBufferType::jparse(j);
         case TypeTag::ISOTag:
@@ -1656,24 +1654,6 @@ bool ByteBufferType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::
 }
 
 std::optional<json> ByteBufferType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
-{
-    assert(false);
-    return nullptr;
-}
-
-BufferOfType* BufferOfType::jparse(json j)
-{
-    assert(false);
-    return nullptr;
-}
-
-bool BufferOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
-{
-    assert(false);
-    return false;
-}
-
-std::optional<json> BufferOfType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     assert(false);
     return nullptr;

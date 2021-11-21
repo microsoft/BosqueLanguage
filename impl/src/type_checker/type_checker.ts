@@ -6524,19 +6524,17 @@ class TypeChecker {
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, optparse);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
-                else if(tdecl.attributes.includes("__bufferof_type") || tdecl.attributes.includes("__databuffer_type")) {
+                else if(tdecl.attributes.includes("__databuffer_type")) {
                     const miroftype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
 
                     let optparse: MIRInvokeKey | undefined = undefined;
-                    if (tdecl.attributes.includes("__databuffer_type")) {
-                        const aoftype = (binds.get("T") as ResolvedType).options[0];
-                        const oodecl = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.object : (aoftype as ResolvedConceptAtomType).conceptTypes[0].concept;
-                        const oobinds = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.binds : (aoftype as ResolvedConceptAtomType).conceptTypes[0].binds;
+                    const aoftype = (binds.get("T") as ResolvedType).options[0];
+                    const oodecl = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.object : (aoftype as ResolvedConceptAtomType).conceptTypes[0].concept;
+                    const oobinds = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.binds : (aoftype as ResolvedConceptAtomType).conceptTypes[0].binds;
 
-                        const sf = (oodecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
-                        const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(oodecl, oobinds));
-                        optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
-                    }
+                    const sf = (oodecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
+                    const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(oodecl, oobinds));
+                    optparse = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
 
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, optparse);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);

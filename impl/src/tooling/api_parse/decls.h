@@ -6,29 +6,7 @@
 
 #pragma once
 
-#include <assert.h>
-
-#include <cstdlib>
-#include <cstdint>
-#include <math.h>
-#include <ctime>
-#include <chrono>
-#include <cstdio>
-
-#include <string>
-#include <regex>
-
-#include <optional>
-#include <vector>
-#include <stack>
-#include <map>
-
-#include <random>
-typedef std::default_random_engine RandGenerator;
-
-#include "json.hpp"
-typedef nlohmann::json json;
-
+#include "common.h"
 #include "bsqregex.h"
 
 class IType;
@@ -52,12 +30,17 @@ enum class TypeTag
     PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
-    BufferOfTag,
     DataBufferTag,
-    ISOTag,
-    LogicalTag,
+    ISOTimeTag,
+    LogicalTimeTag,
     UUIDTag,
     ContentHashTag,
+
+    ISOTimeOfTag,
+    LogicalTimeOfTag,
+    UUIDOfTag,
+    ContentHashOfTag,
+
     TupleTag,
     RecordTag,
     SomethingTag,
@@ -73,7 +56,6 @@ enum class TypeTag
     UnionTag,
     ConceptTag
 };
-
 
 template <typename ObjModel, typename ParseContext, typename ExtractContext>
 class ApiManagerJSON
@@ -91,12 +73,11 @@ public:
     virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseStringOfImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parsePrimitiveOfImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseDataStringImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parsePrimitiveOfImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseDataStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseBufferOfImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseDataBufferImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseISOTimeImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseISOTimeImpl(const APIModule* apimodule, const IType* itype, TimeData t, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
@@ -116,10 +97,6 @@ public:
     UnionTag,
     ConceptTag
 
-    xxxx
-    apimgr.conscall(apimodule, this, value, ctx);
-
-
 
     virtual std::optional<json> extractNoneImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractNothingImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
@@ -136,7 +113,6 @@ public:
     virtual std::optional<json> extractPrimitiveOfImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractDataStringImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractBufferOfImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractDataBufferImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractISOTimeImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
     virtual std::optional<json> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
@@ -159,6 +135,17 @@ public:
     ConceptTag
 };
 
+struct TimeData
+{
+    uint16_t millis; // 0-999
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+    uint8_t sec;     // 0-60
+};
+
 class JSONParseHelper
 {
 public:
@@ -172,6 +159,8 @@ public:
     static std::optional<std::string> parseToDecimalNumber(json j);
 
     static std::optional<std::pair<std::string, uint64_t>> parseToRationalNumber(json j);
+
+    static std::optional<TimeData> parseToTimeData(json j);
 };
 
 class IType
@@ -691,16 +680,7 @@ public:
             return false;
         }
 
-        if(this->usinginv.has_value())
-        {
-            bool okcons = apimgr.conscall(apimodule, this, value, ctx);
-            if(!okcons)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return apimgr.parsePrimitiveOfImpl(apimodule, this, value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -714,67 +694,169 @@ class DataStringType : public IGroundedType
 {
 public:
     const std::string oftype;
+    const std::string accepts;
 
-    DataStringType(std::string name, std::string oftype) : IGroundedType(name), oftype(oftype) {;}
+    DataStringType(std::string name, std::string oftype, std::string accepts) : IGroundedType(TypeTag::DataStringTag, name), oftype(oftype), accepts(accepts) {;}
     virtual ~DataStringType() {;}
 
-    static DataStringType* jparse(json j);
+    static DataStringType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto oftype = j["oftype"].get<std::string>();
+        auto accepts = j["accepts"].get<std::string>();
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+        return new DataStringType(name, oftype, accepts);
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find("String")->second->jfuzz(apimodule, rnd);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        if(!j.is_string())
+        {
+            return false;
+        }
+
+        auto sstr = j.get<std::string>();
+        return apimgr.parseDataStringImpl(apimodule, this, sstr, value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractDataStringImpl(apimodule, this, value, ctx);
+    }
 };
 
 class ByteBufferType : public IGroundedType
 {
 public:
-    ByteBufferType() : IGroundedType("NSCore::ByteBuffer") {;}
+    ByteBufferType() : IGroundedType(TypeTag::ByteBufferTag, "NSCore::ByteBuffer") {;}
     virtual ~ByteBufferType() {;}
 
-    static ByteBufferType* jparse(json j);
+    static ByteBufferType* jparse(json j)
+    {
+        return new ByteBufferType();
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::uniform_int_distribution<size_t> lgen(0, 64);
+        std::uniform_int_distribution<uint8_t> bgen(0, 255);
+        
+        auto blen = lgen(rnd);
+        std::vector<uint8_t> res;
+        res.reserve(blen);
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
-};
+        for(size_t i = 0; i < blen; ++i)
+        {
+            res.push_back(bgen(rnd));
+        }
 
-class BufferOfType : public IGroundedType
-{
-public:
-    BufferOfType(std::string name) : IGroundedType(name) {;}
-    virtual ~BufferOfType() {;}
+        return res;
+    }
 
-    static BufferOfType* jparse(json j);
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        if(!j.is_array())
+        {
+            return false;
+        }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+        return apimgr.parseByteBufferImpl(apimodule, this, j, value, ctx);
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractByteBufferImpl(apimodule, this, value, ctx);
+    }
 };
 
 class DataBufferType : public IGroundedType
 {
 public:
-    DataBufferType(std::string name) : IGroundedType(name) {;}
+    const std::string oftype;
+    const std::string accepts;
+
+    DataBufferType(std::string name, std::string oftype, std::string accepts) : IGroundedType(TypeTag::DataBufferTag, name), oftype(oftype), accepts(accepts) {;}
     virtual ~DataBufferType() {;}
 
-    static DataBufferType* jparse(json j);
+    static DataBufferType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto oftype = j["oftype"].get<std::string>();
+        auto accepts = j["accepts"].get<std::string>();
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+        return new DataBufferType(name, oftype, accepts);
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find("ByteBuffer")->second->jfuzz(apimodule, rnd);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        if(!j.is_array())
+        {
+            return false;
+        }
+
+        return apimgr.parseDataBufferImpl(apimodule, this, j, value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractDataBufferImpl(apimodule, this, value, ctx);
+    }
 };
 
 class ISOTimeType : public IGroundedType
 {
 public:
-    ISOTimeType() : IGroundedType("NSCore::ISOTime") {;}
+    ISOTimeType() : IGroundedType(TypeTag::ISOTimeTag, "NSCore::ISOTime") {;}
     virtual ~ISOTimeType() {;}
 
-    static ISOTimeType* jparse(json j);
+    static ISOTimeType* jparse(json j)
+    {
+        return new ISOTimeType();
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return ;
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        if(!j.is_string())
+        {
+            return false;
+        }
+
+        auto t = JSONParseHelper::parseToTimeData(j);
+        if(!t.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseISOTimeImpl(apimodule, this, t, value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimgr.extractISOTimeImpl(apimodule, this, value, ctx);
+    }
 };
 
 class LogicalTimeType : public IGroundedType

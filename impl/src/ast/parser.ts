@@ -3969,9 +3969,6 @@ class Parser {
                 else if(ename === "DataString") {
                     attributes.push("__datastring_type");
                 }
-                if(ename === "BufferOf") {
-                    attributes.push("__bufferof_type");
-                }
                 else if(ename === "DataBuffer") {
                     attributes.push("__databuffer_type");
                 }

@@ -186,31 +186,6 @@ class SMTEmitter {
         this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(tt), fbody));
     }
 
-    private generateAPITypeConstructorFunction_ValidatedBuffer(tt: MIRType, havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
-        this.walkAndGenerateHavocType(this.temitter.getMIRType("NSCore::ByteBuffer"), havocfuncs, ufuncs);
-        const bcreate = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType("NSCore::ByteBuffer"), new SMTVar("path"), this.bemitter.numgen.int.emitSimpleNat(0));
-
-        const ttdecl = this.bemitter.assembly.entityDecls.get(tt.typeID) as MIRConstructableInternalEntityTypeDecl;
-
-        const bcreateval = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType(ttdecl.fromtype), new SMTVar("path"), this.bemitter.numgen.int.emitSimpleNat(1));
-        const uufsmt = this.temitter.getSMTTypeFor(this.temitter.getMIRType(ttdecl.fromtype));
-        const uuf = new SMTFunctionUninterpreted(`BByteBuffer@expand_${uufsmt.name}`, [this.temitter.getSMTTypeFor(this.temitter.getMIRType("NSCore::ByteBuffer"))], uufsmt);
-
-        const fbody = new SMTLetMulti([{vname: "bb", value: bcreate}, {vname: "apiv", value: bcreateval}],
-            new SMTIf(SMTCallSimple.makeAndOf(
-                this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType("NSCore::ByteBuffer"), new SMTVar("bb")),
-                this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType(ttdecl.fromtype), new SMTVar("apiv")),
-                SMTCallSimple.makeEq(this.temitter.generateResultGetSuccess(this.temitter.getMIRType(ttdecl.fromtype), new SMTVar("apiv")), new SMTCallSimple(`BByteBuffer@expand_${uufsmt.name}`, [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("NSCore::ByteBuffer"), new SMTVar("bb"))]))),
-                new SMTVar("bb"),
-                this.temitter.generateErrorResultAssert(tt)
-            )
-        );
-
-        ufuncs.push(uuf);
-        havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
-        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(tt), fbody));
-    }
-
     private generateAPITypeConstructorFunction_DataBuffer(tt: MIRType, havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
         this.walkAndGenerateHavocType(this.temitter.getMIRType("NSCore::ByteBuffer"), havocfuncs, ufuncs);
         const bcreate = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType("NSCore::ByteBuffer"), new SMTVar("path"), this.bemitter.numgen.int.emitSimpleNat(0));
@@ -801,9 +776,6 @@ class SMTEmitter {
                 }
                 else if (edecl.attributes.includes("__datastring_type")) {
                     this.generateAPITypeConstructorFunction_DataString(tt, havocfuncs, ufuncs);
-                }
-                else if (edecl.attributes.includes("__bufferof_type")) {
-                    this.generateAPITypeConstructorFunction_ValidatedBuffer(tt, havocfuncs, ufuncs);
                 }
                 else if (edecl.attributes.includes("__databuffer_type")) {
                     this.generateAPITypeConstructorFunction_DataBuffer(tt, havocfuncs, ufuncs);
