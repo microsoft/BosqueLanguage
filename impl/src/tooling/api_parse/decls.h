@@ -35,12 +35,10 @@ enum class TypeTag
     LogicalTimeTag,
     UUIDTag,
     ContentHashTag,
-
     ISOTimeOfTag,
     LogicalTimeOfTag,
     UUIDOfTag,
     ContentHashOfTag,
-
     TupleTag,
     RecordTag,
     SomethingTag,
@@ -61,6 +59,8 @@ template <typename ObjModel, typename ParseContext, typename ExtractContext>
 class ApiManagerJSON
 {
 public:
+    virtual bool checkInvokeOk(const std::string& checkinvoke, ObjModel& value);
+
     virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, ObjModel& value, ParseContext& ctx) const = 0;
@@ -72,21 +72,13 @@ public:
     virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseStringOfImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parsePrimitiveOfImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseDataStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, vector<uint8_t>& data, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseDataBufferImpl(const APIModule* apimodule, const IType* itype, vector<uint8_t>& data, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseISOTimeImpl(const APIModule* apimodule, const IType* itype, TimeData t, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     
- ISOTimeOfTag,
-    LogicalTimeOfTag,
-    UUIDOfTag,
-    ContentHashOfTag,
-
     TupleTag,
     RecordTag,
     SomethingTag,
@@ -686,7 +678,7 @@ public:
             return false;
         }
         
-        return apimgr.parseStringOfImpl(apimodule, this, sstr, value, ctx);
+        return apimgr.parseStringImpl(apimodule, this, sstr, value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -700,18 +692,18 @@ class PrimitiveOfType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::optional<std::string> usinginv; 
+    const std::optional<std::string> chkinv; 
 
-    PrimitiveOfType(std::string name, std::string oftype, std::string usinginv) : IGroundedType(TypeTag::PrimitiveOfTag, name), oftype(oftype), usinginv(usinginv) {;}
+    PrimitiveOfType(std::string name, std::string oftype, std::optional<std::string> chkinv) : IGroundedType(TypeTag::PrimitiveOfTag, name), oftype(oftype), chkinv(chkinv) {;}
     virtual ~PrimitiveOfType() {;}
 
     static PrimitiveOfType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto oftype = j["oftype"].get<std::string>();
-        auto usinginv = j["usinginv"].get<std::string>();
+        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
     
-        return new PrimitiveOfType(name, oftype, usinginv);
+        return new PrimitiveOfType(name, oftype, chkinv);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -722,21 +714,19 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
     {
-        auto ptype = apimodule->typemap.find(this->oftype)->second;
-        bool okparse = ptype->tparse(apimgr, apimodule, j, value, ctx);
+        bool okparse = apimodule->typemap.find(this->oftype)->second->tparse(apimgr, apimodule, j, value, ctx);
         if(!okparse)
         {
             return false;
         }
 
-        return apimgr.parsePrimitiveOfImpl(apimodule, this, value, ctx);
+        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        auto ptype = apimodule->typemap.find(this->oftype)->second;
-        return ptype->textract(apimgr, apimodule, value, ctx);
+        return apimodule->typemap.find(this->oftype)->second->textract(apimgr, apimodule, value, ctx);
     }
 };
 
@@ -744,18 +734,18 @@ class DataStringType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::string accepts;
+    const std::optional<std::string> chkinv;
 
-    DataStringType(std::string name, std::string oftype, std::string accepts) : IGroundedType(TypeTag::DataStringTag, name), oftype(oftype), accepts(accepts) {;}
+    DataStringType(std::string name, std::string oftype, std::optional<std::string> chkinv) : IGroundedType(TypeTag::DataStringTag, name), oftype(oftype), chkinv(chkinv) {;}
     virtual ~DataStringType() {;}
 
     static DataStringType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto oftype = j["oftype"].get<std::string>();
-        auto accepts = j["accepts"].get<std::string>();
+        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
 
-        return new DataStringType(name, oftype, accepts);
+        return new DataStringType(name, oftype, chkinv);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -766,13 +756,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
     {
-        if(!j.is_string())
+        bool okparse = apimodule->typemap.find("String")->second->tparse(apimgr, apimodule, j, value, ctx);
+        if(!okparse)
         {
             return false;
         }
 
-        auto sstr = j.get<std::string>();
-        return apimgr.parseDataStringImpl(apimodule, this, sstr, value, ctx);
+        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -851,18 +841,18 @@ class DataBufferType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::string accepts;
+    const std::optional<std::string> chkinv;
 
-    DataBufferType(std::string name, std::string oftype, std::string accepts) : IGroundedType(TypeTag::DataBufferTag, name), oftype(oftype), accepts(accepts) {;}
+    DataBufferType(std::string name, std::string oftype, std::optional<std::string> chkinv) : IGroundedType(TypeTag::DataBufferTag, name), oftype(oftype), chkinv(chkinv) {;}
     virtual ~DataBufferType() {;}
 
     static DataBufferType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto oftype = j["oftype"].get<std::string>();
-        auto accepts = j["accepts"].get<std::string>();
+        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
 
-        return new DataBufferType(name, oftype, accepts);
+        return new DataBufferType(name, oftype, chkinv);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -873,31 +863,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
     {
-        if(!j.is_array())
+        bool okparse = apimodule->typemap.find("ByteBuffer")->second->tparse(apimgr, apimodule, j, value, ctx);
+        if(!okparse)
         {
             return false;
         }
 
-        std::vector<uint8_t> bbuff;
-        bool badval = false;
-        std::transform(j.cbegin(), j.cend(), [&badval](const json& vv) {
-            if(!vv.is_number_unsigned() || vv.get<uint64_t>() >= 256)
-            {
-                badval = true;
-                return 0;
-            }
-            else
-            {
-                return vv.get<uint64_t>();
-            }
-        });
-
-        if(badval)
-        {
-            return false;
-        }
-
-        return apimgr.parseDataBufferImpl(apimodule, this, bbuff, value, ctx);
+        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -1107,19 +1079,231 @@ public:
     }
 };
 
+class ISOTimeOfType : public IGroundedType
+{
+public:
+    const std::optional<std::string> chkinv; 
+
+    ISOTimeOfType(std::string name, std::optional<std::string> chkinv) : IGroundedType(TypeTag::ISOTimeOfTag, name), chkinv(chkinv) {;}
+    virtual ~ISOTimeOfType() {;}
+
+    static ISOTimeOfType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
+    
+        return new ISOTimeOfType(name, chkinv);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find("ISOTime")->second->jfuzz(apimodule, rnd);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        bool okparse = apimodule->typemap.find("ISOTime")->second->tparse(apimgr, apimodule, j, value, ctx);
+        if(!okparse)
+        {
+            return false;
+        }
+
+        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimodule->typemap.find("ISOTime")->second->textract(apimgr, apimodule, value, ctx);
+    }
+};
+
+class LogicalTimeOfType : public IGroundedType
+{
+public:
+    const std::optional<std::string> chkinv; 
+
+    LogicalTimeOfType(std::string name, std::optional<std::string> chkinv) : IGroundedType(TypeTag::LogicalTimeOfTag, name), chkinv(chkinv) {;}
+    virtual ~LogicalTimeOfType() {;}
+
+    static LogicalTimeOfType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
+    
+        return new LogicalTimeOfType(name, chkinv);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find("LogicalTime")->second->jfuzz(apimodule, rnd);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        bool okparse = apimodule->typemap.find("LogicalTime")->second->tparse(apimgr, apimodule, j, value, ctx);
+        if(!okparse)
+        {
+            return false;
+        }
+
+        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimodule->typemap.find("LogicalTime")->second->textract(apimgr, apimodule, value, ctx);
+    }
+};
+
+class UUIDOfOfType : public IGroundedType
+{
+public:
+    const std::optional<std::string> chkinv; 
+
+    UUIDOfOfType(std::string name, std::optional<std::string> chkinv) : IGroundedType(TypeTag::UUIDOfTag, name), chkinv(chkinv) {;}
+    virtual ~UUIDOfOfType() {;}
+
+    static UUIDOfOfType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
+    
+        return new UUIDOfOfType(name, chkinv);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find("UUID")->second->jfuzz(apimodule, rnd);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        bool okparse = apimodule->typemap.find("UUID")->second->tparse(apimgr, apimodule, j, value, ctx);
+        if(!okparse)
+        {
+            return false;
+        }
+
+        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimodule->typemap.find("UUID")->second->textract(apimgr, apimodule, value, ctx);
+    }
+};
+
+class ContentHashOfType : public IGroundedType
+{
+public:
+    const std::optional<std::string> chkinv; 
+
+    ContentHashOfType(std::string name, std::optional<std::string> chkinv) : IGroundedType(TypeTag::ContentHashOfTag, name), chkinv(chkinv) {;}
+    virtual ~ContentHashOfType() {;}
+
+    static ContentHashOfType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
+    
+        return new ContentHashOfType(name, chkinv);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find("ContentHash")->second->jfuzz(apimodule, rnd);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        bool okparse = apimodule->typemap.find("ContentHash")->second->tparse(apimgr, apimodule, j, value, ctx);
+        if(!okparse)
+        {
+            return false;
+        }
+
+        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimodule->typemap.find("ContentHash")->second->textract(apimgr, apimodule, value, ctx);
+    }
+};
+
 class TupleType : public IGroundedType
 {
 public:
     const std::vector<std::string> ttypes;
 
-    TupleType(std::string name, std::vector<std::string> ttypes) : IGroundedType(name), ttypes(ttypes) {;}
+    TupleType(std::string name, std::vector<std::string> ttypes) : IGroundedType(TypeTag::TupleTag, name), ttypes(ttypes) {;}
     virtual ~TupleType() {;}
 
-    static TupleType* jparse(json j);
+    static TupleType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+        std::vector<std::string> ttypes;
+        auto jtypes = j["ttypes"];
+        std::transform(jtypes.cbegin(), jtypes.cend(), std::back_inserter(ttypes), [](const json& jv) {
+            return jv.get<std::string>();
+        });
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+        return new TupleType(name, ttypes);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::vector<json> tj;
+        for(size_t i = 0; i < this->ttypes.size(); ++i)
+        {
+            const std::string& tt = this->ttypes[i];
+
+            auto jval = apimodule->typemap.find(tt)->second->jfuzz(apimodule, rnd);
+            tj.push_back(jval);
+        }
+
+        return tj;
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        if(!j.is_array() || this->ttypes.size() != j.size())
+        {
+            return false;
+        }
+
+        apimgr.prepareParseTuple(this);
+        for(size_t i = 0; i < this->ttypes.size(); ++i)
+        {
+            auto tt = apimodule->typemap.find(this->ttypes[i])->second;
+
+            ObjModel& vval = apimgr.getValueForTupleIndex(tt, i);
+            bool ok = tt->tparse(apimgr, apimodule, j[i], vval, ctx);
+            if(!ok)
+            {
+                return false;
+            }
+        }
+        apimgr.completeParseTuple(this, value);
+
+        return true;
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        return apimodule->typemap.find("ContentHash")->second->textract(apimgr, apimodule, value, ctx);
+    }
 };
 
 class RecordType : public IGroundedType
