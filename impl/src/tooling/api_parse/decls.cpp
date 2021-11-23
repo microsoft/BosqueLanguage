@@ -18,7 +18,9 @@ static std::regex re_numberino_r("^[-+]?(0|[1-9][0-9]*)/([1-9][0-9]*)$");
 static std::regex re_bv_binary("^#b([0|1]+)$");
 static std::regex re_bv_hex("^#x([0-9a-f]+)$");
 
-static std::regex re_iso("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]{3})?Z$");
+static std::regex re_isotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]{3})?Z$");
+static std::regex re_uuid("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+static std::regex re_hash("^0x[0-9a-f]{128}$");
 
 std::optional<uint64_t> JSONParseHelper::parseToUnsignedNumber(json j)
 {
@@ -224,7 +226,7 @@ std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
     }
 
     std::string sstr = j.get<std::string>();
-    if(std::regex_match(sstr, re_iso))
+    if(!std::regex_match(sstr, re_isotime))
     {
         return std::nullopt;
     }
@@ -274,6 +276,109 @@ std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
     }
     
     return std::make_optional(t);
+}
+
+
+std::optional<json> JSONParseHelper::emitUnsignedNumber(uint64_t n)
+{
+    if(n <= 9007199254740991)
+    {
+        return std::make_optional(n);
+    }
+    else
+    {
+        return std::make_optional(std::to_string(n));
+    }
+}
+
+std::optional<json> JSONParseHelper::emitSignedNumber(int64_t i)
+{
+    if(-9007199254740991 <= i && i <= 9007199254740991)
+    {
+        return std::make_optional(i);
+    }
+    else
+    {
+        return std::make_optional(std::to_string(i));
+    }
+}
+
+std::optional<json> JSONParseHelper::emitBigUnsignedNumber(std::string s)
+{
+    std::make_optional(s);
+}
+
+std::optional<json> JSONParseHelper::emitBigSignedNumber(std::string s)
+{
+    std::make_optional(s);
+}
+
+std::optional<json> JSONParseHelper::emitRealNumber(std::string s)
+{
+    std::make_optional(s);
+}
+
+std::optional<json> JSONParseHelper::emitDecimalNumber(std::string s)
+{
+    std::make_optional(s);
+}
+
+std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, uint64_t> rv)
+{
+    std::make_optional(rv.first + "/" + std::to_string(rv.second));
+}
+
+std::optional<json> JSONParseHelper::emitTimeData(TimeData t)
+{
+    tm utctime;
+    utctime.tm_year = t.year;
+    utctime.tm_mon = t.month;
+    utctime.tm_mday = t.day;
+    utctime.tm_hour = t.hour;
+    utctime.tm_min = t.min;
+    utctime.tm_sec = t.sec;
+
+    char sstrt[20] = {0};
+    strftime(sstrt, 20, "%Y-%m-%dT%H:%M:%S", &utctime);
+    std::string res(sstrt, sstrt + 20);
+
+    char sstrz[5] = {0};
+    sprintf_s(sstrz, ".%03uZ", t.millis);
+    std::string zstr(sstrz, sstrz + 5);
+
+    return res + zstr;
+}
+
+std::optional<std::string> JSONParseHelper::checkIsUUID(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    std::string sstr = j.get<std::string>();
+    if(!std::regex_match(sstr, re_uuid))
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(sstr);
+}
+
+std::optional<std::string> JSONParseHelper::checkIsContentHash(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    std::string sstr = j.get<std::string>();
+    if(!std::regex_match(sstr, re_hash))
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(sstr);
 }
 
 IType* IType::jparse(json j)

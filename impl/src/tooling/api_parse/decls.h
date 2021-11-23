@@ -75,13 +75,18 @@ public:
     virtual bool parseStringOfImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parsePrimitiveOfImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseDataStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseDataBufferImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, vector<uint8_t>& data, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseDataBufferImpl(const APIModule* apimodule, const IType* itype, vector<uint8_t>& data, ObjModel& value, ParseContext& ctx) const = 0;
     virtual bool parseISOTimeImpl(const APIModule* apimodule, const IType* itype, TimeData t, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
-    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
+    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::string s, ObjModel& value, ParseContext& ctx) const = 0;
     
+ ISOTimeOfTag,
+    LogicalTimeOfTag,
+    UUIDOfTag,
+    ContentHashOfTag,
+
     TupleTag,
     RecordTag,
     SomethingTag,
@@ -98,27 +103,21 @@ public:
     ConceptTag
 
 
-    virtual std::optional<json> extractNoneImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractNothingImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractBoolImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractNatImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractIntImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractBigNatImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractBigIntImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractFloatImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractDecimalImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractRationalImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractStringImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractStringOfImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractPrimitiveOfImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractDataStringImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractDataBufferImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractISOTimeImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    virtual std::optional<json> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
-    
+    virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<int64_t> extractIntImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::string> extractBigNatImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::string> extractBigIntImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::string> extractFloatImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::string> extractDecimalImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::vector<uint8_t>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<TimeData> extractISOTimeImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::string> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+    virtual std::optional<std::string> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const = 0;
+
     TupleTag,
     RecordTag,
     SomethingTag,
@@ -151,16 +150,24 @@ class JSONParseHelper
 public:
     static std::optional<uint64_t> parseToUnsignedNumber(json j);
     static std::optional<int64_t> parseToSignedNumber(json j);
-
     static std::optional<std::string> parseToBigUnsignedNumber(json j);
     static std::optional<std::string> parseToBigSignedNumber(json j);
-
     static std::optional<std::string> parseToRealNumber(json j);
     static std::optional<std::string> parseToDecimalNumber(json j);
-
     static std::optional<std::pair<std::string, uint64_t>> parseToRationalNumber(json j);
-
     static std::optional<TimeData> parseToTimeData(json j);
+
+    static std::optional<json> emitUnsignedNumber(uint64_t n);
+    static std::optional<json> emitSignedNumber(int64_t i);
+    static std::optional<json> emitBigUnsignedNumber(std::string s);
+    static std::optional<json> emitBigSignedNumber(std::string s);
+    static std::optional<json> emitRealNumber(std::string s);
+    static std::optional<json> emitDecimalNumber(std::string s);
+    static std::optional<json> emitRationalNumber(std::pair<std::string, uint64_t> rv);
+    static std::optional<json> emitTimeData(TimeData t);
+
+    static std::optional<std::string> checkIsUUID(json j);
+    static std::optional<std::string> checkIsContentHash(json j);
 };
 
 class IType
@@ -177,10 +184,10 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const = 0;
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
-    static bool tparse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, const IType* itype, json j, ObjModel& value, ParseContext& ctx);
+    bool tparse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx);
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
-    std::optional<json> textract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, const IType* itype, ObjModel& value, ExtractContext& ctx) const;
+    std::optional<json> textract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const;
 };
 
 class IGroundedType : public IType
@@ -220,7 +227,7 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractNoneImpl(apimodule, this, value, ctx);
+        return std::make_optional(nullptr);
     }
 };
 
@@ -254,7 +261,7 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractNothingImpl(apimodule, this, value, ctx);
+        return std::make_optional(nullptr);
     }
 };
 
@@ -307,7 +314,7 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<uint64_t> ngen(0, 32);
-        return ngen(rnd);
+        return JSONParseHelper::emitUnsignedNumber(ngen(rnd)).value();
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -325,7 +332,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractNatImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractNatImpl(apimodule, this, value, ctx);
+        if(!nval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitUnsignedNumber(nval.value());
     }
 };
 
@@ -343,7 +356,7 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<int64_t> igen(-32, 32);
-        return igen(rnd);
+        return JSONParseHelper::emitSignedNumber(igen(rnd)).value();
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -361,7 +374,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractIntImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractIntImpl(apimodule, this, value, ctx);
+        if(!nval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitSignedNumber(nval.value());
     }
 };
 
@@ -379,7 +398,7 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<uint64_t> ngen(0, 128);
-        return ngen(rnd);
+        return JSONParseHelper::emitBigUnsignedNumber(std::to_string(ngen(rnd))).value();
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -397,7 +416,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractBigNatImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractBigNatImpl(apimodule, this, value, ctx);
+        if(!nval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitBigUnsignedNumber(nval.value());
     }
 };
 
@@ -415,7 +440,7 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<int64_t> igen(-128, 128);
-        return igen(rnd);
+        return JSONParseHelper::emitBigSignedNumber(std::to_string(igen(rnd))).value();
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -433,7 +458,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractBigIntImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractBigIntImpl(apimodule, this, value, ctx);
+        if(!nval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitBigSignedNumber(nval.value());
     }
 };
 
@@ -453,7 +484,7 @@ public:
         std::uniform_int_distribution<int64_t> ngen(-128, 128);
         std::uniform_int_distribution<uint64_t> dgen(1, 32);
         
-        return std::to_string(ngen(rnd)) + "/" + std::to_string(dgen(rnd));
+        return JSONParseHelper::emitRationalNumber(std::make_pair(std::to_string(ngen(rnd)), dgen(rnd))).value();
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -471,7 +502,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractRationalImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractRationalImpl(apimodule, this, value, ctx);
+        if(!nval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitRationalNumber(nval.value());
     }
 };
 
@@ -490,7 +527,7 @@ public:
     {
         std::uniform_real_distribution<double> fgen(-128.0, 128.0);
         
-        return fgen(rnd);
+        return JSONParseHelper::emitRealNumber(std::to_string(fgen(rnd))).value();
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -508,7 +545,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractFloatImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractFloatImpl(apimodule, this, value, ctx);
+        if(!nval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitRealNumber(nval.value());
     }
 };
 
@@ -527,7 +570,7 @@ public:
     {
         std::uniform_real_distribution<float> fgen(-128.0, 128.0);
         
-        return std::to_string(fgen(rnd));
+        return JSONParseHelper::emitRealNumber(std::to_string(fgen(rnd))).value();
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -545,7 +588,13 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractDecimalImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractDecimalImpl(apimodule, this, value, ctx);
+        if(!nval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitRealNumber(nval.value());
     }
 };
 
@@ -643,7 +692,7 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractStringOfImpl(apimodule, this, value, ctx);
+        return apimgr.extractStringImpl(apimodule, this, value, ctx);
     }
 };
 
@@ -674,7 +723,7 @@ public:
     bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
     {
         auto ptype = apimodule->typemap.find(this->oftype)->second;
-        bool okparse = IType::tparse(apimgr, apimodule, ptype, j, value, ctx);
+        bool okparse = ptype->tparse(apimgr, apimodule, j, value, ctx);
         if(!okparse)
         {
             return false;
@@ -686,7 +735,8 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractPrimitiveOfImpl(apimodule, this, value, ctx);
+        auto ptype = apimodule->typemap.find(this->oftype)->second;
+        return ptype->textract(apimgr, apimodule, value, ctx);
     }
 };
 
@@ -728,7 +778,7 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractDataStringImpl(apimodule, this, value, ctx);
+        return apimodule->typemap.find("String")->second->textract(apimgr, apimodule, value, ctx);
     }
 };
 
@@ -768,7 +818,26 @@ public:
             return false;
         }
 
-        return apimgr.parseByteBufferImpl(apimodule, this, j, value, ctx);
+        std::vector<uint8_t> bbuff;
+        bool badval = false;
+        std::transform(j.cbegin(), j.cend(), [&badval](const json& vv) {
+            if(!vv.is_number_unsigned() || vv.get<uint64_t>() >= 256)
+            {
+                badval = true;
+                return 0;
+            }
+            else
+            {
+                return vv.get<uint64_t>();
+            }
+        });
+
+        if(badval)
+        {
+            return false;
+        }
+
+        return apimgr.parseByteBufferImpl(apimodule, this, bbuff, value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
@@ -809,13 +878,32 @@ public:
             return false;
         }
 
-        return apimgr.parseDataBufferImpl(apimodule, this, j, value, ctx);
+        std::vector<uint8_t> bbuff;
+        bool badval = false;
+        std::transform(j.cbegin(), j.cend(), [&badval](const json& vv) {
+            if(!vv.is_number_unsigned() || vv.get<uint64_t>() >= 256)
+            {
+                badval = true;
+                return 0;
+            }
+            else
+            {
+                return vv.get<uint64_t>();
+            }
+        });
+
+        if(badval)
+        {
+            return false;
+        }
+
+        return apimgr.parseDataBufferImpl(apimodule, this, bbuff, value, ctx);
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractDataBufferImpl(apimodule, this, value, ctx);
+        return apimodule->typemap.find("ByteBuffer")->second->textract(apimgr, apimodule, value, ctx);
     }
 };
 
@@ -832,17 +920,19 @@ public:
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
-        return ;
+        std::time_t tval = std::time(nullptr);
+        auto utctime = std::gmtime(&tval);
+
+        char sstr[20] = {0};
+        strftime(sstr, 20, "%Y-%m-%dT%H:%M:%S", utctime);
+
+        std::string res(sstr, sstr + 20);
+        return res + ".000Z";
     }
 
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
     {
-        if(!j.is_string())
-        {
-            return false;
-        }
-
         auto t = JSONParseHelper::parseToTimeData(j);
         if(!t.has_value())
         {
@@ -855,47 +945,166 @@ public:
     template <typename ObjModel, typename ParseContext, typename ExtractContext>
     std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
     {
-        return apimgr.extractISOTimeImpl(apimodule, this, value, ctx);
+        auto tval = apimgr.extractISOTimeImpl(apimodule, this, value, ctx);
+        if(!tval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitTimeData(tval.value());
     }
 };
 
 class LogicalTimeType : public IGroundedType
 {
 public:
-    LogicalTimeType() : IGroundedType("NSCore::LogicalTime") {;}
+    LogicalTimeType() : IGroundedType(TypeTag::LogicalTimeTag, "NSCore::LogicalTime") {;}
     virtual ~LogicalTimeType() {;}
 
-    static LogicalTimeType* jparse(json j);
+    static LogicalTimeType* jparse(json j)
+    {
+        return new LogicalTimeType();
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j,const z3::expr& ctx,  z3::context& c) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::uniform_int_distribution<uint64_t> ngen(0, 128);
+        return JSONParseHelper::emitUnsignedNumber(ngen(rnd)).value();
+    }
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        auto t = JSONParseHelper::parseToUnsignedNumber(j);
+        if(!t.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseLogicalTimeImpl(apimodule, this, t, value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        auto tval = apimgr.extractLogicalTimeImpl(apimodule, this, value, ctx);
+        if(!tval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitUnsignedNumber(tval.value());
+    }
 };
 
 class UUIDType : public IGroundedType
 {
 public:
-    UUIDType() : IGroundedType("NSCore::UUID") {;}
+    UUIDType() : IGroundedType(TypeTag::UUIDTag, "NSCore::UUID") {;}
     virtual ~UUIDType() {;}
 
-    static UUIDType* jparse(json j);
+    static UUIDType* jparse(json j)
+    {
+        return new UUIDType();
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::vector<std::string> uuids = {
+            "45fa4fbe-7c18-400f-99c8-57d824baa1db",
+            "07fdf94f-41a8-4d58-8f1b-7090f02aea3c",
+            "1d999dd0-75da-4d57-b4c7-78afd6d1c7e8",
+            "09f4758f-83bd-4bb4-b39c-b3de9476c79e",
+            "86a7dddf-6302-4feb-b2b7-0c7bb1c9526c",
+            "6e37a758-415f-448f-a7b2-e4ce9309ee94",
+            "12694350-cd2d-4a71-b188-b215ba4db8aa",
+            "5037fa0b-78ec-47f3-926c-ef138a752c09",
+            "03423fa4-8ab2-4f2f-9c73-01c682d261c3",
+            "e6ff1343-47e2-461c-8391-73aae8848bd6"
+        };
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+        std::uniform_int_distribution<size_t> lgen(0, 9);
+        return uuids[lgen(rnd)];
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        auto uuid = JSONParseHelper::checkIsUUID(j);
+        if(!uuid.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseUUIDImpl(apimodule, this, uuid.value(), value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        auto uval = apimgr.extractUUIDImpl(apimodule, this, value, ctx);
+        if(!uval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return uval;
+    }
 };
 
 class ContentHashType : public IGroundedType
 {
 public:
-    ContentHashType() : IGroundedType("NSCore::ContentHash") {;}
+    ContentHashType() : IGroundedType(TypeTag::ContentHashTag, "NSCore::ContentHash") {;}
     virtual ~ContentHashType() {;}
 
-    static ContentHashType* jparse(json j);
+    static ContentHashType* jparse(json j)
+    {
+        return new ContentHashType();
+    }
 
-    virtual bool toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const override final;
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+         std::vector<std::string> shas = {
+            "0x31bca02094eb78126a517b206a88c73cfa9ec6f704c7030d18212cace820f025f00bf0ea68dbf3f3a5436ca63b53bf7bf80ad8d5de7d8359d0b7fed9dbc3ab99",
+            "0x4dff4ea340f0a823f15d3f4f01ab62eae0e5da579ccb851f8db9dfe84c58b2b37b89903a740e1ee172da793a6e79d560e5f7f9bd058a12a280433ed6fa46510a",
+            "0x40b244112641dd78dd4f93b6c9190dd46e0099194d5a44257b7efad6ef9ff4683da1eda0244448cb343aa688f5d3efd7314dafe580ac0bcbf115aeca9e8dc114",
+            "0x3bafbf08882a2d10133093a1b8433f50563b93c14acd05b79028eb1d12799027241450980651994501423a66c276ae26c43b739bc65c4e16b10c3af6c202aebb",
+            "0xa321d8b405e3ef2604959847b36d171eebebc4a8941dc70a4784935a4fca5d5813de84dfa049f06549aa61b20848c1633ce81b675286ea8fb53db240d831c568",
+            "0x06df05371981a237d0ed11472fae7c94c9ac0eff1d05413516710d17b10a4fb6f4517bda4a695f02d0a73dd4db543b4653df28f5d09dab86f92ffb9b86d01e25",
+            "0x3c9ad55147a7144f6067327c3b82ea70e7c5426add9ceea4d07dc2902239bf9e049b88625eb65d014a7718f79354608cab0921782c643f0208983fffa3582e40",
+            "0xf05210c5b4263f0ec4c3995bdab458d81d3953f354a9109520f159db1e8800bcd45b97c56dce90a1fc27ab03e0b8a9af8673747023c406299374116d6f966981",
+            "0xbc23b8b01772d2dd67efb8fe1a5e6bd0f44b97c36101be6cc09f253b53e68d67a22e4643068dfd1341980134ea57570acf65e306e4d96cef4d560384894c88a4",
+            "0x0dc526d8c4fa04084f4b2a6433f4cd14664b93df9fb8a9e00b77ba890b83704d24944c93caa692b51085bb476f81852c27e793600f137ae3929018cd4c8f1a45"
+        };
 
-    virtual std::optional<json> z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const override final;
+        std::uniform_int_distribution<size_t> lgen(0, 9);
+        return shas[lgen(rnd)];
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    bool parse(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, json j, ObjModel& value, ParseContext& ctx) const
+    {
+        auto hash = JSONParseHelper::checkIsContentHash(j);
+        if(!hash.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseContentHashImpl(apimodule, this, hash.value(), value, ctx);
+    }
+
+    template <typename ObjModel, typename ParseContext, typename ExtractContext>
+    std::optional<json> extract(const ApiManagerJSON<ObjModel, ParseContext, ExtractContext>& apimgr, const APIModule* apimodule, ObjModel& value, ExtractContext& ctx) const
+    {
+        auto hash = apimgr.extractContentHashImpl(apimodule, this, value, ctx);
+        if(!hash.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return hash;
+    }
 };
 
 class TupleType : public IGroundedType
