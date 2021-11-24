@@ -836,19 +836,21 @@ public:
 
         //Adjust the new space size if needed and reset/free the newspace allocators
         this->bumpalloc.postGCProcess(this->liveoldspace);
-
-        if(this->globals_mem != nullptr)
-        {
-            Allocator::gcMakeImmortalSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
-
-            mi_free(Allocator::GlobalAllocator.globals_mem);
-            Allocator::GlobalAllocator.globals_mem = nullptr;
-        }
     }
 
     void setGlobalsMemory(void* globals, const RefMask mask)
     {
         this->globals_mem = globals;
         this->globals_mask = mask;
+    }
+
+    void completeGlobalInitialization()
+    {
+        this->collect();
+
+        Allocator::gcMakeImmortalSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
+
+        mi_free(Allocator::GlobalAllocator.globals_mem);
+        Allocator::GlobalAllocator.globals_mem = nullptr;
     }
 };

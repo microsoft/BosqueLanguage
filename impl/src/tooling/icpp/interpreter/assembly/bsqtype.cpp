@@ -10,7 +10,7 @@
 const BSQType** BSQType::g_typetable = nullptr;
 const BSQField** BSQField::g_fieldtable = nullptr;
 
-std::map<BSQRecordPropertyID, std::string> BSQType::g_propertynamemap;
+std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
 
 void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data)
 {
@@ -241,7 +241,7 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQType::g_propertynamemap[ttype->properties[i]] + ":";
+        res += BSQRecordInfo::g_propertynamemap[ttype->properties[i]] + ":";
 
         auto itype = BSQType::g_typetable[ttype->rtypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
@@ -320,9 +320,9 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQType::g_fieldshortnamemap[ttype->fields[i]] + ":";
+        res += BSQField::g_fieldtable[ttype->fields[i]]->fname + ":";
 
-        auto itype = BSQType::g_typetable[ttype->ftypes[i]];
+        auto itype = BSQType::g_typetable[BSQField::g_fieldtable[ttype->fields[i]]->declaredType];
         auto idata = btype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);
         res += itype->fpDisplay(itype, idata);
     }

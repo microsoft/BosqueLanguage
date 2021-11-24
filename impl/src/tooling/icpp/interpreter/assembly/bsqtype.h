@@ -107,9 +107,10 @@ public:
     const std::string fname;
 
     const BSQTypeID declaredType;
+    const bool isOptional;
 
-    BSQField(BSQFieldID fkey, std::string fname, BSQTypeID declaredType): 
-        fkey(fkey), fname(fname), declaredType(declaredType)
+    BSQField(BSQFieldID fkey, std::string fname, BSQTypeID declaredType, bool isOptional): 
+        fkey(fkey), fname(fname), declaredType(declaredType), isOptional(isOptional)
     {;}
 };
 
@@ -119,7 +120,6 @@ class BSQType
 {
 public:
     static const BSQType** g_typetable;
-    static std::map<BSQRecordPropertyID, std::string> g_propertynamemap;
 
     //Well known types
     static const BSQType* g_typeNone;
@@ -140,7 +140,8 @@ public:
     static const BSQType* g_typeStringKRepr128;
     static const std::pair<size_t, const BSQType*> g_typeStringKCons[5];
 
-    static const BSQType* g_typeStringRopeRepr;
+    static const BSQType* g_typeStringTreeRepr;
+    static const BSQType* g_typeStringSliceRepr;
 
     static const BSQType* g_typeString;
 
@@ -164,8 +165,8 @@ public:
     const std::string name;
 
     //Constructor that everyone delegates to
-    BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
-        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), vtable(vtable), fpkeycmp(fpkeycmp), fpDisplay(fpDisplay), name(name), consops(consops)
+    BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), vtable(vtable), fpkeycmp(fpkeycmp), fpDisplay(fpDisplay), name(name)
     {;}
 
     virtual ~BSQType() {;}
@@ -229,8 +230,8 @@ public:
 class BSQRefType : public BSQType
 {
 public:
-    BSQRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops):  
-        BSQType(tid, BSQTypeLayoutKind::Ref, { heapsize, sizeof(void*), sizeof(void*), heapmask, "2" }, REF_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops)
+    BSQRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name):  
+        BSQType(tid, BSQTypeLayoutKind::Ref, { heapsize, sizeof(void*), sizeof(void*), heapmask, "2" }, REF_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name)
     {;}
 
     virtual ~BSQRefType() {;}
@@ -257,8 +258,8 @@ public:
 class BSQStructType : public BSQType
 {
 public:
-    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops, bool norefs): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name, consops)
+    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, bool norefs): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name)
     {;}
 
     virtual ~BSQStructType() {;}
@@ -351,7 +352,6 @@ inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
 //Concrete types
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQTupleInfo
 {
@@ -371,7 +371,7 @@ class BSQTupleRefType : public BSQRefType, public BSQTupleInfo
 {
 public:
     BSQTupleRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, {tupleJSONParse_impl}),
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -382,7 +382,7 @@ class BSQTupleStructType : public BSQStructType, public BSQTupleInfo
 {
 public:
     BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets, bool norefs):
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, {tupleJSONParse_impl}, norefs),
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, norefs),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -390,11 +390,12 @@ public:
 };
 
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-bool recordJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQRecordInfo
 {
 public:
+    static std::map<BSQRecordPropertyID, std::string> g_propertynamemap;
+
     const std::vector<BSQRecordPropertyID> properties;
     const std::vector<BSQTypeID> rtypes;
     const std::vector<size_t> propertyoffsets;
@@ -410,7 +411,7 @@ class BSQRecordRefType : public BSQRefType, public BSQRecordInfo
 {
 public:
     BSQRecordRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, {recordJSONParse_impl}),
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
@@ -421,7 +422,7 @@ class BSQRecordStructType : public BSQStructType, public BSQRecordInfo
 {
 public:
     BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets, bool norefs):
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, {recordJSONParse_impl}, norefs),
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, norefs),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
@@ -430,42 +431,17 @@ public:
 
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-bool entityJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQEntityInfo
 {
 public:
     const std::vector<BSQFieldID> fields;
     const std::vector<size_t> fieldoffsets;
+    const std::optional<BSQVirtualInvokeID> consfunc;
+    const std::vector<BSQFieldID> consfields;
 
-    BSQEntityInfo(std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfuncfields, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
-        consfunc(consfunc), consfuncfields(consfuncfields), fields(fields), fieldoffsets(fieldoffsets)
-    {;}
-
-    virtual ~BSQEntityInfo() {;}
-};
-
-
-
-
-
-
-
-
-
-
-std::string entityStdDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-bool entityStdJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
-class BSQEntityStdInfo
-{
-public:
-    const std::vector<BSQFieldID> fields;
-    const std::vector<BSQTypeID> ftypes;
-    const std::vector<size_t> fieldoffsets;
-
-    BSQEntityInfo(std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
-        fields(fields), ftypes(ftypes), fieldoffsets(fieldoffsets)
+    BSQEntityInfo(std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields):
+        fields(fields), fieldoffsets(fieldoffsets), consfunc(consfunc), consfields(consfields)
     {;}
 
     virtual ~BSQEntityInfo() {;}
@@ -474,9 +450,9 @@ public:
 class BSQEntityRefType : public BSQRefType, public BSQEntityInfo
 {
 public:
-    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets):
-        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name, consops),
-        BSQEntityInfo(fields, ftypes, fieldoffsets)
+    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields):
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name),
+        BSQEntityInfo(fields, fieldoffsets, consfunc, consfields)
     {;}
 
     virtual ~BSQEntityRefType() {;}
@@ -485,9 +461,9 @@ public:
 class BSQEntityStructType : public BSQStructType, public BSQEntityInfo
 {
 public:
-    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQFieldID> fields, std::vector<BSQTypeID> ftypes, std::vector<size_t> fieldoffsets): 
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name, consops),
-        BSQEntityInfo(fields, ftypes, fieldoffsets)
+    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields): 
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name, norefs),
+        BSQEntityInfo(fields, fieldoffsets, consfunc, consfields)
     {;}
 
     virtual ~BSQEntityStructType() {;}
