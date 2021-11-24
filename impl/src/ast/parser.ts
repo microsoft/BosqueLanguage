@@ -158,7 +158,6 @@ const AttributeStrings = [
     "algebraic",
     "orderable",
     "entrypoint",
-    "hidden",
     "private",
     "factory",
     "virtual",

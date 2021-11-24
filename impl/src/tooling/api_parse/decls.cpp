@@ -381,6 +381,80 @@ std::optional<std::string> JSONParseHelper::checkIsContentHash(json j)
     return std::make_optional(sstr);
 }
 
+std::optional<std::pair<std::string, std::string>> JSONParseHelper::checkEnumName(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    auto sstr = j.get<std::string>();
+    auto qidx = sstr.find("::");
+    if(qidx == std::string::npos)
+    {
+        return std::nullopt;
+    }
+
+    auto tstr = sstr.substr(0, qidx);
+    auto nstr = sstr.substr(qidx + 2);
+
+    if(tstr.empty() || nstr.empty())
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(std::make_pair(tstr, nstr));
+}
+
+InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, const IType*>& typemap)
+{
+    auto name = j["name"].get<std::string>();
+    auto restype = typemap.find(j["restype"].get<std::string>())->second;
+
+    std::vector<std::string> argnames;
+    auto jargnames = j["argnames"];
+    std::transform(jargnames.cbegin(), jargnames.cend(), std::back_inserter(argnames), [](const json& jv) {
+        return jv.get<std::string>();
+    });
+
+    std::vector<const IType*> argtypes;
+    auto jargtypes = j["argtypes"];
+    std::transform(jargtypes.cbegin(), jargtypes.cend(), std::back_inserter(argtypes), [&typemap](const json& jv) {
+        return typemap.find(jv.get<std::string>())->second;
+    });
+
+    return new InvokeSignature(name, restype, argnames, argtypes);
+}
+
+APIModule* APIModule::jparse(json j)
+{
+    std::map<std::string, const IType*> typemap;
+    auto japitypes = j["apitypes"];
+    for (size_t i = 0; i < japitypes.size(); ++i)
+    {
+        auto val = IType::jparse(japitypes[i]);
+        typemap[val->name] = val;
+    }
+
+    auto japitypedecls = j["typedecls"];
+    for (size_t i = 0; i < japitypedecls.size(); ++i)
+    {
+        auto key = japitypedecls[i]["name"].get<std::string>();
+        auto val = japitypedecls[i]["type"].get<std::string>();
+        typemap[key] = typemap.find(val)->second;
+    }
+
+    std::vector<InvokeSignature*> apisig;
+    auto japisig = j["apisig"];
+    for (size_t i = 0; i < japisig.size(); ++i)
+    {
+        auto val = InvokeSignature::jparse(japisig[i], typemap);
+        apisig.push_back(val);
+    }
+
+    return new APIModule(typemap, apisig);
+}
+
 IType* IType::jparse(json j)
 {
     switch(j["tag"].get<TypeTag>())
@@ -409,14 +483,10 @@ IType* IType::jparse(json j)
             return StringType::jparse(j);
         case TypeTag::StringOfTag:
             return StringOfType::jparse(j);
-        case TypeTag::PrimitiveOfTag:
-            return PrimitiveOfType::jparse(j);
         case TypeTag::DataStringTag:
             return DataStringType::jparse(j);
         case TypeTag::ByteBufferTag:
             return ByteBufferType::jparse(j);
-        case TypeTag::DataBufferTag:
-            return DataBufferType::jparse(j);
         case TypeTag::ISOTimeTag:
             return ISOTimeType::jparse(j);
         case TypeTag::LogicalTimeTag:
@@ -425,37 +495,20 @@ IType* IType::jparse(json j)
             return UUIDType::jparse(j);
         case TypeTag::ContentHashTag:
             return ContentHashType::jparse(j);
-
-        xxxx
-
+        case TypeTag::PrimitiveOfTag:
+            return PrimitiveOfType::jparse(j);
         case TypeTag::TupleTag:
             return TupleType::jparse(j);
         case TypeTag::RecordTag:
             return RecordType::jparse(j);
-        case TypeTag::SomethingTag:
-            return SomethingType::jparse(j);
-        case TypeTag::OkTag:
-            return OkType::jparse(j);
-        case TypeTag::ErrTag:
-            return ErrType::jparse(j);
-        case TypeTag::ListTag:
-            return ListType::jparse(j);
-        case TypeTag::StackTag:
-            return StackType::jparse(j);
-        case TypeTag::QueueTag:
-            return QueueType::jparse(j);
-        case TypeTag::SetTag:
-            return SetType::jparse(j);
-        case TypeTag::MapTag:
-            return MapType::jparse(j);
+        case TypeTag::ContainerTag:
+            return ContainerType::jparse(j);
         case TypeTag::EnumTag:
             return EnumType::jparse(j);
         case TypeTag::EntityTag:
             return EntityType::jparse(j);
         case TypeTag::UnionTag:
             return UnionType::jparse(j);
-        case TypeTag::ConceptTag:
-            return ConceptType::jparse(j);
         default: 
         {
             assert(false);
