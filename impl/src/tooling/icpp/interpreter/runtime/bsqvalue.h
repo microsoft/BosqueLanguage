@@ -35,6 +35,27 @@ public:
 };
 
 ////
+//Nothing
+typedef uint64_t BSQNothing;
+#define BSQNothingValue 0
+#define BSQNothingHeapValue nullptr
+
+std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+bool entityNothingJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
+
+class BSQNothingType : public BSQRegisterType<BSQNothing>
+{
+public:
+    BSQNothingType(): BSQRegisterType(BSQ_TYPE_ID_NOTHING, sizeof(BSQNothing), "1", EMPTY_KEY_CMP, entityNothingDisplay_impl, "NSCore::Nothing")
+    {
+        static_assert(sizeof(BSQNone) == 8);
+    }
+
+    virtual ~BSQNothingType() {;}
+};
+
+////
 //Bool
 
 typedef uint8_t BSQBool;

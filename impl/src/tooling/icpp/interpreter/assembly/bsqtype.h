@@ -470,7 +470,6 @@ public:
 };
 
 std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-bool ephemeralJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQEphemeralListType : public BSQStructType
 {
@@ -478,8 +477,8 @@ public:
     const std::vector<BSQTypeID> etypes;
     const std::vector<size_t> idxoffsets;
 
-    BSQEphemeralListType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets): 
-        BSQStructType(tid, datasize, imask, {}, nullptr, ephemeralDisplay_impl, name, {ephemeralJSONParse_impl}), etypes(etypes), idxoffsets(idxoffsets)
+    BSQEphemeralListType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets, bool norefs): 
+        BSQStructType(tid, datasize, imask, {}, nullptr, ephemeralDisplay_impl, name, norefs), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     virtual ~BSQEphemeralListType() {;}
@@ -489,15 +488,13 @@ std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 int unionRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-bool unionJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQUnionType : public BSQType
 {
 public:
     const std::vector<BSQTypeID> subtypes;
 
-     BSQUnionType(BSQTypeID tid, BSQTypeKind tkind, BSQTypeSizeInfo allocinfo, KeyCmpFP fpkeycmp, std::string name, std::vector<BSQTypeID> subtypes): 
-        BSQType(tid, tkind, allocinfo, {0}, {}, fpkeycmp, unionDisplay_impl, name, {unionJSONParse_impl}), subtypes(subtypes)
+     BSQUnionType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, KeyCmpFP fpkeycmp, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQType(tid, tkind, allocinfo, {0}, {}, fpkeycmp, unionDisplay_impl, name), subtypes(subtypes)
     {;}
 
     virtual ~BSQUnionType() {;}
@@ -509,7 +506,7 @@ class BSQUnionInlineType : public BSQUnionType
 {
 public:
     BSQUnionInlineType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> subtypes): 
-        BSQUnionType(tid, BSQTypeKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, unionInlineKeyCmp_impl, name, subtypes)
+        BSQUnionType(tid, BSQTypeLayoutKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, unionInlineKeyCmp_impl, name, subtypes)
     {;}
 
     virtual ~BSQUnionInlineType() {;}
@@ -534,12 +531,12 @@ public:
        return (SLPTR_LOAD_UNION_INLINE_TYPE(src))->indexStorageLocationOffset(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
     }
 
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
        assert(false);
     }
 
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         assert(false);
     }
@@ -549,7 +546,7 @@ class BSQUnionRefType : public BSQUnionType
 {
 public:
     BSQUnionRefType(BSQTypeID tid, std::string name, std::vector<BSQTypeID> subtypes): 
-        BSQUnionType(tid, BSQTypeKind::UnionRef, { sizeof(void*), sizeof(void*), sizeof(void*), nullptr, "2" }, unionRefKeyCmp_impl, name, subtypes)
+        BSQUnionType(tid, BSQTypeLayoutKind::UnionRef, { sizeof(void*), sizeof(void*), sizeof(void*), nullptr, "2" }, unionRefKeyCmp_impl, name, subtypes)
     {;}
 
     virtual ~BSQUnionRefType() {;}
@@ -574,13 +571,13 @@ public:
         return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
     }
 
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata));
     }
 
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);

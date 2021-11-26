@@ -7,6 +7,7 @@
 #include "environment.h"
 
 const BSQType* BSQType::g_typeNone = new BSQNoneType();
+const BSQType* BSQType::g_typeNothing = new BSQNothingType();
 const BSQType* BSQType::g_typeBool = new BSQBoolType();
 const BSQType* BSQType::g_typeNat = new BSQNatType();
 const BSQType* BSQType::g_typeInt = new BSQIntType();
@@ -36,156 +37,6 @@ const BSQType* BSQType::g_typeUUID = new BSQUUIDType();
 const BSQType* BSQType::g_typeContentHash = new BSQContentHashType();
 const BSQType* BSQType::g_typeRegex = new BSQRegexType();
 
-static std::regex re_numberino_n("^[+]?(0|[1-9][0-9]*)$");
-static std::regex re_numberino_i("^[-+]?(0|[1-9][0-9]*)$");
-static std::regex re_numberino_f("^[-+]?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
-
-std::optional<uint64_t> parseToUnsignedNumber(json j)
-{
-    std::optional<uint64_t> nval = std::nullopt;
-    if(j.is_number_unsigned() || j.is_string())
-    { 
-        if(j.is_number_unsigned())
-        {
-            nval = j.get<uint64_t>();
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_n))
-            {
-                try
-                {
-                    nval = std::stoull(sstr);
-                }
-                catch(...)
-                {
-                    ;
-                }
-            }
-        }
-    }
-
-    return nval;
-}
-
-std::optional<int64_t> parseToSignedNumber(json j)
-{
-    std::optional<int64_t> nval = std::nullopt;
-    if(j.is_number_integer() || j.is_string())
-    { 
-        if(j.is_number_integer())
-        {
-            nval = j.get<int64_t>();
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_i))
-            {
-                try
-                {
-                    nval = std::stoll(sstr);
-                }
-                catch(...)
-                {
-                    ;
-                }
-            }
-        }
-    }
-
-    return nval;
-}
-
-std::optional<std::string> parseToBigUnsignedNumber(json j)
-{
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number_unsigned() || j.is_string())
-    { 
-        if(j.is_number_unsigned())
-        {
-            nval = std::to_string(j.get<uint64_t>());
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_n))
-            {
-                nval = sstr;
-            }
-        }
-    }
-
-    return nval;
-}
-
-std::optional<std::string> parseToBigSignedNumber(json j)
-{
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number_integer() || j.is_string())
-    { 
-        if(j.is_number_integer())
-        {
-            nval = std::to_string(j.get<uint64_t>());
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_i))
-            {
-                nval = sstr;
-            }
-        }
-    }
-
-    return nval;
-}
-
-std::optional<std::string> parseToRealNumber(json j)
-{
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number() || j.is_string())
-    { 
-        if(j.is_number())
-        {
-            nval = std::to_string(j.get<double>());
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_f))
-            {
-                nval = sstr;
-            }
-        }
-    }
-
-    return nval;
-}
-
-std::optional<std::string> parseToDecimalNumber(json j)
-{
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number() || j.is_string())
-    { 
-        if(j.is_number())
-        {
-            nval = std::to_string(j.get<double>());
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_f))
-            {
-                nval = sstr;
-            }
-        }
-    }
-
-    return nval;
-}
-
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return "none";
@@ -207,6 +58,16 @@ bool entityNoneJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr s
         dynamic_cast<const BSQNoneType*>(BSQType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
         return true;
     }
+}
+
+std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return "nothing";
+}
+
+int entityNothingKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    return 0;
 }
 
 std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data)

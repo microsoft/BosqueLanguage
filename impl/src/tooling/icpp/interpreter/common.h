@@ -14,10 +14,8 @@
 
 #include <optional>
 #include <string>
-#include <regex>
 
-#include "json.hpp"
-typedef nlohmann::json json;
+#include "../../api_parse/decls.h"
 
 #include <mimalloc.h>
 

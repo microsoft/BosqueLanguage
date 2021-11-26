@@ -1462,13 +1462,18 @@ public:
             j = j[1];
         }
 
-        if(!j.is_object() || this->fields.size() < j.size())
+        if(!j.is_object())
         {
             return false;
         }
 
         for (auto iter = j.cbegin(); iter != j.end(); iter++) {
             auto fkey = iter.key();
+            if(fkey == "__type_tag__")
+            {
+                continue;
+            }
+
             auto fpos = std::find_if(this->fields.cbegin(), this->fields.cend() [&fkey](const std::pair<std::string, std::string>& fentry) {
                 return fentry.second == fkey;
             });
@@ -1571,27 +1576,54 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        if(!j.is_array() || j.size() != 2 || !j[0].is_string())
+        if(j.is_object())
         {
-            return false;
+            auto typetagref = j["__type_tag__"];
+            if(!typetagref.is_string())
+            {
+                return false;
+            }
+
+            auto oftyperef = apimodule->typemap.find(typetagref.get<std::string>());
+            if(oftyperef == apimodule->typemap.cend())
+            {
+                return false;
+            }
+
+            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend());
+            if(ofidxref == this->opts.cend())
+            {
+                return false;
+            }
+
+            auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
+
+            apimgr.parseUnionChoice(apimodule, this, value, ofidx, ctx);
+            return oftyperef->second->tparse(apimgr, apimodule, j, value);
         }
+        else{
+            if(!j.is_array() || j.size() != 2 || !j[0].is_string())
+            {
+                return false;
+            }
 
-        auto oftyperef = apimodule->typemap.find(j[0].get<std::string>());
-        if(oftyperef == apimodule->typemap.cend())
-        {
-            return false;
+            auto oftyperef = apimodule->typemap.find(j[0].get<std::string>());
+            if(oftyperef == apimodule->typemap.cend())
+            {
+                return false;
+            }
+
+            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend());
+            if(ofidxref == this->opts.cend())
+            {
+                return false;
+            }
+
+            auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
+
+            apimgr.parseUnionChoice(apimodule, this, value, ofidx, ctx);
+            return oftyperef->second->tparse(apimgr, apimodule, j[1], value);
         }
-
-        auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend());
-        if(ofidxref == this->opts.cend())
-        {
-            return false;
-        }
-
-        auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
-
-        apimgr.parseUnionChoice(apimodule, this, value, ofidx, ctx);
-        return oftyperef->second->tparse(apimgr, apimodule, j[1], value);
     } 
 
     template <typename ValueRepr, typename State>

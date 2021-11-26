@@ -376,3 +376,8 @@ public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     void invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 };
+
+class ICPPParseJSON : public ApiManagerJSON<StorageLocationPtr, Evaluator>
+{
+    xxxx;
+};

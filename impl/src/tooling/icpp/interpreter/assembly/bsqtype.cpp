@@ -181,55 +181,6 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     return res;
 }
 
-bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto tupinfo = dynamic_cast<const BSQTupleInfo*>(btype);
-    if(!j.is_array() || tupinfo->ttypes.size() != j.size())
-    {
-        return false;
-    }
-
-    if(btype->tkind == BSQTypeLayoutKind::Struct)
-    {
-        for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
-        {
-            assert(i < j.size());
-
-            auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            bool ok = etype->consops.fpJSONParse(etype, j[i], SLPTR_INDEX_DATAPTR(sl, tupinfo->idxoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
-    }
-    else
-    {
-        auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.assigndatasize);
-        GCStack::pushFrame(&vbuff, btype->allocinfo.heapmask);
-
-        for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
-        {
-            assert(i < j.size());
-
-            auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            bool ok = etype->consops.fpJSONParse(etype, j[i], SLPTR_INDEX_DATAPTR(vbuff, tupinfo->idxoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
-
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
-        GC_MEM_COPY(tt, vbuff, btype->allocinfo.assigndatasize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-
-        GCStack::popFrame();
-    }
-
-    return true;
-}
-
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     const BSQRecordInfo* ttype = dynamic_cast<const BSQRecordInfo*>(btype);
@@ -250,63 +201,6 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     res += "}";
 
     return res;
-}
-
-bool recordJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto recinfo = dynamic_cast<const BSQRecordInfo*>(btype);
-    if(!j.is_object() || recinfo->rtypes.size() != j.size())
-    {
-        return false;
-    }
-
-    auto allprops = std::all_of(recinfo->properties.cbegin(), recinfo->properties.cend(), [&j](const BSQRecordPropertyID prop){
-                return j.contains(BSQType::g_propertynamemap[prop]);
-            });
-    if(!allprops)
-    {
-        return false;
-    }
-
-    if(btype->tkind == BSQTypeLayoutKind::Struct)
-    {
-        for(size_t i = 0; i < recinfo->properties.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertynamemap[recinfo->properties[i]];
-
-            bool ok = etype->consops.fpJSONParse(etype, j[pname], SLPTR_INDEX_DATAPTR(sl, recinfo->propertyoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
-    }
-    else
-    {
-        auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-        GCStack::pushFrame(&vbuff, btype->allocinfo.heapmask);
-
-        for(size_t i = 0; i < recinfo->properties.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertynamemap[recinfo->properties[i]];
-
-            bool ok = etype->consops.fpJSONParse(etype, j[pname], SLPTR_INDEX_DATAPTR(vbuff, recinfo->propertyoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
-
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
-        GC_MEM_COPY(tt, vbuff, btype->allocinfo.assigndatasize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-
-        GCStack::popFrame();
-    }
-
-    return true;
 }
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -351,31 +245,6 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     return res;
 }
 
-bool ephemeralJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto elinfo = dynamic_cast<const BSQEphemeralListType*>(btype);
-    auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-
-    if(!j.is_array() || j.size() != elinfo->idxoffsets.size())
-    {
-        return false;
-    }
-
-    for (size_t i = 0; i < elinfo->idxoffsets.size(); ++i)
-    {
-        auto etype = BSQType::g_typetable[elinfo->etypes[i]];
-        bool ok = etype->consops.fpJSONParse(etype, j[i], &vbuff);
-        if(!ok)
-        {
-            return false;
-        }
-
-        etype->storeValue(SLPTR_INDEX_DATAPTR(sl, elinfo->idxoffsets[i]), &vbuff);
-    }
-
-    return true;
-}
-
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(data);
@@ -408,99 +277,4 @@ int unionRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageL
         auto tt = SLPTR_LOAD_HEAP_TYPE_ANY(data1);
         return tt->fpkeycmp(tt, data1, data2);
     }
-}
-
-const BSQType* unionJSONParse_impl_select(const BSQUnionType* utype, json j, StorageLocationPtr sl)
-{
-    std::vector<const BSQType*> opts;
-    std::transform(utype->subtypes.cbegin(), utype->subtypes.cend(), std::back_inserter(opts), [](const BSQTypeID tid) {
-        return BSQType::g_typetable[tid];
-    });
-
-    if(j.is_object())
-    {
-        //TODO: map option once we have map type
-        auto mapopt = opts.cend();
-        //std::find_if(opts.cbegin(), opts.cend(), [](const BSQType* opt) {
-        //    return dynamic_cast<const BSQListType*>(opt) != nullptr;
-        //});
-
-        auto recordopt = std::find_if(opts.cbegin(), opts.cend(), [&j](const BSQType* opt) {
-            const BSQRecordInfo* ropt = dynamic_cast<const BSQRecordInfo*>(opt);
-            if(ropt == nullptr || ropt->properties.size() != j.size())
-            {
-                return false;
-            }
-            else
-            {
-                return std::all_of(ropt->properties.cbegin(), ropt->properties.cend(), [&j](const BSQRecordPropertyID prop){
-                    return j.contains(BSQType::g_propertymap[prop]);
-                });
-            }
-        });
-
-        auto oftype = (mapopt != opts.cend()) ? *mapopt : *recordopt;
-        oftype->consops.fpJSONParse(oftype, j, sl);
-        return oftype;
-    }
-    else if(j.is_array())
-    {
-        auto listopt = std::find_if(opts.cbegin(), opts.cend(), [](const BSQType* opt) {
-            return dynamic_cast<const BSQListType*>(opt) != nullptr;
-        });
-
-        auto tupleopt = std::find_if(opts.cbegin(), opts.cend(), [](const BSQType* opt) {
-            return dynamic_cast<const BSQTupleInfo*>(opt) != nullptr;
-        });
-
-        auto oftype = (listopt != opts.cend()) ? *listopt : *tupleopt;
-        oftype->consops.fpJSONParse(oftype, j, sl);
-        return oftype;
-    }
-    else
-    {
-        for(size_t i = 0; i < opts.size(); ++i)
-        {
-            auto opt = opts[i];
-
-            auto ismap = false;
-            auto islist = dynamic_cast<const BSQListType*>(opt) != nullptr;
-            auto isrecord = dynamic_cast<const BSQRecordInfo*>(opt) != nullptr;
-            auto istuple = dynamic_cast<const BSQTupleInfo*>(opt) != nullptr;
-            if(!ismap && !islist && !isrecord && !istuple)
-            {
-                auto okparse = opt->consops.fpJSONParse(opt, j, sl);
-                if(okparse)
-                {
-                    return opt;
-                }
-            }
-        }
-
-        return nullptr;
-    }
-}
-
-bool unionJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto utype = dynamic_cast<const BSQUnionType*>(btype);
-
-    auto rsl = sl;
-    if(utype->isInline())
-    {
-        rsl = SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
-    }
-
-    auto ptype = unionJSONParse_impl_select(utype, j, rsl);
-    if(ptype == nullptr)
-    {
-        return false;
-    }
-
-    if(utype->isInline())
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(ptype, sl);
-    }
-
-    return true;
 }
