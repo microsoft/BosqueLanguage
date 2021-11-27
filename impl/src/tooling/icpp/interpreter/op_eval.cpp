@@ -2148,11 +2148,6 @@ void Evaluator::invokePostlude()
     GCStack::popFrame();
 }
 
-inline void loadPCodeCapturedArgs(BSQPCodeOperator& lambda, const BSQPCode* pc)
-{
-    assert(pc->cargs.size() == 0);
-}
-
 void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype)
 {
     switch (invk->implkey)
@@ -2307,6 +2302,131 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
 }
 
 /*
+
+bool entityNoneJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    if(!j.is_null())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQNoneType*>(BSQType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
+        return true;
+    }
+}
+
+bool entityBoolJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    if(!j.is_boolean())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQBoolType*>(BSQType::g_typeBool)->storeValueDirect(sl, j.get<bool>() ? BSQTRUE : BSQFALSE);
+        return true;
+    }
+}
+
+bool entityNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    auto uval = parseToUnsignedNumber(j);
+    if(!uval.has_value())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, uval.value());
+        return true;
+    }
+}
+
+bool entityBigNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    auto bnval = parseToBigUnsignedNumber(j);
+    if(!bnval.has_value())
+    {
+        return false;
+    }
+
+    dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, std::stoull(bnval.value()));
+    return true;
+}
+
+bool entityIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    auto ival = parseToSignedNumber(j);
+    if(!ival.has_value())
+    {
+        return false;
+    }
+    else
+    {
+        dynamic_cast<const BSQIntType*>(BSQType::g_typeInt)->storeValueDirect(sl, ival.value());
+        return true;
+    }
+}
+
+bool entityBigIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    auto bival = parseToBigUnsignedNumber(j);
+    if(!bival.has_value())
+    {
+        return false;
+    }
+
+    dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, std::stoll(bival.value()));
+    return true;
+}
+
+bool entityFloatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    auto fval = parseToRealNumber(j);
+    if(!fval.has_value())
+    {
+        return false;
+    }
+
+    dynamic_cast<const BSQFloatType*>(BSQType::g_typeFloat)->storeValueDirect(sl, std::stod(fval.value()));
+    return true;
+}
+
+bool entityDecimalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    auto dval = parseToDecimalNumber(j);
+    if(!dval.has_value())
+    {
+        return false;
+    }
+
+    dynamic_cast<const BSQDecimalType*>(BSQType::g_typeDecimal)->storeValueDirect(sl, std::stod(dval.value()));
+    return true;
+}
+
+bool entityRationalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    if(!j.is_array() || j.size() != 2)
+    {
+        return false;
+    }
+
+    auto numtype = dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt);
+    auto denomtype = dynamic_cast<const BSQNatType*>(BSQType::g_typeNat);
+
+    BSQRational rr;
+    auto oknum = numtype->consops.fpJSONParse(numtype, j[0], &rr.numerator);
+    auto okdenom = denomtype->consops.fpJSONParse(denomtype, j[1], &rr.denominator);
+
+    if(!oknum || !okdenom)
+    {
+        return false;
+    }
+
+    dynamic_cast<const BSQRationalType*>(BSQType::g_typeRational)->storeValueDirect(sl, rr);
+    return true;
+}
 
 bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {

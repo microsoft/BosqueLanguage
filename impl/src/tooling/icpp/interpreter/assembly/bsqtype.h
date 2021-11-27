@@ -188,8 +188,8 @@ template <typename T>
 class BSQRegisterType : public BSQType
 {
 public:
-    BSQRegisterType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
-        BSQType(tid, BSQTypeLayoutKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name, consops)
+    BSQRegisterType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeLayoutKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
     {;}
 
     virtual ~BSQRegisterType() {;}
@@ -287,8 +287,8 @@ template <typename T>
 class BSQBigNumType : public BSQType
 {
 public:
-    BSQBigNumType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, ConsFunctorSet consops): 
-        BSQType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name, consops)
+    BSQBigNumType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, __std_fs_read_name_from_reparse_data_buffer)
     {;}
 
     virtual ~BSQBigNumType() {;}
@@ -314,12 +314,12 @@ public:
         return nullptr;
     }
 
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         SLPTR_STORE_CONTENTS_AS(T, trgt, SLPTR_LOAD_CONTENTS_AS(T, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(T, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(T, src));

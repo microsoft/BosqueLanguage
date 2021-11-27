@@ -44,7 +44,7 @@ class ResolvedEntityAtomType extends ResolvedAtomType {
     }
 
     static create(object: EntityTypeDecl, binds: Map<string, ResolvedType>): ResolvedEntityAtomType {
-        let name = object.ns + "::" + object.name;
+        let name = (object.ns !== "NSCore" ? (object.ns + "::") : "") + object.name;
         if (object.terms.length !== 0) {
             name += "<" + object.terms.map((arg) => (binds.get(arg.name) as ResolvedType).typeID).join(", ") + ">";
         }

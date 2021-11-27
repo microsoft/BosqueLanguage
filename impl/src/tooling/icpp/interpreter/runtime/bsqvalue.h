@@ -26,7 +26,7 @@ bool entityNoneJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr s
 class BSQNoneType : public BSQRegisterType<BSQNone>
 {
 public:
-    BSQNoneType(): BSQRegisterType(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", entityNoneKeyCmp_impl, entityNoneDisplay_impl, "NSCore::None", {entityNoneJSONParse_impl})
+    BSQNoneType(): BSQRegisterType(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", entityNoneKeyCmp_impl, entityNoneDisplay_impl, "NSCore::None")
     {
         static_assert(sizeof(BSQNone) == 8);
     }
@@ -65,12 +65,10 @@ typedef uint8_t BSQBool;
 std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityBoolKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-bool entityBoolJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQBoolType : public BSQRegisterType<BSQBool>
 {
 public:
-    BSQBoolType(): BSQRegisterType(BSQ_TYPE_ID_BOOL, sizeof(BSQBool), "1", entityBoolKeyCmp_impl, entityBoolDisplay_impl, "NSCore::Bool", {entityBoolJSONParse_impl})
+    BSQBoolType(): BSQRegisterType(BSQ_TYPE_ID_BOOL, sizeof(BSQBool), "1", entityBoolKeyCmp_impl, entityBoolDisplay_impl, "NSCore::Bool")
     {
         static_assert(sizeof(BSQBool) == 1);
     }
@@ -85,12 +83,10 @@ typedef uint64_t BSQNat;
 std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-bool entityNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQNatType : public BSQRegisterType<BSQNat>
 {
 public:
-    BSQNatType(): BSQRegisterType(BSQ_TYPE_ID_NAT, sizeof(BSQNat), "1", entityNatKeyCmp_impl, entityNatDisplay_impl, "NSCore::Nat", {entityNatJSONParse_impl})
+    BSQNatType(): BSQRegisterType(BSQ_TYPE_ID_NAT, sizeof(BSQNat), "1", entityNatKeyCmp_impl, entityNatDisplay_impl, "NSCore::Nat")
     {
         static_assert(sizeof(BSQNat) == 8);
     }
@@ -105,12 +101,10 @@ typedef int64_t BSQInt;
 std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-bool entityIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQIntType : public BSQRegisterType<BSQInt>
 {
 public:
-    BSQIntType(): BSQRegisterType(BSQ_TYPE_ID_INT, sizeof(BSQInt), "1", entityIntKeyCmp_impl, entityIntDisplay_impl, "NSCore::Int", {entityIntJSONParse_impl})
+    BSQIntType(): BSQRegisterType(BSQ_TYPE_ID_INT, sizeof(BSQInt), "1", entityIntKeyCmp_impl, entityIntDisplay_impl, "NSCore::Int")
     {
         static_assert(sizeof(BSQInt) == 8);
     }
@@ -131,18 +125,16 @@ public:
 typedef uint64_t BSQBigNat;
 
 //
-//TODO: change impl to inline + https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Number.BigInteger.cs
+//TODO: change impl to something like for strings (an inline verison with maybe 128 or 196 bits + some heap allocated support)
 //
 
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityBigNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-bool entityBigNatJSONParse_impl(const BSQType* btype, json jv, StorageLocationPtr sl);
-
 class BSQBigNatType : public BSQBigNumType<BSQBigNat>
 {
 public:
-    BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, BIGNAT_SIZE, BIGNAT_MASK, entityBigNatKeyCmp_impl, entityBigNatDisplay_impl, "NSCore::BigNat", {entityBigNatJSONParse_impl}) 
+    BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, BIGNAT_SIZE, BIGNAT_MASK, entityBigNatKeyCmp_impl, entityBigNatDisplay_impl, "NSCore::BigNat") 
     {
         static_assert(sizeof(BSQBigNat) == BIGNAT_SIZE);
     }
@@ -155,18 +147,16 @@ public:
 typedef int64_t BSQBigInt;
 
 //
-//TODO: change impl to inline + https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Number.BigInteger.cs
+//TODO: change impl to something like for strings (an inline verison with maybe 128 or 196 bits + some heap allocated support)
 //
 
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-bool entityBigIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQBigIntType : public BSQBigNumType<BSQBigInt>
 {
 public:
-    BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, BIGINT_SIZE, BIGINT_MASK, entityBigIntKeyCmp_impl, entityBigIntDisplay_impl, "NSCore::BigInt", {entityBigIntJSONParse_impl}) 
+    BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, BIGINT_SIZE, BIGINT_MASK, entityBigIntKeyCmp_impl, entityBigIntDisplay_impl, "NSCore::BigInt") 
     {
         static_assert(sizeof(BSQBigInt) == BIGINT_SIZE);
     }
@@ -180,12 +170,10 @@ typedef double BSQFloat;
 
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool entityFloatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQFloatType: public BSQRegisterType<BSQFloat>
 {
 public:
-    BSQFloatType(): BSQRegisterType(BSQ_TYPE_ID_FLOAT, sizeof(BSQFloat), "1", EMPTY_KEY_CMP, entityFloatDisplay_impl, "NSCore::Float", {entityFloatJSONParse_impl}) 
+    BSQFloatType(): BSQRegisterType(BSQ_TYPE_ID_FLOAT, sizeof(BSQFloat), "1", EMPTY_KEY_CMP, entityFloatDisplay_impl, "NSCore::Float") 
     {
         static_assert(sizeof(BSQFloat) == 8);
     }
@@ -198,18 +186,15 @@ public:
 typedef double BSQDecimal;
 
 //
-//TODO: this is not a nice "large number of significant integral and fractional digits and no round-off error" like I want plus it is huge -- we need to get a better library later
-//https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Decimal.cs
+//TODO: we need to get a better library later maybe use something like -- /https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Decimal.cs
 //
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool entityDecimalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQDecimalType : public BSQRegisterType<BSQDecimal>
 {
 public:
-    BSQDecimalType() : BSQRegisterType(BSQ_TYPE_ID_DECIMAL, sizeof(BSQDecimal), "1" , EMPTY_KEY_CMP, entityDecimalDisplay_impl, "NSCore::Decimal", {entityDecimalJSONParse_impl})
+    BSQDecimalType() : BSQRegisterType(BSQ_TYPE_ID_DECIMAL, sizeof(BSQDecimal), "1" , EMPTY_KEY_CMP, entityDecimalDisplay_impl, "NSCore::Decimal")
     {
         static_assert(sizeof(BSQDecimal) == 8);
     }
@@ -227,12 +212,10 @@ struct BSQRational
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool entityRationalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQRationalType : public BSQRegisterType<BSQRational>
 {
 public:
-    BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, RATIONAL_SIZE, RATIONAL_MASK, EMPTY_KEY_CMP, entityRationalDisplay_impl, "NSCore::Rational", {entityRationalJSONParse_impl}) 
+    BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, RATIONAL_SIZE, RATIONAL_MASK, EMPTY_KEY_CMP, entityRationalDisplay_impl, "NSCore::Rational") 
     {
         static_assert(sizeof(BSQRational) == RATIONAL_SIZE);
     }
@@ -297,7 +280,7 @@ public:
     static uint64_t getKReprSizeFor(uint64_t v);
 
     BSQStringReprType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name):
-        BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityStringReprDisplay_impl, name, {nullptr}) 
+        BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityStringReprDisplay_impl, name) 
     {;}
 
     virtual ~BSQStringReprType() {;}
@@ -402,7 +385,7 @@ struct BSQString
 };
 constexpr BSQString g_emptyString = {0};
 
-struct BSQStringIterator
+struct BSQStringForwardIterator
 {
     BSQString str;
     int64_t strpos;
@@ -410,10 +393,17 @@ struct BSQStringIterator
     int16_t cpos;
     int16_t minpos;
     int16_t maxpos;
-    int16_t statusflag;
 };
-constexpr int16_t g_validIterFlag = 0;
-constexpr int16_t g_invalidIterFlag = 1;
+
+struct BSQStringReverseIterator
+{
+    BSQString str;
+    int64_t strpos;
+    void* cbuff;
+    int16_t cpos;
+    int16_t minpos;
+    int16_t maxpos;
+};
 
 std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
@@ -431,21 +421,6 @@ uint32_t iteratorGetCodePoint(BSQStringIterator* iter);
 void incrementStringIterator_codePoint(BSQStringIterator* iter);
 void decrementStringIterator_codePoint(BSQStringIterator* iter);
 
-class BSQStringIteratorType : public BSQStructType
-{
-public:
-    BSQStringIteratorType(): 
-        BSQStructType(BSQ_TYPE_ID_STRINGITERATOR, sizeof(BSQStringIterator), "31121", {}, EMPTY_KEY_CMP, entityStringBSQStringIteratorDisplay_impl, "NSCore::StringPos", {nullptr})
-    {
-        static_assert(sizeof(BSQStringIterator) == 40);
-    }
-
-    virtual ~BSQStringIteratorType() {;}
-
-    void registerIteratorGCRoots(BSQStringIterator* iter);
-    void releaseIteratorGCRoots(BSQStringIterator* iter);
-};
-
 std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityStringKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
@@ -458,7 +433,7 @@ private:
 
 public:
     BSQStringType() 
-    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, "NSCore::String", {entityStringJSONParse_impl})
+    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, "NSCore::String")
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -486,12 +461,12 @@ public:
         return nullptr;
     }
 
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
     }
 
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
         SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
         SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));

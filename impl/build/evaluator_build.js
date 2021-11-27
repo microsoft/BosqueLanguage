@@ -35,7 +35,7 @@ else if(process.platform === "linux") {
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /Zi /std:c++17";  
+    ccflags = "/EHsc /Zi /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/win/z3/bin/libz3.lib")
     outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\chkworkflow.exe\"";

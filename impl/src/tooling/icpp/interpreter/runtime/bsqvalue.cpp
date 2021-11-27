@@ -22,14 +22,13 @@ const BSQType* BSQType::g_typeStringKRepr32 = new BSQStringKReprType<32>(BSQ_TYP
 const BSQType* BSQType::g_typeStringKRepr64 = new BSQStringKReprType<64>(BSQ_TYPE_ID_STRINGREPR_K64);
 const BSQType* BSQType::g_typeStringKRepr96 = new BSQStringKReprType<96>(BSQ_TYPE_ID_STRINGREPR_K96);
 const BSQType* BSQType::g_typeStringKRepr128 = new BSQStringKReprType<128>(BSQ_TYPE_ID_STRINGREPR_K128);
-const BSQType* BSQType::g_typeStringKRepr256 = new BSQStringKReprType<256>(BSQ_TYPE_ID_STRINGREPR_K256);
-const std::pair<size_t, const BSQType*> BSQType::g_typeStringKCons[6] = {std::make_pair((size_t)16, BSQType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQType::g_typeStringKRepr128), std::make_pair((size_t)256, BSQType::g_typeStringKRepr256) };
+const std::pair<size_t, const BSQType*> BSQType::g_typeStringKCons[5] = {std::make_pair((size_t)16, BSQType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQType::g_typeStringKRepr128) };
 
-const BSQType* BSQType::g_typeStringConcatRepr = new BSQStringConcatReprType();
+const BSQType* BSQType::g_typeStringTreeRepr = new BSQStringConcatReprType();
 const BSQType* BSQType::g_typeStringSliceRepr = new BSQStringSliceReprType();
 
 const BSQType* BSQType::g_typeString = new BSQStringType();
-const BSQType* BSQType::g_typeStringPos = new BSQStringIteratorType();
+
 const BSQType* BSQType::g_typeByteBuffer = new BSQByteBufferType();
 const BSQType* BSQType::g_typeISOTime = new BSQISOTimeType();
 const BSQType* BSQType::g_typeLogicalTime = new BSQLogicalTimeType();
@@ -45,19 +44,6 @@ std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data
 int entityNoneKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
     return 0;
-}
-
-bool entityNoneJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_null())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQNoneType*>(BSQType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
-        return true;
-    }
 }
 
 std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -89,19 +75,6 @@ int entityBoolKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     }
 }
 
-bool entityBoolJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_boolean())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQBoolType*>(BSQType::g_typeBool)->storeValueDirect(sl, j.get<bool>() ? BSQTRUE : BSQFALSE);
-        return true;
-    }
-}
-
 std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQNat, data)) + "n";
@@ -118,20 +91,6 @@ int entityNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
     else
     {
         return (v1 < v2) ? -1 : 1;
-    }
-}
-
-bool entityNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto uval = parseToUnsignedNumber(j);
-    if(!uval.has_value())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, uval.value());
-        return true;
     }
 }
 
@@ -154,20 +113,6 @@ int entityIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
     }
 }
 
-bool entityIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto ival = parseToSignedNumber(j);
-    if(!ival.has_value())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQIntType*>(BSQType::g_typeInt)->storeValueDirect(sl, ival.value());
-        return true;
-    }
-}
-
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQBigNat, data)) + "N";
@@ -185,18 +130,6 @@ int entityBigNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
     {
         return(v1 < v2) ? -1 : 1;
     }
-}
-
-bool entityBigNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto bnval = parseToBigUnsignedNumber(j);
-    if(!bnval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, std::stoull(bnval.value()));
-    return true;
 }
 
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -218,50 +151,14 @@ int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
     }
 }
 
-bool entityBigIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto bival = parseToBigUnsignedNumber(j);
-    if(!bival.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, std::stoll(bival.value()));
-    return true;
-}
-
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQFloat, data)) + "f";
 }
 
-bool entityFloatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto fval = parseToRealNumber(j);
-    if(!fval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQFloatType*>(BSQType::g_typeFloat)->storeValueDirect(sl, std::stod(fval.value()));
-    return true;
-}
-
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, data)) + "d";
-}
-
-bool entityDecimalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto dval = parseToDecimalNumber(j);
-    if(!dval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQDecimalType*>(BSQType::g_typeDecimal)->storeValueDirect(sl, std::stod(dval.value()));
-    return true;
 }
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -272,29 +169,6 @@ std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr 
     auto denomtype = dynamic_cast<const BSQNatType*>(BSQType::g_typeNat);
 
     return numtype->fpDisplay(numtype, &rval.numerator) + "/" + denomtype->fpDisplay(denomtype, &rval.denominator) + "R";
-}
-
-bool entityRationalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_array() || j.size() != 2)
-    {
-        return false;
-    }
-
-    auto numtype = dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt);
-    auto denomtype = dynamic_cast<const BSQNatType*>(BSQType::g_typeNat);
-
-    BSQRational rr;
-    auto oknum = numtype->consops.fpJSONParse(numtype, j[0], &rr.numerator);
-    auto okdenom = denomtype->consops.fpJSONParse(denomtype, j[1], &rr.denominator);
-
-    if(!oknum || !okdenom)
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQRationalType*>(BSQType::g_typeRational)->storeValueDirect(sl, rr);
-    return true;
 }
 
 std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)

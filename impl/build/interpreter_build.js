@@ -22,7 +22,7 @@ let outfile = "";
 let milib = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -arch x86_64";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     milib = path.join(includebase, "/macos/mimalloc/bin/mimalloc-static.a");
     outfile = "-o " + outbase + "/icpp";
@@ -36,7 +36,7 @@ else if(process.platform === "linux") {
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /Zi /D \"BSQ_DEBUG_BUILD\" /std:c++17";  
+    ccflags = "/EHsc /Zi /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     milib = path.join(includebase, "/win/mimalloc/bin/libmimalloc.a");
     outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\icpp.exe\"";

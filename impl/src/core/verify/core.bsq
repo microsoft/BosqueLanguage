@@ -57,7 +57,6 @@ __universal concept Parsable provides Any {
 
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
 __universal concept APIType provides Any {
-    //ONLY FOR USE IN MOCKING
     function generate<T grounded APIType>(): T # apitype_generate
 }
 
@@ -94,7 +93,7 @@ abstract infix operator >=(a: Some, b: Some): Bool;
 __internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Int = 0i;
     const one: Int = 1i;
-    const negativeone: Int = -1i;
+    const negone: Int = -1i;
 
     method toNat(): Nat { return NumericOps::s_intToNat(this); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_intToBigInt(this)); }
@@ -144,7 +143,7 @@ __safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 __internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
-    const negativeone: BigInt = -1I;
+    const negone: BigInt = -1I;
 
     method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(this); }
@@ -194,7 +193,7 @@ __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = defaul
 __internal __typedeclable entity Rational provides Some, Algebraic, Orderable, APIType {
     const zero: Rational = 0/1R;
     const one: Rational = 1/1R;
-    const negativeone: Rational = -1/1R;
+    const negone: Rational = -1/1R;
 
     method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this))); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this)); }
@@ -220,7 +219,7 @@ __safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = de
 __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIType {
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
-    const negativeone: Float = -1.0f;
+    const negone: Float = -1.0f;
 
     const pi: Float = 3.1415926535897931f;
     const e: Float = 2.7182818284590451f;
@@ -263,7 +262,7 @@ __safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, APIType {
     const zero: Decimal = 0.0d;
     const one: Decmial = 1.0d;
-    const negativeone: Decmial = -1.0d;
+    const negone: Decmial = -1.0d;
 
     const pi: Decimal = 3.1415926535897931d;
     const e: Decimal = 2.7182818284590451d;
