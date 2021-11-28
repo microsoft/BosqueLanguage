@@ -173,19 +173,101 @@ std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr 
 
 std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    BSQStringIterator iter;
-    BSQStringType::initializeIteratorBegin(&iter, SLPTR_LOAD_CONTENTS_AS(BSQString, data));
+    BSQStringForwardIterator iter((BSQString*)data, 0);
 
     std::string res = "\"";
-    while(iteratorIsValid(&iter))
+    while(iter.valid())
     {
-        res += (char)iteratorGetCodePoint(&iter);
-        incrementStringIterator_codePoint(&iter);
+        res += (char)iter.get();
+        iter.advance();
     }
     res += "\"";
 
     return res;
 }
+
+void* BSQStringKReprTypeAbstract::slice(StorageLocationPtr data, uint64_t nstart, uint64_t nend) const
+{
+    if((nstart == 0) & (nend == this->utf8ByteCount(data)))
+    {
+        return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+    }
+
+    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
+
+    ((BSQStringSliceRepr*)res)->srepr = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+    ((BSQStringSliceRepr*)res)->start = nstart;
+    ((BSQStringSliceRepr*)res)->end = nend;
+
+    return data;
+}
+
+void* BSQStringSliceReprType::slice(StorageLocationPtr data, uint64_t nstart, uint64_t nend) const
+{
+    if((nstart == 0) & (nend == this->utf8ByteCount(data)))
+    {
+        return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+    }
+
+    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
+
+    ((BSQStringSliceRepr*)res)->srepr = ((BSQStringSliceRepr*)data)->srepr;
+    ((BSQStringSliceRepr*)res)->start = ((BSQStringSliceRepr*)data)->start + nstart;
+    ((BSQStringSliceRepr*)res)->end = ((BSQStringSliceRepr*)data)->end - nend;
+
+    return res;
+}
+
+void* BSQStringTreeReprType::slice(StorageLocationPtr data, uint64_t nstart, uint64_t nend) const
+{
+    if((nstart == 0) & (nend == this->utf8ByteCount(data)))
+    {
+        return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+    }
+
+    auto s1type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringTreeRepr*)data)->srepr1);
+    auto s2type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringTreeRepr*)data)->srepr2);
+
+    void** stck = (void**)BSQ_STACK_SPACE_ALLOC(sizeof(void*) * 4);
+    GC_MEM_ZERO(stck, sizeof(void*) * 4);
+
+    GCStack::pushFrame(stck, "2222");
+
+    void* res = nullptr;
+    auto s1size = s1type->utf8ByteCount(((BSQStringTreeRepr*)data)->srepr1);
+    if(nend <= s1size)
+    {
+        stck[0] = ((BSQStringTreeRepr*)data)->srepr1;
+        res = s1type->slice(stck, nstart, nend);
+    }
+    else if(s1size <= nstart)
+    {
+        stck[0] = ((BSQStringTreeRepr*)data)->srepr2;
+        res = s2type->slice(stck, nstart - s1size, nend - s1size);
+    }
+    else
+    {
+        stck[0] = ((BSQStringTreeRepr*)data)->srepr1;
+        stck[1] = ((BSQStringTreeRepr*)data)->srepr2;
+
+        ((BSQStringConcatRepr*)res)->srepr1 = s1type->slice(((BSQStringConcatRepr*)data)->srepr1, nstart, s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1));
+        ((BSQStringConcatRepr*)res)->srepr2 = s2type->slice(((BSQStringConcatRepr*)data)->srepr2, 0, nend - s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1));
+        ((BSQStringConcatRepr*)res)->size = nend - nstart;
+
+        res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringTreeRepr);
+    }
+
+    GCStack::popFrame();
+    return res;
+}
+
+std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return "[String Iterator]";
+}
+
+
+
 
 void BSQStringKReprTypeAbstract::initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos)
 {
@@ -205,24 +287,6 @@ void BSQStringKReprTypeAbstract::initializeIterPosition(BSQStringIterator* iter,
     iter->cpos = (int16_t)pos;
 }
 
-void* BSQStringKReprTypeAbstract::slice(void* data, uint64_t nstart, uint64_t nend) const
-{
-    if((nstart == 0) & (nend == this->utf8ByteCount(data)))
-    {
-        return data;
-    }
-
-    Allocator::GlobalAllocator.pushRoot(&data);
-
-    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
-
-    ((BSQStringSliceRepr*)res)->srepr = data;
-    ((BSQStringSliceRepr*)res)->start = nstart;
-    ((BSQStringSliceRepr*)res)->end = nend;
-
-    Allocator::GlobalAllocator.popRoot();
-    return data;
-}
 
 void BSQStringSliceReprType::initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const
 {
@@ -230,24 +294,6 @@ void BSQStringSliceReprType::initializeIterPosition(BSQStringIterator* iter, voi
     BSQStringKReprTypeAbstract::initializeIterPositionWSlice(iter, slicerepr->srepr, (int64_t)slicerepr->start, (int64_t)slicerepr->end, pos + (int64_t)slicerepr->start);
 }
 
-void* BSQStringSliceReprType::slice(void* data, uint64_t nstart, uint64_t nend) const
-{
-    if((nstart == 0) & (nend == this->utf8ByteCount(data)))
-    {
-        return data;
-    }
-
-    Allocator::GlobalAllocator.pushRoot(&data);
-
-    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
-
-    ((BSQStringSliceRepr*)res)->srepr = ((BSQStringSliceRepr*)data)->srepr;
-    ((BSQStringSliceRepr*)res)->start = ((BSQStringSliceRepr*)data)->start + nstart;
-    ((BSQStringSliceRepr*)res)->end = ((BSQStringSliceRepr*)data)->end - nend;
-
-    Allocator::GlobalAllocator.popRoot();
-    return res;
-}
 
 
 void BSQStringConcatReprType::initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const
@@ -264,49 +310,6 @@ void BSQStringConcatReprType::initializeIterPosition(BSQStringIterator* iter, vo
         auto s2type = GET_TYPE_META_DATA_AS(BSQStringReprType, concatrepr->srepr2);
         s2type->initializeIterPosition(iter, concatrepr->srepr2, pos - s1size);
     }
-}
-
-void* BSQStringConcatReprType::slice(void* data, uint64_t nstart, uint64_t nend) const
-{
-    if((nstart == 0) & (nend == this->utf8ByteCount(data)))
-    {
-        return data;
-    }
-
-    auto s1type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringConcatRepr*)data)->srepr1);
-    auto s2type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringConcatRepr*)data)->srepr2);
-
-    Allocator::GlobalAllocator.pushRoot(&data);
-        
-    void* res = nullptr;
-    auto s1size = s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1);
-    if(nend <= s1size)
-    {
-        res = s1type->slice(((BSQStringConcatRepr*)data)->srepr1, nstart, nend);
-    }
-    else if(s1size <= nstart)
-    {
-        res = s2type->slice(((BSQStringConcatRepr*)data)->srepr2, nstart - s1size, nend - s1size);
-    }
-    else
-    {
-        res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringConcatRepr);
-        Allocator::GlobalAllocator.pushRoot(&res);
-
-        ((BSQStringConcatRepr*)res)->srepr1 = s1type->slice(((BSQStringConcatRepr*)data)->srepr1, nstart, s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1));
-        ((BSQStringConcatRepr*)res)->srepr2 = s2type->slice(((BSQStringConcatRepr*)data)->srepr2, 0, nend - s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1));
-        ((BSQStringConcatRepr*)res)->size = nend - nstart;
-
-        Allocator::GlobalAllocator.popRoot(); 
-    }
-
-    Allocator::GlobalAllocator.popRoot();
-    return res;
-}
-
-std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    return "[String Iterator]";
 }
 
 bool iteratorIsValid(const BSQStringIterator* iter)

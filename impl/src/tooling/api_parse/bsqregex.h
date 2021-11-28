@@ -193,6 +193,10 @@ public:
             nstates.erase(nend, nstates.end());
 
             cstates = std::move(nstates);
+            if(cstates.empty())
+            {
+                return false;
+            }
         }
 
         return std::find(cstates.cbegin(), cstates.cend(), this->acceptstate) != cstates.cend();
@@ -216,10 +220,52 @@ public:
             nstates.erase(nend, nstates.end());
 
             cstates = std::move(nstates);
+            if(cstates.empty())
+            {
+                return std::nullopt;
+            }
 
             if(std::find(cstates.cbegin(), cstates.cend(), this->acceptstate) != cstates.cend())
             {
                 return std::make_optional(cci.distance());
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::pair<size_t, size_t>> find(CharCodeIterator& cci) const
+    {
+        size_t rdist = cci.distance();
+        std::vector<StateID> cstates = { this->startstate };
+        std::vector<StateID> nstates = { };
+
+        while(cci.valid())
+        {
+            auto cc = cci.get();
+            for(size_t i = 0; i < cstates.size(); ++i)
+            {
+                this->nfaopts[cstates[i]]->advance(cc, this->nfaopts, nstates);
+            }
+
+            std::sort(nstates.begin(), nstates.end());
+            auto nend = std::unique(nstates.begin(), nstates.end());
+            nstates.erase(nend, nstates.end());
+
+            cstates = std::move(nstates);
+            if(cstates.empty())
+            {
+                //
+                //TODO: this is a pretty slow way to search -- we probably want to do better in the future
+                //
+                cstates = { this->startstate };
+                rdist++;
+                cci.resetTo(rdist);
+            }
+
+            if(std::find(cstates.cbegin(), cstates.cend(), this->acceptstate) != cstates.cend())
+            {
+                return std::make_optional(std::make_pair(rdist, cci.distance() - rdist));
             }
         }
 
@@ -438,6 +484,17 @@ public:
         return this->nfare->match(siter);
     }
 
+    std::optional<std::pair<size_t, size_t>> find(CharCodeIterator& cci)
+    {
+        return this->nfare->find(cci);
+    }
+
+    std::optional<std::pair<size_t, size_t>> find(std::string& s)
+    {
+        StdStringCodeIterator siter(s);
+        return this->nfare->find(siter);
+    }
+
     std::optional<size_t> matchLast(CharCodeIterator& cci)
     {
         return this->nfare_rev->match(cci);
@@ -447,6 +504,17 @@ public:
     {
         StdStringCodeReverseIterator siter(s);
         return this->nfare_rev->match(siter);
+    }
+
+    std::optional<std::pair<size_t, size_t>> findLast(CharCodeIterator& cci)
+    {
+        return this->nfare->find(cci);
+    }
+
+    std::optional<std::pair<size_t, size_t>> findLast(std::string& s)
+    {
+        StdStringCodeReverseIterator siter(s);
+        return this->nfare->find(siter);
     }
 
     std::string generate(RandGenerator& rnd)

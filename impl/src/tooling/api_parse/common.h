@@ -43,6 +43,7 @@ public:
     virtual CharCode get() const = 0;
 
     virtual size_t distance() const = 0;
+    virtual void resetTo(size_t distance) = 0;
 };
 
 class StdStringCodeIterator : public CharCodeIterator
@@ -73,6 +74,11 @@ public:
     {
         return this->curr;
     }
+
+    virtual void resetTo(size_t distance) override final
+    {
+        this->curr = distance;
+    }
 };
 
 class StdStringCodeReverseIterator : public CharCodeIterator
@@ -102,6 +108,11 @@ public:
     virtual size_t distance() const override final
     {
         return (this->sstr.size() - 1) - this->curr;
+    }
+
+    virtual void resetTo(size_t distance) override final
+    {
+        this->curr = distance;
     }
 };
 

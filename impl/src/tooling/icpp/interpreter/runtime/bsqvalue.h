@@ -225,8 +225,6 @@ public:
 
 ////
 //String
-struct BSQStringIterator; //forward decl
-
 struct BSQInlineString
 {
     uint8_t utf8bytes[16];
@@ -286,7 +284,6 @@ public:
     virtual ~BSQStringReprType() {;}
 
     virtual uint64_t utf8ByteCount(void* repr) const = 0;
-    virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const = 0;
     virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const = 0;
 };
 
@@ -314,9 +311,6 @@ public:
         return BSQStringKReprTypeAbstract::getUTF8ByteCount(repr);
     }
 
-    static void initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos);
-
-    virtual void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const override;
     virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const override;
 };
 
@@ -330,53 +324,25 @@ public:
     virtual ~BSQStringKReprType() {;}
 };
 
-struct BSQStringSliceRepr
-{
-    void* srepr; //a krepr string
-    uint64_t start;
-    uint64_t end;
-};
-
-class BSQStringSliceReprType : public BSQStringReprType
-{
-public:
-    BSQStringSliceReprType(): BSQStringReprType(BSQ_TYPE_ID_STRINGREPR_SLICE, sizeof(BSQStringSliceRepr), "211", "[Internal::StringSliceRepr]") 
-    {;}
-
-    virtual ~BSQStringSliceReprType() {;}
-
-    uint64_t utf8ByteCount(void* repr) const override final
-    {
-        auto srepr = (BSQStringSliceRepr*)repr;
-        return (srepr->end - srepr->start);
-    }
-
-    void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const override final;
-    void* slice(void* data, uint64_t nstart, uint64_t nend) const override final;
-};
-
-struct BSQStringConcatRepr
+struct BSQStringTreeRepr
 {
     void* srepr1;
     void* srepr2;
     uint64_t size;
 };
 
-class BSQStringConcatReprType : public BSQStringReprType
+class BSQStringTreeReprType : public BSQStringReprType
 {
 public:
-    BSQStringConcatReprType(): BSQStringReprType(BSQ_TYPE_ID_STRINGREPR_SLICE, sizeof(BSQStringConcatRepr), "22", "[Internal::StringConcatRepr]") 
+    BSQStringTreeReprType(): BSQStringReprType(BSQ_TYPE_ID_STRINGREPR_SLICE, sizeof(BSQStringTreeRepr), "22", "[Internal::StringConcatRepr]") 
     {;}
 
-    virtual ~BSQStringConcatReprType() {;}
+    virtual ~BSQStringTreeReprType() {;}
 
     uint64_t utf8ByteCount(void* repr) const override final
     {
-        return ((BSQStringConcatRepr*)repr)->size;
+        return ((BSQStringTreeRepr*)repr)->size;
     }
-
-    void initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const override final;
-    void* slice(void* data, uint64_t nstart, uint64_t nend) const override final;
 };
 
 struct BSQString
@@ -385,27 +351,57 @@ struct BSQString
 };
 constexpr BSQString g_emptyString = {0};
 
-struct BSQStringForwardIterator
+class BSQStringForwardIterator : public CharCodeIterator
 {
-    BSQString str;
-    int64_t strpos;
+private:
+    BSQString* sstr;
+    int64_t curr;
     void* cbuff;
     int16_t cpos;
     int16_t minpos;
     int16_t maxpos;
+
+    void initializeIteratorPosition(int64_t curr);
+public:
+    BSQStringForwardIterator(BSQString* sstr, int64_t curr) : CharCodeIterator(), sstr(sstr), curr(-1), cbuff(nullptr), cpos(-1), minpos(-1), maxpos(-1) 
+    {
+        this->initializeIteratorPosition(curr);
+    }
+    
+    virtual ~BSQStringForwardIterator() {;}
+
+    virtual bool valid() const override final;
+    virtual void advance() override final;
+    virtual CharCode get() const override final;
+    virtual size_t distance() const override final;
+    virtual void resetTo(size_t distance) override final;
 };
 
-struct BSQStringReverseIterator
+class BSQStringReverseIterator : public CharCodeIterator
 {
-    BSQString str;
-    int64_t strpos;
+private:
+    BSQString* sstr;
+    int64_t curr;
     void* cbuff;
     int16_t cpos;
     int16_t minpos;
     int16_t maxpos;
-};
 
-std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+    void initializeIteratorPosition(int64_t curr);
+public:
+    BSQStringReverseIterator(BSQString* sstr, int64_t curr) : CharCodeIterator(), sstr(sstr), curr(-1), cbuff(nullptr), cpos(-1), minpos(-1), maxpos(-1) 
+    {
+        this->initializeIteratorPosition(curr);
+    }
+
+    virtual ~BSQStringReverseIterator() {;}
+
+    virtual bool valid() const override final;
+    virtual void advance() override final;
+    virtual CharCode get() const override final;
+    virtual size_t distance() const override final;
+    virtual void resetTo(size_t distance) override final;
+};
 
 bool iteratorIsValid(const BSQStringIterator* iter);
 bool iteratorLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2);
