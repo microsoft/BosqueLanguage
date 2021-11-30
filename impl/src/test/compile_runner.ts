@@ -17,7 +17,7 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     try {
         let code: CodeFileInfo[] = [];
 
-        const coredir = Path.join(bosque_dir, "bin/core/verify");
+        const coredir = Path.join(bosque_dir, "bin/core");
         const corefiles = FS.readdirSync(coredir);
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
