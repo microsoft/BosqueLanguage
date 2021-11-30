@@ -55,6 +55,10 @@ __universal private concept Validator provides Any {
 __universal concept Parsable provides Any {
 }
 
+//<summary>Type for indicating that a datatype is parsable out of a buffer.</summary>
+__universal concept BufferParsable provides Any {
+}
+
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
 __universal concept APIType provides Any {
     function generate<T grounded APIType>(): T # apitype_generate
@@ -360,7 +364,8 @@ enum BufferFormat {
     bosque,
     bosque_binary,
     json,
-    json_binary
+    json_binary,
+    grpc
 }
 
 enum BufferCompression {
@@ -375,7 +380,7 @@ __internal entity ByteBuffer provides Some, APIType {
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
-__internal __constructable entity DataBuffer<T unique Parsable> provides Some, APIType when T grounded APIType {
+__internal __constructable entity DataBuffer<T unique BufferParsable> provides Some, APIType when T grounded APIType {
     method value(): ByteBuffer # special_extract
 }
 

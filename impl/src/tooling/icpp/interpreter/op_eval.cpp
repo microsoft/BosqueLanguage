@@ -2428,6 +2428,60 @@ bool entityRationalJSONParse_impl(const BSQType* btype, json j, StorageLocationP
     return true;
 }
 
+
+bool entityStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    if(!j.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto sstr = j.get<std::string>();
+        BSQString s = g_emptyString;
+        if(sstr.size() == 0)
+        {
+            //already empty
+        }
+        else if(sstr.size() < 16) 
+        {
+            s.u_inlineString = BSQInlineString::create((const uint8_t*)sstr.c_str(), sstr.size());
+        }
+        else if(sstr.size() <= 256)
+        {
+            auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
+                return cc.first > sstr.size();
+            });
+            s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
+            BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
+        }
+        else
+        {
+            //
+            //TODO: split the string into multiple parts
+            //
+            assert(false);
+        }
+        
+        dynamic_cast<const BSQStringType*>(BSQType::g_typeString)->storeValueDirect(sl, s);
+        return true;
+    }
+}
+
+
+bool entityLogicalTimeJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    std::optional<std::string> nval = parseToBigUnsignedNumber(j);
+    if(!nval.has_value())
+    {
+        return false;
+    }
+
+    dynamic_cast<const BSQLogicalTimeType*>(BSQType::g_typeLogicalTime)->storeValueDirect(sl, std::stoull(nval.value()));
+    return true;
+}
+
+
 bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {
     auto tupinfo = dynamic_cast<const BSQTupleInfo*>(btype);

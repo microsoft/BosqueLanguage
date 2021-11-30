@@ -209,7 +209,6 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_STRINGREPR_K128 21
 
 #define BSQ_TYPE_ID_STRINGREPR_TREE 22
-#define BSQ_TYPE_ID_STRINGREPR_SLICE 23
 
 enum class BSQPrimitiveImplTag
 {
