@@ -21,8 +21,6 @@ typedef uint64_t BSQNone;
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityNoneKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-bool entityNoneJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQNoneType : public BSQRegisterType<BSQNone>
 {
 public:
@@ -41,8 +39,6 @@ typedef uint64_t BSQNothing;
 #define BSQNothingHeapValue nullptr
 
 std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-bool entityNothingJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQNothingType : public BSQRegisterType<BSQNothing>
 {
@@ -690,10 +686,10 @@ typedef struct { uint8_t bytes[16]; } BSQUUID;
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQUUIDType : public BSQRefType
+class BSQUUIDType : public BSQRegisterType<BSQUUID>
 {
 public:
-    BSQUUIDType(): BSQRefType(BSQ_TYPE_ID_UUID, sizeof(BSQUUID), nullptr, {}, entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, "NSCore::UUID") {;}
+    BSQUUIDType(): BSQRegisterType(BSQ_TYPE_ID_UUID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, "NSCore::UUID") {;}
     
     virtual ~BSQUUIDType() {;}
 };
@@ -716,14 +712,12 @@ public:
 ////
 //Regex
 
-BSQRegex* bsqRegexJSONParse_impl(json j);
-
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQRegexType : public BSQRegisterType<void*>
 {
 public:
-    BSQRegexType(): BSQRegisterType(BSQ_TYPE_ID_REGEX, sizeof(void*), "1", EMPTY_KEY_CMP, entityRegexDisplay_impl, "NSCore::Regex", {nullptr}) {;}
+    BSQRegexType(): BSQRegisterType(BSQ_TYPE_ID_REGEX, sizeof(void*), "1", EMPTY_KEY_CMP, entityRegexDisplay_impl, "NSCore::Regex") {;}
     virtual ~BSQRegexType() {;}
 };
 
@@ -734,13 +728,11 @@ class BSQValidatorType : public BSQRegisterType<void*>
 public:
     const BSQRegex* re;
 
-    BSQValidatorType(BSQTypeID tid, std::string name, BSQRegex* re): BSQRegisterType(tid, sizeof(void*), "1", EMPTY_KEY_CMP, entityValidatorDisplay_impl, name, {nullptr}), re(re) {;}
+    BSQValidatorType(BSQTypeID tid, std::string name, BSQRegex* re): BSQRegisterType(tid, sizeof(void*), "1", EMPTY_KEY_CMP, entityValidatorDisplay_impl, name), re(re) {;}
     virtual ~BSQValidatorType() {;}
 };
 
 std::string entityStringOfDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-bool entityStringOfJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
 
 class BSQStringOfType : public BSQType
 {
@@ -748,7 +740,7 @@ public:
     const BSQTypeID validator;
 
     BSQStringOfType(BSQTypeID tid, std::string name, const BSQTypeID validator)
-    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringOfDisplay_impl, name, {entityStringOfJSONParse_impl}), validator(validator)
+    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringOfDisplay_impl, name), validator(validator)
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -785,15 +777,13 @@ public:
 
 std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool entityDataStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQDataStringType : public BSQType
 {
 public:
     const BSQInvokeID parsemethod;
 
     BSQDataStringType(BSQTypeID tid, std::string name, BSQInvokeID parsemethod)
-    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityDataStringDisplay_impl, name, {entityDataStringJSONParse_impl}), parsemethod(parsemethod)
+    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityDataStringDisplay_impl, name), parsemethod(parsemethod)
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -830,8 +820,6 @@ public:
 
 std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool entityTypedNumberJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQTypedNumberTypeAbstract
 {
 public:
@@ -845,7 +833,7 @@ class BSQTypedNumberType : public BSQRegisterType<T>, public BSQTypedNumberTypeA
 {
 public:
     BSQTypedNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
-    : BSQRegisterType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl}), 
+    : BSQRegisterType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name), 
     BSQTypedNumberTypeAbstract(underlying)
     {;}
 
@@ -857,7 +845,7 @@ class BSQTypedBigNumberType : public BSQBigNumType<T>, public BSQTypedNumberType
 {
 public:
     BSQTypedBigNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
-    : BSQBigNumType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name, {entityTypedNumberJSONParse_impl}), 
+    : BSQBigNumType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name), 
     BSQTypedNumberTypeAbstract(underlying)
     {;}
 
@@ -866,8 +854,6 @@ public:
 
 std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-bool enumJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl);
-
 class BSQEnumType : public BSQStructType
 {
 public:
@@ -875,13 +861,9 @@ public:
     const std::vector<std::pair<std::string, uint32_t>> enuminvs; //map from full enum names to the constant storage location
 
     BSQEnumType(BSQTypeID tid, std::string name, const BSQType* underlying, std::vector<std::pair<std::string, BSQInvokeID>> enuminvs)
-    : BSQStructType(tid, underlying->allocinfo.inlinedatasize, underlying->allocinfo.inlinedmask, {}, underlying->fpkeycmp, enumDisplay_impl, name, {enumJSONParse_impl}),
+    : BSQStructType(tid, underlying->allocinfo.inlinedatasize, underlying->allocinfo.inlinedmask, {}, underlying->fpkeycmp, enumDisplay_impl, name),
     enuminvs(enuminvs)
     {;}
 
     virtual ~BSQEnumType() {;}
 };
-
-//
-//TODO: need to support things that are any APIType not just numeric
-//

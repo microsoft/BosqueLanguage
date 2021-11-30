@@ -635,23 +635,29 @@ int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
 
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
+    auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data);
     std::string res;
-    uint32_t bb8 = () + () + () + ( )
-    for(size_t i = 0; i < 8; ++i)
-    {
-        
-        res += 
-    }
-    re_uuid("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+
+    uint32_t bb4 = *reinterpret_cast<const uint32_t*>(uuid.bytes);
+    uint16_t bb2_1 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 4);
+    uint16_t bb2_2 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 6);
+    uint16_t bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
+    uint64_t bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 8) & 0xFFFFFFFFFFFF;
+    
+    char sstrt[36] = {0};
+    sprintf_s(sstrt, 36, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    std::string res(sstrt, sstrt + 36);
+
+    return res;
 }
 
 int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    auto v1 = (BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1);
-    auto v2 = (BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2);
+    auto v1 = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data1);
+    auto v2 = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data2);
 
-    auto cmp = std::mismatch(v1->bytes, v1->bytes + sizeof(v1->bytes), v2->bytes);
-    if(cmp.first == v1->bytes + sizeof(v1->bytes))
+    auto cmp = std::mismatch(v1.bytes, v1.bytes + sizeof(v1.bytes), v2.bytes);
+    if(cmp.first == v1.bytes + sizeof(v1.bytes))
     {
         return 0;
     }
@@ -661,16 +667,21 @@ int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     }
 }
 
-bool entityUUIDJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    assert(false);
-    return false;
-}
-
 std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    assert(false);
-    return "[ContentHash]";
+    auto v1 = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+
+    std::string rr = "0x";
+    for(auto iter = v1->bytes; iter < v1->bytes + sizeof(v1->bytes); ++iter)
+    {
+        char sstrt[2] = {0};
+        sprintf_s(sstrt, 2, "%02x", *iter);
+
+        std::string ss(sstrt, sstrt + 2);
+        rr += ss;
+    }
+
+    return rr;
 }
 
 int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -689,20 +700,6 @@ int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     }
 }
 
-bool entityContentHashJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    assert(false);
-    return false;
-}
-
-BSQRegex* bsqRegexJSONParse_impl(json j)
-{
-    auto restr = j["restr"].get<std::string>();
-    auto re = BSQRegexOpt::parse(j["re"]);
-
-    return new BSQRegex(restr, re);
-}
-
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr;
@@ -718,36 +715,9 @@ std::string entityStringOfDisplay_impl(const BSQType* btype, StorageLocationPtr 
     return btype->name + entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data);
 }
 
-bool entityStringOfJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_string())
-    {
-        return false;
-    }
-    else
-    {
-        const BSQRegex* vre = dynamic_cast<const BSQValidatorType*>(BSQType::g_typetable[dynamic_cast<const BSQStringOfType*>(btype)->validator])->re;
-
-        //
-        //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
-        //
-
-        return BSQType::g_typeString->consops.fpJSONParse(BSQType::g_typeString, j, sl);
-    }
-}
-
 std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return btype->name + entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data);
-}
-
-bool entityDataStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    //
-    //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
-    //
-
-    return BSQType::g_typeString->consops.fpJSONParse(BSQType::g_typeString, j, sl);
 }
 
 std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -756,38 +726,8 @@ std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationP
     return btype->name + utype->fpDisplay(utype, data);
 }
 
-bool entityTypedNumberJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    //
-    //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
-    //
-    
-    auto utype = BSQType::g_typetable[dynamic_cast<const BSQTypedNumberTypeAbstract*>(btype)->underlying];
-    return utype->consops.fpJSONParse(utype, j, sl);
-}
-
 std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto underlying = dynamic_cast<const BSQEnumType*>(btype)->underlying;
     return "(" + btype->name + ")" + underlying->fpDisplay(underlying, data);
-}
-
-bool enumJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_string())
-    {
-        return false;
-    }
-    else
-    {
-        auto ename = j.get<std::string>();
-
-        auto etype = dynamic_cast<const BSQEnumType*>(btype);
-        auto cpos = std::find_if(etype->enuminvs.cbegin(), etype->enuminvs.cend(), [&ename](const std::pair<std::string, uint32_t>& entry) {
-            return entry.first == ename;
-        })->second;
-    
-        etype->underlying->storeValue(sl, Environment::g_constantbuffer + cpos);
-        return true;
-    }
 }

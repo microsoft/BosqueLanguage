@@ -279,6 +279,65 @@ std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
 }
 
 
+std::optional<std::vector<uint8_t>> JSONParseHelper::parseUUID(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    std::string sstr = j.get<std::string>();
+    if(!std::regex_match(sstr, re_uuid))
+    {
+        return std::nullopt;
+    }
+
+    std::vector<uint8_t> vv;
+    auto iter = sstr.cbegin();
+    while(iter != sstr.cend())
+    {
+        if(*iter == '-')
+        {
+            iter++;
+        }
+
+        std::string sstr = {*iter, *(iter + 1)};
+        uint8_t bv = std::stoi(sstr, nullptr, 16);
+        
+        vv.push_back(bv);
+        iter += 2;
+    }
+
+    return std::make_optional(vv);
+}
+
+std::optional<std::vector<uint8_t>> JSONParseHelper::parseContentHash(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    std::string sstr = j.get<std::string>();
+    if(!std::regex_match(sstr, re_hash))
+    {
+        return std::nullopt;
+    }
+
+    std::vector<uint8_t> vv;
+    auto iter = sstr.cbegin() + 2;
+    while(iter != sstr.cend())
+    {
+        std::string sstr = {*iter, *(iter + 1)};
+        uint8_t bv = std::stoi(sstr, nullptr, 16);
+        
+        vv.push_back(bv);
+        iter += 2;
+    }
+
+    return std::make_optional(vv);
+}
+
 std::optional<json> JSONParseHelper::emitUnsignedNumber(uint64_t n)
 {
     if(n <= 9007199254740991)
@@ -347,38 +406,6 @@ std::optional<json> JSONParseHelper::emitTimeData(TimeData t)
     std::string zstr(sstrz, sstrz + 5);
 
     return res + zstr;
-}
-
-std::optional<std::string> JSONParseHelper::checkIsUUID(json j)
-{
-    if(!j.is_string())
-    {
-        return std::nullopt;
-    }
-
-    std::string sstr = j.get<std::string>();
-    if(!std::regex_match(sstr, re_uuid))
-    {
-        return std::nullopt;
-    }
-
-    return std::make_optional(sstr);
-}
-
-std::optional<std::string> JSONParseHelper::checkIsContentHash(json j)
-{
-    if(!j.is_string())
-    {
-        return std::nullopt;
-    }
-
-    std::string sstr = j.get<std::string>();
-    if(!std::regex_match(sstr, re_hash))
-    {
-        return std::nullopt;
-    }
-
-    return std::make_optional(sstr);
 }
 
 std::optional<std::pair<std::string, std::string>> JSONParseHelper::checkEnumName(json j)

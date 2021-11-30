@@ -2482,6 +2482,26 @@ bool entityLogicalTimeJSONParse_impl(const BSQType* btype, json j, StorageLocati
 }
 
 
+bool enumJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+{
+    if(!j.is_string())
+    {
+        return false;
+    }
+    else
+    {
+        auto ename = j.get<std::string>();
+
+        auto etype = dynamic_cast<const BSQEnumType*>(btype);
+        auto cpos = std::find_if(etype->enuminvs.cbegin(), etype->enuminvs.cend(), [&ename](const std::pair<std::string, uint32_t>& entry) {
+            return entry.first == ename;
+        })->second;
+    
+        etype->underlying->storeValue(sl, Environment::g_constantbuffer + cpos);
+        return true;
+    }
+}
+
 bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
 {
     auto tupinfo = dynamic_cast<const BSQTupleInfo*>(btype);

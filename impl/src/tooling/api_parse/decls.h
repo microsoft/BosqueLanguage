@@ -103,8 +103,8 @@ public:
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, vector<uint8_t>& data, ValueRepr value, State& ctx) const = 0;
     virtual bool parseISOTimeImpl(const APIModule* apimodule, const IType* itype, TimeData t, ValueRepr value, State& ctx) const = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
+    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) const = 0;
+    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) const = 0;
     
     virtual ValueRepr prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) const = 0;
     virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) const = 0;
@@ -176,6 +176,9 @@ public:
     static std::optional<std::pair<std::string, uint64_t>> parseToRationalNumber(json j);
     static std::optional<TimeData> parseToTimeData(json j);
 
+    static std::optional<std::vector<uint8_t>> parseUUID(json j);
+    static std::optional<std::vector<uint8_t>> parseContentHash(json j);
+
     static std::optional<json> emitUnsignedNumber(uint64_t n);
     static std::optional<json> emitSignedNumber(int64_t i);
     static std::optional<json> emitBigUnsignedNumber(std::string s);
@@ -184,9 +187,6 @@ public:
     static std::optional<json> emitDecimalNumber(std::string s);
     static std::optional<json> emitRationalNumber(std::pair<std::string, uint64_t> rv);
     static std::optional<json> emitTimeData(TimeData t);
-
-    static std::optional<std::string> checkIsUUID(json j);
-    static std::optional<std::string> checkIsContentHash(json j);
 
     static std::optional<std::pair<std::string, std::string>> checkEnumName(json j);
 };
@@ -947,7 +947,7 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto uuid = JSONParseHelper::checkIsUUID(j);
+        auto uuid = JSONParseHelper::parseUUID(j);
         if(!uuid.has_value())
         {
             return false;
@@ -1002,7 +1002,7 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto hash = JSONParseHelper::checkIsContentHash(j);
+        auto hash = JSONParseHelper::parseContentHash(j);
         if(!hash.has_value())
         {
             return false;
