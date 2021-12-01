@@ -7,34 +7,33 @@
 namespace NSCore;
 
 __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType {
-    function ints(start: Int, end: Int): List<Int> {
-        check start <= end;
+    __assume_safe private function s_into(l: ListRepr<T>): List<T> # stringof_into
+    method value(): ListRepr<T> # special_extract
 
-        return ListOps::s_range_int(start, end);
+    function ints(start: Int, end: Int): List<Int>
+        requires release start <= end;
+    {
+        return List<Int>::s_into(ListOps::s_range_int(start, end));
     }
 
-    function nats(start: Nat, end: Nat): List<Nat> {
-        check start <= end;
-
-        return ListOps::s_range_nat(start, end);
+    function nats(start: Nat, end: Nat): List<Nat> 
+        requires release start <= end;
+    {
+        return List<Nat>::s_into(ListOps::s_range_nat(start, end));
     }
 
     method index(): List<[Nat, T]> {
-        return ListOps::s_zip_index<T>(this, ListOps::s_size<T>(this));
+        return List<[Nat, T]>::s_into(ListOps::s_zip_index<T>(this.value()));
     }
 
-    method zip<U=?>(l: List<U>): List<[T, U]> {
-        check ListOps::s_size<T>(this) == ListOps::s_size<U>(l);
-
-        return ListOps::s_zip<T, U>(this, l, ListOps::s_size<T>(this));
+    method zip<U=?>(l: List<U>): List<[T, U]>
+        requires release ListOps::s_size<T>(this) == ListOps::s_size<U>(l);
+    {
+        return List<[T, U]>::s_into(ListOps::s_zip<T, U>(this.value(), l));
     }
-
-    ////
-    //Public interface
-    ////
 
     function fill(k: Nat, val: T): List<T> {
-        return ListOps::s_fill<T>(k, val);
+        return List<T>::s_into(ListOps::s_fill<T>(k, val));
     }
 
     function concat(...ll: List<List<T>>): List<T> {
@@ -49,56 +48,49 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             elif(count == 2) {
                 return ListOps::s_concat2<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
             }
-            elif(count == 3) {
-                let fl = ListOps::s_concat2<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
-                return ListOps::s_concat2<T>(fl, ListOps::s_safe_get<List<T>>(ll, 2n));
-            }
             else {
-                //TODO: we need to add a s_flatten constructor that is either an unroll for model generation or 
-                //      an \forall k \exists i, j s.t. get(k) = ll.get(i).get(j) /\ \forall i, j => \exists k s.t. get(k) = ll.get(i).get(j) 
-                check count == 4; 
-
-                let fl = ListOps::s_concat2(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
-                let sl = ListOps::s_concat2(ListOps::s_safe_get<List<T>>(ll, 2n), ListOps::s_safe_get<List<T>>(ll, 3n));
-                return ListOps::s_concat2(fl, sl);
+                return ListOps::s_concat(ll);
             }
         }
     }
 
+//////////////////////////////////////////////////////////////////////////||||||||||||||||||^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
     method size(): Nat {
-        return ListOps::s_size<T>(this);
+        return ListOps::s_size<T>(this.value());
     }
 
     method empty(): Bool {
-        return ListFlatOps::s_empty<T>(this);
+        return ListOps::s_empty<T>(this.value());
     }
 
     method front(): T {
-        check !ListFlatOps::s_empty<T>(this);
-        return ListOps::s_safe_get<T>(this, 0n);
+        check !ListOps::s_empty(this);
+        return ListOps::s_safe_get<T>(this.value(), 0n);
     }
 
     method frontOrNone(): T? {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this.value())) {
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this, 0n);
+            return ListOps::s_safe_get<T>(this.value(), 0n);
         }
     }
 
     method frontOption(): Option<T> {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this.value())) {
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this, 0n));
+            return something(ListOps::s_safe_get<T>(this.value(), 0n));
         }
     }
 
     method frontTry(out? res: T): Bool {
-        if(!ListFlatOps::s_empty<T>(this)) {
-            res = ListOps::s_safe_get<T>(this, 0n);
+        if(!ListOps::s_empty(this.value())) {
+            res = ListOps::s_safe_get<T>(this.value(), 0n);
             return true;
         }
         else {
@@ -107,31 +99,31 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method back(): T {
-        check !ListFlatOps::s_empty<T>(this);
-        return ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n);
+        check !ListOps::s_empty(this.value());
+        return ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
     }
 
     method backOrNone(): T? {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this.value())) {
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n);
+            return ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
         }
     }
 
     method backOption(): Option<T> {
-        if(ListFlatOps::s_empty<T>(this)){
+        if(ListOps::s_empty(this.value())){
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n));
+            return something(ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n));
         }
     }
 
     method backTry(out? res: T): Bool {
-        if(!ListFlatOps::s_empty<T>(this)) {
-            res = ListOps::s_safe_get<T>(this, ListOps::s_size<T>(this) - 1n);
+        if(!ListOps::s_empty(this.value())) {
+            res = ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
             return true;
         }
         else {
@@ -139,14 +131,15 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method get(i: Nat): T {
-        check i < ListOps::s_size<T>(this);
-        return ListOps::s_safe_get<T>(this, i);
+    method get(i: Nat): T
+        requires release i < ListOps::s_size<T>(this.value());
+    {
+        return ListOps::s_safe_get<T>(this.value(), i);
     }
 
     method getOrNone(i: Nat): T? {
-        if(i < ListOps::s_size<T>(this)) {
-            return ListOps::s_safe_get<T>(this, i);
+        if(i < ListOps::s_size<T>(this.value())) {
+            return ListOps::s_safe_get<T>(this.value(), i);
         }
         else {
             return none;
@@ -154,8 +147,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method getOption(i: Nat): Option<T> {
-        if(i < ListOps::s_size<T>(this)) {
-            return something(ListOps::s_safe_get<T>(this, i));
+        if(i < ListOps::s_size<T>(this.value())) {
+            return something(ListOps::s_safe_get<T>(this.value(), i));
         }
         else {
             return nothing;
@@ -163,8 +156,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method getTry(i: Nat, out? res: T): Bool {
-        if(i < ListOps::s_size<T>(this)) {
-            res = ListOps::s_safe_get<T>(this, i);
+        if(i < ListOps::s_size<T>(this.value())) {
+            res = ListOps::s_safe_get<T>(this.value(), i);
             return true;
         }
         else {
@@ -173,62 +166,62 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method single(p: recursive? pred(_: T) -> Bool): T {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
         check idx !== none;
 
-        let lastidx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let lastidx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
         check lastidx === idx;
 
-        return ListOps::s_safe_get<T>(this, idx);
+        return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
     recursive? method singleOrNone(p: recursive? pred(_: T) -> Bool): T? {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
         if(idx === none) {
             return none;
         }
         else {
-            let lastidx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+            let lastidx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
             if(idx !== lastidx) {
                 return none;
             }
             else {
-                return ListOps::s_safe_get<T>(this, idx);
+                return ListOps::s_safe_get<T>(this.value(), idx);
             }
         }
     }
 
     recursive? method singleOption(p: recursive? pred(_: T) -> Bool): Option<T> {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
          if(idx === none) {
             return nothing;
         }
         else {
-            let lastidx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+            let lastidx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
             if(idx !== lastidx) {
                 return nothing;
             }
             else {
-                return something(ListOps::s_safe_get<T>(this, idx));
+                return something(ListOps::s_safe_get<T>(this.value(), idx));
             }
         }
     }
 
     recursive? method singleTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
         if(idx === none) {
             return false;
         }
         else {
-            let lastidx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+            let lastidx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
             if(idx !== lastidx) {
                 return false;
             }
             else {
-                res = ListOps::s_safe_get<T>(this, idx);
+                res = ListOps::s_safe_get<T>(this.value(), idx);
                 return true;
             }
         }
@@ -291,21 +284,21 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T unique Orderable} min(): T {
-        check !ListFlatOps::s_empty<T>(this);
+        check !ListOps::s_empty(this);
 
         let midx = ListOps::s_min_arg<T, T>(this, fn(v: T): T => v);
         return ListOps::s_safe_get<T>(this, midx);
     }
 
     method {when T unique Orderable} max(): T {
-        check !ListFlatOps::s_empty<T>(this);
+        check !ListOps::s_empty(this);
 
         let midx = ListOps::s_max_arg<T, T>(this, fn(v: T): T => v);
         return ListOps::s_safe_get<T>(this, midx);
     }
 
     method {when T unique Orderable} minOrNone(): T? {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return none;
         }
         else {
@@ -315,7 +308,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T unique Orderable} maxOrNone(): T? {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return none;
         }
         else {
@@ -325,7 +318,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T unique Orderable} minOption(): Option<T> {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return nothing;
         }
         else {
@@ -335,7 +328,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T unique Orderable} maxOrOption(): Option<T> {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return nothing;
         }
         else {
@@ -345,7 +338,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T unique Orderable} minTry(out? res: T): Bool {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return false;
         }
         else {
@@ -356,7 +349,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T unique Orderable} maxTry(out? res: T): Bool {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return false;
         }
         else {
@@ -367,21 +360,21 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method argMin<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListFlatOps::s_empty<T>(this);
+        check !ListOps::s_empty(this);
 
         let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
         return ListOps::s_safe_get<T>(this, midx);
     }
 
     method argMax<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListFlatOps::s_empty<T>(this);
+        check !ListOps::s_empty(this);
 
         let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
         return ListOps::s_safe_get<T>(this, midx);
     }
 
     method argMinOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return none;
         }
         else {
@@ -391,7 +384,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method argMaxOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return none;
         }
         else {
@@ -401,7 +394,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method argMinOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return nothing;
         }
         else {
@@ -411,7 +404,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method argMaxOrOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return nothing;
         }
         else {
@@ -421,7 +414,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method argMinTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return false;
         }
         else {
@@ -432,7 +425,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method argMaxTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
-        if(ListFlatOps::s_empty<T>(this)) {
+        if(ListOps::s_empty(this)) {
             return false;
         }
         else {
@@ -1085,13 +1078,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method popBack(): List<T> {
-        check !ListFlatOps::s_empty<T>(this);
+        check !ListOps::s_empty(this);
 
         return ListOps::s_slice<T>(this, 0, ListOps::s_size<T>(this) - 1n);
     }
 
     method popFront(): List<T> {
-        check !ListFlatOps::s_empty<T>(this);
+        check !ListOps::s_empty(this);
 
         return ListOps::s_slice<T>(this, 1n, ListOps::s_size<T>(this));
     }

@@ -1,0 +1,105 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+#if EXEC_LIBS
+__internal entity ListOps provides Some {
+    __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
+
+    function s_isPV<T>(l: ListRepr<T>): Bool {
+        return l.is<ListPV<T>>();
+    }
+
+    function s_asPV<T>(l: ListRepr<T>): ListPV<T> {
+        return ListOps::s_safeAs<ListRepr<T>, ListPV<T>>(l);
+    }
+
+    function s_isListTree<T>(l: ListRepr<T>): Bool {
+        return l.is<ListTree<T>>();
+    }
+
+    function s_asListTree<T>(l: ListRepr<T>): ListTree<T> {
+        return ListOps::s_safeAs<ListRepr<T>, ListTree<T>>(l);
+    }
+
+    function s_empty(l: ListRepr<T>): Nat {
+        return l === none;
+    }
+
+    function s_size<T>(l: ListRepr<T>): Nat {
+        if(l === none) {
+            return 0;
+        }
+        elif(ListOps::s_isPV<T>(l)) {
+            return ListPV<T>::s_popcount(ListOps::s_asPV<T>(l));
+        }
+        else {
+            return ListOps::s_asListTree<T>(l).count;
+        }
+    }
+
+    function s_safe_get<T>(l: ListRepr<T>, i: Nat): T {
+        if(ListOps::s_isPV<T>(l)) {
+            return ListPV<T>::s_safe_get(ListOps::s_asPV<T>(l), i);
+        }
+        else {
+            return ListOps::s_asListTree<T>(l).safe_get(i);
+        }
+    }
+}
+
+entity ListTree<T> provides Some {
+    field count: Nat;
+    field left: ListTree<T> | ListPV<T>;
+    field right ListTree<T> | ListPV<T>;
+
+    function s_isLeaf(n: ListTree<T> | ListPV<T>): Bool {
+        return n.is<ListPV<T>>();
+    }
+
+    function s_asLeaf(n: ListTree<T> | ListPV<T>): ListPV<T> {
+        return ListOps::s_safeAs<ListTree<T> | ListPV<T>, ListPV<T>>(n);
+    }
+
+    function s_isNode(n: ListTree<T> | ListPV<T>): Bool {
+        return n.is<ListTree<T>>();
+    }
+
+    function s_asNode(n: ListTree<T> | ListPV<T>): ListTree<T> {
+        return ListOps::s_safeAs<ListTree<T> | ListPV<T>, ListTree<T>>(n);
+    }
+
+    method safe_get<T>(i: Nat): T {
+        let l = this.left;
+        if(ListTree<T>::s_isLeaf(l)) {
+            return ListPV<T>::s_safe_get(ListTree<T>::s_asLeaf(l), i);
+        }
+        else {
+            let ln = ListTree<T>::s_asNode(l);
+            if(i < ln.count) {
+                return ln.safe_get(i);
+            }
+            else {
+                let r = this.right;
+                let ir = i - ln.count;
+                if(ListTree<T>::s_isLeaf(r)) {
+                    return ListPV<T>::s_safe_get(ListTree<T>::s_asLeaf(r), ir);
+                }
+                else {
+                    let rn = ListTree<T>::s_asNode(r);
+                    return rn.safe_get(ir);
+                }
+            }
+        }
+    }
+}
+
+typedef ListPV<T> = PartialVector<T, [|4|]>;
+typedef ListRepr<T> = None | ListPV<T> | ListTree<T>;
+ 
+
+#endif

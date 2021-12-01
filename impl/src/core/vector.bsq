@@ -1,0 +1,24 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+__internal entity Mask<K constant Nat> provides Some, APIType {
+    __assume_safe function s_safe_get(m: Mask<K>, i: Nat): Bool # mask_safe_get
+}
+
+__internal entity Vector<T, K constant Nat> provides Some, APIType when T grounded APIType {
+    __assume_safe function s_safe_get(v: Vector<T, K>, i: Nat): T # vector_safe_get
+}
+
+__internal entity PartialVector<T, K constant Nat> provides Some, APIType when T grounded APIType {
+    __safe hidden function s_empty(pv: PartialVector<T, K>): Bool # partialvector_empty
+    __safe hidden function s_popcount(pv: PartialVector<T, K>): Nat # partialvector_popcount
+    __safe hidden function s_getmask(pv: PartialVector<T, K>): Mask<K> # partialvector_getmask
+
+    __assume_safe function s_safe_get(pv: PartialVector<T, K>, i: Nat): T # partialvector_safe_get
+    __safe function s_none_get(pv: PartialVector<T, K>, i: Nat): T? # partialvector_none_get
+}

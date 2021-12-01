@@ -1,0 +1,81 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+#if EXEC_LIBS
+__internal entity ListOps provides Some {
+    __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
+
+    function s_isPV<T>(l: ListRepr<T>): Bool {
+        return l.is<ListPV<T>>();
+    }
+
+    function s_asPV<T>(l: ListRepr<T>): ListPV<T> {
+        return ListOps::s_safeAs<ListRepr<T>, ListPV<T>>(l);
+    }
+
+    function s_isRecList<T>(l: ListRepr<T>): Bool {
+        return l.is<RecList<T>>();
+    }
+
+    function s_asRecList<T>(l: ListRepr<T>): RecList<T> {
+        return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l);
+    }
+
+    function s_empty<T>(l: ListRepr<T>): Nat {
+        return l === none;
+    }
+
+    function s_size<T>(l: ListRepr<T>): Nat {
+        if(l === none) {
+            return 0;
+        }
+        elif(ListOps::s_isPV<T>(l)) {
+            return ListPV<T>::s_popcount(ListOps::s_asPV<T>(l));
+        }
+        else {
+            return ListOps::s_asRecList<T>(l).count;
+        }
+    }
+
+    function s_safe_get<T>(l: ListRepr<T>, i: Nat): T {
+        if(ListOps::s_isPV<T>(l)) {
+            return ListPV<T>::s_safe_get(ListOps::s_asPV<T>(l), i);
+        }
+        else {
+            return ListOps::s_asRecList<T>(l).safe_get(i);
+        }
+    }
+}
+
+entity RecList<T> provides Some {
+    field count: Nat;
+    field ll RecListEntry<T>;
+
+    method safe_get<T>(i: Nat): T {
+        return this.ll.safe_get(ll, i);
+    }
+}
+
+entity RecListEntry<T> provides Some {
+    field head: T;
+    field tail RecListEntry<T>?;
+
+    method safe_get<T>(i: Nat): T {
+        if(i == 0) {
+            return this.head;
+        }
+        else {
+            return ListOps::s_safeAs<RecListEntry<T>>(this.tail).safe_get(i - 1);
+        }
+    }
+}
+
+typedef ListPV<T> = PartialVector<T, [|4|]>;
+typedef ListRepr<T> = None | ListPV<T> | RecList<T>;
+
+#endif

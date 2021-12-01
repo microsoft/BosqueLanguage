@@ -335,15 +335,14 @@ __internal entity String provides Some, KeyType, APIType {
 //<summary>Primitive safe string value.</summary>
 __internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
     __assume_safe private function s_into(s: String): StringOf<T> # stringof_into
-
     method value(): String # special_extract
 
-    function parse(s: String): StringOf<T> {
+    function coerce(s: String): StringOf<T> {
         check T::accepts(s);
         return StringOf<T>::s_into(s);
     } 
 
-    function tryParse(s: String): StringOf<T>? {
+    function tryCoerce(s: String): StringOf<T>? {
         if(!T::accepts(s)) {
             return none;
         } 
@@ -355,7 +354,22 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
 
 //<summary>Primitive DataString value.</summary>
 __internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType {
+    __assume_safe private function s_into(s: String): DataString<T> # datastring_into
     method value(): String # special_extract
+
+    function coerce(s: String): DataString<T> {
+        check T::accepts(s);
+        return DataString<T>::s_into(s);
+    } 
+
+    function tryCoerce(s: String): DataString<T>? {
+        if(!T::accepts(s)) {
+            return none;
+        } 
+        else {
+            return DataString<T>::s_into(s);
+        }
+    }
 }
 
 enum BufferFormat {
@@ -375,8 +389,8 @@ enum BufferCompression {
 
 //<summary>An efficient byte buffer for data.</summary>
 __internal entity ByteBuffer provides Some, APIType {
-    //method getFormat(): BufferFormat # bytebuffer_getformat
-    //method getCompression(): BufferCompression # bytebuffer_getcompression;
+    method getFormat(): BufferFormat # bytebuffer_getformat
+    method getCompression(): BufferCompression # bytebuffer_getcompression;
 }
 
 //<summary>An efficient buffer encoding for data.</summary>

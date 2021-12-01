@@ -629,6 +629,7 @@ std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPt
 
 class BSQByteBufferType : public BSQRefType
 {
+    xxxx; //need to fix this to have encoding info too
 public:
     BSQByteBufferType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, "NSCore::ByteBuffer") {;}
 
