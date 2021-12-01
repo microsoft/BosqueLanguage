@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if CHECK_LIBS
-__internal entity ListOps provides Some {
+entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
 
     function s_asRecList<T>(l: ListRepr<T>): RecList<T> {
@@ -38,25 +38,25 @@ __internal entity ListOps provides Some {
 
     function s_safe_get<T>(l: ListRepr<T>, i: Nat): T {
         if(l.is<Vector1<T>>()) {
-            return Vector1<T>::s_at0(l);
+            return l.v0;
         }
         elif(l.is<Vector2<T>>()) {
             if(i == 0) {
-                return Vector2<T>::s_at0(l);
+                return l.v0;
             }
             else {
-                return Vector2<T>::s_at1(l);
+                return l.v1;
             }
         }
         elif(l.is<Vector3<T>>()) {
             if(i == 0) {
-                return Vector3<T>::s_at0(l);
+                return l.v0;
             }
             elif(i == 1) {
-                return Vector3<T>::s_at1(l);
+                return l.v1;
             }
             else {
-                return Vector3<T>::s_at2(l);
+                return l.v2;
             }
         }
         else {
@@ -69,13 +69,13 @@ __internal entity ListOps provides Some {
             return false;
         }
         elif(l.is<Vector1<T>>()) {
-            return p[recursive?](Vector1<T>::s_at0(l));
+            return p[recursive?](l.v0);
         }
         elif(l.is<Vector2<T>>()) {
-            return \/(p[recursive?](Vector2<T>::s_at0(l)), p[recursive?](Vector2<T>::s_at1(l)));
+            return \/(p[recursive?](l.v0), p[recursive?](l.v1));
         }
         elif(l.is<Vector3<T>>()) {
-            return \/(p[recursive?](Vector3<T>::s_at0(l)), p[recursive?](Vector3<T>::s_at1(l)), p[recursive?](Vector3<T>::s_at2(l)));
+            return \/(p[recursive?](l.v0), p[recursive?](l.v1), p[recursive?](l.v2));
         }
         else {
             return l.has_pred[recursive?](p);
@@ -83,12 +83,105 @@ __internal entity ListOps provides Some {
     }
 
     recursive? function s_has_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        if(l === none) {
+            return false;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return p[recursive?](l.v0, 0n);
+        }
+        elif(l.is<Vector2<T>>()) {
+            return \/(p[recursive?](l.v0, 0n), p[recursive?](l.v1, 1n));
+        }
+        elif(l.is<Vector3<T>>()) {
+            return \/(p[recursive?](l.v0, 0n), p[recursive?](l.v1, 1n), p[recursive?](l.v2, 2n));
+        }
+        else {
+            return l.has_pred_idx[recursive?](p);
+        }
     }
 
-    recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            if(p[recursive?](l.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(p[recursive?](l.v0)) {
+                return 0n;
+            }
+            elif(p[recursive?](l.v1)) {
+                return 1n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(p[recursive?](l.v0)) {
+                return 0n;
+            }
+            elif(p[recursive?](l.v1)) {
+                return 1n;
+            }
+            elif(p[recursive?](l.v2)) {
+                return 2n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_pred[recursive?](p);
+        }
     }
 
-    recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            if(p[recursive?](l.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(p[recursive?](l.v0, 0n)) {
+                return 0n;
+            }
+            elif(p[recursive?](l.v1, 1n)) {
+                return 1n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(p[recursive?](l.v0, 0n)) {
+                return 0n;
+            }
+            elif(p[recursive?](l.v1, 1n)) {
+                return 1n;
+            }
+            elif(p[recursive?](l.v2, 2n)) {
+                return 2n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_pred_idx[recursive?](p);
+        }
     }
 
     recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
@@ -123,18 +216,21 @@ entity RecList<T> provides Some {
     }
 
     recursive? method has_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        return this.ll.has_pred_idx[recursive](0n, p);
     }
 
-    recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+        return this.ll.find_pred[recursive](0n, p);
     }
 
-    recursive? method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive? method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        return this.ll.find_pred_idx[recursive](0n, p);
     }
 
-    recursive? method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    recursive? method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat? {
     }
 
-    recursive? method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive? method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
     }
 
     recursive? method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
@@ -178,13 +274,49 @@ entity RecListEntry<T> provides Some {
         }
     }
 
-    recursive method has_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+    recursive method has_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        if(p[recursive?](this.head, idx)) {
+            return true;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return false;
+            }
+            else {
+                return tl.has_pred_idx[recursive](idx + 1n, p);
+            }
+        }
     }
 
-    recursive method find_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    recursive method find_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(p[recursive?](this.head)) {
+            return idx;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return none;
+            }
+            else {
+                return tl.find_pred[recursive](idx + 1n, p);
+            }
+        }
     }
 
-    recursive method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(p[recursive?](this.head, idx)) {
+            return idx;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return none;
+            }
+            else {
+                return tl.find_pred_idx[recursive](idx + 1n, p);
+            }
+        }
     }
 
     recursive method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat {

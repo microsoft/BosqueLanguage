@@ -23,7 +23,7 @@ __internal entity ListOps provides Some {
             return 0;
         }
         elif(l.is<PartialVector<T>>()) {
-            return PartialVector<T>::s_popcount(l);
+            return l.mask.count();
         }
         else {
             return l.count;
@@ -44,7 +44,7 @@ __internal entity ListOps provides Some {
             return false;
         }
         elif(l.is<PartialVector<T>>()) {
-            return Mask::s_some_true(PartialVector<T>::s_apply_pred[recursive?](l, p));
+            return l.find_pred[recursive?](p).some_true();
         }
         else {
             return l.has_pred[recursive](p);
@@ -56,17 +56,35 @@ __internal entity ListOps provides Some {
             return false;
         }
         elif(l.is<PartialVector<T>>()) {
-            return Mask::s_some_true(PartialVector<T>::s_apply_pred_idx[recursive?](l, 0, p));
+            return l.find_pred_idx[recursive?](0, p).some_true();
         }
         else {
             return l.has_pred_idx[recursive](0, p);
         }
     }
 
-    recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return l.find_pred[recursive?](p).min();
+        }
+        else {
+            return l.find_pred[recursive](0, p);
+        }
     }
 
-    recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return l.find_pred_idx[recursive?](p).min();
+        }
+        else {
+            return l.find_pred_idx[recursive](0, p);
+        }
     }
 
     recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
@@ -95,8 +113,8 @@ entity ListTree<T> provides Some {
 
     recursive method safe_get(i: Nat): T {
         let l = this.left;
-        if(l.is<ListPV<T>>()) {
-            return ListPV<T>::s_safe_get(l, i);
+        if(l.is<PartialVector<T>>()) {
+            return PartialVector<T>::s_safe_get(l, i);
         }
         else {
             if(i < l.count) {
@@ -105,8 +123,8 @@ entity ListTree<T> provides Some {
             else {
                 let r = this.right;
                 let ir = i - l.count;
-                if(r.is<ListPV<T>>()) {
-                    return ListPV<T>::s_safe_get(r, ir);
+                if(r.is<PartialVector<T>>()) {
+                    return PartialVector<T>::s_safe_get(r, ir);
                 }
                 else {
                     return r.safe_get[recursive](ir);
@@ -119,11 +137,11 @@ entity ListTree<T> provides Some {
         let l = this.left;
         let r = this.right;
 
-        if(l.is<PartialVector<T>>() && Mask::s_some_true(PartialVector<T>::s_apply_pred[recursive?](l, p))) {
+        if(l.is<PartialVector<T>>() && l.find_pred[recursive?](p).some_true()) {
             return true;
         }
 
-        if(r.is<PartialVector<T>>() && Mask::s_some_true(PartialVector<T>::s_apply_pred[recursive?](r, p))) {
+        if(r.is<PartialVector<T>>() && r.find_pred[recursive?](p).some_true()) {
             return true;
         }
 
@@ -144,10 +162,10 @@ entity ListTree<T> provides Some {
 
         var lcount;
         if(l.is<PartialVector<T>>()) {
-            if(Mask::s_some_true(PartialVector<T>::s_apply_pred_idx[recursive?](l, idx, p))) {
+            if(l.find_pred_idx[recursive?](idx, p).some_true()) {
                 return true;
             }
-            lcount = PartialVector::s_popcount(l);
+            lcount = l.count();
         }
         else {
             if(l.has_pred_idx[recursive](idx, p)) {
@@ -158,17 +176,49 @@ entity ListTree<T> provides Some {
 
         let nidx = idx + lcount; 
         if(r.is<PartialVector<T>>()) {
-            return Mask::s_some_true(PartialVector<T>::s_apply_pred_idx[recursive?](r, nidx, p));
+            return r.find_pred_idx[recursive?](nidx, p).some_true();
         }
         else {
-            return r.has_pred[recursive](nidx, p)) {
+            return r.has_pred[recursive](nidx, p);
         }
     }
 
-    recursive method find_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+    recursive method find_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        let l = this.left;
+        let r = this.right;
+
+        var lcount;
+        if(l.is<PartialVector<T>>()) {
+            let lm = l.find_pred[recursive?](p);
+            if(lm.some_true()) {
+                return idx + lm.min();
+            }
+            lcount = l.count();
+        }
+        else {
+            let lres = l.find_pred[recursive](idx, p)
+            if(lres !== none) {
+                return lres;
+            }
+            lcount = l.count;
+        }
+
+        let nidx = idx + lcount; 
+        if(r.is<PartialVector<T>>()) {
+            let rm = r.find_pred[recursive?](p);
+            if(lm.some_true()) {
+                return idx + rm.min();
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return r.find_pred[recursive](nidx, p);
+        }
     }
 
-    recursive method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+    recursive method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
     }
 
     recursive method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat? {

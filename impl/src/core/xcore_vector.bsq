@@ -7,19 +7,19 @@
 namespace NSCore;
 
 #if CHECK_LIBS
-__internal entity Vector1<T> provides Some {
-    __safe function s_at0(v: Vector1<T>): T # vector1_at0
+entity Vector1<T> provides Some {
+    field v0: T;
 }
 
-__internal entity Vector2<T> provides Some {
-    __safe function s_at0(v: Vector2<T>): T # vector2_at0
-    __safe function s_at1(v: Vector2<T>): T # vector2_at1
+entity Vector2<T> provides Some {
+    field v0: T;
+    field v1: T;
 }
 
-__internal entity Vector3<T> provides Some {
-    __safe function s_at0(v: Vector3<T>): T # vector3_at0
-    __safe function s_at1(v: Vector3<T>): T # vector3_at1
-    __safe function s_at2(v: Vector3<T>): T # vector3_at2
+entity Vector3<T> provides Some {
+    field v0: T;
+    field v1: T;
+    field v2: T;
 }
 #endif
 

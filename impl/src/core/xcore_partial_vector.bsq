@@ -8,27 +8,127 @@ namespace NSCore;
 
 #if EXEC_LIBS
 __internal entity Mask provides Some, APIType {
-    __assume_safe function s_safe_get(m: Mask, i: Nat): Bool # mask_safe_get
+    __safe function s_cons(b0: Bool, b1: Bool, b2: Bool, b3: Bool): Mask # mask_cons
 
-    __safe s_all_true(m: Mask): Bool # mask_all_true
-    __safe s_some_true(m: Mask): Bool # mask_some_true
+    // struct {uint16_t bits; uint16_t count;}
+    __safe function s_min_set(m: Mask): Nat # mask_min_set
+    __safe function s_max_set(m: Mask): Nat # mask_max_set
+    __safe function s_count(m: Mask): Nat # mask_count
+    __safe function s_empty(m: Mask): Nat # mask_empty
 
-    __safe s_true_first(m: Mask): Nat? # mask_true_first
-    __safe s_true_last(m: Mask): Nat? # mask_true_last
+    method bit0(m: Mask): Bool # special_function
+    method bit1(m: Mask): Bool # special_function
+    method bit2(m: Mask): Bool # special_function
+    method bit3(m: Mask): Bool # special_function
 
-    __safe s_negate(m: Mask): Nat? # mask_negate
-    __safe s_and(m: Mask): Nat? # mask_and
-    __safe s_or(m: Mask): Nat? # mask_or
+    method empty(): Bool {
+        return Mask::s_empty(this);
+    }
+
+    method count(): Nat {
+        return Mask::s_count(this);
+    }
+
+    method all_true(m: Mask): Bool {
+        return /\(this.bit0(), this.bit1(), this.bit2(), this.bit3());
+    }
+
+    method some_true(m: Mask): Bool {
+        return \/(this.bit0(), this.bit1(), this.bit2(), this.bit3());
+    }
+
+    method min(): Nat? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            return Mask::s_min_set(this);
+        }
+    }
+
+    method max(): Nat? {
+        if(this.empty()) {
+            return none;
+        }
+        else {
+            return Mask::s_max_set(this);
+        }
+    }
+
+    function and(m1: Mask, m2: Mask): Mask {
+        Mask::s_cons(/\(m1.bit0(), m2.bit0()), /\(m1.bit1(), m2.bit1()), /\(m1.bit2(), m2.bit2()), /\(m1.bit3(), m2.bit3()));
+    }
+
+    method or(m: Mask): Mask  {
+        Mask::s_cons(/\(m1.bit0(), m2.bit0()), /\(m1.bit1(), m2.bit1()), /\(m1.bit2(), m2.bit2()), /\(m1.bit3(), m2.bit3()));
+    }
 }
 
-__internal entity PartialVector<T> provides Some, APIType when T grounded APIType {
-    __safe hidden function s_empty(pv: PartialVector<T>): Bool # partialvector_empty
-    __safe hidden function s_popcount(pv: PartialVector<T>): Nat # partialvector_popcount
+entity PartialVector<T> provides Some, APIType when T grounded APIType {
+    __safe function pv_undef(): T # special_function
 
-    __assume_safe function s_safe_get(pv: PartialVector<T>, i: Nat): T # partialvector_safe_get
+    __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T # pv_safe_get
+    __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> # pv_compact
 
-    recursive? function s_apply_pred(pv: PartialVector<T>, p: recursive? pred(_: T) -> Bool): Mask # special_function_pv_apply_pred
-    recursive? function s_apply_pred_idx(pv: PartialVector<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask # special_function_pv_apply_pred_idx
+    field v0: T;
+    field v1: T;
+    field v2: T;
+    field v3: T;
+    field mask: Mask;
+
+    recursive? method applyPred(p: recursive? pred(_: T) -> Bool): Mask {
+        let b0 = p[recursive?][|this.mask.bit0(), false|](this.v0);
+        let b1 = p[recursive?][|this.mask.bit1(), false|](this.v1);
+        let b2 = p[recursive?][|this.mask.bit2(), false|](this.v2);
+        let b3 = p[recursive?][|this.mask.bit3(), false|](this.v3);
+
+        return Mask::s_cons(b0, b1, b2, b3);
+    }
+
+    recursive? method apply_pred_idx(pv: PartialVector<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+        let b0 = p[recursive?][|this.mask.bit0(), false|](this.v0, idx);
+        let b1 = p[recursive?][|this.mask.bit1(), false|](this.v1, idx + 1n);
+        let b2 = p[recursive?][|this.mask.bit2(), false|](this.v2, idx + 2n);
+        let b3 = p[recursive?][|this.mask.bit3(), false|](this.v3, idx + 3n);
+
+        return Mask::s_cons(b0, b1, b2, b3);
+    }
+
+    recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Mask {
+        let b0 = p[recursive?][|this.mask.bit0(), false|](this.v0);
+        let b1 = p[recursive?][|/\(this.mask.bit1(), !b0), false|](this.v1);
+        let b2 = p[recursive?][|/\(this.mask.bit2(), !b0, !b1), false|](this.v2);
+        let b3 = p[recursive?][|/\(this.mask.bit3(), !b0, !b1, !b2) false|](this.v3);
+
+        return Mask::s_cons(b0, b1, b2, b3);
+    }
+
+    recursive? method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+        let b0 = p[recursive?][|Mask::bit0(this.mask), false|](this.v0, idx);
+        let b1 = p[recursive?][|/\(Mask::bit1(this.mask), !b0), false|](this.v1, idx + 1n);
+        let b2 = p[recursive?][|/\(Mask::bit2(this.mask), !b0, !b1), false|](this.v2, idx + 2n);
+        let b3 = p[recursive?][|/\(Mask::bit3(this.mask), !b0, !b1, !b2) false|](this.v3, idx + 3n);
+
+        return Mask::s_cons(b0, b1, b2, b3);
+    }
+
+    recursive? method s_find_last_pred(pv: PartialVector<T>, p: recursive? pred(_: T) -> Bool): Mask {
+        let b3 = p[recursive?][|this.mask.bit3(), false|](this.v3);
+        let b2 = p[recursive?][|/\(this.mask.bit2(), !b3), false|](this.v2);
+        let b1 = p[recursive?][|/\(this.mask.bit1(), !b3, !b2), false|](this.v1)
+        let b0 = p[recursive?][|/\(this.mask.bit0(), !b3, !b2, !b1) false|](this.v0);
+
+        return Mask::s_cons(b0, b1, b2, b3);
+    }
+
+    recursive? method s_find_last_pred_idx(pv: PartialVector<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+        let b3 = p[recursive?][|this.mask.bit3(), false|](this.v3, idx + 3n);
+        let b2 = p[recursive?][|/\(this.mask.bit2(), !b3), false|](this.v2, idx + 2n);
+        let b1 = p[recursive?][|/\(this.mask.bit1(), !b3, !b2), false|](this.v1, idx + 1n);
+        let b0 = p[recursive?][|/\(this.mask.bit0(), !b3, !b2, !b1) false|](this.v0, idx);
+
+        return Mask::s_cons(b0, b1, b2, b3);
+    }
 
     recursive? function s_map_fn<T, U>(pv: PartialVector<T>, p: recursive? fn(_: T) -> U): PartialVector<U> # special_function_pv_map_fn
     recursive? function s_map_fn_idx<T, U>(pv: PartialVector<T>, idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> # special_function_pv_map_fn_idx
@@ -39,6 +139,12 @@ __internal entity PartialVector<T> provides Some, APIType when T grounded APITyp
     recursive? function s_transduce_fn<T, U, E>(pv: PartialVector<T>, init: E, p: recursive? fn(_: T, _: E) -> U, E): PartialVector<U> # special_function_pv_transduce_fn
     recursive? function s_transduce_fn_idx<T, U, E>(pv: PartialVector<T>, init: E, idx: Nat, p: recursive? fn(_: T, _: E, _: Nat) -> U, E): PartialVector<U> # special_function_pv_transduce_fn_idx
 
-    __safe function s_compact(pv: PartialVector<T>, m: Mask): PartialVector<T> # partialvector_compact
+    recursive? method sort2(cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<U> {
+        assert(Mask::s_count(this.mask) <= 2n);
+
+        if(Mask::s_count(this.mask) == 2n && cmp[recursive?](this.v1, this.v0)) {
+            return PartialVector<T>{this.v1, this.v0, this.v2, this.v3, this.mask};
+        }
+    }
 }
 #endif

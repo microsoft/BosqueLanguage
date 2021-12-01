@@ -161,8 +161,8 @@ enum class BSQTypeLayoutKind : uint32_t
     UnionRef
 };
 
-#define MAX_STRUCT_INLINE_SIZE 32
-#define MAX_UNION_INLINE_SIZE 40
+#define MAX_STRUCT_INLINE_SIZE 58
+#define MAX_UNION_INLINE_SIZE 64
 
 #define PTR_FIELD_MASK_NOP '1'
 #define PTR_FIELD_MASK_PTR '2'
