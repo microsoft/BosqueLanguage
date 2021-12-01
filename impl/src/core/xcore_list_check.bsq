@@ -6,21 +6,9 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace NSCore;
 
-#if EXEC_LIBS
+#if CHECK_LIBS
 __internal entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
-
-    function s_isPV<T>(l: ListRepr<T>): Bool {
-        return l.is<ListPV<T>>();
-    }
-
-    function s_asPV<T>(l: ListRepr<T>): ListPV<T> {
-        return ListOps::s_safeAs<ListRepr<T>, ListPV<T>>(l);
-    }
-
-    function s_isRecList<T>(l: ListRepr<T>): Bool {
-        return l.is<RecList<T>>();
-    }
 
     function s_asRecList<T>(l: ListRepr<T>): RecList<T> {
         return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l);
@@ -32,23 +20,93 @@ __internal entity ListOps provides Some {
 
     function s_size<T>(l: ListRepr<T>): Nat {
         if(l === none) {
-            return 0;
+            return 0n;
         }
-        elif(ListOps::s_isPV<T>(l)) {
-            return ListPV<T>::s_popcount(ListOps::s_asPV<T>(l));
+        elif(l.is<Vector1<T>>()) {
+            return 1n;
+        }
+        elif(l.is<Vector2<T>>()) {
+            return 2n;
+        }
+        elif(l.is<Vector3<T>>()) {
+            return 3n;
         }
         else {
-            return ListOps::s_asRecList<T>(l).count;
+            return l.count;
         }
     }
 
     function s_safe_get<T>(l: ListRepr<T>, i: Nat): T {
-        if(ListOps::s_isPV<T>(l)) {
-            return ListPV<T>::s_safe_get(ListOps::s_asPV<T>(l), i);
+        if(l.is<Vector1<T>>()) {
+            return Vector1<T>::s_at0(l);
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(i == 0) {
+                return Vector2<T>::s_at0(l);
+            }
+            else {
+                return Vector2<T>::s_at1(l);
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(i == 0) {
+                return Vector3<T>::s_at0(l);
+            }
+            elif(i == 1) {
+                return Vector3<T>::s_at1(l);
+            }
+            else {
+                return Vector3<T>::s_at2(l);
+            }
         }
         else {
             return ListOps::s_asRecList<T>(l).safe_get(i);
         }
+    }
+
+    recursive? function s_has_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Bool {
+        if(l === none) {
+            return false;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return p[recursive?](Vector1<T>::s_at0(l));
+        }
+        elif(l.is<Vector2<T>>()) {
+            return \/(p[recursive?](Vector2<T>::s_at0(l)), p[recursive?](Vector2<T>::s_at1(l)));
+        }
+        elif(l.is<Vector3<T>>()) {
+            return \/(p[recursive?](Vector3<T>::s_at0(l)), p[recursive?](Vector3<T>::s_at1(l)), p[recursive?](Vector3<T>::s_at2(l)));
+        }
+        else {
+            return l.has_pred[recursive?](p);
+        }
+    }
+
+    recursive? function s_has_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+    }
+
+    recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+    }
+
+    recursive? function s_filter_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+    }
+
+    recursive? function s_map<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): ListRepr<U> {
+    }
+
+    recursive? function s_map_idx<T, U>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> U): ListRepr<U> {
     }
 }
 
@@ -57,7 +115,38 @@ entity RecList<T> provides Some {
     field ll RecListEntry<T>;
 
     method safe_get<T>(i: Nat): T {
-        return this.ll.safe_get(ll, i);
+        return this.ll.safe_get[recursive](ll, i);
+    }
+
+    recursive? method has_pred(p: recursive? pred(_: T) -> Bool): Bool {
+        return this.ll.has_pred[recursive](p);
+    }
+
+    recursive? method has_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+    }
+
+    recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive? method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive? method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive? method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive? method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+    }
+
+    recursive? method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+    }
+
+    recursive? method map<U>(p: recursive? pred(_: T) -> U): RecList<U> {
+    }
+
+    recursive? method map_idx<U>(p: recursive? pred(_: T, _: Nat) -> U): RecList<U> {
     }
 }
 
@@ -65,17 +154,58 @@ entity RecListEntry<T> provides Some {
     field head: T;
     field tail RecListEntry<T>?;
 
-    method safe_get<T>(i: Nat): T {
+    recursive method safe_get(i: Nat): T {
         if(i == 0) {
             return this.head;
         }
         else {
-            return ListOps::s_safeAs<RecListEntry<T>>(this.tail).safe_get(i - 1);
+            return ListOps::s_safeAs<RecListEntry<T>>(this.tail).safe_get[recursive](i - 1);
         }
+    }
+
+    recursive method has_pred(p: recursive? pred(_: T) -> Bool): Bool {
+        if(p[recursive?](this.head)) {
+            return true;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return false;
+            }
+            else {
+                return tl.has_pred[recursive](p);
+            }
+        }
+    }
+
+    recursive method has_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+    }
+
+    recursive method find_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive method filter_pred(p: recursive? pred(_: T) -> Bool): RecListEntry<T>, Nat {
+    }
+
+    recursive method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): RecListEntry<T>, Nat {
+    }
+
+    recursive method map<U>(p: recursive? pred(_: T) -> U): RecListEntry<U> {
+    }
+
+    recursive method map_idx<U>(p: recursive? pred(_: T, _: Nat) -> U): RecListEntry<U> {
     }
 }
 
-typedef ListPV<T> = PartialVector<T, [|4|]>;
-typedef ListRepr<T> = None | ListPV<T> | RecList<T>;
+typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>;
 
 #endif

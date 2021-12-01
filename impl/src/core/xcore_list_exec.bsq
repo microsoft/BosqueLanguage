@@ -10,18 +10,6 @@ namespace NSCore;
 __internal entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
 
-    function s_isPV<T>(l: ListRepr<T>): Bool {
-        return l.is<ListPV<T>>();
-    }
-
-    function s_asPV<T>(l: ListRepr<T>): ListPV<T> {
-        return ListOps::s_safeAs<ListRepr<T>, ListPV<T>>(l);
-    }
-
-    function s_isListTree<T>(l: ListRepr<T>): Bool {
-        return l.is<ListTree<T>>();
-    }
-
     function s_asListTree<T>(l: ListRepr<T>): ListTree<T> {
         return ListOps::s_safeAs<ListRepr<T>, ListTree<T>>(l);
     }
@@ -34,72 +22,175 @@ __internal entity ListOps provides Some {
         if(l === none) {
             return 0;
         }
-        elif(ListOps::s_isPV<T>(l)) {
-            return ListPV<T>::s_popcount(ListOps::s_asPV<T>(l));
+        elif(l.is<PartialVector<T>>()) {
+            return PartialVector<T>::s_popcount(l);
         }
         else {
-            return ListOps::s_asListTree<T>(l).count;
+            return l.count;
         }
     }
 
     function s_safe_get<T>(l: ListRepr<T>, i: Nat): T {
-        if(ListOps::s_isPV<T>(l)) {
-            return ListPV<T>::s_safe_get(ListOps::s_asPV<T>(l), i);
+        if(l.is<PartialVector<T>>()) {
+            return PartialVector<T>::s_safe_get(l, i);
         }
         else {
-            return ListOps::s_asListTree<T>(l).safe_get(i);
+            return ListOps::s_asListTree<T>(l).safe_get[recursive](i);
         }
+    }
+
+    recursive? function s_has_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Bool {
+        if(l === none) {
+            return false;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return Mask::s_some_true(PartialVector<T>::s_apply_pred[recursive?](l, p));
+        }
+        else {
+            return l.has_pred[recursive](p);
+        }
+    }
+
+    recursive? function s_has_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        if(l === none) {
+            return false;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return Mask::s_some_true(PartialVector<T>::s_apply_pred_idx[recursive?](l, 0, p));
+        }
+        else {
+            return l.has_pred_idx[recursive](0, p);
+        }
+    }
+
+    recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    }
+
+    recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    }
+
+    recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+    }
+
+    recursive? function s_filter_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+    }
+
+    recursive? function s_map<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): ListRepr<U> {
+    }
+
+    recursive? function s_map_idx<T, U>(l: ListRepr<T>, p: recursive? pred(_: T, _: U) -> Bool): ListRepr<U> {
     }
 }
 
 entity ListTree<T> provides Some {
     field count: Nat;
-    field left: ListTree<T> | ListPV<T>;
-    field right ListTree<T> | ListPV<T>;
+    field left: ListTree<T> | PartialVector<T>;
+    field right ListTree<T> | PartialVector<T>;
 
-    function s_isLeaf(n: ListTree<T> | ListPV<T>): Bool {
-        return n.is<ListPV<T>>();
-    }
-
-    function s_asLeaf(n: ListTree<T> | ListPV<T>): ListPV<T> {
-        return ListOps::s_safeAs<ListTree<T> | ListPV<T>, ListPV<T>>(n);
-    }
-
-    function s_isNode(n: ListTree<T> | ListPV<T>): Bool {
-        return n.is<ListTree<T>>();
-    }
-
-    function s_asNode(n: ListTree<T> | ListPV<T>): ListTree<T> {
-        return ListOps::s_safeAs<ListTree<T> | ListPV<T>, ListTree<T>>(n);
-    }
-
-    method safe_get<T>(i: Nat): T {
+    recursive method safe_get(i: Nat): T {
         let l = this.left;
-        if(ListTree<T>::s_isLeaf(l)) {
-            return ListPV<T>::s_safe_get(ListTree<T>::s_asLeaf(l), i);
+        if(l.is<ListPV<T>>()) {
+            return ListPV<T>::s_safe_get(l, i);
         }
         else {
-            let ln = ListTree<T>::s_asNode(l);
-            if(i < ln.count) {
-                return ln.safe_get(i);
+            if(i < l.count) {
+                return l.safe_get[recursive](i);
             }
             else {
                 let r = this.right;
-                let ir = i - ln.count;
-                if(ListTree<T>::s_isLeaf(r)) {
-                    return ListPV<T>::s_safe_get(ListTree<T>::s_asLeaf(r), ir);
+                let ir = i - l.count;
+                if(r.is<ListPV<T>>()) {
+                    return ListPV<T>::s_safe_get(r, ir);
                 }
                 else {
-                    let rn = ListTree<T>::s_asNode(r);
-                    return rn.safe_get(ir);
+                    return r.safe_get[recursive](ir);
                 }
             }
         }
     }
+
+    recursive method has_pred(p: recursive? pred(_: T) -> Bool): Bool {
+        let l = this.left;
+        let r = this.right;
+
+        if(l.is<PartialVector<T>>() && Mask::s_some_true(PartialVector<T>::s_apply_pred[recursive?](l, p))) {
+            return true;
+        }
+
+        if(r.is<PartialVector<T>>() && Mask::s_some_true(PartialVector<T>::s_apply_pred[recursive?](r, p))) {
+            return true;
+        }
+
+        if(l.is<ListTree<T>>() && l.has_pred[recursive](p)) {
+            return true;
+        }
+
+        if(r.is<ListTree<T>>() && r.has_pred[recursive](p)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    recursive method has_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        let l = this.left;
+        let r = this.right;
+
+        var lcount;
+        if(l.is<PartialVector<T>>()) {
+            if(Mask::s_some_true(PartialVector<T>::s_apply_pred_idx[recursive?](l, idx, p))) {
+                return true;
+            }
+            lcount = PartialVector::s_popcount(l);
+        }
+        else {
+            if(l.has_pred_idx[recursive](idx, p)) {
+                return true;
+            }
+            lcount = l.count;
+        }
+
+        let nidx = idx + lcount; 
+        if(r.is<PartialVector<T>>()) {
+            return Mask::s_some_true(PartialVector<T>::s_apply_pred_idx[recursive?](r, nidx, p));
+        }
+        else {
+            return r.has_pred[recursive](nidx, p)) {
+        }
+    }
+
+    recursive method find_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+    }
+
+    recursive method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+    }
+
+    recursive method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+    }
+
+    recursive method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+    }
+
+    recursive method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+    }
+
+    recursive method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+    }
+
+    recursive method map<U>(p: recursive? pred(_: T) -> U): ListRepr<U> {
+    }
+
+    recursive method map_idx<U>(p: recursive? pred(_: T, _: Nat) -> U): ListRepr<U> {
+    }
 }
 
-typedef ListPV<T> = PartialVector<T, [|4|]>;
-typedef ListRepr<T> = None | ListPV<T> | ListTree<T>;
+typedef ListRepr<T> = None | PartialVector<T> | ListTree<T>;
  
 
 #endif

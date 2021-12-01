@@ -1,0 +1,44 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+#if EXEC_LIBS
+__internal entity Mask provides Some, APIType {
+    __assume_safe function s_safe_get(m: Mask, i: Nat): Bool # mask_safe_get
+
+    __safe s_all_true(m: Mask): Bool # mask_all_true
+    __safe s_some_true(m: Mask): Bool # mask_some_true
+
+    __safe s_true_first(m: Mask): Nat? # mask_true_first
+    __safe s_true_last(m: Mask): Nat? # mask_true_last
+
+    __safe s_negate(m: Mask): Nat? # mask_negate
+    __safe s_and(m: Mask): Nat? # mask_and
+    __safe s_or(m: Mask): Nat? # mask_or
+}
+
+__internal entity PartialVector<T> provides Some, APIType when T grounded APIType {
+    __safe hidden function s_empty(pv: PartialVector<T>): Bool # partialvector_empty
+    __safe hidden function s_popcount(pv: PartialVector<T>): Nat # partialvector_popcount
+
+    __assume_safe function s_safe_get(pv: PartialVector<T>, i: Nat): T # partialvector_safe_get
+
+    recursive? function s_apply_pred(pv: PartialVector<T>, p: recursive? pred(_: T) -> Bool): Mask # special_function_pv_apply_pred
+    recursive? function s_apply_pred_idx(pv: PartialVector<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask # special_function_pv_apply_pred_idx
+
+    recursive? function s_map_fn<T, U>(pv: PartialVector<T>, p: recursive? fn(_: T) -> U): PartialVector<U> # special_function_pv_map_fn
+    recursive? function s_map_fn_idx<T, U>(pv: PartialVector<T>, idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> # special_function_pv_map_fn_idx
+
+    recursive? function s_reduce_fn<T, U>(pv: PartialVector<T>, init: U, p: recursive? fn(_: T) -> U): U # special_function_pv_reduce_fn
+    recursive? function s_reduce_fn_idx<T, U>(pv: PartialVector<T>, init: U, idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): U # special_function_pv_reduce_fn_idx
+
+    recursive? function s_transduce_fn<T, U, E>(pv: PartialVector<T>, init: E, p: recursive? fn(_: T, _: E) -> U, E): PartialVector<U> # special_function_pv_transduce_fn
+    recursive? function s_transduce_fn_idx<T, U, E>(pv: PartialVector<T>, init: E, idx: Nat, p: recursive? fn(_: T, _: E, _: Nat) -> U, E): PartialVector<U> # special_function_pv_transduce_fn_idx
+
+    __safe function s_compact(pv: PartialVector<T>, m: Mask): PartialVector<T> # partialvector_compact
+}
+#endif

@@ -1,0 +1,25 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+#if CHECK_LIBS
+__internal entity Vector1<T> provides Some {
+    __safe function s_at0(v: Vector1<T>): T # vector1_at0
+}
+
+__internal entity Vector2<T> provides Some {
+    __safe function s_at0(v: Vector2<T>): T # vector2_at0
+    __safe function s_at1(v: Vector2<T>): T # vector2_at1
+}
+
+__internal entity Vector3<T> provides Some {
+    __safe function s_at0(v: Vector3<T>): T # vector3_at0
+    __safe function s_at1(v: Vector3<T>): T # vector3_at1
+    __safe function s_at2(v: Vector3<T>): T # vector3_at2
+}
+#endif
+
