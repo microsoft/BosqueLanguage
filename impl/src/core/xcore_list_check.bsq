@@ -269,9 +269,147 @@ entity ListOps provides Some {
     }
 
     recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0);
+
+            if(p0) {
+                return l;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0);
+            let v1 = l.v1;
+            let p1 = p[recursive?](v1);
+
+            if(/\(p0, p1)) {
+                return l;
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0);
+            let v1 = l.v1;
+            let p1 = p[recursive?](v1);
+            let v2 = l.v2;
+            let p2 = p[recursive?](v2);
+
+            if(/\(p0, p1, p2)) {
+                return l;
+            }
+            elif(/\(p0, p1)) {
+                return Vector2<T>{v0, v1};
+            }
+            elif(/\(p0, p2)) {
+                return Vector2<T>{v0, v2};
+            }
+            elif(/\(p1, p2)) {
+                return Vector2<T>{v1, v2};
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            elif(p2) {
+                return Vector1<T>{v2};
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.filter_pred[recursive?](p);
+        }
     }
 
     recursive? function s_filter_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0, 0n);
+
+            if(p0) {
+                return l;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0, 0n);
+            let v1 = l.v1;
+            let p1 = p[recursive?](v1, 1n);
+
+            if(/\(p0, p1)) {
+                return l;
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0, 0n);
+            let v1 = l.v1;
+            let p1 = p[recursive?](v1, 1n);
+            let v2 = l.v2;
+            let p2 = p[recursive?](v2, 2n);
+
+            if(/\(p0, p1, p2)) {
+                return l;
+            }
+            elif(/\(p0, p1)) {
+                return Vector2<T>{v0, v1};
+            }
+            elif(/\(p0, p2)) {
+                return Vector2<T>{v0, v2};
+            }
+            elif(/\(p1, p2)) {
+                return Vector2<T>{v1, v2};
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            elif(p2) {
+                return Vector1<T>{v2};
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.filter_pred_idx[recursive?](p);
+        }
     }
 
     recursive? function s_map<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): ListRepr<U> {
@@ -314,9 +452,13 @@ entity RecList<T> provides Some {
     }
 
     recursive? method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+        let lle, lls = this.ll.filter_pred[recursive](p);
+        return RecList<T>{lle, lls};
     }
 
     recursive? method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+        let lle, lls = this.ll.filter_pred_idx[recursive](0n, p);
+        return RecList<T>{lle, lls};
     }
 
     recursive? method map<U>(p: recursive? pred(_: T) -> U): RecList<U> {
@@ -403,7 +545,7 @@ entity RecListEntry<T> provides Some {
         let tl = this.tail;
 
         if(tl === none) {
-            if(p[recursive?](this.head);) {
+            if(p[recursive?](this.head)) {
                 return idx;
             }
             else {
@@ -431,7 +573,7 @@ entity RecListEntry<T> provides Some {
         let tl = this.tail;
 
         if(tl === none) {
-            if(p[recursive?](this.head, idx);) {
+            if(p[recursive?](this.head, idx)) {
                 return idx;
             }
             else {
@@ -445,7 +587,7 @@ entity RecListEntry<T> provides Some {
                 return tres;
             }
             else {
-                if(p[recursive?](this.head, idx);) {
+                if(p[recursive?](this.head, idx)) {
                     return idx;
                 }
                 else {
@@ -455,10 +597,52 @@ entity RecListEntry<T> provides Some {
         }
     }
 
-    recursive method filter_pred(p: recursive? pred(_: T) -> Bool): RecListEntry<T>, Nat {
+    recursive method filter_pred(p: recursive? pred(_: T) -> Bool): RecListEntry<T>?, Nat {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let ph = p[recursive?](hh);
+        if(tl === none) {
+            if(ph) {
+                RecListEntry<T>{hh, none}, 1n;
+            }
+            else {
+                return none, 0n;
+            }
+        }
+        else {
+            let ntl, nts = tl.filter_pred[recursive](p);
+            if(ph) {
+                return RecListEntry<T>{hh, ntl}, nts + 1n;
+            }
+            else {
+                return ntl, nts;
+            }
+        }
     }
 
-    recursive method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): RecListEntry<T>, Nat {
+    recursive method filter_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): RecListEntry<T>?, Nat {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let ph = p[recursive?](hh, idx);
+        if(tl === none) {
+            if(ph) {
+                RecListEntry<T>{hh, none}, 1n;
+            }
+            else {
+                return none, 0n;
+            }
+        }
+        else {
+            let ntl, nts = tl.filter_pred_idx[recursive](p, idx + 1n);
+            if(ph) {
+                return RecListEntry<T>{hh, ntl}, nts + 1n;
+            }
+            else {
+                return ntl, nts;
+            }
+        }
     }
 
     recursive method map<U>(p: recursive? pred(_: T) -> U): RecListEntry<U> {

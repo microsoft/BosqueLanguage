@@ -80,7 +80,7 @@ __internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<PartialVector<T>>()) {
-            return l.find_pred_idx[recursive?](p).min();
+            return l.find_pred_idx[recursive?](0, p).min();
         }
         else {
             return l.find_pred_idx[recursive](0, p);
@@ -104,17 +104,47 @@ __internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<PartialVector<T>>()) {
-            return l.find_last_pred_idx[recursive?](p).max();
+            return l.find_last_pred_idx[recursive?](0, p).max();
         }
         else {
             return l.find_last_pred_idx[recursive](0, p);
         }
     }
 
-    recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+    recursive? function s_filter_pred<T>(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+         if(l === none) {
+            return none;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            let fm = l.apply_pred[recursive?](p);
+            if(fm.empty()) {
+                return none;
+            }
+            else {
+                return PartialVector<T>::s_select(l, fm);
+            }
+        }
+        else {
+            return l.filter_pred_idx[recursive](0, p);
+        }
     }
 
-    recursive? function s_filter_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+    recursive? function s_filter_pred_idx<T>(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            let fm = l.apply_pred_idx[recursive?](0, p);
+            if(fm.empty()) {
+                return none;
+            }
+            else {
+                return PartialVector<T>::s_select(l, fm);
+            }
+        }
+        else {
+            return l.filter_pred_idx[recursive](0, p);
+        }
     }
 
     recursive? function s_map<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): ListRepr<U> {
@@ -128,6 +158,34 @@ entity ListTree<T> provides Some {
     field count: Nat;
     field left: ListTree<T> | PartialVector<T>;
     field right ListTree<T> | PartialVector<T>;
+
+    function append(l: ListTree<T> | PartialVector<T>, r: ListTree<T> | PartialVector<T>): ListTree<T> {
+        let ls: Nat;
+        if(l.is<PartialVector<T>>()) {
+            ls = l.count();
+        }
+        else {
+            ls = l.count;
+        }
+
+        let rs: Nat;
+        if(r.is<PartialVector<T>>()) {
+            rs = r.count();
+        }
+        else {
+            rs = r.count;
+        }
+
+        return ListTree<T>{ls + rs, l, r};
+    }
+
+    method slice(start: Nat, end: Nat): ListTree<T> {
+        if(/\(start === 0, end === this.count)) {
+            return this;
+        }
+
+        xxxx;
+    }
 
     recursive method safe_get(i: Nat): T {
         let l = this.left;
@@ -178,7 +236,7 @@ entity ListTree<T> provides Some {
         let l = this.left;
         let r = this.right;
 
-        var lcount;
+        var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
             if(l.find_pred_idx[recursive?](idx, p).some_true()) {
                 return true;
@@ -205,7 +263,7 @@ entity ListTree<T> provides Some {
         let l = this.left;
         let r = this.right;
 
-        var lcount;
+        var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
             let lm = l.find_pred[recursive?](p);
             if(lm.some_true()) {
@@ -240,7 +298,7 @@ entity ListTree<T> provides Some {
         let l = this.left;
         let r = this.right;
 
-        var lcount;
+        var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
             let lm = l.find_pred_idx[recursive?](idx, p);
             if(lm.some_true()) {
@@ -275,7 +333,7 @@ entity ListTree<T> provides Some {
         let l = this.left;
         let r = this.right;
 
-        var lcount;
+        var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
             lcount = l.count();
         }
@@ -315,7 +373,7 @@ entity ListTree<T> provides Some {
         let l = this.left;
         let r = this.right;
 
-        var lcount;
+        var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
             lcount = l.count();
         }
@@ -355,6 +413,62 @@ entity ListTree<T> provides Some {
     }
 
     recursive method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+        let l = this.left;
+        let r = this.right;
+
+        var lcount: Nat;
+        var nl: ListRepr<T>;
+        if(l.is<PartialVector<T>>()) {
+            lcount = l.count();
+            let lm = l.apply_pred_idx[recursive?](idx, p);
+            if(lm.empty()) {
+                nl = none;
+            }
+            else {
+                nl = PartialVector<T>::s_select(l, lm);
+            }
+        }
+        else {
+            lcount = l.count;
+            nl = l.filter_pred_idx[recursive](idx, p)
+        }
+
+        let nidx = idx + lcount; 
+        var nr: ListRepr<T>;
+        if(r.is<PartialVector<T>>()) {
+            let rm = r.apply_pred_idx[recursive?](nidx, p);
+            if(rm.empty()) {
+                nr = none;
+            }
+            else {
+                nr = PartialVector<T>::s_select(r, rm);
+            }
+        }
+        else {
+            nr = r.filter_pred_idx[recursive](nidx, p)
+        }
+
+        if(/\(nl === none, nr === none)) {
+            return none;
+        }
+        elif(nl === none) {
+            return nr;
+        }
+        elif(nr === none) {
+            return nl;
+        }
+        elif(/\(nl.is<PartialVector<T>>(), nr.is<PartialVector<T>>())) {
+            let nsize = nl.mask.count() + nr.mask.count();
+            if(nsize <= 4) {
+                return PartialVector<T>::s_append(nl, nr);
+            }
+            else {
+                return ListTree<T>::append(nl, nr);
+            }
+        }
+        else {
+            return ListTree<T>::append(nl, nr);
+        }
     }
 
     recursive method map<U>(p: recursive? pred(_: T) -> U): ListRepr<U> {

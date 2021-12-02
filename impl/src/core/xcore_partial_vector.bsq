@@ -10,7 +10,7 @@ namespace NSCore;
 __internal entity Mask provides Some, APIType {
     __safe function s_cons(b0: Bool, b1: Bool, b2: Bool, b3: Bool): Mask # mask_cons
 
-    // struct {uint16_t bits; uint16_t count;}
+    // struct {uint32_t mask (byte); uint32_t count;}
     __safe function s_min_set(m: Mask): Nat # mask_min_set
     __safe function s_max_set(m: Mask): Nat # mask_max_set
     __safe function s_count(m: Mask): Nat # mask_count
@@ -69,6 +69,8 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
 
     __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T # pv_safe_get
     __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> # pv_compact
+    __safe function s_append(pv1: PartialVector<T>, pv2: PartialVector<T>): PartialVector<T> # pv_append
+    __safe function s_slice(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> # pv_slice
 
     field v0: T;
     field v1: T;
@@ -85,7 +87,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return Mask::s_cons(b0, b1, b2, b3);
     }
 
-    recursive? method apply_pred_idx(pv: PartialVector<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+    recursive? method apply_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
         let b0 = p[recursive?][|this.mask.bit0(), false|](this.v0, idx);
         let b1 = p[recursive?][|this.mask.bit1(), false|](this.v1, idx + 1n);
         let b2 = p[recursive?][|this.mask.bit2(), false|](this.v2, idx + 2n);
