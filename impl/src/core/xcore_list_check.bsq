@@ -10,10 +10,6 @@ namespace NSCore;
 entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
 
-    function s_asRecList<T>(l: ListRepr<T>): RecList<T> {
-        return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l);
-    }
-
     function s_empty<T>(l: ListRepr<T>): Nat {
         return l === none;
     }
@@ -33,6 +29,148 @@ entity ListOps provides Some {
         }
         else {
             return l.count;
+        }
+    }
+
+    function s_append(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
+        if(/\(l === none, r === none)) {
+            return none;
+        }
+        elif(l === none) {
+            return r;
+        }
+        elif(r === none) {
+            return l;
+        }
+        elif(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
+            return Vector1<T>{l.v0, r.v0};
+        }
+        elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
+            return Vector1<T>{l.v0, r.v0, r.v1};
+        }
+        elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
+            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector1_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
+        }
+        elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
+            return Vector1<T>{l.v0, l.v1, r.v0};
+        }
+        elif(/\(l.is<Vector2<T>>(), r.is<Vector2<T>>())) {
+            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), RecListEntry<T>::s_vector2_to_list(r))};
+        }
+        elif(/\(l.is<Vector2<T>>(), r.is<Vector3<T>>())) {
+            return RecList<T>{5n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
+        }
+        elif(/\(l.is<Vector3<T>>(), r.is<Vector1<T>>())) {
+            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), RecListEntry<T>::s_vector1_to_list(r))};
+        }
+        elif(/\(l.is<Vector3<T>>(), r.is<Vector2<T>>())) {
+            return RecList<T>{5n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), RecListEntry<T>::s_vector2_to_list(r))};
+        }
+        elif(/\(l.is<Vector3<T>>(), r.is<Vector3<T>>())) {
+            return RecList<T>{6n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
+        }
+        else {
+            if(/\(l.is<Vector1<T>>(), r.is<RecList<T>>())) {
+                return RecList<T>{r.count + 1n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector1_to_list(l), r.ll)};
+            }
+            elif(/\(l.is<Vector2<T>>(), r.is<RecList<T>>())) {
+                return RecList<T>{r.count + 2n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), r.ll)};
+            }
+            elif(/\(l.is<Vector3<T>>(), r.is<RecList<T>>())) {
+                return RecList<T>{r.count + 3n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), r.ll)};
+            }
+            elif(/\(l.is<RecList<T>>(), r.is<Vector1<T>>())) {
+                return RecList<T>{l.count + 1n, RecListEntry<T>::s_append(l.ll, RecListEntry<T>::s_vector1_to_list(r))};
+            }
+            elif(/\(l.is<RecList<T>>(), r.is<Vector2<T>>())) {
+                return RecList<T>{l.count + 2n, RecListEntry<T>::s_append(l.ll, RecListEntry<T>::s_vector1_to_list(r))};
+            }
+            elif(/\(l.is<RecList<T>>(), r.is<Vector3<T>>())) {
+                return RecList<T>{l.count + 3n, RecListEntry<T>::s_append(l.ll, RecListEntry<T>::s_vector1_to_list(r))};
+            }
+            else {
+                return RecList<T>::append(ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l), ListOps::s_safeAs<ListRepr<T>, RecList<T>>(r));
+            }
+        }
+    }
+
+    function s_slice_start(l: ListRepr<T>, start: Nat): ListRepr<T> {
+        if(start == 0) {
+            return l;
+        }
+
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return none;
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(start == 2) {
+                return none;
+            }
+            else {
+                return Vector1<T>{l.v1};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(start == 3) {
+                return none;
+            }
+            elif(start == 2) {
+                return Vector1<T>{l.v2};
+            }
+            else {
+                return Vector2<T>{l.v1, l.v2};
+            }
+        }
+        else {
+            if(start == l.count()) {
+                return none;
+            }
+            else {
+                return l.slice_start[recursive](start);
+            }
+        }
+    }
+
+    function s_slice_end(l: ListRepr<T>, end: Nat): ListRepr<T> {
+        if(end == 0) {
+            return none;
+        }
+
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(end == 2) {
+                return l;
+            }
+            else {
+                return Vector1<T>{l.v0};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(end == 3) {
+                return l;
+            }
+            elif(end == 2) {
+                return Vector2<T>{l.v0, l.v1};
+            }
+            else {
+                return Vector1<T>{l.v0};
+            }
+        }
+        else {
+            if(end == l.count()) {
+                return l;
+            }
+            else {
+                return l.slice_end[recursive](end);
+            }
         }
     }
 
@@ -60,7 +198,7 @@ entity ListOps provides Some {
             }
         }
         else {
-            return ListOps::s_asRecList<T>(l).safe_get(i);
+            return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l).safe_get(i);
         }
     }
 
@@ -412,16 +550,94 @@ entity ListOps provides Some {
         }
     }
 
-    recursive? function s_map<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): ListRepr<U> {
+    recursive? function s_map<T, U>(l: ListRepr<T>, f: recursive? fn(_: T) -> U): ListRepr<U> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return Vector1<U>{f[recursive?](l.v0)};
+        }
+        elif(l.is<Vector2<T>>()) {
+            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v1)};
+        }
+        elif(l.is<Vector3<T>>()) {
+            return Vector3<U>{f[recursive?](l.v0), f[recursive?](l.v1), f[recursive?](l.v2)};
+        }
+        else {
+            return l.map[recursive?](f);
+        }
     }
 
-    recursive? function s_map_idx<T, U>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> U): ListRepr<U> {
+    recursive? function s_map_idx<T, U>(l: ListRepr<T>, f: recursive? fn(_: T, _: Nat) -> U): ListRepr<U> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return Vector1<U>{f[recursive?](l.v0, 0n)};
+        }
+        elif(l.is<Vector2<T>>()) {
+            return Vector2<U>{f[recursive?](l.v0, 0n), f[recursive?](l.v1, 1n)};
+        }
+        elif(l.is<Vector3<T>>()) {
+            return Vector3<U>{f[recursive?](l.v0, 0n), f[recursive?](l.v1, 1n), f[recursive?](l.v2, 2n)};
+        }
+        else {
+            return l.map_idx[recursive?](f);
+        }
     }
 }
 
 entity RecList<T> provides Some {
     field count: Nat;
     field ll RecListEntry<T>;
+
+    invariant $count > 3;
+
+    function append(l: RecList<T>, r: RecList<T>): RecListEntry<T> { 
+        return RecList<T>{l.count + r.count, RecListEntry<T>::s_append(l.ll, r.ll)};
+    }
+
+    method slice_start(start: Nat): ListRepr<T> {
+        let ncount = this.count - start;
+        let lle = RecListEntry<T>::s_slice_start(this.ll, start);
+
+        if(lle === none) {
+            return none;
+        }
+        elif(ncount == 1) {
+            return RecListEntry<T>::s_list_to_vector1(lle);
+        }
+        elif(ncount == 2) {
+            return RecListEntry<T>::s_list_to_vector2(lle);
+        }
+        elif(ncount == 3) {
+            return RecListEntry<T>::s_list_to_vector3(lle);
+        }
+        else {
+            return RecList<T>{ncount, lle};
+        }
+    }
+
+    method slice_end(end: Nat): ListRepr<T> {
+        let ncount = this.count - end;
+        let lle = RecListEntry<T>::s_slice_end(this.ll, end);
+
+        if(lle === none) {
+            return none;
+        }
+        elif(ncount == 1) {
+            return RecListEntry<T>::s_list_to_vector1(lle);
+        }
+        elif(ncount == 2) {
+            return RecListEntry<T>::s_list_to_vector2(lle);
+        }
+        elif(ncount == 3) {
+            return RecListEntry<T>::s_list_to_vector3(lle);
+        }
+        else {
+            return RecList<T>{ncount, lle};
+        }
+    }
 
     method safe_get<T>(i: Nat): T {
         return this.ll.safe_get[recursive](ll, i);
@@ -453,18 +669,54 @@ entity RecList<T> provides Some {
 
     recursive? method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
         let lle, lls = this.ll.filter_pred[recursive](p);
-        return RecList<T>{lle, lls};
+        if(lle === none) {
+            return none;
+        }
+        elif(lls <= 3) {
+            if(lls == 1) {
+                return RecListEntry<T>::s_list_to_vector1(lle);
+            }
+            elif(lls == 2) {
+                return RecListEntry<T>::s_list_to_vector2(lle);
+            }
+            else {
+                return RecListEntry<T>::s_list_to_vector3(lle);
+            }
+        }
+        else {
+            return RecList<T>{lle, lls};
+        }
     }
 
     recursive? method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
         let lle, lls = this.ll.filter_pred_idx[recursive](0n, p);
-        return RecList<T>{lle, lls};
+        if(lle === none) {
+            return none;
+        }
+        elif(lls <= 3) {
+            if(lls == 1) {
+                return RecListEntry<T>::s_list_to_vector1(lle);
+            }
+            elif(lls == 2) {
+                return RecListEntry<T>::s_list_to_vector2(lle);
+            }
+            else {
+                return RecListEntry<T>::s_list_to_vector3(lle);
+            }
+        }
+        else {
+            return RecList<T>{lle, lls};
+        }
     }
 
-    recursive? method map<U>(p: recursive? pred(_: T) -> U): RecList<U> {
+    recursive? method map<U>(f: recursive? fn(_: T) -> U): RecList<U> {
+        let llm = this.ll.map<U>[recursive](f);
+        return RecList<T>{llm, this.count};
     }
 
-    recursive? method map_idx<U>(p: recursive? pred(_: T, _: Nat) -> U): RecList<U> {
+    recursive? method map_idx<U>(f: recursive? fn(_: T, _: Nat) -> U): RecList<U> {
+        let llm = this.ll.map<U>[recursive](0n, f);
+        return RecList<T>{llm, this.count};
     }
 }
 
@@ -472,12 +724,72 @@ entity RecListEntry<T> provides Some {
     field head: T;
     field tail RecListEntry<T>?;
 
+    function s_vector1_to_list(l: Vector1<T>): RecListEntry<T> {
+        return RecListEntry<T>{l.v0, none};
+    }
+
+    function s_vector2_to_list(l: Vector2<T>): RecListEntry<T> {
+        return RecListEntry<T>{l.v0, RecListEntry<T>{l.v1, none}};
+    }
+
+    function s_vector3_to_list(l: Vector3<T>): RecListEntry<T> {
+        return RecListEntry<T>{l.v0, RecListEntry<T>{l.v1,  RecListEntry<T>{l.v2, none}}};
+    }
+
+    function s_list_to_vector1(l: RecListEntry<T>): Vector1<T> {
+        return Vector1<T>{l.head};
+    }
+
+    function s_list_to_vector2(l: RecListEntry<T>): Vector2<T> {
+        let ee2 = lls.tail;
+        return Vector2<T>{l.head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head};
+    }
+
+    function s_list_to_vector3(l: RecListEntry<T>): Vector3<T> {
+        let ee2 = lls.tail;
+        let ee3 = ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).tail
+        return RecListEntry<T>{l.head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee3).head};
+    }
+
+    recursive function s_append(l: RecListEntry<T>?, r: RecListEntry<T>): RecListEntry<T> {
+        if(l == none) {
+            return r;
+        }
+        else {
+            return RecListEntry<T>{l.head, RecListEntry<T>::s_append(l.tail, r)};
+        }
+    }
+
+    recursive function s_slice_start(l: RecListEntry<T>?, idx: Nat): RecListEntry<T>? {
+        if(l == none) {
+            return none;
+        }
+        elif(idx == 0) {
+            return l;
+        }
+        else {
+            return RecListEntry<T>::s_slice_start(l.tail, idx - 1);
+        }
+    }
+
+    recursive function s_slice_end(l: RecListEntry<T>?, idx: Nat): RecListEntry<T>? {
+        if(l == none) {
+            return none;
+        }
+        elif(idx == 0) {
+            return none;
+        }
+        else {
+            return RecListEntry<T>{l.head, RecListEntry<T>::s_slice_end(l.tail, idx - 1)};
+        }
+    }
+
     recursive method safe_get(i: Nat): T {
         if(i == 0) {
             return this.head;
         }
         else {
-            return ListOps::s_safeAs<RecListEntry<T>>(this.tail).safe_get[recursive](i - 1);
+            return ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(this.tail).safe_get[recursive](i - 1);
         }
     }
 
@@ -645,10 +957,32 @@ entity RecListEntry<T> provides Some {
         }
     }
 
-    recursive method map<U>(p: recursive? pred(_: T) -> U): RecListEntry<U> {
+    recursive method map<U>(f: recursive? fn(_: T) -> U): RecListEntry<U> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nh = f[recursive?](hh);
+        if(tl === none) {
+            RecListEntry<U>{nh, none};
+        }
+        else {
+            let ntl = tl.map<U>[recursive](f);
+            return RecListEntry<U>{nh, ntl};
+        }
     }
 
-    recursive method map_idx<U>(p: recursive? pred(_: T, _: Nat) -> U): RecListEntry<U> {
+    recursive method map_idx<U>(idx: Nat, f: recursive? fn(_: T, _: Nat) -> U): RecListEntry<U> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nh = f[recursive?](hh, idx);
+        if(tl === none) {
+            RecListEntry<U>{nh, none};
+        }
+        else {
+            let ntl = tl.map<U>[recursive](f, idx + 1n);
+            return RecListEntry<U>{nh, ntl};
+        }
     }
 }
 
