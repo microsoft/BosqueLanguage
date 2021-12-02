@@ -112,7 +112,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return Mask::s_cons(b0, b1, b2, b3);
     }
 
-    recursive? method s_find_last_pred(pv: PartialVector<T>, p: recursive? pred(_: T) -> Bool): Mask {
+    recursive? method s_find_last_pred(p: recursive? pred(_: T) -> Bool): Mask {
         let b3 = p[recursive?][|this.mask.bit3(), false|](this.v3);
         let b2 = p[recursive?][|/\(this.mask.bit2(), !b3), false|](this.v2);
         let b1 = p[recursive?][|/\(this.mask.bit1(), !b3, !b2), false|](this.v1)
@@ -121,7 +121,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return Mask::s_cons(b0, b1, b2, b3);
     }
 
-    recursive? method s_find_last_pred_idx(pv: PartialVector<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+    recursive? method s_find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
         let b3 = p[recursive?][|this.mask.bit3(), false|](this.v3, idx + 3n);
         let b2 = p[recursive?][|/\(this.mask.bit2(), !b3), false|](this.v2, idx + 2n);
         let b1 = p[recursive?][|/\(this.mask.bit1(), !b3, !b2), false|](this.v1, idx + 1n);

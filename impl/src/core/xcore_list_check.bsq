@@ -184,10 +184,88 @@ entity ListOps provides Some {
         }
     }
 
-    recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            if(p[recursive?](l.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(p[recursive?](l.v1)) {
+                return 1n;
+            }
+            elif(p[recursive?](l.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(p[recursive?](l.v2)) {
+                return 2n;
+            }
+            elif(p[recursive?](l.v1)) {
+                return 1n;
+            }
+            elif(p[recursive?](l.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_last_pred[recursive?](p);
+        }
     }
 
-    recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            if(p[recursive?](l.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(p[recursive?](l.v1, 1n)) {
+                return 1n;
+            }
+            elif(p[recursive?](l.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(p[recursive?](l.v2, 2n)) {
+                return 2n;
+            }
+            elif(p[recursive?](l.v1, 1n)) {
+                return 1n;
+            }
+            elif(p[recursive?](l.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_last_pred_idx[recursive?](p);
+        }
     }
 
     recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
@@ -228,9 +306,11 @@ entity RecList<T> provides Some {
     }
 
     recursive? method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+        return this.ll.find_last_pred[recursive](0n, p);
     }
 
     recursive? method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        return this.ll.find_last_pred_idx[recursive](0n, p);
     }
 
     recursive? method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
@@ -319,10 +399,60 @@ entity RecListEntry<T> provides Some {
         }
     }
 
-    recursive method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat {
+    recursive method find_last_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        let tl = this.tail;
+
+        if(tl === none) {
+            if(p[recursive?](this.head);) {
+                return idx;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let tres = tl.find_last_pred_idx[recursive](idx + 1n, p);
+
+            if(tres !== none) {
+                return tres;
+            }
+            else {
+                if(p[recursive?](this.head);) {
+                    return idx;
+                }
+                else {
+                    return none;
+                }
+            }
+        }
     }
 
-    recursive method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive method find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let tl = this.tail;
+
+        if(tl === none) {
+            if(p[recursive?](this.head, idx);) {
+                return idx;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let tres = tl.find_last_pred_idx[recursive](idx + 1n, p);
+
+            if(tres !== none) {
+                return tres;
+            }
+            else {
+                if(p[recursive?](this.head, idx);) {
+                    return idx;
+                }
+                else {
+                    return none;
+                }
+            }
+        }
     }
 
     recursive method filter_pred(p: recursive? pred(_: T) -> Bool): RecListEntry<T>, Nat {

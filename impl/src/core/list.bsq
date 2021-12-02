@@ -228,59 +228,59 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method allOf(p: recursive? pred(_: T) -> Bool): Bool {
-        return !ListOps::s_has_pred<T>[recursive?](this, recursive? pred(v: T): Bool => !p[recursive?](v));
+        return !ListOps::s_has_pred<T>[recursive?](this.value(), recursive? pred(v: T): Bool => !p[recursive?](v));
     }
 
     recursive? method allOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return !ListOps::s_has_pred_idx<T>[recursive?](this, recursive? pred(v: T, i: Nat): Bool => !p[recursive?](v, i));
+        return !ListOps::s_has_pred_idx<T>[recursive?](this.value(), recursive? pred(v: T, i: Nat): Bool => !p[recursive?](v, i));
     }
 
     recursive? method noneOf(p: recursive? pred(_: T) -> Bool): Bool {
-        return !ListOps::s_has_pred<T>[recursive?](this, p);
+        return !ListOps::s_has_pred<T>[recursive?](this.value(), p);
     }
 
     recursive? method noneOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return !ListOps::s_has_pred_idx<T>[recursive?](this, p);
+        return !ListOps::s_has_pred_idx<T>[recursive?](this.value(), p);
     }
 
     recursive? method someOf(p: recursive? pred(_: T) -> Bool): Bool {
-        return ListOps::s_has_pred<T>[recursive?](this, p);
+        return ListOps::s_has_pred<T>[recursive?](this.value(), p);
     }
 
     recursive? method someOf(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return ListOps::s_has_pred_idx<T>[recursive?](this, p);
+        return ListOps::s_has_pred_idx<T>[recursive?](this.value(), p);
     }
 
     recursive? method countIf(p: recursive? pred(_: T) -> Bool): Nat {
-        return ListOps::s_size<T>(ListOps::s_filter<T>[recursive?](this, p));
+        return ListOps::s_size<T>(ListOps::s_filter<T>[recursive?](this.value(), p));
     }
 
     recursive? method countIf(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
-        return ListOps::s_size<T>(ListOps::s_filter_idx<T>[recursive?](this, p));
+        return ListOps::s_size<T>(ListOps::s_filter_idx<T>[recursive?](this.value(), p));
     }
 
     method {when T grounded KeyType} contains(v: T): Bool {
-        return ListOps::s_has_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        return ListOps::s_has_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
     }
 
     method containsNone(): Bool {
-        return ListOps::s_has_pred<T>(this, pred(e: T): Bool => e === none);
+        return ListOps::s_has_pred<T>(this.value(), pred(e: T): Bool => e === none);
     }
 
     method containsNothing(): Bool {
-        return ListOps::s_has_pred<T>(this, pred(e: T): Bool => e === nothing);
+        return ListOps::s_has_pred<T>(this.value(), pred(e: T): Bool => e === nothing);
     }
 
     method {when T grounded KeyType} count(v: T): Int {
-        return ListOps::s_size<T>(ListOps::s_filter<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e)));
+        return ListOps::s_size<T>(ListOps::s_filter<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e)));
     }
 
     method countNone(): Bool {
-        return ListOps::s_size<T>(ListOps::s_filter<T>(this, pred(e: T): Bool => e === none));
+        return ListOps::s_size<T>(ListOps::s_filter<T>(this.value(), pred(e: T): Bool => e === none));
     }
 
     method countNothing(): Bool {
-        return ListOps::s_size<T>(ListOps::s_filter<T>(this, pred(e: T): Bool => e === nothing));
+        return ListOps::s_size<T>(ListOps::s_filter<T>(this.value(), pred(e: T): Bool => e === nothing));
     }
 
     method {when T unique Orderable} min(): T {

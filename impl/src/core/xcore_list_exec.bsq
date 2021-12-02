@@ -87,10 +87,28 @@ __internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat {
+    recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return l.find_last_pred[recursive?](p).max();
+        }
+        else {
+            return l.find_last_pred[recursive](0, p);
+        }
     }
 
-    recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
+    recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return l.find_last_pred_idx[recursive?](p).max();
+        }
+        else {
+            return l.find_last_pred_idx[recursive](0, p);
+        }
     }
 
     recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
@@ -206,8 +224,8 @@ entity ListTree<T> provides Some {
         let nidx = idx + lcount; 
         if(r.is<PartialVector<T>>()) {
             let rm = r.find_pred[recursive?](p);
-            if(lm.some_true()) {
-                return idx + rm.min();
+            if(rm.some_true()) {
+                return nidx + rm.min();
             }
             else {
                 return none;
@@ -219,12 +237,118 @@ entity ListTree<T> provides Some {
     }
 
     recursive method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let l = this.left;
+        let r = this.right;
+
+        var lcount;
+        if(l.is<PartialVector<T>>()) {
+            let lm = l.find_pred_idx[recursive?](idx, p);
+            if(lm.some_true()) {
+                return idx + lm.min();
+            }
+            lcount = l.count();
+        }
+        else {
+            let lres = l.find_pred_idx[recursive](idx, p)
+            if(lres !== none) {
+                return lres;
+            }
+            lcount = l.count;
+        }
+
+        let nidx = idx + lcount; 
+        if(r.is<PartialVector<T>>()) {
+            let rm = r.find_pred_idx[recursive?](nidx, p);
+            if(rm.some_true()) {
+                return nidx + rm.min();
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return r.find_pred_idx[recursive](nidx, p);
+        }
     }
 
-    recursive method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+    recursive method find_last_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        let l = this.left;
+        let r = this.right;
+
+        var lcount;
+        if(l.is<PartialVector<T>>()) {
+            lcount = l.count();
+        }
+        else {
+            lcount = l.count;
+        }
+
+        let nidx = idx + lcount;
+        if(r.is<PartialVector<T>>()) {
+            let rm = r.find_last_pred[recursive?](p);
+            if(rm.some_true()) {
+                return nidx + rm.max();
+            }
+        }
+        else {
+            let rres = r.find_last_pred[recursive](nidx, p)
+            if(rres !== none) {
+                return rres;
+            }
+        }
+
+        if(l.is<PartialVector<T>>()) {
+            let lm = l.find_last_pred_idx[recursive?](idx, p);
+           if(lm.some_true()) {
+                return idx + lm.max();
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_last_pred[recursive](idx, p)
+        }
     }
 
-    recursive method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+    recursive method find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let l = this.left;
+        let r = this.right;
+
+        var lcount;
+        if(l.is<PartialVector<T>>()) {
+            lcount = l.count();
+        }
+        else {
+            lcount = l.count;
+        }
+
+        let nidx = idx + lcount;
+        if(r.is<PartialVector<T>>()) {
+            let rm = r.find_last_pred_idx[recursive?](nidx, p);
+            if(rm.some_true()) {
+                return nidx + rm.max();
+            }
+        }
+        else {
+            let rres = r.find_last_pred_idx[recursive](nidx, p)
+            if(rres !== none) {
+                return rres;
+            }
+        }
+
+        if(l.is<PartialVector<T>>()) {
+            let lm = l.find_last_pred_idx[recursive?](idx, p);
+            if(lm.some_true()) {
+                return idx + lm.max();
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_last_pred_idx[recursive](idx, p)
+        }
     }
 
     recursive method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
