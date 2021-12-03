@@ -494,13 +494,34 @@ concept Option<T> provides ISomething, APIType when T grounded APIType {
     }
 }
 
+//<summary>Generic type for all Result<T, E> to inherit from.</summary>
+__universal concept IResult provides Some {
+}
+
+//<summary>Generic type for all Result<T, E>::Ok to inherit from.</summary>
+__universal private concept IOk provides Some {
+}
+
+//<summary>Generic type for all Result<T, E>::Err to inherit from.</summary>
+__universal private concept IErr provides Some {
+}
+
+//<summary>Type for flagging T projection from Result -- kludge that has no other purpose.</summary>
+__universal concept IResultT provides Some {
+}
+
+//<summary>Type for flagging E projection from Result -- kludge that has no other purpose.</summary>
+__universal concept IResultE provides Some {
+}
+
+
 //<summary>Result type.</summary>
-concept Result<T, E=None> provides Some, APIType when T grounded APIType && E grounded APIType {
-    __internal __constructable entity Ok provides Some, Result<T, E> {
+concept Result<T, E=None> provides IResult, APIType when T grounded APIType && E grounded APIType {
+    __internal __constructable entity Ok provides IOk, Result<T, E> {
         method value(): T # special_extract
     }
 
-    __internal __constructable entity Err provides Result<T, E> {
+    __internal __constructable entity Err provides IErr, Result<T, E> {
         method value(): E # special_extract
     }
 
@@ -534,8 +555,10 @@ concept Result<T, E=None> provides Some, APIType when T grounded APIType && E gr
 __universal concept Object provides Some {
 }
 
+#if CHECK_LIBS
 __internal entity HavocSequence provides Some {
 }
+#endif
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>
 concept Expandoable<T> provides Some {

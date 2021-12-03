@@ -37,25 +37,22 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     function concat(...ll: List<List<T>>): List<T> {
-        if(ListFlatOps::s_empty<List<T>>(ll)) {
-            return List<T>@{};
+        if(ListFlatOps::s_empty<List<T>>(ll.value())) {
+            return List<T>{};
         }
         else {
-            let count = ListOps::s_size<List<T>>(ll);
+            let count = ListOps::s_size<List<T>>(ll.value());
             if(count == 1) {
-                return ListOps::s_safe_get<List<T>>(ll, 0n);
+                return ListOps::s_safe_get<List<T>>(ll.value(), 0n);
             }
             elif(count == 2) {
-                return ListOps::s_concat2<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ListOps::s_safe_get<List<T>>(ll, 1n));
+                return List<T>::s_into(ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 0n), ListOps::s_safe_get<List<T>>(ll.value(), 1n)));
             }
             else {
-                return ListOps::s_concat(ll);
+                return List<T>::s_into(ListOps::s_concat(ll));
             }
         }
     }
-
-//////////////////////////////////////////////////////////////////////////||||||||||||||||||^^^^^^^^^^^^^^^^^^^^^^^^^
-
 
     method size(): Nat {
         return ListOps::s_size<T>(this.value());
@@ -66,7 +63,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method front(): T {
-        check !ListOps::s_empty(this);
+        check !ListOps::s_empty(this.value());
         return ListOps::s_safe_get<T>(this.value(), 0n);
     }
 
@@ -252,11 +249,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method countIf(p: recursive? pred(_: T) -> Bool): Nat {
-        return ListOps::s_size<T>(ListOps::s_filter<T>[recursive?](this.value(), p));
+        return ListOps::s_size<T>(ListOps::s_filter_pred<T>[recursive?](this.value(), p));
     }
 
     recursive? method countIf(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
-        return ListOps::s_size<T>(ListOps::s_filter_idx<T>[recursive?](this.value(), p));
+        return ListOps::s_size<T>(ListOps::s_filter_pred_idx<T>[recursive?](this.value(), p));
     }
 
     method {when T grounded KeyType} contains(v: T): Bool {
@@ -271,362 +268,370 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         return ListOps::s_has_pred<T>(this.value(), pred(e: T): Bool => e === nothing);
     }
 
+    method {when T unique IResult} containsError(): Bool {
+        return ListOps::s_has_pred<T>(this.value(), pred(e: Result<T!IResultT, T!IResultE>): Bool => e.isErr());
+    }
+
+    method {when T unique IResult} allOk(): Bool {
+        return !ListOps::s_has_pred<T>(this.value(), pred(e: Result<T!IResultT, T!IResultE>): Bool => e.isErr());
+    }
+
     method {when T grounded KeyType} count(v: T): Int {
-        return ListOps::s_size<T>(ListOps::s_filter<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e)));
+        return ListOps::s_size<T>(ListOps::s_filter_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e)));
     }
 
     method countNone(): Bool {
-        return ListOps::s_size<T>(ListOps::s_filter<T>(this.value(), pred(e: T): Bool => e === none));
+        return ListOps::s_size<T>(ListOps::s_filter_pred<T>(this.value(), pred(e: T): Bool => e === none));
     }
 
     method countNothing(): Bool {
-        return ListOps::s_size<T>(ListOps::s_filter<T>(this.value(), pred(e: T): Bool => e === nothing));
+        return ListOps::s_size<T>(ListOps::s_filter_pred<T>(this.value(), pred(e: T): Bool => e === nothing));
     }
 
     method {when T unique Orderable} min(): T {
-        check !ListOps::s_empty(this);
+        check !ListOps::s_empty(this.value());
 
-        let midx = ListOps::s_min_arg<T, T>(this, fn(v: T): T => v);
-        return ListOps::s_safe_get<T>(this, midx);
+        let midx = ListOps::s_min_arg<T, T>(this.value(), fn(v: T): T => v);
+        return ListOps::s_safe_get<T>(this.value(), midx);
     }
 
     method {when T unique Orderable} max(): T {
-        check !ListOps::s_empty(this);
+        check !ListOps::s_empty(this.value());
 
-        let midx = ListOps::s_max_arg<T, T>(this, fn(v: T): T => v);
-        return ListOps::s_safe_get<T>(this, midx);
+        let midx = ListOps::s_max_arg<T, T>(this.value(), fn(v: T): T => v);
+        return ListOps::s_safe_get<T>(this.value(), midx);
     }
 
     method {when T unique Orderable} minOrNone(): T? {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return none;
         }
         else {
-            let midx = ListOps::s_min_arg<T, T>(this, fn(v: T): T => v);
-            return ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_min_arg<T, T>(this.value(), fn(v: T): T => v);
+            return ListOps::s_safe_get<T>(this.value(), midx);
         }
     }
 
     method {when T unique Orderable} maxOrNone(): T? {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return none;
         }
         else {
-            let midx = ListOps::s_max_arg<T, T>(this, fn(v: T): T => v);
-            return ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_arg<T, T>(this.value(), fn(v: T): T => v);
+            return ListOps::s_safe_get<T>(this.value(), midx);
         }
     }
 
     method {when T unique Orderable} minOption(): Option<T> {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return nothing;
         }
         else {
-            let midx = ListOps::s_min_arg<T, T>(this, fn(v: T): T => v);
-            return something(ListOps::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_min_arg<T, T>(this.value(), fn(v: T): T => v);
+            return something(ListOps::s_safe_get<T>(this.value(), midx));
         }
     }
 
     method {when T unique Orderable} maxOrOption(): Option<T> {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return nothing;
         }
         else {
-            let midx = ListOps::s_max_arg<T, T>(this, fn(v: T): T => v);
-            return something(ListOps::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_max_arg<T, T>(this.value(), fn(v: T): T => v);
+            return something(ListOps::s_safe_get<T>(this.value(), midx));
         }
     }
 
     method {when T unique Orderable} minTry(out? res: T): Bool {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return false;
         }
         else {
-            let midx = ListOps::s_min_arg<T, T>(this, fn(v: T): T => v);
-            res = ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_min_arg<T, T>(this.value(), fn(v: T): T => v);
+            res = ListOps::s_safe_get<T>(this.value(), midx);
             return true;
         }
     }
 
     method {when T unique Orderable} maxTry(out? res: T): Bool {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return false;
         }
         else {
-            let midx = ListOps::s_max_arg<T, T>(this, fn(v: T): T => v);
-            res = ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_arg<T, T>(this.value(), fn(v: T): T => v);
+            res = ListOps::s_safe_get<T>(this.value(), midx);
             return true;
         }
     }
 
     method argMin<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListOps::s_empty(this);
+        check !ListOps::s_empty(this.value());
 
-        let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
-        return ListOps::s_safe_get<T>(this, midx);
+        let midx = ListOps::s_min_arg<T, U>[recursive?](this.value(), f);
+        return ListOps::s_safe_get<T>(this.value(), midx);
     }
 
     method argMax<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListOps::s_empty(this);
+        check !ListOps::s_empty(this.value());
 
-        let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
-        return ListOps::s_safe_get<T>(this, midx);
+        let midx = ListOps::s_max_arg<T, U>[recursive?](this.value(), f);
+        return ListOps::s_safe_get<T>(this.value(), midx);
     }
 
     method argMinOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return none;
         }
         else {
-            let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
-            return ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_min_arg<T, U>[recursive?](this.value(), f);
+            return ListOps::s_safe_get<T>(this.value(), midx);
         }
     }
 
     method argMaxOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return none;
         }
         else {
-            let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
-            return ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_arg<T, U>[recursive?](this.value(), f);
+            return ListOps::s_safe_get<T>(this.value(), midx);
         }
     }
 
     method argMinOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return nothing;
         }
         else {
-            let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
-            return something(ListOps::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_min_arg<T, U>[recursive?](this.value(), f);
+            return something(ListOps::s_safe_get<T>(this.value(), midx));
         }
     }
 
     method argMaxOrOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return nothing;
         }
         else {
-            let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
-            return something(ListOps::s_safe_get<T>(this, midx));
+            let midx = ListOps::s_max_arg<T, U>[recursive?](this.value(), f);
+            return something(ListOps::s_safe_get<T>(this.value(), midx));
         }
     }
 
     method argMinTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return false;
         }
         else {
-            let midx = ListOps::s_min_arg_idx<T, U>[recursive?](this, f);
-            res = ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_min_arg<T, U>[recursive?](this.value(), f);
+            res = ListOps::s_safe_get<T>(this.value(), midx);
             return true;
         }
     }
 
     method argMaxTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
-        if(ListOps::s_empty(this)) {
+        if(ListOps::s_empty(this.value())) {
             return false;
         }
         else {
-            let midx = ListOps::s_max_arg_idx<T, U>[recursive?](this, f);
-            res = ListOps::s_safe_get<T>(this, midx);
+            let midx = ListOps::s_max_arg<T, U>[recursive?](this.value(), f);
+            res = ListOps::s_safe_get<T>(this.value(), midx);
             return true;
         }
     }
 
     method {when T unique Algebraic} sum(): T {
-        return ListOps::s_sum<T>(this);
+        return ListOps::s_sum<T>(this.value());
     }
 
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         check idx !== none;
-        return ListOps::s_safe_get<T>(this, idx);
+        return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
     recursive? method find(p: recursive? pred(_: T, _: Nat) -> Bool): T {
-        let idx = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         check idx !== none;
-        return ListOps::s_safe_get<T>(this, idx);
+        return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
     recursive? method findOrNone(p: recursive? pred(_: T) -> Bool): T? {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this.value(), idx);
         }
     }
 
     recursive? method findOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
-        let idx = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this.value(), idx);
         }
     }
 
     recursive? method findOption(p: recursive? pred(_: T) -> Bool): Option<T> {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this.value(), idx));
         }
     }
 
     recursive? method findOption(p: recursive? pred(_: T, _: Nat) -> Bool): Option<T> {
-        let idx = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this.value(), idx));
         }
     }
 
     recursive? method findTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
         }
         else {
-            res = ListOps::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this.value(), idx);
             return true;
         }
     }
 
     recursive? method findTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        let idx = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
         }
         else {
-            res = ListOps::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this.value(), idx);
             return true;
         }
     }
 
     recursive? method findLast(p: recursive? pred(_: T) -> Bool): T {
-        let idx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
         check idx !== none;
-        return ListOps::s_safe_get<T>(this, idx);
+        return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
     recursive? method findLast(p: recursive? pred(_: T, _: Nat) -> Bool): T {
-        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
         check idx !== none;
-        return ListOps::s_safe_get<T>(this, idx);
+        return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
     recursive? method findLastOrNone(p: recursive? pred(_: T) -> Bool): T? {
-        let idx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this.value(), idx);
         }
     }
 
     recursive? method findLastOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): T? {
-        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this, idx);
+            return ListOps::s_safe_get<T>(this.value(), idx);
         }
     }
 
     recursive? method findLastOption(p: recursive? pred(_: T) -> Bool): Option<T> {
-        let idx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this.value(), idx));
         }
     }
 
     recursive? method findLastOption(p: recursive? pred(_: T, _: Nat) -> Bool): Option<T> {
-        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this, idx));
+            return something(ListOps::s_safe_get<T>(this.value(), idx));
         }
     }
 
     recursive? method findLastTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
-        let idx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
         }
         else {
-            res = ListOps::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this.value(), idx);
             return true;
         }
     }
 
     recursive? method findLastTry(out? res: T, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
         }
         else {
-            res = ListOps::s_safe_get<T>(this, idx);
+            res = ListOps::s_safe_get<T>(this.value(), idx);
             return true;
         }
     }
 
     recursive? method findIndexOf(p: recursive? pred(_: T) -> Bool): Nat {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         check idx !== none;
         return idx;
     }
 
     recursive? method findIndexOf(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
-        let idx = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         check idx !== none;
         return idx;
     }
 
     recursive? method findIndexOfOrNone(p: recursive? pred(_: T) -> Bool): Nat? {
-        return ListOps::s_find_pred<T>[recursive?](this, p);
+        return ListOps::s_find_pred<T>[recursive?](this.value(), p);
     }
 
     recursive? method findIndexOfOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        return ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        return ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
     }
 
     recursive? method findIndexOfOption(p: recursive? pred(_: T) -> Bool): Option<Nat> {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
@@ -637,7 +642,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method findIndexOfOption(p: recursive? pred(_: T, _: Nat) -> Bool): Option<Nat> {
-        let idx = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
@@ -648,7 +653,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method findIndexOfTry(out? res: Nat, p: recursive? pred(_: T) -> Bool): Bool {
-        let idx = ListOps::s_find_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
@@ -660,7 +665,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method findIndexOfTry(out? res: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        let idx = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
@@ -672,29 +677,29 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method findIndexOfLast(p: recursive? pred(_: T) -> Bool): Nat {
-        let idx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
         check idx !== none;
         return idx;
     }
 
     recursive? method findIndexOfLast(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
-        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
         check idx !== none;
         return idx;
     }
 
     recursive? method findIndexOfLastOrNone(p: recursive? pred(_: T) -> Bool): Nat? {
-        return ListOps::s_find_last_pred<T>[recursive?](this, p);
+        return ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
     }
 
     recursive? method findIndexOfLastOrNone(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        return ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        return ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
     }
 
     recursive? method findIndexOfLastOption(p: recursive? pred(_: T) -> Bool): Option<Nat> {
-        let idx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
@@ -705,7 +710,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method findIndexOfLastOption(p: recursive? pred(_: T, _: Nat) -> Bool): Option<Nat> {
-        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return nothing;
@@ -716,7 +721,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method findIndexOfLastTry(out? res: Nat, p: recursive? pred(_: T) -> Bool): Bool {
-        let idx = ListOps::s_find_last_pred<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
@@ -728,7 +733,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method findIndexOfLastTry(out? res: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this, p);
+        let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
         if(idx === none) {
             return false;
@@ -740,18 +745,18 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T grounded KeyType} indexOf(v: T): Nat {
-        let idx = ListOps::s_find_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        let idx = ListOps::s_find_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
         check idx !== none;
         return idx;
     }
 
     method {when T grounded KeyType} indexOfOrNone(v: T): Nat? {
-        return ListOps::s_find_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        return ListOps::s_find_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
     }
 
     method {when T grounded KeyType} indexOfOption(v: T): Option<Nat> {
-        let idx = ListOps::s_find_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        let idx = ListOps::s_find_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
         if(idx === none) {
             return nothing;
@@ -762,7 +767,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T grounded KeyType} indexOfTry(out? res: Nat, v: T): Bool {
-        let idx = ListOps::s_find_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        let idx = ListOps::s_find_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
         if(idx === none) {
             return false;
@@ -774,18 +779,18 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T grounded KeyType} indexOfLast(v: T): Nat {
-        let idx = ListOps::s_find_last_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        let idx = ListOps::s_find_last_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
         check idx !== none;
         return idx;
     }
 
     method {when T grounded KeyType} indexOfLastOrNone(v: T): Nat? {
-        return ListOps::s_find_last_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        return ListOps::s_find_last_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
     }
 
     method {when T grounded KeyType} indexOfLastOption(v: T): Option<Nat> {
-        let idx = ListOps::s_find_last_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        let idx = ListOps::s_find_last_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
         if(idx === none) {
             return nothing;
@@ -796,7 +801,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T grounded KeyType} indexOfLastTry(out? res: Nat, v: T): Bool {
-        let idx = ListOps::s_find_last_pred<T>(this, pred(e: T): Bool => KeyType::equal<T>(v, e));
+        let idx = ListOps::s_find_last_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
         if(idx === none) {
             return false;
@@ -808,244 +813,255 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method filter(p: recursive? pred(_: T) -> Bool): List<T> {
-        return ListOps::s_filter<T>[recursive?](this, p);
+        return List<T>::s_into(ListOps::s_filter_pred<T>[recursive?](this.value(), p));
     }
 
     recursive? method filter(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
-        return ListOps::s_filter_idx<T>[recursive?](this, p);
+        return List<T>::s_into(ListOps::s_filter_pred_idx<T>[recursive?](this.value(), p));
     }
 
     method filterType<U>(): List<U> {
-        let fl = ListOps::s_filter<T>(this, pred(v: T): Bool => v istype U);
-        let tl = ListOps::s_map<T, U>(fl, fn(v: T): U => ListOps::s_safeAs<T, U>(v));
-        return tl;
+        let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v istype U);
+        return List<U>::s_into(ListOps::s_map<T, U>(fl, fn(v: T): U => ListOps::s_safeAs<T, U>(v)));
     }
 
     method filterSome(): List<T!Some> {
-        let fl = ListOps::s_filter<T>(this, pred(v: T): Bool => v istype T!Some);
-        let tl = ListOps::s_map<T, T!Some>(fl, fn(v: T): T!Some => ListOps::s_safeAs<T, T!Some>(v));
-        return tl;
+        let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v !== none);
+        return List<T!Some>::s_into(ListOps::s_map<T, T!Some>(fl.value(), fn(v: T): T!Some => ListOps::s_safeAs<T, T!Some>(v)));
     }
 
     method {when T unique IOption} filterSomething(): List<T!IOptionT> {
-        let fl = ListOps::s_filter<T>(this, pred(v: T): Bool => v istype Something<T!IOptionT>);
-        let tl = ListOps::s_map<T, T!IOptionT>(fl, fn(v: T): T!IOptionT => ListOps::s_safeAs<T, Something<T!IOptionT>>(v).value());
-        return tl;
+        let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v !== nothing);
+        return List<T!IOptionT>::s_into(ListOps::s_map<T, T!IOptionT>(fl.value(), fn(v: T): T!IOptionT => ListOps::s_safeAs<T, Something<T!IOptionT>>(v).value()));
+    }
 
-        let somes = ListOps::s_filter_type<T, Option<T!IOptionT>>(this);
-        return ListOps::s_map<Option<T!IOptionT>, T!IOptionT>(somes, fn(v: Option<T!IOptionT>): T!IOptionT => v.value());
+    method {when T unique IResult} filterOk(): List<T!IResultT> {
+        let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v.isOk());
+        return List<T!IResultT>::s_into(ListOps::s_map<T, T!IResultT>(fl.value(), fn(v: T): T!IResultT => ListOps::s_safeAs<T, Result<T!IResultT, T!IResultE>::Ok>(v).value()));
     }
 
     method castType<U>(): List<U> {
-        return ListOps::s_map<T, U>(this, fn(v: T): U => v astype U);
+        return List<U>::s_into(ListOps::s_map<T, U>(this.value(), fn(v: T): U => v astype U));
     }
 
-    method slice(start?: Nat=0n, end?: Nat=ListOperators::s_size<T>(this)): List<T> {
+    method castSome(): List<T!Some> {
+        return List<T!Some>::s_into(ListOps::s_map<T, T!Some>(this.value(), fn(v: T): T!Some => v astype T!Some));
+    }
+
+    method {when T unique IOption} castSomething(): List<T!IOptionT> {
+        return List<T!IOptionT>::s_into(ListOps::s_map<T, T!IOptionT>(this.value(), fn(v: T): T!IOptionT => v.data()));
+    }
+
+    method {when T unique IResult} castOk(): List<T!IResultT> {
+        return List<T!IResultT>::s_into(ListOps::s_map<T, T!IResultT>(this.value(), fn(v: T): T!IResultT => v.result()));
+    }
+
+    method slice(start?: Nat=0n, end?: Nat=ListOps::s_size<T>(this.value())): List<T> {
         check start <= end;
-        check end <= ListOps::s_size<T>(this);
-        return ListOps::s_slice<T>(this, start, end);
+        check end <= ListOps::s_size<T>(this.value());
+        return List<T>::s_into(ListOps::s_slice_end<T>(ListOps::s_slice_front<T>(this.value(), start), end));
     }
 
     method removeFirst(k: Nat): List<T> {
-        check k <= ListOps::s_size<T>(this);
-        return ListOps::s_slice<T>(this, k, ListOps::s_size<T>(this));
+        check k <= ListOps::s_size<T>(this.value());
+        return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), k));
     } 
 
     method removeLast(k: Nat): List<T> {
-        check k <= ListOps::s_size<T>(this);
-        return ListOps::s_slice<T>(this, 0, ListOps::s_size<T>(this) - k);
+        check k <= ListOps::s_size<T>(this.value());
+        return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), ListOps::s_size<T>(this.value()) - k));
     }
 
     recursive? method takeWhile(p: recursive? pred(_: T) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
+        let lpos = ListOps::s_find_pred<T>[recursive?](this.value(), recursive? pred(v: T) => !p[recursive?](v));
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice<T>(this, 0, lpos);
+            return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), lpos));
         }
     }
 
     recursive? method takeWhile(p: recursive? pred(_: T, _: Nat) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this.value(), recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice<T>(this, 0, lpos);
+            return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), lpos));
         }
     }
 
     recursive? method discardWhile(p: recursive? pred(_: T) -> Bool): List<T> {
-        let lpos = ListOps::s_find_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
+        let lpos = ListOps::s_find_pred<T>[recursive?](this.value(), recursive? pred(v: T) => !p[recursive?](v));
 
         if(lpos === none) {
-            return List<T>@{};
+            return List<T>{};
         }
         else {
-            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
+            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
         }
     }
 
     recursive? method discardWhile(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
-        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this.value(), recursive? pred(v: T, i: Nat) => !p[recursive?](v, i));
 
         if(lpos === none) {
-            return List<T>@{};
+            return List<T>{};
         }
         else {
-            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
+            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
         }
     }
 
     recursive? method takeUntil(p: recursive? pred(_: T) -> Bool): List<T> {
-        let lpos = ListOps::s_find_pred<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice<T>(this, 0, lpos);
+            return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), lpos));
         }
     }
 
     recursive? method takeUntil(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
-        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice<T>(this, 0, lpos);
+            return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), lpos));
         }
     }
 
     recursive? method discardUntil(p: recursive? pred(_: T) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_pred<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
+            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
         }
     }
 
     recursive? method discardUntil(p: recursive? pred(_: T, _: Nat) -> Bool): List<T>  {
-        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this, p);
+        let lpos = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
         if(lpos === none) {
             return this;
         }
         else {
-            return ListOps::s_slice<T>(this, lpos, ListOps::s_size<T>(this));
+            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
         }
     }
 
     recursive? method map<U=?>(f: recursive? fn(_: T) -> U): List<U>  {
-        return ListOps::s_map<T, U>[recursive?](this, f);
+        return List<U>::s_into(ListOps::s_map<T, U>[recursive?](this.value(), f));
     }
 
     recursive? method map<U=?>(f: recursive? fn(_: T, _: Nat) -> U): List<U>  {
-        return ListOps::s_map_idx<T, U>[recursive?](this, f);
+        return List<U>::s_into(ListOps::s_map_idx<T, U>[recursive?](this.value(), f));
     }
 
-    recursive? method mapNone<U=?>(f: recursive? fn(_: T!Some) -> U): List<U>  {
-        return ListOps::s_map<T, U>[recursive?](this, recursive? fn(v: T): U => {
+    recursive? method mapNone<U=?>(f: recursive? fn(_: T!Some) -> U): List<U?>  {
+        return List<U>::s_into(ListOps::s_map<T, U>[recursive?](this.value(), recursive? fn(v: T): U => {
             if(v === none) {
                 return none;
             }
             else {
                 return f[recursive?](v);
             }
-        });
+        }));
     }
 
-    recursive? method mapNone<U=?>(f: recursive? fn(_: T, _: Nat) -> U): List<U>  {
-        return ListOps::s_map_idx<T, U>[recursive?](this, recursive? fn(v: T, i: Nat): U => {
+    recursive? method mapNone<U=?>(f: recursive? fn(_: T, _: Nat) -> U): List<U?>  {
+        return List<U>::s_into(ListOps::s_map_idx<T, U>[recursive?](this.value(), recursive? fn(v: T, i: Nat): U => {
             if(v === none) {
                 return none;
             }
             else {
                 return f[recursive?](v, i);
             }
-        });
+        }));
     }
 
-    recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT) -> U): List<U>  {
-        return ListOps::s_map<T, U>[recursive?](this, recursive? fn(v: T): U => {
+    recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT) -> U): List<Option<U>>  {
+        return List<Option<U>>::s_into(ListOps::s_map<T, U>[recursive?](this.value(), recursive? fn(v: T): U => {
             if(v === nothing) {
                 return nothing;
             }
             else {
                 return something(f[recursive?](v.value()));
             }
-        });
+        }));
     }
 
-    recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT, _: Nat) -> U): List<U>  {
-        return ListOps::s_map_idx<T, U>[recursive?](this, recursive? fn(v: T, i: Nat): U => {
+    recursive? method {when T unique IOption} mapOption<U=?>(f: recursive? fn(_: T!IOptionT, _: Nat) -> U): List<Option<U>>  {
+        return List<Option<U>>::s_into(ListOps::s_map_idx<T, U>[recursive?](this.value(), recursive? fn(v: T, i: Nat): U => {
             if(v === nothing) {
                 return nothing;
             }
             else {
                 return something(f[recursive?](v.value(), i));
             }
-        });
+        }));
     }
 
     method {when T grounded KeyType} project<U=?>(m: Map<T, U>): List<U> {
-        return ListOps::s_map<T, U>(this, fn(v: T): U => {
+        return List<T>::s_into(ListOps::s_map<T, U>(this.value(), fn(v: T): U => {
             return m.get(v);
-        });
+        }));
     }
 
     method {when T grounded KeyType} projectOrNone<U=?>(m: Map<T, U>): List<U?> {
-        return ListOps::s_map_Helper<T, U?>(this, fn(v: T): U? => {
+        return List<T>::s_into(ListOps::s_map<T, U?>(this.value(), fn(v: T): U? => {
             return m.getOrNone(v);
-        });
+        }));
     }
 
     method {when T grounded KeyType} projectOption<U=?>(m: Map<T, U>): List<Option<U>> {
-        return ListOps::s_map_Helper<T, Option<U>>(this, fn(v: T): Option<U> => {
+        return List<T>::s_into(ListOps::s_map<T, Option<U>>(this.value(), fn(v: T): Option<U> => {
             return m.getOption(v);
-        });
+        }));
     }
 
     method {when T grounded KeyType} projectImage<U=?>(m: Map<T, U>): List<U> {
-        let img = ListOps::s_filter<T>(pred(v: T) => m.has(v));
-        return ListOps::s_map<T, U>(img, fn(v: T): U => m.get(v));
+        let img = ListOps::s_filter_pred<T>(this.value() pred(v: T) => m.has(v));
+        return List<T>::s_into(ListOps::s_map<T, U>(img, fn(v: T): U => m.get(v)));
     }
 
     recursive? method join<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, U]> {
-        return ListOps::s_join<T, U>[recursive?](this, ol, p);
+        return List<[T, U]>::s_into(ListOps::s_join<T, U>[recursive?](this.value(), ol, p));
     }
 
     recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? fn(_: T, _: U) -> Bool): List<[T, List<U>]> {
-        return ListOps::s_map<T, [T, List<U>]>[recursive?](this, recursive? fn(v: T): [T, List<U>] => {
-            let ul = ListOps::s_filter<U>[recursive?](ol, pred(u: U) => p[recursive?](v, u));
+        return List<[T, List<U>]>::s_into(ListOps::s_map<T, [T, List<U>]>[recursive?](this.value(), recursive? fn(v: T): [T, List<U>] => {
+            let ul = List<U>::s_into(ListOps::s_filter_pred<U>[recursive?](ol.value(), pred(u: U) => p[recursive?](v, u)));
             return [v, ul];
-        });
+        }));
     }
 
     method append(l: List<T>): List<T> {
-        return ListOps::s_concat2<T>(this, l);
+        return List<T>::s_into(ListOps::s_append<T>(this.value(), l));
     }
 
     method prepend(l: List<T>): List<T> {
-        return ListOps::s_concat2<T>(l, this);
+        return List<T>::s_into(ListOps::s_append<T>(l, this.value()));
     }
 
     recursive? method partition<K grounded KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
-        let allkeys = ListOps::s_map<T, K>[recursive?](this, pf);
-        let ukeys = ListOps::s_unique<K>(allkeys);
+        let allkeys = ListOps::s_map<T, K>[recursive?](this.value(), pf);
+        let ukeys = ListOps::s_uniqueify<K>(allkeys.value(), pred(a: K, b: K): Bool => KeyType::less<K>(a, b), pred(a: K, b: K): Bool => KeyType::equal<K>(a, b));
 
-        let kopts = ListOps::s_zip<K, T>(allkeys, this);
-        let classes = ListOps::s_map<K, [K, List<T>]>(ukeys, fn(k: K): [K, List<T>] => {
-            let pl = ListOps::s_filter<[K, T]>(kopts, pred(v: [K, T]) => k === v.0);
-            let tl = ListOps::s_map<[K, T], T>(pl, fn(vv: [K, T]): T => vv.1);
+        let kopts = ListOps::s_zip<K, T>(allkeys.value(), this.value());
+        let classes = ListOps::s_map<K, [K, List<T>]>(ukeys.value(), fn(k: K): [K, List<T>] => {
+            let pl = ListOps::s_filter_pred<[K, T]>(kopts.value(), pred(v: [K, T]) => k === v.0);
+            let tl = ListOps::s_map<[K, T], T>(pl.value(), fn(vv: [K, T]): T => vv.1);
 
             return [k, tl];
         });
@@ -1054,86 +1070,82 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
-        return ListOps::s_sort<T>[recursive?](this, cmp);
+        return ListOps::s_sort<T>[recursive?](this.value(), cmp);
     }
 
-    recursive? method uniqueify(eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
-       return ListOps::s_unique<T>[recursive?](this, eq);
-    }
-
-    recursive? method unique(eq: recursive? pred(_: T, _: T) -> Bool): Bool {
-       return ListOps::s_isunique<T>[recursive?](this, eq);
+    recursive? method uniqueify(cmp: recursive? pred(_: T, _: T) -> Bool, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+       return ListOps::s_unique_from_sorted<T>[recursive?](ListOps::s_sort<T>[recursive?](this.value(), cmp), eq);
     }
 
     method reverse(): List<T> {
-        return ListOps::s_reverse<T>(this);
+        return ListOps::s_reverse<T>(this.value());
     }
 
     method pushBack(v: T): List<T> {
-        return ListOps::s_concat2<T>(this, List<T>@{v});
+        return ListOps::s_append<T>(this.value(), List<T>{v});
     }
 
     method pushFront(v: T): List<T> {
-        return ListOps::s_concat2<T>(List<T>@{v}, this);
+        return ListOps::s_append<T>(List<T>{v}.value(), this.value());
     }
 
     method popBack(): List<T> {
-        check !ListOps::s_empty(this);
+        check !ListOps::s_empty(this.value());
 
-        return ListOps::s_slice<T>(this, 0, ListOps::s_size<T>(this) - 1n);
+        return ListOps::s_slice_end<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
     }
 
     method popFront(): List<T> {
-        check !ListOps::s_empty(this);
+        check !ListOps::s_empty(this.value());
 
-        return ListOps::s_slice<T>(this, 1n, ListOps::s_size<T>(this));
+        return ListOps::s_slice_front<T>(this.value(), 1n);
     }
 
     method set(i: Nat, v: T): List<T> {
-        check i < ListOps::s_size<T>(this);
+        check i < ListOps::s_size<T>(this.value());
 
-        let count = ListOps::s_size<T>(this);
-        let vl = List<T>@{v};
+        let count = ListOps::s_size<T>(this.value());
+        let vl = List<T{v};
 
         if(count == 1n) {
             return vl;
         }
         else {
             if(i == 0n) {
-                return ListOps::s_concat2<T>(vl, ListOps::s_slice<T>(this, 1n, count));
+                return ListOps::s_append<T>(vl, ListOps::s_slice_front<T>(this.value(), 1n));
             }
             elif(i == count - 1n) {
-                return ListOps::s_concat2<T>(ListOps::s_slice<T>(this, 0, count - 1n), vl);
+                return ListOps::s_append<T>(ListOps::s_slice_end<T>(this.value(), count - 1n), vl);
             }
             else {
-                let front = ListOps::s_slice<T>(this, 0n, i);
-                let back = ListOps::s_slice<T>(this, i + 1n, count);
+                let front = ListOps::s_slice_end<T>(this.value(), i);
+                let back = ListOps::s_slice_front<T>(this.value(), i + 1n);
 
-                return ListOps::s_concat2<T>(ListOps::s_concat2<T>(front, vl), back);
+                return ListOps::s_append<T>(ListOps::s_append<T>(front, vl), back);
             }
         } 
     }
 
     method remove(i: Nat): List<T> {
-        check i < ListOps::s_size<T>(this);
+        check i < ListOps::s_size<T>(this.value());
 
-        let count = ListOps::s_size<T>(this);
+        let count = ListOps::s_size<T>(this.value());
 
         if(count == 1n) {
-            return List<T>@{};
+            return List<T>{};
         }
         else {
             if(i == 0n) {
-                return ListOps::s_slice<T>(this, 1n, count);
+                return ListOps::s_slice_front<T>(this.value(), 1n);
             }
             elif(i == count - 1n) {
-                return ListOps::s_slice<T>(this, 0, count - 1n);
+                return ListOps::s_slice_end<T>(this.value(), count - 1n);
             }
             else {
-                let front = ListOps::s_slice<T>(this, 0n, i);
-                let back = ListOps::s_slice<T>(this, i + 1n, count);
+                let front = ListOps::s_slice_end<T>(this.value(), i);
+                let back = ListOps::s_slice_front<T>(this.value(), i + 1n);
 
-                return ListOps::s_concat2<T>(front, back);
+                return ListOps::s_append<T>(front, back);
             }
         } 
     }

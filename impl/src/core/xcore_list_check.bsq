@@ -32,6 +32,13 @@ entity ListOps provides Some {
         }
     }
 
+    s_range_int
+    s_range_nat
+    s_fill
+
+    s_zip_index
+    s_zip
+
     function s_append(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
         if(/\(l === none, r === none)) {
             return none;
@@ -93,6 +100,8 @@ entity ListOps provides Some {
             }
         }
     }
+
+    s_concat
 
     function s_slice_start(l: ListRepr<T>, start: Nat): ListRepr<T> {
         if(start == 0) {
@@ -585,6 +594,15 @@ entity ListOps provides Some {
             return l.map_idx[recursive?](f);
         }
     }
+
+    s_min_arg<
+        s_max_arg<
+            s_sum
+
+    s_join
+    s_sort
+    s_unique_from_sorted
+    s_reverse
 }
 
 entity RecList<T> provides Some {
