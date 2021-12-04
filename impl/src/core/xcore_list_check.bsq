@@ -32,12 +32,83 @@ entity ListOps provides Some {
         }
     }
 
-    s_range_int
-    s_range_nat
-    s_fill
+    function s_range<T unique Int | Nat>(start: T, end: T, inc: T, zero: T): ListRepr<T> {
+        if(start == end) {
+            return none;
+        }
+        else {
+            let count = end - start;
+            if(count == 1n) {
+                return Vector1<T>{start};
+            }
+            elif(count == 2n) {
+                return Vector2<T>{start, start + inc};
+            }
+            elif(count == 3n) {
+                return Vector3<T>{start, start + inc, start + inc + inc};
+            }
+            else {
+                return RecList<T>::range(start, end, inc);
+            }
+        }
+    }
 
-    s_zip_index
-    s_zip
+    function s_fill<T>(count: Nat, v: T): ListRepr<T> {
+        if(count == 0n) {
+            return none;
+        }
+        elif(count == 1n) {
+            return Vector1<T>{v};
+        }
+        elif(count == 2n) {
+            return Vector2<T>{v, v};
+        }
+        elif(count == 3n) {
+            return Vector3<T>{v, v, v};
+        }
+        else {
+            return RecList<T>::fill(count, v);
+        }
+    }
+
+    function s_zip_index<T>(l: ListRepr<T>): ListRepr<[Nat, T]> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return Vector1<T>{[0, l.v0]};
+        }
+        elif(l.is<Vector2<T>>()) {
+            return Vector2<T>{[0, l.v0], [1, l.v1]};
+        }
+        elif(l.is<Vector3<T>>()) {
+            return Vector3<T>{[0, l.v0], [1, l.v1], [2, l.v2]};
+        }
+        else {
+            return l.zip_index();
+        }
+    }
+
+    function s_zip<T, U>(l1: ListRepr<T>, l2: ListRepr<U>): ListRepr<[T, U]> {
+        if(\/(l1 === none, l2 === none)) {
+            return none;
+        }
+        elif(/\(l1.is<Vector1<T>>(), l2.is<Vector1<U>>())) {
+            return Vector1<T>{[l1.v0, l2.v0]};
+        }
+        elif(/\(l1.is<Vector2<T>>(), l2.is<Vector2<U>>())) {
+            return Vector2<T>{[l1.v0, l2.v0], [l1.v1, l2.v1]};
+        }
+        elif(/\(l1.is<Vector3<T>>(), l2.is<Vector3<U>>())) {
+            return Vector3<T>{[l1.v0, l2.v0], [l1.v1, l2.v1], [l1.v2, l2.v2]};
+        }
+        else {
+            let ll1 = ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l1);
+            let ll2 = ListOps::s_safeAs<ListRepr<U>, RecList<U>>(l2);
+
+            return ll1.zip<U>(ll2);
+        }
+    }
 
     function s_append(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
         if(/\(l === none, r === none)) {
@@ -50,16 +121,16 @@ entity ListOps provides Some {
             return l;
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
-            return Vector1<T>{l.v0, r.v0};
+            return Vector2<T>{l.v0, r.v0};
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
-            return Vector1<T>{l.v0, r.v0, r.v1};
+            return Vector3<T>{l.v0, r.v0, r.v1};
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
             return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector1_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
-            return Vector1<T>{l.v0, l.v1, r.v0};
+            return Vector3<T>{l.v0, l.v1, r.v0};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector2<T>>())) {
             return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), RecListEntry<T>::s_vector2_to_list(r))};
@@ -611,6 +682,26 @@ entity RecList<T> provides Some {
 
     invariant $count > 3;
 
+    function range<T unique Int | Nat>(start: T, end: T, inc: T): RecList<T> {
+        let ll = RecListEntry<T>::range[recursive](start, end, inc);
+        return RecList<T>{end - start, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
+    }
+
+    function fill<T>(count: Nat, v: T): RecList<T> {
+        let ll = RecListEntry<T>::fill[recursive](count);
+        return RecList<T>{count, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
+    }
+
+    method zip_index(): RecList<[Nat, T]> {
+        let ll = this.ll.zip_index[recursive](0n);
+        return RecList<[Nat, T]>{this.count, ll};
+    }
+
+    method zip<U>(ol: RecList<U>): RecList<[T, U]> {
+        let ll = this.zip<U>[recursive](ol.ll);
+        return RecList<[T, U]>{this.count, ll};
+    }
+
     function append(l: RecList<T>, r: RecList<T>): RecListEntry<T> { 
         return RecList<T>{l.count + r.count, RecListEntry<T>::s_append(l.ll, r.ll)};
     }
@@ -767,6 +858,57 @@ entity RecListEntry<T> provides Some {
         let ee2 = lls.tail;
         let ee3 = ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).tail
         return RecListEntry<T>{l.head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee3).head};
+    }
+
+    recursive function range<T unique Int | Nat>(start: T, end: T, inc: T): RecListEntry<T>? {
+        if(start == end) {
+            return none;
+        }
+        else {
+            let ntl = RecListEntry<T>::range[recursive](start + inc, end, inc);
+            return RecListEntry<T>{start, ntl};
+        }
+    }
+
+    recursive function fill<T>(count: Nat, v: T): RecListEntry<T>? {
+        if(start == end) {
+            return none;
+        }
+        else {
+            let ntl = RecListEntry<T>::fill[recursive](count - 1n, v);
+            return RecListEntry<T>{v, ntl};
+        }
+    }
+
+    recursive method zip_index(idx: Nat): RecListEntry<[Nat, T]> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nh = [idx, hh];
+        if(tl === none) {
+            RecListEntry<[Nat, T]>{nh, none};
+        }
+        else {
+            let ntl = tl.zip_index[recursive](idx + 1n);
+            return RecListEntry<[Nat, T]>{nh, ntl};
+        }
+    }
+
+    recursive method zip<U>(ol: RecListEntry<U>): RecListEntry<[T, U]> {
+        let tt = this.tail;
+        let th = this.head;
+
+        let ot = ol.tail;
+        let oh = ol.head;
+
+        let nh = [th, oh];
+        if(\/(tt === none, ot === none)) {
+            RecListEntry<[T, U]>{nh, none};
+        }
+        else {
+            let ntl = tt.zip<U>[recursive](ot);
+            return RecListEntry<[T, U]>{nh, ntl};
+        }
     }
 
     recursive function s_append(l: RecListEntry<T>?, r: RecListEntry<T>): RecListEntry<T> {

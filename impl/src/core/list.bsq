@@ -10,16 +10,10 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     __assume_safe private function s_into(l: ListRepr<T>): List<T> # stringof_into
     method value(): ListRepr<T> # special_extract
 
-    function ints(start: Int, end: Int): List<Int>
+    function {when T unique Int | Nat} range(start: T, end: T): List<T>
         requires release start <= end;
     {
-        return List<Int>::s_into(ListOps::s_range_int(start, end));
-    }
-
-    function nats(start: Nat, end: Nat): List<Nat> 
-        requires release start <= end;
-    {
-        return List<Nat>::s_into(ListOps::s_range_nat(start, end));
+        return List<T>::s_into(ListOps::s_range<T>(start, end, T::one, T::zero));
     }
 
     method index(): List<[Nat, T]> {
@@ -1056,49 +1050,49 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
     recursive? method partition<K grounded KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
         let allkeys = ListOps::s_map<T, K>[recursive?](this.value(), pf);
-        let ukeys = ListOps::s_uniqueify<K>(allkeys.value(), pred(a: K, b: K): Bool => KeyType::less<K>(a, b), pred(a: K, b: K): Bool => KeyType::equal<K>(a, b));
+        let ukeys = ListOps::s_uniqueify<K>(allkeys, pred(a: K, b: K): Bool => KeyType::less<K>(a, b), pred(a: K, b: K): Bool => KeyType::equal<K>(a, b));
 
-        let kopts = ListOps::s_zip<K, T>(allkeys.value(), this.value());
-        let classes = ListOps::s_map<K, [K, List<T>]>(ukeys.value(), fn(k: K): [K, List<T>] => {
-            let pl = ListOps::s_filter_pred<[K, T]>(kopts.value(), pred(v: [K, T]) => k === v.0);
-            let tl = ListOps::s_map<[K, T], T>(pl.value(), fn(vv: [K, T]): T => vv.1);
+        let kopts = ListOps::s_zip<K, T>(allkeys, this.value());
+        let classes = List<[K, List<T>]>::s_into(ListOps::s_map<K, [K, List<T>]>(ukeys, fn(k: K): [K, List<T>] => {
+            let pl = ListOps::s_filter_pred<[K, T]>(kopts, pred(v: [K, T]) => k === v.0);
+            let tl = List<T>::s_into(ListOps::s_map<[K, T], T>(pl, fn(vv: [K, T]): T => vv.1));
 
             return [k, tl];
-        });
+        }));
 
         return Map<K, T>@{...classes};
     }
 
     recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
-        return ListOps::s_sort<T>[recursive?](this.value(), cmp);
+        return List<T>::s_into(ListOps::s_sort<T>[recursive?](this.value(), cmp));
     }
 
     recursive? method uniqueify(cmp: recursive? pred(_: T, _: T) -> Bool, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
-       return ListOps::s_unique_from_sorted<T>[recursive?](ListOps::s_sort<T>[recursive?](this.value(), cmp), eq);
+       return List<T>::s_into(ListOps::s_unique_from_sorted<T>[recursive?](ListOps::s_sort<T>[recursive?](this.value(), cmp), eq));
     }
 
     method reverse(): List<T> {
-        return ListOps::s_reverse<T>(this.value());
+        return List<T>::s_into(ListOps::s_reverse<T>(this.value()));
     }
 
     method pushBack(v: T): List<T> {
-        return ListOps::s_append<T>(this.value(), List<T>{v});
+        return List<T>::s_into(ListOps::s_append<T>(this.value(), List<T>{v}));
     }
 
     method pushFront(v: T): List<T> {
-        return ListOps::s_append<T>(List<T>{v}.value(), this.value());
+        return List<T>::s_into(ListOps::s_append<T>(List<T>{v}.value(), this.value()));
     }
 
     method popBack(): List<T> {
         check !ListOps::s_empty(this.value());
 
-        return ListOps::s_slice_end<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
+        return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n));
     }
 
     method popFront(): List<T> {
         check !ListOps::s_empty(this.value());
 
-        return ListOps::s_slice_front<T>(this.value(), 1n);
+        return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), 1n));
     }
 
     method set(i: Nat, v: T): List<T> {
@@ -1112,16 +1106,16 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
         else {
             if(i == 0n) {
-                return ListOps::s_append<T>(vl, ListOps::s_slice_front<T>(this.value(), 1n));
+                return List<T>::s_into(ListOps::s_append<T>(vl, ListOps::s_slice_front<T>(this.value(), 1n)));
             }
             elif(i == count - 1n) {
-                return ListOps::s_append<T>(ListOps::s_slice_end<T>(this.value(), count - 1n), vl);
+                return List<T>::s_into(ListOps::s_append<T>(ListOps::s_slice_end<T>(this.value(), count - 1n), vl));
             }
             else {
                 let front = ListOps::s_slice_end<T>(this.value(), i);
                 let back = ListOps::s_slice_front<T>(this.value(), i + 1n);
 
-                return ListOps::s_append<T>(ListOps::s_append<T>(front, vl), back);
+                return List<T>::s_into(ListOps::s_append<T>(ListOps::s_append<T>(front, vl), back));
             }
         } 
     }
@@ -1136,18 +1130,36 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
         else {
             if(i == 0n) {
-                return ListOps::s_slice_front<T>(this.value(), 1n);
+                return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), 1n));
             }
             elif(i == count - 1n) {
-                return ListOps::s_slice_end<T>(this.value(), count - 1n);
+                return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), count - 1n));
             }
             else {
                 let front = ListOps::s_slice_end<T>(this.value(), i);
                 let back = ListOps::s_slice_front<T>(this.value(), i + 1n);
 
-                return ListOps::s_append<T>(front, back);
+                return List<T>::s_into(ListOps::s_append<T>(front, back));
             }
         } 
+    }
+
+    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T) -> U): U {
+        return ListOps::s_reduce<T, U>[recursive?](this.value(), init, f);
+    }
+
+    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T, _: Nat) -> U): U {
+        return ListOps::s_reduce_idx<T, U>[recursive?](this.value(), init, f);
+    }
+
+    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E) -> U, E): List<U>, E {
+        let llu, ee = ListOps::s_transduce<T, E, U>[recursive?](this.value(), env, f);
+        return List<U>::s_into(llu), ee;
+    }
+
+    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> U, E): List<U>, E {
+        let llu, ee = ListOps::s_transduce_idx<T, E, U>[recursive?](this.value(), env, f);
+        return List<U>::s_into(llu), ee;
     }
 
     //

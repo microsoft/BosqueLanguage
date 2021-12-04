@@ -14,6 +14,8 @@ entity Mask provides Some, APIType {
     field bit3: Bool;
 
     // struct {uint32_t mask (byte); uint32_t count;}
+
+    __safe function s_init_k(k: Nat): Mask # mask_init_k
     __safe function s_min_set(m: Mask): Nat # mask_min_set
     __safe function s_max_set(m: Mask): Nat # mask_max_set
     __safe function s_count(m: Mask): Nat # mask_count
@@ -74,33 +76,34 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     __safe function s_slice_start(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> # pv_slice_start
     __safe function s_slice_end(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> # pv_slice_end
 
+    field mask: Mask;
     field v0: T;
     field v1: T;
     field v2: T;
     field v3: T;
-    field mask: Mask;
 
     invariant !$mask.empty();
 
     recursive? method applyPred(p: recursive? pred(_: T) -> Bool): Mask {
+        let m: this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
         var b3 = false;
 
-        if(this.mask.bit0) {
+        if(m.bit0) {
             b0 = p[recursive?](this.v0);
         }
 
-        if(this.mask.bit1) {
+        if(m.bit1) {
             b1 = p[recursive?](this.v1);
         }
 
-        if(this.mask.bit2) {
+        if(m.bit2) {
             b2 = p[recursive?](this.v2);
         }
 
-        if(this.mask.bit3) {
+        if(m.bit3) {
             b3 = p[recursive?](this.v3);
         }
 
@@ -108,24 +111,25 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method apply_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+        let m: this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
         var b3 = false;
 
-        if(this.mask.bit0) {
+        if(m.bit0) {
             b0 = p[recursive?](this.v0, idx);
         }
 
-        if(this.mask.bit1) {
+        if(m.bit1) {
             b1 = p[recursive?](this.v1, idx + 1n);
         }
 
-        if(this.mask.bit2) {
+        if(m.bit2) {
             b2 = p[recursive?](this.v2, idx + 2n);
         }
 
-        if(this.mask.bit3) {
+        if(m.bit3) {
             b3 = p[recursive?](this.v3, idx + 3n);
         }
         
@@ -133,24 +137,25 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Mask {
+        let m: this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
         var b3 = false;
 
-        if(this.mask.bit0) {
+        if(m.bit0) {
             b0 = p[recursive?](this.v0);
         }
 
-        if(/\(!b0, this.mask.bit1)) {
+        if(/\(!b0, m.bit1)) {
             b1 = p[recursive?](this.v1);
         }
 
-        if(/\(!b0, !b1, this.mask.bit2)) {
+        if(/\(!b0, !b1, m.bit2)) {
             b2 = p[recursive?](this.v2);
         }
 
-        if(/\(!b0, !b1, !b2, this.mask.bit3)) {
+        if(/\(!b0, !b1, !b2, m.bit3)) {
             b3 = p[recursive?](this.v3);
         }
         
@@ -158,24 +163,25 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+        let m: this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
         var b3 = false;
 
-        if(this.mask.bit0) {
+        if(m.bit0) {
             b0 = p[recursive?](this.v0, idx);
         }
 
-        if(/\(!b0, this.mask.bit1)) {
+        if(/\(!b0, m.bit1)) {
             b1 = p[recursive?](this.v1, idx + 1n);
         }
 
-        if(/\(!b0, !b1, this.mask.bit2)) {
+        if(/\(!b0, !b1, m.bit2)) {
             b2 = p[recursive?](this.v2, idx + 2n);
         }
 
-        if(/\(!b0, !b1, !b2, this.mask.bit3)) {
+        if(/\(!b0, !b1, !b2, m.bit3)) {
             b3 = p[recursive?](this.v3, idx + 3n);
         }
         
@@ -183,24 +189,25 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method s_find_last_pred(p: recursive? pred(_: T) -> Bool): Mask {
+        let m: this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
         var b3 = false;
 
-        if(this.mask.bit3) {
+        if(m.bit3) {
             b3 = p[recursive?](this.v3);
         }
 
-        if(/\(!b3, this.mask.bit2)) {
+        if(/\(!b3, m.bit2)) {
             b2 = p[recursive?](this.v2);
         }
 
-        if(/\(!b3, !b2, this.mask.bit1)) {
+        if(/\(!b3, !b2, m.bit1)) {
             b1 = p[recursive?](this.v1);
         }
 
-        if(/\(!b3, !b2, !b1, this.mask.bit0)) {
+        if(/\(!b3, !b2, !b1, m.bit0)) {
             b0 = p[recursive?](this.v0);
         }
         
@@ -208,78 +215,186 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method s_find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
+        let m: this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
         var b3 = false;
 
-        if(this.mask.bit3) {
+        if(m.bit3) {
             b3 = p[recursive?](this.v3, idx + 3n);
         }
 
-        if(/\(!b3, this.mask.bit2)) {
+        if(/\(!b3, m.bit2)) {
             b2 = p[recursive?](this.v2, idx + 2n);
         }
 
-        if(/\(!b3, !b2, this.mask.bit1)) {
+        if(/\(!b3, !b2, m.bit1)) {
             b1 = p[recursive?](this.v1, idx + 1n);
         }
 
-        if(/\(!b3, !b2, !b1, this.mask.bit0)) {
+        if(/\(!b3, !b2, !b1, m.bit0)) {
             b0 = p[recursive?](this.v0, idx);
         }
         
         return Mask::s_cons(b0, b1, b2, b3);
     }
 
-    recursive? function s_map_fn<T, U>(pv: PartialVector<T>, f: recursive? fn(_: T) -> U): PartialVector<U> {
+    recursive? method s_map_fn<T, U>(f: recursive? fn(_: T) -> U): PartialVector<U> {
+        let m: this.mask;
         var v0 = s_pv_undef<U>();
         var v1 = s_pv_undef<U>();
         var v2 = s_pv_undef<U>();
         var v3 = s_pv_undef<U>();
 
-        if(this.mask.bit0) {
+        if(m.bit0) {
             v0 = f[recursive?](this.v0);
         }
 
-        if(this.mask.bit1) {
+        if(m.bit1) {
             v1 = f[recursive?](this.v1);
         }
 
-        if(this.mask.bit2) {
+        if(m.bit2) {
             v2 = f[recursive?](this.v2);
         }
 
-        if(this.mask.bit3) {
+        if(m.bit3) {
             v3 = f[recursive?](this.v3);
         }
         
-        return PartialVector<U>{v0, v1, v2, v3, pv.mask};
+        return PartialVector<U>{m, v0, v1, v2, v3};
     }
     
-    recursive? function s_map_fn_idx<T, U>(pv: PartialVector<T>, idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> {
+    recursive? method s_map_fn_idx<T, U>(idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> {
+        let m: this.mask;
         var v0 = s_pv_undef<U>();
         var v1 = s_pv_undef<U>();
         var v2 = s_pv_undef<U>();
         var v3 = s_pv_undef<U>();
 
-        if(this.mask.bit0) {
+        if(m.bit0) {
             v0 = f[recursive?](this.v0, idx);
         }
 
-        if(this.mask.bit1) {
+        if(m.bit1) {
             v1 = f[recursive?](this.v1, idx + 1n);
         }
 
-        if(this.mask.bit2) {
+        if(m.bit2) {
             v2 = f[recursive?](this.v2, idx + 2n);
         }
 
-        if(this.mask.bit3) {
+        if(m.bit3) {
             v3 = f[recursive?](this.v3, idx + 3n);
         }
         
-        return PartialVector<U>{v0, v1, v2, v3, pv.mask};
+        return PartialVector<U>{m, v0, v1, v2, v3};
+    }
+
+    function s_range<T unique Int | Nat>(start: T, end: T, inc: T, zero: T): ListRepr<Int> {
+        let m = Mask::s_init_k(count);
+
+        if(count <= 1n) {
+            return PartialVector<Int>{m, start, zero, zero, zero};
+        }
+        else {
+            let e1 = start + inc;
+            if(count == 2n) {
+                return PartialVector<Int>{m, start, e1, zero, zero};
+            }
+            else {
+                let e2 = e1 + inc;
+                if(count == 3n) {
+                    return PartialVector<Int>{m, start, e1, e2, zero};
+                }
+                else {
+                    let e3 = e2 + inc;
+                    return PartialVector<Int>{m, start, e1, e2, e3};
+                }
+            }
+        }
+    }
+
+    function s_fill<T>(count: Nat, v: T): ListRepr<T> {
+        let m = Mask::s_init_k(count);
+
+        var v0 = s_pv_undef<T>();
+        var v1 = s_pv_undef<T>();
+        var v2 = s_pv_undef<T>();
+        var v3 = s_pv_undef<T>();
+
+        if(m.bit0) {
+            v0 = v;
+        }
+
+        if(m.bit1) {
+            v1 = v;
+        }
+
+        if(m.bit2) {
+            v2 = v;
+        }
+
+        if(m.bit3) {
+            v3 = v;
+        }
+        
+        return PartialVector<U>{m, v0, v1, v2, v3};
+    }
+
+    method s_zip_index<T>(idx: Nat): PartialVector<[Nat, T]> {
+        let m: this.mask;
+        var v0 = s_pv_undef<[Nat, T]>();
+        var v1 = s_pv_undef<[Nat, T]>();
+        var v2 = s_pv_undef<[Nat, T]>();
+        var v3 = s_pv_undef<[Nat, T]>();
+
+        if(m.bit0) {
+            v0 = [idx, this.v0];
+        }
+
+        if(m.bit1) {
+            v1 = [idx + 1n, this.v1];
+        }
+
+        if(m.bit2) {
+            v2 = [idx + 2n, this.v2];
+        }
+
+        if(m.bit3) {
+            v3 = [idx + 3n, this.v3];
+        }
+        
+        return PartialVector<U>{m, v0, v1, v2, v3};
+    }
+
+    method s_zip<U>(ov: PartialVector<U>): PartialVector<[V, U]> {
+        let tm: this.mask;
+        let om: ov.mask;
+
+        var v0 = s_pv_undef<[V, U]>();
+        var v1 = s_pv_undef<[V, U]>();
+        var v2 = s_pv_undef<[V, U]>();
+        var v3 = s_pv_undef<[V, U]>();
+
+        if(/\(tm.bit0, om.bit0)) {
+            v0 = [this.v0, ov.v0];
+        }
+
+        if(/\(tm.bit1, om.bit1)) {
+            v1 = [this.v1, ov.v1];
+        }
+
+        if(/\(tm.bit2, om.bit2)) {
+            v2 = [this.v2, ov.v2];
+        }
+
+        if(/\(tm.bit3, om.bit3)) {
+            v3 =[this.v3, ov.v3];
+        }
+        
+        return PartialVector<U>{Mask::and(tm, om), v0, v1, v2, v3};
     }
 
     recursive? function s_reduce_fn<T, U>(pv: PartialVector<T>, init: U, p: recursive? fn(_: T) -> U): U # special_function_pv_reduce_fn
@@ -292,7 +407,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         assert(Mask::s_count(this.mask) <= 2n);
 
         if(Mask::s_count(this.mask) == 2n && cmp[recursive?](this.v1, this.v0)) {
-            return PartialVector<T>{this.v1, this.v0, this.v2, this.v3, this.mask};
+            return PartialVector<T>{this.mask, this.v1, this.v0, this.v2, this.v3};
         }
     }
 }
