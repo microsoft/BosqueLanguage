@@ -85,7 +85,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     invariant !$mask.empty();
 
     recursive? method applyPred(p: recursive? pred(_: T) -> Bool): Mask {
-        let m: this.mask;
+        let m = this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
@@ -111,7 +111,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method apply_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
-        let m: this.mask;
+        let m = this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
@@ -137,7 +137,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Mask {
-        let m: this.mask;
+        let m = this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
@@ -163,7 +163,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
-        let m: this.mask;
+        let m = this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
@@ -189,7 +189,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method s_find_last_pred(p: recursive? pred(_: T) -> Bool): Mask {
-        let m: this.mask;
+        let m = this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
@@ -215,7 +215,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method s_find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
-        let m: this.mask;
+        let m = this.mask;
         var b0 = false;
         var b1 = false;
         var b2 = false;
@@ -241,7 +241,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     recursive? method s_map_fn<T, U>(f: recursive? fn(_: T) -> U): PartialVector<U> {
-        let m: this.mask;
+        let m = this.mask;
         var v0 = s_pv_undef<U>();
         var v1 = s_pv_undef<U>();
         var v2 = s_pv_undef<U>();
@@ -267,7 +267,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
     
     recursive? method s_map_fn_idx<T, U>(idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> {
-        let m: this.mask;
+        let m = this.mask;
         var v0 = s_pv_undef<U>();
         var v1 = s_pv_undef<U>();
         var v2 = s_pv_undef<U>();
@@ -292,7 +292,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return PartialVector<U>{m, v0, v1, v2, v3};
     }
 
-    function s_range<T unique Int | Nat>(start: T, end: T, inc: T, zero: T): ListRepr<Int> {
+    function {when T unique Int | Nat} s_range(start: T, end: T, inc: T, zero: T): PartialVector<T> {
         let m = Mask::s_init_k(count);
 
         if(count <= 1n) {
@@ -316,7 +316,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         }
     }
 
-    function s_fill<T>(count: Nat, v: T): ListRepr<T> {
+    function s_fill(count: Nat, v: T): PartialVector<T> {
         let m = Mask::s_init_k(count);
 
         var v0 = s_pv_undef<T>();
@@ -344,7 +344,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     method s_zip_index<T>(idx: Nat): PartialVector<[Nat, T]> {
-        let m: this.mask;
+        let m = this.mask;
         var v0 = s_pv_undef<[Nat, T]>();
         var v1 = s_pv_undef<[Nat, T]>();
         var v2 = s_pv_undef<[Nat, T]>();
@@ -370,8 +370,8 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     }
 
     method s_zip<U>(ov: PartialVector<U>): PartialVector<[V, U]> {
-        let tm: this.mask;
-        let om: ov.mask;
+        let tm = this.mask;
+        let om = ov.mask;
 
         var v0 = s_pv_undef<[V, U]>();
         var v1 = s_pv_undef<[V, U]>();
@@ -395,6 +395,32 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         }
         
         return PartialVector<U>{Mask::and(tm, om), v0, v1, v2, v3};
+    }
+
+    method s_zip_map<U>(idx: i, getfn: fn(i: Nat) -> U): PartialVector<[V, U]> {
+        let m = this.mask;
+        var v0 = s_pv_undef<[V, U]>();
+        var v1 = s_pv_undef<[V, U]>();
+        var v2 = s_pv_undef<[V, U]>();
+        var v3 = s_pv_undef<[V, U]>();
+
+        if(m.bit0) {
+            v0 = [this.v0, getfn(idx)];
+        }
+
+        if(m.bit1) {
+            v1 = [this.v1, getfn(idx + 1n)];
+        }
+
+        if(m.bit2) {
+            v2 = [this.v2, getfn(idx + 2n)];
+        }
+
+        if(m.bit3) {
+            v3 =[this.v3, getfn(idx + 3n)];
+        }
+        
+        return PartialVector<U>{m, v0, v1, v2, v3};
     }
 
     recursive? function s_reduce_fn<T, U>(pv: PartialVector<T>, init: U, p: recursive? fn(_: T) -> U): U # special_function_pv_reduce_fn

@@ -78,7 +78,7 @@ __internal entity ListOps provides Some {
             let ll1 = ListOps::s_safeAs<ListRepr<T>, ListTree<T>>(l1);
             let ll2 = ListOps::s_safeAs<ListRepr<U>, ListTree<U>>(l2);
 
-            return ListTree<T>::zip<U>[recursive](ll1, ll2);
+            return ll1.zip<U>[recursive](ll2, 0);
         }
     }
 
@@ -298,14 +298,35 @@ entity ListTree<T> provides Some {
 
     invariant $count > 4;
 
-    recursive function s_range<T unique Int | Nat>(start: T, end: T, inc: T, zero: T): ListRepr<Int> {
-        //make ballanced
-        xxxx;
+    recursive {when T unique Int | Nat} function s_range(start: T, end: T, inc: T, zero: T): ListRepr<Int> {
+        let count = end - start;
+        if(count <= 4) {
+            return PartialVector<T>::s_range(start, end, inc, zero);
+        }
+        else {
+            let llc = count / (inc + inc);
+            let rrc = count - llc;
+
+            let llt = ListTree<T>::s_range[recursive](start, start + llc, inc, zero);
+            let rrt = ListTree<T>::s_fill[recursive](start + llc, end, inc, zero);
+
+            retur ListTree<T>{count, llt, rrt};
+        }
     }
     
     recursive function s_fill<T>(count: Nat, v: T): ListRepr<T> {
-        //make ballanced
-        xxxx;
+        if(n <= 4) {
+            return PartialVector<T>::s_fill(count, v);
+        }
+        else {
+            let llc = count / 2n;
+            let rrc = count - llc;
+
+            let llt = ListTree<T>::s_fill[recursive](llc, v);
+            let rrt = ListTree<T>::s_fill[recursive](rrc, v);
+
+            return ListTree<T>{count, llt, rrt};
+        }
     }
 
     recursive method s_zip_index<T>(idx: Nat): ListRepr<[Nat, T]> {
@@ -316,7 +337,7 @@ entity ListTree<T> provides Some {
         var nl: ListRepr<T>;
         if(l.is<PartialVector<T>>()) {
             lcount = l.count();
-            nl = l.zip_index(idx);
+            nl = l.s_zip_index(idx);
         }
         else {
             lcount = l.count;
@@ -326,7 +347,7 @@ entity ListTree<T> provides Some {
         let nidx = idx + lcount;
         var nr: ListRepr<T>;
         if(r.is<PartialVector<T>>()) {
-            nr = r.zip_index(nidx);
+            nr = r.s_zip_index(nidx);
         }
         else {
             nr = r.zip_index[recursive](nidx)
@@ -335,9 +356,31 @@ entity ListTree<T> provides Some {
         return ListTree<T>::append(nl, nr);
     }
 
-    recursive method zip<U>(ol: ListRepr<U>): ListRepr<[T, U]> {
-        //use map_idx
-        xxxx;
+    recursive method zip<U>(ol: ListRepr<U>, idx: Nat): ListRepr<[T, U]> {
+        let l = this.left;
+        let r = this.right;
+
+        var lcount: Nat;
+        var nl: ListRepr<T>;
+        if(l.is<PartialVector<T>>()) {
+            lcount = l.count();
+            nl = l.s_zip_map<U>(idx, fn(i: Nat): U => ListOps::s_safe_get<U>(ol, i));
+        }
+        else {
+            lcount = l.count;
+            nl = l.zip<U>[recursive](ol, idx)
+        }
+
+        let nidx = idx + lcount;
+        var nr: ListRepr<T>;
+        if(r.is<PartialVector<T>>()) {
+            nr = r.zip_map(idx, fn(i: Nat): U => ListOps::s_safe_get<U>(ol, i));
+        }
+        else {
+            nr = r.zip[recursive](ol, nidx)
+        }
+        
+        return ListTree<T>::append(nl, nr);
     }
 
     function append(l: ListTree<T> | PartialVector<T>, r: ListTree<T> | PartialVector<T>): ListRepr<T> {

@@ -110,7 +110,7 @@ entity ListOps provides Some {
         }
     }
 
-    function s_append(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
+    function s_append<T>(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
         if(/\(l === none, r === none)) {
             return none;
         }
@@ -172,9 +172,7 @@ entity ListOps provides Some {
         }
     }
 
-    s_concat
-
-    function s_slice_start(l: ListRepr<T>, start: Nat): ListRepr<T> {
+    function s_slice_start<T>(l: ListRepr<T>, start: Nat): ListRepr<T> {
         if(start == 0) {
             return l;
         }
@@ -214,7 +212,7 @@ entity ListOps provides Some {
         }
     }
 
-    function s_slice_end(l: ListRepr<T>, end: Nat): ListRepr<T> {
+    function s_slice_end<T>(l: ListRepr<T>, end: Nat): ListRepr<T> {
         if(end == 0) {
             return none;
         }
@@ -682,12 +680,12 @@ entity RecList<T> provides Some {
 
     invariant $count > 3;
 
-    function range<T unique Int | Nat>(start: T, end: T, inc: T): RecList<T> {
+    function {when T unique Int | Nat} range(start: T, end: T, inc: T): RecList<T> {
         let ll = RecListEntry<T>::range[recursive](start, end, inc);
         return RecList<T>{end - start, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
     }
 
-    function fill<T>(count: Nat, v: T): RecList<T> {
+    function fill(count: Nat, v: T): RecList<T> {
         let ll = RecListEntry<T>::fill[recursive](count);
         return RecList<T>{count, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
     }
@@ -860,7 +858,7 @@ entity RecListEntry<T> provides Some {
         return RecListEntry<T>{l.head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee3).head};
     }
 
-    recursive function range<T unique Int | Nat>(start: T, end: T, inc: T): RecListEntry<T>? {
+    recursive {when T unique Int | Nat} function range(start: T, end: T, inc: T): RecListEntry<T>? {
         if(start == end) {
             return none;
         }
@@ -870,7 +868,7 @@ entity RecListEntry<T> provides Some {
         }
     }
 
-    recursive function fill<T>(count: Nat, v: T): RecListEntry<T>? {
+    recursive function fill(count: Nat, v: T): RecListEntry<T>? {
         if(start == end) {
             return none;
         }

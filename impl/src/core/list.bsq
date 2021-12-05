@@ -31,7 +31,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     function concat(...ll: List<List<T>>): List<T> {
-        if(ListFlatOps::s_empty<List<T>>(ll.value())) {
+        if(ListOps::s_empty<T>(this.value())) {
             return List<T>{};
         }
         else {
@@ -42,11 +42,53 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             elif(count == 2) {
                 return List<T>::s_into(ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 0n), ListOps::s_safe_get<List<T>>(ll.value(), 1n)));
             }
+            elif(count == 3) {
+                let la = ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 0n), ListOps::s_safe_get<List<T>>(ll.value(), 1n));
+                return List<T>::s_into(ListOps::s_append<T>(la, ListOps::s_safe_get<List<T>>(ll.value(), 2n)));
+            }
+            elif(count == 4) {
+                let la = ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 0n), ListOps::s_safe_get<List<T>>(ll.value(), 1n));
+                let ra = ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 2n), ListOps::s_safe_get<List<T>>(ll.value(), 3n));
+                return List<T>::s_into(ListOps::s_append<T>(la, ra));
+            }
             else {
-                return List<T>::s_into(ListOps::s_concat(ll));
+#if CHECK_LIBS
+                return List<T>::s_into(List<T>::s_concat<T>(ll.value()));
+#else
+                return List<T>::s_into(List<T>::s_concat<T>(ll.value(), 0, count));
+#endif
             }
         }
     }
+
+#if CHECK_LIBS
+    private recursive function s_concat(ll: ListRepr<List<T>>): ListRepr<T> {
+        let count = ListOps::s_size<List<T>>(ll);
+        if(count == 1) {
+            return ListOps::s_safe_get<List<T>>(ll, 0n);
+        }
+        else {
+            let lr = ListOps::s_slice_front<List<T>>(ll, 1n);
+            let ltail = List<T>::s_concat(lr);
+
+            return ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ltail);
+        }
+    }
+#else
+    private recursive function s_concat(ll: List<List<T>>, start: Nat, end: Nat): List<T> {
+        let count = end - start;
+        if(count == 1) {
+            return ListOps::s_safe_get<List<T>>(ll, start);
+        }
+        else {
+            let split = count / 2n;
+            let la = List<T>::s_concat(ll, start, start + split);
+            let ra = List<T>::s_concat(lr, start + split, end);
+
+            return ListOps::s_append<T>(la, ra);
+        }
+    }
+#endif
 
     method size(): Nat {
         return ListOps::s_size<T>(this.value());
