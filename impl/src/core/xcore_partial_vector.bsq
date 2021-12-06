@@ -511,29 +511,14 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return acc;
     }
 
-    recursive? method sort2(cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<T> {
-        let m = this.mask;
-        let count = Mask::s_count(m);
+    recursive? method partition(piv: T, cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<T>, PartialVector<T> {
+        let mgt = this.applyPred(recursive? pred(e: T): Bool => cmp(piv, e));
+        let mle = this.applyPred(recursive? pred(e: T): Bool => !cmp(piv, e));
 
-        if(count == 1) {
-            return this;
-        }
-        elif(count == 2n) {
-            if(cmp[recursive?](this.v1, this.v0)) {
-                return PartialVector<T>{this.mask, this.v1, this.v0, this.v2, this.v3};
-            }
-            else {
-                return this;
-            }
-        }
-        else {
-            xxxx;
-            
-            return this;
-        }
+        return PartialVector<T>::s_select(this, mle), PartialVector<T>::s_select(this, mgt); 
     }
 
-    recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+    recursive? method unique_from_sorted(eq: recursive? pred(_: T, _: T) -> Bool): PartialVector<T> {
         xxxx;
     }
     
