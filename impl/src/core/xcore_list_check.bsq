@@ -664,14 +664,195 @@ entity ListOps provides Some {
         }
     }
 
-    s_min_arg<
-        s_max_arg<
-            s_sum
+    recursive? function s_min_arg<T, U unique Orderable>(l: ListRepr<T>, f: recursive? fn(v: T) -> U): Nat {
+        if(l.is<Vector1<T>>()) {
+            return 0n;
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(f[recursive?](l.v1) < f[recursive?](l.v0)) {
+                return 1n;
+            }
+            else {
+                return 0n;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let lt21 = f[recursive?](l.v2) < f[recursive?](l.v1);
+            let lt20 = f[recursive?](l.v2) < f[recursive?](l.v0);
+            let lt10 = f[recursive?](l.v1) < f[recursive?](l.v0);
+            if(/\(lt21, lt20)) {
+                return 2n;
+            }
+            elif(lt10) {
+                return 1n;
+            }
+            else {
+                return 0n
+            }
+        }
+        else {
+            return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l).min_arg[recursive?](f);
+        }
+    }
 
-    s_join
-    s_sort
-    s_unique_from_sorted
-    s_reverse
+    recursive? function s_max_arg<T, U unique Orderable>(l: ListRepr<T>, f: recursive? fn(v: T) -> U): Nat {
+        if(l.is<Vector1<T>>()) {
+            return 0n;
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(f[recursive?](l.v1) > f[recursive?](l.v0)) {
+                return 1n;
+            }
+            else {
+                return 0n;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let gt21 = f[recursive?](l.v2) > f[recursive?](l.v1);
+            let gt20 = f[recursive?](l.v2) > f[recursive?](l.v0);
+            let gt10 = f[recursive?](l.v1) > f[recursive?](l.v0);
+            if(/\(gt21, gt20)) {
+                return 2n;
+            }
+            elif(gt10) {
+                return 1n;
+            }
+            else {
+                return 0n
+            }
+        }
+        else {
+            return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l).max_arg[recursive?](f);
+        }
+    }
+
+    function s_sum<T unique Algebraic>(l: ListRepr<T>): T {
+        if(l === none) {
+            return T::zero;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l.v0;
+        }
+        elif(l.is<Vector2<T>>()) {
+            return l.v0 + l.v1;
+        }
+        elif(l.is<Vector3<T>>()) {
+            return l.v0 + l.v1 + l.v2;
+        }
+        else {
+            return l.sum();
+        }
+    }
+
+    recursive? function s_sort<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(!cmp[recursive?](l.v1, l.v0)) {
+                return l;
+            }
+            else {
+                return List<T>@{at1, at0};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let l10 = cmp[recursive?](l.v1, l.v0);
+            let l20 = cmp[recursive?](l.v2, l.v0);
+            let l21 = cmp[recursive?](l.v2, l.v1);
+
+            if(/\(l20, l21)) {
+                if(l10) {
+                    return Vector3<T>{l.v2, l.v1, l.v0};
+                }
+                else {
+                    return Vector3<T>{l.v2, l.v0, l.v1};
+                }
+            }
+            elif(/\(l10, !l21)) {
+                if(l20) {
+                    return Vector3<T>{l.v1, l.v2, l.v0};
+                }
+                else {
+                    return Vector3<T>{l.v1, l.v0, l.v2};
+                }
+            }
+            else {
+                if(l21) {
+                    return Vector3<T>{l.v0, l.v2, l.v1};
+                }
+                else {
+                    return Vector3<T>{l.v0, l.v1, l.v2};
+                }
+            }
+        }
+        else {
+            return l.sort[recursive?](eq);
+        }
+    }
+
+    recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(eq[recursive?](l.v0, l.v1)) {
+                return Vector1<T>{l.v0};
+            }
+            else {
+                return l;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let eq01 = eq[recursive?](l.v0, l.v1);
+            let eq02 = eq[recursive?](l.v0, l.v2);
+            let eq12 = eq[recursive?](l.v1, l.v2);
+            
+
+            if(/\(eq01, eq02)) {
+                return Vector1<T>{l.v0};
+            }
+            elif(eq01) {
+                return Vector2<T>{l.v0, l.v2};
+            }
+            elif(eq02) {
+                return Vector2<T>{l.v0, l.v1};
+            }
+            elif(eq12) {
+                return Vector2<T>{l.v0, l.v1};
+            }
+            else {
+                return l;
+            }
+        }
+        else {
+            return l.unique_from_sorted[recursive?](eq);
+        }
+    }
+    
+    function s_reverse(l: ListRepr<T>): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            return Vector2<T>{l.v1, l.v0};
+        }
+        elif(l.is<Vector3<T>>()) {
+            return Vector3<T>{l.v2, l.v1, l.v0};
+        }
+        else {
+            return l.reverse();
+        }
+    }
 }
 
 entity RecList<T> provides Some {

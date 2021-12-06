@@ -75,6 +75,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
     __safe function s_append(pv1: PartialVector<T>, pv2: PartialVector<T>): PartialVector<T> # pv_append
     __safe function s_slice_start(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> # pv_slice_start
     __safe function s_slice_end(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> # pv_slice_end
+    __safe function s_reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> # pv_reverse
 
     field mask: Mask;
     field v0: T;
@@ -423,18 +424,127 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return PartialVector<U>{m, v0, v1, v2, v3};
     }
 
+    recursive? method s_min_arg<T, U unique Orderable>(f: recursive? fn(v: T) -> U): Nat {
+        let m = this.mask;
+        var minidx = 0n;
+        var minval = f[recursive?](this.v0);
+
+        if(m.bit1) {
+            let v1 = f[recursive?](this.v1);
+            if(v1 < minval) {
+                minidx = 1n;
+                minval = v1;
+            }
+        }
+
+        if(m.bit2) {
+            let v2 = f[recursive?](this.v2);
+            if(v2 < minval) {
+                minidx = 2n;
+                minval = v2;
+            }
+        }
+
+        if(m.bit3) {
+            let v3 = f[recursive?](this.v2);
+            if(v3 < minval) {
+                minidx = 3n;
+                minval = v3;
+            }
+        }
+        
+        return minidx;
+    }
+
+    recursive? method s_max_arg<T, U unique Orderable>(f: recursive? fn(v: T) -> U): Nat {
+        let m = this.mask;
+        var maxidx = 0n;
+        var maxval = f[recursive?](this.v0);
+
+        if(m.bit1) {
+            let v1 = f[recursive?](this.v1);
+            if(v1 > maxval) {
+                maxidx = 1n;
+                maxval = v1;
+            }
+        }
+
+        if(m.bit2) {
+            let v2 = f[recursive?](this.v2);
+            if(v2 > maxval) {
+                maxidx = 2n;
+                maxval = v2;
+            }
+        }
+
+        if(m.bit3) {
+            let v3 = f[recursive?](this.v2);
+            if(v3 > maxval) {
+                maxidx = 3n;
+                maxval = v3;
+            }
+        }
+        
+        return maxidx;
+    }
+
+    method s_sum<T unique Algebraic>(iv: T): T {
+        let m = this.mask;
+        var acc = iv;
+
+        if(m.bit0) {
+            acc = acc + this.v0;
+        }
+
+        if(m.bit1) {
+            acc = acc + this.v1;
+        }
+
+        if(m.bit2) {
+            acc = acc + this.v2;
+        }
+
+        if(m.bit3) {
+            acc = acc + this.v3;
+        }
+        
+        return acc;
+    }
+
+    recursive? method sort2(cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<T> {
+        let m = this.mask;
+        let count = Mask::s_count(m);
+
+        if(count == 1) {
+            return this;
+        }
+        elif(count == 2n) {
+            if(cmp[recursive?](this.v1, this.v0)) {
+                return PartialVector<T>{this.mask, this.v1, this.v0, this.v2, this.v3};
+            }
+            else {
+                return this;
+            }
+        }
+        else {
+            xxxx;
+            
+            return this;
+        }
+    }
+
+    recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+        xxxx;
+    }
+    
+    method s_reverse(): PartialVector<T> {
+        return PartialVector<T>::s_reverse(this, Mask::s_count(this.mask));
+    }
+
     recursive? function s_reduce_fn<T, U>(pv: PartialVector<T>, init: U, p: recursive? fn(_: T) -> U): U # special_function_pv_reduce_fn
     recursive? function s_reduce_fn_idx<T, U>(pv: PartialVector<T>, init: U, idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): U # special_function_pv_reduce_fn_idx
 
     recursive? function s_transduce_fn<T, U, E>(pv: PartialVector<T>, init: E, p: recursive? fn(_: T, _: E) -> U, E): PartialVector<U> # special_function_pv_transduce_fn
     recursive? function s_transduce_fn_idx<T, U, E>(pv: PartialVector<T>, init: E, idx: Nat, p: recursive? fn(_: T, _: E, _: Nat) -> U, E): PartialVector<U> # special_function_pv_transduce_fn_idx
-
-    recursive? method sort2(cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<U> {
-        assert(Mask::s_count(this.mask) <= 2n);
-
-        if(Mask::s_count(this.mask) == 2n && cmp[recursive?](this.v1, this.v0)) {
-            return PartialVector<T>{this.mask, this.v1, this.v0, this.v2, this.v3};
-        }
-    }
 }
 #endif
