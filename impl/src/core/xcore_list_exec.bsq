@@ -366,6 +366,69 @@ __internal entity ListOps provides Some {
             return l.reverse[recursive]();
         }
     }
+
+    recursive? function s_reduce<T, U>(init: U, op: recursive? fn(_: T, _: U) -> U): U {
+        if(l === none) {
+            return init;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return l.s_reduce_fn<U>[recursive?](init, op);
+        }
+        else {
+            return l.reduce<U>[recursive](init, op);
+        }
+    }
+
+    recursive? function s_reduce_idx<T, U>(init: U, op: recursive? fn(_: T, _: U, _: Nat) -> U): U {
+        if(l === none) {
+            return init;
+        }
+        elif(l.is<PartialVector<T>>()) {
+            return l.s_reduce_fn_idx<U>[recursive?](init, 0n, op);
+        }
+        else {
+            return l.reduce_idx<U>[recursive](init, 0n, op);
+        }
+    }
+
+    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: T, _: E) -> U, E): ListRepr<U>, E {
+        if(l === none) {
+            return none, env;
+        }
+        else {
+            var nl: ListRepr<U>;
+            var nenv: E;
+
+            if(l.is<PartialVector<T>>()) {
+                nl, nenv = l.s_transduce_fn<E, U>[recursive?](env, op);
+            }
+            else {
+                nl, nenv = l.transduce<E, U>[recursive](env, op);
+            }
+
+            return nl, nenv;
+        }
+    }
+    }
+
+    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: T, _: E, _: Nat) -> U, E): ListRepr<U>, E {
+        if(l === none) {
+            return none, env;
+        }
+        else {
+            var nl: ListRepr<U>;
+            var nenv: E;
+
+            if(l.is<PartialVector<T>>()) {
+                nl, nenv = l.s_transduce_fn_idx<E, U>[recursive?](env, 0n, op);
+            }
+            else {
+                nl, nenv = l.transduce_idx<E, U>[recursive](env, 0n, op);
+            }
+
+            return nl, nenv;
+        }
+    }
 }
 
 typedef ListTreeEntry<T> = PartialVector<T> | ListTree<T>;
@@ -1042,12 +1105,35 @@ entity ListTree<T> provides Some {
         return lacc + racc;
     }
     
+    recursive method sort(cmp: recursive? pred(_: T, _: T) -> Bool): ListTreeEntry<T> {
+        return ListTree<T>::s_sort_entry[recursive](this, cmp);
+    }
+
+    recursive function s_sort_entry(ll: ListTreeEntry<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListTreeEntry<T> {
+        if(l.is<PartialVector<T>>()) {
+            return l.s_sort(cmp);
+        }
+        else {
+            llt, leq, lgt = ListTree<T>::s_partition[recursive](l, cmp);
+            
+            var llk = ListOps::s_safeAs<ListTreeEntry<T>?, ListTreeEntry<T>>(lleq);
+            if(llt !== none) {
+                llk = ListTree<T>::append(llt, llk);
+            }
+            if(lgt !== none) {
+                llk = ListTree<T>::append(llk, lgt);
+            }
+
+            return llk;
+        }
+    }
+
     recursive function s_partition(ll: ListTree<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListTreeEntry<T>?, ListTreeEntry<T>?, ListTreeEntry<T>? {
         let count = ll.count;
 
         let e0 = ll.safe_get[recursive](0n);
         let em = ll.safe_get[recursive](count / 2n);
-        let ec = ll.safe_get[recursive](count - 1);
+        let ec = ll.safe_get[recursive](count - 1n);
 
         let lt0m = cmp[recursive](e0, em);
         let lt0c = cmp[recursive](e0, ec);
@@ -1144,6 +1230,110 @@ entity ListTree<T> provides Some {
         }
         
         return ListTree<T>::append(nr, nl);
+    }
+
+    recursive method reduce<U>(init: U, op: recursive? fn(_: T, _: U) -> U): U {
+        let l = this.left;
+        let r = this.right;
+        
+        var uu = init;
+
+        if(l.is<PartialVector<T>>()) {
+            uu = l.s_reduce_fn<U>[recursive?](uu, op);
+        }
+        else {
+            uu = l.reduce<U>[recursive](uu, op);
+        }
+
+        if(r.is<PartialVector<T>>()) {
+            uu = r.s_reduce_fn<U>[recursive?](uu, op);
+        }
+        else {
+            uu = r.reduce<U>[recursive](uu, op);
+        }
+        
+        return uu;
+    }
+
+    recursive method reduce_idx<U>(init: U, idx: Nat, op: recursive? fn(_: T, _: U, _: Nat) -> U): U {
+        let l = this.left;
+        let r = this.right;
+        
+        var uu = init;
+
+        var lcount: Nat;
+        if(l.is<PartialVector<T>>()) {
+            lcount = l.count();
+            uu = l.s_reduce_fn_idx<U>[recursive?](uu, idx, op);
+        }
+        else {
+            lcount = l.count;
+            uu = l.reduce_idx<U>[recursive](uu, idx, op);
+        }
+
+        let nidx = idx + lcount;
+        if(r.is<PartialVector<T>>()) {
+            uu = r.s_reduce_fn_idx<U>[recursive?](uu, nidx, op);
+        }
+        else {
+            uu = r.reduce_idx<U>[recursive](uu, nidx, op);
+        }
+        
+        return uu;
+    }
+
+    recursive method transduce<E, U>(env: E, op: recursive? fn(_: T, _: E) -> U, E): ListTree<U>, E {
+        let l = this.left;
+        let r = this.right;
+        
+        var ee = env;
+
+        var nl: ListTreeEntry<U>;
+        if(l.is<PartialVector<T>>()) {
+            nl, ee = l.s_transduce_fn<E, U>[recursive?](ee, op);
+        }
+        else {
+            nl, ee = l.transduce<E, U>[recursive](ee, op);
+        }
+
+        var nr: ListTreeEntry<U>;
+        if(r.is<PartialVector<T>>()) {
+            nr, ee = r.s_transduce_fn<E, U>[recursive?](ee, op);
+        }
+        else {
+            nr, ee = r.transduce<E, U>[recursive](ee, op);
+        }
+        
+        return ListTree<T>::append(nl, nr), ee;
+    }
+
+    recursive method transduce_idx<E, U>(env: E, idx: Nat, op: recursive? fn(_: T, _: E, _: Nat) -> U, E): ListTree<U>, E {
+        let l = this.left;
+        let r = this.right;
+        
+        var ee = env;
+
+        var lcount: Nat;
+        var nl: ListTreeEntry<U>;
+        if(l.is<PartialVector<T>>()) {
+            lcount = l.count();
+            nl, ee = l.s_transduce_fn_idx<E, U>[recursive?](ee, idx, op);
+        }
+        else {
+            lcount = l.count;
+            nl, ee = l.transduce_idx<E, U>[recursive](ee, idx, op);
+        }
+
+        let nidx = idx + lcount;
+        var nr: ListTreeEntry<U>;
+        if(r.is<PartialVector<T>>()) {
+            nr, ee = r.s_transduce_fn_idx<E, U>[recursive?](ee, nidx, op);
+        }
+        else {
+            nr, ee = r.transduce_idx<E, U>[recursive](ee, nidx, op);
+        }
+        
+        return ListTree<T>::append(nl, nr), ee;
     }
 }
 

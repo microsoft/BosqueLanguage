@@ -1217,11 +1217,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         } 
     }
 
-    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T) -> U): U {
+    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T, _: U) -> U): U {
         return ListOps::s_reduce<T, U>[recursive?](this.value(), init, f);
     }
 
-    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T, _: Nat) -> U): U {
+    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T, _: U, _: Nat) -> U): U {
         return ListOps::s_reduce_idx<T, U>[recursive?](this.value(), init, f);
     }
 
