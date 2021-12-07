@@ -1006,6 +1006,49 @@ entity RecList<T> provides Some {
         let llm = this.ll.map<U>[recursive](0n, f);
         return RecList<T>{llm, this.count};
     }
+
+    recursive? method min_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat {
+        let midx, _ = this.ll.min_arg<U>[recursive](0, f);
+        return minidx;
+    }
+
+    recursive? method max_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
+        let midx, _ = this.ll.max_arg<U>[recursive?](0, f);
+        return minidx;
+    }
+
+    method {when T unique Algebraic} sum(): T {
+        return this.ll.sum[recursive](f);
+    }
+
+    recursive method sort(cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+        return RecList<T>{this.ll.sort[recursive](cmp), this.count};
+    }
+
+    recursive method unique_from_sorted(prev: T, eq: recursive? pred(_: T, _: T) -> Bool): RecListEntry<T>?, Nat {
+        let tl = this.ll.tail;
+        let hh = this.ll.head;
+
+        let nll, ns = ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(tl).unique_from_sorted[recursive](hh, eq);
+        if(ns <= 3) {
+            if(ns == 1) {
+                return RecListEntry<T>::s_list_to_vector1(nll);
+            }
+            elif(ns == 2) {
+                return RecListEntry<T>::s_list_to_vector2(nll);
+            }
+            else {
+                return RecListEntry<T>::s_list_to_vector3(nll);
+            }
+        }
+        else {
+            return RecList<T>{nll, ns};
+        }
+    }
+    
+    method reverse(): RecList<T> {
+        return RecList<T>{this.ll.reverse[recursive](), this.count};
+    }
 }
 
 entity RecListEntry<T> provides Some {
@@ -1255,7 +1298,7 @@ entity RecListEntry<T> provides Some {
         let ph = p[recursive?](hh);
         if(tl === none) {
             if(ph) {
-                RecListEntry<T>{hh, none}, 1n;
+                return RecListEntry<T>{hh, none}, 1n;
             }
             else {
                 return none, 0n;
@@ -1279,14 +1322,14 @@ entity RecListEntry<T> provides Some {
         let ph = p[recursive?](hh, idx);
         if(tl === none) {
             if(ph) {
-                RecListEntry<T>{hh, none}, 1n;
+                return RecListEntry<T>{hh, none}, 1n;
             }
             else {
                 return none, 0n;
             }
         }
         else {
-            let ntl, nts = tl.filter_pred_idx[recursive](p, idx + 1n);
+            let ntl, nts = tl.filter_pred_idx[recursive](idx + 1n, p);
             if(ph) {
                 return RecListEntry<T>{hh, ntl}, nts + 1n;
             }
@@ -1302,7 +1345,7 @@ entity RecListEntry<T> provides Some {
 
         let nh = f[recursive?](hh);
         if(tl === none) {
-            RecListEntry<U>{nh, none};
+            return RecListEntry<U>{nh, none};
         }
         else {
             let ntl = tl.map<U>[recursive](f);
@@ -1316,11 +1359,127 @@ entity RecListEntry<T> provides Some {
 
         let nh = f[recursive?](hh, idx);
         if(tl === none) {
-            RecListEntry<U>{nh, none};
+            return RecListEntry<U>{nh, none};
         }
         else {
-            let ntl = tl.map<U>[recursive](f, idx + 1n);
+            let ntl = tl.map<U>[recursive](idx + 1n, f);
             return RecListEntry<U>{nh, ntl};
+        }
+    }
+
+    recursive method min_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
+        let tl = this.tail;
+        let hh = this.head;
+        let hu = f[recursive?](hh);
+
+        if(tl === none) {
+            return idx, hu;
+        }
+        else {
+            let ntl, ntu = tl.min_arg<U>[recursive](idx + 1n, f);
+            if(ntu < hu) {
+                return ntl, ntu;
+            }
+            else {
+                return idx, hu;
+            }
+        }
+    }
+
+    recursive method max_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
+        let tl = this.tail;
+        let hh = this.head;
+        let hu = f[recursive?](hh);
+
+        if(tl === none) {
+            return idx, hu;
+        }
+        else {
+            let ntl, ntu = tl.min_arg<U>[recursive](idx + 1n, f);
+            if(ntu > hu) {
+                return ntl, ntu;
+            }
+            else {
+                return idx, hu;
+            }
+        }
+    }
+
+    recursive method {when T unique Algebraic} sum(): T {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return hh;
+        }
+        else {
+            return hh + tl.sum();
+        }
+    }
+
+    recursive method sort(cmp: recursive? pred(_: T, _: T) -> Bool): RecListEntry<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return this;
+        }
+        else {
+            let ntl = tl.sort[recursive](cmp);
+            return ntl.sort_insert(hh, cmp);
+        }
+    }
+
+    recursive method sort_insert(v: T, cmp: recursive? pred(_: T, _: T) -> Bool): RecListEntry<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(!cmp[recursive?](hh, v)) {
+            return RecListEntry<T>{v, this};
+        }
+        else {
+            if(tl === none) {
+                return RecListEntry<T>{hh, RecListEntry<T>{v, none}};
+            }
+            else {
+                let ntl = tl.sort_insert[recursive](v, cmp);
+                return RecListEntry<T>{hh, ntl};
+            }
+        }
+    }
+
+    recursive method unique_from_sorted(prev: T, eq: recursive? pred(_: T, _: T) -> Bool): RecListEntry<T>?, Nat {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(eq[recursive?](prev, hh)) {
+            if(tl === none) {
+                return none, 0n;
+            }
+            else {
+                return tl.unique_from_sorted[recursive](prev, eq);
+            }
+        }
+        else {
+            if(tl === none) {
+                return RecListEntry<T>{hh, none}, 1n;
+            }
+            else {
+                let tll, n = tl.unique_from_sorted[recursive](hh, eq);
+                return RecListEntry<T>{hh, tll}, n + 1n;
+            }
+        }
+    }
+    
+    recursive method reverse(rl: RecListEntry<T>?): RecListEntry<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return RecListEntry<T>{hh, rl};
+        }
+        else {
+            return tl.reverse[recursive](RecListEntry<T>{hh, rl});
         }
     }
 }

@@ -85,7 +85,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
 
     invariant !$mask.empty();
 
-    recursive? method applyPred(p: recursive? pred(_: T) -> Bool): Mask {
+    recursive? method apply_pred(p: recursive? pred(_: T) -> Bool): Mask {
         let m = this.mask;
         var b0 = false;
         var b1 = false;
@@ -297,21 +297,21 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         let m = Mask::s_init_k(count);
 
         if(count <= 1n) {
-            return PartialVector<Int>{m, start, zero, zero, zero};
+            return PartialVector<T>{m, start, zero, zero, zero};
         }
         else {
             let e1 = start + inc;
             if(count == 2n) {
-                return PartialVector<Int>{m, start, e1, zero, zero};
+                return PartialVector<T>{m, start, e1, zero, zero};
             }
             else {
                 let e2 = e1 + inc;
                 if(count == 3n) {
-                    return PartialVector<Int>{m, start, e1, e2, zero};
+                    return PartialVector<T>{m, start, e1, e2, zero};
                 }
                 else {
                     let e3 = e2 + inc;
-                    return PartialVector<Int>{m, start, e1, e2, e3};
+                    return PartialVector<T>{m, start, e1, e2, e3};
                 }
             }
         }
@@ -341,7 +341,7 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
             v3 = v;
         }
         
-        return PartialVector<U>{m, v0, v1, v2, v3};
+        return PartialVector<T>{m, v0, v1, v2, v3};
     }
 
     method s_zip_index<T>(idx: Nat): PartialVector<[Nat, T]> {
@@ -367,17 +367,17 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
             v3 = [idx + 3n, this.v3];
         }
         
-        return PartialVector<U>{m, v0, v1, v2, v3};
+        return PartialVector<[Nat, T]>{m, v0, v1, v2, v3};
     }
 
-    method s_zip<U>(ov: PartialVector<U>): PartialVector<[V, U]> {
+    method s_zip<U>(ov: PartialVector<U>): PartialVector<[T, U]> {
         let tm = this.mask;
         let om = ov.mask;
 
-        var v0 = s_pv_undef<[V, U]>();
-        var v1 = s_pv_undef<[V, U]>();
-        var v2 = s_pv_undef<[V, U]>();
-        var v3 = s_pv_undef<[V, U]>();
+        var v0 = s_pv_undef<[T, U]>();
+        var v1 = s_pv_undef<[T, U]>();
+        var v2 = s_pv_undef<[T, U]>();
+        var v3 = s_pv_undef<[T, U]>();
 
         if(/\(tm.bit0, om.bit0)) {
             v0 = [this.v0, ov.v0];
@@ -395,15 +395,15 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
             v3 =[this.v3, ov.v3];
         }
         
-        return PartialVector<U>{Mask::and(tm, om), v0, v1, v2, v3};
+        return PartialVector<[T, U]>{Mask::and(tm, om), v0, v1, v2, v3};
     }
 
-    method s_zip_map<U>(idx: i, getfn: fn(i: Nat) -> U): PartialVector<[V, U]> {
+    method s_zip_map<U>(idx: i, getfn: fn(i: Nat) -> U): PartialVector<[T, U]> {
         let m = this.mask;
-        var v0 = s_pv_undef<[V, U]>();
-        var v1 = s_pv_undef<[V, U]>();
-        var v2 = s_pv_undef<[V, U]>();
-        var v3 = s_pv_undef<[V, U]>();
+        var v0 = s_pv_undef<[T, U]>();
+        var v1 = s_pv_undef<[T, U]>();
+        var v2 = s_pv_undef<[T, U]>();
+        var v3 = s_pv_undef<[T, U]>();
 
         if(m.bit0) {
             v0 = [this.v0, getfn(idx)];
@@ -421,10 +421,10 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
             v3 =[this.v3, getfn(idx + 3n)];
         }
         
-        return PartialVector<U>{m, v0, v1, v2, v3};
+        return PartialVector<[T, U]>{m, v0, v1, v2, v3};
     }
 
-    recursive? method s_min_arg<T, U unique Orderable>(f: recursive? fn(v: T) -> U): Nat {
+    recursive? method s_min_arg<T, U unique Orderable>(f: recursive? fn(v: T) -> U): Nat, U {
         let m = this.mask;
         var minidx = 0n;
         var minval = f[recursive?](this.v0);
@@ -446,17 +446,17 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         }
 
         if(m.bit3) {
-            let v3 = f[recursive?](this.v2);
+            let v3 = f[recursive?](this.v3);
             if(v3 < minval) {
                 minidx = 3n;
                 minval = v3;
             }
         }
         
-        return minidx;
+        return minidx, minval;
     }
 
-    recursive? method s_max_arg<T, U unique Orderable>(f: recursive? fn(v: T) -> U): Nat {
+    recursive? method s_max_arg<T, U unique Orderable>(f: recursive? fn(v: T) -> U): Nat, U {
         let m = this.mask;
         var maxidx = 0n;
         var maxval = f[recursive?](this.v0);
@@ -478,17 +478,17 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         }
 
         if(m.bit3) {
-            let v3 = f[recursive?](this.v2);
+            let v3 = f[recursive?](this.v3);
             if(v3 > maxval) {
                 maxidx = 3n;
                 maxval = v3;
             }
         }
         
-        return maxidx;
+        return maxidx, maxval;
     }
 
-    method s_sum<T unique Algebraic>(iv: T): T {
+    method {when T unique Algebraic} s_sum(iv: T): T {
         let m = this.mask;
         var acc = iv;
 
@@ -511,17 +511,268 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return acc;
     }
 
-    recursive? method partition(piv: T, cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<T>, PartialVector<T> {
-        let mgt = this.applyPred(recursive? pred(e: T): Bool => cmp(piv, e));
-        let mle = this.applyPred(recursive? pred(e: T): Bool => !cmp(piv, e));
+    method s_parallel_sum<T unique Algebraic>(iv: T): T {
+        let m = this.mask;
+        
+        var v0= iv;
+        if(m.bit0) {
+            v0 = this.v0;
+        }
 
-        return PartialVector<T>::s_select(this, mle), PartialVector<T>::s_select(this, mgt); 
+        var v1 = iv;
+        if(m.bit1) {
+            v1 = this.v1;
+        }
+
+        var v2 = iv;
+        if(m.bit2) {
+            v2 = this.v2;
+        }
+
+        var v3 = iv;
+        if(m.bit3) {
+            v3 = this.v3;
+        }
+        
+        return v0 + v1 + v2 + v3;
     }
 
-    recursive? method unique_from_sorted(eq: recursive? pred(_: T, _: T) -> Bool): PartialVector<T> {
-        xxxx;
+    recursive? method s_partition(piv: T, cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<T>, PartialVector<T>, PartialVector<T> {
+        let m = this.mask;
+
+        var b0l = false;
+        var b0g = false;
+        var b0e = false;
+        if(m.bit0) {
+            b0l = cmp[recursive?](this.v0, piv);
+            b0g = cmp[recursive?](piv, this.v0);
+            b0e = /\(!b0l, b0g);
+        }
+
+        var b1l = false;
+        var b1g = false;
+        var b1e = false;
+        if(m.bit1) {
+            b1l = cmp[recursive?](this.v1, piv);
+            b1g = cmp[recursive?](piv, this.v1);
+            b1e = /\(!b1l, b1g);
+        }
+
+        var b2l = false;
+        var b2g = false;
+        var b2e = false;
+        if(m.bit2) {
+            b2l = cmp[recursive?](this.v2, piv);
+            b2g = cmp[recursive?](piv, this.v2);
+            b2e = /\(!b2l, b2g);
+        }
+
+        var b3l = false;
+        var b3g = false;
+        var b3e = false;
+        if(m.bit3) {
+            b3l = cmp[recursive?](this.v3, piv);
+            b3g = cmp[recursive?](piv, this.v3);
+            b3e = /\(!b3l, b3g);
+        }
+
+        let ml = Mask::s_cons(b0l, b1l, b2l, b3l);
+        let me = Mask::s_cons(b0e, b1e, b2e, b3e);
+        let mg = Mask::s_cons(b0g, b1g, b2g, b3g);
+        return PartialVector<T>::s_select(this, ml), PartialVector<T>::s_select(this, me), PartialVector<T>::s_select(this, mg);
     }
-    
+
+    recursive? method s_sort(cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<T> {
+        let count = this.mask.count();
+
+        if(count == 1n) {
+            return this;
+        }
+        else {
+            var v0 = s_pv_undef<T>();
+            var v1 = s_pv_undef<T>();
+            var v2 = s_pv_undef<T>();
+            var v3 = s_pv_undef<T>();
+
+            if(count == 2n) {
+                v0 = this.v0;
+                v1 = this.v1;
+                if(!cmp[recursive?](v1, v0)) {
+                    return this;
+                }
+                else {
+                    return PartialVector<T>{this.mask, v1, v0, v2, v3};
+                }
+            }
+            else {
+                let minxidx, maxidx = this.s_min_max[recursive?](cmp);
+                if(minidx == maxidx) {
+                    return this;
+                }
+                elif(count == 3n) {
+                    v0 = this.v0;
+                    v1 = this.v1;
+                    v2 = this.v2;
+
+                    if(minidx == 0n) {
+                        if(maxidx == 1n) {
+                            return PartialVector<T>{this.mask, v0, v2, v1, v3};
+                        }
+                        else {
+                            return this;
+                        }
+                    }
+                    elif(minidx == 1n) {
+                        if(maxidx == 0n) {
+                            return PartialVector<T>{this.mask, v1, v2, v0, v3};
+                        }
+                        else {
+                            return PartialVector<T>{this.mask, v1, v0, v2, v3};
+                        }
+                    }
+                    elif(minidx == 2n) {
+                        if(maxidx == 0n) {
+                            return PartialVector<T>{this.mask, v2, v1, v0, v3};
+                        }
+                        else {
+                            return PartialVector<T>{this.mask, v2, v0, v1, v3};
+                        }
+                    }
+                }
+                else {
+                    if(minidx == 0n) {
+                        if(maxidx == 1n) {
+
+                        }
+                        elif(maxidx == 2n) {
+                        
+                        }
+                        else {
+                        
+                        }
+                    }
+                    elif(minidx == 1n) {
+                        if(maxidx == 0n) {
+                        
+                        }
+                        elif(maxidx == 2n) {
+                        
+                        }
+                        else {
+                        
+                        }
+                    }
+                    elif(minidx == 2n) {
+                        if(maxidx == 0n) {
+                        
+                        }
+                        elif(maxidx == 1n) {
+                        
+                        }
+                        else {
+                        
+                        }
+                    }
+                    else {
+                        if(maxidx == 0n) {
+                        
+                        }
+                        elif(maxidx == 1n) {
+                        
+                        }
+                        else {
+                        
+                        }
+                    }
+                }
+            }
+            elif(count == 3n) {
+                v0 = this.v0;
+                v1 = this.v1;
+                v2 = this.v2;
+
+                let l10 = cmp[recursive?](v1, v0);
+                let l20 = cmp[recursive?](v2, v0);
+                let l21 = cmp[recursive?](v2, v1);
+
+                if(/\(l20, l21)) {
+                    if(l10) {
+                        return PartialVector<T>{this.mask, v2, v1, v0};
+                    }
+                    else {
+                        return PartialVector<T>{this.mask, v2, v0, v1};
+                    }
+                }
+                elif(/\(l10, !l21)) {
+                    if(l20) {
+                        return PartialVector<T>{this.mask, v1, v2, v0};
+                    }
+                    else {
+                        return PartialVector<T>{this.mask, v1, v0, v2};
+                    }
+                }
+                else {
+                    if(l21) {
+                        return PartialVector<T>{this.mask, v0, v2, v1};
+                    }
+                    else {
+                        return this;
+                    }
+                }
+            }
+            else {
+
+            }
+        }
+    }
+
+    recursive? method s_min_max<T, U unique Orderable>(f: recursive? fn(v: T) -> U): Nat, Nat {
+        let m = this.mask;
+
+        var minidx = 0n;
+        var minval = f[recursive?](this.v0);
+        var maxidx = 0n;
+        var maxval = f[recursive?](this.v0);
+
+        if(m.bit1) {
+            let v1 = f[recursive?](this.v1);
+            if(v1 < minval) {
+                minidx = 1n;
+                minval = v1;
+            }
+            if(v1 > maxval) {
+                maxidx = 1n;
+                maxval = v1;
+            }
+        }
+
+        if(m.bit2) {
+            let v2 = f[recursive?](this.v2);
+            if(v2 < minval) {
+                minidx = 2n;
+                minval = v2;
+            }
+            if(v2 > maxval) {
+                maxidx = 2n;
+                maxval = v2;
+            }
+        }
+
+        if(m.bit3) {
+            let v3 = f[recursive?](this.v3);
+            if(v3 < minval) {
+                minidx = 3n;
+                minval = v3;
+            }
+            if(v3 > maxval) {
+                maxidx = 3n;
+                maxval = v3;
+            }
+        }
+        
+        return minidx, maxidx;
+    }
+
     method s_reverse(): PartialVector<T> {
         return PartialVector<T>::s_reverse(this, Mask::s_count(this.mask));
     }

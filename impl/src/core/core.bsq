@@ -68,6 +68,13 @@ __universal concept APIType provides Any {
 __universal concept Algebraic provides Any {
 }
 
+enum AlgebraicOpStability {
+    unstable,
+    bounded,
+    stable,
+    complete
+}
+
 //<summary>Type for indicating that a datatype overrides the algebraic operators ==, !=, <, >, <=, >=.</summary>
 __universal concept Orderable provides Any {
 }
@@ -95,6 +102,7 @@ abstract infix operator >=(a: Some, b: Some): Bool;
 
 //<summary>Primitive integer value.</summary>
 __internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::bounded;
     const zero: Int = 0i;
     const one: Int = 1i;
     const negone: Int = -1i;
@@ -121,6 +129,7 @@ __safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 
 //<summary>Primitive natural number value.</summary>
 __internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::stable;
     const zero: Nat = 0n;
     const one: Nat = 1n;
 
@@ -145,6 +154,7 @@ __safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
 __internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::complete;
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
     const negone: BigInt = -1I;
@@ -171,6 +181,7 @@ __safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = defaul
 
 //<summary>Primitive big-integer value.</summary>
 __internal __typedeclable entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::complete;
     const zero: BigNat = 0N;
     const one: BigNat = 1N;
 
@@ -195,6 +206,7 @@ __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = defaul
 
 //<summary>Primitive rational value.</summary>
 __internal __typedeclable entity Rational provides Some, Algebraic, Orderable, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
     const zero: Rational = 0/1R;
     const one: Rational = 1/1R;
     const negone: Rational = -1/1R;
@@ -221,6 +233,7 @@ __safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = de
 
 //<summary>Primitive float value defaults to 64bit.</summary>
 __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
     const negone: Float = -1.0f;
@@ -264,6 +277,7 @@ __safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 
 //<summary>Primitive float decimal value.</summary>
 __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
     const zero: Decimal = 0.0d;
     const one: Decmial = 1.0d;
     const negone: Decmial = -1.0d;
