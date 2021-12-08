@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if CHECK_LIBS
-entity MapOps provides Some {
+internal entity MapOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # map_safeas
 
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
@@ -102,8 +102,55 @@ entity MapOps provides Some {
         elif(m2 === none) {
             return m1;
         }
+        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
+            let kl0 = l.v0.0;
+            let kr0 = r.v0.0;
+            check !KeyType::equal<T>(kl0, kr0);
+
+            if(KeyType::less<K>(kl0, kr0)) {
+                return Vector2<[K, V]>{l.v0, r.v0};
+            }
+            else {
+                return Vector2<[K, V]>{r.v0, l.v0};
+            }
+        }
+        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
+            let kl0 = l.v0.0;
+            let kr0 = r.v0.0;
+            let kr1 = r.v1.0;
+            check /\(!KeyType::equal<T>(kl0, kr0), !KeyType::equal<T>(kl0, kr1));
+
+            if(KeyType::less<K>(kl0, kr0)) {
+                return Vector3<[K, V]>{l.v0, r.v0, r.v1};
+            }
+            elif(KeyType::less<K>(kl0, kr1)) {
+                return Vector3<[K, V]>{r.v0, l.v0, r.v1};
+            }
+            else {
+                return Vector3<[K, V]>{r.v0, r.v1, l.v0};
+            }
+        }
+        elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
+            let kl0 = l.v0.0;
+            let kl1 = l.v1.0;
+            let kr0 = r.v0.0;
+            check /\(!KeyType::equal<T>(kr0, kl0), !KeyType::equal<T>(kr0, kr1));
+
+            if(KeyType::less<K>(kr0, kl0)) {
+                return Vector3<[K, V]>{r.v0, l.v0, l.v1};
+            }
+            elif(KeyType::less<K>(kr0, kl1)) {
+                return Vector3<[K, V]>{l.v0, r.v0, l.v1};
+            }
+            else {
+                return Vector3<[K, V]>{l.v0, l.v1, r.v0};
+            }
+        }
         else {
-            xxxx;
+            let ll, llc = RecMapEntry<T>::s_ensure_list(l);
+            let rr, rrc = RecMapEntry<T>::s_ensure_list(r);
+
+            return RecMap<K, V>{llc + rrc, RecMapEntry<K, V>::union(ll, rr)}; 
         }
     }
 
@@ -111,8 +158,8 @@ entity MapOps provides Some {
         if(m === none) {
             return none;
         }
-        elif(l.is<Vector1<[K, V]>>()) {
-            let v0 = l.v0;
+        elif(m.is<Vector1<[K, V]>>()) {
+            let v0 = m.v0;
             let p0 = p[recursive?](v0.0, v0.1);
 
             if(p0) {
@@ -122,60 +169,60 @@ entity MapOps provides Some {
                 return none;
             }
         }
-        elif(l.is<Vector2<T>>()) {
-            let v0 = l.v0;
-            let p0 = p[recursive?](v0);
-            let v1 = l.v1;
-            let p1 = p[recursive?](v1);
+        elif(l.is<Vector2<[K, V]>>()) {
+            let v0 = m.v0;
+            let p0 = p[recursive?](v0.0, v0.1);
+            let v1 = m.v1;
+            let p1 = p[recursive?](v1.0, v1.1);
 
             if(/\(p0, p1)) {
-                return l;
+                return m;
             }
             elif(p0) {
-                return Vector1<T>{v0};
+                return Vector1<[K, V]>{v0};
             }
             elif(p1) {
-                return Vector1<T>{v1};
+                return Vector1<[K, V]>{v1};
             }
             else {
                 return none;
             }
         }
-        elif(l.is<Vector3<T>>()) {
-            let v0 = l.v0;
-            let p0 = p[recursive?](v0);
-            let v1 = l.v1;
-            let p1 = p[recursive?](v1);
-            let v2 = l.v2;
-            let p2 = p[recursive?](v2);
+        elif(m.is<Vector3<[K, V]>>()) {
+            let v0 = m.v0;
+            let p0 = p[recursive?](v0.0, v0.1);
+            let v1 = m.v1;
+            let p1 = p[recursive?](v1.0, v1.1);
+            let v2 = m.v2;
+            let p2 = p[recursive?](v2.0, v2.1);
 
             if(/\(p0, p1, p2)) {
-                return l;
+                return m;
             }
             elif(/\(p0, p1)) {
-                return Vector2<T>{v0, v1};
+                return Vector2<[K, V]>{v0, v1};
             }
             elif(/\(p0, p2)) {
-                return Vector2<T>{v0, v2};
+                return Vector2<[K, V]>{v0, v2};
             }
             elif(/\(p1, p2)) {
-                return Vector2<T>{v1, v2};
+                return Vector2<[K, V]>{v1, v2};
             }
             elif(p0) {
-                return Vector1<T>{v0};
+                return Vector1<[K, V]>{v0};
             }
             elif(p1) {
-                return Vector1<T>{v1};
+                return Vector1<[K, V]>{v1};
             }
             elif(p2) {
-                return Vector1<T>{v2};
+                return Vector1<[K, V]>{v2};
             }
             else {
                 return none;
             }
         }
         else {
-            xxxx;
+            return m.submap[recursive?](p);
         }
     }
 
@@ -183,8 +230,23 @@ entity MapOps provides Some {
         if(m === none) {
             return none;
         }
+        elif(m.is<Vector1<[K, V]>>()) {
+            let v0 = m.v0;
+            return Vector1<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)]};
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            let v0 = m.v0;
+            let v1 = m.v1;
+            return Vector2<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)]};
+        }
+        elif(m.is<Vector3<[K, V]>>()) {
+            let v0 = m.v0;
+            let v1 = m.v1;
+            let v2 = m.v2;
+            return Vector3<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)]};
+        }
         else {
-            xxxx;
+            return m.remap<U>[recursive?](f);
         }
     }
 
@@ -297,6 +359,26 @@ entity RecMap<K grounded KeyType, V> provides Some {
         return this.t.find[recursive](k);
     }
 
+    function union(m1: BTree<K, V>, m2: BTree<K, V>): RecMap<K, V> {
+        let um = RecMapEntry<K, V>::union[recursive](m1.ll, m2.ll);
+        return RecMap<K, V>{m1.count + m2.count, um};
+    }
+
+    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): RecMap<K, V>? {
+        let uu, us = this.ll.submap[recursive](p);
+        if(uu === none) {
+            return none;
+        }
+        else {
+            return RecMap<K, V>{us, uu};
+        }
+    }
+
+    recursive? method remap<U>(f: recursive? fn(k: K, v: V) -> U): RecMap<K, U> {
+        let um = this.ll.remap<U>[recursive](f);
+        return RecMap<K, V>{this.count, um};
+    }
+
     method add(k: K, v: V): RecMap<K, V> {
         return RecMap<K, V>{this.count + 1, this.ll.add[recursive](k, v)};
     }
@@ -360,6 +442,70 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
         }
     }
 
+    recursive function union(m1: RecMapEntry<K, V>, m2: RecMapEntry<K, V>): RecMapEntry<K, V> {
+        let m1tl = m1.tail;
+        let m1hh = m1.head;
+        let m2tl = m2.tail;
+        let m2hh = m2.head;
+
+        if(KeyType::less<T>(m1hh.0, m2hh.0)) {
+            if(m1tl === none) {
+                return RecMapEntry<T>{m1hh, m2};
+            }
+            else {
+                let um = RecMapEntry<K, V>::union(m1tl, m2);
+                return RecMapEntry<T>{m1hh, um};
+            }
+        }
+        else {
+            if(m2tl === none) {
+                return RecMapEntry<T>{m2hh, m1};
+            }
+            else {
+                let um = RecMapEntry<K, V>::union(m1, m2tl);
+                return RecMapEntry<T>{m2hh, um};
+            }
+        }
+    }
+
+    recursive method submap(p: recursive? pred(k: K, v: V) -> Bool): RecMapEntry<K, V>?, Nat {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let ph = p[recursive?](hh.0, hh.1);
+        if(tl === none) {
+            if(ph) {
+                return RecMapEntry<T>{hh, none}, 1n;
+            }
+            else {
+                return none, 0n;
+            }
+        }
+        else {
+            let ntl, nts = tl.submap[recursive](p);
+            if(ph) {
+                return RecMapEntry<T>{hh, ntl}, nts + 1n;
+            }
+            else {
+                return ntl, nts;
+            }
+        }
+    }
+
+    recursive method remap<U>(f: recursive? fn(k: K, v: V) -> U): RecMapEntry<K, U> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nh = f[recursive?](hh.0, hh.1);
+        if(tl === none) {
+            return RecMapEntry<K, U>{nh, none};
+        }
+        else {
+            let ntl = tl.remap<U>[recursive](f);
+            return RecMapEntry<K, U>{nh, ntl};
+        }
+    }
+
     recursive method add(k: K, v: V): RecMapEntry<K, V> {
         let kk = this.head.0;
         check !KeyType::equal<K>(k, kk);
@@ -409,6 +555,6 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
     }
 }
 
-typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | RecMap<[K, V]>;
+internal typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | RecMap<[K, V]>;
 
 #endif

@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if EXEC_LIBS
-__internal entity Mask provides Some, APIType {
+__internal internal entity Mask provides Some, APIType {
     field bit0: Bool;
     field bit1: Bool;
     field bit2: Bool;
@@ -67,9 +67,9 @@ __internal entity Mask provides Some, APIType {
     }
 }
 
-__safe function s_pv_undef<T>(): T # special_function
+__safe internal function s_pv_undef<T>(): T # special_function
 
-__internal entity PartialVector<T> provides Some, APIType when T grounded APIType {
+__internal internal entity PartialVector<T> provides Some, APIType when T grounded APIType {
     __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T # pv_safe_get
     __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> # pv_compact
     __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> # pv_append

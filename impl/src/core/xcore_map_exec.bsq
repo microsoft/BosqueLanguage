@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if EXEC_LIBS
-entity MapOps provides Some {
+internal entity MapOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # map_safeas
 
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
@@ -52,7 +52,7 @@ entity MapOps provides Some {
             return m1;
         }
         else {
-            xxxx;
+            return BTree<K, V>::union(m1, m2); 
         }
     }
 
@@ -61,7 +61,7 @@ entity MapOps provides Some {
             return none;
         }
         else {
-            xxxx;
+            return m.submap[recursive?](p); 
         }
     }
 
@@ -70,7 +70,7 @@ entity MapOps provides Some {
             return none;
         }
         else {
-            xxxx;
+            return m.remap<U>[recursive?](f);
         }
     }
 
@@ -92,7 +92,7 @@ entity MapOps provides Some {
     }
 }
 
-entity BTree<K grounded KeyType, V> {
+__internal internal entity BTree<K grounded KeyType, V> {
     field count: Nat;
     field t: BTreeNode<K, V>;
 
@@ -102,6 +102,26 @@ entity BTree<K grounded KeyType, V> {
 
     method find(k: K): [K, V]? {
         return this.t.find[recursive](k);
+    }
+
+    function union(m1: BTree<K, V>, m2: BTree<K, V>): BTree<K, V> {
+        let uu = BTreeNode<K, V>::union[recursive](m1.t, m2.t);
+        return BTree<K, V>{m1.count + m2.count, uu};
+    }
+
+    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): BTree<K, V>? {
+        let uu, us = this.t.submap[recursive](p);
+        if(uu === none) {
+            return none;
+        }
+        else {
+            return BTree<K, V>{us, uu};
+        }
+    }
+
+    recursive? method remap<U>(f: recursive? fn(k: K, v: V) -> U): BTree<K, U> {
+        let rmp = this.t.remap[recursive](f);
+        return BTree<K, U>{this.count, rmp};
     }
 
     method add(k: K, v: V): BTree<K, V> {
@@ -123,11 +143,15 @@ entity BTree<K grounded KeyType, V> {
     }
 }
 
-entity BTreeNode<K grounded KeyType, V> {
+internal entity BTreeNode<K grounded KeyType, V> {
     field key: K;
     field val: V;
     field l: BTree<K, V>?;
     field r: BTree<K, V>?;
+
+    method isLeaf() {
+        return /\(this.l === none, this.r === none);
+    }
 
     recursive has(k: K): Bool {
         let kk = this.key;
@@ -181,12 +205,123 @@ entity BTreeNode<K grounded KeyType, V> {
         }
     }
 
+    recursive function union(m1: BTreeNode<K, V>, m2: BTreeNode<K, V>): BTreeNode<K, V> {
+        if(m2.isLeaf()) {
+            return m1.add[recursive](m2.key, m2.val);
+        }
+        elif(m1.isLeaf()) {
+            return m2.add[recursive](m1.key, m1.val);
+        }
+        else {
+            let m1min = m1.s_min[recursive]();
+            let m1max = m1.s_max[recursive]();
+            let m2min = m2.s_min[recursive]();
+            let m2max = m2.s_max[recursive]();
+
+            if(KeyType::less<K>(m1max, m2min)) {
+                let m2mt, m2me, = m2.s_remove_min[recursive]();
+                return BTreeNode<K, V>{m2me.key, m2me.val, m1, m2mt};
+            }
+            elif(KeyType::less<K>(m2max, m1min)) {
+                let m1mt, m1me, = m1.s_remove_min[recursive]();
+                return BTreeNode<K, V>{m1me.key, m1me.val, m2, m1mt};
+            }
+            else {
+                var rml = m2;
+
+                let ll = m1.l;
+                if(ll !== none) {
+                    rml = BTreeNode<K, V>::union(ll, rml);
+                }
+
+                let rr = m1.r;
+                if(rr !== none) {
+                    rml = BTreeNode<K, V>::union(rr, rml);
+                }
+
+                return rml.add(m1.key, m1.val);
+            }
+        }
+    }
+
+    recursive method s_min(): K {
+        let ll = this.l;
+        if(ll === none) {
+            return this.key;
+        }
+        else {
+            return ll.s_min();
+        }
+    }
+
+    recursive method s_max(): K {
+        let rr = this.r;
+        if(rr === none) {
+            return this.key;
+        }
+        else {
+            return rr.s_max();
+        }
+    }
+
+    recursive method submap(p: recursive? pred(k: K, v: V) -> Bool): BTreeNode<K, V>?, Nat {
+        let ll = this.l;
+        var nll: BTreeNode<K, V>? = none;
+        var nls = 0n;
+        if(ll !== none) {
+            nll, nls = ll.submap[recursive](p);
+        }
+
+        let rr = this.r;
+        var nrr: BTreeNode<K, V>? = none;
+        var nrs = 0n;
+        if(rr !== none) {
+            nrr, nrs = rr.submap[recursive](p);
+        }
+
+        if(p[recursive?](this.key, this.val)) {
+            return BTreeNode<K, V>{this.key, this.val, nll, nrr}, nls + nrs + 1;
+        }
+        else {
+            if(/\(nll === none, nrr === none)) {
+                return none, 0n;
+            }
+            elif(nll === none) {
+                return nrr, nrs;
+            }
+            elif(nrr === none) {
+                return nll, nls;
+            }
+            else {
+                let nrrx, ne = nrr.s_remove_min[recursive]();
+                return BTreeNode<K, V>{ne.0, ne.1, nll, nrrx}, nls + nrs;
+            }
+        }
+    }
+
+    recursive method remap<U>(f: recursive? fn(k: K, v: V) -> U): BTreeNode<K, U> {
+        let ll = this.l;
+        var nll: BTreeNode<K, U>? = none;
+        if(ll !== none) {
+            nll = ll.remap<U>[recursive](f);
+        }
+
+        let rr = this.r;
+        var nrr: BTreeNode<K, U>? = none;
+        if(rr !== none) {
+            nrr = rr.remap<U>[recursive](f);
+        }
+
+        let uu = f[recursive?](this.key, this.val);
+        return BTreeNode<K, U>{this.key, uu, nll, nrr};
+    }
+
     recursive method add(k: K, v: V): BTreeNode<K, V> {
         let kk = this.key;
         check !KeyType::equal<K>(k, kk);
         
-        var nll: BTreeNode<K, V>;
-        var nrr: BTreeNode<K, V>;
+        var nll: BTreeNode<K, V>?;
+        var nrr: BTreeNode<K, V>?;
         if(KeyType::less<K>(k, kk)) {
             let ll = this.l;
             if(ll === none) {
@@ -219,8 +354,8 @@ entity BTreeNode<K grounded KeyType, V> {
             return BTreeNode<K, V>{kk, v, nll, nrr};
         }
         else {
-            var nll: BTreeNode<K, V>;
-            var nrr: BTreeNode<K, V>;
+            var nll: BTreeNode<K, V>?;
+            var nrr: BTreeNode<K, V>?;
             if(KeyType::less<K>(k, kk)) {
                 let ll = this.l;
                 check ll !== none;
@@ -261,8 +396,8 @@ entity BTreeNode<K grounded KeyType, V> {
             }
         }
         else {
-            var nll: BTreeNode<K, V>;
-            var nrr: BTreeNode<K, V>;
+            var nll: BTreeNode<K, V>?;
+            var nrr: BTreeNode<K, V>?;
             if(KeyType::less<K>(k, kk)) {
                 check ll !== none;
 
@@ -283,7 +418,7 @@ entity BTreeNode<K grounded KeyType, V> {
     recursive method s_remove_min(): BTreeNode<K, V>?, [K, V] {
         let ll = this.l;
         if(ll === none) {
-            return this.r, [ll.key, ll.val];
+            return this.r, [this.key, this.val];
         }
         else {
             let nll, ee = ll.s_min_helper();
@@ -292,6 +427,6 @@ entity BTreeNode<K grounded KeyType, V> {
     }
 }
 
-typedef MapRepr<K grounded KeyType, V> = None | BTree<K, V>;
+internal typedef MapRepr<K grounded KeyType, V> = None | BTree<K, V>;
 
 #endif

@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if EXEC_LIBS
-__internal entity ListOps provides Some {
+internal entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
 
     function s_empty<T>(l: ListRepr<T>): Bool {
@@ -431,9 +431,9 @@ __internal entity ListOps provides Some {
     }
 }
 
-typedef ListTreeEntry<T> = PartialVector<T> | ListTree<T>;
+internal typedef ListTreeEntry<T> = PartialVector<T> | ListTree<T>;
 
-entity ListTree<T> provides Some {
+internal entity ListTree<T> provides Some {
     field count: Nat;
     field left: ListTreeEntry<T>;
     field right ListTreeEntry<T>;
@@ -1339,6 +1339,6 @@ entity ListTree<T> provides Some {
     }
 }
 
-typedef ListRepr<T> = None | PartialVector<T> | ListTree<T>;
+internal typedef ListRepr<T> = None | PartialVector<T> | ListTree<T>;
 
 #endif

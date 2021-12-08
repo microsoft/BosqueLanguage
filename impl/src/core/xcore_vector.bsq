@@ -7,16 +7,16 @@
 namespace NSCore;
 
 #if CHECK_LIBS
-entity Vector1<T> provides Some {
+internal entity Vector1<T> provides Some {
     field v0: T;
 }
 
-entity Vector2<T> provides Some {
+internal entity Vector2<T> provides Some {
     field v0: T;
     field v1: T;
 }
 
-entity Vector3<T> provides Some {
+internal entity Vector3<T> provides Some {
     field v0: T;
     field v1: T;
     field v2: T;

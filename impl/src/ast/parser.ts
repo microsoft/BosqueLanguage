@@ -159,6 +159,7 @@ const AttributeStrings = [
     "orderable",
     "entrypoint",
     "private",
+    "internal",
     "factory",
     "virtual",
     "abstract",

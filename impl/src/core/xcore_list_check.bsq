@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if CHECK_LIBS
-entity ListOps provides Some {
+internal entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
 
     function s_empty<T>(l: ListRepr<T>): Bool {
@@ -130,53 +130,10 @@ entity ListOps provides Some {
             return Vector3<T>{l.v0, l.v1, r.v0};
         }
         else {
-            let ll = REPR_TO_LIST_ENTRY
-            let rr = REPR_TO_LIST_ENTRY
+            let ll, llc = RecListEntry<T>::s_ensure_list(l);
+            let rr, rrc = RecListEntry<T>::s_ensure_list(r);
 
-            return RecList<T>::append(ll, rr); 
-        }
-
-
-        elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
-            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector1_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
-        }
-        elif(/\(l.is<Vector2<T>>(), r.is<Vector2<T>>())) {
-            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), RecListEntry<T>::s_vector2_to_list(r))};
-        }
-        elif(/\(l.is<Vector2<T>>(), r.is<Vector3<T>>())) {
-            return RecList<T>{5n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
-        }
-        elif(/\(l.is<Vector3<T>>(), r.is<Vector1<T>>())) {
-            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), RecListEntry<T>::s_vector1_to_list(r))};
-        }
-        elif(/\(l.is<Vector3<T>>(), r.is<Vector2<T>>())) {
-            return RecList<T>{5n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), RecListEntry<T>::s_vector2_to_list(r))};
-        }
-        elif(/\(l.is<Vector3<T>>(), r.is<Vector3<T>>())) {
-            return RecList<T>{6n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
-        }
-        else {
-            if(/\(l.is<Vector1<T>>(), r.is<RecList<T>>())) {
-                return RecList<T>{r.count + 1n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector1_to_list(l), r.ll)};
-            }
-            elif(/\(l.is<Vector2<T>>(), r.is<RecList<T>>())) {
-                return RecList<T>{r.count + 2n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), r.ll)};
-            }
-            elif(/\(l.is<Vector3<T>>(), r.is<RecList<T>>())) {
-                return RecList<T>{r.count + 3n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector3_to_list(l), r.ll)};
-            }
-            elif(/\(l.is<RecList<T>>(), r.is<Vector1<T>>())) {
-                return RecList<T>{l.count + 1n, RecListEntry<T>::s_append(l.ll, RecListEntry<T>::s_vector1_to_list(r))};
-            }
-            elif(/\(l.is<RecList<T>>(), r.is<Vector2<T>>())) {
-                return RecList<T>{l.count + 2n, RecListEntry<T>::s_append(l.ll, RecListEntry<T>::s_vector1_to_list(r))};
-            }
-            elif(/\(l.is<RecList<T>>(), r.is<Vector3<T>>())) {
-                return RecList<T>{l.count + 3n, RecListEntry<T>::s_append(l.ll, RecListEntry<T>::s_vector1_to_list(r))};
-            }
-            else {
-                return RecList<T>::append(ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l), ListOps::s_safeAs<ListRepr<T>, RecList<T>>(r));
-            }
+            return RecList<T>{llc + rrc, RecListEntry<T>::append(ll, rr)}; 
         }
     }
 
@@ -949,7 +906,7 @@ entity ListOps provides Some {
     }
 }
 
-entity RecList<T> provides Some {
+internal entity RecList<T> provides Some {
     field count: Nat;
     field ll: RecListEntry<T>;
 
@@ -1161,7 +1118,7 @@ entity RecList<T> provides Some {
     }
 }
 
-entity RecListEntry<T> provides Some {
+internal entity RecListEntry<T> provides Some {
     field head: T;
     field tail RecListEntry<T>?;
 
@@ -1177,6 +1134,23 @@ entity RecListEntry<T> provides Some {
         return RecListEntry<T>{l.v0, RecListEntry<T>{l.v1,  RecListEntry<T>{l.v2, none}}};
     }
 
+    function s_ensure_list(l: Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>): RecListEntry<T>, Nat {
+        if(l.is<RecList<T>>()) {
+            return l.ll, ll.count;
+        }
+        else {
+            if(l.is<Vector1<T>>()) {
+                return RecListEntry<T>::s_vector1_to_list(l), 1n;
+            }
+            elif(l.is<Vector2<T>>()) {
+                return RecListEntry<T>::s_vector2_to_list(l), 2n;
+            }
+            else {
+                return RecListEntry<T>::s_vector3_to_list(l), 3n;
+            }
+        }
+    }
+
     function s_list_to_vector1(l: RecListEntry<T>): Vector1<T> {
         return Vector1<T>{l.head};
     }
@@ -1190,6 +1164,18 @@ entity RecListEntry<T> provides Some {
         let ee2 = lls.tail;
         let ee3 = ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).tail
         return RecListEntry<T>{l.head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee3).head};
+    }
+
+    function s_list_to_vector(l: RecListEntry<T>, count: Nat): Vector3<T> {
+        if(count == 1n) {
+            return RecListEntry<T>::s_list_to_vector1(l);
+        }
+        elif(count == 2n) {
+            return RecListEntry<T>::s_list_to_vector2(l);
+        }
+        else {
+            return RecListEntry<T>::s_list_to_vector3(l);
+        }
     }
 
     recursive {when T unique Int | Nat} function range(start: T, end: T, inc: T): RecListEntry<T>? {
@@ -1648,6 +1634,6 @@ entity RecListEntry<T> provides Some {
     }
 }
 
-typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>;
+internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>;
 
 #endif
