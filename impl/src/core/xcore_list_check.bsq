@@ -10,7 +10,7 @@ namespace NSCore;
 entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
 
-    function s_empty<T>(l: ListRepr<T>): Nat {
+    function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
     }
 
@@ -943,9 +943,7 @@ entity ListOps provides Some {
 
 entity RecList<T> provides Some {
     field count: Nat;
-    field ll RecListEntry<T>;
-
-    invariant $count > 3;
+    field ll: RecListEntry<T>;
 
     function {when T unique Int | Nat} range(start: T, end: T, inc: T): RecList<T> {
         let ll = RecListEntry<T>::range[recursive](start, end, inc);
@@ -1530,7 +1528,7 @@ entity RecListEntry<T> provides Some {
         }
         else {
             let ntl = tl.sort[recursive](cmp);
-            return ntl.sort_insert(hh, cmp);
+            return ntl.sort_insert[recursive](hh, cmp);
         }
     }
 

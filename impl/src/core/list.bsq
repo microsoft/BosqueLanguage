@@ -7,7 +7,7 @@
 namespace NSCore;
 
 __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType {
-    __assume_safe private function s_into(l: ListRepr<T>): List<T> # stringof_into
+    private function s_into(l: ListRepr<T>): List<T> # special_inject
     method value(): ListRepr<T> # special_extract
 
     function {when T unique Int | Nat} range(start: T, end: T): List<T>
@@ -1172,7 +1172,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         check i < ListOps::s_size<T>(this.value());
 
         let count = ListOps::s_size<T>(this.value());
-        let vl = List<T{v};
+        let vl = List<T>{v};
 
         if(count == 1n) {
             return vl;

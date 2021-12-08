@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if EXEC_LIBS
-entity Mask provides Some, APIType {
+__internal entity Mask provides Some, APIType {
     field bit0: Bool;
     field bit1: Bool;
     field bit2: Bool;
@@ -37,7 +37,7 @@ entity Mask provides Some, APIType {
     }
 
     method some_true(): Bool {
-        return Mask::some_true(this);
+        return Mask::s_some_true(this);
     }
 
     method min(): Nat? {
@@ -69,10 +69,10 @@ entity Mask provides Some, APIType {
 
 __safe function s_pv_undef<T>(): T # special_function
 
-entity PartialVector<T> provides Some, APIType when T grounded APIType {
+__internal entity PartialVector<T> provides Some, APIType when T grounded APIType {
     __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T # pv_safe_get
     __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> # pv_compact
-    __safe function s_append(pv1: PartialVector<T>, pv2: PartialVector<T>): PartialVector<T> # pv_append
+    __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> # pv_append
     __safe function s_slice_start(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> # pv_slice_start
     __safe function s_slice_end(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> # pv_slice_end
     __safe function s_reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> # pv_reverse
@@ -831,4 +831,35 @@ entity PartialVector<T> provides Some, APIType when T grounded APIType {
         return PartialVector<U>{m, v0, v1, v2, v3}, ee;
     }
 }
+
+__internal entity PartialVectorMap<K grounded KeyType, V> provides Some, APIType when K grounded APIType && V grounded APIType {
+    __safe function s_safe_get_k(pv: PartialVectorMap<K, V>, i: Nat): K # pvmap_safe_get_k
+    __safe function s_safe_get_v(pv: PartialVectorMap<K, V>, i: Nat): V # pvmap_safe_get_v
+    __safe function s_select(pv: PartialVectorMap<K, V>, m: Mask): PartialVectorMap<K, V> # pvmap_compact
+    __safe function s_append(pv1: PartialVectorMap<K, V>, count1: Nat, pv2: PartialVectorMap<T>, count2: Nat): PartialVector<T> # pvmap_append
+    
+    field mask: Mask;
+    field k0: K;
+    field k1: K;
+    field k2: K;
+    field k3: K;
+    field v0: V;
+    field v1: V;
+    field v2: V;
+    field v3: V;
+
+    invariant !$mask.empty();
+
+    method s_key_mask(k: K): Mask {
+        let m = this.mask;
+
+        var b0 = /\(m.bit0, KeyType::equal<K>(this.k0, k));
+        var b1 = /\(m.bit1, KeyType::equal<K>(this.k1, k));
+        var b2 = /\(m.bit2, KeyType::equal<K>(this.k2, k));
+        var b3 = /\(m.bit3, KeyType::equal<K>(this.k3, k));
+        
+        return Mask::s_cons(b0, b1, b2, b3);
+    }
+}
+
 #endif

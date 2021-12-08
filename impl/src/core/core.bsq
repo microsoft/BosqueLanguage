@@ -348,7 +348,7 @@ __internal entity String provides Some, KeyType, APIType {
 
 //<summary>Primitive safe string value.</summary>
 __internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
-    __assume_safe private function s_into(s: String): StringOf<T> # stringof_into
+    private function s_into(s: String): StringOf<T> # special_inject
     method value(): String # special_extract
 
     function coerce(s: String): StringOf<T> {
@@ -368,7 +368,7 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
 
 //<summary>Primitive DataString value.</summary>
 __internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType {
-    __assume_safe private function s_into(s: String): DataString<T> # datastring_into
+    private function s_into(s: String): DataString<T> # special_inject
     method value(): String # special_extract
 
     function coerce(s: String): DataString<T> {

@@ -1,0 +1,157 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+#if CHECK_LIBS
+entity MapOps provides Some {
+    __assume_safe function s_safeAs<T, U>(v: T): U # map_safeas
+
+    function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
+        return m === none;
+    }
+
+    function s_size<K grounded KeyType, V>(m: MapRepr<T>): Nat {
+        if(m === none) {
+            return 0n;
+        }
+        elif(m.is<Vector1<[K, V]>>()) {
+            return 1n;
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            return 2n;
+        }
+        elif(m.is<Vector3<[K, V]>>()) {
+            return 3n;
+        }
+        else {
+            return m.count;
+        }
+    }
+
+    function s_has<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): Bool {
+        if(m === none) {
+            return false;
+        }
+        elif(m.is<Vector1<[K, V]>>()) {
+            return KeyType::equal<K>(m.v0.0, k);
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            return \/(KeyType::equal<K>(m.v0.0, k), KeyType::equal<K>(m.v1.0, k));
+        }
+        elif(m.is<Vector3<T>>()) {
+            return \/(KeyType::equal<K>(m.v0.0, k), KeyType::equal<K>(m.v1.0, k), KeyType::equal<K>(m.v2.0, k));
+        }
+        else {
+            return m.has(k);
+        }
+    }
+
+    function s_find<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): [K, V]? {
+        if(m === none) {
+            return none;
+        }
+        elif(m.is<Vector1<[K, V]>>()) {
+            if(KeyType::equal<K>(m.v0.0, k)) {
+                return m.v0;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            if(KeyType::equal<K>(m.v0.0, k)) {
+                return m.v0;
+            }
+            elif(KeyType::equal<K>(m.v1.0, k)) {
+                return m.v1;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(m.is<Vector3<T>>()) {
+             if(KeyType::equal<K>(m.v0.0, k)) {
+                return m.v0;
+            }
+            elif(KeyType::equal<K>(m.v1.0, k)) {
+                return m.v1;
+            }
+            elif(KeyType::equal<K>(m.v2.0, k)) {
+                return m.v2;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return m.find(k);
+        }
+    }
+
+    function s_add<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+    }
+
+    function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+    }
+
+    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+    }
+}
+
+entity RecMap<K grounded KeyType, V> provides Some {
+    field count: Nat;
+    field ll: RecMapEntry<K, V>;
+
+    method has(k: K): Bool {
+        return this.t.has[recursive](k);
+    }
+
+    method find(k: K): [K, V]? {
+        return this.t.find[recursive](k);
+    }
+}
+
+entity RecMapEntry<K grounded KeyType, V> provides Some {
+    field head: [K, V];
+    field tail RecMapEntry<K, V>?;
+
+    recursive method has(k: K): Bool {
+        let hh = this.ll.head;
+        if(KeyType::equal<K>(hh.0, k)) {
+            return true;
+        }
+        else {
+            let tl = this.ll.tail;
+            if(tl === none) {
+                return false;
+            }
+            else {
+                return tl.has[recursive](k);
+            }
+        }
+    }
+
+    method find(k: K): [K, V]? {
+        let hh = this.ll.head;
+        if(KeyType::equal<K>(hh, k)) {
+            return hh;
+        }
+        else {
+            let tl = this.ll.tail;
+            if(tl === none) {
+                return none;
+            }
+            else {
+                return tl.find[recursive](k);
+            }
+        }
+    }
+}
+
+typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | RecMap<[K, V]>;
+
+#endif

@@ -10,13 +10,13 @@ namespace NSCore;
 __internal entity ListOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
 
-    function s_empty(l: ListRepr<T>): Nat {
+    function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
     }
 
     function s_size<T>(l: ListRepr<T>): Nat {
         if(l === none) {
-            return 0;
+            return 0n;
         }
         elif(l.is<PartialVector<T>>()) {
             return l.count();
@@ -32,7 +32,7 @@ __internal entity ListOps provides Some {
         }
         else {
             let count = end - start;
-            if(count <= 4) {
+            if(count <= 4n) {
                 return PartialVector<T>::s_range(start, end, inc, zero);
             }
             else {
@@ -527,9 +527,11 @@ entity ListTree<T> provides Some {
 
     function append(l: ListTreeEntry<T>, r: ListTreeEntry<T>): ListTreeEntry<T> {
         if(/\(l.is<PartialVector<T>>(), r.is<PartialVector<T>>())) {
-            let nsize = l.count() + r.count();
+            let lc = l.count();
+            let rc = r.count();
+            let nsize = lc + rc;
             if(nsize <= 4) {
-                return PartialVector<T>::s_append(l, r);
+                return PartialVector<T>::s_append(l, lc, r, rc);
             }
         }
 

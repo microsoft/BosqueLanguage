@@ -1,0 +1,173 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace NSCore;
+
+#if EXEC_LIBS
+entity MapOps provides Some {
+    __assume_safe function s_safeAs<T, U>(v: T): U # map_safeas
+
+    function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
+        return m === none;
+    }
+
+    function s_size<K grounded KeyType, V>(m: MapRepr<T>): Nat {
+        if(m === none) {
+            return 0n;
+        }
+        elif(m.is<PartialVectorMap<K, V>>()) {
+            return m.count();
+        }
+        else {
+            return m.count;
+        }
+    }
+
+    function s_has<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): Bool {
+        if(m === none) {
+            return false;
+        }
+        elif(m.is<PartialVectorMap<[K, V]>>()) {
+            let msk = m.s_key_mask(k);
+            return msk.some_true();
+        }
+        else {
+            return m.has(k);
+        }
+    }
+
+    function s_find<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): [K, V]? {
+        if(m === none) {
+            return none;
+        }
+        elif(m.is<PartialVector<K, V>>()) {
+            let msk = m.s_key_mask(k);
+            let idx = msk.min();
+            if(idx === none) {
+                return none;
+            }
+            else {
+                return [PartialVectorMap<K, V>::s_safe_get_k(m, idx), PartialVectorMap<K, V>::s_safe_get_v(m, idx)];
+            }
+        }
+        else {
+            return m.find(k);
+        }
+    }
+
+    function s_add<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+        if(m.is<PartialVector<K, V>>()) {
+            let msk = m.s_key_mask(k);
+            let idx = msk.min();
+            if(idx === none) {
+                return none;
+            }
+            else {
+                return [PartialVectorMap<K, V>::s_safe_get_k(m, idx), PartialVectorMap<K, V>::s_safe_get_v(m, idx)];
+            }
+        }
+        else {
+            return m.add(k, v);
+        }
+    }
+
+    function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+        if(m.is<PartialVector<K, V>>()) {
+            let msk = m.s_key_mask(k);
+            let idx = msk.min();
+            if(idx === none) {
+                return none;
+            }
+            else {
+                return [PartialVectorMap<K, V>::s_safe_get_k(m, idx), PartialVectorMap<K, V>::s_safe_get_v(m, idx)];
+            }
+        }
+        else {
+            return m.add(k, v);
+        }
+    }
+
+    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+    }
+}
+
+entity BTree<K grounded KeyType, V> {
+    field count: Nat;
+    field t: BTreeNode<K, V>;
+
+    invariant $count > 4;
+
+    method has(k: K): Bool {
+        return this.t.has[recursive](k);
+    }
+
+    method find(k: K): [K, V]? {
+        return this.t.find[recursive](k);
+    }
+}
+
+entity BTreeNode<K grounded KeyType, V> {
+    field key: K;
+    field val: V;
+    field l: BTree<K, V>?;
+    field r: BTree<K, V>?;
+
+    recursive has(k: K): Bool {
+        let kk = this.key;
+        if(KeyType::equal<K>(kk, k)) {
+            return true;
+        }
+        
+        if(KeyType::less<K>(kk, k)) {
+            let ll = this.l;
+            if(ll === none) {
+                return false;
+            }
+            else {
+                return ll.has[recursive](k);
+            }
+        }
+        else {
+            let rr = this.r;
+            if(rr === none) {
+                return false;
+            }
+            else {
+                return rr.has[recursive](k);
+            }
+        }
+    }
+
+    recursive find(k: K): [K, V]? {
+        let kk = this.key;
+        if(KeyType::equal<K>(kk, k)) {
+            return [kk, this.val];
+        }
+        
+        if(KeyType::less<K>(kk, k)) {
+            let ll = this.l;
+            if(ll === none) {
+                return none;
+            }
+            else {
+                return ll.has[recursive](k);
+            }
+        }
+        else {
+            let rr = this.r;
+            if(rr === none) {
+                return none;
+            }
+            else {
+                return rr.has[recursive](k);
+            }
+        }
+    }
+}
+
+typedef MapRepr<K grounded KeyType, V> = None | PartialVectorMap<K, V> | BTree<K, V>;
+
+#endif
