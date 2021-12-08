@@ -18,9 +18,6 @@ entity MapOps provides Some {
         if(m === none) {
             return 0n;
         }
-        elif(m.is<PartialVectorMap<K, V>>()) {
-            return m.count();
-        }
         else {
             return m.count;
         }
@@ -29,10 +26,6 @@ entity MapOps provides Some {
     function s_has<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): Bool {
         if(m === none) {
             return false;
-        }
-        elif(m.is<PartialVectorMap<[K, V]>>()) {
-            let msk = m.s_key_mask(k);
-            return msk.some_true();
         }
         else {
             return m.has(k);
@@ -43,31 +36,47 @@ entity MapOps provides Some {
         if(m === none) {
             return none;
         }
-        elif(m.is<PartialVector<K, V>>()) {
-            let msk = m.s_key_mask(k);
-            let idx = msk.min();
-            if(idx === none) {
-                return none;
-            }
-            else {
-                return [PartialVectorMap<K, V>::s_safe_get_k(m, idx), PartialVectorMap<K, V>::s_safe_get_v(m, idx)];
-            }
-        }
         else {
             return m.find(k);
         }
     }
 
+    function s_union<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
+        if(/\(m1 === none, m2 === none)) {
+            return none;
+        }
+        elif(m1 === none) {
+            return m2;
+        }
+        elif(m2 === none) {
+            return m1;
+        }
+        else {
+            xxxx;
+        }
+    }
+
+    recursive? function s_submap<K grounded KeyType, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
+        if(m === none) {
+            return none;
+        }
+        else {
+            xxxx;
+        }
+    }
+
+    recursive? function s_remap<K grounded KeyType, V, U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): MapRepr<K, U> {
+        if(m === none) {
+            return none;
+        }
+        else {
+            xxxx;
+        }
+    }
+
     function s_add<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
-        if(m.is<PartialVector<K, V>>()) {
-            let msk = m.s_key_mask(k);
-            let idx = msk.min();
-            if(idx === none) {
-                return none;
-            }
-            else {
-                return [PartialVectorMap<K, V>::s_safe_get_k(m, idx), PartialVectorMap<K, V>::s_safe_get_v(m, idx)];
-            }
+        if(m === none) {
+            return BTree<K, V>{1n, BTreeNode<K, V>{k, v, none, none}};
         }
         else {
             return m.add(k, v);
@@ -75,22 +84,11 @@ entity MapOps provides Some {
     }
 
     function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
-        if(m.is<PartialVector<K, V>>()) {
-            let msk = m.s_key_mask(k);
-            let idx = msk.min();
-            if(idx === none) {
-                return none;
-            }
-            else {
-                return [PartialVectorMap<K, V>::s_safe_get_k(m, idx), PartialVectorMap<K, V>::s_safe_get_v(m, idx)];
-            }
-        }
-        else {
-            return m.add(k, v);
-        }
+        return MapOps::s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).set(k, v);
     }
 
-    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
+        return MapOps::s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).remove(k);
     }
 }
 
@@ -98,14 +96,30 @@ entity BTree<K grounded KeyType, V> {
     field count: Nat;
     field t: BTreeNode<K, V>;
 
-    invariant $count > 4;
-
     method has(k: K): Bool {
         return this.t.has[recursive](k);
     }
 
     method find(k: K): [K, V]? {
         return this.t.find[recursive](k);
+    }
+
+    method add(k: K, v: V): BTree<K, V> {
+        return BTree<K, V>{this.count + 1, this.t.add[recursive](k, v)};
+    }
+
+    recursive method set(m: MapRepr<K, V>, k: K, v: V): BTree<K, V> {
+        return BTree<K, V>{this.count, this.t.set[recursive](k, v)};
+    }
+
+    recursive method remove(k: K): MapRepr<K, V> {
+        let rt = this.t.remove[recursive](k);
+        if(rt === none) {
+            return none;
+        }
+        else {
+            return BTree<K, V>{this.count - 1n, rt};
+        }
     }
 }
 
@@ -117,11 +131,11 @@ entity BTreeNode<K grounded KeyType, V> {
 
     recursive has(k: K): Bool {
         let kk = this.key;
-        if(KeyType::equal<K>(kk, k)) {
+        if(KeyType::equal<K>(k, kk)) {
             return true;
         }
         
-        if(KeyType::less<K>(kk, k)) {
+        if(KeyType::less<K>(k, kk)) {
             let ll = this.l;
             if(ll === none) {
                 return false;
@@ -143,11 +157,11 @@ entity BTreeNode<K grounded KeyType, V> {
 
     recursive find(k: K): [K, V]? {
         let kk = this.key;
-        if(KeyType::equal<K>(kk, k)) {
+        if(KeyType::equal<K>(k, kk)) {
             return [kk, this.val];
         }
         
-        if(KeyType::less<K>(kk, k)) {
+        if(KeyType::less<K>(k, kk)) {
             let ll = this.l;
             if(ll === none) {
                 return none;
@@ -166,8 +180,118 @@ entity BTreeNode<K grounded KeyType, V> {
             }
         }
     }
+
+    recursive method add(k: K, v: V): BTreeNode<K, V> {
+        let kk = this.key;
+        check !KeyType::equal<K>(k, kk);
+        
+        var nll: BTreeNode<K, V>;
+        var nrr: BTreeNode<K, V>;
+        if(KeyType::less<K>(k, kk)) {
+            let ll = this.l;
+            if(ll === none) {
+                nll = BTreeNode<K, V>{k, v, none, none};
+            }
+            else {
+                nll = ll.add[recursive](k, v);
+            }
+
+            nrr = this.r;
+        }
+        else {
+            let rr = this.r;
+            if(rr === none) {
+                nrr = BTreeNode<K, V>{k, v, none, none};
+            }
+            else {
+                nrr = rr.add[recursive](k, v);
+            }
+
+            nll = this.l;
+        }
+
+        return BTreeNode<K, V>{kk, this.val, nll, nrr};
+    }
+
+    recursive method set(m: MapRepr<K, V>, k: K, v: V): BTreeNode<K, V> {
+        let kk = this.key;
+        if(KeyType::equal<K>(k, kk)) {
+            return BTreeNode<K, V>{kk, v, nll, nrr};
+        }
+        else {
+            var nll: BTreeNode<K, V>;
+            var nrr: BTreeNode<K, V>;
+            if(KeyType::less<K>(k, kk)) {
+                let ll = this.l;
+                check ll !== none;
+
+                nll = ll.set[recursive](k, v);
+                nrr = this.r;
+            }
+            else {
+                let rr = this.r;
+                check rr !== none;
+
+                nrr = rr.set[recursive](k, v);
+                nll = this.l;
+            }
+
+            return BTreeNode<K, V>{kk, this.val, nll, nrr};
+        }
+    }
+
+    recursive method remove(k: K): BTreeNode<K, V>? {
+        let kk = this.key;
+        let ll = this.l;
+        let rr = this.r;
+
+        if(KeyType::equal<K>(k, kk)) {
+            if(/\(ll === none, rr === none)) {
+                return none;
+            }
+            elif(ll === none) {
+                return rr;
+            }
+            elif(rr === none) {
+                return ll;
+            }
+            else {
+                let nrr, ne = rr.s_remove_min[recursive]();
+                return BTreeNode<K, V>{ne.0, ne.1, ll, nrr};
+            }
+        }
+        else {
+            var nll: BTreeNode<K, V>;
+            var nrr: BTreeNode<K, V>;
+            if(KeyType::less<K>(k, kk)) {
+                check ll !== none;
+
+                nll = ll.remove[recursive](k);
+                nrr = this.r;
+            }
+            else {
+                check rr !== none;
+
+                nrr = rr.remove[recursive](k);
+                nll = this.l;
+            }
+
+            return BTreeNode<K, V>{kk, this.val, nll, nrr};
+        }
+    }
+
+    recursive method s_remove_min(): BTreeNode<K, V>?, [K, V] {
+        let ll = this.l;
+        if(ll === none) {
+            return this.r, [ll.key, ll.val];
+        }
+        else {
+            let nll, ee = ll.s_min_helper();
+            return BTreeNode<K, V>{kk, this.val, nll, this.r}, ee;
+        }
+    }
 }
 
-typedef MapRepr<K grounded KeyType, V> = None | PartialVectorMap<K, V> | BTree<K, V>;
+typedef MapRepr<K grounded KeyType, V> = None | BTree<K, V>;
 
 #endif

@@ -61,29 +61,19 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method union(m: Map<K, V>): Map<K, V> {
-        let am = ListOps::s_concat2<[K, V]>(this.value(), m.value());
-        check ListOps::s_chk_kv_unique<K, V>(am);
-        
-        return Map<K, V>::s_safecreate(am);
+        return Map<K, V>::s_into(MapOps::s_union<K, V>(this.value(), m.value()));
     }
 
-    recursive? method submap(p: recursive? pred(v: [K, V]) -> Bool): Map<K, V> {
-        let sm = ListOps::s_filter<[K, V]>(this.value(), p);
-        return Map<K, V>::s_safecreate(sm);
+    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): Map<K, V> {
+        return Map<K, V>::s_into(MapOps::s_submap<K, V>(this.value(), p));
     }
 
-    recursive? method remap(f: recursive? fn(v: [K, V]) -> V): Map<K, V> {
-        let rm = ListOps::s_map<[K, V]>(this.value(), recursive? fn(v: [K, V]): [K, V] => [v.0, f[recursive?](v)]);
-        return Map<K, V>::s_safecreate(rm);
+    recursive? method remap<U=?>(f: recursive? fn(k: K, v: V) -> U): Map<K, U> {
+        return Map<K, U>::s_into(MapOps::s_remap<K, V, U>(this.value(), f));
     }
 
     method add(k: K, v: V): Map<K, V> {
-        if(this.empty()) {
-            return Map<K, V>{ k => v };
-        }
-        else {
-            return Map<K, V>::s_into(MapOps::s_add<K, V>(this.value(), k, v));
-        }
+        return Map<K, V>::s_into(MapOps::s_add<K, V>(this.value(), k, v));
     }
 
     method set(k: K, v: V): Map<K, V> {

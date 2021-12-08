@@ -126,11 +126,19 @@ entity ListOps provides Some {
         elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
             return Vector3<T>{l.v0, r.v0, r.v1};
         }
-        elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
-            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector1_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
-        }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
             return Vector3<T>{l.v0, l.v1, r.v0};
+        }
+        else {
+            let ll = REPR_TO_LIST_ENTRY
+            let rr = REPR_TO_LIST_ENTRY
+
+            return RecList<T>::append(ll, rr); 
+        }
+
+
+        elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
+            return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector1_to_list(l), RecListEntry<T>::s_vector3_to_list(r))};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector2<T>>())) {
             return RecList<T>{4n, RecListEntry<T>::s_append(RecListEntry<T>::s_vector2_to_list(l), RecListEntry<T>::s_vector2_to_list(r))};

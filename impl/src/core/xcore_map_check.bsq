@@ -92,13 +92,196 @@ entity MapOps provides Some {
         }
     }
 
+    function s_union<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): Map<K, V> {
+        if(/\(m1 === none, m2 === none)) {
+            return none;
+        }
+        elif(m1 === none) {
+            return m2;
+        }
+        elif(m2 === none) {
+            return m1;
+        }
+        else {
+            xxxx;
+        }
+    }
+
+    recursive? function s_submap<K grounded KeyType, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
+        if(m === none) {
+            return none;
+        }
+        elif(l.is<Vector1<[K, V]>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0.0, v0.1);
+
+            if(p0) {
+                return m;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0);
+            let v1 = l.v1;
+            let p1 = p[recursive?](v1);
+
+            if(/\(p0, p1)) {
+                return l;
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let v0 = l.v0;
+            let p0 = p[recursive?](v0);
+            let v1 = l.v1;
+            let p1 = p[recursive?](v1);
+            let v2 = l.v2;
+            let p2 = p[recursive?](v2);
+
+            if(/\(p0, p1, p2)) {
+                return l;
+            }
+            elif(/\(p0, p1)) {
+                return Vector2<T>{v0, v1};
+            }
+            elif(/\(p0, p2)) {
+                return Vector2<T>{v0, v2};
+            }
+            elif(/\(p1, p2)) {
+                return Vector2<T>{v1, v2};
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            elif(p2) {
+                return Vector1<T>{v2};
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            xxxx;
+        }
+    }
+
+    recursive? function s_remap<K grounded KeyType, V, U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): MapRepr<K, U> {
+        if(m === none) {
+            return none;
+        }
+        else {
+            xxxx;
+        }
+    }
+
     function s_add<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+        if(m === none) {
+            return Vector1<[K, V]>{[k, v]};
+        }
+        elif(m.is<Vector1<[K, V]>>()) {
+            check !KeyType::equal<K>(m.v0.0, k);
+            if(KeyType::less<K>(k, m.v0.0)) {
+                return Vector2<[K, V]>>{[k, v], m.v0};
+            }
+            else {
+                return Vector2<[K, V]>>{m.v0, [k, v]};
+            }
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            check !(\/(KeyType::equal<K>(m.v0.0, k), KeyType::equal<K>(m.v1.0, k)));
+            if(KeyType::less<K>(k, m.v0.0)) {
+                return Vector3<[K, V]>>{[k, v], m.v0, m.v1};
+            }
+            elif(KeyType::less<K>(k, m.v1.0)) {
+                return Vector3<[K, V]>>{m.v0, [k, v], m.v1};
+            }
+            else {
+                return Vector2<[K, V]>>{m.v0, m.v1, [k, v]};
+            }
+        }
+        elif(m.is<Vector3<T>>()) {
+            let ll4 = RecMapEntry<K, V>{m.v0, RecMapEntry<K, V>{m.v1, RecMapEntry<K, V>{m.v2, none}}}.add(k, v);
+            return RecMap<K, V>{4n, ll4};
+        }
+        else {
+            return m.add(k, v);
+        }
     }
 
     function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+        if(m.is<Vector1<[K, V]>>()) {
+            check KeyType::equal<K>(m.v0.0, k);
+            return Vector1<[K, V]>{[k, v]};
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            if(KeyType::equal<K>(m.v0.0, k)) {
+                return Vector2<[K, V]>>{[k, v], m.v1};
+            }
+            else {
+                check KeyType::equal<K>(m.v1.0, k);
+                return Vector2<[K, V]>>{m.v0, [k, v]};
+            }
+        }
+        elif(m.is<Vector3<T>>()) {
+            if(KeyType::equal<K>(m.v0.0, k)) {
+                return Vector3<[K, V]>>{[k, v], m.v1, m.v2};
+            }
+            elif(KeyType::equal<K>(m.v1.0, k)) {
+                return Vector3<[K, V]>>{m.v0, [k, v], m.v2};
+            }
+            else {
+                check KeyType::equal<K>(m.v2.0, k);
+                return Vector3<[K, V]>>{m.v0, m.v1, [k, v]};
+            }
+        }
+        else {
+            return MapOps::s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).set(k, v);
+        }
     }
 
-    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
+    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
+        if(m.is<Vector1<[K, V]>>()) {
+            check KeyType::equal<K>(m.v0.0, k);
+            return none;
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            if(KeyType::equal<K>(m.v0.0, k)) {
+                return Vector1<[K, V]>>{m.v1};
+            }
+            else {
+                check KeyType::equal<K>(m.v1.0, k);
+                return Vector1<[K, V]>>{m.v0};
+            }
+        }
+        elif(m.is<Vector3<T>>()) {
+            if(KeyType::equal<K>(m.v0.0, k)) {
+                return Vector2<[K, V]>>{m.v1, m.v2};
+            }
+            elif(KeyType::equal<K>(m.v1.0, k)) {
+                return Vector2<[K, V]>>{m.v0, m.v2};
+            }
+            else {
+                check KeyType::equal<K>(m.v2.0, k);
+                return Vector2<[K, V]>>{m.v0, m.v1};
+            }
+        }
+        else {
+            return MapOps::s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).remove(k);
+        }
     }
 }
 
@@ -112,6 +295,32 @@ entity RecMap<K grounded KeyType, V> provides Some {
 
     method find(k: K): [K, V]? {
         return this.t.find[recursive](k);
+    }
+
+    method add(k: K, v: V): RecMap<K, V> {
+        return RecMap<K, V>{this.count + 1, this.ll.add[recursive](k, v)};
+    }
+
+    recursive method set(m: MapRepr<K, V>, k: K, v: V): RecMap<K, V> {
+        return RecMap<K, V>{this.count, this.ll.set[recursive](k, v)};
+    }
+
+    recursive method remove(k: K): RecMapEntry<K, V>? {
+        let rl = this.ll.set[recursive](k);
+        let rrl = MapOps::s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rl);
+
+        if(this.count == 4) {
+            let h0 = rrl.head;
+            let tl0 = MapOps::s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rrl.tail);
+            let h1 = tl0.head;
+            let tl1 = MapOps::s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(tl0.tail);
+            let h2 = tl1.head;
+
+            return Vector3<[K, V]>>{h0, h1, h2}; 
+        }
+        else {
+            return RecMap<K, V>{this.count - 1n, rrl};
+        }
     }
 }
 
@@ -148,6 +357,54 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
             else {
                 return tl.find[recursive](k);
             }
+        }
+    }
+
+    recursive method add(k: K, v: V): RecMapEntry<K, V> {
+        let kk = this.head.0;
+        check !KeyType::equal<K>(k, kk);
+        
+        if(KeyType::less<K>(k, kk)) {
+            let tl = this.ll.tail;
+            if(tl === none) {
+                ntl = RecMapEntry<K, V>{[k, v], none};
+            }
+            else {
+                ntl = tl.add[recursive](k, v);
+            }
+
+            return RecMapEntry<K, V>{this.head, ntl};
+        }
+        else {
+            return RecMapEntry<K, V>{[k, v], this.tail};
+        }
+    }
+
+    recursive method set(m: MapRepr<K, V>, k: K, v: V): RecMapEntry<K, V> {
+        let kk = this.head.0;
+        if(KeyType::equal<K>(k, kk)) {
+            return RecMapEntry<K, V>{[k, v], this.tail};
+        }
+        else {
+            let tl = this.ll.tail;
+            check tl !== none;
+
+            let ntl = tl.set[recursive](k, v);
+            return RecMapEntry<K, V>{this.head, ntl};
+        }
+    }
+
+    recursive method remove(k: K): RecMapEntry<K, V>? {
+        let kk = this.head.0;
+        if(KeyType::equal<K>(k, kk)) {
+            return this.tail;
+        }
+        else {
+            let tl = this.ll.tail;
+            check tl !== none;
+
+            let ntl = tl.remove[recursive](k);
+            return RecMapEntry<K, V>{this.head, ntl};
         }
     }
 }
