@@ -145,6 +145,8 @@ public:
 
     static const BSQType* g_typeString;
 
+    static const BSQType* g_typeByteBufferLeaf;
+    static const BSQType* g_typeByteBufferNode;
     static const BSQType* g_typeByteBuffer;
     static const BSQType* g_typeISOTime;
     static const BSQType* g_typeLogicalTime;
@@ -428,7 +430,6 @@ public:
 
     virtual ~BSQRecordStructType() {;}
 };
-
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 

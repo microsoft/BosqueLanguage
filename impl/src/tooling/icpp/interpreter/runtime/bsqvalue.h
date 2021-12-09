@@ -612,18 +612,53 @@ public:
 
 ////
 //ByteBuffer
-struct BSQByteBuffer
+struct BSQByteBufferLeaf
 {
-    BSQByteBuffer* next;
-    uint64_t bytecount;
     uint8_t bytes[256];
 };
 
-//
-//TODO: at some point in the future we might want to split this out with the 256 buffer as a 
-//      carefully memory aligned thing and a overall object that know the total lenght of the 
-//      buffer
-//
+struct BSQByteBufferNode
+{
+    BSQByteBufferNode* next;
+    BSQByteBufferLeaf* bytes;
+    uint64_t bytecount;
+};
+
+struct BSQByteBuffer
+{
+    BSQByteBufferNode* next;
+    uint64_t bytecount;
+};
+
+std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQByteBufferLeafType : public BSQRefType
+{
+public:
+    BSQByteBufferLeafType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_LEAF, sizeof(BSQByteBufferLeaf), nullptr, {}, EMPTY_KEY_CMP, entityByteBufferLeafDisplay_impl, "NSCore::ByteBufferLeaf") {;}
+
+    virtual ~BSQByteBufferLeafType() {;}
+};
+
+std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQByteBufferNodeType : public BSQRefType
+{
+public:
+    BSQByteBufferNodeType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_NODE, sizeof(BSQByteBufferNode), "22", {}, EMPTY_KEY_CMP, entityByteBufferNodeDisplay_impl, "NSCore::ByteBufferNode") {;}
+
+    virtual ~BSQByteBufferNodeType() {;}
+};
+
+std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQByteBufferType : public BSQStructType
+{
+public:
+    BSQByteBufferType(): BSQStructType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, "NSCore::ByteBuffer", false) {;}
+
+    virtual ~BSQByteBufferType() {;}
+};
 
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 

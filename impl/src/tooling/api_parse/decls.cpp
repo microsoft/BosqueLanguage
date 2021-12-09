@@ -275,6 +275,13 @@ std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
         return std::nullopt;
     }
     
+    std::stringstream tstr(sstr);
+    std::chrono::time_point<std::chrono::seconds> time = std::chrono::from_stream(tstr, "");
+
+    std::chrono::utc_time<std::chrono::seconds> utc_t()
+
+    std::chrono::tai_clock::from_utc()
+
     return std::make_optional(t);
 }
 
@@ -389,7 +396,7 @@ std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, u
 
 std::optional<json> JSONParseHelper::emitTimeData(TimeData t)
 {
-    tm utctime;
+    tm utctime = {0};
     utctime.tm_year = t.year;
     utctime.tm_mon = t.month;
     utctime.tm_mday = t.day;

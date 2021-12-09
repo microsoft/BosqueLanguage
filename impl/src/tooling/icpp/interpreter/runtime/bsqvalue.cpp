@@ -6,35 +6,6 @@
 #include "bsqvalue.h"
 #include "environment.h"
 
-const BSQType* BSQType::g_typeNone = new BSQNoneType();
-const BSQType* BSQType::g_typeNothing = new BSQNothingType();
-const BSQType* BSQType::g_typeBool = new BSQBoolType();
-const BSQType* BSQType::g_typeNat = new BSQNatType();
-const BSQType* BSQType::g_typeInt = new BSQIntType();
-const BSQType* BSQType::g_typeBigNat = new BSQBigNatType();
-const BSQType* BSQType::g_typeBigInt = new BSQBigIntType();
-const BSQType* BSQType::g_typeFloat = new BSQFloatType();
-const BSQType* BSQType::g_typeDecimal = new BSQDecimalType();
-const BSQType* BSQType::g_typeRational = new BSQRationalType();
-
-const BSQType* BSQType::g_typeStringKRepr16 = new BSQStringKReprType<16>(BSQ_TYPE_ID_STRINGREPR_K16);
-const BSQType* BSQType::g_typeStringKRepr32 = new BSQStringKReprType<32>(BSQ_TYPE_ID_STRINGREPR_K32); 
-const BSQType* BSQType::g_typeStringKRepr64 = new BSQStringKReprType<64>(BSQ_TYPE_ID_STRINGREPR_K64);
-const BSQType* BSQType::g_typeStringKRepr96 = new BSQStringKReprType<96>(BSQ_TYPE_ID_STRINGREPR_K96);
-const BSQType* BSQType::g_typeStringKRepr128 = new BSQStringKReprType<128>(BSQ_TYPE_ID_STRINGREPR_K128);
-const std::pair<size_t, const BSQType*> BSQType::g_typeStringKCons[5] = {std::make_pair((size_t)16, BSQType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQType::g_typeStringKRepr128) };
-
-const BSQType* BSQType::g_typeStringTreeRepr = new BSQStringTreeReprType();
-
-const BSQType* BSQType::g_typeString = new BSQStringType();
-
-const BSQType* BSQType::g_typeByteBuffer = new BSQByteBufferType();
-const BSQType* BSQType::g_typeISOTime = new BSQISOTimeType();
-const BSQType* BSQType::g_typeLogicalTime = new BSQLogicalTimeType();
-const BSQType* BSQType::g_typeUUID = new BSQUUIDType();
-const BSQType* BSQType::g_typeContentHash = new BSQContentHashType();
-const BSQType* BSQType::g_typeRegex = new BSQRegexType();
-
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return "none";
@@ -584,6 +555,16 @@ BSQString BSQStringType::slice(StorageLocationPtr str, int64_t startpos, int64_t
 
         return res;
     }
+}
+
+std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return "[Byte Buffer]";
+}
+
+std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return "[Byte Buffer]";
 }
 
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data)
