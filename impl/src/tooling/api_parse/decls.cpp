@@ -18,7 +18,11 @@ static std::regex re_numberino_r("^[-+]?(0|[1-9][0-9]*)/([1-9][0-9]*)$");
 static std::regex re_bv_binary("^#b([0|1]+)$");
 static std::regex re_bv_hex("^#x([0-9a-f]+)$");
 
-static std::regex re_isotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]{3})?Z$");
+static std::regex re_utcisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$");
+static std::regex re_lclisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(+|-)[0-9]{2}(:?[0-9]{2})?$");
+
+static std::regex re_ticktime("^T(0|[1-9][0-9]*)ns$");
+
 static std::regex re_uuid("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
 static std::regex re_hash("^0x[0-9a-f]{128}$");
 
@@ -218,7 +222,7 @@ std::optional<std::pair<std::string, uint64_t>> JSONParseHelper::parseToRational
     }
 }
 
-std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
+std::optional<DateTimeRaw> parseToDateTimeRaw(json j)
 {
     if(!j.is_string())
     {
@@ -226,18 +230,15 @@ std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
     }
 
     std::string sstr = j.get<std::string>();
-    if(!std::regex_match(sstr, re_isotime))
+    bool isutctime = std::regex_match(sstr, re_utcisotime);
+    bool islocaltime = std::regex_match(sstr, re_lclisotime);
+
+    if(!isutctime && !islocaltime)
     {
         return std::nullopt;
     }
 
-    TimeData t;
-    t.millis = std::strtol(&sstr[20], nullptr, 10);
-    if(t.millis > 999)
-    {
-        return std::nullopt;
-    }
-    
+    DateTimeRaw t;
     uint16_t yy = std::strtol(&sstr[0], nullptr, 10);
     if(yy < 1900)
     {
@@ -268,23 +269,128 @@ std::optional<TimeData> JSONParseHelper::parseToTimeData(json j)
     {
         return std::nullopt;
     }
+    
+    return std::make_optional(t);
+}
 
-    t.sec = std::strtol(&sstr[17], nullptr, 10);
-    if(t.sec > 60)
+std::optional<int32_t> parseToDateTimeTZ(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    std::string sstr = j.get<std::string>();
+    if(std::regex_match(sstr, re_utcisotime))
+    {
+        return std::make_optional(0);
+    }
+
+    if(!std::regex_match(sstr, re_lclisotime))
+    {
+        return std::nullopt;
+    }
+
+    std::string tstr = sstr.substr(19);
+    std::string hhstr = tstr.substr(0, 3);
+    std::string mmstr;
+    if(tstr.length() > 3)
+    {
+        if(tstr[3] == ':')
+        {
+            mmstr = tstr.substr(4);
+        }
+        else
+        {
+            mmstr = tstr.substr(3);
+        }
+    }
+
+    int32_t hh = std::strtol(&hhstr[0], nullptr, 10);
+    if(hh > 24)
+    {
+        return std::nullopt;
+    }
+
+    int32_t mm = 0;
+    if(!mmstr.empty())
+    {
+        mm = std::strtol(&mmstr[0], nullptr, 10);
+    }
+
+    if(mm > 59) {
+        return std::nullopt;
+    }
+    
+    int32_t mmoffset = mm + (60 * hh);
+    if(mmoffset < (-12 * 60) || (14 * 60) < mmoffset) {
+        return std::nullopt;
+    }
+
+    return std::make_optional(mmoffset);
+}
+
+std::optional<DateTime> JSONParseHelper::parseToDateTime(json j)
+{
+    if(j.is_string())
+    {
+        auto utc = parseToDateTimeRaw(j);
+        if(!utc.has_value())
+        {
+            return std::nullopt;
+        }
+
+        DateTime tinfo = {utc.value(), utc.value(), 0, ""};
+        return std::make_optional(tinfo);
+    }
+    else
+    {
+        if(!j.is_array() || j.size() > 3)
+        {
+            return std::nullopt;
+        }
+
+        auto utc = parseToDateTimeRaw(j[0]);
+        auto local = parseToDateTimeRaw(j[1]);
+        auto tz = parseToDateTimeTZ(j[1]);
+
+        if(!utc.has_value() || !local.has_value() || !tz.has_value())
+        {
+            return std::nullopt;
+        }
+
+        auto sstr = (j.size() == 3 && j[2].is_string()) ? j[2].get<std::string>() : "";
+
+        DateTime tinfo = {utc.value(), local.value(), tz.value(), sstr};
+        return std::make_optional(tinfo);
+    }
+}
+
+std::optional<uint64_t> JSONParseHelper::parseToTickTime(json j)
+{
+    if(!j.is_string())
     {
         return std::nullopt;
     }
     
-    std::stringstream tstr(sstr);
-    std::chrono::time_point<std::chrono::seconds> time = std::chrono::from_stream(tstr, "");
+    std::string sstr = j.get<std::string>();
+    if(!std::regex_match(sstr, re_ticktime))
+    {
+        return std::nullopt;
+    }
 
-    std::chrono::utc_time<std::chrono::seconds> utc_t()
+    std::optional<uint64_t> nval = std::nullopt;
+    try
+    {
+        nval = std::stoull(sstr);
+    }
+    catch(...)
+    {
+        ;
+    }
 
-    std::chrono::tai_clock::from_utc()
-
-    return std::make_optional(t);
+    return nval;
 }
-
 
 std::optional<std::vector<uint8_t>> JSONParseHelper::parseUUID(json j)
 {
@@ -394,25 +500,57 @@ std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, u
     std::make_optional(rv.first + "/" + std::to_string(rv.second));
 }
 
-std::optional<json> JSONParseHelper::emitTimeData(TimeData t)
+std::string emitDateTimeRaw(DateTimeRaw t)
 {
-    tm utctime = {0};
-    utctime.tm_year = t.year;
-    utctime.tm_mon = t.month;
-    utctime.tm_mday = t.day;
-    utctime.tm_hour = t.hour;
-    utctime.tm_min = t.min;
-    utctime.tm_sec = t.sec;
+    struct tm dt = {0};
+    dt.tm_year = t.year;
+    dt.tm_mon = t.month;
+    dt.tm_mday = t.day;
+    dt.tm_hour = t.hour;
+    dt.tm_min = t.min;
 
     char sstrt[20] = {0};
-    strftime(sstrt, 20, "%Y-%m-%dT%H:%M:%S", &utctime);
-    std::string res(sstrt, sstrt + 20);
+    size_t dtlen = strftime(sstrt, 20, "%Y-%m-%dT%H:%M", &dt);
+    std::string res(sstrt, sstrt + dtlen);
 
-    char sstrz[5] = {0};
-    sprintf_s(sstrz, ".%03uZ", t.millis);
-    std::string zstr(sstrz, sstrz + 5);
+    return res;
+}
 
-    return res + zstr;
+std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
+{
+    if(t.tzoffset == 0)
+    {
+        auto tstr = emitDateTimeRaw(t.utctime) + "Z"; 
+        return std::make_optional(tstr);
+    }
+    else
+    {
+        auto jobj = json::array();
+
+        auto utcstr = emitDateTimeRaw(t.utctime) + "Z";
+        jobj[0] = utcstr;
+
+        auto hh = t.tzoffset / 60;
+        auto mm = std::abs(t.tzoffset) % 60;
+        char sstrt[10] = {0};
+        sprintf_s(sstrt, 10, "%+02d:%0d", hh, mm);
+        std::string tzstr(sstrt, sstrt + 10);
+
+        auto lclstr = emitDateTimeRaw(t.localtime) + tzstr;
+        jobj[1] = lclstr;
+
+        if(!t.tzname.empty())
+        {
+            jobj[2] = t.tzname;
+        }
+
+        return std::make_optional(jobj);
+    }
+}
+
+std::optional<json> JSONParseHelper::emitTickTime(uint64_t t)
+{
+    return "T" + std::to_string(t) + "ns";
 }
 
 std::optional<std::pair<std::string, std::string>> JSONParseHelper::checkEnumName(json j)
@@ -521,8 +659,10 @@ IType* IType::jparse(json j)
             return DataStringType::jparse(j);
         case TypeTag::ByteBufferTag:
             return ByteBufferType::jparse(j);
-        case TypeTag::ISOTimeTag:
-            return ISOTimeType::jparse(j);
+        case TypeTag::DateTimeTag:
+            return DateTimeType::jparse(j);
+        case TypeTag::TickTimeTag:
+            return TickTimeType::jparse(j);
         case TypeTag::LogicalTimeTag:
             return LogicalTimeType::jparse(j);
         case TypeTag::UUIDTag:

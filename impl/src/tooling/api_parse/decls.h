@@ -69,7 +69,8 @@ enum class TypeTag
     StringOfTag,
     DataStringTag,
     ByteBufferTag,
-    ISOTimeTag,
+    DateTimeTag,
+    TickTimeTag,
     LogicalTimeTag,
     UUIDTag,
     ContentHashTag,
@@ -80,6 +81,24 @@ enum class TypeTag
     EnumTag,
     EntityTag,
     UnionTag
+};
+
+struct DateTimeRaw
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+};
+
+struct DateTime
+{
+    DateTimeRaw utctime;
+    DateTimeRaw localtime;
+
+    int32_t tzoffset; //in minutes
+    std::string tzname; //optional abbrev (and/or) description
 };
 
 template <typename ValueRepr, typename State>
@@ -101,7 +120,8 @@ public:
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
     virtual bool parseDataStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, vector<uint8_t>& data, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseISOTimeImpl(const APIModule* apimodule, const IType* itype, TimeData t, ValueRepr value, State& ctx) const = 0;
+    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, ValueRepr value, State& ctx) const = 0;
+    virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) const = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) const = 0;
     virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) const = 0;
     virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) const = 0;
@@ -138,7 +158,8 @@ public:
     virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::vector<uint8_t>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<TimeData> extractISOTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
+    virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
+    virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::string> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::string> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
@@ -153,17 +174,6 @@ public:
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, State& ctx) const = 0;
 };
 
-struct TimeData
-{
-    uint16_t millis; // 0-999
-    uint16_t year;   // Year since 1900
-    uint8_t month;   // 0-11
-    uint8_t day;     // 1-31
-    uint8_t hour;    // 0-23
-    uint8_t min;     // 0-59
-    uint8_t sec;     // 0-60
-};
-
 class JSONParseHelper
 {
 public:
@@ -174,7 +184,8 @@ public:
     static std::optional<std::string> parseToRealNumber(json j);
     static std::optional<std::string> parseToDecimalNumber(json j);
     static std::optional<std::pair<std::string, uint64_t>> parseToRationalNumber(json j);
-    static std::optional<TimeData> parseToTimeData(json j);
+    static std::optional<DateTime> parseToDateTime(json j);
+    static std::optional<uint64_t> parseToTickTime(json j);
 
     static std::optional<std::vector<uint8_t>> parseUUID(json j);
     static std::optional<std::vector<uint8_t>> parseContentHash(json j);
@@ -186,7 +197,8 @@ public:
     static std::optional<json> emitRealNumber(std::string s);
     static std::optional<json> emitDecimalNumber(std::string s);
     static std::optional<json> emitRationalNumber(std::pair<std::string, uint64_t> rv);
-    static std::optional<json> emitTimeData(TimeData t);
+    static std::optional<json> emitDateTime(DateTime t);
+    static std::optional<json> emitTickTime(uint64_t t);
 
     static std::optional<std::pair<std::string, std::string>> checkEnumName(json j);
 };
@@ -824,51 +836,105 @@ public:
     }
 };
 
-class ISOTimeType : public IGroundedType
+class DateTimeType : public IGroundedType
 {
 public:
-    ISOTimeType() : IGroundedType(TypeTag::ISOTimeTag, "NSCore::ISOTime") {;}
-    virtual ~ISOTimeType() {;}
+    DateTimeType() : IGroundedType(TypeTag::DateTimeTag, "NSCore::DateTime") {;}
+    virtual ~DateTimeType() {;}
 
-    static ISOTimeType* jparse(json j)
+    static DateTimeType* jparse(json j)
     {
-        return new ISOTimeType();
+        return new DateTimeType();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
+        auto jobj = json::object();
         std::time_t tval = std::time(nullptr);
+
         auto utctime = std::gmtime(&tval);
+        char utcstr[20] = {0};
+        size_t utcsize = strftime(utcstr, 20, "%Y-%m-%dT%H:%MZ", utctime);
+        std::string utcres(utcstr, utcstr + utcsize);
+        jobj[0] = utcres;
 
-        char sstr[20] = {0};
-        strftime(sstr, 20, "%Y-%m-%dT%H:%M:%S", utctime);
+        auto lcltime = std::localtime(&tval);
+        char lclstr[20] = {0};
+        size_t lclsize = strftime(lclstr, 20, "%Y-%m-%dT%H:%M%z", lcltime);
+        std::string lclres(lclstr, lclstr + lclsize);
+        jobj[1] = lclres;
 
-        std::string res(sstr, sstr + 20);
-        return res + ".000Z";
+        char tzdeets[20] = {0};
+        size_t tzsize = strftime(tzdeets, 20, "%Z", lcltime);
+        std::string tzres(tzdeets, tzdeets + tzsize);
+        jobj[2] = tzres;
+        
+        return jobj;
     }
 
     template <typename ValueRepr, typename State>
     bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto t = JSONParseHelper::parseToTimeData(j);
+        auto t = JSONParseHelper::parseToDateTime(j);
         if(!t.has_value())
         {
             return false;
         }
 
-        return apimgr.parseISOTimeImpl(apimodule, this, t, value, ctx);
+        return apimgr.parseDateTimeImpl(apimodule, this, t.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto tval = apimgr.extractISOTimeImpl(apimodule, this, value, ctx);
+        auto tval = apimgr.extractDateTimeImpl(apimodule, this, value, ctx);
         if(!tval.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitTimeData(tval.value());
+        return JSONParseHelper::emitDateTime(tval.value());
+    }
+};
+
+class TickTimeType : public IGroundedType
+{
+public:
+    TickTimeType() : IGroundedType(TypeTag::TickTimeTag, "NSCore::TickTime") {;}
+    virtual ~TickTimeType() {;}
+
+    static TickTimeType* jparse(json j)
+    {
+        return new TickTimeType();
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        auto t = JSONParseHelper::parseToTickTime(j);
+        if(!t.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseTickTimeImpl(apimodule, this, t.value(), value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        auto tval = apimgr.extractTickTimeImpl(apimodule, this, value, ctx);
+        if(!tval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitTickTime(tval.value());
     }
 };
 

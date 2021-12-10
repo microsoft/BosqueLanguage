@@ -393,7 +393,7 @@ enum BufferFormat {
     bosque_binary,
     json,
     json_binary,
-    grpc
+    protobuf
 }
 
 enum BufferCompression {
@@ -412,8 +412,12 @@ __internal __constructable entity DataBuffer<T unique BufferParsable> provides S
     method value(): ByteBuffer # special_extract
 }
 
-//<summary>Primitive ISOTime value.</summary>
-__internal __typedeclable entity ISOTime provides Some, Orderable APIType {
+//<summary>Primitive DateTime value.</summary>
+__internal __typedeclable entity DateTime provides Some, Orderable, APIType {
+}
+
+//<summary>Primitive DateTime value.</summary>
+__internal __typedeclable entity TickTime provides Some, Orderable, APIType {
 }
 
 //<summary>Primitive LogicalTime value.</summary>

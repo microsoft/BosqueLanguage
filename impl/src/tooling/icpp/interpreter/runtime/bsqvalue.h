@@ -624,10 +624,27 @@ struct BSQByteBufferNode
     uint64_t bytecount;
 };
 
+enum class BufferFormat {
+    utf8 = 0x0,
+    binary,
+    bosque,
+    bosque_binary,
+    json,
+    json_binary,
+    protobuf
+};
+
+enum class BufferCompression {
+    off = 0x0,
+    deflate
+};
+
 struct BSQByteBuffer
 {
-    BSQByteBufferNode* next;
+    BSQByteBufferNode* bytes;
     uint64_t bytecount;
+    BufferFormat format;
+    BufferCompression compression;
 };
 
 std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -664,7 +681,6 @@ std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPt
 
 class BSQByteBufferType : public BSQRefType
 {
-    xxxx; //need to fix this to have encoding info too
 public:
     BSQByteBufferType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, "NSCore::ByteBuffer") {;}
 
@@ -673,28 +689,47 @@ public:
 
 ////
 //ISOTime
-struct BSQTimeData
+struct BSQTimeDataRaw
 {
-    uint16_t millis; // 0-999
     uint16_t year;   // Year since 1900
     uint8_t month;   // 0-11
     uint8_t day;     // 1-31
     uint8_t hour;    // 0-23
     uint8_t min;     // 0-59
-    uint8_t sec;     // 0-60
 };
 
-std::string entityISOTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+struct BSQDateTime
+{
+    DateTimeRaw utctime;
+    DateTimeRaw localtime;
 
-class BSQISOTimeType : public BSQRegisterType<BSQTimeData>
+    int32_t tzoffset; //in minutes
+    std::string tzname; //optional abbrev (and/or) description
+};
+
+std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQDateTimeType : public BSQRefType
 {
 public:
-    BSQISOTimeType(): BSQRegisterType(BSQ_TYPE_ID_ISOTIME, 24, "111", EMPTY_KEY_CMP, entityISOTimeDisplay_impl, "NSCore::ISOTime") 
+    BSQDateTimeType(): BSQRefType(BSQ_TYPE_ID_DATETIME, sizeof(BSQDateTime), nullptr, {}, EMPTY_KEY_CMP, entityDateTimeDisplay_impl, "NSCore::DateTime") {;}
+    
+    virtual ~BSQDateTimeType() {;}
+};
+
+typedef uint64_t BSQTickTime;
+
+std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQTickTimeType : public BSQRegisterType<uint64_t>
+{
+public:
+    BSQTickTimeType(): BSQRegisterType(BSQ_TYPE_ID_TICKTIME, sizeof(BSQTickTime), "1", EMPTY_KEY_CMP, entityTickTimeDisplay_impl, "NSCore::TickTime") 
     {
-        static_assert(sizeof(BSQTimeData) <= 24);
+        static_assert(sizeof(BSQTickTime) <= 24);
     }
     
-    virtual ~BSQISOTimeType() {;}
+    virtual ~BSQTickTimeType() {;}
 };
 
 ////

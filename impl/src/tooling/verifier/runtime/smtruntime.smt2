@@ -64,13 +64,42 @@
 (define-sort BDecimal () Real)
 (define-sort BRational () Real)
 ;;BSTRING_TYPE_ALIAS;;
-(define-sort BByteBuffer () (Seq (_ BitVec 8)))
-(define-sort BISOTime () Int)
+(define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
-(define-sort BUUID () (_ BitVec 12)) ;;TODO we should experiment with this encoding -- int, bv128, constructor?
 ;;BHASHCODE_TYPE_ALIAS;;
 
 ;;TODO BHashable and Hash + HashInvert and axioms
+
+(define-datatype BByteBuffer 
+  (BByteBuffer@cons 
+    (BByteBuffer@bytes (Seq (_ BitVec 8)))
+    (BDateTimeRaw@format BNat)
+    (BDateTimeRaw@compress BNat)
+))
+
+(declare-datatype BDateTimeRaw 
+  (BDateTimeRaw@cons 
+    (BDateTimeRaw@year BNat)
+    (BDateTimeRaw@month BNat)
+    (BDateTimeRaw@day BNat)
+    (BDateTimeRaw@hour BNat)
+    (BDateTimeRaw@min BNat) 
+))
+
+(declare-datatype BDateTime 
+  (BDateTimeEntry@cons 
+    (BDateTime@utctime BDateTimeRaw)
+    (BDateTimeEntry@localtime BDateTimeRaw)
+    (BDateTimeEntry@tzoffset BNat)
+    (BDateTimeEntry@tzinfo BString)
+))
+
+(declare-datatype BUUID (BDateTimeRaw@cons 
+    (BUUID@b0 (_ BitVec 8)) (BUUID@b1 (_ BitVec 8)) (BUUID@b2 (_ BitVec 8)) (BUUID@b3 (_ BitVec 8))
+    (BUUID@b4 (_ BitVec 8)) (BUUID@b5 (_ BitVec 8)) (BUUID@b6 (_ BitVec 8)) (BUUID@b7 (_ BitVec 8))
+    (BUUID@b8 (_ BitVec 8)) (BUUID@b9 (_ BitVec 8)) (BUUID@b10 (_ BitVec 8)) (BUUID@b11 (_ BitVec 8))
+    (BUUID@b12 (_ BitVec 8)) (BUUID@b13 (_ BitVec 8)) (BUUID@b14 (_ BitVec 8)) (BUUID@b15 (_ BitVec 8))
+))
 
 ;;BINT_CONSTANTS;;
 

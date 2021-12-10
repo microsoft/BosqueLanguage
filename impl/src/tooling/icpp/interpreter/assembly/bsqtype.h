@@ -148,7 +148,8 @@ public:
     static const BSQType* g_typeByteBufferLeaf;
     static const BSQType* g_typeByteBufferNode;
     static const BSQType* g_typeByteBuffer;
-    static const BSQType* g_typeISOTime;
+    static const BSQType* g_typeDateTime;
+    static const BSQType* g_typeTickTime;
     static const BSQType* g_typeLogicalTime;
     static const BSQType* g_typeUUID;
     static const BSQType* g_typeContentHash;
