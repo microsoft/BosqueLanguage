@@ -6,7 +6,56 @@
 #pragma once
 
 #include "../common.h"
-#include "../assembly/bsqtype.h"
+
+#include <list>
+
+////
+//BSQType abstract base class
+class BSQType
+{
+public:
+    static const BSQType** g_typetable;
+
+    const BSQTypeID tid;
+    const BSQTypeLayoutKind tkind;
+    
+    const BSQTypeSizeInfo allocinfo;
+    const GCFunctorSet gcops;
+
+    KeyCmpFP fpkeycmp;
+    const std::map<BSQVirtualInvokeID, BSQInvokeID> vtable; //TODO: This is slow indirection but nice and simple
+
+    DisplayFP fpDisplay;
+    const std::string name;
+
+    //Constructor that everyone delegates to
+    BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), vtable(vtable), fpkeycmp(fpkeycmp), fpDisplay(fpDisplay), name(name)
+    {;}
+
+    virtual ~BSQType() {;}
+
+    inline bool isLeaf() const
+    {
+        return this->allocinfo.heapmask == nullptr;
+    }
+
+    virtual void clearValue(StorageLocationPtr trgt) const = 0;
+    virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
+    virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const = 0;
+
+    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+        this->storeValue(trgt, udata);
+    }
+
+    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
+        this->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+    }
+};
 
 struct GCStackEntry
 {
@@ -334,6 +383,8 @@ private:
 
     void* globals_mem;
     RefMask globals_mask;
+
+    std::list<void*> load_roots;
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
@@ -694,6 +745,14 @@ private:
         {
             Allocator::gcProcessSlotsWithMask<true>((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
         }
+
+        if(!Allocator::GlobalAllocator.load_roots.empty())
+        {
+            for(auto iter = Allocator::GlobalAllocator.load_roots.begin(); iter != Allocator::GlobalAllocator.load_roots.end(); ++iter)
+            {
+                Allocator::gcProcessSlot<true>(&(*iter));
+            }
+        }
     }
 
     void processHeap()
@@ -774,10 +833,18 @@ private:
         {
             Allocator::gcClearMarkSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
         }
+
+        if(!Allocator::GlobalAllocator.load_roots.empty())
+        {
+            for(auto iter = Allocator::GlobalAllocator.load_roots.begin(); iter != Allocator::GlobalAllocator.load_roots.end(); ++iter)
+            {
+                Allocator::gcClearMark(*iter);
+            }
+        }
     }
 
 public:
-    Allocator() : bumpalloc(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
+    Allocator() : bumpalloc(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr), load_roots()
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->promotedbytes = 0);
@@ -838,6 +905,21 @@ public:
         this->bumpalloc.postGCProcess(this->liveoldspace);
     }
 
+    void pushLoadRoot(void* vv)
+    {
+        this->load_roots.push_front(vv);
+    }
+
+    std::list<void*>::iterator getLoadRootPosition()
+    {
+        return this->load_roots.begin();
+    }
+
+    void clearFromLoadRootPosition(std::list<void*>::iterator pos)
+    {
+        this->load_roots.erase(this->load_roots.begin(), pos);
+    }
+
     void setGlobalsMemory(void* globals, const RefMask mask)
     {
         this->globals_mem = globals;
@@ -854,3 +936,39 @@ public:
         Allocator::GlobalAllocator.globals_mem = nullptr;
     }
 };
+
+void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_inlineImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_refImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data);
+void gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data);
+
+void gcProcessHeapOperator_nopImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_inlineImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_refImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data);
+void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data);
+
+void gcDecOperator_nopImpl(const BSQType* btype, void** data);
+void gcDecOperator_inlineImpl(const BSQType* btype, void** data);
+void gcDecOperator_refImpl(const BSQType* btype, void** data);
+void gcDecOperator_stringImpl(const BSQType* btype, void** data);
+void gcDecOperator_bignumImpl(const BSQType* btype, void** data);
+
+void gcClearOperator_nopImpl(const BSQType* btype, void** data);
+void gcClearOperator_inlineImpl(const BSQType* btype, void** data);
+void gcClearOperator_refImpl(const BSQType* btype, void** data);
+void gcClearOperator_stringImpl(const BSQType* btype, void** data);
+void gcClearOperator_bignumImpl(const BSQType* btype, void** data);
+
+void gcMakeImmortalOperator_nopImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_inlineImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_refImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_stringImpl(const BSQType* btype, void** data);
+void gcMakeImmortalOperator_bignumImpl(const BSQType* btype, void** data);
+
+constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessRootOperator_refImpl, gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcClearOperator_refImpl, gcMakeImmortalOperator_refImpl };
+constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessRootOperator_nopImpl, gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcClearOperator_nopImpl, gcMakeImmortalOperator_nopImpl };
+constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessRootOperator_inlineImpl, gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcClearOperator_inlineImpl, gcMakeImmortalOperator_inlineImpl };
+constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessRootOperator_nopImpl, gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcClearOperator_nopImpl, gcMakeImmortalOperator_nopImpl };
+

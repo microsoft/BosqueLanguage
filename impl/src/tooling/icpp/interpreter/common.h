@@ -143,6 +143,31 @@ typedef void* StorageLocationPtr;
 #define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
 #define IS_INLINE_BIGNUM(N) false
 
+#define SLPTR_LOAD_CONTENTS_AS(T, L) (*((T*)L))
+#define SLPTR_STORE_CONTENTS_AS(T, L, V) *((T*)L) = V
+
+#define SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(L) (*((void**)L))
+#define SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(L, V) *((void**)L) = V
+
+#define SLPTR_LOAD_UNION_INLINE_TYPE(L) (*((const BSQType**)L))
+#define SLPTR_LOAD_UNION_INLINE_TYPE_AS(T, L) (*((const BSQType**)L))
+#define SLPTR_LOAD_UNION_INLINE_DATAPTR(L) ((void*)(((uint8_t*)L) + sizeof(const BSQType*)))
+
+#define SLPTR_STORE_UNION_INLINE_TYPE(T, L) *((const BSQType**)L) = T
+
+#define SLPTR_LOAD_HEAP_TYPE_ANY(L) ((*((void**)L) == nullptr) ? BSQType::g_typeNone : GET_TYPE_META_DATA(*((void**)L)))
+#define SLPTR_LOAD_HEAP_TYPE_SOME(L) GET_TYPE_META_DATA(*((void**)L))
+#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)SLPTR_LOAD_HEAP_TYPE_SOME(*((void**)L)))
+
+#define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
+
+#define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
+
+#define SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(SRCTYPE, SRC) (SRCTYPE->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(SRC) : SLPTR_LOAD_HEAP_TYPE_SOME(SRC))
+
+#define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
+#define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
+
 ////////////////////////////////
 //Type and GC interaction decls
 
@@ -174,6 +199,28 @@ typedef const char* RefMask;
 
 typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
 typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr);
+
+struct BSQTypeSizeInfo
+{
+    const uint64_t heapsize;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
+    const uint64_t inlinedatasize; //number of bytes needed in storage location for this (includes type tag for inline union -- is the size of a pointer for ref -- and word size for BSQBool)
+    const uint64_t assigndatasize; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
+
+    const RefMask heapmask; //The mask to used to traverse this object during gc (if it is heap allocated) -- null if this is a leaf object -- partial if tailing scalars
+    const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must cover full size of data
+};
+
+struct GCFunctorSet
+{
+    GCProcessOperatorFP fpProcessObjRoot;
+    GCProcessOperatorFP fpProcessObjHeap;
+    GCProcessOperatorFP fpDecObj;
+    GCProcessOperatorFP fpClearObj;
+    GCProcessOperatorFP fpMakeImmortal;
+};
+
+typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
+constexpr KeyCmpFP EMPTY_KEY_CMP = nullptr;
 
 typedef uint32_t BSQTypeID;
 typedef uint32_t BSQTupleIndex;

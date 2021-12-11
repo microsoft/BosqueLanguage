@@ -11,16 +11,12 @@
 #include <cstdint>
 #include <math.h>
 #include <ctime>
-#include <chrono>
 #include <cstdio>
 
 #include <string>
 #include <regex>
 
 #include <optional>
-#include <vector>
-#include <stack>
-#include <map>
 
 #include <random>
 typedef std::default_random_engine RandGenerator;

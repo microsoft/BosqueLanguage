@@ -6,8 +6,413 @@
 #pragma once
 
 #include "../common.h"
-#include "../assembly/bsqtype.h"
-#include "../core/bsqmemory.h"
+#include "bsqmemory.h"
+
+#include <vector>
+#include <map>
+
+class BSQField
+{
+public:
+    static const BSQField** g_fieldtable;
+
+    const BSQFieldID fkey;
+    const std::string fname;
+
+    const BSQTypeID declaredType;
+    const bool isOptional;
+
+    BSQField(BSQFieldID fkey, std::string fname, BSQTypeID declaredType, bool isOptional): 
+        fkey(fkey), fname(fname), declaredType(declaredType), isOptional(isOptional)
+    {;}
+};
+
+class BSQWellKnownType
+{
+public:
+    //Well known types
+    static const BSQType* g_typeNone;
+    static const BSQType* g_typeNothing;
+    static const BSQType* g_typeBool;
+    static const BSQType* g_typeNat;
+    static const BSQType* g_typeInt;
+    static const BSQType* g_typeBigNat;
+    static const BSQType* g_typeBigInt;
+    static const BSQType* g_typeFloat;
+    static const BSQType* g_typeDecimal;
+    static const BSQType* g_typeRational;
+
+    static const BSQType* g_typeStringKRepr16;
+    static const BSQType* g_typeStringKRepr32;
+    static const BSQType* g_typeStringKRepr64;
+    static const BSQType* g_typeStringKRepr96;
+    static const BSQType* g_typeStringKRepr128;
+    static const std::pair<size_t, const BSQType*> g_typeStringKCons[5];
+
+    static const BSQType* g_typeStringTreeRepr;
+    static const BSQType* g_typeStringSliceRepr;
+
+    static const BSQType* g_typeString;
+
+    static const BSQType* g_typeByteBufferLeaf;
+    static const BSQType* g_typeByteBufferNode;
+    static const BSQType* g_typeByteBuffer;
+    static const BSQType* g_typeDateTime;
+    static const BSQType* g_typeTickTime;
+    static const BSQType* g_typeLogicalTime;
+    static const BSQType* g_typeUUID;
+    static const BSQType* g_typeContentHash;
+    static const BSQType* g_typeRegex;
+};
+
+template <typename T>
+class BSQRegisterType : public BSQType
+{
+public:
+    BSQRegisterType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeLayoutKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
+    {;}
+
+    virtual ~BSQRegisterType() {;}
+
+    void storeValueDirect(StorageLocationPtr trgt, T v) const
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, v);
+    }
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, sizeof(T));
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, SLPTR_LOAD_CONTENTS_AS(T, src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+};
+
+class BSQRefType : public BSQType
+{
+public:
+    BSQRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name):  
+        BSQType(tid, BSQTypeLayoutKind::Ref, { heapsize, sizeof(void*), sizeof(void*), heapmask, "2" }, REF_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name)
+    {;}
+
+    virtual ~BSQRefType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+};
+
+class BSQStructType : public BSQType
+{
+public:
+    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, bool norefs): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name)
+    {;}
+
+    virtual ~BSQStructType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        BSQ_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final 
+    {
+        return SLPTR_INDEX_DATAPTR(src, offset);
+    }
+};
+
+template <typename T>
+class BSQBigNumType : public BSQType
+{
+public:
+    BSQBigNumType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, __std_fs_read_name_from_reparse_data_buffer)
+    {;}
+
+    virtual ~BSQBigNumType() {;}
+
+    void storeValueDirect(StorageLocationPtr trgt, T v) const
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, v);
+    }
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, sizeof(T));
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(T, trgt, SLPTR_LOAD_CONTENTS_AS(T, src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        BSQ_INTERNAL_ASSERT(false);
+        return nullptr;
+    }
+};
+
+////////////////////////////////
+//Storage Operators
+
+template <bool isRoot>
+GCProcessOperatorFP getProcessFP(const BSQType* tt)
+{
+    BSQ_INTERNAL_ASSERT(false);
+    return nullptr;
+}
+
+template <>
+inline GCProcessOperatorFP getProcessFP<true>(const BSQType* tt)
+{
+    return tt->gcops.fpProcessObjRoot;
+}
+
+template <>
+inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
+{
+    return tt->gcops.fpProcessObjHeap;
+}
+
+////
+//Concrete types
+
+std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQTupleInfo
+{
+public:
+    BSQTupleIndex maxIndex;
+    std::vector<BSQTypeID> ttypes;
+    std::vector<size_t> idxoffsets;
+
+    BSQTupleInfo(BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
+        maxIndex(maxIndex), ttypes(ttypes), idxoffsets(idxoffsets)
+    {;}
+
+    virtual ~BSQTupleInfo() {;}
+};
+
+class BSQTupleRefType : public BSQRefType, public BSQTupleInfo
+{
+public:
+    BSQTupleRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name),
+        BSQTupleInfo(maxIndex, ttypes, idxoffsets)
+    {;}
+
+    virtual ~BSQTupleRefType() {;}
+};
+
+class BSQTupleStructType : public BSQStructType, public BSQTupleInfo
+{
+public:
+    BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets, bool norefs):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, norefs),
+        BSQTupleInfo(maxIndex, ttypes, idxoffsets)
+    {;}
+
+    virtual ~BSQTupleStructType() {;}
+};
+
+std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQRecordInfo
+{
+public:
+    static std::map<BSQRecordPropertyID, std::string> g_propertynamemap;
+
+    const std::vector<BSQRecordPropertyID> properties;
+    const std::vector<BSQTypeID> rtypes;
+    const std::vector<size_t> propertyoffsets;
+
+    BSQRecordInfo(std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
+        properties(properties), rtypes(rtypes), propertyoffsets(propertyoffsets)
+    {;}
+
+    virtual ~BSQRecordInfo() {;}
+};
+
+class BSQRecordRefType : public BSQRefType, public BSQRecordInfo
+{
+public:
+    BSQRecordRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name),
+        BSQRecordInfo(properties, rtypes, propertyoffsets)
+    {;}
+
+    virtual ~BSQRecordRefType() {;}
+};
+
+class BSQRecordStructType : public BSQStructType, public BSQRecordInfo
+{
+public:
+    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets, bool norefs):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, norefs),
+        BSQRecordInfo(properties, rtypes, propertyoffsets)
+    {;}
+
+    virtual ~BSQRecordStructType() {;}
+};
+
+std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQEntityInfo
+{
+public:
+    const std::vector<BSQFieldID> fields;
+    const std::vector<size_t> fieldoffsets;
+    const std::optional<BSQVirtualInvokeID> consfunc;
+    const std::vector<BSQFieldID> consfields;
+
+    BSQEntityInfo(std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields):
+        fields(fields), fieldoffsets(fieldoffsets), consfunc(consfunc), consfields(consfields)
+    {;}
+
+    virtual ~BSQEntityInfo() {;}
+};
+
+class BSQEntityRefType : public BSQRefType, public BSQEntityInfo
+{
+public:
+    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields):
+        BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name),
+        BSQEntityInfo(fields, fieldoffsets, consfunc, consfields)
+    {;}
+
+    virtual ~BSQEntityRefType() {;}
+};
+
+class BSQEntityStructType : public BSQStructType, public BSQEntityInfo
+{
+public:
+    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields): 
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name, norefs),
+        BSQEntityInfo(fields, fieldoffsets, consfunc, consfields)
+    {;}
+
+    virtual ~BSQEntityStructType() {;}
+};
+
+std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+class BSQEphemeralListType : public BSQStructType
+{
+public:
+    const std::vector<BSQTypeID> etypes;
+    const std::vector<size_t> idxoffsets;
+
+    BSQEphemeralListType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets, bool norefs): 
+        BSQStructType(tid, datasize, imask, {}, nullptr, ephemeralDisplay_impl, name, norefs), etypes(etypes), idxoffsets(idxoffsets)
+    {;}
+
+    virtual ~BSQEphemeralListType() {;}
+};
+
+std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+int unionRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+class BSQUnionType : public BSQType
+{
+public:
+    const std::vector<BSQTypeID> subtypes;
+
+     BSQUnionType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, KeyCmpFP fpkeycmp, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQType(tid, tkind, allocinfo, {0}, {}, fpkeycmp, unionDisplay_impl, name), subtypes(subtypes)
+    {;}
+
+    virtual ~BSQUnionType() {;}
+
+    virtual bool isInline() const = 0;
+};
+
+class BSQUnionInlineType : public BSQUnionType
+{
+public:
+    BSQUnionInlineType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQUnionType(tid, BSQTypeLayoutKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, unionInlineKeyCmp_impl, name, subtypes)
+    {;}
+
+    virtual ~BSQUnionInlineType() {;}
+
+    bool isInline() const override final
+    {
+        return true;
+    }
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+       return (SLPTR_LOAD_UNION_INLINE_TYPE(src))->indexStorageLocationOffset(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
+    }
+};
+
+class BSQUnionRefType : public BSQUnionType
+{
+public:
+    BSQUnionRefType(BSQTypeID tid, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQUnionType(tid, BSQTypeLayoutKind::UnionRef, { sizeof(void*), sizeof(void*), sizeof(void*), nullptr, "2" }, unionRefKeyCmp_impl, name, subtypes)
+    {;}
+
+    virtual ~BSQUnionRefType() {;}
+
+    bool isInline() const override final
+    {
+        return false;
+    }
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
+    }
+};
 
 ////
 //Primitive value representations
@@ -21,16 +426,7 @@ typedef uint64_t BSQNone;
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityNoneKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQNoneType : public BSQRegisterType<BSQNone>
-{
-public:
-    BSQNoneType(): BSQRegisterType(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", entityNoneKeyCmp_impl, entityNoneDisplay_impl, "NSCore::None")
-    {
-        static_assert(sizeof(BSQNone) == 8);
-    }
-
-    virtual ~BSQNoneType() {;}
-};
+#define CONS_BSQ_NONE_TYPE() (new BSQRegisterType<BSQNone>(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", entityNoneKeyCmp_impl, entityNoneDisplay_impl, "None"))
 
 ////
 //Nothing
@@ -40,16 +436,7 @@ typedef uint64_t BSQNothing;
 
 std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQNothingType : public BSQRegisterType<BSQNothing>
-{
-public:
-    BSQNothingType(): BSQRegisterType(BSQ_TYPE_ID_NOTHING, sizeof(BSQNothing), "1", EMPTY_KEY_CMP, entityNothingDisplay_impl, "NSCore::Nothing")
-    {
-        static_assert(sizeof(BSQNone) == 8);
-    }
-
-    virtual ~BSQNothingType() {;}
-};
+#define CONS_BSQ_NOTHING_TYPE() (new BSQRegisterType<BSQNothing>(BSQ_TYPE_ID_NOTHING, sizeof(BSQNothing), "1", EMPTY_KEY_CMP, entityNothingDisplay_impl, "Nothing"))
 
 ////
 //Bool
@@ -61,16 +448,7 @@ typedef uint8_t BSQBool;
 std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityBoolKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBoolType : public BSQRegisterType<BSQBool>
-{
-public:
-    BSQBoolType(): BSQRegisterType(BSQ_TYPE_ID_BOOL, sizeof(BSQBool), "1", entityBoolKeyCmp_impl, entityBoolDisplay_impl, "NSCore::Bool")
-    {
-        static_assert(sizeof(BSQBool) == 1);
-    }
-
-    virtual ~BSQBoolType() {;}
-};
+#define CONS_BSQ_BOOL_TYPE() (new BSQRegisterType<BSQBool>(BSQ_TYPE_ID_BOOL, sizeof(BSQBool), "1", entityBoolKeyCmp_impl, entityBoolDisplay_impl, "Bool"))
 
 ////
 //Nat
@@ -79,17 +457,8 @@ typedef uint64_t BSQNat;
 std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQNatType : public BSQRegisterType<BSQNat>
-{
-public:
-    BSQNatType(): BSQRegisterType(BSQ_TYPE_ID_NAT, sizeof(BSQNat), "1", entityNatKeyCmp_impl, entityNatDisplay_impl, "NSCore::Nat")
-    {
-        static_assert(sizeof(BSQNat) == 8);
-    }
-
-    virtual ~BSQNatType() {;}
-};
-
+#define CONS_BSQ_NAT_TYPE(TID, NAME) (new BSQRegisterType<BSQNat>(TID, sizeof(BSQNat), "1", entityNatKeyCmp_impl, entityNatDisplay_impl, NAME))
+    
 ////
 //Int
 typedef int64_t BSQInt;
@@ -97,16 +466,7 @@ typedef int64_t BSQInt;
 std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQIntType : public BSQRegisterType<BSQInt>
-{
-public:
-    BSQIntType(): BSQRegisterType(BSQ_TYPE_ID_INT, sizeof(BSQInt), "1", entityIntKeyCmp_impl, entityIntDisplay_impl, "NSCore::Int")
-    {
-        static_assert(sizeof(BSQInt) == 8);
-    }
-
-    virtual ~BSQIntType() {;}
-};
+#define CONS_BSQ_INT_TYPE(TID, NAME) (new BSQRegisterType<BSQInt>(TID, sizeof(BSQInt), "1", entityIntKeyCmp_impl, entityIntDisplay_impl, NAME))
 
 ////
 //BigNat
@@ -119,16 +479,7 @@ typedef uint64_t BSQBigNat;
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityBigNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBigNatType : public BSQBigNumType<BSQBigNat>
-{
-public:
-    BSQBigNatType(): BSQBigNumType(BSQ_TYPE_ID_BIGNAT, sizeof(BSQBigNat), "4", entityBigNatKeyCmp_impl, entityBigNatDisplay_impl, "NSCore::BigNat")
-    {
-        static_assert(sizeof(BSQNone) == 8);
-    }
-
-    virtual ~BSQBigNatType() {;}
-};
+#define CONS_BSQ_BIG_NAT_TYPE(TID, NAME) (new BSQBigNumType<BSQBigNat>(TID, sizeof(BSQBigNat), "4", entityBigNatKeyCmp_impl, entityBigNatDisplay_impl, NAME))
 
 ////
 //BigInt
@@ -141,16 +492,7 @@ typedef int64_t BSQBigInt;
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQBigIntType : public BSQBigNumType<BSQBigInt>
-{
-public:
-    BSQBigIntType(): BSQBigNumType(BSQ_TYPE_ID_BIGINT, sizeof(BSQBigInt), "4", entityBigIntKeyCmp_impl, entityBigIntDisplay_impl, "NSCore::BigInt")
-    {
-        static_assert(sizeof(BSQNone) == 8);
-    }
-
-    virtual ~BSQBigIntType() {;}
-};
+#define CONS_BSQ_BIG_INT_TYPE(TID, NAME) (new BSQBigNumType<BSQBigInt>(TID, sizeof(BSQBigInt), "4", entityBigIntKeyCmp_impl, entityBigIntDisplay_impl, NAME))
 
 ////
 //Float
@@ -158,16 +500,7 @@ typedef double BSQFloat;
 
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQFloatType: public BSQRegisterType<BSQFloat>
-{
-public:
-    BSQFloatType(): BSQRegisterType(BSQ_TYPE_ID_FLOAT, sizeof(BSQFloat), "1", EMPTY_KEY_CMP, entityFloatDisplay_impl, "NSCore::Float") 
-    {
-        static_assert(sizeof(BSQFloat) == 8);
-    }
-
-    virtual ~BSQFloatType() {;}
-};
+#define CONS_BSQ_FLOAT_TYPE(TID, NAME) (new BSQRegisterType<BSQFloat>(TID, sizeof(BSQFloat), "1", EMPTY_KEY_CMP, entityFloatDisplay_impl, NAME))
 
 ////
 //Decimal
@@ -179,16 +512,7 @@ typedef double BSQDecimal;
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQDecimalType : public BSQRegisterType<BSQDecimal>
-{
-public:
-    BSQDecimalType() : BSQRegisterType(BSQ_TYPE_ID_DECIMAL, sizeof(BSQDecimal), "1" , EMPTY_KEY_CMP, entityDecimalDisplay_impl, "NSCore::Decimal")
-    {
-        static_assert(sizeof(BSQDecimal) == 8);
-    }
-
-    virtual ~BSQDecimalType() {;}
-};
+#define CONS_BSQ_DECIMAL_TYPE(TID, NAME) (new BSQRegisterType<BSQDecimal>(TID, sizeof(BSQDecimal), "1", EMPTY_KEY_CMP, entityDecimalDisplay_impl, NAME))
 
 ////
 //Rational
@@ -200,16 +524,7 @@ struct BSQRational
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQRationalType : public BSQRegisterType<BSQRational>
-{
-public:
-    BSQRationalType() : BSQRegisterType(BSQ_TYPE_ID_RATIONAL, sizeof(BSQRational), "41", EMPTY_KEY_CMP, entityRationalDisplay_impl, "NSCore::Rational") 
-    {
-        static_assert(sizeof(BSQRational) == 16);
-    }
-
-    virtual ~BSQRationalType() {;}
-};
+#define CONS_BSQ_RATIONAL_TYPE(TID, NAME) (new BSQRegisterType<BSQRational>(TID, sizeof(BSQRational), "41", EMPTY_KEY_CMP, entityRationalDisplay_impl, NAME))
 
 ////
 //String
@@ -299,11 +614,11 @@ public:
 
     inline static const BSQStringKReprTypeAbstract* selectKReprForSize(size_t k)
     {
-        auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&k](const std::pair<size_t, const BSQType*>& cc) {
+        auto stp = std::find_if(BSQWellKnownType::g_typeStringKCons, BSQWellKnownType::g_typeStringKCons + sizeof(BSQWellKnownType::g_typeStringKCons), [&k](const std::pair<size_t, const BSQType*>& cc) {
             return cc.first > k;
         });
     
-        assert(stp != BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons));
+        assert(stp != BSQWellKnownType::g_typeStringKCons + sizeof(BSQWellKnownType::g_typeStringKCons));
         return static_cast<const BSQStringKReprTypeAbstract*>(stp->second);
     }
 
@@ -541,19 +856,19 @@ public:
 std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityStringKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQStringType : public BSQType
+class BSQStringImplType : public BSQType
 {
 private:
     static uint8_t* boxInlineString(BSQInlineString istr);
 
 public:
-    BSQStringType() 
-    : BSQType(BSQ_TYPE_ID_STRING, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, "NSCore::String")
+    BSQStringImplType(BSQTypeID tid, std::string name) 
+    : BSQType(tid, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, name)
     {
         static_assert(sizeof(BSQString) == 16);
     }
 
-    virtual ~BSQStringType() {;}
+    virtual ~BSQStringImplType() {;}
 
     void storeValueDirect(StorageLocationPtr trgt, BSQString s) const
     {
@@ -574,17 +889,6 @@ public:
     {
         assert(false);
         return nullptr;
-    }
-
-    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
-    }
-
-    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));
     }
 
     static int keycmp(BSQString v1, BSQString v2);
@@ -609,6 +913,8 @@ public:
     static BSQString concat2(StorageLocationPtr s1, StorageLocationPtr s2);
     static BSQString slice(StorageLocationPtr str, int64_t startpos, int64_t endpos);
 };
+
+#define CONS_BSQ_STRING_TYPE(TID, NAME) (new BSQStringImplType(TID, NAME))
 
 ////
 //ByteBuffer
@@ -648,48 +954,16 @@ struct BSQByteBuffer
 };
 
 std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-class BSQByteBufferLeafType : public BSQRefType
-{
-public:
-    BSQByteBufferLeafType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_LEAF, sizeof(BSQByteBufferLeaf), nullptr, {}, EMPTY_KEY_CMP, entityByteBufferLeafDisplay_impl, "NSCore::ByteBufferLeaf") {;}
-
-    virtual ~BSQByteBufferLeafType() {;}
-};
-
 std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-class BSQByteBufferNodeType : public BSQRefType
-{
-public:
-    BSQByteBufferNodeType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_NODE, sizeof(BSQByteBufferNode), "22", {}, EMPTY_KEY_CMP, entityByteBufferNodeDisplay_impl, "NSCore::ByteBufferNode") {;}
-
-    virtual ~BSQByteBufferNodeType() {;}
-};
-
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQByteBufferType : public BSQStructType
-{
-public:
-    BSQByteBufferType(): BSQStructType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, "NSCore::ByteBuffer", false) {;}
-
-    virtual ~BSQByteBufferType() {;}
-};
-
-std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-class BSQByteBufferType : public BSQRefType
-{
-public:
-    BSQByteBufferType(): BSQRefType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, "NSCore::ByteBuffer") {;}
-
-    virtual ~BSQByteBufferType() {;}
-};
+#define CONS_BSQ_BYTE_BUFFER_LEAF_TYPE() (new BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_LEAF, sizeof(BSQByteBufferLeaf), nullptr, {}, EMPTY_KEY_CMP, entityByteBufferLeafDisplay_impl, "ByteBufferLeaf"))
+#define CONS_BSQ_BYTE_BUFFER_NODE_TYPE() (new BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_NODE, sizeof(BSQByteBufferNode), "22", {}, EMPTY_KEY_CMP, entityByteBufferNodeDisplay_impl, "ByteBufferNode"))
+#define CONS_BSQ_BYTE_BUFFER_TYPE() (new BSQRefType(BSQ_TYPE_ID_BYTEBUFFER, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, "ByteBuffer"))
 
 ////
-//ISOTime
-struct BSQTimeDataRaw
+//DateTime
+struct BSQDateTimeRaw
 {
     uint16_t year;   // Year since 1900
     uint8_t month;   // 0-11
@@ -700,8 +974,8 @@ struct BSQTimeDataRaw
 
 struct BSQDateTime
 {
-    DateTimeRaw utctime;
-    DateTimeRaw localtime;
+    BSQDateTimeRaw utctime;
+    BSQDateTimeRaw localtime;
 
     int32_t tzoffset; //in minutes
     std::string tzname; //optional abbrev (and/or) description
@@ -709,28 +983,15 @@ struct BSQDateTime
 
 std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQDateTimeType : public BSQRefType
-{
-public:
-    BSQDateTimeType(): BSQRefType(BSQ_TYPE_ID_DATETIME, sizeof(BSQDateTime), nullptr, {}, EMPTY_KEY_CMP, entityDateTimeDisplay_impl, "NSCore::DateTime") {;}
-    
-    virtual ~BSQDateTimeType() {;}
-};
+#define CONS_BSQ_DATE_TIME_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQDateTime), nullptr, {}, EMPTY_KEY_CMP, entityDateTimeDisplay_impl, NAME))
 
+////
+//TickTime
 typedef uint64_t BSQTickTime;
 
 std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQTickTimeType : public BSQRegisterType<uint64_t>
-{
-public:
-    BSQTickTimeType(): BSQRegisterType(BSQ_TYPE_ID_TICKTIME, sizeof(BSQTickTime), "1", EMPTY_KEY_CMP, entityTickTimeDisplay_impl, "NSCore::TickTime") 
-    {
-        static_assert(sizeof(BSQTickTime) <= 24);
-    }
-    
-    virtual ~BSQTickTimeType() {;}
-};
+#define CONS_BSQ_TICK_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQTickTime), "1", EMPTY_KEY_CMP, entityTickTimeDisplay_impl, NAME))
 
 ////
 //LogicalTime
@@ -739,16 +1000,7 @@ typedef uint64_t BSQLogicalTime;
 std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-class BSQLogicalTimeType : public BSQRegisterType<BSQLogicalTime>
-{
-public:
-    BSQLogicalTimeType(): BSQRegisterType(BSQ_TYPE_ID_LOGICALTIME, sizeof(BSQLogicalTime), "1", entityLogicalTimeKeyCmp_impl, entityLogicalTimeDisplay_impl, "NSCore::LogicalTime") 
-    {
-        static_assert(sizeof(BSQLogicalTime) == 8);
-    }
-
-    virtual ~BSQLogicalTimeType() {;}
-};
+#define CONS_BSQ_LOGICAL_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQLogicalTime), "1", entityLogicalTimeKeyCmp_impl, entityLogicalTimeDisplay_impl, NAME))
 
 ////
 //UUID
@@ -810,8 +1062,7 @@ class BSQStringOfType : public BSQType
 public:
     const BSQTypeID validator;
 
-    BSQStringOfType(BSQTypeID tid, std::string name, const BSQTypeID validator)
-    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringOfDisplay_impl, name), validator(validator)
+    BSQStringOfType(BSQTypeID tid, std::string name, const BSQTypeID validator) : BSQType(tid, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringOfDisplay_impl, name), validator(validator)
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -833,17 +1084,6 @@ public:
         assert(false);
         return nullptr;
     }
-
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
-    }
-
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));
-    }
 };
 
 std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -853,8 +1093,7 @@ class BSQDataStringType : public BSQType
 public:
     const BSQInvokeID parsemethod;
 
-    BSQDataStringType(BSQTypeID tid, std::string name, BSQInvokeID parsemethod)
-    : BSQType(tid, BSQTypeKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityDataStringDisplay_impl, name), parsemethod(parsemethod)
+    BSQDataStringType(BSQTypeID tid, std::string name, BSQInvokeID parsemethod) : BSQType(tid, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityDataStringDisplay_impl, name), parsemethod(parsemethod)
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -876,17 +1115,6 @@ public:
         assert(false);
         return nullptr;
     }
-
-    void extractFromUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_CONTENTS_AS(BSQString, trgt, SLPTR_LOAD_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(src)));
-    }
-
-    void injectIntoUnion(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        SLPTR_STORE_CONTENTS_AS(BSQString, SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_CONTENTS_AS(BSQString, src));
-    }
 };
 
 std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationPtr data);
@@ -897,15 +1125,16 @@ public:
     const BSQTypeID underlying;
 
     BSQTypedNumberTypeAbstract(BSQTypeID underlying): underlying(underlying) {;}
+    virtual ~BSQTypedNumberTypeAbstract() {;}
 };
 
 template <typename T>
 class BSQTypedNumberType : public BSQRegisterType<T>, public BSQTypedNumberTypeAbstract
 {
 public:
-    BSQTypedNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive)
+    BSQTypedNumberType(BSQTypeID tid, std::string name, BSQTypeID underlying, const BSQType* primitive) 
     : BSQRegisterType<T>(tid, primitive->allocinfo.inlinedatasize, primitive->allocinfo.inlinedmask, primitive->fpkeycmp, entityTypedNumberDisplay_impl, name), 
-    BSQTypedNumberTypeAbstract(underlying)
+    BSQTypedNumberTypeAbstract(underlying) 
     {;}
 
     virtual ~BSQTypedNumberType() {;}
@@ -923,6 +1152,24 @@ public:
     virtual ~BSQTypedBigNumberType() {;}
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQEnumType : public BSQStructType
@@ -938,3 +1185,4 @@ public:
 
     virtual ~BSQEnumType() {;}
 };
+

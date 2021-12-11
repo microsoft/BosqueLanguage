@@ -142,16 +142,17 @@
       ; Decimal -> Real
       ; Rational -> Real
       ; String -> String | (Seq (_ BitVec 64))
-      ; ByteBuffer -> (Seq (_ BitVec 8))
-      ; ISOTime -> Int
+      ; ByteBuffer -> BByteBuffer
+      ; DateTime -> BDateTime
+      ; TickTime -> Int
       ; LogicalTime -> Int
-      ; UUID -> ?? need to investigate
+      ; UUID -> BUUID
       ; ContentHash -> (_ BitVec X)
       (HavocSequence 0)
     ) (
       ( (bsq_none@literal) ) 
       ( (bsq_nothing@literal) )
-      ( (HavocSequence@cons (Int) (Seq BNat)) )
+      ( (HavocSequence@cons (HavocSequence@root Int) (HavocSequence@path (Seq BNat))) )
 ))
 
 ;;
@@ -177,14 +178,14 @@
       (bsqkey_contenthash@box (bsqkey_contenthash_value BHash))
       ;;KEY_TYPE_BOXING;;
     )
-    ( (BKey@box (BKey_type TypeTag) (BKey_value bsq_keyobject)) )
+    ( (BKey@box (BKey_type TypeTag) (BKey_oftype TypeTag) (BKey_value bsq_keyobject)) )
 ))
 
 (declare-const BKey@none BKey)
-(assert (= BKey@none (BKey@box TypeTag_None bsqkey_none@literal)))
+(assert (= BKey@none (BKey@box TypeTag_None TypeTag_None bsqkey_none@literal)))
 
 (declare-const BKey@nothing BKey)
-(assert (= BKey@nothing (BKey@box TypeTag_Nothing bsqkey_nothing@literal)))
+(assert (= BKey@nothing (BKey@box TypeTag_Nothing TypeTag_Nothing bsqkey_nothing@literal)))
 
 (define-fun bsqkey_none@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
   false

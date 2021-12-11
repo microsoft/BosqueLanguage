@@ -161,7 +161,7 @@ public:
     virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::string> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
+    virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::string> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     
     virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) const = 0;
@@ -186,7 +186,7 @@ public:
     static std::optional<std::pair<std::string, uint64_t>> parseToRationalNumber(json j);
     static std::optional<DateTime> parseToDateTime(json j);
     static std::optional<uint64_t> parseToTickTime(json j);
-
+    static std::optional<uint64_t> parseToLogicalTime(json j);
     static std::optional<std::vector<uint8_t>> parseUUID(json j);
     static std::optional<std::vector<uint8_t>> parseContentHash(json j);
 
@@ -199,6 +199,7 @@ public:
     static std::optional<json> emitRationalNumber(std::pair<std::string, uint64_t> rv);
     static std::optional<json> emitDateTime(DateTime t);
     static std::optional<json> emitTickTime(uint64_t t);
+    static std::optional<json> emitLogicalTime(uint64_t t);
 
     static std::optional<std::pair<std::string, std::string>> checkEnumName(json j);
 };
@@ -910,7 +911,8 @@ public:
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
-        
+        std::uniform_int_distribution<uint64_t> ngen(0, 128);
+        return "L" + std::to_string(ngen(rnd));
     }
 
     template <typename ValueRepr, typename State>
@@ -952,13 +954,13 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<uint64_t> ngen(0, 128);
-        return JSONParseHelper::emitUnsignedNumber(ngen(rnd)).value();
+        return "L" + std::to_string(ngen(rnd));
     }
 
     template <typename ValueRepr, typename State>
     bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto t = JSONParseHelper::parseToUnsignedNumber(j);
+        auto t = JSONParseHelper::parseToLogicalTime(j);
         if(!t.has_value())
         {
             return false;
@@ -976,7 +978,7 @@ public:
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitUnsignedNumber(tval.value());
+        return JSONParseHelper::emitLogicalTime(tval.value());
     }
 };
 
@@ -1086,7 +1088,7 @@ public:
             return std::nullopt;
         }
 
-        return hash;
+        return "0x" + hash;
     }
 };
 
@@ -1311,22 +1313,31 @@ public:
     }
 };
 
+enum class ContainerCategory
+{
+    List = 0x0,
+    Stack,
+    Queue,
+    Set,
+    Map
+};
+
 class ContainerType : public IGroundedType
 {
 public:
-    const std::string oftype;
+    const ContainerCategory category;
     const std::string elemtype;
 
-    ContainerType(std::string name, std::string oftype, std::string elemtype) : IGroundedType(TypeTag::ContainerTag, name), oftype(oftype), elemtype(elemtype) {;}
+    ContainerType(std::string name, ContainerCategory category, std::string elemtype) : IGroundedType(TypeTag::ContainerTag, name), category(category), elemtype(elemtype) {;}
     virtual ~ContainerType() {;}
 
     static ContainerType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
-        auto oftype = j["oftype"].get<std::string>();
+        auto category = j["category"].get<ContainerCategory>();
         auto elemtype = j["elemtype"].get<std::string>();
 
-        return new ContainerType(name, oftype, elemtype);
+        return new ContainerType(name, category, elemtype);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
