@@ -35,9 +35,9 @@ const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE(BS
 const BSQType* BSQWellKnownType::g_typeDateTime = CONS_BSQ_DATE_TIME_TYPE(BSQ_TYPE_ID_DATETIME, "DateTime");
 const BSQType* BSQWellKnownType::g_typeTickTime = CONS_BSQ_TICK_TIME_TYPE(BSQ_TYPE_ID_TICKTIME, "TickTime");
 const BSQType* BSQWellKnownType::g_typeLogicalTime = CONS_BSQ_LOGICAL_TIME_TYPE(BSQ_TYPE_ID_LOGICALTIME, "LogicalTime");
-const BSQType* BSQType::g_typeUUID = new BSQUUIDType();
-const BSQType* BSQType::g_typeContentHash = new BSQContentHashType();
-const BSQType* BSQType::g_typeRegex = new BSQRegexType();
+const BSQType* BSQWellKnownType::g_typeUUID = CONS_BSQ_UUID_TYPE(BSQ_TYPE_ID_UUID, "UUID");
+const BSQType* BSQWellKnownType::g_typeContentHash = CONS_BSQ_CONTENT_HASH_TYPE(BSQ_TYPE_ID_CONTENTHASH, "ContentHash");
+const BSQType* BSQWellKnownType::g_typeRegex = CONS_BSQ_REGEX_TYPE(BSQ_TYPE_ID_REGEX, "Regex");
 
 std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
 
@@ -291,10 +291,7 @@ std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr 
 {
     auto rval = SLPTR_LOAD_CONTENTS_AS(BSQRational, data);
 
-    auto numtype = dynamic_cast<const BSQBigIntType*>();
-    auto denomtype = dynamic_cast<const BSQNatType*>(BSQType::g_typeNat);
-
-    return numtype->fpDisplay(numtype, &rval.numerator) + "/" + denomtype->fpDisplay(denomtype, &rval.denominator) + ((btype->name == "Rational") ? "R" : ("_" + btype->name));
+    return std::to_string(rval.numerator) + "/" + std::to_string(rval.denominator) + ((btype->name == "Rational") ? "R" : ("_" + btype->name));
 }
 
 std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -367,7 +364,7 @@ void* BSQStringTreeReprType::slice(StorageLocationPtr data, uint64_t nstart, uin
         stck[2] = s2;
         stck[3] = s2type->slice(stck + 2, 0, nend - s1type->utf8ByteCount(s2));
 
-        res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringTreeRepr);
+        res = Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringTreeRepr);
         *((BSQStringTreeRepr*)res) = {stck[1], stck[3], nend - nstart};
     }
 
@@ -491,7 +488,7 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
     BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, data);
 
     std::string res;
-    res.reserve((size_t)BSQStringType::utf8ByteCount(str));
+    res.reserve((size_t)BSQStringImplType::utf8ByteCount(str));
 
     BSQStringForwardIterator iter(&str, 0);
     while(iter.valid())
@@ -505,21 +502,21 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
 
 int entityStringKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    return BSQStringType::keycmp(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
+    return BSQStringImplType::keycmp(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
 }
 
-uint8_t* BSQStringType::boxInlineString(BSQInlineString istr)
+uint8_t* BSQStringImplType::boxInlineString(BSQInlineString istr)
 {
-    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr16);
+    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr16);
     *res = (uint8_t)BSQInlineString::utf8ByteCount(istr);
     BSQ_MEM_COPY(res + 1, BSQInlineString::utf8Bytes(istr), *res);
 
     return res;
 }
 
-int BSQStringType::keycmp(BSQString v1, BSQString v2)
+int BSQStringImplType::keycmp(BSQString v1, BSQString v2)
 {
-    if(BSQStringType::empty(v1) & BSQStringType::empty(v2))
+    if(BSQStringImplType::empty(v1) & BSQStringImplType::empty(v2))
     {
         return 0;
     }
@@ -529,7 +526,7 @@ int BSQStringType::keycmp(BSQString v1, BSQString v2)
     }
     else
     {
-        auto bdiff = BSQStringType::utf8ByteCount(v1) - BSQStringType::utf8ByteCount(v2);
+        auto bdiff = BSQStringImplType::utf8ByteCount(v1) - BSQStringImplType::utf8ByteCount(v2);
         if(bdiff != 0)
         {
             return bdiff < 0 ? -1 : 1;
@@ -560,7 +557,7 @@ int BSQStringType::keycmp(BSQString v1, BSQString v2)
     }
 }
 
-BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
+BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 {
     //
     //TODO: want to rebalance here later
@@ -571,22 +568,22 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
     BSQString str1 = SLPTR_LOAD_CONTENTS_AS(BSQString, s1);
     BSQString str2 = SLPTR_LOAD_CONTENTS_AS(BSQString, s2);
 
-    if(BSQStringType::empty(str1) & BSQStringType::empty(str2))
+    if(BSQStringImplType::empty(str1) & BSQStringImplType::empty(str2))
     {
         return g_emptyString;
     }
-    else if(BSQStringType::empty(str1))
+    else if(BSQStringImplType::empty(str1))
     {
         return str2;
     }
-    else if(BSQStringType::empty(str2))
+    else if(BSQStringImplType::empty(str2))
     {
         return str1;
     }
     else
     {
-        auto len1 = BSQStringType::utf8ByteCount(str1);
-        auto len2 = BSQStringType::utf8ByteCount(str2);
+        auto len1 = BSQStringImplType::utf8ByteCount(str1);
+        auto len2 = BSQStringImplType::utf8ByteCount(str2);
 
         BSQString res;
         if(IS_INLINE_STRING(&str1) & IS_INLINE_STRING(&str2))
@@ -601,7 +598,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
             {
                 assert(len1 + len2 <= 30);
 
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
@@ -615,7 +612,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
         {
             if(len1 + len2 < 32)
             {
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
@@ -640,10 +637,10 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
             }
             else
             {
-                auto crepr = (BSQStringTreeRepr*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringTreeRepr);
+                auto crepr = (BSQStringTreeRepr*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringTreeRepr);
                 crepr->size = (uint64_t)(len1 + len2);
-                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringType::boxInlineString(str1.u_inlineString) : str1.u_data;
-                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringType::boxInlineString(str2.u_inlineString) : str2.u_data;
+                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringImplType::boxInlineString(str1.u_inlineString) : str1.u_data;
+                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringImplType::boxInlineString(str2.u_inlineString) : str2.u_data;
                 
                 res.u_data = crepr;
             }
@@ -653,7 +650,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
     }
 }
 
-BSQString BSQStringType::slice(StorageLocationPtr str, int64_t startpos, int64_t endpos)
+BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int64_t endpos)
 {
     //
     //TODO: want to rebalance here later
@@ -692,7 +689,7 @@ BSQString BSQStringType::slice(StorageLocationPtr str, int64_t startpos, int64_t
             }
             else if(dist < 32)
             {
-                res.u_data = Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
+                res.u_data = Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(res.u_data);
                
                 BSQStringForwardIterator iter(&rstr, startpos);
@@ -835,7 +832,7 @@ std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data
     uint16_t bb2_1 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 4);
     uint16_t bb2_2 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 6);
     uint16_t bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
-    uint64_t bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 8) & 0xFFFFFFFFFFFF;
+    uint64_t bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 10) & 0xFFFFFFFFFFFF;
     
     char sstrt[36] = {0};
     sprintf_s(sstrt, 36, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
@@ -903,24 +900,8 @@ std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr
     return btype->name + ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr;
 }
 
-std::string entityStringOfDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    return entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data) + "_" + btype->name;
-}
-
-std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    return entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data) + "_" + btype->name;
-}
-
-std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    auto utype = BSQType::g_typetable[dynamic_cast<const BSQTypedNumberTypeAbstract*>(btype)->underlying];
-    return utype->fpDisplay(utype, data) + "_" + btype->name;
-}
-
 std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    auto underlying = dynamic_cast<const BSQEnumType*>(btype)->underlying;
-    return "(" + btype->name + ")" + underlying->fpDisplay(underlying, data);
+    auto val = SLPTR_LOAD_CONTENTS_AS(uint64_t, data);
+    return static_cast<const BSQEnumType*>(btype)->enumnames[val];
 }

@@ -162,7 +162,7 @@ public:
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::string> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
+    virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     
     virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) const = 0;
     virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) const = 0;
@@ -200,6 +200,8 @@ public:
     static std::optional<json> emitDateTime(DateTime t);
     static std::optional<json> emitTickTime(uint64_t t);
     static std::optional<json> emitLogicalTime(uint64_t t);
+    static std::optional<json> emitUUID(std::vector<uint8_t> uuid);
+    static std::optional<json> emitHash(std::vector<uint8_t> hash);
 
     static std::optional<std::pair<std::string, std::string>> checkEnumName(json j);
 };
@@ -1033,7 +1035,7 @@ public:
             return std::nullopt;
         }
 
-        return uval;
+        return JSONParseHelper::emitUUID(tval.value());
     }
 };
 
@@ -1088,7 +1090,7 @@ public:
             return std::nullopt;
         }
 
-        return "0x" + hash;
+        return JSONParseHelper::emitHash(hash.value());
     }
 };
 

@@ -553,6 +553,38 @@ std::optional<json> JSONParseHelper::emitTickTime(uint64_t t)
     return "T" + std::to_string(t) + "ns";
 }
 
+std::optional<json> JSONParseHelper::emitUUID(std::vector<uint8_t> uuid)
+{
+    std::string res;
+
+    uint32_t bb4 = *reinterpret_cast<const uint32_t*>(&uuid[0]);
+    uint16_t bb2_1 = *reinterpret_cast<const uint16_t*>(&uuid[4]);
+    uint16_t bb2_2 = *reinterpret_cast<const uint16_t*>(&uuid[6]);
+    uint16_t bb2_3 = *reinterpret_cast<const uint16_t*>(&uuid[8]);
+    uint64_t bb6 = *reinterpret_cast<const uint64_t*>(&uuid[10]) & 0xFFFFFFFFFFFF;
+    
+    char sstrt[36] = {0};
+    sprintf_s(sstrt, 36, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    std::string res(sstrt, sstrt + 36);
+
+    return res;
+}
+
+std::optional<json> JSONParseHelper::emitHash(std::vector<uint8_t> hash)
+{
+    std::string rr = "0x";
+    for(auto iter = hash.cbegin(); iter < hash.cend(); ++iter)
+    {
+        char sstrt[2] = {0};
+        sprintf_s(sstrt, 2, "%02x", *iter);
+
+        std::string ss(sstrt, sstrt + 2);
+        rr += ss;
+    }
+
+    return rr;
+}
+
 std::optional<std::pair<std::string, std::string>> JSONParseHelper::checkEnumName(json j)
 {
     if(!j.is_string())
