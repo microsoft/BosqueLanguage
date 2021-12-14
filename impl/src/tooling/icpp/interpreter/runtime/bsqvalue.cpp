@@ -147,15 +147,114 @@ int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stora
 
 int unionRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    auto tdiff = SLPTR_LOAD_HEAP_TYPE_ANY(data1)->tid - SLPTR_LOAD_HEAP_TYPE_ANY(data2)->tid;
+    auto tdiff = SLPTR_LOAD_HEAP_TYPE(data1)->tid - SLPTR_LOAD_HEAP_TYPE(data2)->tid;
     if(tdiff != 0)
     {
         return tdiff;
     }
     else
     {
-        auto tt = SLPTR_LOAD_HEAP_TYPE_ANY(data1);
+        auto tt = SLPTR_LOAD_HEAP_TYPE(data1);
         return tt->fpkeycmp(tt, data1, data2);
+    }
+}
+
+void coerce(const BSQType* from, const BSQType* into, StorageLocationPtr trgt, StorageLocationPtr src)
+{
+    if(into->tkind == BSQTypeLayoutKind::UnionUniversal)
+    {
+        const BSQUnionUniversalType* uutype = dynamic_cast<const BSQUnionUniversalType*>(into);
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
+        {
+            uutype->coerceFromUnionUniversal(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            uutype->coerceFromUnionInline(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionRef)
+        {
+            uutype->coerceFromUnionRef(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else
+        {
+            uutype->coerceFromAtomic(from, trgt, src);
+        }
+    }
+    else if(into->tkind == BSQTypeLayoutKind::UnionInline)
+    {
+        const BSQUnionInlineType* iltype = dynamic_cast<const BSQUnionInlineType*>(into);
+
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
+        {
+            iltype->coerceFromUnionUniversal(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            iltype->coerceFromUnionInline(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionRef)
+        {
+            iltype->coerceFromUnionRef(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else
+        {
+            iltype->coerceFromAtomic(from, trgt, src);
+        }
+    }
+    else if(into->tkind == BSQTypeLayoutKind::UnionRef)
+    {
+        const BSQUnionRefType* urtype = dynamic_cast<const BSQUnionRefType*>(into);
+
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
+        {
+            urtype->coerceFromUnionUniversal(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            urtype->coerceFromUnionInline(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionRef)
+        {
+            urtype->coerceFromUnionRef(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else
+        {
+            urtype->coerceFromAtomic(from, trgt, src);
+        }
+    }
+    else
+    {
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
+        {
+            dynamic_cast<const BSQUnionUniversalType*>(from)->extractToAtomic(into, trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            dynamic_cast<const BSQUnionInlineType*>(from)->extractToAtomic(into, trgt, src);
+        }
+        else
+        {
+            BSQ_INTERNAL_ASSERT(from->tkind == BSQTypeLayoutKind::UnionRef);
+
+            dynamic_cast<const BSQUnionRefType*>(from)->extractToAtomic(into, trgt, src);
+        }
+    }
+}
+
+std::pair<const BSQType*, StorageLocationPtr> extractFromUnionVCall(const BSQUnionType* fromlayout, const BSQType* intoflow, StorageLocationPtr trgt, StorageLocationPtr src)
+{
+    coerce(fromlayout, intoflow, trgt, src);
+
+    if(intoflow->tkind == BSQTypeLayoutKind::UnionInline)
+    {
+        return std::make_pair(SLPTR_LOAD_UNION_INLINE_TYPE(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt));
+    }
+    else 
+    {
+        BSQ_INTERNAL_ASSERT(intoflow->tkind == BSQTypeLayoutKind::UnionRef);
+
+        return std::make_pair(SLPTR_LOAD_HEAP_TYPE(trgt), trgt);
     }
 }
 

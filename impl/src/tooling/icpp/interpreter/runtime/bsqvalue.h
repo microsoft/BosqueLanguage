@@ -97,6 +97,39 @@ public:
     }
 };
 
+class BSQEnumType : public BSQType
+{
+public:
+    const std::vector<std::string> enumnames;
+
+    BSQEnumType(BSQTypeID tid, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, const std::vector<std::string> enumnames): 
+        BSQType(tid, BSQTypeLayoutKind::Register, { sizeof(uint64_t), sizeof(uint64_t), sizeof(uint64_t), nullptr, "1" }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name), enumnames(enumnames)
+    {;}
+
+    virtual ~BSQEnumType() {;}
+
+    void storeValueDirect(StorageLocationPtr trgt, uint64_t v) const
+    {
+        SLPTR_STORE_CONTENTS_AS(uint64_t, trgt, v);
+    }
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, sizeof(uint64_t));
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        SLPTR_STORE_CONTENTS_AS(uint64_t, trgt, SLPTR_LOAD_CONTENTS_AS(uint64_t, src));
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+};
+
 class BSQRefType : public BSQType
 {
 public:
@@ -122,11 +155,14 @@ public:
     }
 };
 
+class BSQBoxedStructType;
 class BSQStructType : public BSQType
 {
 public:
+    BSQBoxedStructType* boxedtype; //set after construction if needed -- maybe null
+
     BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, bool norefs): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name)
+        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name), boxedtype(nullptr)
     {;}
 
     virtual ~BSQStructType() {;}
@@ -150,10 +186,10 @@ public:
 class BSQBoxedStructType : public BSQType
 {
 public:
-    const BSQStructType* boxedtype;
+    const BSQStructType* oftype; //set after construction
 
-    BSQBoxedStructType(BSQTypeID tid, const BSQStructType* boxedtype, DisplayFP fpDisplay, std::string name): 
-        BSQType(tid, BSQTypeLayoutKind::BoxedStruct, { boxedtype->allocinfo.inlinedatasize, sizeof(void*), sizeof(void*), boxedtype->allocinfo.inlinedmask, "2" }, REF_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name)
+    BSQBoxedStructType(BSQTypeID tid, const BSQStructType* oftype, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeLayoutKind::BoxedStruct, { oftype->allocinfo.assigndatasize, sizeof(void*), sizeof(void*), oftype->allocinfo.inlinedmask, "2" }, REF_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name)
     {;}
 
     virtual ~BSQBoxedStructType() {;}
@@ -172,20 +208,6 @@ public:
     {
         BSQ_INTERNAL_ASSERT(false);
         return nullptr;
-    }
-
-    void extractFromHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        auto udata = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
-        this->boxedtype->storeValue(trgt, udata);
-    }
-
-    void injectIntoHeapUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        auto obj = Allocator::GlobalAllocator.allocateDynamic(this);
-        this->boxedtype->storeValue(obj, src);
-
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, obj);
     }
 };
 
@@ -363,6 +385,55 @@ public:
     virtual ~BSQEntityStructType() {;}
 };
 
+//SOMETHING, RESULT_OK, and RESULT_ERR
+class BSQEntityConstructableRefType : public BSQRefType
+{
+public:
+    const BSQRefType* oftype;
+
+    BSQEntityConstructableRefType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, const BSQRefType* oftype):
+        BSQRefType(tid, oftype->allocinfo.heapsize, oftype->allocinfo.heapmask, {}, oftype->fpkeycmp, fpDisplay, name), oftype(oftype)
+    {;}
+
+    virtual ~BSQEntityConstructableRefType() {;}
+};
+
+class BSQEntityConstructableStructType : public BSQStructType
+{
+public:
+    const BSQStructType* oftype;
+
+    BSQEntityConstructableStructType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, const BSQStructType* oftype, bool norefs): 
+        BSQStructType(tid, oftype->allocinfo.inlinedatasize, oftype->allocinfo.inlinedmask, {}, oftype->fpkeycmp, fpDisplay, name, norefs), oftype(oftype)
+    {;}
+
+    virtual ~BSQEntityConstructableStructType() {;}
+};
+
+//MASK
+class BSQMaskType : public BSQStructType, public BSQEntityInfo
+{
+public:
+    BSQMaskType(DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets): 
+        BSQStructType(BSQ_TYPE_ID_MASK, 8, "1", {}, EMPTY_KEY_CMP, entityDisplay_impl, "Mask", true),
+        BSQEntityInfo(fields, fieldoffsets, {}, {})
+    {;}
+
+    virtual ~BSQMaskType() {;}
+};
+
+//PARTIAL VECTOR
+
+//LIST
+
+//MAP 
+
+
+///QUEUE, STACK, SET
+
+
+
+
 std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 class BSQEphemeralListType : public BSQStructType
@@ -392,38 +463,6 @@ public:
     {;}
 
     virtual ~BSQUnionType() {;}
-
-    virtual bool isInline() const = 0;
-};
-
-class BSQUnionInlineType : public BSQUnionType
-{
-public:
-    BSQUnionInlineType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> subtypes): 
-        BSQUnionType(tid, BSQTypeLayoutKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, unionInlineKeyCmp_impl, name, subtypes)
-    {;}
-
-    virtual ~BSQUnionInlineType() {;}
-
-    bool isInline() const override final
-    {
-        return true;
-    }
-
-    void clearValue(StorageLocationPtr trgt) const override final
-    {
-        GC_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
-    }
-
-    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
-    }
-
-    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
-    {
-       return (SLPTR_LOAD_UNION_INLINE_TYPE(src))->indexStorageLocationOffset(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
-    }
 };
 
 class BSQUnionRefType : public BSQUnionType
@@ -434,11 +473,6 @@ public:
     {;}
 
     virtual ~BSQUnionRefType() {;}
-
-    bool isInline() const override final
-    {
-        return false;
-    }
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
@@ -454,7 +488,224 @@ public:
     {
         return SLPTR_INDEX_DATAPTR(SLPTR_LOAD_HEAP_DATAPTR(src), offset);
     }
+
+    void coerceFromAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        btype->storeValue(trgt, src);
+    }
+
+    void coerceFromUnionRef(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        this->storeValue(trgt, src);
+    }
+
+    void coerceFromUnionInline(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        this->storeValue(trgt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+    }
+
+    void coerceFromUnionUniversal(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        this->storeValue(trgt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+    }
+
+    void extractToAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        btype->storeValue(trgt, src);
+    }
 };
+
+class BSQUnionInlineType : public BSQUnionType
+{
+public:
+    BSQUnionInlineType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQUnionType(tid, BSQTypeLayoutKind::UnionInline, { datasize, datasize, datasize, nullptr, imask }, unionInlineKeyCmp_impl, name, subtypes)
+    {;}
+
+    virtual ~BSQUnionInlineType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+       return (SLPTR_LOAD_UNION_INLINE_TYPE(src))->indexStorageLocationOffset(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
+    }
+
+    void coerceFromAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        SLPTR_STORE_UNION_INLINE_TYPE(btype, trgt);
+        btype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+    }
+
+    void coerceFromUnionRef(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto reprtype = SLPTR_LOAD_HEAP_TYPE(src);
+
+        SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
+        reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+    }
+
+    void coerceFromUnionInline(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto reprtype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+
+        SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
+        reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+    }
+
+    void coerceFromUnionUniversal(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto reprtype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+        if(reprtype->tkind != BSQTypeLayoutKind::BoxedStruct)
+        {
+            SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
+            reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+        }
+        else
+        {
+            const BSQStructType* structtype = dynamic_cast<const BSQBoxedStructType*>(reprtype)->oftype;
+
+            auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+            auto boxeddata = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata);
+
+            SLPTR_STORE_UNION_INLINE_TYPE(structtype, trgt);
+            structtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), boxeddata);
+        }
+    }
+
+    void extractToAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        btype->storeValue(trgt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+    }
+};
+
+class BSQUnionUniversalType : public BSQUnionType
+{
+public:
+    BSQUnionUniversalType(BSQTypeID tid, std::string name, std::vector<BSQTypeID> subtypes): 
+        BSQUnionType(tid, BSQTypeLayoutKind::UnionUniversal, { UNION_UNIVERSAL_SIZE, UNION_UNIVERSAL_SIZE, UNION_UNIVERSAL_SIZE, nullptr, UNION_UNIVERSAL_MASK }, EMPTY_KEY_CMP, name, subtypes)
+    {;}
+
+    virtual ~BSQUnionUniversalType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, this->allocinfo.assigndatasize);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, this->allocinfo.assigndatasize);
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+       return (SLPTR_LOAD_UNION_INLINE_TYPE(src))->indexStorageLocationOffset(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), offset);
+    }
+
+    void coerceFromAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        if(btype->tkind != BSQTypeLayoutKind::Struct)
+        {
+            SLPTR_STORE_UNION_INLINE_TYPE(btype, trgt);
+            btype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+        }
+        else
+        {
+            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQStructType*>(btype)->boxedtype;
+            if(boxedtype == nullptr)
+            {
+                SLPTR_STORE_UNION_INLINE_TYPE(btype, trgt);
+                btype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+            }
+            else
+            {
+                auto obj = Allocator::GlobalAllocator.allocateDynamic(boxedtype);
+                btype->storeValue(obj, src);
+
+                SLPTR_STORE_UNION_INLINE_TYPE(boxedtype, trgt);
+                boxedtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), obj);
+            }
+        }
+    }
+
+    void coerceFromUnionRef(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto reprtype = SLPTR_LOAD_HEAP_TYPE(src);
+
+        SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
+        reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
+    }
+
+    void coerceFromUnionInline(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto reprtype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+        if(reprtype->tkind != BSQTypeLayoutKind::Struct)
+        {
+            SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
+            reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+        }
+        else
+        {
+            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQStructType*>(reprtype)->boxedtype;
+            if(boxedtype == nullptr)
+            {
+                SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
+                reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+            }
+            else
+            {
+                auto obj = Allocator::GlobalAllocator.allocateDynamic(boxedtype);
+                reprtype->storeValue(obj, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+
+                SLPTR_STORE_UNION_INLINE_TYPE(boxedtype, trgt);
+                boxedtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), obj);
+            }
+        }
+    }
+
+    void coerceFromUnionUniversal(const BSQUnionType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        auto reprtype = SLPTR_LOAD_UNION_INLINE_TYPE(src);
+
+        SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
+        reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+    }
+
+    void extractToAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
+    {
+        if(btype->tkind != BSQTypeLayoutKind::Struct)
+        {
+            btype->storeValue(trgt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+        }
+        else
+        {
+            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQStructType*>(btype)->boxedtype;
+            if(boxedtype == nullptr)
+            {
+                btype->storeValue(trgt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+            }
+            else
+            {
+                auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
+                auto boxeddata = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata);
+
+                btype->storeValue(trgt, boxeddata);
+            }
+        }
+    }
+};
+
+void coerce(const BSQType* from, const BSQType* into, StorageLocationPtr trgt, StorageLocationPtr src);
+std::pair<const BSQType*, StorageLocationPtr> extractFromUnionVCall(const BSQUnionType* fromlayout, const BSQType* intoflow, StorageLocationPtr trgt, StorageLocationPtr src);
 
 ////
 //Primitive value representations
@@ -463,7 +714,6 @@ public:
 //None
 typedef uint64_t BSQNone;
 #define BSQNoneValue 0
-#define BSQNoneHeapValue nullptr
 
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityNoneKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
@@ -1074,16 +1324,4 @@ std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr
 
 std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-class BSQEnumType : public BSQRegisterType<uint64_t>
-{
-public:
-    const std::vector<std::string> enumnames; //map from numeric values to names
-
-    BSQEnumType(BSQTypeID tid, std::string name, std::vector<std::string> enumnames)
-    : BSQRegisterType(tid, sizeof(uint64_t), "1", entityNatKeyCmp_impl, enumDisplay_impl, name),
-    enumnames(enumnames)
-    {;}
-
-    virtual ~BSQEnumType() {;}
-};
 

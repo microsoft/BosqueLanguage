@@ -532,7 +532,6 @@ __universal concept IResultT provides Some {
 __universal concept IResultE provides Some {
 }
 
-
 //<summary>Result type.</summary>
 concept Result<T, E=None> provides IResult, APIType when T grounded APIType && E grounded APIType {
     __internal __constructable entity Ok provides IOk, Result<T, E> {

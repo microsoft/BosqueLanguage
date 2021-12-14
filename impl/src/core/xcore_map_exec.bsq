@@ -92,7 +92,7 @@ internal entity MapOps provides Some {
     }
 }
 
-__internal internal entity BTree<K grounded KeyType, V> {
+internal entity BTree<K grounded KeyType, V> {
     field count: Nat;
     field t: BTreeNode<K, V>;
 

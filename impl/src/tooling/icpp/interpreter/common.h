@@ -155,15 +155,12 @@ typedef void* StorageLocationPtr;
 
 #define SLPTR_STORE_UNION_INLINE_TYPE(T, L) *((const BSQType**)L) = T
 
-#define SLPTR_LOAD_HEAP_TYPE_ANY(L) ((*((void**)L) == nullptr) ? BSQWellKnownType::g_typeNone : GET_TYPE_META_DATA(*((void**)L)))
-#define SLPTR_LOAD_HEAP_TYPE_SOME(L) GET_TYPE_META_DATA(*((void**)L))
+#define SLPTR_LOAD_HEAP_TYPE(L) GET_TYPE_META_DATA(*((void**)L))
 #define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)SLPTR_LOAD_HEAP_TYPE_SOME(*((void**)L)))
 
 #define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
 
 #define SLPTR_INDEX_DATAPTR(SL, I) ((void*)(((uint8_t*)SL) + I))
-
-#define SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(SRCTYPE, SRC) (SRCTYPE->isInline() ? SLPTR_LOAD_UNION_INLINE_TYPE(SRC) : SLPTR_LOAD_HEAP_TYPE_SOME(SRC))
 
 #define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
 #define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
@@ -182,8 +179,9 @@ enum class BSQTypeLayoutKind : uint32_t
     String,
     BigNum,
     Ref,
+    UnionRef,
     UnionInline,
-    UnionRef
+    UnionUniversal
 };
 
 #define PTR_FIELD_MASK_NOP '1'
@@ -207,6 +205,10 @@ struct BSQTypeSizeInfo
     const RefMask heapmask; //The mask to used to traverse this object during gc (if it is heap allocated) -- null if this is a leaf object -- partial if tailing scalars
     const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must cover full size of data
 };
+
+#define UNION_UNIVERSAL_CONTENT_SIZE 32
+#define UNION_UNIVERSAL_SIZE 40
+#define UNION_UNIVERSAL_MASK "51111"
 
 struct GCFunctorSet
 {
@@ -256,6 +258,8 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_STRINGREPR_K128 24
 
 #define BSQ_TYPE_ID_STRINGREPR_TREE 25
+
+#define BSQ_TYPE_ID_MASK 26
 
 enum class BSQPrimitiveImplTag
 {

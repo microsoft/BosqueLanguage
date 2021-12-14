@@ -43,18 +43,6 @@ public:
     virtual void clearValue(StorageLocationPtr trgt) const = 0;
     virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const = 0;
-
-    void extractFromInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(src);
-        this->storeValue(trgt, udata);
-    }
-
-    void injectIntoInlineUnion(StorageLocationPtr trgt, StorageLocationPtr src) const
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(this, trgt);
-        this->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
-    }
 };
 
 struct GCStackEntry
