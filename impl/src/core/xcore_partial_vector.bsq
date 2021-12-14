@@ -7,7 +7,7 @@
 namespace NSCore;
 
 #if EXEC_LIBS
-__internal internal entity Mask provides Some, APIType {
+__internal internal entity Mask provides Some {
     field bit0: Bool;
     field bit1: Bool;
     field bit2: Bool;
@@ -69,7 +69,7 @@ __internal internal entity Mask provides Some, APIType {
 
 __safe internal function s_pv_undef<T>(): T # special_function
 
-__internal internal entity PartialVector<T> provides Some, APIType when T grounded APIType {
+__internal internal entity PartialVector<T> provides Some {
     __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T # pv_safe_get
     __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> # pv_compact
     __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> # pv_append
@@ -82,9 +82,7 @@ __internal internal entity PartialVector<T> provides Some, APIType when T ground
     field v1: T;
     field v2: T;
     field v3: T;
-
-    invariant !$mask.empty();
-
+    
     recursive? method apply_pred(p: recursive? pred(_: T) -> Bool): Mask {
         let m = this.mask;
         var b0 = false;

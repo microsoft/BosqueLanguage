@@ -155,14 +155,13 @@ public:
     }
 };
 
-class BSQBoxedStructType;
 class BSQStructType : public BSQType
 {
 public:
-    BSQBoxedStructType* boxedtype; //set after construction if needed -- maybe null
+    const BSQTypeID boxedtype; //value is 0 if this is not a boxable type
 
-    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, bool norefs): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name), boxedtype(nullptr)
+    BSQStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, bool norefs, BSQTypeID boxedtype): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, { datasize, datasize, datasize, nullptr, imask }, norefs ? STRUCT_LEAF_GC_FUNCTOR_SET : STRUCT_STD_GC_FUNCTOR_SET, vtable, fpkeycmp, fpDisplay, name), boxedtype(boxedtype)
     {;}
 
     virtual ~BSQStructType() {;}
@@ -298,8 +297,8 @@ public:
 class BSQTupleStructType : public BSQStructType, public BSQTupleInfo
 {
 public:
-    BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets, bool norefs):
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, norefs),
+    BSQTupleStructType(BSQTypeID tid, uint64_t datasize, RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, BSQTypeID boxedtype, BSQTupleIndex maxIndex, std::vector<BSQTypeID> ttypes, std::vector<size_t> idxoffsets):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, tupleDisplay_impl, name, norefs, boxedtype),
         BSQTupleInfo(maxIndex, ttypes, idxoffsets)
     {;}
 
@@ -338,8 +337,8 @@ public:
 class BSQRecordStructType : public BSQStructType, public BSQRecordInfo
 {
 public:
-    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets, bool norefs):
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, norefs),
+    BSQRecordStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, BSQTypeID boxedtype, std::vector<BSQRecordPropertyID> properties, std::vector<BSQTypeID> rtypes, std::vector<size_t> propertyoffsets):
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, recordDisplay_impl, name, norefs, boxedtype),
         BSQRecordInfo(properties, rtypes, propertyoffsets)
     {;}
 
@@ -377,8 +376,8 @@ public:
 class BSQEntityStructType : public BSQStructType, public BSQEntityInfo
 {
 public:
-    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields): 
-        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name, norefs),
+    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, BSQTypeID boxedtype, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields): 
+        BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name, norefs, boxedtype),
         BSQEntityInfo(fields, fieldoffsets, consfunc, consfields)
     {;}
 
@@ -389,10 +388,10 @@ public:
 class BSQEntityConstructableRefType : public BSQRefType
 {
 public:
-    const BSQRefType* oftype;
+    const BSQTypeID oftype;
 
-    BSQEntityConstructableRefType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, const BSQRefType* oftype):
-        BSQRefType(tid, oftype->allocinfo.heapsize, oftype->allocinfo.heapmask, {}, oftype->fpkeycmp, fpDisplay, name), oftype(oftype)
+    BSQEntityConstructableRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, KeyCmpFP fpKeyCmp, DisplayFP fpDisplay, std::string name, BSQTypeID oftype):
+        BSQRefType(tid, heapsize, heapmask, {}, fpKeyCmp, fpDisplay, name), oftype(oftype)
     {;}
 
     virtual ~BSQEntityConstructableRefType() {;}
@@ -401,10 +400,10 @@ public:
 class BSQEntityConstructableStructType : public BSQStructType
 {
 public:
-    const BSQStructType* oftype;
+    const BSQTypeID oftype;
 
-    BSQEntityConstructableStructType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, const BSQStructType* oftype, bool norefs): 
-        BSQStructType(tid, oftype->allocinfo.inlinedatasize, oftype->allocinfo.inlinedmask, {}, oftype->fpkeycmp, fpDisplay, name, norefs), oftype(oftype)
+    BSQEntityConstructableStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpKeyCmp, DisplayFP fpDisplay, std::string name, bool norefs, BSQTypeID boxedtype, BSQTypeID oftype): 
+        BSQStructType(tid, datasize, imask, {}, fpKeyCmp, fpDisplay, name, norefs, boxedtype), oftype(oftype)
     {;}
 
     virtual ~BSQEntityConstructableStructType() {;}
@@ -414,9 +413,9 @@ public:
 class BSQMaskType : public BSQStructType, public BSQEntityInfo
 {
 public:
-    BSQMaskType(DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets): 
-        BSQStructType(BSQ_TYPE_ID_MASK, 8, "1", {}, EMPTY_KEY_CMP, entityDisplay_impl, "Mask", true),
-        BSQEntityInfo(fields, fieldoffsets, {}, {})
+    BSQMaskType(std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets): 
+        BSQStructType(BSQ_TYPE_ID_MASK, 8, "1", {}, EMPTY_KEY_CMP, entityDisplay_impl, "Mask", true, 0),
+        BSQEntityInfo(fields, fieldoffsets, std::nullopt, {})
     {;}
 
     virtual ~BSQMaskType() {;}
@@ -424,15 +423,86 @@ public:
 
 //PARTIAL VECTOR
 
+class BSQPartialVectorType : public BSQRefType, public BSQEntityInfo
+{
+public:
+    const BSQTypeID elemtype;
+
+    BSQPartialVectorType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, BSQTypeID elemtype): 
+        BSQRefType(tid, heapsize, heapmask, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        BSQEntityInfo(fields, fieldoffsets, std::nullopt, fields),
+        elemtype(elemtype)
+    {;}
+
+    virtual ~BSQPartialVectorType() {;}
+};
+
 //LIST
+class BSQListType : public BSQType
+{
+public:
+    const BSQTypeID ctype; //type of elements in the list
+    const BSQTypeID pvtype; //PV type
+    const BSQTypeID treetype; //Tree type
 
-//MAP 
+    BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ctype, BSQTypeID elemtype, BSQTypeID pvtype, BSQTypeID treetype): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        ctype(ctype), pvtype(pvtype), treetype(treetype)
+    {;}
 
+    virtual ~BSQListType() {;}
 
-///QUEUE, STACK, SET
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, 16);
+    }
 
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, 16);
+    }
 
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+};
 
+//MAP
+class BSQMapType : public BSQType
+{
+public:
+    const BSQTypeID ktype; //type of K in the map
+    const BSQTypeID vtype; //type of V in the map
+    const BSQTypeID ctype; //type of [K, V]
+    const BSQTypeID treetype; //Tree type
+
+    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype, BSQTypeID ctype, BSQTypeID treetype): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        ktype(ktype), vtype(vtype), ctype(ctype), treetype(treetype)
+    {;}
+
+    virtual ~BSQMapType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, 16);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, 16);
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+};
+
+//TODO: QUEUE, STACK, SET
 
 std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
@@ -443,7 +513,7 @@ public:
     const std::vector<size_t> idxoffsets;
 
     BSQEphemeralListType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::string name, std::vector<BSQTypeID> etypes, std::vector<size_t> idxoffsets, bool norefs): 
-        BSQStructType(tid, datasize, imask, {}, nullptr, ephemeralDisplay_impl, name, norefs), etypes(etypes), idxoffsets(idxoffsets)
+        BSQStructType(tid, datasize, imask, {}, nullptr, ephemeralDisplay_impl, name, norefs, 0), etypes(etypes), idxoffsets(idxoffsets)
     {;}
 
     virtual ~BSQEphemeralListType() {;}
@@ -620,7 +690,7 @@ public:
         }
         else
         {
-            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQStructType*>(btype)->boxedtype;
+            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQBoxedStructType*>(BSQType::g_typetable[dynamic_cast<const BSQStructType*>(btype)->boxedtype]);
             if(boxedtype == nullptr)
             {
                 SLPTR_STORE_UNION_INLINE_TYPE(btype, trgt);
@@ -655,7 +725,7 @@ public:
         }
         else
         {
-            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQStructType*>(reprtype)->boxedtype;
+            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQBoxedStructType*>(BSQType::g_typetable[dynamic_cast<const BSQStructType*>(reprtype)->boxedtype]);
             if(boxedtype == nullptr)
             {
                 SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
@@ -688,7 +758,7 @@ public:
         }
         else
         {
-            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQStructType*>(btype)->boxedtype;
+            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQBoxedStructType*>(BSQType::g_typetable[dynamic_cast<const BSQStructType*>(btype)->boxedtype]);
             if(boxedtype == nullptr)
             {
                 btype->storeValue(trgt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
@@ -1322,6 +1392,37 @@ std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr
 
 #define CONS_BSQ_VALIDATOR_TYPE(TID, NAME) (new BSQRegisterType<void*>(TID, sizeof(void*), "1", EMPTY_KEY_CMP, entityValidatorDisplay_impl, NAME))
 
-std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+////
+//ENUM
 
+std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
+#define CONS_BSQ_ENUM_TYPE(TID, NAME, ENAMES) (new BSQEnumType(TID, entityNatKeyCmp_impl, entityEnumDisplay_impl, NAME, ENAMES))
+
+////
+//Mask
+
+typedef struct { uint8_t bits[4]; uint32_t size; } BSQMask;
+
+#define CONS_BSQ_MASK_TYPE(FIELDS, FIELDOFFSETS) (new BSQMaskType(FIELDS, FIELDOFFSETS))
+
+////
+//PartialVector
+
+std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+#define CONS_BSQ_PARTIAL_VECTOR_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, FIELDS, FIELDOFFSETS, ELEMTYPE) (new BSQPartialVectorType(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, FIELDS, FIELDOFFSETS, ELEMTYPE))
+
+////
+//List
+
+std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+#define CONS_BSQ_LIST_TYPE(TID, NAME, CTYPE, PVTYPE, TREETYPE) (new BSQListType(TID, entityListDisplay_impl, NAME, CTYPE, PVTYPE, TREETYPE))
+
+////
+//Map
+
+std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
+#define CONS_BSQ_MAP_TYPE(TID, NAME, KTYPE, VTYPE, CTYPE, TREETYPE) (new BSQMapType(TID, entityMapDisplay_impl, NAME, KTYPE, VTYPE, CTYPE, TREETYPE))

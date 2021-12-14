@@ -438,8 +438,6 @@ internal entity ListTree<T> provides Some {
     field left: ListTreeEntry<T>;
     field right ListTreeEntry<T>;
 
-    invariant $count > 4;
-
     recursive {when T unique Int | Nat} function s_range(start: T, end: T, inc: T, zero: T): ListTreeEntry<Int> {
         let count = end - start;
         if(count <= 4) {
