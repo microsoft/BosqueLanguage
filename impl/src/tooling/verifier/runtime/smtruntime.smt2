@@ -18,6 +18,19 @@
     )
 ))
 
+(declare-fun TypeTag_OrdinalOf () Int)
+(assert (= (TypeTag_OrdinalOf TypeTag_None) 0))
+(assert (= (TypeTag_OrdinalOf TypeTag_Bool) 2))
+(assert (= (TypeTag_OrdinalOf TypeTag_Nat) 3))
+(assert (= (TypeTag_OrdinalOf TypeTag_Int) 4))
+(assert (= (TypeTag_OrdinalOf TypeTag_BigNat) 5))
+(assert (= (TypeTag_OrdinalOf TypeTag_BigInt) 6))
+(assert (= (TypeTag_OrdinalOf TypeTag_String) 10))
+(assert (= (TypeTag_OrdinalOf TypeTag_LogicalTime) 16))
+(assert (= (TypeTag_OrdinalOf TypeTag_UUID) 17))
+(assert (= (TypeTag_OrdinalOf TypeTag_ContentHash) 18))
+;;ORDINAL_TAG_DECLS;;
+
 (declare-datatypes (
       (AbstractTypeTag 0)
     ) (
@@ -66,6 +79,7 @@
 ;;BSTRING_TYPE_ALIAS;;
 (define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
+;;BUUID_TYPE_ALIAS;;
 ;;BHASHCODE_TYPE_ALIAS;;
 
 ;;TODO BHashable and Hash + HashInvert and axioms
@@ -87,18 +101,11 @@
 ))
 
 (declare-datatype BDateTime 
-  (BDateTimeEntry@cons 
+  (BDateTime@cons 
     (BDateTime@utctime BDateTimeRaw)
-    (BDateTimeEntry@localtime BDateTimeRaw)
-    (BDateTimeEntry@tzoffset BNat)
-    (BDateTimeEntry@tzinfo BString)
-))
-
-(declare-datatype BUUID (BDateTimeRaw@cons 
-    (BUUID@b0 (_ BitVec 8)) (BUUID@b1 (_ BitVec 8)) (BUUID@b2 (_ BitVec 8)) (BUUID@b3 (_ BitVec 8))
-    (BUUID@b4 (_ BitVec 8)) (BUUID@b5 (_ BitVec 8)) (BUUID@b6 (_ BitVec 8)) (BUUID@b7 (_ BitVec 8))
-    (BUUID@b8 (_ BitVec 8)) (BUUID@b9 (_ BitVec 8)) (BUUID@b10 (_ BitVec 8)) (BUUID@b11 (_ BitVec 8))
-    (BUUID@b12 (_ BitVec 8)) (BUUID@b13 (_ BitVec 8)) (BUUID@b14 (_ BitVec 8)) (BUUID@b15 (_ BitVec 8))
+    (BDateTime@localtime BDateTimeRaw)
+    (BDateTime@tzoffset BNat)
+    (BDateTime@tzinfo BString)
 ))
 
 ;;BINT_CONSTANTS;;
@@ -159,14 +166,11 @@
 ;; KeyType Concept datatypes
 ;;
 (declare-datatypes (
-      ;;KEY_TYPE_DECLS;;
       (bsq_keyobject 0)
       (BKey 0)
     ) (
-    ;;KEY_TYPE_CONSTRUCTORS;;
     (
       (bsqkey_none@literal)
-      (bsqkey_nothing@literal) 
       (bsqkey_bool@box (bsqkey_bool_value Bool))
       (bsqkey_int@box (bsqkey_int_value BInt))
       (bsqkey_nat@box (bsqkey_nat_value BNat))
@@ -176,7 +180,6 @@
       (bsqkey_logicaltime@box (bsqkey_logicaltime_value BLogicalTime))
       (bsqkey_uuid@box (bsqkey_uuid_value BUUID))
       (bsqkey_contenthash@box (bsqkey_contenthash_value BHash))
-      ;;KEY_TYPE_BOXING;;
     )
     ( (BKey@box (BKey_type TypeTag) (BKey_oftype TypeTag) (BKey_value bsq_keyobject)) )
 ))
@@ -184,51 +187,82 @@
 (declare-const BKey@none BKey)
 (assert (= BKey@none (BKey@box TypeTag_None TypeTag_None bsqkey_none@literal)))
 
-(declare-const BKey@nothing BKey)
-(assert (= BKey@nothing (BKey@box TypeTag_Nothing TypeTag_Nothing bsqkey_nothing@literal)))
-
-(define-fun bsqkey_none@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
+(define-fun bsq_none@less ((k1 bsq_none) (k2 bsq_none)) Bool
   false
 )
 
-(define-fun bsqkey_nothing@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  false
+(define-fun Bool@less ((k1 Bool) (k2 Bool)) Bool
+  (and (not k1) k2)
 )
 
-(define-fun bsqkey_bool@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (and (not (bsqkey_bool_value k1)) (bsqkey_bool_value k2))
+(define-fun BInt@less ((k1 BInt) (k2 BInt)) Bool
+  (bvslt k1 k2)
 )
 
-(define-fun bsqkey_int@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (bvslt (bsqkey_int_value k1) (bsqkey_int_value k2))
+(define-fun BNat@less ((k1 BNat) (k2 BNat)) Bool
+  (bvult k1 k2)
 )
 
-(define-fun bsqkey_nat@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (bvult (bsqkey_nat_value k1) (bsqkey_nat_value k2))
+(define-fun BBigInt@less ((k1 BBigInt) (k2 BBigInt)) Bool
+  (< k1 k2)
 )
 
-(define-fun bsqkey_bigint@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (< (bsqkey_bigint_value k1) (bsqkey_bigint_value k2))
+(define-fun BBigNat@less ((k1 BBigNat) (k2 BBigNat)) Bool
+  (< k1 k2)
 )
 
-(define-fun bsqkey_bignat@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (< (bsqkey_bignat_value k1) (bsqkey_bignat_value k2))
+(define-fun BString@less ((k1 BString) (k2 BString)) Bool
+  (str.< k1 k2)
 )
 
-(define-fun bsqkey_string@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (str.< (bsqkey_string_value k1) (bsqkey_string_value k2))
+(define-fun BLogicalTime@less ((k1 BLogicalTime) (k2 BLogicalTime)) Bool
+  (< k1 k2)
 )
 
-(define-fun bsqkey_logicaltime@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (< (bsqkey_logicaltime_value k1) (bsqkey_logicaltime_value k2))
+(define-fun BUUID@less ((k1 BUUID) (k2 BUUID)) Bool
+  (bvult k1 k2)
 )
 
-(define-fun bsqkey_uuid@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (bvult (bsqkey_uuid_value k1) (bsqkey_uuid_value k2))
+(define-fun BContentHash@less ((k1 BContentHash) (k2 BContentHash)) Bool
+  (bvult k1 k2)
 )
 
-(define-fun bsqkey_contenthash@less ((k1 bsq_keyobject) (k2 bsq_keyobject)) Bool
-  (bvult (bsqkey_contenthash_value k1) (bsqkey_contenthash_value k2))
+(define-fun BKey@less ((k1 BKey) (k2 BKey)) Bool
+  (let ((tt (BKey_oftype k1)) (ttv1 (TypeTag_OrdinalOf (BKey_type k1))) (ttv2 (TypeTag_OrdinalOf (BKey_type k2))))
+    (ite (not (= ttv1 ttv2))
+      (< ttv1 ttv2)
+      (let ((vv1 (BKey_value k1)) (vv2 (BKey_value k2)))
+        (ite (tt TypeTag_None)
+          false
+          (ite (= tt TypeTag_Bool)
+            (Bool@less (bsqkey_bool_value vv1) (bsqkey_bool_value vv2))
+            (ite (= tt TypeTag_Int) 
+              (BInt@less (bsqkey_int_value k1) (bsqkey_int_value k2))
+              (ite (= tt TypeTag_Nat) 
+                (BNat@less (bsqkey_nat_value k1) (bsqkey_nat_value k2))
+                (ite (= tt TypeTag_BigInt)
+                  (BBigInt@less (bsqkey_bigint_value vv1) (bsqkey_bigint_value vv2))
+                  (ite (= tt TypeTag_BigNat)
+                    (BBigNat@less (bsqkey_bignat_value vv1) (bsqkey_bignat_value vv2))
+                    (ite (= tt TypeTag_String)
+                      (BString@less (bsqkey_string_value vv1) (bsqkey_string_value vv2))
+                      (ite (= tt TypeTag_LogicalTime)
+                        (BLogicalTime@less (bsqkey_logicaltime_value vv1) (bsqkey_logicaltime_value vv2))
+                        (ite (= tt TypeTag_UUID)
+                          (BUUID@less (bsqkey_uuid_value vv1) (bsqkey_uuid_value vv2))
+                          (bsqkey_contenthash@less (bsqkey_contenthash_value vv1) (bsqkey_contenthash_value vv2))
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
 )
 
 ;;
@@ -238,7 +272,6 @@
     (bsq_regex 0)
     ;;TUPLE_DECLS;;
     ;;RECORD_DECLS;;
-    ;;TYPE_COLLECTION_INTERNAL_INFO_DECLS;;
     ;;TYPE_DECLS;;
     (bsq_object 0)
     (BTerm 0)
@@ -246,14 +279,15 @@
     ( (bsq_regex@cons (bsq_regex_value Int)) )
     ;;TUPLE_TYPE_CONSTRUCTORS;;
     ;;RECORD_TYPE_CONSTRUCTORS;;
-    ;;TYPE_COLLECTION_INTERNAL_INFO_CONSTRUCTORS;;
     ;;TYPE_CONSTRUCTORS;;
     (
+      (bsqobject_nothing@literal)
       (bsqobject_float@box (bsqobject_float_value BFloat))
       (bsqobject_decimal@box (bsqobject_decimal_value BDecimal))
       (bsqobject_rational@box (bsqobject_rational_value BRational))
       (bsqobject_bytebuffer@box (bsqobject_bytebuffer_value BByteBuffer))
-      (bsqobject_isotime@box (bsqobject_isotime_value Int))
+      (bsqobject_datetime@box (bsqobject_datetime_value BDateTime))
+      (bsqobject_ticktime@box (bsqobject_ticktime_value BTickTime))
       (bsqobject_regex@box (bsqobject_regex_value bsq_regex))
       ;;TUPLE_TYPE_BOXING;;
       ;;RECORD_TYPE_BOXING;;
@@ -269,9 +303,7 @@
 (assert (= BTerm@none (BTerm@keybox BKey@none)))
 
 (declare-const BTerm@nothing BTerm)
-(assert (= BTerm@nothing (BTerm@keybox BKey@nothing)))
-
-;;TYPE_COLLECTION_EMPTY_DECLS;;
+(assert (= BTerm@nothing bsqobject_nothing@literal))
 
 ;;
 ;;Define utility functions
@@ -333,12 +365,13 @@
 (declare-fun BRational@UFCons_API ((Seq BNat)) BRational)
 (declare-fun BString@UFCons_API ((Seq BNat)) BString)
 (declare-fun BByteBuffer@UFCons_API ((Seq BNat)) BByteBuffer)
-(declare-fun BISOTime@UFCons_API ((Seq BNat)) BISOTime)
+(declare-fun BDateTime@UFCons_API ((Seq BNat)) BDateTime)
+(declare-fun BTickTime@UFCons_API ((Seq BNat)) BTickTime)
 (declare-fun BLogicalTime@UFCons_API ((Seq BNat)) BLogicalTime)
 (declare-fun BUUID@UFCons_API ((Seq BNat)) BUUID)
 (declare-fun BContentHash@UFCons_API ((Seq BNat)) BHash)
 
-(declare-fun ListSize@UFCons_API ((Seq BNat)) BNat)
+(declare-fun ContainerSize@UFCons_API ((Seq BNat)) BNat)
 (declare-fun EnumChoice@UFCons_API ((Seq BNat)) BNat)
 (declare-fun ConceptChoice@UFCons_API ((Seq BNat)) BNat)
 (declare-fun UnionChoice@UFCons_API ((Seq BNat)) BNat)

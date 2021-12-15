@@ -391,7 +391,12 @@ class ResolvedType {
     }
 
     isOkType(): boolean {
-        return this.typeID === "NSCore::Nothing";
+        if(!this.isUniqueCallTargetType()) {
+            return false;
+        }
+
+        const oodecl = this.getUniqueCallTargetType().object;
+        return oodecl.attributes.includes("__ok_type");
     }
 
     isErrType(): boolean {
@@ -400,7 +405,7 @@ class ResolvedType {
         }
 
         const oodecl = this.getUniqueCallTargetType().object;
-        return oodecl.attributes.includes("__something_type");
+        return oodecl.attributes.includes("__err_type");
     }
 
     isResultType(): boolean {

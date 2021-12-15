@@ -275,7 +275,7 @@ internal entity MapOps provides Some {
                 return Vector2<[K, V]>>{m.v0, m.v1, [k, v]};
             }
         }
-        elif(m.is<Vector3<T>>()) {
+        elif(m.is<Vector3<[K, V]>>()) {
             let ll4 = RecMapEntry<K, V>{m.v0, RecMapEntry<K, V>{m.v1, RecMapEntry<K, V>{m.v2, none}}}.add(k, v);
             return RecMap<K, V>{4n, ll4};
         }
@@ -345,6 +345,24 @@ internal entity MapOps provides Some {
             return MapOps::s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).remove(k);
         }
     }
+
+    function s_check_ordered<K grounded KeyType, V>(m: MapRepr<K, V>): Bool {
+        if(m === none) {
+            return true;
+        }
+        elif(m.is<Vector1<[K, V]>>()) {
+            return true;
+        }
+        elif(m.is<Vector2<[K, V]>>()) {
+            return KeyType::less<K>(m.v0.0, m.v1.0);
+        }
+        elif(m.is<Vector3<T>>()) {
+            return /\(KeyType::less<K>(m.v0.0, m.v1.0), KeyType::less<K>(m.v1.0, m.v2.0));
+        }
+        else {
+            return m.checkOrdered();
+        }
+    }
 }
 
 entity RecMap<K grounded KeyType, V> provides Some {
@@ -383,11 +401,11 @@ entity RecMap<K grounded KeyType, V> provides Some {
         return RecMap<K, V>{this.count + 1, this.ll.add[recursive](k, v)};
     }
 
-    recursive method set(m: MapRepr<K, V>, k: K, v: V): RecMap<K, V> {
+    method set(m: MapRepr<K, V>, k: K, v: V): RecMap<K, V> {
         return RecMap<K, V>{this.count, this.ll.set[recursive](k, v)};
     }
 
-    recursive method remove(k: K): RecMapEntry<K, V>? {
+    method remove(k: K): RecMapEntry<K, V>? {
         let rl = this.ll.set[recursive](k);
         let rrl = MapOps::s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rl);
 
@@ -404,6 +422,16 @@ entity RecMap<K grounded KeyType, V> provides Some {
             return RecMap<K, V>{this.count - 1n, rrl};
         }
     }
+
+    method checkOrdered(): Bool {
+        let ttl = this.ll.tail;
+        if(ttl === none) {
+            return true;
+        }
+        else {
+             return ttl.checkOrdered[recursive](this.ll.head.0);
+        }
+    }
 }
 
 entity RecMapEntry<K grounded KeyType, V> provides Some {
@@ -411,12 +439,12 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
     field tail RecMapEntry<K, V>?;
 
     recursive method has(k: K): Bool {
-        let hh = this.ll.head;
+        let hh = this.head;
         if(KeyType::equal<K>(hh.0, k)) {
             return true;
         }
         else {
-            let tl = this.ll.tail;
+            let tl = this.tail;
             if(tl === none) {
                 return false;
             }
@@ -427,12 +455,12 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
     }
 
     method find(k: K): [K, V]? {
-        let hh = this.ll.head;
+        let hh = this.head;
         if(KeyType::equal<K>(hh, k)) {
             return hh;
         }
         else {
-            let tl = this.ll.tail;
+            let tl = this.tail;
             if(tl === none) {
                 return none;
             }
@@ -532,7 +560,7 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
             return RecMapEntry<K, V>{[k, v], this.tail};
         }
         else {
-            let tl = this.ll.tail;
+            let tl = this.tail;
             check tl !== none;
 
             let ntl = tl.set[recursive](k, v);
@@ -546,12 +574,28 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
             return this.tail;
         }
         else {
-            let tl = this.ll.tail;
+            let tl = this.tail;
             check tl !== none;
 
             let ntl = tl.remove[recursive](k);
             return RecMapEntry<K, V>{this.head, ntl};
         }
+    }
+
+    recursive method checkOrdered(k: K): Bool {
+        let hk = this.head.0;
+        if(!KeyType::less<K>(k, hk)) {
+            return false;
+        }
+        else {
+            let tl = this.tail;
+            if(tail === none) {
+                return true;
+            }
+            else {
+                return tl.checkOrdered(hk);
+            }
+       }
     }
 }
 

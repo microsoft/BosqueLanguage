@@ -3962,6 +3962,7 @@ class Parser {
                 this.raiseError(line, "Collision between object and other names");
             }
 
+            xxxx;
             if(currentDecl.ns === "NSCore") {
                 if(ename === "StringOf") {
                     attributes.push("__stringof_type");
