@@ -8,7 +8,7 @@ namespace NSCore;
 
 #if EXEC_LIBS
 internal entity MapOps provides Some {
-    __assume_safe function s_safeAs<T, U>(v: T): U # map_safeas
+    __assume_safe function s_safeAs<T, U>(v: T): U map_safeas
 
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
         return m === none;

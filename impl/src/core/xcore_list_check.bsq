@@ -8,7 +8,7 @@ namespace NSCore;
 
 #if CHECK_LIBS
 internal entity ListOps provides Some {
-    __assume_safe function s_safeAs<T, U>(v: T): U # list_safeas
+    __assume_safe function s_safeAs<T, U>(v: T): U list_safeas
 
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;

@@ -5,7 +5,7 @@
 
 import { ParserEnvironment, FunctionScope } from "./parser_env";
 import { FunctionParameter, TypeSignature, NominalTypeSignature, TemplateTypeSignature, ParseErrorTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, AutoTypeSignature, ProjectTypeSignature, EphemeralListTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
-import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionOrOperatorExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixInvoke, PostfixOp, PrefixNotOp, BinLogicExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionOrOperatorExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, StructureMatchGuard, AbortStatement, BlockStatementExpression, IfExpression, MatchExpression, RecursiveAnnotation, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ValidateStatement, NakedCallStatement, ValueListStructuredAssignment, NominalStructuredAssignment, VariablePackDeclarationStatement, VariablePackAssignmentStatement, ConstructorEphemeralValueList, MapEntryConstructorExpression, SpecialConstructorExpression, TypeMatchGuard, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralExpressionValue, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, IsTypeExpression, AsTypeExpression, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, PostfixGetIndexOption, PostfixGetPropertyOption, SwitchEntry, SwitchExpression, StructuredAssignementPrimitive, SwitchStatement, SwitchGuard, WildcardSwitchGuard, LiteralSwitchGuard } from "./body";
+import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionOrOperatorExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixInvoke, PostfixOp, PrefixNotOp, BinLogicExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionOrOperatorExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, StructureMatchGuard, AbortStatement, BlockStatementExpression, IfExpression, MatchExpression, RecursiveAnnotation, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ValidateStatement, NakedCallStatement, ValueListStructuredAssignment, NominalStructuredAssignment, VariablePackDeclarationStatement, VariablePackAssignmentStatement, ConstructorEphemeralValueList, MapEntryConstructorExpression, SpecialConstructorExpression, TypeMatchGuard, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralExpressionValue, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, IsTypeExpression, AsTypeExpression, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, PostfixGetIndexOption, PostfixGetPropertyOption, SwitchEntry, SwitchExpression, StructuredAssignementPrimitive, SwitchStatement, SwitchGuard, WildcardSwitchGuard, LiteralSwitchGuard, LogicActionExpression } from "./body";
 import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, PreConditionDecl, PostConditionDecl, BuildLevel, TypeConditionRestriction, InvariantDecl, TemplateTypeRestriction, StaticOperatorDecl, NamespaceOperatorDecl, OOPTypeDecl } from "./assembly";
 import { BSQRegex } from "./bsqregex";
 
@@ -52,6 +52,7 @@ const KeywordStrings = [
     "requires",
     "something",
     "spec",
+    "doc",
     "switch",
     "test",
     "true",
@@ -77,10 +78,8 @@ const SymbolStrings = [
     "{|",
     "|}",
 
-    "#",
     "&",
     "&&",
-    "@",
     "!",
     "!=",
     "!==",
@@ -107,39 +106,33 @@ const SymbolStrings = [
     "-",
     "->",
     "*",
-    "/"
+    "/",
+    "/\\",
+    "\\/"
 ].sort((a, b) => { return (a.length !== b.length) ? (b.length - a.length) : a.localeCompare(b); });
 
 const RegexFollows = new Set<string>([
     "_debug",
-    "abort",
-    "assert",
-    "check",
-    "else",
     "ensures",
     "invariant",
-    "release",
     "return",
     "requires",
-    "test",
     "validate",
-    "when",
     "yield",
     "[",
     "(",
     "(|",
     "{|",
-    "&",
     "&&",
     "!",
     "!=",
     ",",
     "=",
     "==",
+    "===",
     "=>",
     "==>",
     "?",
-    "|",
     "||",
     "+",
     "<",
@@ -208,6 +201,7 @@ const TokenStrings = {
     Template: "[TEMPLATE]",
     Identifier: "[IDENTIFIER]",
     Operator: "[OPERATOR]",
+    FollowTypeSep: "[FOLLOWTYPE]",
 
     EndOfStream: "[EOS]"
 };
@@ -533,7 +527,7 @@ class Lexer {
         else if (Lexer.isIdentifierName(name)) {
             const isTypeThing = /^_[A-Z]/.test(name);
             if (isTypeThing) {
-                this.recordLexTokenWData(this.m_cpos + 1, TokenStrings.Identifier, "_");
+                this.recordLexToken(this.m_cpos + 1, TokenStrings.FollowTypeSep);
             }
             else {
                 this.recordLexTokenWData(this.m_cpos + name.length, TokenStrings.Identifier, name);
@@ -1514,23 +1508,14 @@ class Parser {
 
     private parseConstructorPrimary(otype: TypeSignature): Expression {
         const sinfo = this.getCurrentSrcInfo();
-
-        this.ensureAndConsumeToken("@");
         const args = this.parseArguments("{", "}");
 
         return new ConstructorPrimaryExpression(sinfo, otype, args);
     }
 
-    private parseConstructorPrimaryWithFactory(otype: TypeSignature): Expression {
+    private parseConstructorPrimaryWithFactory(otype: TypeSignature, fname: string, targs: TemplateArguments, rec: RecursiveAnnotation): Expression {
         const sinfo = this.getCurrentSrcInfo();
-
-        this.ensureAndConsumeToken("@");
-        this.ensureToken(TokenStrings.Identifier);
-
-        const fname = this.consumeTokenAndGetValue();
-        const targs = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
-        const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
-        const args = this.parseArguments("(", ")");
+        const args = this.parseArguments("{", "}");
 
         return new ConstructorPrimaryWithFactoryExpression(sinfo, otype, fname, rec, targs, args);
     }
@@ -1568,7 +1553,7 @@ class Parser {
     }
 
     private parseFollowTypeTag(): TypeSignature {
-        this.ensureAndConsumeToken("#");
+        this.ensureAndConsumeToken(TokenStrings.FollowTypeSep);
 
         if (this.testToken(TokenStrings.Template)) {
             return this.parseTemplateTypeReference();
@@ -1694,11 +1679,11 @@ class Parser {
         }
     }
 
-    private checkTypeBasedExpressionFollowsParens(): boolean {
+    private checkTypeScopeBasedExpressionFollowsParens(): boolean {
         const lpos = this.scanMatchingParens("(", ")");
         const ptok = this.peekToken(lpos - this.m_cpos);
 
-        return ptok === "::" || ptok === "@" || ptok === "#";
+        return ptok === "::";
     }
 
     private parsePrimaryExpression(): Expression {
@@ -1822,7 +1807,7 @@ class Parser {
         else if (tk === "fn" || this.testFollows("recursive", "fn") || this.testFollows("recursive?", "fn") || tk === "pred" || this.testFollows("recursive", "pred") || this.testFollows("recursive?", "pred")) {
             return this.parsePCodeTerm();
         }
-        else if (tk === "(" && !this.checkTypeBasedExpressionFollowsParens()) {
+        else if (tk === "(" && !this.checkTypeScopeBasedExpressionFollowsParens()) {
             try {
                 this.setRecover(this.scanMatchingParens("(", ")"));
 
@@ -1849,6 +1834,11 @@ class Parser {
         else if (this.testToken("(|")) {
             const args = this.parseArguments("(|", "|)");
             return new ConstructorEphemeralValueList(sinfo, args);
+        }
+        else if (this.testToken("/\\") || this.testToken("\\/")) {
+            const op = this.consumeTokenAndGetValue() as "/\\" | "\\/";
+            const args = this.parseArguments("(", ")");
+            return new LogicActionExpression(sinfo, op, args);
         }
         else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Identifier)) {
             //it is a namespace access of some type
@@ -1891,16 +1881,26 @@ class Parser {
                 else {
                     const targs = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
                     const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
-                    const args = this.parseArguments("(", ")");
-
-                    return new CallStaticFunctionOrOperatorExpression(sinfo, ttype, name, targs, rec, args, "std");
+                    if(this.testToken("{")) {
+                        return this.parseConstructorPrimaryWithFactory(ttype, name, targs, rec);
+                    }
+                    else {
+                        const args = this.parseArguments("(", ")");
+                        return new CallStaticFunctionOrOperatorExpression(sinfo, ttype, name, targs, rec, args, "std");
+                    }
                 }
             }
-            else if (this.testFollows("@", TokenStrings.Identifier)) {
-                return this.parseConstructorPrimaryWithFactory(ttype);
-            }
-            else if (this.testFollows("@", "{")) {
-                return this.parseConstructorPrimary(ttype);
+            else if (this.testFollows("{")) {
+                if(this.testFollows("{", TokenStrings.TypedString)) {
+                    this.ensureAndConsumeToken("{");
+                    const tstring = this.consumeTokenAndGetValue();
+                    this.ensureAndConsumeToken("}");
+
+                    return new LiteralTypedStringConstructorExpression(sinfo, tstring, ttype)
+                }
+                else {
+                    return this.parseConstructorPrimary(ttype);
+                }
             }
             else {
                 this.raiseError(line, "Unknown token sequence in parsing expression");
@@ -1914,17 +1914,10 @@ class Parser {
 
         if (this.testToken(TokenStrings.TypedString)) {
             const tstring = this.consumeTokenAndGetValue();
-
-            if (this.testAndConsumeTokenIf("#")) {
-                const ttype = this.parseFollowTypeConstructor();
-                return [new LiteralTypedStringExpression(sinfo, tstring, ttype), ops];
-            }
-            else {
-                this.ensureAndConsumeToken("(");
-                const ttype = this.parseFollowTypeConstructor();
-                this.ensureAndConsumeToken(")");
-                return [new LiteralTypedStringConstructorExpression(sinfo, tstring, ttype), ops];
-            }
+            this.ensureAndConsumeToken(TokenStrings.FollowTypeSep);
+             
+            const ttype = this.parseFollowTypeConstructor();
+            return [new LiteralTypedStringExpression(sinfo, tstring, ttype), ops];
         }
         else {
             let exp = this.parsePrimaryExpression();
@@ -1943,7 +1936,7 @@ class Parser {
             }
             
             const rops = ops.slice(cpos);
-            if (this.peekTokenData() === "#") {
+            if (this.testToken(TokenStrings.FollowTypeSep)) {
                 const ttype = this.parseFollowTypeTag();
 
                 if(exp instanceof LiteralIntegralExpression) {
@@ -2302,8 +2295,7 @@ class Parser {
                         //TODO: in theory it could also be a "(" and we need to do a tryParseType thing OR just disallow () in this position
                         //
                         if (this.testToken("<")) {
-                            if (this.testFollows("<", TokenStrings.Namespace) || this.testFollows("<", TokenStrings.Type) || this.testFollows("<", TokenStrings.Template) 
-                                || this.testFollows("<", "[") || this.testFollows("<", "{") || this.testFollows("<", "(|")) {
+                            if (this.testFollows("<", TokenStrings.Namespace) || this.testFollows("<", TokenStrings.Type) || this.testFollows("<", TokenStrings.Template) || this.testFollows("<", "[") || this.testFollows("<", "{") || this.testFollows("<", "(|")) {
                                 const terms = this.parseTemplateArguments();
                                 const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
 
@@ -2614,8 +2606,8 @@ class Parser {
         const sinfo = this.getCurrentSrcInfo();
 
         //
-        //TODO: This will have an ugly parse if we do -- x of Int < 3
-        //      It will try to parse as Int<3, ... as a type which fails
+        //TODO: This will have an ugly parse if we do -- x astype Int < 3
+        //      It will try to parse as Int<3 ... as a type which fails
         //
 
         let exp = this.parseSelectExpression();
@@ -2643,6 +2635,8 @@ class Parser {
 
             let cond: "none" | "nothing" | "err" = this.consumeTokenAndGetValue() as "none" | "nothing" | "err";
             this.consumeToken();
+
+            //TODO: eventually we want to allow arbitrary boolean expressions in the ?...? and an optional following expression as the result
 
             return new ExpOrExpression(ffsinfo, texp, cond);
         }
@@ -3636,6 +3630,20 @@ class Parser {
             this.raiseError(this.getCurrentLine(), "Collision between imported using names");
         }
 
+        //
+        //TODO: Packaging!!!!
+        //We want to change this to do pre-scan of namespace exports -- probably use a convention that top-level exports.bsq is used for a directory as 
+        //a best practice to keep things organized -- but we will look at all files for any exports they have and gather them all.
+        //For packages we will do a package.json thing that has an exports and if the package is intrusive (then can peek inside for analysis, link  
+        //direcly, and export template types) or external (then only accessable via APIs).
+        //Then when parsing in a package every name gets the implicit package part appended EXCEPT for things imported in packages here which obviously
+        //get the importing package name appended. These should always be implicit (i.e. developer doesn't need to specify the package part except maybe 
+        //here to import).
+        //Our versioning trick is going to be looking at the imported types and signatures (including transative dependencies). We will split up the 
+        //package dependencies into "public" and "internal" -- internal dependencies can be resolved by finding a satisfying version OR cloning. The 
+        //public dependences can be part of the exported signatures and must be resolved by finding satifying versions with other packages. 
+        //
+
         currentDecl.usings.push(new NamespaceUsing(fromns, names));
     }
 
@@ -3962,7 +3970,6 @@ class Parser {
                 this.raiseError(line, "Collision between object and other names");
             }
 
-            xxxx;
             if(currentDecl.ns === "NSCore") {
                 if(ename === "StringOf") {
                     attributes.push("__stringof_type");
@@ -3982,6 +3989,9 @@ class Parser {
                 else if(ename === "Something") {
                     attributes.push("__something_type");
                 }
+                else if(ename === "HavocSequence") {
+                    attributes.push("__havoc_type");
+                }
                 else if(ename === "List") {
                     attributes.push("__list_type");
                 }
@@ -3996,6 +4006,12 @@ class Parser {
                 }
                 else if(ename === "Map") {
                     attributes.push("__map_type");
+                }
+                else if(ename === "Mask") {
+                    attributes.push("__mask_type");
+                }
+                else if(ename === "PartialVector") {
+                    attributes.push("__partialvector_type");
                 }
                 else {
                     //not special
@@ -4166,12 +4182,21 @@ class Parser {
                 let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
                 
-                provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
-                provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
+                let implicitops = [["t", "==", "t", "NSCore::Bool"], ["t", "!=", "t", "NSCore::Bool"]];
 
-                [["+", "t", "t"], ["t", "+", "t", "t"], ["-", "t", "t"], ["t", "-", "t", "t"], ["t", "*", "u", "t"], ["u", "*", "t", "t"], ["t", "/", "t", "u"],
-                ["t", "==", "t", "NSCore::Bool"], ["t", "!=", "t", "NSCore::Bool"], 
-                ["t", "<", "t", "NSCore::Bool"], ["t", ">", "t", "NSCore::Bool"], ["t", "<=", "t", "NSCore::Bool"], ["t", ">=", "t", "NSCore::Bool"]].forEach((op) => {
+                if(attributes.includes("orderable")) {
+                    provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
+
+                    implicitops = [...implicitops, ["t", "<", "t", "NSCore::Bool"], ["t", ">", "t", "NSCore::Bool"], ["t", "<=", "t", "NSCore::Bool"], ["t", ">=", "t", "NSCore::Bool"]];
+                }
+
+                if(attributes.includes("algebraic")) {
+                    provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
+
+                    implicitops = [...implicitops, ["+", "t", "t"], ["t", "+", "t", "t"], ["-", "t", "t"], ["t", "-", "t", "t"], ["t", "*", "u", "t"], ["u", "*", "t", "t"], ["t", "/", "t", "u"]];
+                }
+
+                implicitops.forEach((op) => {
                     const ns = this.m_penv.assembly.getNamespace("NSCore");
 
                     const isprefix = op[0] !== "t" && op[0] !== "u";
@@ -4257,11 +4282,20 @@ class Parser {
                 ["zero", "one"].forEach((sf) => {
                     const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
 
-                    const cexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([ new PositionalArgument(undefined, false, new AccessStaticFieldExpression(sinfo, idval, "zero"))]));
-                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "zero", ttype, new ConstantExpressionValue(cexp, new Set<string>())); 
+                    const cexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([ new PositionalArgument(undefined, false, new AccessStaticFieldExpression(sinfo, idval, sf))]));
+                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], sf, ttype, new ConstantExpressionValue(cexp, new Set<string>())); 
 
                     staticMembers.push(sfdecl);
                 });
+
+                if(attributes.includes("algebraic")) {
+                    const ttype = new NominalTypeSignature("NSCore", ["AlgebraicOpStability"], []);
+
+                    const cexp = new AccessStaticFieldExpression(sinfo, idval, "stability")
+                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "stability", ttype, new ConstantExpressionValue(cexp, new Set<string>())); 
+
+                    staticMembers.push(sfdecl);
+                }
 
                 if (this.testAndConsumeTokenIf("&")) {
                     this.setRecover(this.scanCodeParens());

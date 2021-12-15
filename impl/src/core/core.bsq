@@ -8,8 +8,8 @@ namespace NSCore;
 
 //<summary>Special type which all values are instances of.</summary>
 __universal concept Any {
-    method is<T>(): Bool # special_method
-    method as<T>(): T # special_method
+    method is<T>(): Bool special_method
+    method as<T>(): T special_method
 
     method asOrNone<T>(): T? {
         return this.is<T>() ? this.as<T>() : none;
@@ -33,8 +33,8 @@ __universal concept Any {
         }
     }
 
-    method isSome(): Bool # special_method
-    method isNone(): Bool # special_method
+    method isSome(): Bool special_method
+    method isNone(): Bool special_method
 }
 
 //<summary>Special type for representing all non-none values.</summary>
@@ -43,8 +43,8 @@ __universal concept Some provides Any {
 
 //<summary>Special type for indicating a value can be used as a key in a collection.</summary>
 __universal concept KeyType provides Any {
-    function equal<T grounded KeyType>(a: T, b: T): Bool # special_method
-    function less<T grounded KeyType>(a: T, b: T): Bool # special_method
+    function equal<T grounded KeyType>(a: T, b: T): Bool special_method
+    function less<T grounded KeyType>(a: T, b: T): Bool special_method
 }
 
 //<summary>Type for indicating that a datatype is a Validator.</summary>
@@ -61,7 +61,7 @@ __universal concept BufferParsable provides Any {
 
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
 __universal concept APIType provides Any {
-    function generate<T grounded APIType>(): T # apitype_generate
+    function generate<T grounded APIType>(): T apitype_generate
 }
 
 //<summary>Type for indicating that a datatype overrides the algebraic operators +, -, *, / along with the needed consts.</summary>
@@ -105,7 +105,6 @@ __internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyTyp
     const stability: AlgebraicOpStability = AlgebraicOpStability::bounded;
     const zero: Int = 0i;
     const one: Int = 1i;
-    const negone: Int = -1i;
 
     method toNat(): Nat { return NumericOps::s_intToNat(this); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_intToBigInt(this)); }
@@ -157,7 +156,6 @@ __internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, Key
     const stability: AlgebraicOpStability = AlgebraicOpStability::complete;
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
-    const negone: BigInt = -1I;
 
     method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(this); }
@@ -209,7 +207,6 @@ __internal __typedeclable entity Rational provides Some, Algebraic, Orderable, A
     const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
     const zero: Rational = 0/1R;
     const one: Rational = 1/1R;
-    const negone: Rational = -1/1R;
 
     method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this))); }
     method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this)); }
@@ -236,7 +233,6 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
-    const negone: Float = -1.0f;
 
     const pi: Float = 3.1415926535897931f;
     const e: Float = 2.7182818284590451f;
@@ -280,7 +276,6 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
     const zero: Decimal = 0.0d;
     const one: Decmial = 1.0d;
-    const negone: Decmial = -1.0d;
 
     const pi: Decimal = 3.1415926535897931d;
     const e: Decimal = 2.7182818284590451d;
@@ -321,9 +316,9 @@ __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = defa
 
 //<summary>Primitive string value.</summary>
 __internal entity String provides Some, KeyType, APIType {
-    __safe private function s_empty(s: String): Bool # string_empty
+    __safe private function s_empty(s: String): Bool string_empty
 
-    __assume_safe private function s_concat2(s1: String, s2: String): String # string_append
+    __assume_safe private function s_concat2(s1: String, s2: String): String string_append
 
     function concat(...sl: List<String>): String {
         return ListOps::s_strconcat(sl);
@@ -348,8 +343,8 @@ __internal entity String provides Some, KeyType, APIType {
 
 //<summary>Primitive safe string value.</summary>
 __internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
-    private function s_into(s: String): StringOf<T> # special_inject
-    method value(): String # special_extract
+    private function s_into(s: String): StringOf<T> special_inject
+    method value(): String special_extract
 
     function coerce(s: String): StringOf<T> {
         check T::accepts(s);
@@ -368,8 +363,8 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
 
 //<summary>Primitive DataString value.</summary>
 __internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType {
-    private function s_into(s: String): DataString<T> # special_inject
-    method value(): String # special_extract
+    private function s_into(s: String): DataString<T> special_inject
+    method value(): String special_extract
 
     function coerce(s: String): DataString<T> {
         check T::accepts(s);
@@ -403,13 +398,13 @@ enum BufferCompression {
 
 //<summary>An efficient byte buffer for data.</summary>
 __internal entity ByteBuffer provides Some, APIType {
-    method getFormat(): BufferFormat # bytebuffer_getformat
-    method getCompression(): BufferCompression # bytebuffer_getcompression;
+    method getFormat(): BufferFormat bytebuffer_getformat
+    method getCompression(): BufferCompression bytebuffer_getcompression;
 }
 
 //<summary>An efficient buffer encoding for data.</summary>
 __internal __constructable entity DataBuffer<T unique BufferParsable> provides Some, APIType when T grounded APIType {
-    method value(): ByteBuffer # special_extract
+    method value(): ByteBuffer special_extract
 }
 
 //<summary>Primitive DateTime value.</summary>
@@ -438,18 +433,18 @@ __internal entity Regex provides Some {
 
 //<summary>Static methods for Tuples.</summary>
 __universal concept Tuple provides Some {
-    function append(arg: Any): Tuple # special_method
+    function append(arg: Any): Tuple special_method
 }
 
 //<summary>Static methods for Records.</summary>
 __universal concept Record provides Some {
-    function join(arg: Any): Record # special_method
+    function join(arg: Any): Record special_method
 }
 
 //<summary>Generic type for all Option<T> to inherit from.</summary>
 __universal concept IOption provides Some {
-    method isNothing(): Bool # special_nothing
-    method isSomething(): Bool # special_something
+    method isNothing(): Bool special_nothing
+    method isSomething(): Bool special_something
 
     method asNothing(): Nothing {
         return this.as<Nothing>();
@@ -466,7 +461,7 @@ __internal entity Nothing provides IOption, APIType {
 
 //<summary>Type for representing the nothing option value.</summary>
 __internal __constructable entity Something<T> provides Option<T>, APIType when T grounded APIType {
-    method value(): T # special_extract
+    method value(): T special_extract
 }
 
 //<summary>Type for flagging T projection from Option -- kludge that has no other purpose.</summary>
@@ -535,11 +530,11 @@ __universal concept IResultE provides Some {
 //<summary>Result type.</summary>
 concept Result<T, E=None> provides IResult, APIType when T grounded APIType && E grounded APIType {
     __internal __constructable entity Ok provides IOk, Result<T, E> {
-        method value(): T # special_extract
+        method value(): T special_extract
     }
 
     __internal __constructable entity Err provides IErr, Result<T, E> {
-        method value(): E # special_extract
+        method value(): E special_extract
     }
 
     method isOk(): Bool {
@@ -579,5 +574,5 @@ __internal entity HavocSequence provides Some {
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>
 concept Expandoable<T> provides Some {
-    method expand<U>(): List<U> # special_method
+    method expand<U>(): List<U> special_method
 }

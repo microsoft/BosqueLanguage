@@ -169,6 +169,8 @@ enum ExpressionTag {
     CallNamespaceFunctionOrOperatorExpression = "CallNamespaceFunctionOrOperatorExpression",
     CallStaticFunctionOrOperatorExpression = "CallStaticFunctionOrOperatorExpression",
 
+    LogicActionExpression = "LogicActionExpression",
+
     IsTypeExpression = "IsTypeExpression",
     AsTypeExpression = "AsTypeExpression",
 
@@ -574,6 +576,18 @@ class CallStaticFunctionOrOperatorExpression extends Expression {
         this.terms = terms;
         this.args = args;
         this.opkind = opkind;
+    }
+}
+
+
+class LogicActionExpression extends Expression {
+    readonly opkind: "/\\" | "\\/";
+    readonly args: Arguments;
+
+    constructor(sinfo: SourceInfo, opkind: "/\\" | "\\/", args: Arguments) {
+        super(ExpressionTag.LogicActionExpression, sinfo);
+        this.opkind = opkind;
+        this.args = args;
     }
 }
 
@@ -1253,6 +1267,7 @@ export {
     ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorEphemeralValueList, 
     ConstructorPCodeExpression, SpecialConstructorExpression,
     CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression,
+    LogicActionExpression,
     IsTypeExpression, AsTypeExpression,
     PostfixOpTag, PostfixOperation, PostfixOp,
     PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames,
