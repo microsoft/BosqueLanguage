@@ -572,6 +572,8 @@ class Assembly {
     private m_subtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
     private m_atomSubtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
 
+    private m_typedeclResolutions: Map<string, ResolvedType> = new Map<string, ResolvedType>();
+
     private resolveTemplateBinds(declterms: TemplateTermDecl[], giventerms: TypeSignature[], binds: Map<string, ResolvedType>): Map<string, ResolvedType> | undefined {
         let fullbinds = new Map<string, ResolvedType>();
 
@@ -998,12 +1000,14 @@ class Assembly {
     }
 
     private normalizeType_Nominal(t: NominalTypeSignature, binds: Map<string, ResolvedType>): ResolvedType | ResolvedFunctionType {
-        const [aliasResolvedType, aliasResolvedBinds] = this.lookupTypeDef(t, binds);
+        const [aliasResolvedType, aliasResolvedBinds, isresolution] = this.lookupTypeDef(t, binds);
+
+        let rtype: ResolvedType | ResolvedFunctionType = ResolvedType.createEmpty(); 
         if (aliasResolvedType === undefined) {
-            return ResolvedType.createEmpty();
+            ;
         }
         else if (!(aliasResolvedType instanceof NominalTypeSignature)) {
-            return this.normalizeTypeGeneral(aliasResolvedType, aliasResolvedBinds);
+            rtype = this.normalizeTypeGeneral(aliasResolvedType, aliasResolvedBinds);
         }
         else {
             const fconcept = this.tryGetConceptTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.computeResolvedName());
@@ -1013,7 +1017,7 @@ class Assembly {
                 }
 
                 const cta = this.createConceptTypeAtom(fconcept, aliasResolvedType, aliasResolvedBinds);
-                return cta !== undefined ? ResolvedType.createSingle(cta) : ResolvedType.createEmpty();
+                rtype = cta !== undefined ? ResolvedType.createSingle(cta) : ResolvedType.createEmpty();
             }
 
             const fobject = this.tryGetObjectTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.computeResolvedName());
@@ -1023,11 +1027,22 @@ class Assembly {
                 }
 
                 const ota = this.createObjectTypeAtom(fobject, aliasResolvedType, aliasResolvedBinds);
-                return ota !== undefined ? ResolvedType.createSingle(ota) : ResolvedType.createEmpty();
+                rtype = ota !== undefined ? ResolvedType.createSingle(ota) : ResolvedType.createEmpty();
             }
 
             return ResolvedType.createEmpty();
         }
+
+        if(isresolution) {
+            let sstr = (t.nameSpace !== "NSCore" ? (t.nameSpace + "::") : "") + t.computeResolvedName();
+            if(t.terms.length !== 0) {
+                sstr += "<" + t.terms.map((t) => this.normalizeTypeOnly(t, binds).typeID).join(", ") + ">";
+            }
+
+            this.m_typedeclResolutions.set(sstr, rtype as ResolvedType);
+        }
+
+        return rtype;
     }
 
 
@@ -1610,29 +1625,29 @@ class Assembly {
 
     ////
     //Type representation, normalization, and operations
-    lookupTypeDef(t: NominalTypeSignature, binds: Map<string, ResolvedType>): [TypeSignature | undefined, Map<string, ResolvedType>] {
+    lookupTypeDef(t: NominalTypeSignature, binds: Map<string, ResolvedType>): [TypeSignature | undefined, Map<string, ResolvedType>, boolean] {
         if (!this.hasNamespace(t.nameSpace)) {
-            return [undefined, new Map<string, ResolvedType>()];
+            return [undefined, new Map<string, ResolvedType>(), false];
         }
 
         const lname = t.nameSpace + "::" + t.tnames.join("::");
         const nsd = this.getNamespace(t.nameSpace);
         if (!nsd.typeDefs.has(lname)) {
-            return [t, new Map<string, ResolvedType>(binds)];
+            return [t, new Map<string, ResolvedType>(binds), false];
         }
 
         //compute the bindings to use when resolving the RHS of the typedef alias
         const typealias = nsd.typeDefs.get(lname) as NamespaceTypedef;
         const updatedbinds = this.resolveTemplateBinds(typealias.terms, t.terms, binds);
         if(updatedbinds === undefined) {
-            return [undefined, new Map<string, ResolvedType>()];
+            return [undefined, new Map<string, ResolvedType>(), false];
         }
 
         if (typealias.boundType instanceof NominalTypeSignature) {
             return this.lookupTypeDef(typealias.boundType, updatedbinds);
         }
         else {
-            return [typealias.boundType, updatedbinds];
+            return [typealias.boundType, updatedbinds, true];
         }
     }
 

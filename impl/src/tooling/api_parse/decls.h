@@ -32,6 +32,9 @@ public:
     const std::map<std::string, const IType*> typemap;
     const std::vector<InvokeSignature*> api;
 
+    xxxx; //Info on type decls here so users can use them too
+    xxxx; //Info on namespace mappings here so users can write short NS qualifiers and we map to the right fully qualified names
+
     APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> api) : typemap(typemap), api(api)
     {
         ;

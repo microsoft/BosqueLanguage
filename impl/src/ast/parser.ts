@@ -4013,6 +4013,9 @@ class Parser {
                 else if(ename === "PartialVector") {
                     attributes.push("__partialvector_type");
                 }
+
+                xxxx; //others cause we want to be able to special case the havoc constructors and such
+
                 else {
                     //not special
                 }
