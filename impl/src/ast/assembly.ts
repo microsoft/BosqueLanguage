@@ -1444,7 +1444,8 @@ class Assembly {
     getSpecialBufferFormatType(): ResolvedType { return this.internSpecialObjectType(["BufferFormat"]); }
     getSpecialBufferCompressionType(): ResolvedType { return this.internSpecialObjectType(["BufferCompression"]); }
     getSpecialByteBufferType(): ResolvedType { return this.internSpecialObjectType(["ByteBuffer"]); }
-    getSpecialISOTimeType(): ResolvedType { return this.internSpecialObjectType(["ISOTime"]); }
+    getSpecialDateTimeType(): ResolvedType { return this.internSpecialObjectType(["DateTime"]); }
+    getSpecialTickTimeType(): ResolvedType { return this.internSpecialObjectType(["TickTime"]); }
     getSpecialLogicalTimeType(): ResolvedType { return this.internSpecialObjectType(["LogicalTime"]); }
     getSpecialUUIDType(): ResolvedType { return this.internSpecialObjectType(["UUID"]); }
     getSpecialContentHashType(): ResolvedType { return this.internSpecialObjectType(["ContentHash"]); }
@@ -1459,6 +1460,7 @@ class Assembly {
     getSpecialKeyTypeConceptType(): ResolvedType { return this.internSpecialConceptType(["KeyType"]); }
     getSpecialValidatorConceptType(): ResolvedType { return this.internSpecialConceptType(["Validator"]); }
     getSpecialParsableConceptType(): ResolvedType { return this.internSpecialConceptType(["Parsable"]); }
+    getSpecialBufferParsableConceptType(): ResolvedType { return this.internSpecialConceptType(["BufferParsable"]); }
     getSpecialAPITypeConceptType(): ResolvedType { return this.internSpecialConceptType(["APIType"]); }
     getSpecialAlgebraicConceptType(): ResolvedType { return this.internSpecialConceptType(["Algebraic"]); }
     getSpecialOrderableConceptType(): ResolvedType { return this.internSpecialConceptType(["Orderable"]); }
@@ -1469,6 +1471,13 @@ class Assembly {
     getSpecialISomethingConceptType(): ResolvedType { return this.internSpecialConceptType(["ISomething"]); }
     getSpecialIOptionConceptType(): ResolvedType { return this.internSpecialConceptType(["IOption"]); }
     getSpecialIOptionTConceptType(): ResolvedType { return this.internSpecialConceptType(["IOptionT"]); }
+
+    getSpecialIResultConceptType(): ResolvedType { return this.internSpecialConceptType(["IResult"]); }
+    getSpecialIOkConceptType(): ResolvedType { return this.internSpecialConceptType(["IOk"]); }
+    getSpecialIErrTConceptType(): ResolvedType { return this.internSpecialConceptType(["IErr"]); }
+    getSpecialIResultTConceptType(): ResolvedType { return this.internSpecialConceptType(["IResultT"]); }
+    getSpecialIResultEConceptType(): ResolvedType { return this.internSpecialConceptType(["IResultE"]); }
+
     getSpecialObjectConceptType(): ResolvedType { return this.internSpecialConceptType(["Object"]); }
 
     getStringOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::StringOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
@@ -1479,6 +1488,27 @@ class Assembly {
     getOkType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Result::Ok") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
     getErrType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Result::Err") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
 
+    getMaskType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Mask") as EntityTypeDecl, new Map<string, ResolvedType>())); }
+    getPartialVectorType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::PartialVector") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getListTreeType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::ListTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getListTreeEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::ListTreeEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    
+    getBTreeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::BTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getBTreeNodeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::BTreeNode") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    
+    getVector1Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Vector1") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector2Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Vector2") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector3Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Vector3") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    
+    getRecListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecList") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getRecListEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecListEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    
+    getRecMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecMap") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getRecMapEntryType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecMapEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    
+    getListOpsType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::ListOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getMapOpsType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::MapOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    
     getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     getQueueType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Queue") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }

@@ -1214,6 +1214,9 @@ class ICPPBodyEmitter {
             case MIROpTag.MIRPrefixNotOp: {
                 return this.processPrefixNotOp(op as MIRPrefixNotOp);
             }
+            case MIROpTag.MIRLogicAction: {
+                return xxxx;
+            }
             case MIROpTag.MIRIsTypeOf: {
                 return this.processIsTypeOf(op as MIRIsTypeOf);
             }

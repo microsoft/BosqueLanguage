@@ -512,11 +512,11 @@ __universal concept IResult provides Some {
 }
 
 //<summary>Generic type for all Result<T, E>::Ok to inherit from.</summary>
-__universal private concept IOk provides Some {
+__universal internal concept IOk provides Some {
 }
 
 //<summary>Generic type for all Result<T, E>::Err to inherit from.</summary>
-__universal private concept IErr provides Some {
+__universal internal concept IErr provides Some {
 }
 
 //<summary>Type for flagging T projection from Result -- kludge that has no other purpose.</summary>

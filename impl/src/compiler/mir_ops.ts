@@ -646,6 +646,8 @@ enum MIROpTag {
     MIRBinKeyLess = "MIRBinKeyLess",
     MIRPrefixNotOp = "MIRPrefixNotOp",
 
+    MIRLogicAction = "MIRLogicAction",
+
     MIRIsTypeOf = "MIRIsTypeOf",
 
     MIRJump = "MIRJump",
@@ -785,6 +787,8 @@ abstract class MIROp {
                 return MIRBinKeyLess.jparse(jobj);
             case MIROpTag.MIRPrefixNotOp:
                 return MIRPrefixNotOp.jparse(jobj);
+            case MIROpTag.MIRLogicAction:
+                return MIRLogicAction.jparse(jobj);
             case MIROpTag.MIRIsTypeOf:
                 return MIRIsTypeOf.jparse(jobj);
             case MIROpTag.MIRJump:
@@ -2211,7 +2215,7 @@ class MIRConstructorPrimaryCollectionCopies extends MIROp {
     }
 
     stringify(): string {
-        return `${this.trgt.stringify()} = ${this.tkey}{${this.args.map((arg) => `expand(${arg[1].stringify()})`).join(", ")}`;
+        return `${this.trgt.stringify()} = ${this.tkey}{${this.args.map((arg) => `expand(${arg[1].stringify()})`).join(", ")}}`;
     }
 
     jemit(): object {
@@ -2240,7 +2244,7 @@ class MIRConstructorPrimaryCollectionMixed extends MIROp {
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        return `${this.trgt.stringify()} = ${this.tkey}{${this.args.map((arg) => arg[0] ? `expand(${arg[2].stringify()})` : arg[2].stringify()).join(", ")}`;
+        return `${this.trgt.stringify()} = ${this.tkey}{${this.args.map((arg) => arg[0] ? `expand(${arg[2].stringify()})` : arg[2].stringify()).join(", ")}}`;
     }
 
     canRaise(implicitAssumesEnabled: boolean): boolean {
@@ -2369,6 +2373,35 @@ class MIRPrefixNotOp extends MIROp {
 
     static jparse(jobj: any): MIROp {
         return new MIRPrefixNotOp(jparsesinfo(jobj.sinfo), MIRArgument.jparse(jobj.arg), MIRRegisterArgument.jparse(jobj.trgt));
+    }
+}
+
+class MIRLogicAction extends MIROp {
+    trgt: MIRRegisterArgument;
+    opkind: "/\\" | "\\/";
+    args: MIRArgument[];
+
+    constructor(sinfo: SourceInfo, trgt: MIRRegisterArgument, opkind: "/\\" | "\\/", args: MIRArgument[]) {
+        super(MIROpTag.MIRLogicAction, sinfo);
+
+        this.trgt = trgt;
+        this.opkind = opkind;
+        this.args = args;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = ${this.opkind}(${this.args.map((arg) => arg.stringify()).join(", ")})`;
+    }
+
+    jemit(): object {
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), opkind: this.opkind, args: this.args.map((arg) =>arg.jemit()) };
+    }
+
+    static jparse(jobj: any): MIROp {
+        return new MIRLogicAction(jparsesinfo(jobj.sinfo), MIRRegisterArgument.jparse(jobj.trgt), jobj.opkind, jobj.args.map((jarg: any) => MIRArgument.jparse(jarg)));
     }
 }
 
@@ -2790,6 +2823,7 @@ export {
     MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIREphemeralListExtend,
     MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed,
     MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp,
+    MIRLogicAction,
     MIRIsTypeOf,
     MIRJump, MIRJumpCond, MIRJumpNone,
     MIRReturnAssign, MIRReturnAssignOfCons,

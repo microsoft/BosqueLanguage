@@ -795,6 +795,7 @@ class SMTEmitter {
                 else if (edecl.attributes.includes("__something_type")) {
                     this.generateAPITypeConstructorFunction_Something(tt, havocfuncs, ufuncs);
                 }
+                xxxx;
                 else if (edecl.attributes.includes("__list_type")) {
                     this.generateAPITypeConstructorFunction_List(tt, havocfuncs, ufuncs);
                 }

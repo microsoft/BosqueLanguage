@@ -122,6 +122,8 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
         topoVisit(invokes.get(ivk) as CallGNode, [], tordered, invokes);
     });
 
+    xxxx; //constructor invariant calls
+
     assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
         roots.push(invokes.get(cdecl.ivalue) as CallGNode);
         topoVisit(invokes.get(cdecl.ivalue) as CallGNode, [], tordered, invokes);

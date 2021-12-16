@@ -3632,13 +3632,13 @@ class Parser {
 
         //
         //TODO: Packaging!!!!
-        //We want to change this to do pre-scan of namespace exports -- probably use a convention that top-level exports.bsq is used for a directory as 
-        //a best practice to keep things organized -- but we will look at all files for any exports they have and gather them all.
-        //For packages we will do a package.json thing that has an exports and if the package is intrusive (then can peek inside for analysis, link  
-        //direcly, and export template types) or external (then only accessable via APIs).
-        //Then when parsing in a package every name gets the implicit package part appended EXCEPT for things imported in packages here which obviously
-        //get the importing package name appended. These should always be implicit (i.e. developer doesn't need to specify the package part except maybe 
-        //here to import).
+        //We want to change this to do an in-order scan of the files AND assuming the namespace imports do NOT have cycles.
+        //
+        //Allow namespaces as NSxxx, or NSxxx::yyy::zzz, or URI#NS...
+        //Import takes a NS and imports all the names defined in it -- fully qualified name collisions, even if not actually imported are an error -- like Java
+        //Import by default shortens the NS by removing the URI or allows you to rename to a new NS prefix but not flat import.
+        //Package just exports a set of namespaces.
+        //
         //Our versioning trick is going to be looking at the imported types and signatures (including transative dependencies). We will split up the 
         //package dependencies into "public" and "internal" -- internal dependencies can be resolved by finding a satisfying version OR cloning. The 
         //public dependences can be part of the exported signatures and must be resolved by finding satifying versions with other packages. 

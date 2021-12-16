@@ -1948,6 +1948,9 @@ class SMTBodyEmitter {
             case MIROpTag.MIRPrefixNotOp: {
                 return this.processPrefixNotOp(op as MIRPrefixNotOp, continuation);
             }
+            case MIROpTag.MIRLogicAction: {
+                return xxxx;
+            }
             case MIROpTag.MIRIsTypeOf: {
                 return this.processIsTypeOf(op as MIRIsTypeOf, continuation);
             }
