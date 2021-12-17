@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 //The core namespace implements the primitive concepts used in the bosque core language
-namespace NSCore;
+namespace Core;
 
 __internal entity Queue<T> provides Some, Expandoable<T> {
 }

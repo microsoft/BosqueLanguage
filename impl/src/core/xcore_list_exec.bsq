@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 //The core namespace implements the primitive concepts used in the bosque core language
-namespace NSCore;
+namespace Core;
 
 #if EXEC_LIBS
 internal entity ListOps provides Some {

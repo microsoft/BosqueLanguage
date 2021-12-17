@@ -157,7 +157,7 @@ function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: M
     const links = computeBlockLinks(b.body);
     const bo = topologicalOrder(b.body);
     const lv = computeBlockLiveVars(b.body);
-    const vtypes = computeVarTypes(b.body, params, masm, "NSCore::Bool");
+    const vtypes = computeVarTypes(b.body, params, masm, "Core::Bool");
     const rtype = vtypes.get("$__ir_ret__") as MIRType;
 
     if(bo.find((bb) => (links.get(bb.label) as FlowLink).preds.size > 1 && bb.label !== "returnassign") === undefined) {

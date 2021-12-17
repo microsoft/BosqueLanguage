@@ -519,7 +519,7 @@ function ssaConvertInvokes(masm: MIRAssembly) {
             args.set(p.name, masm.typeMap.get(p.type) as MIRType);
         });
         
-        convertBodyToSSA(inv.body, masm.typeMap.get("NSCore::Bool") as MIRType, args);
+        convertBodyToSSA(inv.body, masm.typeMap.get("Core::Bool") as MIRType, args);
     });
 }
 

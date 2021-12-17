@@ -842,18 +842,18 @@ class MIRAssembly {
     private m_atomSubtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
 
     private getConceptsProvidedByTuple(tt: MIRTupleType): MIRType {
-        let tci: [MIRResolvedTypeKey, string][] = [["NSCore::Some", "Some"]];
-        if (tt.entries.every((ttype) => this.subtypeOf(ttype, this.typeMap.get("NSCore::APIType") as MIRType))) {
-            tci.push(["NSCore::APIType", "APIType"]);
+        let tci: [MIRResolvedTypeKey, string][] = [["Core::Some", "Some"]];
+        if (tt.entries.every((ttype) => this.subtypeOf(ttype, this.typeMap.get("Core::APIType") as MIRType))) {
+            tci.push(["Core::APIType", "APIType"]);
         }
 
         return MIRType.createSingle(MIRConceptType.create(tci));
     }
 
     private getConceptsProvidedByRecord(rr: MIRRecordType): MIRType {
-        let tci: [MIRResolvedTypeKey, string][] = [["NSCore::Some", "Some"]];
-        if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.typeMap.get("NSCore::APIType") as MIRType))) {
-            tci.push(["NSCore::APIType", "APIType"]);
+        let tci: [MIRResolvedTypeKey, string][] = [["Core::Some", "Some"]];
+        if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.typeMap.get("Core::APIType") as MIRType))) {
+            tci.push(["Core::APIType", "APIType"]);
         }
 
         return MIRType.createSingle(MIRConceptType.create(tci));

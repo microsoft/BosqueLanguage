@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 //The core namespace implements the primitive types used in the Bosque language
-namespace NSCore;
+namespace Core;
 
 internal entity NumericOps provides Some {
     function s_natToInt(n: Nat): Int number_nattoint
