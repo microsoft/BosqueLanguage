@@ -93,19 +93,19 @@ class ParserEnvironment {
 
         this.m_functionScopes = [];
 
-        this.SpecialAnySignature = new NominalTypeSignature("NSCore", ["Any"], []);
-        this.SpecialSomeSignature = new NominalTypeSignature("NSCore", ["Some"], []);
-        this.SpecialNoneSignature = new NominalTypeSignature("NSCore", ["None"], []);
-        this.SpecialBoolSignature = new NominalTypeSignature("NSCore", ["Bool"], []);
+        this.SpecialAnySignature = new NominalTypeSignature("Core", ["Any"], []);
+        this.SpecialSomeSignature = new NominalTypeSignature("Core", ["Some"], []);
+        this.SpecialNoneSignature = new NominalTypeSignature("Core", ["None"], []);
+        this.SpecialBoolSignature = new NominalTypeSignature("Core", ["Bool"], []);
 
-        this.SpecialIntSignature = new NominalTypeSignature("NSCore", ["Int"], []);
-        this.SpecialNatSignature = new NominalTypeSignature("NSCore", ["Nat"], []);
-        this.SpecialFloatSignature = new NominalTypeSignature("NSCore", ["Float"], []);
-        this.SpecialDecimalSignature = new NominalTypeSignature("NSCore", ["Decimal"], []);
-        this.SpecialBigIntSignature = new NominalTypeSignature("NSCore", ["BigInt"], []);
-        this.SpecialBigNatSignature = new NominalTypeSignature("NSCore", ["BigNat"], []);
-        this.SpecialRationalSignature = new NominalTypeSignature("NSCore", ["Rational"], []);
-        this.SpecialStringSignature = new NominalTypeSignature("NSCore", ["String"], []);
+        this.SpecialIntSignature = new NominalTypeSignature("Core", ["Int"], []);
+        this.SpecialNatSignature = new NominalTypeSignature("Core", ["Nat"], []);
+        this.SpecialFloatSignature = new NominalTypeSignature("Core", ["Float"], []);
+        this.SpecialDecimalSignature = new NominalTypeSignature("Core", ["Decimal"], []);
+        this.SpecialBigIntSignature = new NominalTypeSignature("Core", ["BigInt"], []);
+        this.SpecialBigNatSignature = new NominalTypeSignature("Core", ["BigNat"], []);
+        this.SpecialRationalSignature = new NominalTypeSignature("Core", ["Rational"], []);
+        this.SpecialStringSignature = new NominalTypeSignature("Core", ["String"], []);
         
         this.SpecialAutoSignature = new AutoTypeSignature();
     }
@@ -163,9 +163,9 @@ class ParserEnvironment {
             return ns;
         }
 
-        const coredecl = this.assembly.getNamespace("NSCore");
-        if (coredecl.declaredNames.has("NSCore::" + typename)) {
-            return "NSCore";
+        const coredecl = this.assembly.getNamespace("Core");
+        if (coredecl.declaredNames.has("Core::" + typename)) {
+            return "Core";
         }
         else {
             const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
@@ -174,7 +174,7 @@ class ParserEnvironment {
             }
             else {
                 const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(typename) !== -1);
-                return fromns !== undefined ? fromns.fromNamespace : undefined;
+                return fromns !== undefined ? fromns.fromns : undefined;
             }
         }
     }
@@ -186,14 +186,14 @@ class ParserEnvironment {
             return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
         }
 
-        const nsmaindecl = this.assembly.getNamespace("NSCore");
-        if (nsmaindecl.declaredNames.has("NSCore::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+        const nsmaindecl = this.assembly.getNamespace("Core");
+        if (nsmaindecl.declaredNames.has("Core::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
             const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "NSCore" : undefined;
+            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "Core" : undefined;
         }
 
         const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);
-        return fromns !== undefined ? fromns.fromNamespace : undefined;
+        return fromns !== undefined ? fromns.fromns : undefined;
     }
 
     tryResolveAsInfixBinaryOperator(opname: string, level: number): string | undefined {
@@ -203,14 +203,14 @@ class ParserEnvironment {
             return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
         }
 
-        const nsmaindecl = this.assembly.getNamespace("NSCore");
-        if (nsmaindecl.declaredNames.has("NSCore::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+        const nsmaindecl = this.assembly.getNamespace("Core");
+        if (nsmaindecl.declaredNames.has("Core::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
             const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? "NSCore" : undefined;
+            return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? "Core" : undefined;
         }
         
         const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);
-        return fromns !== undefined ? fromns.fromNamespace : undefined;
+        return fromns !== undefined ? fromns.fromns : undefined;
     }
 }
 

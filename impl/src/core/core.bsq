@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 //The core namespace implements the primitive types used in the Bosque language
-namespace NSCore;
+namespace Core;
 
 //<summary>Special type which all values are instances of.</summary>
 __universal concept Any {

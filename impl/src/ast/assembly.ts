@@ -751,14 +751,14 @@ class Assembly {
     }
 
     private splitConceptTypes(ofc: ResolvedConceptAtomType, withc: ResolvedConceptAtomType): {tp: ResolvedType | undefined, fp: ResolvedType | undefined} {
-        if (ofc.typeID === "NSCore::Any" && withc.typeID === "NSCore::Some") {
+        if (ofc.typeID === "Core::Any" && withc.typeID === "Core::Some") {
             return { tp: ResolvedType.createSingle(withc), fp: this.getSpecialNoneType() };
         }
-        else if (ofc.typeID.startsWith("NSCore::Option<") && withc.typeID === "NSCore::ISomething") {
-            const somthingres = ResolvedEntityAtomType.create(this.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl, ofc.conceptTypes[0].binds)
+        else if (ofc.typeID.startsWith("Core::Option<") && withc.typeID === "Core::ISomething") {
+            const somthingres = ResolvedEntityAtomType.create(this.tryGetObjectTypeForFullyResolvedName("Core::Something") as EntityTypeDecl, ofc.conceptTypes[0].binds)
             return { tp: ResolvedType.createSingle(somthingres), fp: this.getSpecialNothingType() };
         }
-        else if (ofc.typeID === "NSCore::IOption" && withc.typeID === "NSCore::ISomething") {
+        else if (ofc.typeID === "Core::IOption" && withc.typeID === "Core::ISomething") {
             return { tp: ResolvedType.createSingle(withc), fp: this.getSpecialNothingType() };
         }
         else {
@@ -767,27 +767,27 @@ class Assembly {
     }
 
     private splitConceptEntityTypes(ofc: ResolvedConceptAtomType, withe: ResolvedEntityAtomType): { tp: ResolvedType | undefined, fp: ResolvedType | undefined } {
-        const somethingdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl;
-        const okdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
-        const errdecl = this.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
+        const somethingdecl = this.tryGetObjectTypeForFullyResolvedName("Core::Something") as EntityTypeDecl;
+        const okdecl = this.tryGetObjectTypeForFullyResolvedName("Core::Result::Ok") as EntityTypeDecl;
+        const errdecl = this.tryGetObjectTypeForFullyResolvedName("Core::Result::Err") as EntityTypeDecl;
 
         //
         //TODO: we may want to handle some ISomething, Something, Option, Nothing situations more precisely if they can arise
         //
 
-        if (ofc.typeID === "NSCore::Any" && withe.typeID === "NSCore::None") {
+        if (ofc.typeID === "Core::Any" && withe.typeID === "Core::None") {
             return { tp: ResolvedType.createSingle(withe), fp: this.getSpecialSomeConceptType() };
         }
-        else if (ofc.typeID.startsWith("NSCore::Option<") && withe.typeID === "NSCore::Nothing") {
+        else if (ofc.typeID.startsWith("Core::Option<") && withe.typeID === "Core::Nothing") {
             return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(somethingdecl, ofc.conceptTypes[0].binds)) };
         }
-        else if (ofc.typeID.startsWith("NSCore::Option<") && withe.typeID === "NSCore::Something<") {
+        else if (ofc.typeID.startsWith("Core::Option<") && withe.typeID === "Core::Something<") {
             return { tp: ResolvedType.createSingle(withe), fp: this.getSpecialNothingType() };
         }
-        else if (ofc.typeID.startsWith("NSCore::Result<") && withe.typeID.startsWith("NSCore::Result::Ok<")) {
+        else if (ofc.typeID.startsWith("Core::Result<") && withe.typeID.startsWith("Core::Result::Ok<")) {
             return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(errdecl, ofc.conceptTypes[0].binds)) };
         }
-        else if (ofc.typeID.startsWith("NSCore::Result<") && withe.typeID.startsWith("NSCore::Result::Err<")) {
+        else if (ofc.typeID.startsWith("Core::Result<") && withe.typeID.startsWith("Core::Result::Err<")) {
             return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(okdecl, ofc.conceptTypes[0].binds)) };
         }
         else if(this.atomSubtypeOf(withe, ofc)) {
@@ -984,8 +984,8 @@ class Assembly {
         if(oftype.typeID === "Some") {
             return this.splitTypes(fromtype, this.getSpecialNoneType()).fp;
         }
-        else if(oftype.typeID === "NSCore::IOptionT") {
-            if(oftype.options.length === 1 && oftype.typeID.startsWith("NSCore::Option<")) {
+        else if(oftype.typeID === "Core::IOptionT") {
+            if(oftype.options.length === 1 && oftype.typeID.startsWith("Core::Option<")) {
                 return (oftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds.get("T") as ResolvedType;
             }
             else {
@@ -1036,7 +1036,7 @@ class Assembly {
         }
 
         if(isresolution) {
-            let sstr = (t.nameSpace !== "NSCore" ? (t.nameSpace + "::") : "") + t.computeResolvedName();
+            let sstr = (t.nameSpace !== "Core" ? (t.nameSpace + "::") : "") + t.computeResolvedName();
             if(t.terms.length !== 0) {
                 sstr += "<" + t.terms.map((t) => this.normalizeTypeOnly(t, binds).typeID).join(", ") + ">";
             }
@@ -1215,27 +1215,27 @@ class Assembly {
         let flattened: ResolvedAtomType[] = ([] as ResolvedAtomType[]).concat(...ntypes);
 
         //check for Some | None and add Any if needed
-        if (flattened.some((atom) => atom.typeID === "NSCore::None") && flattened.some((atom) => atom.typeID === "NSCore::Some")) {
+        if (flattened.some((atom) => atom.typeID === "Core::None") && flattened.some((atom) => atom.typeID === "Core::Some")) {
             flattened.push(this.getSpecialAnyConceptType().options[0]);
         }
 
         //check for Option<T> | Nothing and add Result<T> if needed
-        if (flattened.some((atom) => atom.typeID === "NSCore::Nothing") && flattened.some((atom) => atom.typeID.startsWith("NSCore::Something<"))) {
-            const copt = this.m_conceptMap.get("NSCore::Option") as ConceptTypeDecl;
+        if (flattened.some((atom) => atom.typeID === "Core::Nothing") && flattened.some((atom) => atom.typeID.startsWith("Core::Something<"))) {
+            const copt = this.m_conceptMap.get("Core::Option") as ConceptTypeDecl;
 
             const nopts = flattened
-                .filter((atom) => atom.typeID.startsWith("NSCore::Something<"))
+                .filter((atom) => atom.typeID.startsWith("Core::Something<"))
                 .map((atom) => ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(copt, (atom as ResolvedEntityAtomType).binds)]));
 
             flattened.push(...nopts);
         }
 
         //check for Option<T> | Nothing and add Result<T> if needed
-        if (flattened.some((atom) => atom.typeID.startsWith("NSCore::Result::Ok<")) && flattened.some((atom) => atom.typeID.startsWith("NSCore::Result::Err<"))) {
-            const ropt = this.m_conceptMap.get("NSCore::Result") as ConceptTypeDecl;
+        if (flattened.some((atom) => atom.typeID.startsWith("Core::Result::Ok<")) && flattened.some((atom) => atom.typeID.startsWith("Core::Result::Err<"))) {
+            const ropt = this.m_conceptMap.get("Core::Result") as ConceptTypeDecl;
 
-            const okopts =  flattened.filter((atom) => atom.typeID.startsWith("NSCore::Result::Ok<"));
-            const erropts =  flattened.filter((atom) => atom.typeID.startsWith("NSCore::Result::Err<"));
+            const okopts =  flattened.filter((atom) => atom.typeID.startsWith("Core::Result::Ok<"));
+            const erropts =  flattened.filter((atom) => atom.typeID.startsWith("Core::Result::Err<"));
 
             const bothopts = okopts.filter((okatom) => erropts.some((erratom) => {
                 const okbinds = (okatom as ResolvedEntityAtomType).binds;
@@ -1310,7 +1310,7 @@ class Assembly {
             return undefined;
         }
 
-        if(t.isPred && rtype.typeID !== "NSCore::Bool") {
+        if(t.isPred && rtype.typeID !== "Core::Bool") {
             return undefined; //pred must have Bool result type
         }
 
@@ -1423,27 +1423,27 @@ class Assembly {
     }
 
     private internSpecialConceptType(names: [string], terms?: TypeSignature[], binds?: Map<string, ResolvedType>): ResolvedType {
-        if (this.m_specialTypeMap.has("NSCore::" + names.join("::"))) {
-            return this.m_specialTypeMap.get("NSCore::" + names.join("::")) as ResolvedType;
+        if (this.m_specialTypeMap.has("Core::" + names.join("::"))) {
+            return this.m_specialTypeMap.get("Core::" + names.join("::")) as ResolvedType;
         }
 
-        const rsig = new NominalTypeSignature("NSCore", names, terms || [] as TypeSignature[]);
-        const tconcept = this.createConceptTypeAtom(this.tryGetConceptTypeForFullyResolvedName("NSCore::" + names.join("::")) as ConceptTypeDecl, rsig, binds || new Map<string, ResolvedType>());
+        const rsig = new NominalTypeSignature("Core", names, terms || [] as TypeSignature[]);
+        const tconcept = this.createConceptTypeAtom(this.tryGetConceptTypeForFullyResolvedName("Core::" + names.join("::")) as ConceptTypeDecl, rsig, binds || new Map<string, ResolvedType>());
         const rtype = ResolvedType.createSingle(tconcept as ResolvedAtomType);
-        this.m_specialTypeMap.set("NSCore::" + names.join("::"), rtype);
+        this.m_specialTypeMap.set("Core::" + names.join("::"), rtype);
 
         return rtype;
     }
 
     private internSpecialObjectType(names: string[], terms?: TypeSignature[], binds?: Map<string, ResolvedType>): ResolvedType {
-        if (this.m_specialTypeMap.has("NSCore::" + names.join("::"))) {
-            return this.m_specialTypeMap.get("NSCore::" + names.join("::")) as ResolvedType;
+        if (this.m_specialTypeMap.has("Core::" + names.join("::"))) {
+            return this.m_specialTypeMap.get("Core::" + names.join("::")) as ResolvedType;
         }
 
-        const rsig = new NominalTypeSignature("NSCore", names, terms || [] as TypeSignature[]);
-        const tobject = this.createObjectTypeAtom(this.tryGetObjectTypeForFullyResolvedName("NSCore::" + names.join("::")) as EntityTypeDecl, rsig, binds || new Map<string, ResolvedType>());
+        const rsig = new NominalTypeSignature("Core", names, terms || [] as TypeSignature[]);
+        const tobject = this.createObjectTypeAtom(this.tryGetObjectTypeForFullyResolvedName("Core::" + names.join("::")) as EntityTypeDecl, rsig, binds || new Map<string, ResolvedType>());
         const rtype = ResolvedType.createSingle(tobject as ResolvedAtomType);
-        this.m_specialTypeMap.set("NSCore::" + names.join("::"), rtype);
+        this.m_specialTypeMap.set("Core::" + names.join("::"), rtype);
 
         return rtype;
     }
@@ -1497,45 +1497,45 @@ class Assembly {
 
     getSpecialObjectConceptType(): ResolvedType { return this.internSpecialConceptType(["Object"]); }
 
-    getStringOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::StringOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getDataStringType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::DataString") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getDataBufferType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::DataBuffer") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getStringOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::StringOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getDataStringType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::DataString") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getDataBufferType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::DataBuffer") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
 
-    getSomethingType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Something") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getOkType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Result::Ok") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
-    getErrType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Result::Err") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
+    getSomethingType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Something") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getOkType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Result::Ok") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
+    getErrType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Result::Err") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
 
-    getMaskType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Mask") as EntityTypeDecl, new Map<string, ResolvedType>())); }
-    getPartialVectorType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::PartialVector") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getListTreeType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::ListTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getListTreeEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::ListTreeEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getMaskType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Mask") as EntityTypeDecl, new Map<string, ResolvedType>())); }
+    getPartialVectorType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::PartialVector") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getListTreeType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getListTreeEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListTreeEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     
-    getBTreeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::BTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    getBTreeNodeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::BTreeNode") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getBTreeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::BTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getBTreeNodeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::BTreeNode") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
     
-    getVector1Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Vector1") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getVector2Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Vector2") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getVector3Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Vector3") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector1Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Vector1") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector2Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Vector2") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector3Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Vector3") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     
-    getRecListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecList") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getRecListEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecListEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getRecListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecList") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getRecListEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecListEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     
-    getRecMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecMap") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    getRecMapEntryType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::RecMapEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getRecMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecMap") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getRecMapEntryType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecMapEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
     
-    getListOpsType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::ListOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getMapOpsType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::MapOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getListOpsType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getMapOpsType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::MapOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
     
-    getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getQueueType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Queue") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getSetType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Set") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("NSCore::Map") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getQueueType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Queue") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getSetType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Set") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Map") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
 
-    getOptionConceptType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("NSCore::Option") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t))])); }
-    getResultConceptType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("NSCore::Result") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))])); }
+    getOptionConceptType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Core::Option") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t))])); }
+    getResultConceptType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Core::Result") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))])); }
     
-    isExpandoableType(ty: ResolvedAtomType): boolean { return ty.typeID.startsWith("NSCore::Expandoable<"); }
+    isExpandoableType(ty: ResolvedAtomType): boolean { return ty.typeID.startsWith("Core::Expandoable<"); }
 
     ensureNominalRepresentation(t: ResolvedType): ResolvedType {
         const opts = t.options.map((opt) => {
@@ -1725,7 +1725,7 @@ class Assembly {
     }
 
     getExpandoProvides(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>): ResolvedType | undefined {
-        if(ooptype.ns === "NSCore" && ooptype.name === "Expandoable") {
+        if(ooptype.ns === "Core" && ooptype.name === "Expandoable") {
             return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(ooptype as ConceptTypeDecl, binds)]));
         }
 

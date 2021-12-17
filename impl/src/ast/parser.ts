@@ -1927,9 +1927,14 @@ class Parser {
         }
         else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Identifier)) {
             //it is a namespace access of some type
-            const ns = this.consumeTokenAndGetValue();
+            let ns: string | undefined = this.consumeTokenAndGetValue();
             this.consumeToken();
             const name = this.consumeTokenAndGetValue();
+
+            ns = this.m_penv.tryResolveNamespace(ns, name);
+            if (ns === undefined) {
+                ns = "[Unresolved Error]";
+            }
 
             if (!this.testToken("<") && !this.testToken("[") && !this.testToken("(")) {
                 //just a constant access
@@ -1945,9 +1950,14 @@ class Parser {
         }
         else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Operator)) {
             //it is a namespace access of some type
-            const ns = this.consumeTokenAndGetValue();
+            let ns: string | undefined = this.consumeTokenAndGetValue();
             this.consumeToken();
             const name = this.consumeTokenAndGetValue();
+
+            ns = this.m_penv.tryResolveNamespace(ns, name);
+            if (ns === undefined) {
+                ns = "[Unresolved Error]";
+            }
 
             const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
             const args = this.parseArguments("(", ")");
@@ -3154,9 +3164,14 @@ class Parser {
         }
         else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Identifier)) {
             //it is a namespace function call
-            const ns = this.consumeTokenAndGetValue();
+            let ns: string | undefined = this.consumeTokenAndGetValue();
             this.consumeToken();
             const name = this.consumeTokenAndGetValue();
+
+            ns = this.m_penv.tryResolveNamespace(ns, name);
+            if (ns === undefined) {
+                ns = "[Unresolved Error]";
+            }
 
             const targs = this.testToken("<") ? this.parseTemplateArguments() : new TemplateArguments([]);
             const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
@@ -3166,9 +3181,14 @@ class Parser {
         }
         else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Operator)) {
             //it is a namespace function call
-            const ns = this.consumeTokenAndGetValue();
+            let ns: string | undefined = this.consumeTokenAndGetValue();
             this.consumeToken();
             const name = this.consumeTokenAndGetValue();
+
+            ns = this.m_penv.tryResolveNamespace(ns, name);
+            if (ns === undefined) {
+                ns = "[Unresolved Error]";
+            }
 
             const rec = this.testToken("[") ? this.parseRecursiveAnnotation() : "no";
             const args = this.parseArguments("(", ")");
@@ -4138,9 +4158,45 @@ class Parser {
                 else if(ename === "PartialVector") {
                     attributes.push("__partialvector_type");
                 }
-
-                xxxx; //others cause we want to be able to special case the havoc constructors and such
-
+                else if(ename === "ListTree") {
+                    attributes.push("__listtree_type");
+                }
+                else if(ename === "ListTreeEntry") {
+                    attributes.push("__listtreeentry_type");
+                }
+                else if(ename === "BTree") {
+                    attributes.push("__btree_type");
+                }
+                else if(ename === "BTreeEntry") {
+                    attributes.push("__btreeentry_type");
+                }
+                else if(ename === "Vector1") {
+                    attributes.push("__vector1_type");
+                }
+                else if(ename === "Vector2") {
+                    attributes.push("__vector2_type");
+                }
+                else if(ename === "Vector3") {
+                    attributes.push("__vector3_type");
+                }
+                else if(ename === "RecList") {
+                    attributes.push("__reclist_type");
+                }
+                else if(ename === "RecListEntry") {
+                    attributes.push("__reclistentry_type");
+                }
+                else if(ename === "RecMap") {
+                    attributes.push("__recmap_type");
+                }
+                else if(ename === "RecMapEntry") {
+                    attributes.push("__recmapentry_type");
+                }
+                else if(ename === "ListOps") {
+                    attributes.push("__listops_type");
+                }
+                else if(ename === "MapOps") {
+                    attributes.push("__mapops_type");
+                }
                 else {
                     //not special
                 }
@@ -4692,8 +4748,13 @@ class Parser {
 
             let ns = currentDecl;
             if(this.testToken(TokenStrings.Namespace)) {
-                const nns = this.consumeTokenAndGetValue();
+                let nns: string | undefined = this.consumeTokenAndGetValue();
                 this.ensureAndConsumeToken("::");
+
+                nns = this.m_penv.tryResolveNamespace(nns, fname);
+                if (nns === undefined) {
+                    nns = "[Unresolved Error]";
+                }
 
                 ns = this.m_penv.assembly.getNamespace(nns);
             }
@@ -4957,9 +5018,9 @@ class Parser {
         return parseok;
     }
 
-    parseCompilationUnitPass2(file: string, contents: string, macrodefs: string[]): boolean {
+    parseCompilationUnitPass2(file: string, contents: string, macrodefs: string[], namespacestrings: Set<string>): boolean {
         this.setNamespaceAndFile("[No Namespace]", file);
-        const lexer = new Lexer(contents, macrodefs);
+        const lexer = new Lexer(contents, macrodefs, namespacestrings);
         this.initialize(lexer.lex());
 
         //namespace NS; ...

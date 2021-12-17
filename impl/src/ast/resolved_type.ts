@@ -44,7 +44,7 @@ class ResolvedEntityAtomType extends ResolvedAtomType {
     }
 
     static create(object: EntityTypeDecl, binds: Map<string, ResolvedType>): ResolvedEntityAtomType {
-        let name = (object.ns !== "NSCore" ? (object.ns + "::") : "") + object.name;
+        let name = (object.ns !== "Core" ? (object.ns + "::") : "") + object.name;
         if (object.terms.length !== 0) {
             name += "<" + object.terms.map((arg) => (binds.get(arg.name) as ResolvedType).typeID).join(", ") + ">";
         }
@@ -357,19 +357,19 @@ class ResolvedType {
     }
 
     isNoneType(): boolean {
-        return this.typeID === "NSCore::None";
+        return this.typeID === "Core::None";
     }
 
     isSomeType(): boolean {
-        return this.typeID === "NSCore::Some";
+        return this.typeID === "Core::Some";
     }
 
     isAnyType(): boolean {
-        return this.typeID === "NSCore::Any";
+        return this.typeID === "Core::Any";
     }
 
     isNothingType(): boolean {
-        return this.typeID === "NSCore::Nothing";
+        return this.typeID === "Core::Nothing";
     }
 
     isSomethingType(): boolean {
