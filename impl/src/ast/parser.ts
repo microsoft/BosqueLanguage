@@ -198,6 +198,7 @@ const TokenStrings = {
     //Names
     Namespace: "[NAMESPACE]",
     Type: "[TYPE]",
+    ScopeName: "[SCOPE]",
     Template: "[TEMPLATE]",
     Identifier: "[IDENTIFIER]",
     Operator: "[OPERATOR]",
@@ -281,6 +282,7 @@ class Lexer {
     }
 
     private m_macrodefs: string[];
+    private m_namespaceScopes: Set<String> | undefined;
 
     private m_input: string;
     private m_internTable: Map<string, string>;
@@ -289,8 +291,10 @@ class Lexer {
     private m_cpos: number;
     private m_tokens: Token[];
 
-    constructor(input: string, macrodefs: string[]) {
+    constructor(input: string, macrodefs: string[], namespaceScopes: Set<String> | undefined) {
         this.m_macrodefs = macrodefs;
+        this.m_namespaceScopes = namespaceScopes;
+
         this.m_input = input;
         this.m_internTable = new Map<string, string>();
         this.m_cline = 1;
@@ -301,21 +305,86 @@ class Lexer {
 
     ////
     //Helpers
-    private static isNamespaceName(str: string) {
-        return /^NS/.test(str);
+    private isInScopeNameMode(): boolean {
+        return this.m_namespaceScopes === undefined;
     }
 
-    private static isTypenameName(str: string) {
-        return str.length > 1 && !/^NS/.test(str) && /^[A-Z]/.test(str);
+    private static readonly _s_scopenameRe = /(([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+)/y;
+    private static readonly _s_typenameRe = /[A-Z][_a-zA-Z0-9]+/y;
+    private static readonly _s_istypenameRe = /^[A-Z][_a-zA-Z0-9]+$/y;
+    private tryExtractScopeName(): string | undefined {
+        if(this.m_namespaceScopes !== undefined) {
+            return undefined;
+        }
+
+        Lexer._s_scopenameRe.lastIndex = this.m_cpos;
+        const m = Lexer._s_nameRe.exec(this.m_input);
+        if(m === null) {
+            return undefined;
+        }
+        else {
+            return m[0];
+        }
     }
 
-    private static isTemplateName(str: string) {
+    private tryExtractNamespaceName(): string | undefined {
+        if(this.m_namespaceScopes === undefined) {
+            return undefined;
+        }
+
+        Lexer._s_scopenameRe.lastIndex = this.m_cpos;
+        const m = Lexer._s_nameRe.exec(this.m_input);
+        if(m === null) {
+            return undefined;
+        }
+        else {
+            const fullscope = m[0];
+            if(this.m_namespaceScopes.has(fullscope)) {
+                return fullscope;
+            }
+            else {
+                let ttrim = fullscope.lastIndexOf("::");
+                let pscope = fullscope;
+                while(ttrim !== -1) {
+                    pscope = pscope.substring(0, ttrim);
+
+                    if(this.m_namespaceScopes.has(pscope)) {
+                        return pscope;
+                    }
+                   
+                    ttrim = pscope.lastIndexOf("::");
+                }
+                return undefined;
+            }
+        }
+    }
+
+    private tryExtractTypenameName(): string | undefined {
+        if(this.m_namespaceScopes === undefined) {
+            return undefined;
+        }
+
+        Lexer._s_typenameRe.lastIndex = this.m_cpos;
+        const m = Lexer._s_nameRe.exec(this.m_input);
+        if(m === null) {
+            return undefined;
+        }
+        else {
+            return m[0];
+        }
+    }
+
+    public isDeclTypeName(str: string): boolean {
+        return Lexer._s_istypenameRe.test(str);
+    }
+
+    private isTemplateName(str: string): boolean {
         return str.length === 1 && /^[A-Z]$/.test(str);
     }
 
     //TODO: we need to make sure that someone doesn't name a local variable "_"
-    private static isIdentifierName(str: string) {
-        return /^([$]?([_a-zA-Z]|([_a-zA-Z][_a-zA-Z0-9]*[a-zA-Z0-9])))$/.test(str);
+    private isIdentifierName(str: string): boolean {
+        return /^([$]?([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))$/.test(str);
     }
 
     private recordLexToken(epos: number, kind: string) {
@@ -501,30 +570,14 @@ class Lexer {
     private tryLexName(): boolean {
         Lexer._s_nameRe.lastIndex = this.m_cpos;
         const m = Lexer._s_nameRe.exec(this.m_input);
-        if (m === null) {
-            return false;
-        }
 
-        const name = m[0];
-
-        const kwmatch = Lexer.findKeywordString(name);
+        const kwmatch = (m !== null) && Lexer.findKeywordString(m[0]);
         if (kwmatch) {
-            this.recordLexToken(this.m_cpos + name.length, kwmatch);
+            this.recordLexToken(this.m_cpos + m[0].length, kwmatch);
             return true;
         }
-        else if (Lexer.isNamespaceName(name)) {
-            this.recordLexTokenWData(this.m_cpos + name.length, TokenStrings.Namespace, name);
-            return true;
-        }
-        else if (Lexer.isTypenameName(name)) {
-            this.recordLexTokenWData(this.m_cpos + name.length, TokenStrings.Type, name);
-            return true;
-        }
-        else if (Lexer.isTemplateName(name)) {
-            this.recordLexTokenWData(this.m_cpos + name.length, TokenStrings.Template, name);
-            return true;
-        }
-        else if (Lexer.isIdentifierName(name)) {
+        else if (m !== null && this.isIdentifierName(m[0])) {
+            const name = m[0];
             const isTypeThing = /^_[A-Z]/.test(name);
             if (isTypeThing) {
                 this.recordLexToken(this.m_cpos + 1, TokenStrings.FollowTypeSep);
@@ -534,9 +587,41 @@ class Lexer {
             }
             return true;
         }
+        else if (m !== null && this.isTemplateName(m[0])) {
+            const name = m[0];
+            this.recordLexTokenWData(this.m_cpos + name.length, TokenStrings.Template, name);
+            return true;
+        }
         else {
-            this.recordLexToken(this.m_cpos + name.length, TokenStrings.Error);
-            return false;
+            if(this.isInScopeNameMode()) {
+                const scopeopt = this.tryExtractScopeName();
+                if(scopeopt !== undefined) {
+                    this.recordLexTokenWData(this.m_cpos + scopeopt.length, TokenStrings.ScopeName, scopeopt);
+                    return true;
+                }
+                else {
+                    this.recordLexToken(this.m_cpos + 1, TokenStrings.Error);
+                    return false;
+                }
+            }
+            else {
+                const nsopt = this.tryExtractNamespaceName();
+                if(nsopt !== undefined) {
+                    this.recordLexTokenWData(this.m_cpos + nsopt.length, TokenStrings.Namespace, nsopt);
+                    return true;
+                }
+                else {
+                    const topt = this.tryExtractTypenameName();
+                    if(topt !== undefined) {
+                        this.recordLexTokenWData(this.m_cpos + topt.length, TokenStrings.Type, topt);
+                        return true;
+                    }
+                    else {
+                        this.recordLexToken(this.m_cpos + 1, TokenStrings.Error);
+                        return false;
+                    }
+                }
+            }
         }
     }
 
@@ -1007,7 +1092,7 @@ class Parser {
         }
         else {
             if (ikind === InvokableKind.PCodePred && allTypedParams) {
-                resultInfo = new NominalTypeSignature("NSCore", ["Bool"]);
+                resultInfo = new NominalTypeSignature("Core", ["Bool"]);
             }
 
             if (ikind !== InvokableKind.PCodeFn && ikind !== InvokableKind.PCodePred) {
@@ -2831,7 +2916,6 @@ class Parser {
         }
         else if (this.testFollows(TokenStrings.Namespace, "::", TokenStrings.Type ) || this.testToken(TokenStrings.Type)) {
             const ttype = this.parseTypeSignature();
-            this.ensureAndConsumeToken("@");
             const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
                 if (this.testFollows(TokenStrings.Identifier, "=")) {
                     this.ensureToken(TokenStrings.Identifier);
@@ -3095,9 +3179,7 @@ class Parser {
             //we should find a type (nominal here) and it is a static invoke or a structured assign
             const ttype = this.parseTypeSignature();
 
-            if (this.testFollows("@", "{")) {
-                this.consumeToken();
-
+            if (this.testToken("{")) {
                 let decls = new Set<string>();
                 const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
                     if (this.testFollows(TokenStrings.Identifier, "=")) {
@@ -3262,9 +3344,7 @@ class Parser {
                 let decls = new Set<string>();
                 const oftype = this.parseTypeSignature();
 
-                if (this.testFollows("@", "{")) {
-                    this.consumeToken();
-
+                if (this.testToken("{")) {
                     const assigns = this.parseListOf<[string | undefined, StructuredAssignementPrimitive]>("{", "}", ",", () => {
                         if (this.testFollows(TokenStrings.Identifier, "=")) {
                             this.ensureToken(TokenStrings.Identifier);
@@ -3613,16 +3693,55 @@ class Parser {
         return [preconds, postconds];
     }
 
+    private parseNamespaceDep(): {fromns: string, asns: string} {
+        //import NS;
+        //import NS as NS;
+
+        this.ensureAndConsumeToken("import");
+        this.ensureToken(TokenStrings.ScopeName);
+        const fromns = this.consumeTokenAndGetValue();
+
+        let nsp = {fromns: fromns, asns: fromns}; //case of import NS;
+        if(this.testToken(TokenStrings.Identifier)) {
+            const nn = this.consumeTokenAndGetValue();
+            if(nn !== "as") {
+                this.raiseError(this.getCurrentLine(), "Expected keyword 'as'");
+            }
+
+            this.ensureToken(TokenStrings.ScopeName);
+            const asns = this.consumeTokenAndGetValue();
+
+            nsp = {fromns: fromns, asns: asns};
+        }
+        
+        this.ensureAndConsumeToken(";");
+
+        return nsp;
+    }
+
     private parseNamespaceUsing(currentDecl: NamespaceDeclaration) {
-        //import NS {...} ;
+        //import NS;
+        //import NS as NS;
 
         this.ensureAndConsumeToken("import");
         this.ensureToken(TokenStrings.Namespace);
         const fromns = this.consumeTokenAndGetValue();
 
-        const names = this.parseListOf<string>("{", "}", ",", () => {
-            return this.consumeTokenAndGetValue();
-        })[0];
+        let asns = fromns; //case of import NS;
+        if(this.testToken(TokenStrings.Identifier)) {
+            const nn = this.consumeTokenAndGetValue();
+            if(nn !== "as") {
+                this.raiseError(this.getCurrentLine(), "Expected keyword 'as'");
+            }
+
+            this.ensureToken(TokenStrings.Namespace);
+            asns = this.consumeTokenAndGetValue();
+        }
+        
+        this.ensureAndConsumeToken(";");
+
+        const ffns = this.m_penv.assembly.getNamespace(fromns);
+        const names = [...ffns.declaredNames].map((vv) => vv.slice(ffns.ns.length + 2));
 
         this.ensureAndConsumeToken(";");
 
@@ -3634,7 +3753,7 @@ class Parser {
         //TODO: Packaging!!!!
         //We want to change this to do an in-order scan of the files AND assuming the namespace imports do NOT have cycles.
         //
-        //Allow namespaces as NSxxx, or NSxxx::yyy::zzz, or URI#NS...
+        //Allow namespaces as xxx, or xxx::yyy::zzz
         //Import takes a NS and imports all the names defined in it -- fully qualified name collisions, even if not actually imported are an error -- like Java
         //Import by default shortens the NS by removing the URI or allows you to rename to a new NS prefix but not flat import.
         //Package just exports a set of namespaces.
@@ -3643,8 +3762,14 @@ class Parser {
         //package dependencies into "public" and "internal" -- internal dependencies can be resolved by finding a satisfying version OR cloning. The 
         //public dependences can be part of the exported signatures and must be resolved by finding satifying versions with other packages. 
         //
+        //The full NS SHOULD include a part like packageVN, where N is the major version number of the root package. This will allow multiple 
+        //coexisting major versions of a package to be used in an application. Versioning must specify a major number or MajorX+, the others 
+        //can be *, X+, X-Y, or X-
+        //Good design practice would be put the public API type decls in one package and the API sigs + impls in thier own -- this way changing 
+        //an API sig only forces updates to that package and the types + impl can be shared with the older versions if needed.
+        //
 
-        currentDecl.usings.push(new NamespaceUsing(fromns, names));
+        currentDecl.usings.push(new NamespaceUsing(fromns, asns, names));
     }
 
     private parseNamespaceTypedef(currentDecl: NamespaceDeclaration) {
@@ -3688,7 +3813,7 @@ class Parser {
         }
         
         if (!iscorens) {
-            provides.push([new NominalTypeSignature("NSCore", ["Object"]), undefined]);
+            provides.push([new NominalTypeSignature("Core", ["Object"]), undefined]);
         }
 
         return provides;
@@ -3824,7 +3949,7 @@ class Parser {
             //TODO: we should support release/test/debug/spec attributes on invariants as well
             //
 
-            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), new NominalTypeSignature("NSCore", ["Bool"]), false));
+            this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), new NominalTypeSignature("Core", ["Bool"]), false));
             while (this.testToken("invariant")) {
                 this.consumeToken();
 
@@ -3889,7 +4014,7 @@ class Parser {
 
         const cname = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore", ["{"]);
+        const provides = this.parseProvides(currentDecl.ns === "Core", ["{"]);
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -3914,7 +4039,7 @@ class Parser {
 
             this.clearRecover();
 
-            if(currentDecl.ns === "NSCore") {
+            if(currentDecl.ns === "Core") {
                 if(cname === "Result") {
                     attributes.push("__result_type");
                 }
@@ -3947,7 +4072,7 @@ class Parser {
 
         const ename = this.consumeTokenAndGetValue();
         const terms = this.parseTermDeclarations();
-        const provides = this.parseProvides(currentDecl.ns === "NSCore", ["{"]);
+        const provides = this.parseProvides(currentDecl.ns === "Core", ["{"]);
 
         try {
             this.setRecover(this.scanCodeParens());
@@ -3970,7 +4095,7 @@ class Parser {
                 this.raiseError(line, "Collision between object and other names");
             }
 
-            if(currentDecl.ns === "NSCore") {
+            if(currentDecl.ns === "Core") {
                 if(ename === "StringOf") {
                     attributes.push("__stringof_type");
                 }
@@ -4071,9 +4196,9 @@ class Parser {
             })[0];
             
             const provides = [
-                [new NominalTypeSignature("NSCore", ["Some"]), undefined],
-                [new NominalTypeSignature("NSCore", ["KeyType"]), undefined], 
-                [new NominalTypeSignature("NSCore", ["APIType"]), undefined]
+                [new NominalTypeSignature("Core", ["Some"]), undefined],
+                [new NominalTypeSignature("Core", ["KeyType"]), undefined], 
+                [new NominalTypeSignature("Core", ["APIType"]), undefined]
             ] as [TypeSignature, TypeConditionRestriction | undefined][];
 
             const invariants: InvariantDecl[] = [];
@@ -4160,14 +4285,14 @@ class Parser {
                     this.raiseError(this.getCurrentLine(), re);
                 }
 
-                const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("NSCore", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
-                const param = new FunctionParameter("arg", new NominalTypeSignature("NSCore", ["String"]), false, undefined, undefined, undefined);
+                const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("Core", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
+                const param = new FunctionParameter("arg", new NominalTypeSignature("Core", ["String"]), false, undefined, undefined, undefined);
                 
                 const acceptsid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "accepts");
                 const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
-                const acceptsinvoke = new InvokeDecl(sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("NSCore", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
+                const acceptsinvoke = new InvokeDecl(sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("Core", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
                 const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
-                const provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+                const provides = [[new NominalTypeSignature("Core", ["Some"]), undefined], [new NominalTypeSignature("Core", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type", ...attributes], currentDecl.ns, iname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
 
                 currentDecl.objects.set(iname, validatortype);
@@ -4182,25 +4307,25 @@ class Parser {
                 }
                 const idval = this.parseNominalType();
 
-                let provides = [[new NominalTypeSignature("NSCore", ["Some"]), undefined], [new NominalTypeSignature("NSCore", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
-                provides.push([new NominalTypeSignature("NSCore", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("NSCore", ["KeyType"]))])]);
+                let provides = [[new NominalTypeSignature("Core", ["Some"]), undefined], [new NominalTypeSignature("Core", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+                provides.push([new NominalTypeSignature("Core", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("Core", ["KeyType"]))])]);
                 
-                let implicitops = [["t", "==", "t", "NSCore::Bool"], ["t", "!=", "t", "NSCore::Bool"]];
+                let implicitops = [["t", "==", "t", "Core::Bool"], ["t", "!=", "t", "Core::Bool"]];
 
                 if(attributes.includes("orderable")) {
-                    provides.push([new NominalTypeSignature("NSCore", ["Orderable"]), undefined]);
+                    provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
 
-                    implicitops = [...implicitops, ["t", "<", "t", "NSCore::Bool"], ["t", ">", "t", "NSCore::Bool"], ["t", "<=", "t", "NSCore::Bool"], ["t", ">=", "t", "NSCore::Bool"]];
+                    implicitops = [...implicitops, ["t", "<", "t", "Core::Bool"], ["t", ">", "t", "Core::Bool"], ["t", "<=", "t", "Core::Bool"], ["t", ">=", "t", "Core::Bool"]];
                 }
 
                 if(attributes.includes("algebraic")) {
-                    provides.push([new NominalTypeSignature("NSCore", ["Algebraic"]), undefined]);
+                    provides.push([new NominalTypeSignature("Core", ["Algebraic"]), undefined]);
 
                     implicitops = [...implicitops, ["+", "t", "t"], ["t", "+", "t", "t"], ["-", "t", "t"], ["t", "-", "t", "t"], ["t", "*", "u", "t"], ["u", "*", "t", "t"], ["t", "/", "t", "u"]];
                 }
 
                 implicitops.forEach((op) => {
-                    const ns = this.m_penv.assembly.getNamespace("NSCore");
+                    const ns = this.m_penv.assembly.getNamespace("Core");
 
                     const isprefix = op[0] !== "t" && op[0] !== "u";
                     const opstr = isprefix ? op[0] : op[1];
@@ -4218,7 +4343,7 @@ class Parser {
                             new PostfixOp(sinfo, laccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
                             : laccess;
 
-                        bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "NSCore", op[0], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, aexp)]), "prefix");
+                        bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core", op[0], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, aexp)]), "prefix");
                     }
                     else {
                         const lptype = op[0] === "t" ? ttype : idval;
@@ -4235,10 +4360,10 @@ class Parser {
                             new PostfixOp(sinfo, raccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
                             : raccess;
 
-                        bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "NSCore", op[1], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, lexp), new PositionalArgument(undefined, false, rexp)]), "infix");
+                        bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core", op[1], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, lexp), new PositionalArgument(undefined, false, rexp)]), "infix");
                     }
 
-                    let resultType: TypeSignature = new NominalTypeSignature("NSCore", ["Bool"]);
+                    let resultType: TypeSignature = new NominalTypeSignature("Core", ["Bool"]);
                     const resstr = op[op.length - 1];
                     if(resstr === "t") {
                         resultType = ttype;
@@ -4272,7 +4397,7 @@ class Parser {
                     if (!ns.operators.has(opstr)) {
                         ns.operators.set(opstr, []);
                     }
-                    (ns.operators.get(opstr) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "NSCore", opstr, sig, level));
+                    (ns.operators.get(opstr) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "Core", opstr, sig, level));
                 });
 
                 const invariants: InvariantDecl[] = [];
@@ -4292,7 +4417,7 @@ class Parser {
                 });
 
                 if(attributes.includes("algebraic")) {
-                    const ttype = new NominalTypeSignature("NSCore", ["AlgebraicOpStability"], []);
+                    const ttype = new NominalTypeSignature("Core", ["AlgebraicOpStability"], []);
 
                     const cexp = new AccessStaticFieldExpression(sinfo, idval, "stability")
                     const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "stability", ttype, new ConstantExpressionValue(cexp, new Set<string>())); 
@@ -4344,7 +4469,7 @@ class Parser {
 
             const concepttype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
 
-            const provides = this.parseProvides(currentDecl.ns === "NSCore", ["of", "using"]);
+            const provides = this.parseProvides(currentDecl.ns === "Core", ["of", "using"]);
 
             let complexheader = false;
             const cinvariants: InvariantDecl[] = [];
@@ -4534,7 +4659,7 @@ class Parser {
                 recursive = Parser.attributeSetContains("recursive", attributes) ? "yes" : "cond";
             }
 
-            const ns = this.m_penv.assembly.getNamespace("NSCore");
+            const ns = this.m_penv.assembly.getNamespace("Core");
             const sig = this.parseInvokableCommon(InvokableKind.StaticOperator, attributes.includes("abstract"), attributes, recursive, [], undefined);
 
             let level = -1;
@@ -4551,7 +4676,7 @@ class Parser {
             if (!ns.operators.has(fname)) {
                 ns.operators.set(fname, []);
             }
-            (ns.operators.get(fname) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "NSCore", fname, sig, level));
+            (ns.operators.get(fname) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "Core", fname, sig, level));
         }
         else {
             if(!this.testToken(TokenStrings.Identifier) && !this.testToken(TokenStrings.Operator)) {
@@ -4596,16 +4721,50 @@ class Parser {
 
     ////
     //Public methods
-
-    parseCompilationUnitPass1(file: string, contents: string, macrodefs: string[]): boolean {
+    parseCompilationUnitGetNamespaceDeps(file: string, contents: string, macrodefs: string[]): {ns: string, deps: string[], remap: Map<string, string>} | undefined {
         this.setNamespaceAndFile("[No Namespace]", file);
 
-        const lexer = new Lexer(contents, macrodefs);
+        const lexer = new Lexer(contents, macrodefs, undefined);
         this.initialize(lexer.lex());
 
         //namespace NS; ...
         this.ensureAndConsumeToken("namespace");
-        this.ensureToken(TokenStrings.Namespace);
+        this.ensureToken(TokenStrings.ScopeName);
+        const ns = this.consumeTokenAndGetValue();
+        this.ensureAndConsumeToken(";");
+
+        this.setNamespaceAndFile(ns, file);
+
+        let deps: string[] = [];
+        let remap = new Map<string, string>();
+        while (this.m_cpos < this.m_epos) {
+            try {
+                this.m_cpos = this.scanTokenOptions("import");
+                if (this.m_cpos === this.m_epos) {
+                    break;
+                }
+
+                const dep = this.parseNamespaceDep();
+                deps.push(dep.fromns);
+                remap.set(dep.asns, dep.fromns);
+            }
+            catch(ex) {
+                return undefined;
+            }
+        }
+
+        return {ns: ns, deps: deps, remap: remap};
+    }
+
+    parseCompilationUnitPass1(file: string, contents: string, macrodefs: string[]): boolean {
+        this.setNamespaceAndFile("[No Namespace]", file);
+
+        const lexer = new Lexer(contents, macrodefs, undefined);
+        this.initialize(lexer.lex());
+
+        //namespace NS; ...
+        this.ensureAndConsumeToken("namespace");
+        this.ensureToken(TokenStrings.ScopeName);
         const ns = this.consumeTokenAndGetValue();
         this.ensureAndConsumeToken(";");
 
@@ -4643,16 +4802,18 @@ class Parser {
                         || this.testToken("==") || this.testToken("!=") || this.testToken("<") || this.testToken(">") || this.testToken("<=") || this.testToken(">=")) {
                         const fname = this.consumeTokenAndGetValue();
                         
-                        const nscore = this.m_penv.assembly.getNamespace("NSCore");
-                        nscore.declaredNames.add("NSCore::" + fname);
+                        const nscore = this.m_penv.assembly.getNamespace("Core");
+                        nscore.declaredNames.add("Core::" + fname);
                     }
                     else {
-                        const fname = this.consumeTokenAndGetValue();
                         let nns = ns;
-                        if (this.testToken(TokenStrings.Namespace)) {
+                        if (this.testToken(TokenStrings.ScopeName)) {
                             nns = this.consumeTokenAndGetValue();
+                            this.ensureAndConsumeToken("::");
                         }
 
+                        const fname = this.consumeTokenAndGetValue();
+                        
                         if (nns === ns) {
                             nsdecl.declaredNames.add(ns + "::" + fname);
                         }
@@ -4660,20 +4821,26 @@ class Parser {
                 }
                 else if (this.testToken("typedef")) {
                     this.consumeToken();
-                    this.ensureToken(TokenStrings.Type);
+                    this.ensureToken(TokenStrings.ScopeName);
                     const tname = this.consumeTokenAndGetValue();
+
+                    if (!lexer.isDeclTypeName(tname)) {
+                        this.raiseError(this.getCurrentLine(), "Not a valid type name to define");
+                    }
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-
                     nsdecl.declaredNames.add(ns + "::" + tname);
                 }
                 else if (this.testToken("typedecl")) {            
                     this.consumeToken();
 
-                    this.ensureToken(TokenStrings.Type);
+                    this.ensureToken(TokenStrings.ScopeName);
                     const tname = this.consumeTokenAndGetValue();
 
+                    if (!lexer.isDeclTypeName(tname)) {
+                        this.raiseError(this.getCurrentLine(), "Not a valid type name to define");
+                    }
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
@@ -4712,8 +4879,12 @@ class Parser {
                                 this.consumeToken();
                             }
 
-                            this.ensureToken(TokenStrings.Type);
+                            this.ensureToken(TokenStrings.ScopeName);
                             const ename = this.consumeTokenAndGetValue();
+
+                            if (!lexer.isDeclTypeName(ename)) {
+                                this.raiseError(this.getCurrentLine(), "Not a valid type name to define");
+                            }
                             if (nsdecl.declaredNames.has(tname)) {
                                 this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                             }
@@ -4735,20 +4906,19 @@ class Parser {
                 }
                 else if (this.testToken("enum")) {
                     this.consumeToken();
-                    this.ensureToken(TokenStrings.Type);
+                    this.ensureToken(TokenStrings.ScopeName);
                     const tname = this.consumeTokenAndGetValue();
+
+                    if (!lexer.isDeclTypeName(tname)) {
+                        this.raiseError(this.getCurrentLine(), "Not a valid type name to define");
+                    }
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-
-                    if(this.testAndConsumeTokenIf("=")) {
-                        this.ensureAndConsumeToken(TokenStrings.Type);
-                    }
+                    nsdecl.declaredNames.add(ns + "::" + tname);
 
                     this.ensureToken("{"); //we should be at the opening left paren 
                     this.m_cpos = this.scanCodeParens(); //scan to the closing paren
-
-                    nsdecl.declaredNames.add(ns + "::" + tname);
 
                     if (this.testToken("&")) {
                         this.ensureToken("{"); //we should be at the opening left paren 
@@ -4757,16 +4927,19 @@ class Parser {
                 }
                 else if (this.testToken("concept") || this.testToken("entity")) {
                     this.consumeToken();
-                    this.ensureToken(TokenStrings.Type);
+                    this.ensureToken(TokenStrings.ScopeName);
                     const tname = this.consumeTokenAndGetValue();
+
+                    if (!lexer.isDeclTypeName(tname)) {
+                        this.raiseError(this.getCurrentLine(), "Not a valid type name to define");
+                    }
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-
                     nsdecl.declaredNames.add(ns + "::" + tname);
 
                     this.parseTermDeclarations();
-                    this.parseProvides(ns === "NSCore", ["{"]);
+                    this.parseProvides(ns === "Core", ["{"]);
             
                     this.ensureToken("{"); //we should be at the opening left paren 
                     this.m_cpos = this.scanCodeParens(); //scan to the closing paren

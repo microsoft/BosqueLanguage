@@ -503,11 +503,13 @@ class NamespaceTypedef {
 }
 
 class NamespaceUsing {
-    readonly fromNamespace: string;
+    readonly fromns: string;
+    readonly asns: string;
     readonly names: string[];
 
-    constructor(from: string, names: string[]) {
-        this.fromNamespace = from;
+    constructor(fromns: string, asns: string, names: string[]) {
+        this.fromns = fromns;
+        this.asns = asns;
         this.names = names;
     }
 }
