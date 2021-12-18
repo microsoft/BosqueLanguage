@@ -307,15 +307,17 @@ abstract class MIREntityTypeDecl extends MIROOTypeDecl {
 }
 
 class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
+    readonly usinginvariant: MIRInvokeKey | undefined;
     readonly consfunc: MIRInvokeKey | undefined;
     readonly consfuncfields: MIRFieldKey[];
 
     readonly fields: MIRFieldDecl[];
     readonly vcallMap: Map<MIRVirtualMethodKey, MIRInvokeKey> = new Map<string, MIRInvokeKey>();
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], consfunc: MIRInvokeKey | undefined, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], usinginvariant: MIRInvokeKey | undefined, consfunc: MIRInvokeKey | undefined, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
+        this.usinginvariant = usinginvariant;
         this.consfunc = consfunc;
 
         this.consfuncfields = consfuncfields;
@@ -323,11 +325,11 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     }
 
     jemit(): object {
-        return { tag: "std", ...this.jemitbase(), consfunc: this.consfunc, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
+        return { tag: "std", ...this.jemitbase(), usinginvariant: this.usinginvariant, consfunc: this.consfunc, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
     }
 
     static jparse(jobj: any): MIRConceptTypeDecl {
-        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.consfunc, jobj.consfuncfields, jobj.fields);
+        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.usinginvariant, jobj.consfunc, jobj.consfuncfields, jobj.fields);
         
         jobj.vcallMap.forEach((vc: any) => entity.vcallMap.set(vc[0], vc[1]));
         return entity;
@@ -801,20 +803,42 @@ class MIRType {
     }
 }
 
+enum BuildMode {
+    Solver = "Solver",
+    Exec = "Exec"
+}
+
+enum InputMode {
+    HavocSmall = "HavocSmall",
+    HavocEnumerable = "HavocEnumerable",
+    InputAssign = "InputAssign"
+}
+
 class PackageConfig {
-    //TODO: package.config data
+    readonly buildmode: BuildMode;
+    readonly inputmode: InputMode;
+    readonly macrodefs: string[]; 
+
+    readonly src: { srcpath: string, shortname: string, contents: string }[];
+
+    constructor(buildmode: BuildMode, inputmode: InputMode, macrodefs: string[], src: { srcpath: string, shortname: string, contents: string }[]) {
+        this.buildmode = buildmode;
+        this.inputmode = inputmode;
+        this.macrodefs = macrodefs;
+        this.src = src;
+    }
 
     jemit(): object {
-        return { };
+        return { buildmode: this.buildmode, inputmode: this.inputmode, macrodefs: this.macrodefs, src: this.src };
     }
 
     static jparse(jobj: any): PackageConfig {
-        return new PackageConfig();
+        return new PackageConfig(jobj.buildmode, jobj.inputmode, jobj.macrodefs, jobj.src);
     }
 }
 
 class MIRAssembly {
-    readonly package: PackageConfig;
+    readonly package: PackageConfig[];
     readonly srcFiles: { fpath: string, contents: string }[];
     readonly srcHash: string;
 
@@ -840,6 +864,8 @@ class MIRAssembly {
 
     private m_subtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
     private m_atomSubtypeRelationMemo: Map<string, Map<string, boolean>> = new Map<string, Map<string, boolean>>();
+
+    entyremaps = {namespaceremap: new Map<string, string>(), entrytypedef: new Map<string, MIRType>()};
 
     private getConceptsProvidedByTuple(tt: MIRTupleType): MIRType {
         let tci: [MIRResolvedTypeKey, string][] = [["Core::Some", "Some"]];
@@ -934,7 +960,7 @@ class MIRAssembly {
         return res;
     }
 
-    constructor(pckge: PackageConfig, srcFiles: { fpath: string, contents: string }[], srcHash: string) {
+    constructor(pckge: PackageConfig[], srcFiles: { fpath: string, contents: string }[], srcHash: string) {
         this.package = pckge;
         this.srcFiles = srcFiles;
         this.srcHash = srcHash;
@@ -960,7 +986,7 @@ class MIRAssembly {
 
     jemit(): object {
         return {
-            package: this.package.jemit(),
+            package: this.package.map((pc) => pc.jemit()),
             srcFiles: this.srcFiles,
             srcHash: this.srcHash,
             literalRegexs: [...this.literalRegexs].map((lre) => lre.jemit()),
@@ -972,12 +998,17 @@ class MIRAssembly {
             virtualOperatorDecls: [...this.virtualOperatorDecls],
             conceptDecls: [...this.conceptDecls].map((cd) => [cd[0], cd[1].jemit()]),
             entityDecls: [...this.entityDecls].map((ed) => [ed[0], ed[1].jemit()]),
-            typeMap: [...this.typeMap].map((t) => [t[0], t[1].jemit()])
+            typeMap: [...this.typeMap].map((t) => [t[0], t[1].jemit()]),
+
+            entyremaps: {
+                namespaceremap: [...this.entyremaps.namespaceremap].map((vv) => vv), 
+                entrytypedef: [...this.entyremaps.entrytypedef].map((vv) => [vv[0], vv[1].jemit()])
+            }
         };
     }
 
     static jparse(jobj: any): MIRAssembly {
-        let masm = new MIRAssembly(PackageConfig.jparse(jobj.package), jobj.srcFiles, jobj.srcHash);
+        let masm = new MIRAssembly(jobj.package.map((pc: any) => PackageConfig.jparse(pc)), jobj.srcFiles, jobj.srcHash);
 
         jobj.literalRegexs.forEach((lre: any) => masm.literalRegexs.push(BSQRegex.jparse(lre)));
         jobj.validatorRegexs.forEach((vre: any) => masm.validatorRegexs.set(vre[0], vre[1]));
@@ -990,6 +1021,9 @@ class MIRAssembly {
         jobj.entityDecls.forEach((id: any) => masm.entityDecls.set(id[0], MIROOTypeDecl.jparse(id[1]) as MIREntityTypeDecl));
         jobj.typeMap.forEach((t: any) => masm.typeMap.set(t[0], MIRType.jparse(t[1])));
 
+        jobj.entyremaps.namespaceremap.forEach((vv: any) => masm.entyremaps.namespaceremap.set(vv[0], vv[1]));
+        jobj.entyremaps.entrytypedef.forEach((vv: any) => masm.entyremaps.entrytypedef.set(vv[0], MIRType.jparse(vv[1])));
+
         return masm;
     }
 }
@@ -1001,5 +1035,5 @@ export {
     MIREntityType, MIRObjectEntityTypeDecl, MIRConstructableEntityTypeDecl, MIREnumEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, 
     MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl,
     MIRConceptType, MIRTupleType, MIRRecordType, MIREphemeralListType,
-    PackageConfig, MIRAssembly
+    BuildMode, InputMode, PackageConfig, MIRAssembly
 };

@@ -59,9 +59,13 @@ __universal concept Parsable provides Any {
 __universal concept BufferParsable provides Any {
 }
 
+
+//<summary>Type for indicating that a datatype can be use as an input on a test method.</summary>
+__universal concept TestableType provides Any {
+}
+
 //<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
-__universal concept APIType provides Any {
-    function generate<T grounded APIType>(): T apitype_generate
+__universal concept APIType provides TestableType {
 }
 
 //<summary>Type for indicating that a datatype overrides the algebraic operators +, -, *, / along with the needed consts.</summary>

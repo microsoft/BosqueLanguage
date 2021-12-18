@@ -9,7 +9,7 @@
 
 import * as assert from "assert";
 import { MIRBasicBlock, MIROpTag, MIRInvokeKey, MIRInvokeFixedFunction, MIRBody, MIRInvokeVirtualOperator, MIRInvokeVirtualFunction, MIREntityUpdate } from "./mir_ops";
-import { MIRAssembly, MIRConstantDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRType } from "./mir_assembly";
+import { MIRAssembly, MIRConstantDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRType } from "./mir_assembly";
 
 type CallGNode = {
     invoke: MIRInvokeKey,
@@ -122,7 +122,34 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
         topoVisit(invokes.get(ivk) as CallGNode, [], tordered, invokes);
     });
 
-    xxxx; //constructor invariant calls
+    assembly.entityDecls.forEach((ee) => {
+        if(ee instanceof MIRObjectEntityTypeDecl && ee.provides.includes("Core::APIType") && ee.usinginvariant !== undefined) {
+            roots.push(invokes.get(ee.usinginvariant) as CallGNode);
+            topoVisit(invokes.get(ee.usinginvariant) as CallGNode, [], tordered, invokes);
+
+            roots.push(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode);
+            topoVisit(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode, [], tordered, invokes);
+        }
+        else if(ee instanceof MIRConstructableEntityTypeDecl && ee.provides.includes("Core::APIType") && ee.usinginvariant !== undefined) {
+            roots.push(invokes.get(ee.usinginvariant) as CallGNode);
+            topoVisit(invokes.get(ee.usinginvariant) as CallGNode, [], tordered, invokes);
+        }
+        else if(ee instanceof MIRConstructableInternalEntityTypeDecl && ee.provides.includes("Core::APIType") && ee.optaccepts !== undefined) {
+            roots.push(invokes.get(ee.optaccepts) as CallGNode);
+            topoVisit(invokes.get(ee.optaccepts) as CallGNode, [], tordered, invokes);
+        }
+        else if(ee instanceof MIRPrimitiveSetEntityTypeDecl && ee.provides.includes("Core::APIType")) {
+            roots.push(invokes.get(ee.reprinvariant) as CallGNode);
+            topoVisit(invokes.get(ee.reprinvariant) as CallGNode, [], tordered, invokes);
+        }
+        else if(ee instanceof MIRPrimitiveMapEntityTypeDecl && ee.provides.includes("Core::APIType")) {
+            roots.push(invokes.get(ee.reprinvariant) as CallGNode);
+            topoVisit(invokes.get(ee.reprinvariant) as CallGNode, [], tordered, invokes);
+        }
+        else {
+            ;
+        }
+    });
 
     assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
         roots.push(invokes.get(cdecl.ivalue) as CallGNode);

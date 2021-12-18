@@ -7,7 +7,7 @@ import { SourceInfo, Parser } from "../ast/parser";
 import { MIRAbort, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRBody, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeadFlow, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMultiLoadFromEpehmeralList, MIRNop, MIROp, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRRegisterAssign, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart, MIRVirtualMethodKey, MIRInject, MIRExtract, MIRGuardedOptionInject, MIRConstantNothing, MIRLogicAction } from "./mir_ops";
 import { Assembly, BuildLevel, ConceptTypeDecl, EntityTypeDecl, InvokeDecl, MemberMethodDecl, NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, OOMemberLookupInfo, OOPTypeDecl, StaticFunctionDecl, StaticMemberDecl, StaticOperatorDecl } from "../ast/assembly";
 import { ResolvedConceptAtomType, ResolvedConceptAtomTypeEntry, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedFunctionType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedType } from "../ast/resolved_type";
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
+import { BuildMode, MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
 
 import { TypeChecker } from "../type_checker/type_checker";
 import { simplifyBody } from "./mir_cleanup";
@@ -1285,53 +1285,106 @@ class MIREmitter {
         this.pendingPCodeProcessing.push({ lkey: ikey, lshort: shortname, invoke: idecl, sigt: fsig, bodybinds: bodybinds, cargs: cinfo, capturedpcodes: capturedpcode });
     }
 
-    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { fpath: string, filepath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
+    static generateMASM(buildmode: BuildMode, pckge: PackageConfig[], buildLevel: BuildLevel, entrypoints: { filename: string, names: string[] }): { masm: MIRAssembly | undefined, errors: string[] } {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new Assembly();
-        let p = new Parser(assembly, srcFiles.map((sfi) => { return {fullname: sfi.fpath, shortname: sfi.filepath}; }));
+        const allfiles = ([] as [PackageConfig, string, string, string][]).concat(...pckge.map((pk) => pk.src.map((srci) => [pk, srci.srcpath, srci.shortname, srci.contents] as [PackageConfig, string, string, string])));
+
+        const p = new Parser(assembly, allfiles.map((fe) => { return {fullname: fe[1], shortname: fe[2]}; }));
+        let depsmap = new Map<string, string[]>();
+        let filetonsnamemap = new Map<string, Set<string>>();
+        let nsfilemap = new Map<string, [PackageConfig, string, string, string][]>();
+        let entryremap = new Map<string, string>();
+        let entryns: string = "Main";
+        let allfe: [PackageConfig, string, string, string][] = [];
         try {
-            for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass1(srcFiles[i].fpath, srcFiles[i].contents, macrodefs);
+            for(let i = 0; i < allfiles.length; ++i) {
+                const fe = allfiles[i];
+                const deps = p.parseCompilationUnitGetNamespaceDeps(fe[1], fe[3], fe[0].macrodefs);
+                if(deps === undefined) {
+                    return { masm: undefined, errors: ["Hard failure in parse of namespace deps"] };
+                }
+
+                if(fe[1] === entrypoints.filename) {
+                    entryremap = deps.remap;
+                    entryns = deps.ns;
+                }
+
+                const nsnamemap = ["Core", deps.ns, ...[...deps.remap].map((rrp) => rrp[0])];
+                filetonsnamemap.set(fe[1], new Set<string>(nsnamemap));
+
+                if(!depsmap.has(deps.ns)) {
+                    depsmap.set(deps.ns, []);
+                }
+                depsmap.set(deps.ns, [...(depsmap.get(deps.ns) as string[]), ...deps.deps].sort());
+
+                if(!nsfilemap.has(deps.ns)) {
+                    nsfilemap.set(deps.ns, []);
+                }
+                (nsfilemap.get(deps.ns) as [PackageConfig, string, string, string][]).push(fe);
             }
 
-            for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass2(srcFiles[i].fpath, srcFiles[i].contents, macrodefs);
+            const allns = [...depsmap].map((dm) => dm[0]).sort();
+            let nsdone = new Set<string>();
+            while(nsdone.size < allns.length) {
+                const nsopts = allns.filter((ns) => {
+                    const ndeps = depsmap.get(ns) as string[];
+                    return ndeps.every((dep) => nsdone.has(dep));
+                });
+
+                if(nsopts.length === 0) {
+                    //TODO: should hunt down the cycle
+                    return { masm: undefined, errors: ["Cyclic dependency in namespaces"] };
+                }
+
+                const nns = nsopts[0];
+                const nsfiles = nsfilemap.get(nns) as [PackageConfig, string, string, string][];
+
+                for (let i = 0; i < nsfiles.length; ++i) {
+                    const parseok = p.parseCompilationUnitPass1(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs);
+                    if (!parseok) {
+                        const parseErrors = p.getParseErrors();
+                        if (parseErrors !== undefined) {
+                            return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
+                        }
+                    }
+                }
+    
+                for (let i = 0; i < nsfiles.length; ++i) {
+                    const parseok = p.parseCompilationUnitPass2(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs, filetonsnamemap.get(nsfiles[i][3]) as Set<string>);
+                    if (!parseok) {
+                        const parseErrors = p.getParseErrors();
+                        if (parseErrors !== undefined) {
+                            return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
+                        }
+                    }
+                }
+
+                allfe = [...allfe, ...nsfiles].sort((a, b) => a[1].localeCompare(b[1]));
+                nsdone.add(nns);
             }
         }
         catch (ex) {
             return { masm: undefined, errors: [`Hard failure in parse with exception -- ${ex}`] };
         }
 
-        const parseErrors = p.getParseErrors();
-        if (parseErrors !== undefined) {
-            return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
-        }
-
         ////////////////
         //Compute the assembly hash and initialize representations
         const hash = Crypto.createHash("sha512");
-        const data = [...srcFiles].sort((a, b) => a.fpath.localeCompare(b.fpath));
-        data.forEach((sf) => {
-            hash.update(sf.fpath);
-            hash.update(sf.contents);
+        allfe.forEach((sf) => {
+            hash.update(sf[1]);
+            hash.update(JSON.stringify(sf[0].jemit()));
+            hash.update(sf[3]);
         });
 
-        const masm = new MIRAssembly(pckge, srcFiles, hash.digest("hex"));
+        const masmsrc = allfe.map((fe) => {
+            return {fpath: fe[1], contents: fe[3]};
+        });
+
+        const masm = new MIRAssembly(pckge, masmsrc, hash.digest("hex"));
         const emitter = new MIREmitter(assembly, masm, true);
         const checker = new TypeChecker(assembly, emitter, buildLevel, p.sortedSrcFiles);
-
-        emitter.registerResolvedTypeReference(assembly.getSpecialAnyConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialSomeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialKeyTypeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialValidatorConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialParsableConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialAPITypeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialAlgebraicConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialOrderableConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
 
         emitter.registerResolvedTypeReference(assembly.getSpecialNoneType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBoolType());
@@ -1346,7 +1399,8 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferFormatType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferCompressionType());
         emitter.registerResolvedTypeReference(assembly.getSpecialByteBufferType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialDateTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTickTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialUUIDType());
         emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
@@ -1354,10 +1408,40 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialNothingType());
         emitter.registerResolvedTypeReference(assembly.getSpecialHavocType());
 
+        emitter.registerResolvedTypeReference(assembly.getSpecialAnyConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialSomeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialKeyTypeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialValidatorConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialParsableConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialBufferParsableConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTestableTypeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialAPITypeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialAlgebraicConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialOrderableConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
+
+        
+        emitter.registerResolvedTypeReference(assembly.getSpecialISomethingConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIOptionConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIOptionTConceptType());
+
+        emitter.registerResolvedTypeReference(assembly.getSpecialIResultConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIOkConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIErrTConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIResultTConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIResultEConceptType());
+
+        emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
+
+        if(buildmode === BuildMode.Exec) {
+            emitter.registerResolvedTypeReference(assembly.getMaskType());
+        }
+
         //get any entrypoint functions and initialize the checker there
-        const epns = assembly.getNamespace(entrypoints.namespace);
+        const epns = assembly.getNamespace(entryns);
         if (epns === undefined) {
-            return { masm: undefined, errors: [`Could not find namespace ${entrypoints.namespace}`] };
+            return { masm: undefined, errors: [`Could not find namespace ${entryns}`] };
         }
         else {
             if(entrypoints.names.length === 0) {
@@ -1450,7 +1534,7 @@ class MIREmitter {
             if (checker.getErrorList().length === 0) {
                 checker.processRegexInfo();
 
-                if (functionalize) {
+                if (buildmode === BuildMode.Solver) {
                     functionalizeInvokes(emitter, masm);
                 }
                 
@@ -1466,6 +1550,12 @@ class MIREmitter {
             return { masm: undefined, errors: tcerrors.map((err: [string, number, string]) => JSON.stringify(err)) };
         }
         else {
+            let typedefremaps = new Map<string, MIRType>(); 
+            assembly.getTypedefRemap().forEach((tt, tkey) => {
+                typedefremaps.set(tkey, emitter.registerResolvedTypeReference(tt));
+            });
+
+            masm.entyremaps = {namespaceremap: entryremap, entrytypedef: typedefremaps};
             return { masm: masm, errors: [] };
         }
     }
