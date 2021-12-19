@@ -1004,7 +1004,22 @@ class Assembly {
                 return ResolvedType.createEmpty();
             }
         }
-        xxxx;
+        else if(oftype.typeID === "Core::IResultT") {
+            if(oftype.options.length === 1 && oftype.typeID.startsWith("Core::Result<")) {
+                return (oftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds.get("T") as ResolvedType;
+            }
+            else {
+                return ResolvedType.createEmpty();
+            }
+        }
+        else if(oftype.typeID === "Core::IResultE") {
+            if(oftype.options.length === 1 && oftype.typeID.startsWith("Core::Result<")) {
+                return (oftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds.get("E") as ResolvedType;
+            }
+            else {
+                return ResolvedType.createEmpty();
+            }
+        }
         else {
             return ResolvedType.createEmpty();
         }

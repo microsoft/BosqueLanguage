@@ -353,19 +353,19 @@ class TypeChecker {
         }
 
         if (lhsexp instanceof LiteralNoneExpression) {
-            return rhs.options.some((opt) => opt.typeID === "NSCore::None") ? "lhsnone" : "falsealways";
+            return rhs.options.some((opt) => opt.typeID === "Core::None") ? "lhsnone" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNoneExpression) {
-            return lhs.options.some((opt) => opt.typeID === "NSCore::None") ? "rhsnone" : "falsealways";
+            return lhs.options.some((opt) => opt.typeID === "Core::None") ? "rhsnone" : "falsealways";
         }
 
         if (lhsexp instanceof LiteralNothingExpression) {
-            return rhs.options.some((opt) => opt.typeID === "NSCore::None") ? "lhsnothing" : "falsealways";
+            return rhs.options.some((opt) => opt.typeID === "Core::None") ? "lhsnothing" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNothingExpression) {
-            return lhs.options.some((opt) => opt.typeID === "NSCore::None") ? "rhsnothing" : "falsealways";
+            return lhs.options.some((opt) => opt.typeID === "Core::None") ? "rhsnothing" : "falsealways";
         }
 
         //should be a subtype on one of the sides
@@ -1895,7 +1895,7 @@ class TypeChecker {
                 }
             }));
 
-            const lentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("NSCore::List") as EntityTypeDecl;
+            const lentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("Core::List") as EntityTypeDecl;
             const oftype = ResolvedEntityAtomType.create(lentity, new Map<string, ResolvedType>().set("T", etype));
 
             const rtreg = this.m_emitter.generateTmpRegister();
@@ -2195,7 +2195,7 @@ class TypeChecker {
         //ensure full string<T> type is registered
         const terms = [new TemplateTypeSignature("T")];
         const binds = new Map<string, ResolvedType>().set("T", oftype);
-        const stype = this.resolveAndEnsureTypeOnly(sinfo, new NominalTypeSignature("NSCore", ["StringOf"], terms), binds);
+        const stype = this.resolveAndEnsureTypeOnly(sinfo, new NominalTypeSignature("Core", ["StringOf"], terms), binds);
 
         return { oftype: [oodecl, oobinds], ofresolved: oftype, stringtype: stype };
     }
@@ -2215,7 +2215,7 @@ class TypeChecker {
         //ensure full DataString<T> type is registered
         const terms = [new TemplateTypeSignature("T")];
         const binds = new Map<string, ResolvedType>().set("T", oftype);
-        const stype = this.resolveAndEnsureTypeOnly(sinfo, new NominalTypeSignature("NSCore", ["DataString"], terms), binds);
+        const stype = this.resolveAndEnsureTypeOnly(sinfo, new NominalTypeSignature("Core", ["DataString"], terms), binds);
 
         const frbinds = this.m_assembly.resolveBindsForCallComplete([], [], binds, new Map<string, ResolvedType>(), new Map<string, ResolvedType>()) as Map<string, ResolvedType>;
         const ptype = this.resolveAndEnsureTypeOnly(sinfo, (fdecltry as StaticFunctionDecl).invoke.resultType, frbinds);
@@ -2335,6 +2335,8 @@ class TypeChecker {
             nval = new MIRConstantFloat(value);
         }
         else {
+            this.raiseErrorIf(sinfo, !ntype.isSameType(this.m_assembly.getSpecialDecimalType()), "Can only create typed numeric based literal");
+            
             nval = new MIRConstantDecimal(value);
         }
 
@@ -2566,7 +2568,7 @@ class TypeChecker {
 
     private checkSpecialConstructorExpression(env: TypeEnvironment, exp: SpecialConstructorExpression, trgt: MIRRegisterArgument, infertype: ResolvedType | undefined): TypeEnvironment {
         if(exp.rop === "something") {
-            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("NSCore::Option<")), "something shorthand constructors only valid with NSCore::Option typed expressions");
+            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("Core::Option<")), "something shorthand constructors only valid with Core::Option typed expressions");
 
             const T = infertype !== undefined && infertype.options.length === 1 ? this.getTBind(this.getUniqueTypeBinds(infertype)) : undefined;
             const treg = this.m_emitter.generateTmpRegister();
@@ -2584,7 +2586,7 @@ class TypeChecker {
            
         }
         else {
-            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("NSCore::Result<")), "ok/err shorthand constructors only valid with NSCore::Result typed expressions");
+            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("Core::Result<")), "ok/err shorthand constructors only valid with Core::Result typed expressions");
 
             const {T, E} = infertype !== undefined && infertype.options.length === 1 ? this.getTEBinds(this.getUniqueTypeBinds(infertype)) : { T: undefined, E: undefined };
             const treg = this.m_emitter.generateTmpRegister();
@@ -2818,7 +2820,7 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, (fdecltry === undefined && opdecltry === undefined), `Static function/operator not defined for type ${fromtype.typeID}`);
         this.raiseErrorIf(exp.sinfo, (fdecltry !== undefined && opdecltry !== undefined), `Static function/operator multiply defined for type ${fromtype.typeID}`);
 
-        if(fdecltry !== undefined && fdecltry.contiainingType.ns === "NSCore" && fdecltry.contiainingType.name === "KeyType" && (exp.name === "less" || exp.name === "equal")) {
+        if(fdecltry !== undefined && fdecltry.contiainingType.ns === "Core" && fdecltry.contiainingType.name === "KeyType" && (exp.name === "less" || exp.name === "equal")) {
             const ktype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.terms.targs[0], env.terms);
             this.raiseErrorIf(exp.sinfo, !this.m_assembly.subtypeOf(ktype, this.m_assembly.getSpecialKeyTypeConceptType()) || !ktype.isGroundedType(), "Invalid argument");
 
@@ -2845,7 +2847,7 @@ class TypeChecker {
 
             return [env.setUniformResultExpression(this.m_assembly.getSpecialBoolType())];
         }
-        else if(fromtype.typeID === "NSCore::Tuple" && exp.name === "append") {
+        else if(fromtype.typeID === "Core::Tuple" && exp.name === "append") {
             let eargs: [ResolvedType, ResolvedType, MIRRegisterArgument][] = [];
             let ttypes: ResolvedType[] = [];
 
@@ -2873,7 +2875,7 @@ class TypeChecker {
 
             return [env.setUniformResultExpression(rtupletype)];
         }
-        else if(fromtype.typeID === "NSCore::Record" && exp.name === "join") {
+        else if(fromtype.typeID === "Core::Record" && exp.name === "join") {
             let eargs: [ResolvedType, ResolvedType, MIRRegisterArgument][] = [];
             let ttypes: {pname: string, ptype: ResolvedType}[] = [];
             let names = new Set<string>();
@@ -6585,7 +6587,7 @@ class TypeChecker {
                     const ultype = this.m_assembly.getListType(oftype);
                     const mirultype = this.m_emitter.registerResolvedTypeReference(ultype);
 
-                    const lopstype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("NSCore", ["ListOps"]), new Map<string, ResolvedType>());
+                    const lopstype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["ListOps"]), new Map<string, ResolvedType>());
                     const mirlopstype = this.m_emitter.registerResolvedTypeReference(lopstype);
                     const funq = (lopstype.options[0] as ResolvedEntityAtomType).object.staticFunctions.find((ff) => ff.name === "s_chk_kv_unique") as StaticFunctionDecl;
                     const unqchkinv = this.m_emitter.registerStaticCall(lopstype, [mirlopstype, (lopstype.options[0] as ResolvedEntityAtomType).object, new Map<string, ResolvedType>()], funq, "s_chk_kv_unique", binds, [], []);
