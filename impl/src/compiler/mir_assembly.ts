@@ -308,13 +308,13 @@ abstract class MIREntityTypeDecl extends MIROOTypeDecl {
 
 class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     readonly usinginvariant: MIRInvokeKey | undefined;
-    readonly consfunc: MIRInvokeKey | undefined;
+    readonly consfunc: MIRInvokeKey;
     readonly consfuncfields: MIRFieldKey[];
 
     readonly fields: MIRFieldDecl[];
     readonly vcallMap: Map<MIRVirtualMethodKey, MIRInvokeKey> = new Map<string, MIRInvokeKey>();
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], usinginvariant: MIRInvokeKey | undefined, consfunc: MIRInvokeKey | undefined, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], usinginvariant: MIRInvokeKey | undefined, consfunc: MIRInvokeKey, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
         this.usinginvariant = usinginvariant;

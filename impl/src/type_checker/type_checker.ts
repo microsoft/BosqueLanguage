@@ -6641,11 +6641,7 @@ class TypeChecker {
 
             if (tdecl instanceof EntityTypeDecl) {
                 if(tdecl.attributes.includes("__enum_type")) {
-                    const enums = tdecl.staticMembers.map((sdecl) => { 
-                        const vve = (((sdecl.value as ConstantExpressionValue).exp as ConstructorPrimaryExpression).args.argList[0] as PositionalArgument).value as LiteralIntegralExpression;
-                        const v = Number.parseInt(vve.value.slice(0, vve.value.length - 1));
-                        return {ename: sdecl.name, value: v}; 
-                    });
+                    const enums = tdecl.staticMembers.map((sdecl) => sdecl.name);
 
                     const mirentity = new MIREnumEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, enums);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
@@ -6657,7 +6653,7 @@ class TypeChecker {
                     let invkey: string | undefined = undefined;
                     let conskey: string | undefined = undefined;
                     if(tdecl.invariants.length !== 0) {
-                        let initinfo = this.generateInjectableEntityInitializerFunctions(tdecl, binds, oftype);
+                        const initinfo = this.generateInjectableEntityInitializerFunctions(tdecl, binds, oftype);
 
                         const invbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@invariant");
                         const invkeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@invariant", new Map<string, ResolvedType>(), []);
@@ -6724,56 +6720,9 @@ class TypeChecker {
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, undefined);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
-                else if(tdecl.attributes.includes("__havoc_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__mask_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__partialvector_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__listtree_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__listtreeentry_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__btree_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__btreeentry_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__vector1_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__vector2_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__vector3_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__reclist_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__reclistentry_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__recmap_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__recmapentry_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__listops_type")) {
-                    xxxx;
-                }
-                else if(tdecl.attributes.includes("__mapops_type")) {
-                    xxxx;
-                }
                 else if(tdecl.attributes.includes("__list_type")) {
-                    const miroftype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
+                    const oftype = (tdecl.memberMethods.find((mf) => mf.name === "value") as MemberMethodDecl).invoke.resultType;
+                    const miroftype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.normalizeTypeOnly(oftype, new Map().set("T", binds.get("T") as ResolvedType)));
                     const mirbinds = new Map<string, MIRType>().set("T", this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType));
 
                     const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds);
@@ -6792,18 +6741,21 @@ class TypeChecker {
                     //MIRPrimitiveSetEntityTypeDecl
                 }
                 else if(tdecl.attributes.includes("__map_type")) {
-                    const oftype = ResolvedType.createSingle(ResolvedTupleAtomType.create([binds.get("K") as ResolvedType, binds.get("V") as ResolvedType]));
-                    const miroftype = this.m_emitter.registerResolvedTypeReference(oftype);
+                    const ofbinds = new Map().set("K", binds.get("K") as ResolvedType).set("V", binds.get("V") as ResolvedType);
+                    const oftype = (tdecl.memberMethods.find((mf) => mf.name === "value") as MemberMethodDecl).invoke.resultType;
+                    const miroftype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.normalizeTypeOnly(oftype, ofbinds));
                     const mirbinds = new Map<string, MIRType>().set("K", this.m_emitter.registerResolvedTypeReference(binds.get("K") as ResolvedType)).set("V", this.m_emitter.registerResolvedTypeReference(binds.get("V") as ResolvedType));
-                    const ultype = this.m_assembly.getListType(oftype);
-                    const mirultype = this.m_emitter.registerResolvedTypeReference(ultype);
 
-                    const lopstype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["ListOps"]), new Map<string, ResolvedType>());
-                    const mirlopstype = this.m_emitter.registerResolvedTypeReference(lopstype);
-                    const funq = (lopstype.options[0] as ResolvedEntityAtomType).object.staticFunctions.find((ff) => ff.name === "s_chk_kv_unique") as StaticFunctionDecl;
-                    const unqchkinv = this.m_emitter.registerStaticCall(lopstype, [mirlopstype, (lopstype.options[0] as ResolvedEntityAtomType).object, new Map<string, ResolvedType>()], funq, "s_chk_kv_unique", binds, [], []);
+                    const tupletype = ResolvedType.createSingle(ResolvedTupleAtomType.create([binds.get("K") as ResolvedType, binds.get("V") as ResolvedType]));
+                    const mirtupletype = this.m_emitter.registerResolvedTypeReference(tupletype);
+
+                    const mopstype = this.m_assembly.getMapOpsType();
+                    const mirmopstype = this.m_emitter.registerResolvedTypeReference(mopstype);
+
+                    const uniqff = (mopstype.options[0] as ResolvedEntityAtomType).object.staticFunctions.find((ff) => ff.name === "s_check_ordered") as StaticFunctionDecl;
+                    const unqinv = this.m_emitter.registerStaticCall(mopstype, [mirmopstype, (mopstype.options[0] as ResolvedEntityAtomType).object, new Map<string, ResolvedType>()], uniqff, "s_check_ordered", ofbinds, [], []);
                     
-                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, mirultype.typeID, unqchkinv);
+                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, mirtupletype.typeID, unqinv);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__internal")) { 
@@ -6811,19 +6763,35 @@ class TypeChecker {
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else {
-                    const consbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@constructor");
-                    const conskey = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@constructor", new Map<string, ResolvedType>(), []);
+                    const initinfo = this.generateEntityInitializerFunctions(tdecl, binds);
+
+                    const invenvargs = new Map<string, VarInfo>();
                     const consenvargs = new Map<string, VarInfo>();
                     const ccfields = this.m_assembly.getAllOOFieldsConstructors(tdecl, binds);
                     [...ccfields.req, ...ccfields.opt].forEach((ff) => {
                         const fdi = ff[1];
                         const ftype = this.resolveAndEnsureTypeOnly(fdi[1].sourceLocation, fdi[1].declaredType, fdi[2]);
+
+                        invenvargs.set(`$${fdi[1].name}`, new VarInfo(ftype, fdi[1].value === undefined, false, true, ftype));
                         consenvargs.set(`$${fdi[1].name}`, new VarInfo(ftype, fdi[1].value === undefined, false, true, ftype));
                     });
                     const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
 
+                    let invkey: string | undefined = undefined;
+                    if(tdecl.invariants.length !== 0) {
+                        const invbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@invariant");
+                        const invkeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@invariant", new Map<string, ResolvedType>(), []);
+                        
+                        const invenv = TypeEnvironment.createInitialEnvForCall(invkeyid.keyid, invbodyid, binds, new Map<string, PCode>(), invenvargs, undefined);
+                        this.generateInvariantCheck(invbodyid, invenv, invkeyid.keyid, invkeyid.shortname, tdecl, binds, initinfo);
+                        invkey = invkeyid.keyid;
+                    }
+
+                    const consbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@constructor");
+                    const conskey = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@constructor", new Map<string, ResolvedType>(), []);
+                    
                     const consenv = TypeEnvironment.createInitialEnvForCall(conskey.keyid, consbodyid, binds, new Map<string, PCode>(), consenvargs, undefined);
-                    this.generateConstructor(consbodyid, consenv, conskey.keyid, conskey.shortname, tdecl, binds);
+                    this.generateConstructor(consbodyid, consenv, conskey.keyid, conskey.shortname, tdecl, binds, initinfo);
 
                     const fields: MIRFieldDecl[] = [];
                     const finfos = [...this.m_assembly.getAllOOFieldsLayout(tdecl, binds)];
@@ -6843,7 +6811,7 @@ class TypeChecker {
                         fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
                     });
 
-                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, conskey !== undefined ? conskey.keyid : undefined, consfuncfields, fields);
+                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, invkey !== undefined ? invkey : undefined, conskey.keyid, consfuncfields, fields);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
             }

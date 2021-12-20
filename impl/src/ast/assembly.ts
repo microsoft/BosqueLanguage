@@ -1556,8 +1556,8 @@ class Assembly {
     getRecMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecMap") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
     getRecMapEntryType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecMapEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
     
-    getListOpsType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getMapOpsType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::MapOps") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getListOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
+    getMapOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::MapOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
     
     getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }

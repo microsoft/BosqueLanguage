@@ -7,7 +7,7 @@
 namespace Core;
 
 #if EXEC_LIBS
-internal entity Mask provides Some {
+__internal internal entity Mask provides Some {
     field bit0: Bool;
     field bit1: Bool;
     field bit2: Bool;
