@@ -590,7 +590,6 @@ class MIRPrimitiveMapEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl
     }
 }
 
-
 abstract class MIRTypeOption {
     readonly typeID: MIRResolvedTypeKey;
     readonly shortname: string;

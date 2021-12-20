@@ -102,53 +102,62 @@ internal entity MapOps provides Some {
         elif(m2 === none) {
             return m1;
         }
-        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
-            let kl0 = l.v0.0;
-            let kr0 = r.v0.0;
+        elif(/\(m1.is<Vector1<[K, V]>>(), m2.is<Vector1<[K, V]>>())) {
+            let mm1 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m1);
+            let mm2 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m2);
+
+            let kl0 = mm1.v0.0;
+            let kr0 = mm2.v0.0;
             check !KeyType::equal<T>(kl0, kr0);
 
             if(KeyType::less<K>(kl0, kr0)) {
-                return Vector2<[K, V]>{l.v0, r.v0};
+                return Vector2<[K, V]>{mm1.v0, mm2.v0};
             }
             else {
-                return Vector2<[K, V]>{r.v0, l.v0};
+                return Vector2<[K, V]>{mm1.v0, mm2.v0};
             }
         }
-        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
-            let kl0 = l.v0.0;
-            let kr0 = r.v0.0;
-            let kr1 = r.v1.0;
+        elif(/\(m1.is<Vector1<[K, V]>>(), m2.is<Vector2<[K, V]>>())) {
+            let mm1 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m1);
+            let mm2 = ListOps::s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(m2);
+
+            let kl0 = mm1.v0.0;
+            let kr0 = mm2.v0.0;
+            let kr1 = mm2.v1.0;
             check /\(!KeyType::equal<T>(kl0, kr0), !KeyType::equal<T>(kl0, kr1));
 
             if(KeyType::less<K>(kl0, kr0)) {
-                return Vector3<[K, V]>{l.v0, r.v0, r.v1};
+                return Vector3<[K, V]>{mm1.v0, mm2.v0, mm2.v1};
             }
             elif(KeyType::less<K>(kl0, kr1)) {
-                return Vector3<[K, V]>{r.v0, l.v0, r.v1};
+                return Vector3<[K, V]>{mm2.v0, mm1.v0, mm2.v1};
             }
             else {
-                return Vector3<[K, V]>{r.v0, r.v1, l.v0};
+                return Vector3<[K, V]>{mm2.v0, mm2.v1, mm1.v0};
             }
         }
-        elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
-            let kl0 = l.v0.0;
-            let kl1 = l.v1.0;
-            let kr0 = r.v0.0;
+        elif(/\(m1.is<Vector2<[K, V]>>(), m2.is<Vector1<[K, V]>>())) {
+            let mm1 = ListOps::s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(m1);
+            let mm2 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m2);
+
+            let kl0 = mm1.v0.0;
+            let kl1 = mm1.v1.0;
+            let kr0 = mm2.v0.0;
             check /\(!KeyType::equal<T>(kr0, kl0), !KeyType::equal<T>(kr0, kr1));
 
             if(KeyType::less<K>(kr0, kl0)) {
-                return Vector3<[K, V]>{r.v0, l.v0, l.v1};
+                return Vector3<[K, V]>{mm2.v0, mm1.v0, mm1.v1};
             }
             elif(KeyType::less<K>(kr0, kl1)) {
-                return Vector3<[K, V]>{l.v0, r.v0, l.v1};
+                return Vector3<[K, V]>{mm1.v0, mm2.v0, mm1.v1};
             }
             else {
-                return Vector3<[K, V]>{l.v0, l.v1, r.v0};
+                return Vector3<[K, V]>{mm1.v0, mm1.v1, mm2.v0};
             }
         }
         else {
-            let ll, llc = RecMapEntry<T>::s_ensure_list(l);
-            let rr, rrc = RecMapEntry<T>::s_ensure_list(r);
+            let ll, llc = RecMapEntry<T>::s_ensure_list(m1);
+            let rr, rrc = RecMapEntry<T>::s_ensure_list(m2);
 
             return RecMap<K, V>{llc + rrc, RecMapEntry<K, V>::union(ll, rr)}; 
         }
@@ -437,6 +446,35 @@ entity RecMap<K grounded KeyType, V> provides Some {
 entity RecMapEntry<K grounded KeyType, V> provides Some {
     field head: [K, V];
     field tail RecMapEntry<K, V>?;
+
+    function s_vector1_to_list(m: Vector1<[K, V]>): RecMapEntry<K, V> {
+        return RecMapEntry<K, V>{m.v0, none};
+    }
+
+    function s_vector2_to_list(m: Vector2<[K, V]>): RecMapEntry<K, V> {
+        return RecMapEntry<K, V>{m.v0, RecMapEntry<K, V>{m.v1, none}};
+    }
+
+    function s_vector3_to_list(m: Vector3<[K, V]>): RecMapEntry<K, V> {
+        return RecMapEntry<K, V>{m.v0, RecMapEntry<K, V>{m.v1, RecMapEntry<K, V>{m.v2, none}}};
+    }
+
+    function s_ensure_list(m: Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | RecMap<K, V>): RecMapEntry<K, V>, Nat {
+        if(m.is<RecMap<K, V>>()) {
+            return m.ll, m.count;
+        }
+        else {
+            if(m.is<Vector1<[K, V]>>()) {
+                return RecMapEntry<T>::s_vector1_to_list(m), 1n;
+            }
+            elif(m.is<Vector2<[K, V]>>()) {
+                return RecMapEntry<T>::s_vector2_to_list(m), 2n;
+            }
+            else {
+                return RecMapEntry<T>::s_vector3_to_list(m), 3n;
+            }
+        }
+    }
 
     recursive method has(k: K): Bool {
         let hh = this.head;

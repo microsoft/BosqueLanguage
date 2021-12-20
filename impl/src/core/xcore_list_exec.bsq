@@ -72,7 +72,10 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(/\(l1.is<PartialVector<T>>(), l2.is<PartialVector<U>>())) {
-            return l1.s_zip<U>(l2);
+            let ll1 = ListOps::s_safeAs<ListRepr<T>, PartialVector<T>>(l1);
+            let ll2 = ListOps::s_safeAs<ListRepr<U>, PartialVector<U>>(l2);
+
+            return ll1.s_zip<U>(ll2);
         }
         else {
             let ll1 = ListOps::s_safeAs<ListRepr<T>, ListTree<T>>(l1);
@@ -525,11 +528,14 @@ internal entity ListTree<T> provides Some {
 
     function append(l: ListTreeEntry<T>, r: ListTreeEntry<T>): ListTreeEntry<T> {
         if(/\(l.is<PartialVector<T>>(), r.is<PartialVector<T>>())) {
-            let lc = l.count();
-            let rc = r.count();
+            let ll = ListOps::s_safeAs<ListRepr<T>, PartialVector<T>>(l);
+            let rr = ListOps::s_safeAs<ListRepr<U>, PartialVector<U>>(r);
+
+            let lc = ll.count();
+            let rc = rr.count();
             let nsize = lc + rc;
             if(nsize <= 4) {
-                return PartialVector<T>::s_append(l, lc, r, rc);
+                return PartialVector<T>::s_append(ll, lc, rr, rc);
             }
         }
 

@@ -94,13 +94,22 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(/\(l1.is<Vector1<T>>(), l2.is<Vector1<U>>())) {
-            return Vector1<T>{[l1.v0, l2.v0]};
+            let ll1 = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(l1);
+            let ll2 = ListOps::s_safeAs<ListRepr<U>, Vector1<U>>(l2);
+
+            return Vector1<[T, U]>{[l11.v0, l12.v0]};
         }
         elif(/\(l1.is<Vector2<T>>(), l2.is<Vector2<U>>())) {
-            return Vector2<T>{[l1.v0, l2.v0], [l1.v1, l2.v1]};
+            let ll1 = ListOps::s_safeAs<ListRepr<T>, Vector2<T>>(l1);
+            let ll2 = ListOps::s_safeAs<ListRepr<U>, Vector2<U>>(l2);
+
+            return Vector2<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1]};
         }
         elif(/\(l1.is<Vector3<T>>(), l2.is<Vector3<U>>())) {
-            return Vector3<T>{[l1.v0, l2.v0], [l1.v1, l2.v1], [l1.v2, l2.v2]};
+            let ll1 = ListOps::s_safeAs<ListRepr<T>, Vector3<T>>(l1);
+            let ll2 = ListOps::s_safeAs<ListRepr<U>, Vector3<U>>(l2);
+
+            return Vector3<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1], [l1.v2, l2.v2]};
         }
         else {
             let ll1 = ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l1);
@@ -121,13 +130,22 @@ internal entity ListOps provides Some {
             return l;
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
-            return Vector2<T>{l.v0, r.v0};
+            let ll = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let rr = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(r);
+
+            return Vector2<T>{ll.v0, rr.v0};
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
-            return Vector3<T>{l.v0, r.v0, r.v1};
+            let ll = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let rr = ListOps::s_safeAs<ListRepr<T>, Vector2<T>>(r);
+
+            return Vector3<T>{ll.v0, rr.v0, rr.v1};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
-            return Vector3<T>{l.v0, l.v1, r.v0};
+            let ll = ListOps::s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            let rr = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(r);
+
+            return Vector3<T>{ll.v0, ll.v1, rr.v0};
         }
         else {
             let ll, llc = RecListEntry<T>::s_ensure_list(l);
