@@ -992,8 +992,8 @@ class Parser {
     }
 
     parseBuildInfo(cb: BuildLevel): BuildLevel {
-        if(this.testToken("spec") || this.testToken("debug") || this.testToken("test") || this.testToken("release")) {
-            return this.consumeTokenAndGetValue() as "spec" | "debug" | "test" | "release";
+        if(this.testToken("doc") || this.testToken("spec") || this.testToken("debug") || this.testToken("test") || this.testToken("release")) {
+            return this.consumeTokenAndGetValue() as "doc" | "spec" | "debug" | "test" | "release";
         }
         else {
             return cb;

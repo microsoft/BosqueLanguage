@@ -11,9 +11,13 @@ import { SourceInfo } from "./parser";
 import * as assert from "assert";
 import { BSQRegex } from "./bsqregex";
 
-type BuildLevel = "spec" | "debug" | "test" | "release";
+type BuildLevel = "doc" | "spec" | "debug" | "test" | "release";
 
 function isBuildLevelEnabled(check: BuildLevel, enabled: BuildLevel): boolean {
+    if(check === "doc") {
+        return false;
+    }
+
     if(enabled === "spec") {
         return true;
     }

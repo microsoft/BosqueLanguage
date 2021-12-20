@@ -808,32 +808,30 @@ enum BuildMode {
     Exec = "Exec"
 }
 
-enum InputMode {
-    HavocSmall = "HavocSmall",
-    HavocEnumerable = "HavocEnumerable",
-    InputAssign = "InputAssign"
+enum ActionMode {
+    EvaluateInput, //Inputs will be parsed as concrete values and set to extract result value
+    EvaluateSymbolic, //Inputs will be symbolically generated and executed with failures reported -- single entrypoint assumed
+    TestFixedInput, //Inputs will be parsed as concrete values and executed with failures reported and check for "true" return value
+    TestSymbolic //Inputs will be symbolically generated and executed with failures reported and check for "true" return value -- single entrypoint assumed
 }
 
 class PackageConfig {
-    readonly buildmode: BuildMode;
-    readonly inputmode: InputMode;
+    
     readonly macrodefs: string[]; 
 
     readonly src: { srcpath: string, shortname: string, contents: string }[];
 
-    constructor(buildmode: BuildMode, inputmode: InputMode, macrodefs: string[], src: { srcpath: string, shortname: string, contents: string }[]) {
-        this.buildmode = buildmode;
-        this.inputmode = inputmode;
+    constructor(macrodefs: string[], src: { srcpath: string, shortname: string, contents: string }[]) {
         this.macrodefs = macrodefs;
         this.src = src;
     }
 
     jemit(): object {
-        return { buildmode: this.buildmode, inputmode: this.inputmode, macrodefs: this.macrodefs, src: this.src };
+        return { macrodefs: this.macrodefs, src: this.src };
     }
 
     static jparse(jobj: any): PackageConfig {
-        return new PackageConfig(jobj.buildmode, jobj.inputmode, jobj.macrodefs, jobj.src);
+        return new PackageConfig(jobj.macrodefs, jobj.src);
     }
 }
 
@@ -1035,5 +1033,5 @@ export {
     MIREntityType, MIRObjectEntityTypeDecl, MIRConstructableEntityTypeDecl, MIREnumEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, 
     MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl,
     MIRConceptType, MIRTupleType, MIRRecordType, MIREphemeralListType,
-    BuildMode, InputMode, PackageConfig, MIRAssembly
+    BuildMode, ActionMode, PackageConfig, MIRAssembly
 };
