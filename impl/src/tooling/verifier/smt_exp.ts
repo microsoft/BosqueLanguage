@@ -8,12 +8,7 @@ import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 
 type VerifierOptions = {
     ISize: number, //bits used for Int/Nat
-    StringOpt: "ASCII" | "UNICODE",
-
-    EnableCollection_SmallHavoc: boolean,
-    EnableCollection_LargeHavoc: boolean,
-    EnableCollection_SmallOps: boolean,
-    EnableCollection_LargeOps: boolean
+    StringOpt: "ASCII" | "UNICODE"
 };
 
 class BVEmitter {
@@ -459,99 +454,11 @@ class SMTCond extends SMTExp {
     }
 }
 
-class SMTADTKindSwitch extends SMTExp {
-    readonly value: SMTExp;
-    readonly opts: { cons: string, cargs: string[], result: SMTExp }[];
-
-    constructor(value: SMTExp, opts: { cons: string, cargs: string[], result: SMTExp }[]) {
-        super();
-
-        this.value = value;
-        this.opts = opts;
-    }
-
-    emitSMT2(indent: string | undefined): string {
-        const matches = this.opts.map((op) => {
-            const test = op.cargs.length !== 0 ? `(${op.cons} ${op.cargs.join(" ")})` : op.cons;
-            return `(${test} ${op.result.emitSMT2(undefined)})`;
-        });
-
-        if (indent === undefined) {
-            return `(match ${this.value.emitSMT2(undefined)} (${matches.join(" ")}))`;
-        }
-        else {
-            return `(match ${this.value.emitSMT2(undefined)} (\n${indent + "  "}${matches.join("\n" + indent + "  ")})\n${indent})`;
-        }
-    }
-
-    computeCallees(callees: Set<string>): void {
-        this.value.computeCallees(callees);
-        this.opts.forEach((opt) => {
-            opt.result.computeCallees(callees);
-        });
-    }
-}
-
-class SMTForAll extends SMTExp {
-    readonly terms: { vname: string, vtype: SMTType }[];
-    readonly clause: SMTExp;
-
-    constructor(terms: { vname: string, vtype: SMTType }[], clause: SMTExp) {
-        super();
-
-        this.terms = terms;
-        this.clause = clause;
-    }
-
-    emitSMT2(indent: string | undefined): string {
-        const terms = this.terms.map((t) => `(${t.vname} ${t.vtype.name})`);
-
-        if(indent === undefined) {
-            return `(forall (${terms.join(" ")}) ${this.clause.emitSMT2(undefined)})`;
-        }
-        else {
-            return `(forall (${terms.join(" ")})\n${indent + "  "}${this.clause.emitSMT2(indent + "  ")}\n${indent})`;
-        }
-    }
-
-    computeCallees(callees: Set<string>): void {
-        this.clause.computeCallees(callees);
-    }
-}
-
-class SMTExists extends SMTExp {
-    readonly terms: { vname: string, vtype: SMTType }[];
-    readonly clause: SMTExp;
-
-    constructor(terms: { vname: string, vtype: SMTType }[], clause: SMTExp) {
-        super();
-
-        this.terms = terms;
-        this.clause = clause;
-    }
-
-    emitSMT2(indent: string | undefined): string {
-        const terms = this.terms.map((t) => `(${t.vname} ${t.vtype.name})`);
-        
-        if(indent === undefined) {
-            return `(exists (${terms.join(" ")}) ${this.clause.emitSMT2(undefined)})`;
-        }
-        else {
-            return `(exists (${terms.join(" ")})\n${indent + "  "}${this.clause.emitSMT2(indent + "  ")}\n${indent})`;
-        }
-    }
-
-    computeCallees(callees: Set<string>): void {
-        this.clause.computeCallees(callees);
-    }
-}
-
 export {
     VerifierOptions,
     SMTMaskConstruct,
     BVEmitter,
     SMTType, SMTExp, SMTVar, SMTConst, 
     SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallGeneralWPassThroughMask,
-    SMTLet, SMTLetMulti, SMTIf, SMTCond, SMTADTKindSwitch,
-    SMTForAll, SMTExists
+    SMTLet, SMTLetMulti, SMTIf, SMTCond
 };

@@ -23,28 +23,20 @@ enum APIEmitTypeTag
     DecimalTag,
     StringTag,
     StringOfTag,
-    PrimitiveOfTag,
     DataStringTag,
     ByteBufferTag,
-    DataBufferTag,
-    ISOTag,
-    LogicalTag,
+    DateTimeTag,
+    TickTimeTag,
+    LogicalTimeTag,
     UUIDTag,
     ContentHashTag,
+    ConstructableOfType,
     TupleTag,
     RecordTag,
-    SomethingTag,
-    OkTag,
-    ErrTag,
-    ListTag,
-    StackTag,
-    QueueTag,
-    SetTag,
-    MapTag,
+    ContainerTag,
     EnumTag,
     EntityTag,
-    UnionTag,
-    ConceptTag
+    UnionTag
 };
 
 class SMTTypeEmitter {
@@ -808,7 +800,7 @@ class SMTTypeEmitter {
             }
         }
         else if(entity instanceof MIRConstructableEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.PrimitiveOfTag, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons || null};
+            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons || null};
         }
         else if(entity instanceof MIREnumEntityTypeDecl) {
             return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, enums: entity.enums};

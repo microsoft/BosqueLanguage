@@ -640,12 +640,22 @@ APIModule* APIModule::jparse(json j)
         typemap[val->name] = val;
     }
 
+    std::map<std::string, std::string> typedeclmap;
     auto japitypedecls = j["typedecls"];
     for (size_t i = 0; i < japitypedecls.size(); ++i)
     {
         auto key = japitypedecls[i]["name"].get<std::string>();
         auto val = japitypedecls[i]["type"].get<std::string>();
-        typemap[key] = typemap.find(val)->second;
+        typedeclmap[key] = val;
+    }
+
+    std::map<std::string, std::string> namespacemap;
+    auto jnamespaceremap = j["namespacemap"];
+    for (size_t i = 0; i < japitypedecls.size(); ++i)
+    {
+        auto key = jnamespaceremap[i]["name"].get<std::string>();
+        auto val = jnamespaceremap[i]["into"].get<std::string>();
+        namespacemap[key] = val;
     }
 
     std::vector<InvokeSignature*> apisig;
@@ -656,7 +666,7 @@ APIModule* APIModule::jparse(json j)
         apisig.push_back(val);
     }
 
-    return new APIModule(typemap, apisig);
+    return new APIModule(typemap, apisig, typedeclmap, namespacemap);
 }
 
 IType* IType::jparse(json j)
@@ -701,8 +711,8 @@ IType* IType::jparse(json j)
             return UUIDType::jparse(j);
         case TypeTag::ContentHashTag:
             return ContentHashType::jparse(j);
-        case TypeTag::PrimitiveOfTag:
-            return PrimitiveOfType::jparse(j);
+        case TypeTag::ConstructableOfType:
+            return ConstructableOfType::jparse(j);
         case TypeTag::TupleTag:
             return TupleType::jparse(j);
         case TypeTag::RecordTag:

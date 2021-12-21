@@ -373,7 +373,6 @@
 
 (declare-fun ContainerSize@UFCons_API ((Seq BNat)) BNat)
 (declare-fun EnumChoice@UFCons_API ((Seq BNat)) BNat)
-(declare-fun ConceptChoice@UFCons_API ((Seq BNat)) BNat)
 (declare-fun UnionChoice@UFCons_API ((Seq BNat)) BNat)
 
 ;;GLOBAL_DECLS;;

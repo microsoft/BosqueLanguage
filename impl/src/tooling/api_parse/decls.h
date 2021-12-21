@@ -32,10 +32,10 @@ public:
     const std::map<std::string, const IType*> typemap;
     const std::vector<InvokeSignature*> api;
 
-    xxxx; //Info on type decls here so users can use them too
-    xxxx; //Info on namespace mappings here so users can write short NS qualifiers and we map to the right fully qualified names
+    const std::map<std::string, std::string> typedefmap;
+    const std::map<std::string, std::string> namespacemap;
 
-    APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> api) : typemap(typemap), api(api)
+    APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> api, std::map<std::string, std::string> typedefmap, std::map<std::string, std::string> namespacemap) : typemap(typemap), api(api), typedefmap(typedefmap), namespacemap(namespacemap)
     {
         ;
     }
@@ -77,7 +77,7 @@ enum class TypeTag
     LogicalTimeTag,
     UUIDTag,
     ContentHashTag,
-    PrimitiveOfTag,
+    ConstructableOfType,
     TupleTag,
     RecordTag,
     ContainerTag,
@@ -1097,22 +1097,22 @@ public:
     }
 };
 
-class PrimitiveOfType : public IGroundedType
+class ConstructableOfType : public IGroundedType
 {
 public:
     const std::string oftype;
     const std::optional<std::string> chkinv; 
 
-    PrimitiveOfType(std::string name, std::string oftype, std::optional<std::string> chkinv) : IGroundedType(TypeTag::PrimitiveOfTag, name), oftype(oftype), chkinv(chkinv) {;}
-    virtual ~PrimitiveOfType() {;}
+    ConstructableOfType(std::string name, std::string oftype, std::optional<std::string> chkinv) : IGroundedType(TypeTag::ConstructableOfType, name), oftype(oftype), chkinv(chkinv) {;}
+    virtual ~ConstructableOfType() {;}
 
-    static PrimitiveOfType* jparse(json j)
+    static ConstructableOfType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto oftype = j["oftype"].get<std::string>();
         auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
     
-        return new PrimitiveOfType(name, oftype, chkinv);
+        return new ConstructableOfType(name, oftype, chkinv);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final

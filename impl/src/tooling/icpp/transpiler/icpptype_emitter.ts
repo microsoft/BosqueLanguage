@@ -3,10 +3,10 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRRecordType, MIRSpecialTypeCategory, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
-import { MIRFieldKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MIRAssembly, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRObjectEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
-import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion, ICPPParseTag, ICPPTypeSizeInfoSimple } from "./icpp_assembly";
+import { ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeKind, ICPPTypeRegister, ICPPTypeRecord, ICPPTypeSizeInfo, ICPPTypeTuple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPTypeRefUnion, ICPPTypeInlineUnion, ICPPParseTag, ICPPTypeSizeInfoSimple, ICPPTypeUniversalUnion } from "./icpp_assembly";
 
 import { ArgumentTag, Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar, NONE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
@@ -14,32 +14,127 @@ import { SourceInfo } from "../../../ast/parser";
 import * as assert from "assert";
 import { BSQRegex } from "../../../ast/bsqregex";
 
+enum APIEmitTypeTag
+{
+    NoneTag = 0x0,
+    NothingTag,
+    BoolTag,
+    NatTag,
+    IntTag,
+    BigNatTag,
+    BigIntTag,
+    RationalTag,
+    FloatTag,
+    DecimalTag,
+    StringTag,
+    StringOfTag,
+    DataStringTag,
+    ByteBufferTag,
+    DateTimeTag,
+    TickTimeTag,
+    LogicalTimeTag,
+    UUIDTag,
+    ContentHashTag,
+    ConstructableOfType,
+    TupleTag,
+    RecordTag,
+    ContainerTag,
+    EnumTag,
+    EntityTag,
+    UnionTag
+};
+
 class ICPPTypeEmitter {
     readonly topts: TranspilerOptions;
     readonly assembly: MIRAssembly;
     
+    private namectr: number = 0;
+    private allshortnames = new Set<string>();
+    private mangledTypeNameMap: Map<string, string> = new Map<string, string>();
+    private mangledFunctionNameMap: Map<string, string> = new Map<string, string>();
+    private mangledGlobalNameMap: Map<string, string> = new Map<string, string>();
+
     private typeDataMap: Map<MIRResolvedTypeKey, ICPPType> = new Map<MIRResolvedTypeKey, ICPPType>();
     private typeInfoShallowMap: Map<MIRResolvedTypeKey, ICPPTypeSizeInfoSimple> = new Map<MIRResolvedTypeKey, ICPPTypeSizeInfoSimple>();
 
-    constructor(assembly: MIRAssembly, topts: TranspilerOptions, mangledNameMap?: Map<string, string>) {
+    constructor(assembly: MIRAssembly, topts: TranspilerOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>, mangledGlobalNameMap?: Map<string, string>) {
         this.assembly = assembly;
         this.topts = topts;
+
+        this.namectr = namectr || 0;
+        this.mangledTypeNameMap = mangledTypeNameMap || new Map<string, string>();
+        this.mangledFunctionNameMap = mangledFunctionNameMap || new Map<string, string>();
+        this.mangledGlobalNameMap = mangledGlobalNameMap || new Map<string, string>();
+    }
+
+    internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
+        if (!this.mangledTypeNameMap.has(keyid)) {
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
+            this.mangledTypeNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
+        }
+    }
+
+    lookupTypeName(keyid: MIRResolvedTypeKey): string {
+        assert(this.mangledTypeNameMap.has(keyid));
+
+        return this.mangledTypeNameMap.get(keyid) as string;
+    }
+
+    internFunctionName(keyid: MIRInvokeKey, shortname: string) {
+        if (!this.mangledFunctionNameMap.has(keyid)) {
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
+            this.mangledFunctionNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
+        }
+    }
+
+    lookupFunctionName(keyid: MIRInvokeKey): string {
+        assert(this.mangledFunctionNameMap.has(keyid), `Missing -- ${keyid}`);
+
+        return this.mangledFunctionNameMap.get(keyid) as string;
+    }
+
+    internGlobalName(keyid: MIRGlobalKey, shortname: string) {
+        if (!this.mangledGlobalNameMap.has(keyid)) {
+            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
+            if(this.allshortnames.has(cleanname)) {
+                cleanname = cleanname + "$" + this.namectr++;
+            }
+
+            this.mangledGlobalNameMap.set(keyid, cleanname);
+            this.allshortnames.add(cleanname);
+        }
+    }
+
+    lookupGlobalName(keyid: MIRGlobalKey): string {
+        assert(this.mangledGlobalNameMap.has(keyid));
+
+        return this.mangledGlobalNameMap.get(keyid) as string;
     }
 
     getMIRType(tkey: MIRResolvedTypeKey): MIRType {
         return this.assembly.typeMap.get(tkey) as MIRType;
     }
 
-    isType(tt: MIRType, tkey: string): boolean {
-        return tt.trkey === tkey;
+    isType(tt: MIRType, tkey: MIRResolvedTypeKey): boolean {
+        return tt.typeID === tkey;
     }
 
     isUniqueTupleType(tt: MIRType): boolean {
-        return tt.options.length === 1 && (tt.options[0] instanceof MIRTupleType) && !(tt.options[0] as MIRTupleType).entries.some((entry) => entry.isOptional);
+        return tt.options.length === 1 && (tt.options[0] instanceof MIRTupleType);
     }
 
     isUniqueRecordType(tt: MIRType): boolean {
-        return tt.options.length === 1 && (tt.options[0] instanceof MIRRecordType) && !(tt.options[0] as MIRRecordType).entries.some((entry) => entry.isOptional);
+        return tt.options.length === 1 && (tt.options[0] instanceof MIRRecordType);
     }
 
     isUniqueEntityType(tt: MIRType): boolean {
@@ -54,40 +149,89 @@ class ICPPTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
+    isTypeSmallInline(tt: MIRType): boolean {
+        if(this.isType(tt, "Core::Bool") || this.isType(tt, "Core::Nat") || this.isType(tt, "Core::Int") || this.isType(tt, "Core::Float") || this.isType(tt, "Core::Decimal")) {
+            return true;
+        } 
+        else if(this.isType(tt, "Core::BigNat") || this.isType(tt, "Core::BigInt") || this.isType(tt, "Core::String")) {
+            return true;
+        }
+        else if(this.isType(tt, "Core::Mask")) {
+            return true;
+        }
+        else {
+            return tt.typeID.startsWith("NSCore::StringOf") || tt.typeID.startsWith("NSCore::DataString");
+        }
+    }
+
+    isTypeInline(tt: MIRType): boolean {
+        if(this.isTypeSmallInline(tt)) {
+            return true;
+        }
+        else if(this.isType(tt, "Core::Rational")) {
+            return true;
+        }
+        else if(this.isUniqueTupleType(tt)) {
+            const ttup = tt.getUniqueTupleTargetType();
+            return ttup.entries.length <= 4 && ttup.entries.every((ee) => this.isTypeSmallInline(ee));
+        }
+        else if(this.isUniqueRecordType(tt)) {
+            const ttrec = tt.getUniqueRecordTargetType();
+            return ttrec.entries.length <= 4 && ttrec.entries.every((ee) => this.isTypeSmallInline(ee.ptype));
+        }
+        else if(this.isUniqueEntityType(tt)) {
+            const tted = this.assembly.entityDecls.get(tt.getUniqueCallTargetType().typeID) as MIREntityTypeDecl;
+            if(tted instanceof MIREnumEntityTypeDecl) {
+                return true;
+            }
+            else if(tted instanceof MIRConstructableEntityTypeDecl) {
+                return this.isTypeSmallInline(this.getMIRType(tted.fromtype));
+            }
+            else if(tted instanceof MIRObjectEntityTypeDecl) {
+                return tted.fields.length <= 4 && tted.fields.every((ff) => this.isTypeSmallInline(this.getMIRType(ff.declaredType)));
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+
     private computeICCPTypeForUnion(utype: MIRType, tl: ICPPType[]): ICPPType {
         const iskey = this.assembly.subtypeOf(utype, this.getMIRType("NSCore::KeyType"));
 
-        if(tl.every((t) => (t.tkey === "NSCore::None") || t.tkind === ICPPTypeKind.Ref || t.tkind === ICPPTypeKind.UnionRef)) {
-            return new ICPPTypeRefUnion(utype.trkey, iskey);
+        if(tl.some((t) => t.tkind === ICPPTypeKind.UnionUniversal)) {
+            return new ICPPTypeUniversalUnion(utype.typeID);
+        }
+        else if(tl.every((t) => t.tkind === ICPPTypeKind.Ref || t.tkind === ICPPTypeKind.UnionRef)) {
+            return new ICPPTypeRefUnion(utype.typeID, iskey);
         }
         else {
             let size = Math.max(...tl.map((t) => t.tkind === ICPPTypeKind.UnionInline ? t.allocinfo.inlinedatasize : (ICPP_WORD_SIZE + t.allocinfo.inlinedatasize)));
+
             let mask: RefMask = "5";
             for(let i = 0; i < (size - ICPP_WORD_SIZE) / ICPP_WORD_SIZE; ++i) {
                 mask = mask + "1";
             }
 
-            return new ICPPTypeInlineUnion(utype.trkey, size, mask, iskey);
+            return new ICPPTypeInlineUnion(utype.typeID, size, mask, iskey);
         }
     }
 
     private getICPPTypeInfoForTupleShallow(tt: MIRTupleType): ICPPTypeSizeInfoSimple {
-        if(!tt.isvalue) {
-            return ICPPTypeSizeInfoSimple.createByRefTypeInfo(tt.trkey);
+        let size = 0;
+        let mask: RefMask = "";
+
+        for (let i = 0; i < tt.entries.length; ++i) {
+            const sizeinfo = this.getICPPTypeInfoShallow(tt.entries[i]);
+
+            size = size + sizeinfo.inlinedatasize;
+            mask = mask + sizeinfo.inlinedmask;
         }
-        else {
-            let size = 0;
-            let mask: RefMask = "";
 
-            for(let i = 0; i < tt.entries.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(tt.entries[i].type);
-
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
-            }
-
-            return ICPPTypeSizeInfoSimple.createByValueTypeInfo(tt.trkey, size, mask);
-        }
+        return ICPPTypeSizeInfoSimple.createByValueTypeInfo(tt.typeID, size, mask);
     }
 
     private getICPPTypeForTuple(tt: MIRTupleType): ICPPType {
@@ -96,7 +240,7 @@ class ICPPTypeEmitter {
         let size = 0;
         let mask: RefMask = "";
 
-        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoShallow(entry.type));
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoShallow(entry));
         for(let i = 0; i < icppentries.length; ++i) {
             idxtypes.push(icppentries[i].tkey);
             idxoffsets.push(size);
@@ -104,11 +248,11 @@ class ICPPTypeEmitter {
             mask = mask + icppentries[i].inlinedmask;
         }
 
-        const iskey = this.assembly.subtypeOf(this.getMIRType(tt.trkey), this.getMIRType("NSCore::KeyType"));
-        if(this.isUniqueTupleType(this.getMIRType(tt.trkey))) {
-            return tt.isvalue 
-                ? ICPPTypeTuple.createByValueTuple(tt.trkey, size, mask, idxtypes, idxoffsets, iskey)
-                : ICPPTypeTuple.createByRefTuple(tt.trkey, size, mask, idxtypes, idxoffsets, iskey)
+        const iskey = this.assembly.subtypeOf(this.getMIRType(tt.typeID), this.getMIRType("NSCore::KeyType"));
+        if(this.isUniqueTupleType(this.getMIRType(tt.typeID))) {
+            return this.isTypeInline(this.getMIRType(tt.typeID)) 
+                ? ICPPTypeTuple.createByValueTuple(tt.typeID, size, mask, idxtypes, idxoffsets, iskey)
+                : ICPPTypeTuple.createByRefTuple(tt.typeID, size, mask, idxtypes, idxoffsets, iskey)
         }
         else {
             return tt.isvalue 
@@ -317,8 +461,13 @@ class ICPPTypeEmitter {
     }
 
     getICPPTypeInfoShallow(tt: MIRType): ICPPTypeSizeInfoSimple {
-        if(this.typeInfoShallowMap.has(tt.trkey)) {
-            return this.typeInfoShallowMap.get(tt.trkey) as ICPPTypeSizeInfoSimple;
+        if(this.typeInfoShallowMap.has(tt.typeID)) {
+            return this.typeInfoShallowMap.get(tt.typeID) as ICPPTypeSizeInfoSimple;
+        }
+
+        if(!this.isTypeInline(tt)) {
+            this.typeInfoShallowMap.set(tt.typeID, ICPPTypeSizeInfoSimple.createByRefTypeInfo(tt.typeID));
+            return this.typeInfoShallowMap.get(tt.typeID) as ICPPTypeSizeInfoSimple;
         }
 
         let iidata: ICPPTypeSizeInfoSimple | undefined = undefined;

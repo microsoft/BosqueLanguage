@@ -1276,8 +1276,8 @@ IType* IType::jparse(json j)
             return StringType::jparse(j);
         case TypeTag::StringOfTag:
             return StringOfType::jparse(j);
-        case TypeTag::PrimitiveOfTag:
-            return PrimitiveOfType::jparse(j);
+        case TypeTag::ConstructableOfType:
+            return ConstructableOfType::jparse(j);
         case TypeTag::DataStringTag:
             return DataStringType::jparse(j);
         case TypeTag::ByteBufferTag:
@@ -1581,22 +1581,22 @@ std::optional<json> StringType::z3extract(ExtractionInfo& ex, const z3::expr& ct
     return ex.evalToString(s, m, bef(ctx));
 }
 
-PrimitiveOfType* PrimitiveOfType::jparse(json j)
+ConstructableOfType* ConstructableOfType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
     auto oftype = j["oftype"].get<std::string>();
     auto usinginv = j["usinginv"].get<std::string>();
     
-    return new PrimitiveOfType(name, oftype, usinginv);
+    return new ConstructableOfType(name, oftype, usinginv);
 }
 
-bool PrimitiveOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
+bool ConstructableOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
 {
     auto ectx = extendContext(pinfo.apimodule, c, ctx, 0);
     return pinfo.apimodule->typemap.find(this->oftype)->second->toz3arg(pinfo, j, ectx, c);
 }
 
-std::optional<json> PrimitiveOfType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
+std::optional<json> ConstructableOfType::z3extract(ExtractionInfo& ex, const z3::expr& ctx, z3::solver& s, z3::model& m) const
 {
     auto ectx = extendContext(ex.apimodule, s.ctx(), ctx, 0);
     return ex.apimodule->typemap.find(this->oftype)->second->z3extract(ex, ectx, s, m);

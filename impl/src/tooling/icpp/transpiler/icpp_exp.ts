@@ -16,8 +16,9 @@ enum ArgumentTag
 }
 
 const EMPTY_CONST_POSITION = 0;
-const NONE_VALUE_POSITION = + UNIVERSAL_SIZE;
-const TRUE_VALUE_POSITION = NONE_VALUE_POSITION + ICPP_WORD_SIZE;
+const NONE_VALUE_POSITION = UNIVERSAL_SIZE;
+const NOTHING_VALUE_POSITION = NONE_VALUE_POSITION + ICPP_WORD_SIZE;
+const TRUE_VALUE_POSITION = NOTHING_VALUE_POSITION + ICPP_WORD_SIZE;
 const FALSE_VALUE_POSITION = TRUE_VALUE_POSITION + ICPP_WORD_SIZE;
 
 enum OpCodeTag
@@ -172,14 +173,7 @@ enum OpCodeTag
     GeBigIntOp,
     GeRationalOp,
     GeFloatOp,
-    GeDecimalOp,
-
-    EqStrPosOp,
-    NeqStrPosOp,
-    LtStrPosOp,
-    GtStrPosOp,
-    LeStrPosOp,
-    GeStrPosOp,
+    GeDecimalOp
 }
 
 type Argument = {
@@ -521,7 +515,7 @@ class ICPPOpEmitter
 
 export {
     ArgumentTag, OpCodeTag, 
-    EMPTY_CONST_POSITION, NONE_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
+    EMPTY_CONST_POSITION, NONE_VALUE_POSITION, NOTHING_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
     Argument, TargetVar,
     ICPPGuard, ICPPStatementGuard,
     ICPPOp,

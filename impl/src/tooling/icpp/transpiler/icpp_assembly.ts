@@ -25,11 +25,13 @@ enum ICPPTypeKind
     Invalid = 0x0,
     Register,
     Struct,
+    BoxedStruct,
     String,
     BigNum,
     Ref,
+    UnionRef,
     UnionInline,
-    UnionRef
+    UnionUniversal
 }
 
 type RefMask = string;
@@ -121,8 +123,9 @@ enum ICPPParseTag
     EntityTag,
     EphemeralListTag,
     EnumTag,
+    RefUnionTag,
     InlineUnionTag,
-    RefUnionTag
+    UniversalUnionTag
 }
 
 class ICPPType {
@@ -310,6 +313,16 @@ class ICPPTypeEphemeralList extends ICPPType {
     }
 }
 
+class ICPPTypeRefUnion extends ICPPType {
+    constructor(tkey: MIRResolvedTypeKey, iskey: boolean) {
+        super(ICPPParseTag.RefUnionTag, tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"), iskey);
+    }
+
+    jemitRefUnion(subtypes: MIRResolvedTypeKey[]): object {
+        return {...this.jemitType([]), subtypes: subtypes};
+    }
+}
+
 class ICPPTypeInlineUnion extends ICPPType {
     constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, iskey: boolean) {
         super(ICPPParseTag.InlineUnionTag, tkey, ICPPTypeKind.UnionInline, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), iskey);
@@ -320,12 +333,12 @@ class ICPPTypeInlineUnion extends ICPPType {
     }
 }
 
-class ICPPTypeRefUnion extends ICPPType {
-    constructor(tkey: MIRResolvedTypeKey, iskey: boolean) {
-        super(ICPPParseTag.RefUnionTag, tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"), iskey);
+class ICPPTypeUniversalUnion extends ICPPType {
+    constructor(tkey: MIRResolvedTypeKey) {
+        super(ICPPParseTag.UniversalUnionTag, tkey, ICPPTypeKind.UnionUniversal, ICPPTypeSizeInfo.createByValueTypeInfo(40, "51111"), false);
     }
 
-    jemitRefUnion(subtypes: MIRResolvedTypeKey[]): object {
+    jemitInlineUnion(subtypes: MIRResolvedTypeKey[]): object {
         return {...this.jemitType([]), subtypes: subtypes};
     }
 }
@@ -622,7 +635,7 @@ class ICPPAssembly
 export {
     TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_SIZE, ICPPParseTag,
     ICPPTypeKind, ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask,
-    ICPPType, ICPPTypeRegister, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeInlineUnion, ICPPTypeRefUnion,
+    ICPPType, ICPPTypeRegister, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeInlineUnion, ICPPTypeRefUnion, ICPPTypeUniversalUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
     ICPPConstDecl,
     ICPPAssembly
