@@ -353,19 +353,19 @@ class TypeChecker {
         }
 
         if (lhsexp instanceof LiteralNoneExpression) {
-            return rhs.options.some((opt) => opt.typeID === "Core::None") ? "lhsnone" : "falsealways";
+            return rhs.options.some((opt) => opt.typeID === "None") ? "lhsnone" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNoneExpression) {
-            return lhs.options.some((opt) => opt.typeID === "Core::None") ? "rhsnone" : "falsealways";
+            return lhs.options.some((opt) => opt.typeID === "None") ? "rhsnone" : "falsealways";
         }
 
         if (lhsexp instanceof LiteralNothingExpression) {
-            return rhs.options.some((opt) => opt.typeID === "Core::None") ? "lhsnothing" : "falsealways";
+            return rhs.options.some((opt) => opt.typeID === "None") ? "lhsnothing" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNothingExpression) {
-            return lhs.options.some((opt) => opt.typeID === "Core::None") ? "rhsnothing" : "falsealways";
+            return lhs.options.some((opt) => opt.typeID === "None") ? "rhsnothing" : "falsealways";
         }
 
         //should be a subtype on one of the sides
@@ -1916,7 +1916,7 @@ class TypeChecker {
                 }
             }));
 
-            const lentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("Core::List") as EntityTypeDecl;
+            const lentity = this.m_assembly.tryGetObjectTypeForFullyResolvedName("List") as EntityTypeDecl;
             const oftype = ResolvedEntityAtomType.create(lentity, new Map<string, ResolvedType>().set("T", etype));
 
             const rtreg = this.m_emitter.generateTmpRegister();
@@ -2589,7 +2589,7 @@ class TypeChecker {
 
     private checkSpecialConstructorExpression(env: TypeEnvironment, exp: SpecialConstructorExpression, trgt: MIRRegisterArgument, infertype: ResolvedType | undefined): TypeEnvironment {
         if(exp.rop === "something") {
-            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("Core::Option<")), "something shorthand constructors only valid with Core::Option typed expressions");
+            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("Option<")), "something shorthand constructors only valid with Option typed expressions");
 
             const T = infertype !== undefined && infertype.options.length === 1 ? this.getTBind(this.getUniqueTypeBinds(infertype)) : undefined;
             const treg = this.m_emitter.generateTmpRegister();
@@ -2607,7 +2607,7 @@ class TypeChecker {
            
         }
         else {
-            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("Core::Result<")), "ok/err shorthand constructors only valid with Core::Result typed expressions");
+            this.raiseErrorIf(exp.sinfo, infertype !== undefined && (infertype.options.length !== 1 || !(infertype as ResolvedType).typeID.startsWith("Result<")), "ok/err shorthand constructors only valid with Result typed expressions");
 
             const {T, E} = infertype !== undefined && infertype.options.length === 1 ? this.getTEBinds(this.getUniqueTypeBinds(infertype)) : { T: undefined, E: undefined };
             const treg = this.m_emitter.generateTmpRegister();
@@ -2876,7 +2876,7 @@ class TypeChecker {
 
             return [env.setUniformResultExpression(this.m_assembly.getSpecialBoolType())];
         }
-        else if(fromtype.typeID === "Core::Tuple" && exp.name === "append") {
+        else if(fromtype.typeID === "Tuple" && exp.name === "append") {
             let eargs: [ResolvedType, ResolvedType, MIRRegisterArgument][] = [];
             let ttypes: ResolvedType[] = [];
 
@@ -2904,7 +2904,7 @@ class TypeChecker {
 
             return [env.setUniformResultExpression(rtupletype)];
         }
-        else if(fromtype.typeID === "Core::Record" && exp.name === "join") {
+        else if(fromtype.typeID === "Record" && exp.name === "join") {
             let eargs: [ResolvedType, ResolvedType, MIRRegisterArgument][] = [];
             let ttypes: {pname: string, ptype: ResolvedType}[] = [];
             let names = new Set<string>();

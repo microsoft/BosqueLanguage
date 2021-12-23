@@ -42,23 +42,23 @@ std::optional<json> getIRFromFile(const std::string& file)
 
 void initialize(size_t typecount, size_t cbuffsize, const RefMask cmask)
 {
-    Environment::g_typenameToIDMap["NSCore::None"] = {BSQ_TYPE_ID_NONE, BSQType::g_typeNone};
-    Environment::g_typenameToIDMap["NSCore::Bool"] = {BSQ_TYPE_ID_BOOL, BSQType::g_typeBool};
-    Environment::g_typenameToIDMap["NSCore::Nat"] = {BSQ_TYPE_ID_NAT, BSQType::g_typeNat};
-    Environment::g_typenameToIDMap["NSCore::Int"] = {BSQ_TYPE_ID_INT, BSQType::g_typeInt};
-    Environment::g_typenameToIDMap["NSCore::BigNat"] = {BSQ_TYPE_ID_BIGNAT, BSQType::g_typeBigNat};
-    Environment::g_typenameToIDMap["NSCore::BigInt"] = {BSQ_TYPE_ID_BIGINT, BSQType::g_typeBigInt};
-    Environment::g_typenameToIDMap["NSCore::Float"] = {BSQ_TYPE_ID_FLOAT, BSQType::g_typeFloat};
-    Environment::g_typenameToIDMap["NSCore::Decimal"] = {BSQ_TYPE_ID_DECIMAL, BSQType::g_typeDecimal};
-    Environment::g_typenameToIDMap["NSCore::Rational"] = {BSQ_TYPE_ID_RATIONAL, BSQType::g_typeRational};
-    Environment::g_typenameToIDMap["NSCore::StringPos"] = {BSQ_TYPE_ID_STRINGITERATOR, BSQType::g_typeStringPos};
-    Environment::g_typenameToIDMap["NSCore::String"] = {BSQ_TYPE_ID_STRING, BSQType::g_typeString};
-    Environment::g_typenameToIDMap["NSCore::ByteBuffer"] = {BSQ_TYPE_ID_BYTEBUFFER, BSQType::g_typeByteBuffer};
-    Environment::g_typenameToIDMap["NSCore::ISOTime"] = {BSQ_TYPE_ID_ISOTIME, BSQType::g_typeISOTime};
-    Environment::g_typenameToIDMap["NSCore::LogicalTime"] = {BSQ_TYPE_ID_LOGICALTIME, BSQType::g_typeLogicalTime};
-    Environment::g_typenameToIDMap["NSCore::UUID"] = {BSQ_TYPE_ID_UUID, BSQType::g_typeUUID};
-    Environment::g_typenameToIDMap["NSCore::ContentHash"] = {BSQ_TYPE_ID_CONTENTHASH, BSQType::g_typeContentHash};
-    Environment::g_typenameToIDMap["NSCore::Regex"] = {BSQ_TYPE_ID_REGEX, BSQType::g_typeRegex};
+    Environment::g_typenameToIDMap["None"] = {BSQ_TYPE_ID_NONE, BSQType::g_typeNone};
+    Environment::g_typenameToIDMap["Bool"] = {BSQ_TYPE_ID_BOOL, BSQType::g_typeBool};
+    Environment::g_typenameToIDMap["Nat"] = {BSQ_TYPE_ID_NAT, BSQType::g_typeNat};
+    Environment::g_typenameToIDMap["Int"] = {BSQ_TYPE_ID_INT, BSQType::g_typeInt};
+    Environment::g_typenameToIDMap["BigNat"] = {BSQ_TYPE_ID_BIGNAT, BSQType::g_typeBigNat};
+    Environment::g_typenameToIDMap["BigInt"] = {BSQ_TYPE_ID_BIGINT, BSQType::g_typeBigInt};
+    Environment::g_typenameToIDMap["Float"] = {BSQ_TYPE_ID_FLOAT, BSQType::g_typeFloat};
+    Environment::g_typenameToIDMap["Decimal"] = {BSQ_TYPE_ID_DECIMAL, BSQType::g_typeDecimal};
+    Environment::g_typenameToIDMap["Rational"] = {BSQ_TYPE_ID_RATIONAL, BSQType::g_typeRational};
+    Environment::g_typenameToIDMap["StringPos"] = {BSQ_TYPE_ID_STRINGITERATOR, BSQType::g_typeStringPos};
+    Environment::g_typenameToIDMap["String"] = {BSQ_TYPE_ID_STRING, BSQType::g_typeString};
+    Environment::g_typenameToIDMap["ByteBuffer"] = {BSQ_TYPE_ID_BYTEBUFFER, BSQType::g_typeByteBuffer};
+    Environment::g_typenameToIDMap["ISOTime"] = {BSQ_TYPE_ID_ISOTIME, BSQType::g_typeISOTime};
+    Environment::g_typenameToIDMap["LogicalTime"] = {BSQ_TYPE_ID_LOGICALTIME, BSQType::g_typeLogicalTime};
+    Environment::g_typenameToIDMap["UUID"] = {BSQ_TYPE_ID_UUID, BSQType::g_typeUUID};
+    Environment::g_typenameToIDMap["ContentHash"] = {BSQ_TYPE_ID_CONTENTHASH, BSQType::g_typeContentHash};
+    Environment::g_typenameToIDMap["Regex"] = {BSQ_TYPE_ID_REGEX, BSQType::g_typeRegex};
 
     Environment::g_typenameToIDMap["[STR_K16]"] = {BSQ_TYPE_ID_STRINGREPR_K16, BSQType::g_typeStringKRepr16};
     Environment::g_typenameToIDMap["[STR_K32]"] = {BSQ_TYPE_ID_STRINGREPR_K32, BSQType::g_typeStringKRepr32};

@@ -297,14 +297,14 @@ class ICPPBodyEmitter {
        
         this.vopts = vopts;
 
-        this.currentRType = typegen.getMIRType("NSCore::None");
+        this.currentRType = typegen.getMIRType("None");
 
-        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPTypeData(this.typegen.getMIRType("NSCore::None")), value: "None", isliteral: true });
+        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPTypeData(this.typegen.getMIRType("None")), value: "None", isliteral: true });
         this.constsize = UNIVERSAL_SIZE;
 
-        this.registerSpecialLiteralValue("none", "NSCore::None");
-        this.registerSpecialLiteralValue("true", "NSCore::Bool");
-        this.registerSpecialLiteralValue("false", "NSCore::Bool");
+        this.registerSpecialLiteralValue("none", "None");
+        this.registerSpecialLiteralValue("true", "Bool");
+        this.registerSpecialLiteralValue("false", "Bool");
 
         this.assembly.constantDecls.forEach((cdecl) => {
             const decltype = this.typegen.getICPPTypeData(this.typegen.getMIRType(cdecl.declaredType));
@@ -355,53 +355,53 @@ class ICPPBodyEmitter {
             return this.getSpecialLiteralValue("false");
         }
         else if (cval instanceof MIRConstantInt) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Int");
+            this.registerSpecialLiteralValue(cval.value, "Int");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantNat) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Nat");
+            this.registerSpecialLiteralValue(cval.value, "Nat");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantBigInt) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::BigInt");
+            this.registerSpecialLiteralValue(cval.value, "BigInt");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantBigNat) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::BigNat");
+            this.registerSpecialLiteralValue(cval.value, "BigNat");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantRational) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Rational");
+            this.registerSpecialLiteralValue(cval.value, "Rational");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantFloat) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Float");
+            this.registerSpecialLiteralValue(cval.value, "Float");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantDecimal) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Decimal");
+            this.registerSpecialLiteralValue(cval.value, "Decimal");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantString) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::String");
+            this.registerSpecialLiteralValue(cval.value, "String");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantTypedNumber) {
             return this.constantToICPP(cval.value);
         }
         else if (cval instanceof MIRConstantStringOf) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::String");
+            this.registerSpecialLiteralValue(cval.value, "String");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantDataString) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::String");
+            this.registerSpecialLiteralValue(cval.value, "String");
             return this.getSpecialLiteralValue(cval.value);
         }
         else {
             assert(cval instanceof MIRConstantRegex);
 
             const rval = (cval as MIRConstantRegex).value;
-            this.registerSpecialLiteralValue(rval.restr, "NSCore::Regex");
+            this.registerSpecialLiteralValue(rval.restr, "Regex");
             return this.getSpecialLiteralValue(rval.restr);
         }
     }
@@ -449,26 +449,26 @@ class ICPPBodyEmitter {
     }
 
     generateNoneCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
-        if (this.typegen.isType(argtype, "NSCore::None")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+        if (this.typegen.isType(argtype, "None")) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
         }
-        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NScore::None"), argtype)) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
         }
     }
 
     generateSomeCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
-        if (this.typegen.isType(argtype, "NSCore::None")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+        if (this.typegen.isType(argtype, "None")) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
         }
-        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NScore::None"), argtype)) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
         }
     }
     
@@ -513,11 +513,11 @@ class ICPPBodyEmitter {
     }
 
     processTupleHasIndex(op: MIRTupleHasIndex): ICPPOp {
-        return ICPPOpEmitter.genTupleHasIndexOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.idx);
+        return ICPPOpEmitter.genTupleHasIndexOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.idx);
     }
 
     processRecordHasProperty(op: MIRRecordHasProperty): ICPPOp {
-        return ICPPOpEmitter.genRecordHasPropertyOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.pname);
+        return ICPPOpEmitter.genRecordHasPropertyOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.pname);
     }
 
     processLoadTupleIndex(op: MIRLoadTupleIndex): ICPPOp {
@@ -1005,14 +1005,14 @@ class ICPPBodyEmitter {
         const sguard = this.generateStatmentGuardInfo(op.sguard);
         if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
             if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
-                return ICPPOpEmitter.genBinKeyEqFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
+                return ICPPOpEmitter.genBinKeyEqFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
             }
             else {
-                return ICPPOpEmitter.genBinKeyEqStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+                return ICPPOpEmitter.genBinKeyEqStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
             }
         }
         else {
-            return ICPPOpEmitter.genBinKeyEqVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+            return ICPPOpEmitter.genBinKeyEqVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
         }
     }
 
@@ -1027,19 +1027,19 @@ class ICPPBodyEmitter {
         const sguard = this.generateStatmentGuardInfo(op.sguard);
         if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
             if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
-                return ICPPOpEmitter.genBinKeyLessFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
+                return ICPPOpEmitter.genBinKeyLessFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
             }
             else {
-                return ICPPOpEmitter.genBinKeyLessStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+                return ICPPOpEmitter.genBinKeyLessStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
             }
         }
         else {
-            return ICPPOpEmitter.genBinKeyLessVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+            return ICPPOpEmitter.genBinKeyLessVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
         }
     }
 
     processPrefixNotOp(op: MIRPrefixNotOp): ICPPOp {
-        return ICPPOpEmitter.genPrefixNotOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg));
+        return ICPPOpEmitter.genPrefixNotOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg));
     }
 
     processIsTypeOf(op: MIRIsTypeOf): ICPPOp {
@@ -1049,20 +1049,20 @@ class ICPPBodyEmitter {
 
         const sguard = this.generateStatmentGuardInfo(op.sguard);
         if(this.assembly.subtypeOf(flow, oftype)) {
-            return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), sguard);
+            return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), sguard);
         }
-        else if(this.typegen.isType(oftype, "NSCore::None")) {
-            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
+        else if(this.typegen.isType(oftype, "None")) {
+            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
         }
-        else if (this.typegen.isType(oftype, "NSCore::Some")) {
-            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
+        else if (this.typegen.isType(oftype, "Some")) {
+            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
         }
         else {
             if(this.typegen.isUniqueType(oftype)) {
-                return ICPPOpEmitter.genTypeTagIsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
+                return ICPPOpEmitter.genTypeTagIsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
             }
             else {
-                return ICPPOpEmitter.genTypeTagSubtypeOfOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
+                return ICPPOpEmitter.genTypeTagSubtypeOfOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
             }
         }
     }
@@ -1239,237 +1239,237 @@ class ICPPBodyEmitter {
     processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, op: MIRInvokeKey, args: Argument[]): ICPPOp {
         switch (op) {
             //op unary +
-            case "NSCore::+=prefix=(NSCore::Int)":
-            case "NSCore::+=prefix=(NSCore::Nat)":
-            case "NSCore::+=prefix=(NSCore::BigInt)":
-            case "NSCore::+=prefix=(NSCore::BigNat)":
-            case "NSCore::+=prefix=(NSCore::Rational)":
-            case "NSCore::+=prefix=(NSCore::Float)":
-            case "NSCore::+=prefix=(NSCore::Decimal)": {
+            case "+=prefix=(Int)":
+            case "+=prefix=(Nat)":
+            case "+=prefix=(BigInt)":
+            case "+=prefix=(BigNat)":
+            case "+=prefix=(Rational)":
+            case "+=prefix=(Float)":
+            case "+=prefix=(Decimal)": {
                 return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, oftype, args[0], ICPPOpEmitter.genNoStatmentGuard());
             }
             //op unary -
-            case "NSCore::-=prefix=(NSCore::Int)": {
+            case "-=prefix=(Int)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateIntOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::BigInt)": {
+            case "-=prefix=(BigInt)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateBigIntOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::Rational)": {
+            case "-=prefix=(Rational)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateRationalOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::Float)": {
+            case "-=prefix=(Float)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateFloatOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::Decimal)": {
+            case "-=prefix=(Decimal)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateDecimalOp, trgt, oftype, args[0]);
             }
             //op infix +
-            case "NSCore::+=infix=(NSCore::Int, NSCore::Int)": {
+            case "+=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "+=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "+=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "+=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "+=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Float, NSCore::Float)": {
+            case "+=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "+=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix -
-            case "NSCore::-=infix=(NSCore::Int, NSCore::Int)": {
+            case "-=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "-=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "-=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "-=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "-=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Float, NSCore::Float)": {
+            case "-=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "-=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix *
-            case "NSCore::*=infix=(NSCore::Int, NSCore::Int)": {
+            case "*=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "*=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "*=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "*=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "*=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Float, NSCore::Float)": {
+            case "*=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "*=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix /
-            case "NSCore::/=infix=(NSCore::Int, NSCore::Int)": {
+            case "/=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "/=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "/=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "/=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "/=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Float, NSCore::Float)": {
+            case "/=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "/=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix ==
-            case "NSCore::===infix=(NSCore::Int, NSCore::Int)": {
+            case "===infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::Nat, NSCore::Nat)": {
+            case "===infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "===infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "===infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::Rational, NSCore::Rational)": {
+            case "===infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqRationalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix !=
-            case "NSCore::!==infix=(NSCore::Int, NSCore::Int)": {
+            case "!==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::Nat, NSCore::Nat)": {
+            case "!==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "!==infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "!==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::Rational, NSCore::Rational)": {
+            case "!==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqRationalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix <
-            case "NSCore::<=infix=(NSCore::Int, NSCore::Int)": {
+            case "<=infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "<=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "<=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "<=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "<=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Float, NSCore::Float)": {
+            case "<=infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "<=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >
-            case "NSCore::>=infix=(NSCore::Int, NSCore::Int)": {
+            case ">=infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>=infix=(NSCore::Nat, NSCore::Nat)": {
+            case ">=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case ">=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case ">=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>=infix=(NSCore::Rational, NSCore::Rational)": {
+            case ">=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>=infix=(NSCore::Float, NSCore::Float)": {
+            case ">=infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case ">=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix <=
-            case "NSCore::<==infix=(NSCore::Int, NSCore::Int)": {
+            case "<==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Nat, NSCore::Nat)": {
+            case "<==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::BigInt, NSCore::BigInt)":  {
+            case "<==infix=(BigInt, BigInt)":  {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "<==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Rational, NSCore::Rational)": {
+            case "<==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Float, NSCore::Float)": {
+            case "<==infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "<==infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >=
-            case "NSCore::>==infix=(NSCore::Int, NSCore::Int)": {
+            case ">==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>==infix=(NSCore::Nat, NSCore::Nat)": {
+            case ">==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>==infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case ">==infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>==infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case ">==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>==infix=(NSCore::Rational, NSCore::Rational)":{
+            case ">==infix=(Rational, Rational)":{
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>==infix=(NSCore::Float, NSCore::Float)": {
+            case ">==infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::>==infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case ">==infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeDecimalOp, trgt, oftype, args[0], args[1]);
             }
             default: {

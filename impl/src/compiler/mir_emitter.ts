@@ -397,13 +397,13 @@ class MIREmitter {
             return;
         }
 
-        if(itype.typeID === "Core::Int") {
+        if(itype.typeID === "Int") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantInt(vv), itype.typeID, trgt));
         }
-        else if(itype.typeID === "Core::Nat") {
+        else if(itype.typeID === "Nat") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantNat(vv), itype.typeID, trgt));
         }
-        else if(itype.typeID === "Core::BigInt") {
+        else if(itype.typeID === "BigInt") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantBigInt(vv), itype.typeID, trgt));
         }
         else {
@@ -424,7 +424,7 @@ class MIREmitter {
             return;
         }
 
-        if(ftype.typeID === "Core::Float") {
+        if(ftype.typeID === "Float") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantFloat(fv), ftype.typeID, trgt));
         }
         else {
@@ -1048,7 +1048,7 @@ class MIREmitter {
         }
 
         if (decl.ns === "Core" && decl.name === "Result") {
-            const okdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Core::Result::Ok") as EntityTypeDecl;
+            const okdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Result::Ok") as EntityTypeDecl;
             const okkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(okdecl, binds)));
             const okentry = { tkey: okkey, ootype: okdecl, binds: binds }
             if (!this.masm.entityDecls.has(okkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === okkey) === -1) {
@@ -1061,7 +1061,7 @@ class MIREmitter {
                 }
             }
 
-            const errdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Core::Result::Err") as EntityTypeDecl;
+            const errdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Result::Err") as EntityTypeDecl;
             const errkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(errdecl, binds)));
             const errentry = { tkey: errkey, ootype: errdecl, binds: binds }
             if (!this.masm.entityDecls.has(errkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === errkey) === -1) {
@@ -1076,7 +1076,7 @@ class MIREmitter {
         }
 
         if (decl.ns === "Core" && decl.name === "Option") {
-            const somethingdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Core::Something") as EntityTypeDecl;
+            const somethingdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Something") as EntityTypeDecl;
             const somethngkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(somethingdecl, binds)));
             const somethingentry = { tkey: somethngkey, ootype: somethingdecl, binds: binds }
             if (!this.masm.entityDecls.has(somethngkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === somethngkey) === -1) {

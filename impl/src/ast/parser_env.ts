@@ -164,7 +164,7 @@ class ParserEnvironment {
         }
 
         const coredecl = this.assembly.getNamespace("Core");
-        if (coredecl.declaredNames.has("Core::" + typename)) {
+        if (coredecl.declaredNames.has(typename)) {
             return "Core";
         }
         else {
@@ -187,7 +187,7 @@ class ParserEnvironment {
         }
 
         const nsmaindecl = this.assembly.getNamespace("Core");
-        if (nsmaindecl.declaredNames.has("Core::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+        if (nsmaindecl.declaredNames.has(opname) && nsmaindecl.operators.get(opname) !== undefined) {
             const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
             return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "Core" : undefined;
         }
@@ -204,7 +204,7 @@ class ParserEnvironment {
         }
 
         const nsmaindecl = this.assembly.getNamespace("Core");
-        if (nsmaindecl.declaredNames.has("Core::" + opname) && nsmaindecl.operators.get(opname) !== undefined) {
+        if (nsmaindecl.declaredNames.has(opname) && nsmaindecl.operators.get(opname) !== undefined) {
             const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
             return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? "Core" : undefined;
         }

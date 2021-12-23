@@ -512,7 +512,6 @@ Examples of nominal types include:
 ```none
 MyType       //user declared concept or entity
 Some         //core library declared concept
-NSCore::Some //core library concept with explicit namespace scope
 List<Int>    //core collection with generic parameter Int
 ```
 

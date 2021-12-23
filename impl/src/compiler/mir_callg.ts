@@ -123,26 +123,26 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
     });
 
     assembly.entityDecls.forEach((ee) => {
-        if(ee instanceof MIRObjectEntityTypeDecl && ee.provides.includes("Core::APIType") && ee.usinginvariant !== undefined) {
+        if(ee instanceof MIRObjectEntityTypeDecl && ee.provides.includes("APIType") && ee.usinginvariant !== undefined) {
             roots.push(invokes.get(ee.usinginvariant) as CallGNode);
             topoVisit(invokes.get(ee.usinginvariant) as CallGNode, [], tordered, invokes);
 
             roots.push(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode);
             topoVisit(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode, [], tordered, invokes);
         }
-        else if(ee instanceof MIRConstructableEntityTypeDecl && ee.provides.includes("Core::APIType") && ee.usinginvariant !== undefined) {
+        else if(ee instanceof MIRConstructableEntityTypeDecl && ee.provides.includes("APIType") && ee.usinginvariant !== undefined) {
             roots.push(invokes.get(ee.usinginvariant) as CallGNode);
             topoVisit(invokes.get(ee.usinginvariant) as CallGNode, [], tordered, invokes);
         }
-        else if(ee instanceof MIRConstructableInternalEntityTypeDecl && ee.provides.includes("Core::APIType") && ee.optaccepts !== undefined) {
+        else if(ee instanceof MIRConstructableInternalEntityTypeDecl && ee.provides.includes("APIType") && ee.optaccepts !== undefined) {
             roots.push(invokes.get(ee.optaccepts) as CallGNode);
             topoVisit(invokes.get(ee.optaccepts) as CallGNode, [], tordered, invokes);
         }
-        else if(ee instanceof MIRPrimitiveSetEntityTypeDecl && ee.provides.includes("Core::APIType")) {
+        else if(ee instanceof MIRPrimitiveSetEntityTypeDecl && ee.provides.includes("APIType")) {
             roots.push(invokes.get(ee.reprinvariant) as CallGNode);
             topoVisit(invokes.get(ee.reprinvariant) as CallGNode, [], tordered, invokes);
         }
-        else if(ee instanceof MIRPrimitiveMapEntityTypeDecl && ee.provides.includes("Core::APIType")) {
+        else if(ee instanceof MIRPrimitiveMapEntityTypeDecl && ee.provides.includes("APIType")) {
             roots.push(invokes.get(ee.reprinvariant) as CallGNode);
             topoVisit(invokes.get(ee.reprinvariant) as CallGNode, [], tordered, invokes);
         }

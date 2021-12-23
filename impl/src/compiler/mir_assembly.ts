@@ -7,7 +7,37 @@ import { SourceInfo } from "../ast/parser";
 import { MIRBody, MIRResolvedTypeKey, MIRFieldKey, MIRInvokeKey, MIRVirtualMethodKey, MIRGlobalKey } from "./mir_ops";
 import { BSQRegex } from "../ast/bsqregex";
 
-import assert = require("assert");
+import * as assert from "assert";
+
+enum APIEmitTypeTag
+{
+    NoneTag = 0x0,
+    NothingTag,
+    BoolTag,
+    NatTag,
+    IntTag,
+    BigNatTag,
+    BigIntTag,
+    RationalTag,
+    FloatTag,
+    DecimalTag,
+    StringTag,
+    StringOfTag,
+    DataStringTag,
+    ByteBufferTag,
+    DateTimeTag,
+    TickTimeTag,
+    LogicalTimeTag,
+    UUIDTag,
+    ContentHashTag,
+    ConstructableOfType,
+    TupleTag,
+    RecordTag,
+    ContainerTag,
+    EnumTag,
+    EntityTag,
+    UnionTag
+};
 
 function jemitsinfo(sinfo: SourceInfo): object {
     return { line: sinfo.line, column: sinfo.column, pos: sinfo.pos, span: sinfo.span };
@@ -866,18 +896,18 @@ class MIRAssembly {
     entyremaps = {namespaceremap: new Map<string, string>(), entrytypedef: new Map<string, MIRType>()};
 
     private getConceptsProvidedByTuple(tt: MIRTupleType): MIRType {
-        let tci: MIRResolvedTypeKey[] = ["Core::Some"];
-        if (tt.entries.every((ttype) => this.subtypeOf(ttype, this.typeMap.get("Core::APIType") as MIRType))) {
-            tci.push("Core::APIType");
+        let tci: MIRResolvedTypeKey[] = ["Some"];
+        if (tt.entries.every((ttype) => this.subtypeOf(ttype, this.typeMap.get("APIType") as MIRType))) {
+            tci.push("APIType");
         }
 
         return MIRType.createSingle(MIRConceptType.create(tci));
     }
 
     private getConceptsProvidedByRecord(rr: MIRRecordType): MIRType {
-        let tci: MIRResolvedTypeKey[] = ["Core::Some"];
-        if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.typeMap.get("Core::APIType") as MIRType))) {
-            tci.push("Core::APIType");
+        let tci: MIRResolvedTypeKey[] = ["Some"];
+        if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.typeMap.get("APIType") as MIRType))) {
+            tci.push("APIType");
         }
 
         return MIRType.createSingle(MIRConceptType.create(tci));
@@ -1023,6 +1053,11 @@ class MIRAssembly {
         jobj.entyremaps.entrytypedef.forEach((vv: any) => masm.entyremaps.entrytypedef.set(vv[0], MIRType.jparse(vv[1])));
 
         return masm;
+    }
+
+    emitAPIInfo(): any {
+        let x = APIEmitTypeTag.BigIntTag;
+        xxxx; //emit the API type infor JSON object for this assembly
     }
 }
 

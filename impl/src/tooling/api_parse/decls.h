@@ -239,7 +239,7 @@ public:
 class NoneType : public IGroundedType
 {
 public:
-    NoneType() : IGroundedType(TypeTag::NoneTag, "NSCore::None") {;}
+    NoneType() : IGroundedType(TypeTag::NoneTag, "None") {;}
     virtual ~NoneType() {;}
 
     static NoneType* jparse(json j)
@@ -273,7 +273,7 @@ public:
 class NothingType : public IGroundedType
 {
 public:
-    NothingType() : IGroundedType(TypeTag::NothingTag, "NSCore::Nothing") {;}
+    NothingType() : IGroundedType(TypeTag::NothingTag, "Nothing") {;}
     virtual ~NothingType() {;}
 
     static NothingType* jparse(json j)
@@ -307,7 +307,7 @@ public:
 class BoolType : public IGroundedType
 {
 public:
-    BoolType() : IGroundedType(TypeTag::BoolTag, "NSCore::Bool") {;}
+    BoolType() : IGroundedType(TypeTag::BoolTag, "Bool") {;}
     virtual ~BoolType() {;}
 
     static BoolType* jparse(json j)
@@ -342,7 +342,7 @@ public:
 class NatType : public IGroundedType
 {
 public:
-    NatType() : IGroundedType(TypeTag::NatTag, "NSCore::Nat") {;}
+    NatType() : IGroundedType(TypeTag::NatTag, "Nat") {;}
     virtual ~NatType() {;}
 
     static NatType* jparse(json j)
@@ -384,7 +384,7 @@ public:
 class IntType : public IGroundedType
 {
 public:
-    IntType() : IGroundedType(TypeTag::IntTag, "NSCore::Int") {;}
+    IntType() : IGroundedType(TypeTag::IntTag, "Int") {;}
     virtual ~IntType() {;}
 
     static IntType* jparse(json j)
@@ -426,7 +426,7 @@ public:
 class BigNatType : public IGroundedType
 {
 public:
-    BigNatType() : IGroundedType(TypeTag::BigNatTag, "NSCore::BigNat") {;}
+    BigNatType() : IGroundedType(TypeTag::BigNatTag, "BigNat") {;}
     virtual ~BigNatType() {;}
 
     static BigNatType* jparse(json j)
@@ -468,7 +468,7 @@ public:
 class BigIntType : public IGroundedType
 {
 public:
-    BigIntType() : IGroundedType(TypeTag::BigIntTag, "NSCore::BigInt") {;}
+    BigIntType() : IGroundedType(TypeTag::BigIntTag, "BigInt") {;}
     virtual ~BigIntType() {;}
 
     static BigIntType* jparse(json j)
@@ -510,7 +510,7 @@ public:
 class RationalType : public IGroundedType
 {
 public:
-    RationalType() : IGroundedType(TypeTag::RationalTag, "NSCore::Rational") {;}
+    RationalType() : IGroundedType(TypeTag::RationalTag, "Rational") {;}
     virtual ~RationalType() {;}
 
     static RationalType* jparse(json j)
@@ -554,7 +554,7 @@ public:
 class FloatType : public IGroundedType
 {
 public:
-    FloatType() : IGroundedType(TypeTag::FloatTag, "NSCore::Float") {;}
+    FloatType() : IGroundedType(TypeTag::FloatTag, "Float") {;}
     virtual ~FloatType() {;}
 
     static FloatType* jparse(json j)
@@ -597,7 +597,7 @@ public:
 class DecimalType : public IGroundedType
 {
 public:
-    DecimalType() : IGroundedType(TypeTag::DecimalTag, "NSCore::Decimal") {;}
+    DecimalType() : IGroundedType(TypeTag::DecimalTag, "Decimal") {;}
     virtual ~DecimalType() {;}
 
     static DecimalType* jparse(json j)
@@ -640,7 +640,7 @@ public:
 class StringType : public IGroundedType
 {
 public:
-    StringType() : IGroundedType(TypeTag::StringTag, "NSCore::String") {;}
+    StringType() : IGroundedType(TypeTag::StringTag, "String") {;}
     virtual ~StringType() {;}
 
     static StringType* jparse(json j)
@@ -780,7 +780,7 @@ public:
 class ByteBufferType : public IGroundedType
 {
 public:
-    ByteBufferType() : IGroundedType(TypeTag::ByteBufferTag, "NSCore::ByteBuffer") {;}
+    ByteBufferType() : IGroundedType(TypeTag::ByteBufferTag, "ByteBuffer") {;}
     virtual ~ByteBufferType() {;}
 
     static ByteBufferType* jparse(json j)
@@ -845,7 +845,7 @@ public:
 class DateTimeType : public IGroundedType
 {
 public:
-    DateTimeType() : IGroundedType(TypeTag::DateTimeTag, "NSCore::DateTime") {;}
+    DateTimeType() : IGroundedType(TypeTag::DateTimeTag, "DateTime") {;}
     virtual ~DateTimeType() {;}
 
     static DateTimeType* jparse(json j)
@@ -906,7 +906,7 @@ public:
 class TickTimeType : public IGroundedType
 {
 public:
-    TickTimeType() : IGroundedType(TypeTag::TickTimeTag, "NSCore::TickTime") {;}
+    TickTimeType() : IGroundedType(TypeTag::TickTimeTag, "TickTime") {;}
     virtual ~TickTimeType() {;}
 
     static TickTimeType* jparse(json j)
@@ -948,7 +948,7 @@ public:
 class LogicalTimeType : public IGroundedType
 {
 public:
-    LogicalTimeType() : IGroundedType(TypeTag::LogicalTimeTag, "NSCore::LogicalTime") {;}
+    LogicalTimeType() : IGroundedType(TypeTag::LogicalTimeTag, "LogicalTime") {;}
     virtual ~LogicalTimeType() {;}
 
     static LogicalTimeType* jparse(json j)
@@ -990,7 +990,7 @@ public:
 class UUIDType : public IGroundedType
 {
 public:
-    UUIDType() : IGroundedType(TypeTag::UUIDTag, "NSCore::UUID") {;}
+    UUIDType() : IGroundedType(TypeTag::UUIDTag, "UUID") {;}
     virtual ~UUIDType() {;}
 
     static UUIDType* jparse(json j)
@@ -1045,7 +1045,7 @@ public:
 class ContentHashType : public IGroundedType
 {
 public:
-    ContentHashType() : IGroundedType(TypeTag::ContentHashTag, "NSCore::ContentHash") {;}
+    ContentHashType() : IGroundedType(TypeTag::ContentHashTag, "ContentHash") {;}
     virtual ~ContentHashType() {;}
 
     static ContentHashType* jparse(json j)

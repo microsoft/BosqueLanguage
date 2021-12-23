@@ -9,36 +9,6 @@ import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTTypeInfo, VerifierO
 
 import * as assert from "assert";
 
-enum APIEmitTypeTag
-{
-    NoneTag = 0x0,
-    NothingTag,
-    BoolTag,
-    NatTag,
-    IntTag,
-    BigNatTag,
-    BigIntTag,
-    RationalTag,
-    FloatTag,
-    DecimalTag,
-    StringTag,
-    StringOfTag,
-    DataStringTag,
-    ByteBufferTag,
-    DateTimeTag,
-    TickTimeTag,
-    LogicalTimeTag,
-    UUIDTag,
-    ContentHashTag,
-    ConstructableOfType,
-    TupleTag,
-    RecordTag,
-    ContainerTag,
-    EnumTag,
-    EntityTag,
-    UnionTag
-};
-
 class SMTTypeEmitter {
     readonly assembly: MIRAssembly;
     readonly vopts: VerifierOptions;
@@ -48,6 +18,8 @@ class SMTTypeEmitter {
     private mangledTypeNameMap: Map<string, string> = new Map<string, string>();
     private mangledFunctionNameMap: Map<string, string> = new Map<string, string>();
     private mangledGlobalNameMap: Map<string, string> = new Map<string, string>();
+
+    private typeDataMap: Map<MIRResolvedTypeKey, SMTTypeInfo> = new Map<MIRResolvedTypeKey, SMTTypeInfo>();
 
     constructor(assembly: MIRAssembly, vopts: VerifierOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>, mangledGlobalNameMap?: Map<string, string>) {
         this.assembly = assembly;
@@ -64,9 +36,9 @@ class SMTTypeEmitter {
         this.mangledGlobalNameMap.forEach((sn) => this.allshortnames.add(sn));
     }
 
-    internTypeName(keyid: MIRResolvedTypeKey, shortname: string) {
+    internTypeName(keyid: MIRResolvedTypeKey) {
         if (!this.mangledTypeNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
+            let cleanname = keyid.replace(/:/g, ".").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "$" + this.namectr++;
             }
@@ -146,74 +118,103 @@ class SMTTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    private getSMTTypeForEntity(tt: MIRType, entity: MIREntityTypeDecl): SMTType {
+    getSMTTypeFor(tt: MIRType): SMTTypeInfo {
+        if(this.typeDataMap.has(tt.typeID)) {
+            return this.typeDataMap.get(tt.typeID) as SMTTypeInfo;
+        }
+
+        this.internTypeName(tt.typeID);
+        if(this.isUniqueTupleType(tt)) {
+            return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
+        }
+        else if(this.isUniqueRecordType(tt)) {
+            return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
+        }
+        else if(this.isUniqueEntityType(tt)) {
+            return this.getSMTTypeInfoForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
+        }
+        else if (this.isUniqueEphemeralType(tt)) {
+            return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
+        }
+        else if(this.assembly.subtypeOf(tt, this.getMIRType("KeyType"))) {
+            return new SMTType("BKey", "[BKEY]", tt.typeID);
+        }
+        else {
+            return new SMTType("BTerm", "[BTERM]", tt.typeID);
+        }
+    }
+
+    private getSMTTypeInfoForEntity(tt: MIRType, entity: MIREntityTypeDecl): SMTTypeInfo {
         if(entity instanceof MIRInternalEntityTypeDecl) {
             if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
-                if (this.isType(tt, "NSCore::None")) {
-                    return new SMTType("bsq_none", "TypeTag_None", entity.tkey);
+                if (this.isType(tt, "None")) {
+                    return new SMTTypeInfo("bsq_none", "TypeTag_None", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::Nothing")) {
-                    return new SMTType("bsq_nothing", "TypeTag_Nothing", entity.tkey);
+                else if (this.isType(tt, "Nothing")) {
+                    return new SMTTypeInfo("bsq_nothing", "TypeTag_Nothing", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::Bool")) {
-                    return new SMTType("Bool", "TypeTag_Bool", entity.tkey);
+                else if (this.isType(tt, "Bool")) {
+                    return new SMTTypeInfo("Bool", "TypeTag_Bool", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::Int")) {
-                    return new SMTType("BInt", "TypeTag_Int", entity.tkey);
+                else if (this.isType(tt, "Int")) {
+                    return new SMTTypeInfo("BInt", "TypeTag_Int", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::Nat")) {
-                    return new SMTType("BNat", "TypeTag_Nat", entity.tkey);
+                else if (this.isType(tt, "Nat")) {
+                    return new SMTTypeInfo("BNat", "TypeTag_Nat", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::BigInt")) {
-                    return new SMTType("BBigInt", "TypeTag_BigInt", entity.tkey);
+                else if (this.isType(tt, "BigInt")) {
+                    return new SMTTypeInfo("BBigInt", "TypeTag_BigInt", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::BigNat")) {
-                    return new SMTType("BBigNat", "TypeTag_BigInt", entity.tkey);
+                else if (this.isType(tt, "BigNat")) {
+                    return new SMTTypeInfo("BBigNat", "TypeTag_BigInt", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::Float")) {
-                    return new SMTType("BFloat", "TypeTag_Float", entity.tkey);
+                else if (this.isType(tt, "Float")) {
+                    return new SMTTypeInfo("BFloat", "TypeTag_Float", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::Decimal")) {
-                    return new SMTType("BDecimal", "TypeTag_Decimal", entity.tkey);
+                else if (this.isType(tt, "Decimal")) {
+                    return new SMTTypeInfo("BDecimal", "TypeTag_Decimal", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::Rational")) {
-                    return new SMTType("BRational", "TypeTag_Rational", entity.tkey);
+                else if (this.isType(tt, "Rational")) {
+                    return new SMTTypeInfo("BRational", "TypeTag_Rational", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::String")) {
-                    return new SMTType("BString", "TypeTag_String", entity.tkey);
+                else if (this.isType(tt, "String")) {
+                    return new SMTTypeInfo("BString", "TypeTag_String", entity.tkey);
                 }
-                else if (tt.typeID.startsWith("NSCore::ByteBuffer")) {
-                    return new SMTType("BByteBuffer", "TypeTag_ByteBuffer", entity.tkey);
+                else if (this.isType(tt, "ByteBuffer")) {
+                    return new SMTTypeInfo("BByteBuffer", "TypeTag_ByteBuffer", entity.tkey);
                 }
-                else if(this.isType(tt, "NSCore::ISOTime")) {
-                    return new SMTType("BISOTime", "TypeTag_ISOTime", entity.tkey);
+                else if(this.isType(tt, "DateTime")) {
+                    return new SMTTypeInfo("BDateTime", "TypeTag_DateTime", entity.tkey);
                 }
-                else if(this.isType(tt, "NSCore::LogicalTime")) {
-                    return new SMTType("BLogicalTime", "TypeTag_LogicalTime", entity.tkey);
+                else if(this.isType(tt, "TickTime")) {
+                    return new SMTTypeInfo("BTickTime", "TypeTag_TickTime", entity.tkey);
                 }
-                else if(this.isType(tt, "NSCore::UUID")) {
+                else if(this.isType(tt, "LogicalTime")) {
+                    return new SMTTypeInfo("BLogicalTime", "TypeTag_LogicalTime", entity.tkey);
+                }
+                else if(this.isType(tt, "UUID")) {
                     return new SMTType("BUUID", "TypeTag_UUID", entity.tkey);
                 }
-                else if(this.isType(tt, "NSCore::ContentHash")) {
+                else if(this.isType(tt, "ContentHash")) {
                     return new SMTType("BHash", "TypeTag_ContentHash", entity.tkey);
                 }
-                else if(this.isType(tt, "NSCore::Regex")) {
+                else if(this.isType(tt, "Regex")) {
                     return new SMTType("bsq_regex", "TypeTag_Regex", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::HavocSequence")) {
+                else if (this.isType(tt, "HavocSequence")) {
                     return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
                 }
                 else {
-                    if (this.isType(tt, "NSCore::NumericOps")) {
+                    if (this.isType(tt, "NumericOps")) {
                         return new SMTType("NumericOps", "TypeTag_NumericOps", entity.tkey);
                     }
-                    else if (this.isType(tt, "NSCore::ListFlatOps")) {
+                    else if (this.isType(tt, "ListFlatOps")) {
                         return new SMTType("ListFlatOps", "TypeTag_ListFlatOps", entity.tkey);
                     }
-                    else if (this.isType(tt, "NSCore::ListConcatOps")) {
+                    else if (this.isType(tt, "ListConcatOps")) {
                         return new SMTType("ListConcatOps", "TypeTag_ListConcatOps", entity.tkey);
                     }
-                    else if (this.isType(tt, "NSCore::ListOps")) {
+                    else if (this.isType(tt, "ListOps")) {
                         return new SMTType("ListOps", "ListOps", entity.tkey);
                     }
                     else {
@@ -223,25 +224,25 @@ class SMTTypeEmitter {
                 }
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                if (tt.typeID.startsWith("NSCore::StringOf")) {
+                if (tt.typeID.startsWith("StringOf")) {
                     return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
-                else if (tt.typeID.startsWith("NSCore::DataString")) {
+                else if (tt.typeID.startsWith("DataString")) {
                     return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
-                else if (tt.typeID.startsWith("NSCore::DataBuffer")) {
+                else if (tt.typeID.startsWith("DataBuffer")) {
                     return new SMTType("BByteBuffer", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
-                else if (tt.typeID.startsWith("NSCore::Something")) {
+                else if (tt.typeID.startsWith("Something")) {
                     const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
                     return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
-                else if (tt.typeID.startsWith("NSCore::Result::Ok")) {
+                else if (tt.typeID.startsWith("Result::Ok")) {
                     const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
                     return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
                 else {
-                    assert(tt.typeID.startsWith("NSCore::Result::Err"));
+                    assert(tt.typeID.startsWith("Result::Err"));
                     const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
                     return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
@@ -273,7 +274,7 @@ class SMTTypeEmitter {
             return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
         else if (entity instanceof MIREnumEntityTypeDecl) {
-            const sof = this.getSMTTypeFor(this.getMIRType("NSCore::Nat"));
+            const sof = this.getSMTTypeFor(this.getMIRType("Nat"));
             return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
         else {
@@ -281,34 +282,11 @@ class SMTTypeEmitter {
         }
     }
 
-    getSMTTypeFor(tt: MIRType): SMTType {
-        this.internTypeName(tt.typeID, tt.shortname);
-
-        if(this.isUniqueTupleType(tt)) {
-            return new SMTType(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
-        }
-        else if(this.isUniqueRecordType(tt)) {
-            return new SMTType(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
-        }
-        else if(this.isUniqueEntityType(tt)) {
-            return this.getSMTTypeForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
-        }
-        else if (this.isUniqueEphemeralType(tt)) {
-            return new SMTType(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
-        }
-        else if(this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType"))) {
-            return new SMTType("BKey", "[BKEY]", tt.typeID);
-        }
-        else {
-            return new SMTType("BTerm", "[BTERM]", tt.typeID);
-        }
-    }
-
     getSMTConstructorName(tt: MIRType): { cons: string, box: string, bfield: string } {
         assert(tt.options.length === 1);
         this.internTypeName(tt.typeID, tt.shortname);
 
-        const kfix = this.assembly.subtypeOf(tt, this.getMIRType("NSCore::KeyType")) ? "bsqkey_" : "bsqobject_"
+        const kfix = this.assembly.subtypeOf(tt, this.getMIRType("KeyType")) ? "bsqkey_" : "bsqobject_"
         if (this.isUniqueTupleType(tt)) {
             return { cons: `${this.lookupTypeName(tt.typeID)}@cons`, box: `${this.lookupTypeName(tt.typeID)}@box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}_value` };
         }
@@ -325,43 +303,43 @@ class SMTTypeEmitter {
     }
 
     private coerceFromAtomicToKey(exp: SMTExp, from: MIRType): SMTExp  {
-        assert(this.assembly.subtypeOf(from, this.getMIRType("NSCore::KeyType")));
+        assert(this.assembly.subtypeOf(from, this.getMIRType("KeyType")));
 
-        if (from.typeID === "NSCore::None") {
+        if (from.typeID === "None") {
             return new SMTConst("BKey@none");
         }
-        else if(from.typeID === "NSCore::Nothing") {
+        else if(from.typeID === "Nothing") {
             return new SMTConst("BKey@nothing");
         }
         else {
             const smtfrom = this.getSMTTypeFor(from);
             let objval: SMTExp | undefined = undefined;
 
-            if (this.isType(from, "NSCore::Bool")) {
+            if (this.isType(from, "Bool")) {
                 objval = new SMTCallSimple("bsqkey_bool@box", [exp]);
             }
-            else if (this.isType(from, "NSCore::Int")) {
+            else if (this.isType(from, "Int")) {
                 objval = new SMTCallSimple("bsqkey_int@box", [exp]);
             }
-            else if (this.isType(from, "NSCore::Nat")) {
+            else if (this.isType(from, "Nat")) {
                 objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
             }
-            else if (this.isType(from, "NSCore::BigInt")) {
+            else if (this.isType(from, "BigInt")) {
                 objval = new SMTCallSimple("bsqkey_bigint@box", [exp]);
             }
-            else if (this.isType(from, "NSCore::BigNat")) {
+            else if (this.isType(from, "BigNat")) {
                 objval = new SMTCallSimple("bsqkey_bignat@box", [exp]);
             }
-            else if (this.isType(from, "NSCore::String")) {
+            else if (this.isType(from, "String")) {
                 objval = new SMTCallSimple("bsqkey_string@box", [exp]);
             }
-            else if(this.isType(from, "NSCore::LogicalTime")) {
+            else if(this.isType(from, "LogicalTime")) {
                 objval = new SMTCallSimple("bsqkey_logicaltime@box", [exp]);
             }
-            else if(this.isType(from, "NSCore::UUID")) {
+            else if(this.isType(from, "UUID")) {
                 objval = new SMTCallSimple("bsqkey_uuid@box", [exp]);
             }
-            else if(this.isType(from, "NSCore::ContentHash")) {
+            else if(this.isType(from, "ContentHash")) {
                 objval = new SMTCallSimple("bsqkey_contenthash@box", [exp]);
             }
             else {
@@ -375,36 +353,36 @@ class SMTTypeEmitter {
     }
 
     private coerceFromAtomicToTerm(exp: SMTExp, from: MIRType): SMTExp {
-        if (from.typeID === "NSCore::None") {
+        if (from.typeID === "None") {
             return new SMTConst(`BTerm@none`);
         }
-        else if (from.typeID === "NSCore::Nothing") {
+        else if (from.typeID === "Nothing") {
             return new SMTConst(`BTerm@nothing`);
         }
         else {
-            if(this.assembly.subtypeOf(from, this.getMIRType("NSCore::KeyType"))) {
+            if(this.assembly.subtypeOf(from, this.getMIRType("KeyType"))) {
                 return new SMTCallSimple("BTerm@keybox", [this.coerceFromAtomicToKey(exp, from)]);
             }
             else {
                 const smtfrom = this.getSMTTypeFor(from);
                 let objval: SMTExp | undefined = undefined;
 
-                if (this.isType(from, "NSCore::Float")) {
+                if (this.isType(from, "Float")) {
                     objval = new SMTCallSimple("bsq_float@box", [exp]);
                 }
-                else if (this.isType(from, "NSCore::Decimal")) {
+                else if (this.isType(from, "Decimal")) {
                     objval = new SMTCallSimple("bsq_decimal@box", [exp]);
                 }
-                else if (this.isType(from, "NSCore::Rational")) {
+                else if (this.isType(from, "Rational")) {
                     objval = new SMTCallSimple("bsq_rational@box", [exp]);
                 }
-                else if (this.isType(from, "NSCore::ByteBuffer")) {
+                else if (this.isType(from, "ByteBuffer")) {
                     objval = new SMTCallSimple("bsq_bytebuffer@box", [exp]);
                 }
-                else if(this.isType(from, "NSCore::ISOTime")) {
+                else if(this.isType(from, "ISOTime")) {
                     objval = new SMTCallSimple("bsq_isotime@box", [exp]);
                 }
-                else if (this.isType(from, "NSCore::Regex")) {
+                else if (this.isType(from, "Regex")) {
                     objval = new SMTCallSimple("bsq_regex@box", [exp]);
                 }
                 else if (this.isUniqueTupleType(from)) {
@@ -425,37 +403,37 @@ class SMTTypeEmitter {
     }
 
     private coerceKeyIntoAtomic(exp: SMTExp, into: MIRType): SMTExp {
-        if (this.isType(into, "NSCore::None")) {
+        if (this.isType(into, "None")) {
             return new SMTConst("bsq_none@literal");
         }
         else {
             const oexp = new SMTCallSimple("BKey_value", [exp]);
 
-            if (this.isType(into, "NSCore::Bool")) {
+            if (this.isType(into, "Bool")) {
                 return new SMTCallSimple("bsqkey_bool_value", [oexp]);
             }
-            else if (this.isType(into, "NSCore::Int")) {
+            else if (this.isType(into, "Int")) {
                 return new SMTCallSimple("bsqkey_int_value", [oexp]);
             }
-            else if (this.isType(into, "NSCore::Nat")) {
+            else if (this.isType(into, "Nat")) {
                 return new SMTCallSimple("bsqkey_nat_value", [oexp]);
             }
-            else if (this.isType(into, "NSCore::BigInt")) {
+            else if (this.isType(into, "BigInt")) {
                 return new SMTCallSimple("bsqkey_bigint_value", [oexp]);
             }
-            else if (this.isType(into, "NSCore::BigNat")) {
+            else if (this.isType(into, "BigNat")) {
                 return new SMTCallSimple("bsqkey_bignat_value", [oexp]);
             }
-            else if (this.isType(into, "NSCore::String")) {
+            else if (this.isType(into, "String")) {
                 return new SMTCallSimple("bsqkey_string_value", [oexp]);
             }
-            else if(this.isType(into, "NSCore::LogicalTime")) {
+            else if(this.isType(into, "LogicalTime")) {
                 return new SMTCallSimple("bsqkey_logicaltime_value", [oexp]);
             }
-            else if(this.isType(into, "NSCore::UUID")) {
+            else if(this.isType(into, "UUID")) {
                 return new SMTCallSimple("bsqkey_uuid_value", [oexp]);
             }
-            else if(this.isType(into, "NSCore::ContentHash")) {
+            else if(this.isType(into, "ContentHash")) {
                 return new SMTCallSimple("bsqkey_contenthash_value", [oexp]);
             }
             else if (this.isUniqueTupleType(into)) {
@@ -473,35 +451,35 @@ class SMTTypeEmitter {
     }
 
     private coerceTermIntoAtomic(exp: SMTExp, into: MIRType): SMTExp {
-        if (this.isType(into, "NSCore::None")) {
+        if (this.isType(into, "None")) {
             return new SMTConst("bsq_none@literal");
         }
-        else if (this.isType(into, "NSCore::Nothing")) {
+        else if (this.isType(into, "Nothing")) {
             return new SMTConst("bsq_nothing@literal");
         }
         else {
-            if(this.assembly.subtypeOf(into, this.getMIRType("NSCore::KeyType"))) {
+            if(this.assembly.subtypeOf(into, this.getMIRType("KeyType"))) {
                 return this.coerceKeyIntoAtomic(new SMTCallSimple("BTerm_keyvalue", [exp]), into)
             }
             else {
                 const oexp = new SMTCallSimple("BTerm_termvalue", [exp]);
 
-                if (this.isType(into, "NSCore::Float")) {
+                if (this.isType(into, "Float")) {
                     return new SMTCallSimple("bsqobject_float_value", [oexp]);
                 }
-                else if (this.isType(into, "NSCore::Decimal")) {
+                else if (this.isType(into, "Decimal")) {
                     return new SMTCallSimple("bsqobject_decimal_value", [oexp]);
                 }
-                else if (this.isType(into, "NSCore::Rational")) {
+                else if (this.isType(into, "Rational")) {
                     return new SMTCallSimple("bsqobject_rational_value", [oexp]);
                 }
-                else if (this.isType(into, "NSCore::ByteBuffer")) {
+                else if (this.isType(into, "ByteBuffer")) {
                     return new SMTCallSimple("bsqobject_bytebuffer_value", [oexp]);
                 }
-                else if(this.isType(into, "NSCore::ISOTime")) {
+                else if(this.isType(into, "ISOTime")) {
                     return new SMTCallSimple("bsqobject_isotime_value", [oexp]);
                 }
-                else if (this.isType(into, "NSCore::Regex")) {
+                else if (this.isType(into, "Regex")) {
                     return new SMTCallSimple("bsqobject_regex_value", [oexp]);
                 }
                 else if (this.isUniqueTupleType(into)) {
@@ -639,31 +617,31 @@ class SMTTypeEmitter {
     }
 
     private havocTypeInfoGen(tt: MIRType): [string, boolean] {
-        if (this.isType(tt, "NSCore::None")) {
+        if (this.isType(tt, "None")) {
             return ["BNone@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Nothing")) {
+        else if (this.isType(tt, "Nothing")) {
             return ["BNothing@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Bool")) {
+        else if (this.isType(tt, "Bool")) {
             return ["BBool@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Int")) {
+        else if (this.isType(tt, "Int")) {
             return ["BInt@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Nat")) {
+        else if (this.isType(tt, "Nat")) {
             return ["BNat@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::BigInt")) {
+        else if (this.isType(tt, "BigInt")) {
             return ["BBigInt@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Float")) {
+        else if (this.isType(tt, "Float")) {
             return ["BFloat@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::Decimal")) {
+        else if (this.isType(tt, "Decimal")) {
             return ["BDecimal@UFCons_API", false];
         }
-        else if (this.isType(tt, "NSCore::ContentHash")) {
+        else if (this.isType(tt, "ContentHash")) {
             return ["BContentHash@UFCons_API", false];
         }
         else {
@@ -695,52 +673,52 @@ class SMTTypeEmitter {
     private getAPITypeForEntity(tt: MIRType, entity: MIREntityTypeDecl): object {
         if(entity instanceof MIRInternalEntityTypeDecl) {
             if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
-                if (this.isType(tt, "NSCore::None")) {
+                if (this.isType(tt, "None")) {
                     return {tag: APIEmitTypeTag.NoneTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::Nothing")) {
+                else if (this.isType(tt, "Nothing")) {
                     return {tag: APIEmitTypeTag.NothingTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::Bool")) {
+                else if (this.isType(tt, "Bool")) {
                     return {tag: APIEmitTypeTag.BoolTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::Int")) {
+                else if (this.isType(tt, "Int")) {
                     return {tag: APIEmitTypeTag.IntTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::Nat")) {
+                else if (this.isType(tt, "Nat")) {
                     return {tag: APIEmitTypeTag.NatTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::BigInt")) {
+                else if (this.isType(tt, "BigInt")) {
                     return {tag: APIEmitTypeTag.BigIntTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::BigNat")) {
+                else if (this.isType(tt, "BigNat")) {
                     return {tag: APIEmitTypeTag.BigNatTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::Float")) {
+                else if (this.isType(tt, "Float")) {
                     return {tag: APIEmitTypeTag.FloatTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::Decimal")) {
+                else if (this.isType(tt, "Decimal")) {
                     return {tag: APIEmitTypeTag.DecimalTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::Rational")) {
+                else if (this.isType(tt, "Rational")) {
                     return {tag: APIEmitTypeTag.RationalTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::String")) {
+                else if (this.isType(tt, "String")) {
                     return {tag: APIEmitTypeTag.StringTag, name: tt.typeID};
                 }
-                else if (this.isType(tt, "NSCore::ByteBuffer")) {
+                else if (this.isType(tt, "ByteBuffer")) {
                     return {tag: APIEmitTypeTag.ByteBufferTag, name: tt.typeID};
                 }
-                else if(this.isType(tt, "NSCore::ISOTime")) {
+                else if(this.isType(tt, "ISOTime")) {
                     return {tag: APIEmitTypeTag.ISOTag, name: tt.typeID};
                 }
-                else if(this.isType(tt, "NSCore::LogicalTime")) {
+                else if(this.isType(tt, "LogicalTime")) {
                     return {tag: APIEmitTypeTag.LogicalTag, name: tt.typeID};
                 }
-                else if(this.isType(tt, "NSCore::UUID")) {
+                else if(this.isType(tt, "UUID")) {
                     return {tag: APIEmitTypeTag.UUIDTag, name: tt.typeID};
                 }
-                else if(this.isType(tt, "NSCore::ContentHash")) {
+                else if(this.isType(tt, "ContentHash")) {
                     return {tag: APIEmitTypeTag.ContentHashTag, name: tt.typeID};
                 }
                 else {
@@ -749,23 +727,23 @@ class SMTTypeEmitter {
                 }
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                if (tt.typeID.startsWith("NSCore::StringOf")) {
+                if (tt.typeID.startsWith("StringOf")) {
                     return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: (entity.fromtype as MIRResolvedTypeKey)};
                 }
-                else if (tt.typeID.startsWith("NSCore::DataString")) {
+                else if (tt.typeID.startsWith("DataString")) {
                     return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
-                else if (tt.typeID.startsWith("NSCore::DataBuffer")) {
+                else if (tt.typeID.startsWith("DataBuffer")) {
                     return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
-                else if (tt.typeID.startsWith("NSCore::Something")) {
+                else if (tt.typeID.startsWith("Something")) {
                     return {tag: APIEmitTypeTag.SomethingTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
-                else if (tt.typeID.startsWith("NSCore::Result::Ok")) {
+                else if (tt.typeID.startsWith("Result::Ok")) {
                     return {tag: APIEmitTypeTag.OkTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
                 else {
-                    assert(tt.typeID.startsWith("NSCore::Result::Err"));
+                    assert(tt.typeID.startsWith("Result::Err"));
                     return {tag: APIEmitTypeTag.ErrTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
                 }
             }

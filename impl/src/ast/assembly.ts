@@ -755,14 +755,14 @@ class Assembly {
     }
 
     private splitConceptTypes(ofc: ResolvedConceptAtomType, withc: ResolvedConceptAtomType): {tp: ResolvedType | undefined, fp: ResolvedType | undefined} {
-        if (ofc.typeID === "Core::Any" && withc.typeID === "Core::Some") {
+        if (ofc.typeID === "Any" && withc.typeID === "Some") {
             return { tp: ResolvedType.createSingle(withc), fp: this.getSpecialNoneType() };
         }
-        else if (ofc.typeID.startsWith("Core::Option<") && withc.typeID === "Core::ISomething") {
-            const somthingres = ResolvedEntityAtomType.create(this.tryGetObjectTypeForFullyResolvedName("Core::Something") as EntityTypeDecl, ofc.conceptTypes[0].binds)
+        else if (ofc.typeID.startsWith("Option<") && withc.typeID === "ISomething") {
+            const somthingres = ResolvedEntityAtomType.create(this.tryGetObjectTypeForFullyResolvedName("Something") as EntityTypeDecl, ofc.conceptTypes[0].binds)
             return { tp: ResolvedType.createSingle(somthingres), fp: this.getSpecialNothingType() };
         }
-        else if (ofc.typeID === "Core::IOption" && withc.typeID === "Core::ISomething") {
+        else if (ofc.typeID === "IOption" && withc.typeID === "ISomething") {
             return { tp: ResolvedType.createSingle(withc), fp: this.getSpecialNothingType() };
         }
         else {
@@ -771,27 +771,27 @@ class Assembly {
     }
 
     private splitConceptEntityTypes(ofc: ResolvedConceptAtomType, withe: ResolvedEntityAtomType): { tp: ResolvedType | undefined, fp: ResolvedType | undefined } {
-        const somethingdecl = this.tryGetObjectTypeForFullyResolvedName("Core::Something") as EntityTypeDecl;
-        const okdecl = this.tryGetObjectTypeForFullyResolvedName("Core::Result::Ok") as EntityTypeDecl;
-        const errdecl = this.tryGetObjectTypeForFullyResolvedName("Core::Result::Err") as EntityTypeDecl;
+        const somethingdecl = this.tryGetObjectTypeForFullyResolvedName("Something") as EntityTypeDecl;
+        const okdecl = this.tryGetObjectTypeForFullyResolvedName("Result::Ok") as EntityTypeDecl;
+        const errdecl = this.tryGetObjectTypeForFullyResolvedName("Result::Err") as EntityTypeDecl;
 
         //
         //TODO: we may want to handle some ISomething, Something, Option, Nothing situations more precisely if they can arise
         //
 
-        if (ofc.typeID === "Core::Any" && withe.typeID === "Core::None") {
+        if (ofc.typeID === "Any" && withe.typeID === "None") {
             return { tp: ResolvedType.createSingle(withe), fp: this.getSpecialSomeConceptType() };
         }
-        else if (ofc.typeID.startsWith("Core::Option<") && withe.typeID === "Core::Nothing") {
+        else if (ofc.typeID.startsWith("Option<") && withe.typeID === "Nothing") {
             return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(somethingdecl, ofc.conceptTypes[0].binds)) };
         }
-        else if (ofc.typeID.startsWith("Core::Option<") && withe.typeID === "Core::Something<") {
+        else if (ofc.typeID.startsWith("Option<") && withe.typeID === "Something<") {
             return { tp: ResolvedType.createSingle(withe), fp: this.getSpecialNothingType() };
         }
-        else if (ofc.typeID.startsWith("Core::Result<") && withe.typeID.startsWith("Core::Result::Ok<")) {
+        else if (ofc.typeID.startsWith("Result<") && withe.typeID.startsWith("Result::Ok<")) {
             return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(errdecl, ofc.conceptTypes[0].binds)) };
         }
-        else if (ofc.typeID.startsWith("Core::Result<") && withe.typeID.startsWith("Core::Result::Err<")) {
+        else if (ofc.typeID.startsWith("Result<") && withe.typeID.startsWith("Result::Err<")) {
             return { tp: ResolvedType.createSingle(withe), fp: ResolvedType.createSingle(ResolvedEntityAtomType.create(okdecl, ofc.conceptTypes[0].binds)) };
         }
         else if(this.atomSubtypeOf(withe, ofc)) {
@@ -1000,24 +1000,24 @@ class Assembly {
         if(oftype.typeID === "Some") {
             return this.splitTypes(fromtype, this.getSpecialNoneType()).fp;
         }
-        else if(oftype.typeID === "Core::IOptionT") {
-            if(oftype.options.length === 1 && oftype.typeID.startsWith("Core::Option<")) {
+        else if(oftype.typeID === "IOptionT") {
+            if(oftype.options.length === 1 && oftype.typeID.startsWith("Option<")) {
                 return (oftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds.get("T") as ResolvedType;
             }
             else {
                 return ResolvedType.createEmpty();
             }
         }
-        else if(oftype.typeID === "Core::IResultT") {
-            if(oftype.options.length === 1 && oftype.typeID.startsWith("Core::Result<")) {
+        else if(oftype.typeID === "IResultT") {
+            if(oftype.options.length === 1 && oftype.typeID.startsWith("Result<")) {
                 return (oftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds.get("T") as ResolvedType;
             }
             else {
                 return ResolvedType.createEmpty();
             }
         }
-        else if(oftype.typeID === "Core::IResultE") {
-            if(oftype.options.length === 1 && oftype.typeID.startsWith("Core::Result<")) {
+        else if(oftype.typeID === "IResultE") {
+            if(oftype.options.length === 1 && oftype.typeID.startsWith("Result<")) {
                 return (oftype.options[0] as ResolvedConceptAtomType).conceptTypes[0].binds.get("E") as ResolvedType;
             }
             else {
@@ -1247,27 +1247,27 @@ class Assembly {
         let flattened: ResolvedAtomType[] = ([] as ResolvedAtomType[]).concat(...ntypes);
 
         //check for Some | None and add Any if needed
-        if (flattened.some((atom) => atom.typeID === "Core::None") && flattened.some((atom) => atom.typeID === "Core::Some")) {
+        if (flattened.some((atom) => atom.typeID === "None") && flattened.some((atom) => atom.typeID === "Some")) {
             flattened.push(this.getSpecialAnyConceptType().options[0]);
         }
 
         //check for Option<T> | Nothing and add Result<T> if needed
-        if (flattened.some((atom) => atom.typeID === "Core::Nothing") && flattened.some((atom) => atom.typeID.startsWith("Core::Something<"))) {
-            const copt = this.m_conceptMap.get("Core::Option") as ConceptTypeDecl;
+        if (flattened.some((atom) => atom.typeID === "Nothing") && flattened.some((atom) => atom.typeID.startsWith("Something<"))) {
+            const copt = this.m_conceptMap.get("Option") as ConceptTypeDecl;
 
             const nopts = flattened
-                .filter((atom) => atom.typeID.startsWith("Core::Something<"))
+                .filter((atom) => atom.typeID.startsWith("Something<"))
                 .map((atom) => ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(copt, (atom as ResolvedEntityAtomType).binds)]));
 
             flattened.push(...nopts);
         }
 
         //check for Option<T> | Nothing and add Result<T> if needed
-        if (flattened.some((atom) => atom.typeID.startsWith("Core::Result::Ok<")) && flattened.some((atom) => atom.typeID.startsWith("Core::Result::Err<"))) {
-            const ropt = this.m_conceptMap.get("Core::Result") as ConceptTypeDecl;
+        if (flattened.some((atom) => atom.typeID.startsWith("Result::Ok<")) && flattened.some((atom) => atom.typeID.startsWith("Result::Err<"))) {
+            const ropt = this.m_conceptMap.get("Result") as ConceptTypeDecl;
 
-            const okopts =  flattened.filter((atom) => atom.typeID.startsWith("Core::Result::Ok<"));
-            const erropts =  flattened.filter((atom) => atom.typeID.startsWith("Core::Result::Err<"));
+            const okopts =  flattened.filter((atom) => atom.typeID.startsWith("Result::Ok<"));
+            const erropts =  flattened.filter((atom) => atom.typeID.startsWith("Result::Err<"));
 
             const bothopts = okopts.filter((okatom) => erropts.some((erratom) => {
                 const okbinds = (okatom as ResolvedEntityAtomType).binds;
@@ -1342,7 +1342,7 @@ class Assembly {
             return undefined;
         }
 
-        if(t.isPred && rtype.typeID !== "Core::Bool") {
+        if(t.isPred && rtype.typeID !== "Bool") {
             return undefined; //pred must have Bool result type
         }
 
@@ -1455,27 +1455,27 @@ class Assembly {
     }
 
     private internSpecialConceptType(names: [string], terms?: TypeSignature[], binds?: Map<string, ResolvedType>): ResolvedType {
-        if (this.m_specialTypeMap.has("Core::" + names.join("::"))) {
-            return this.m_specialTypeMap.get("Core::" + names.join("::")) as ResolvedType;
+        if (this.m_specialTypeMap.has(names.join("::"))) {
+            return this.m_specialTypeMap.get(names.join("::")) as ResolvedType;
         }
 
         const rsig = new NominalTypeSignature("Core", names, terms || [] as TypeSignature[]);
-        const tconcept = this.createConceptTypeAtom(this.tryGetConceptTypeForFullyResolvedName("Core::" + names.join("::")) as ConceptTypeDecl, rsig, binds || new Map<string, ResolvedType>());
+        const tconcept = this.createConceptTypeAtom(this.tryGetConceptTypeForFullyResolvedName(names.join("::")) as ConceptTypeDecl, rsig, binds || new Map<string, ResolvedType>());
         const rtype = ResolvedType.createSingle(tconcept as ResolvedAtomType);
-        this.m_specialTypeMap.set("Core::" + names.join("::"), rtype);
+        this.m_specialTypeMap.set(names.join("::"), rtype);
 
         return rtype;
     }
 
     private internSpecialObjectType(names: string[], terms?: TypeSignature[], binds?: Map<string, ResolvedType>): ResolvedType {
-        if (this.m_specialTypeMap.has("Core::" + names.join("::"))) {
-            return this.m_specialTypeMap.get("Core::" + names.join("::")) as ResolvedType;
+        if (this.m_specialTypeMap.has(names.join("::"))) {
+            return this.m_specialTypeMap.get(names.join("::")) as ResolvedType;
         }
 
         const rsig = new NominalTypeSignature("Core", names, terms || [] as TypeSignature[]);
-        const tobject = this.createObjectTypeAtom(this.tryGetObjectTypeForFullyResolvedName("Core::" + names.join("::")) as EntityTypeDecl, rsig, binds || new Map<string, ResolvedType>());
+        const tobject = this.createObjectTypeAtom(this.tryGetObjectTypeForFullyResolvedName(names.join("::")) as EntityTypeDecl, rsig, binds || new Map<string, ResolvedType>());
         const rtype = ResolvedType.createSingle(tobject as ResolvedAtomType);
-        this.m_specialTypeMap.set("Core::" + names.join("::"), rtype);
+        this.m_specialTypeMap.set(names.join("::"), rtype);
 
         return rtype;
     }
@@ -1530,45 +1530,45 @@ class Assembly {
 
     getSpecialObjectConceptType(): ResolvedType { return this.internSpecialConceptType(["Object"]); }
 
-    getStringOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::StringOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getDataStringType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::DataString") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getDataBufferType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::DataBuffer") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getStringOfType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("StringOf") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getDataStringType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("DataString") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getDataBufferType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("DataBuffer") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
 
-    getSomethingType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Something") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getOkType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Result::Ok") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
-    getErrType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Result::Err") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
+    getSomethingType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Something") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getOkType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Result::Ok") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
+    getErrType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Result::Err") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
 
-    getMaskType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Mask") as EntityTypeDecl, new Map<string, ResolvedType>())); }
-    getPartialVectorType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::PartialVector") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getListTreeType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getListTreeEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListTreeEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getMaskType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Mask") as EntityTypeDecl, new Map<string, ResolvedType>())); }
+    getPartialVectorType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("PartialVector") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getListTreeType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("ListTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getListTreeEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("ListTreeEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     
-    getBTreeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::BTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    getBTreeNodeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::BTreeNode") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getBTreeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("BTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getBTreeNodeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("BTreeNode") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
     
-    getVector1Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Vector1") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getVector2Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Vector2") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getVector3Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Vector3") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector1Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Vector1") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector2Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Vector2") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getVector3Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Vector3") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     
-    getRecListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecList") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getRecListEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecListEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getRecListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecList") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getRecListEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecListEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
     
-    getRecMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecMap") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    getRecMapEntryType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::RecMapEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getRecMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecMap") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getRecMapEntryType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecMapEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
     
-    getListOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::ListOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
-    getMapOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::MapOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
+    getListOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("ListOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
+    getMapOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("MapOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
     
-    getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getQueueType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Queue") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getSetType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Set") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Core::Map") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
+    getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getQueueType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Queue") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getSetType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Set") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
+    getMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Map") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
 
-    getOptionConceptType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Core::Option") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t))])); }
-    getResultConceptType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Core::Result") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))])); }
+    getOptionConceptType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Option") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t))])); }
+    getResultConceptType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Result") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))])); }
     
-    isExpandoableType(ty: ResolvedAtomType): boolean { return ty.typeID.startsWith("Core::Expandoable<"); }
+    isExpandoableType(ty: ResolvedAtomType): boolean { return ty.typeID.startsWith("Expandoable<"); }
 
     ensureNominalRepresentation(t: ResolvedType): ResolvedType {
         const opts = t.options.map((opt) => {

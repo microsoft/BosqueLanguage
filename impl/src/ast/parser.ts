@@ -4366,12 +4366,12 @@ class Parser {
                 let provides = [[new NominalTypeSignature("Core", ["Some"]), undefined], [new NominalTypeSignature("Core", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 provides.push([new NominalTypeSignature("Core", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("Core", ["KeyType"]))])]);
                 
-                let implicitops = [["t", "==", "t", "Core::Bool"], ["t", "!=", "t", "Core::Bool"]];
+                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
 
                 if(attributes.includes("orderable")) {
                     provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
 
-                    implicitops = [...implicitops, ["t", "<", "t", "Core::Bool"], ["t", ">", "t", "Core::Bool"], ["t", "<=", "t", "Core::Bool"], ["t", ">=", "t", "Core::Bool"]];
+                    implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
                 }
 
                 if(attributes.includes("algebraic")) {
@@ -4864,7 +4864,7 @@ class Parser {
                         const fname = this.consumeTokenAndGetValue();
                         
                         const nscore = this.m_penv.assembly.getNamespace("Core");
-                        nscore.declaredNames.add("Core::" + fname);
+                        nscore.declaredNames.add(fname);
                     }
                     else {
                         let nns = ns;

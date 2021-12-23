@@ -67,7 +67,7 @@ class ResolvedConceptAtomTypeEntry {
     }
 
     static create(concept: ConceptTypeDecl, binds: Map<string, ResolvedType>): ResolvedConceptAtomTypeEntry {
-        let name = concept.ns + "::" + concept.name;
+        let name = (concept.ns !== "Core" ? (concept.ns + "::") : "") + concept.name;
         if (concept.terms.length !== 0) {
             name += "<" + concept.terms.map((arg) => (binds.get(arg.name) as ResolvedType).typeID).join(", ") + ">";
         }
@@ -335,19 +335,19 @@ class ResolvedType {
     }
 
     isNoneType(): boolean {
-        return this.typeID === "Core::None";
+        return this.typeID === "None";
     }
 
     isSomeType(): boolean {
-        return this.typeID === "Core::Some";
+        return this.typeID === "Some";
     }
 
     isAnyType(): boolean {
-        return this.typeID === "Core::Any";
+        return this.typeID === "Any";
     }
 
     isNothingType(): boolean {
-        return this.typeID === "Core::Nothing";
+        return this.typeID === "Nothing";
     }
 
     isSomethingType(): boolean {
