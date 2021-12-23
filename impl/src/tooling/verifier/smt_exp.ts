@@ -150,23 +150,23 @@ class SMTMaskConstruct {
     }
 }
 
-class SMTType {
-    readonly name: string;
+class SMTTypeInfo {
+    readonly smttypename: string;
     readonly smttypetag: string;
     readonly typeID: MIRResolvedTypeKey;
     
-    constructor(name: string, smttypetag: string, typeid: MIRResolvedTypeKey) {
-        this.name = name;
+    constructor(smttypename: string, smttypetag: string, typeid: MIRResolvedTypeKey) {
+        this.smttypename = smttypename;
         this.smttypetag = smttypetag;
         this.typeID = typeid;
     }
 
     isGeneralKeyType(): boolean {
-        return this.name === "BKey";
+        return this.smttypename === "BKey";
     }
 
     isGeneralTermType(): boolean {
-        return this.name === "BTerm";
+        return this.smttypename === "BTerm";
     }
 }
 
@@ -458,7 +458,7 @@ export {
     VerifierOptions,
     SMTMaskConstruct,
     BVEmitter,
-    SMTType, SMTExp, SMTVar, SMTConst, 
+    SMTTypeInfo, SMTExp, SMTVar, SMTConst, 
     SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallGeneralWPassThroughMask,
     SMTLet, SMTLetMulti, SMTIf, SMTCond
 };

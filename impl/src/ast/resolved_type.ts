@@ -9,11 +9,9 @@ import * as assert from "assert";
 
 abstract class ResolvedAtomType {
     readonly typeID: string;
-    readonly shortID: string;
 
-    constructor(typeID: string, shortID: string) {
+    constructor(typeID: string) {
         this.typeID = typeID;
-        this.shortID = shortID;
     }
 
     abstract hasTemplateType(): boolean;
@@ -21,7 +19,7 @@ abstract class ResolvedAtomType {
 
 class ResolvedTemplateUnifyType extends ResolvedAtomType {
     constructor(typeID: string) {
-        super(typeID, typeID);
+        super(typeID);
     }
 
     static create(name: string): ResolvedTemplateUnifyType {
@@ -37,8 +35,8 @@ class ResolvedEntityAtomType extends ResolvedAtomType {
     readonly object: EntityTypeDecl;
     readonly binds: Map<string, ResolvedType>;
 
-    constructor(typeID: string, shortID: string, object: EntityTypeDecl, binds: Map<string, ResolvedType>) {
-        super(typeID, shortID);
+    constructor(typeID: string, object: EntityTypeDecl, binds: Map<string, ResolvedType>) {
+        super(typeID);
         this.object = object;
         this.binds = binds;
     }
@@ -49,12 +47,7 @@ class ResolvedEntityAtomType extends ResolvedAtomType {
             name += "<" + object.terms.map((arg) => (binds.get(arg.name) as ResolvedType).typeID).join(", ") + ">";
         }
 
-        let shortname = object.name;
-        if (object.terms.length !== 0) {
-            shortname += "<" + object.terms.map((arg) => (binds.get(arg.name) as ResolvedType).shortID).join(", ") + ">";
-        }
-
-        return new ResolvedEntityAtomType(name, shortname, object, binds);
+        return new ResolvedEntityAtomType(name, object, binds);
     }
 
     hasTemplateType(): boolean {
@@ -64,14 +57,11 @@ class ResolvedEntityAtomType extends ResolvedAtomType {
 
 class ResolvedConceptAtomTypeEntry {
     readonly typeID: string;
-    readonly shortID: string;
-
     readonly concept: ConceptTypeDecl;
     readonly binds: Map<string, ResolvedType>;
 
-    constructor(typeID: string, shortID: string, concept: ConceptTypeDecl, binds: Map<string, ResolvedType>) {
+    constructor(typeID: string, concept: ConceptTypeDecl, binds: Map<string, ResolvedType>) {
         this.typeID = typeID;
-        this.shortID = shortID;
         this.concept = concept;
         this.binds = binds;
     }
@@ -82,29 +72,23 @@ class ResolvedConceptAtomTypeEntry {
             name += "<" + concept.terms.map((arg) => (binds.get(arg.name) as ResolvedType).typeID).join(", ") + ">";
         }
 
-        let shortname = concept.name;
-        if (concept.terms.length !== 0) {
-            shortname += "<" + concept.terms.map((arg) => (binds.get(arg.name) as ResolvedType).shortID).join(", ") + ">";
-        }
-
-        return new ResolvedConceptAtomTypeEntry(name, shortname, concept, binds);
+        return new ResolvedConceptAtomTypeEntry(name, concept, binds);
     }
 }
 
 class ResolvedConceptAtomType extends ResolvedAtomType {
     readonly conceptTypes: ResolvedConceptAtomTypeEntry[];
 
-    constructor(typeID: string, shortID: string, concepts: ResolvedConceptAtomTypeEntry[]) {
-        super(typeID, shortID);
+    constructor(typeID: string, concepts: ResolvedConceptAtomTypeEntry[]) {
+        super(typeID);
         this.conceptTypes = concepts;
     }
 
     static create(concepts: ResolvedConceptAtomTypeEntry[]): ResolvedConceptAtomType {
         const sortedConcepts = concepts.sort((a, b) => a.typeID.localeCompare(b.typeID));
         const name = sortedConcepts.map((cpt) => cpt.typeID).join("&");
-        const shortname = sortedConcepts.map((cpt) => cpt.shortID).join("&");
 
-        return new ResolvedConceptAtomType(name, shortname, sortedConcepts);
+        return new ResolvedConceptAtomType(name, sortedConcepts);
     }
 
     hasTemplateType(): boolean {
@@ -115,16 +99,15 @@ class ResolvedConceptAtomType extends ResolvedAtomType {
 class ResolvedTupleAtomType extends ResolvedAtomType {
     readonly types: ResolvedType[];
 
-    constructor(typeID: string, shortID: string, types: ResolvedType[]) {
-        super(typeID, shortID);
+    constructor(typeID: string, types: ResolvedType[]) {
+        super(typeID);
         this.types = types;
     }
 
     static create(types: ResolvedType[]): ResolvedTupleAtomType {
         const name = types.map((entry) => entry.typeID).join(", ");
-        const shortname = types.map((entry) => entry.shortID).join(",");
 
-        return new ResolvedTupleAtomType("[" + name + "]", "[" + shortname + "]", types);
+        return new ResolvedTupleAtomType("[" + name + "]", types);
     }
 
     hasTemplateType(): boolean {
@@ -135,17 +118,16 @@ class ResolvedTupleAtomType extends ResolvedAtomType {
 class ResolvedRecordAtomType extends ResolvedAtomType {
     readonly entries: {pname: string, ptype: ResolvedType}[];
 
-    constructor(typeID: string, shortID: string, entries: {pname: string, ptype: ResolvedType}[]) {
-        super(typeID, shortID);
+    constructor(typeID: string, entries: {pname: string, ptype: ResolvedType}[]) {
+        super(typeID);
         this.entries = entries;
     }
 
     static create(entries: {pname: string, ptype: ResolvedType}[]): ResolvedRecordAtomType {
         let simplifiedEntries = [...entries].sort((a, b) => a.pname.localeCompare(b.pname));
         const name = simplifiedEntries.map((entry) => entry.pname + ": " + entry.ptype.typeID).join(", ");
-        const shortname = simplifiedEntries.map((entry) => entry.pname + ":" + entry.ptype.shortID).join(",");
 
-        return new ResolvedRecordAtomType("{" + name + "}", "{" + shortname + "}", simplifiedEntries);
+        return new ResolvedRecordAtomType("{" + name + "}", simplifiedEntries);
     }
 
     hasTemplateType(): boolean {
@@ -156,16 +138,15 @@ class ResolvedRecordAtomType extends ResolvedAtomType {
 class ResolvedEphemeralListType extends ResolvedAtomType {
     readonly types: ResolvedType[];
 
-    constructor(typeID: string, shortID: string, types: ResolvedType[]) {
-        super(typeID, shortID);
+    constructor(typeID: string, types: ResolvedType[]) {
+        super(typeID);
         this.types = types;
     }
 
     static create(entries: ResolvedType[]): ResolvedEphemeralListType {
         const name = entries.map((entry) => entry.typeID).join(", ");
-        const shortname = entries.map((entry) => entry.shortID).join(",");
 
-        return new ResolvedEphemeralListType("(|" + name + "|)", "(|" + shortname + "|)", entries);
+        return new ResolvedEphemeralListType("(|" + name + "|)", entries);
     }
 
     hasTemplateType(): boolean {
@@ -174,22 +155,20 @@ class ResolvedEphemeralListType extends ResolvedAtomType {
 }
 
 class ResolvedType {
-    readonly typeID: string; 
-    readonly shortID: string;
+    readonly typeID: string;
     readonly options: ResolvedAtomType[];
 
-    constructor(typeID: string, shortID: string, options: ResolvedAtomType[]) {
+    constructor(typeID: string, options: ResolvedAtomType[]) {
         this.typeID = typeID;
-        this.shortID = shortID;
         this.options = options;
     }
 
     static createEmpty(): ResolvedType {
-        return new ResolvedType("", "", []);
+        return new ResolvedType("", []);
     }
 
     static createSingle(type: ResolvedAtomType): ResolvedType {
-        return new ResolvedType(type.typeID, type.shortID, [type]);
+        return new ResolvedType(type.typeID, [type]);
     }
 
     static create(types: ResolvedAtomType[]): ResolvedType {
@@ -202,9 +181,8 @@ class ResolvedType {
         else {
             const atoms = types.sort((a, b) => a.typeID.localeCompare(b.typeID));
             const name = atoms.map((arg) => arg.typeID).join("|");
-            const shortname = atoms.map((arg) => arg.shortID).join("|");
 
-            return new ResolvedType(name, shortname, atoms);
+            return new ResolvedType(name, atoms);
         }
     }
 
@@ -444,7 +422,6 @@ class ResolvedFunctionTypeParam {
 
 class ResolvedFunctionType {
     readonly typeID: string;
-    readonly shortID: string;
     readonly recursive: "yes" | "no" | "cond";
     readonly params: ResolvedFunctionTypeParam[];
     readonly optRestParamName: string | undefined;
@@ -454,9 +431,8 @@ class ResolvedFunctionType {
 
     readonly allParamNames: Set<string>;
 
-    constructor(typeID: string, shortID: string, recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType, isPred: boolean) {
+    constructor(typeID: string, recursive: "yes" | "no" | "cond", params: ResolvedFunctionTypeParam[], optRestParamName: string | undefined, optRestParamType: ResolvedType | undefined, resultType: ResolvedType, isPred: boolean) {
         this.typeID = typeID;
-        this.shortID = shortID;
         this.recursive = recursive;
         this.params = params;
         this.optRestParamName = optRestParamName;
@@ -471,18 +447,13 @@ class ResolvedFunctionType {
         const cvalues = params.map((param) => (param.refKind !== undefined ? param.refKind : "") + param.name + (param.isOptional ? "?: " : ": ") + param.type.typeID + (param.litexp !== undefined ? ("==" + param.litexp) : ""));
         let cvalue = cvalues.join(", ");
 
-        const shortcvalues = params.map((param) => (param.refKind !== undefined ? param.refKind : "") + param.name + (param.isOptional ? "?: " : ": ") + param.type.shortID + (param.litexp !== undefined ? ("==" + param.litexp) : ""));
-        let shortcvalue = shortcvalues.join(", ");
-
         if (optRestParamName !== undefined && optRestParamType !== undefined) {
             cvalue += ((cvalues.length !== 0 ? ", " : "") + ("..." + optRestParamName + ": " + optRestParamType.typeID));
-            shortcvalue += ((cvalues.length !== 0 ? ", " : "") + ("..." + optRestParamName + ": " + optRestParamType.shortID));
         }
 
         const lstr = isPred ? "pred" : "fn";
         const name = lstr + "(" + cvalue + ") -> " + resultType.typeID;
-        const shortname = lstr + "(" + shortcvalue + ") -> " + resultType.shortID;
-        return new ResolvedFunctionType(name, shortname, recursive, params, optRestParamName, optRestParamType, resultType, isPred);
+        return new ResolvedFunctionType(name, recursive, params, optRestParamName, optRestParamType, resultType, isPred);
     }
 }
 

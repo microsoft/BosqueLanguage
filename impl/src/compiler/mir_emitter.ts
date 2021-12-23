@@ -33,18 +33,15 @@ type GeneratedKeyName<T> = {
 }
 
 class MIRKeyGenerator {
-    static computeBindsKeyInfo(binds: Map<string, ResolvedType>): [string, string] {
+    static computeBindsKeyInfo(binds: Map<string, ResolvedType>): string{
         if (binds.size === 0) {
-            return ["", ""];
+            return "";
         }
 
         let terms: string[] = [];
         binds.forEach((v, k) => terms.push(`${k}=${v.typeID}`));
 
-        let shortterms: string[] = [];
-        binds.forEach((v, k) => shortterms.push(`${k}=${v.shortID}`));
-
-        return [`<${terms.sort().join(", ")}>`, `<${shortterms.sort().join(", ")}>`];
+        return `<${terms.sort().join(", ")}>`;
     }
 
     static computePCodeKeyInfo(pcodes: PCode[]): string {
@@ -55,13 +52,13 @@ class MIRKeyGenerator {
         return "[" + pcodes.map((pc) => `${pc.ikey}`).join(",") + "]";
     }
 
-    static generateTypeKey(t: ResolvedType): GeneratedKeyName<MIRResolvedTypeKey> {
-        return {keyid: t.typeID, shortname: t.shortID};
+    static generateTypeKey(t: ResolvedType): MIRResolvedTypeKey {
+        return t.typeID;
     }
 
     static generateFieldKey(t: ResolvedType, name: string): MIRFieldKey {
         const tkey = this.generateTypeKey(t);
-        return `__f__${tkey.keyid}.${name}`;
+        return `__f__${tkey}.${name}`;
     }
 
     static generateGlobalKeyWNamespace(ns: string, name: string, prefix?: string): GeneratedKeyName<MIRGlobalKey> {
@@ -74,37 +71,37 @@ class MIRKeyGenerator {
     static generateGlobalKeyWType(t: ResolvedType, name: string, prefix?: string): GeneratedKeyName<MIRGlobalKey> {
         const tinfo = MIRKeyGenerator.generateTypeKey(t);
 
-        const fname = `__g__${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}`;
-        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.shortname}::${name}`;
+        const fname = `__g__${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}`;
         return {keyid: fname, shortname: shortfname};
     }
 
     static generateFunctionKeyWNamespace(ns: string, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], prefix?: string): GeneratedKeyName<MIRInvokeKey> {
-        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
         const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${binfo}${pcinfo}`;
-        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${shortbinfo}${pcinfo}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${binfo}${pcinfo}`;
         return {keyid: fname, shortname: shortfname};
     }
 
     static generateFunctionKeyWType(t: ResolvedType, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], prefix?: string): GeneratedKeyName<MIRInvokeKey> {
         const tinfo = MIRKeyGenerator.generateTypeKey(t);
-        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
-        const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}${binfo}${pcinfo}`;
-        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.shortname}::${name}${shortbinfo}${pcinfo}`;
+        const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}${binfo}${pcinfo}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}${binfo}${pcinfo}`;
         return {keyid: fname, shortname: shortfname};
     }
 
     static generateVirtualMethodKey(vname: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): GeneratedKeyName<MIRVirtualMethodKey> {
-        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
 
         const iname = `__v__${vname}${binfo}${pcinfo}`;
-        const shortvname =  `${vname}${shortbinfo}${pcinfo}`;
+        const shortvname =  `${vname}${binfo}${pcinfo}`;
         return {keyid: iname, shortname: shortvname};
     }
 
@@ -132,7 +129,7 @@ type PendingOOMethodProcessingInfo = { vkey: MIRVirtualMethodKey, mkey: MIRInvok
 type PendingPCodeProcessingInfo = { lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, PCode][] };
 type PendingOPVirtualProcessingInfo = { vkey: MIRVirtualMethodKey, optns: string | undefined, optenclosingType: [ResolvedType, MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
 
-type EntityInstantiationInfo = { tkey: MIRResolvedTypeKey, shortname: string, ootype: OOPTypeDecl, binds: Map<string, ResolvedType> };
+type EntityInstantiationInfo = { tkey: MIRResolvedTypeKey, ootype: OOPTypeDecl, binds: Map<string, ResolvedType> };
 type AllVInvokesInfo = { vkey: MIRVirtualMethodKey, enclosingtype: ResolvedType, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
 
 class MIREmitter {
@@ -1046,33 +1043,33 @@ class MIREmitter {
         }
 
         const key = MIRKeyGenerator.generateTypeKey(rtype);
-        if (this.masm.conceptDecls.has(key.keyid) || this.masm.entityDecls.has(key.keyid) || this.pendingOOProcessing.findIndex((oop) => oop.tkey === key.keyid) !== -1) {
+        if (this.masm.conceptDecls.has(key) || this.masm.entityDecls.has(key) || this.pendingOOProcessing.findIndex((oop) => oop.tkey === key) !== -1) {
             return;
         }
 
         if (decl.ns === "Core" && decl.name === "Result") {
             const okdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Core::Result::Ok") as EntityTypeDecl;
             const okkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(okdecl, binds)));
-            const okentry = { tkey: okkey.keyid, shortname: okkey.shortname, ootype: okdecl, binds: binds }
-            if (!this.masm.entityDecls.has(okkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === okkey.keyid) === -1) {
+            const okentry = { tkey: okkey, ootype: okdecl, binds: binds }
+            if (!this.masm.entityDecls.has(okkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === okkey) === -1) {
                 this.pendingOOProcessing.push(okentry);
                 this.entityInstantiationInfo.push(okentry);
 
                 if(this.emitEnabled) {
-                    const ft = MIREntityType.create(okkey.keyid, okkey.shortname);
+                    const ft = MIREntityType.create(okkey);
                     this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
                 }
             }
 
             const errdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Core::Result::Err") as EntityTypeDecl;
             const errkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(errdecl, binds)));
-            const errentry = { tkey: errkey.keyid, shortname: errkey.shortname, ootype: errdecl, binds: binds }
-            if (!this.masm.entityDecls.has(errkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === errkey.keyid) === -1) {
+            const errentry = { tkey: errkey, ootype: errdecl, binds: binds }
+            if (!this.masm.entityDecls.has(errkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === errkey) === -1) {
                 this.pendingOOProcessing.push(errentry);
                 this.entityInstantiationInfo.push(errentry);
 
                 if(this.emitEnabled) {
-                    const ft = MIREntityType.create(errkey.keyid, errkey.shortname);
+                    const ft = MIREntityType.create(errkey);
                     this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
                 }
             }
@@ -1081,13 +1078,13 @@ class MIREmitter {
         if (decl.ns === "Core" && decl.name === "Option") {
             const somethingdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Core::Something") as EntityTypeDecl;
             const somethngkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(somethingdecl, binds)));
-            const somethingentry = { tkey: somethngkey.keyid, shortname: somethngkey.shortname, ootype: somethingdecl, binds: binds }
-            if (!this.masm.entityDecls.has(somethngkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === somethngkey.keyid) === -1) {
+            const somethingentry = { tkey: somethngkey, ootype: somethingdecl, binds: binds }
+            if (!this.masm.entityDecls.has(somethngkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === somethngkey) === -1) {
                 this.pendingOOProcessing.push(somethingentry);
                 this.entityInstantiationInfo.push(somethingentry);
 
                 if(this.emitEnabled) {
-                    const ft = MIREntityType.create(somethngkey.keyid, somethngkey.shortname);
+                    const ft = MIREntityType.create(somethngkey);
                     this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
                 }
             }
@@ -1102,8 +1099,8 @@ class MIREmitter {
             }
         }
 
-        this.pendingOOProcessing.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
-        this.entityInstantiationInfo.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
+        this.pendingOOProcessing.push({ tkey: key, ootype: decl, binds: binds});
+        this.entityInstantiationInfo.push({ tkey: key, ootype: decl, binds: binds});
     }
 
     registerResolvedTypeReference(t: ResolvedType): MIRType {
@@ -1128,7 +1125,7 @@ class MIREmitter {
                 }
 
                 const ekey = MIRKeyGenerator.generateTypeKey(rtt);
-                rt = MIREntityType.create(ekey.keyid, ekey.shortname);
+                rt = MIREntityType.create(ekey);
             }
             else if (sopt instanceof ResolvedConceptAtomType) {
                 if(sopt.conceptTypes.length > 1) {
@@ -1139,7 +1136,7 @@ class MIREmitter {
                     this.registerTypeInstantiation(rtt, cpt.concept, cpt.binds);
                     return MIRKeyGenerator.generateTypeKey(rtt);
                 });
-                rt = MIRConceptType.create(natoms.map((kk) => [kk.keyid, kk.shortname]));
+                rt = MIRConceptType.create(natoms);
             }
             else if (sopt instanceof ResolvedTupleAtomType) {
                 const tatoms = sopt.types.map((entry) => this.registerResolvedTypeReference(entry));
@@ -1470,7 +1467,7 @@ class MIREmitter {
 
                     while (emitter.pendingOOProcessing.length !== 0) {
                         const tt = emitter.pendingOOProcessing[0];
-                        checker.processOOType(tt.tkey, tt.shortname, tt.ootype, tt.binds);
+                        checker.processOOType(tt.tkey, tt.ootype, tt.binds);
 
                         emitter.pendingOOProcessing.shift();
                     }
