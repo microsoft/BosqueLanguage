@@ -1472,24 +1472,6 @@ class ICPPBodyEmitter {
             case "NSCore::>==infix=(NSCore::Decimal, NSCore::Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeDecimalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::!==infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::<=infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::>=infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::<==infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::>==infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeStrPosOp, trgt, oftype, args[0], args[1]);
-            }
             default: {
                 return NOT_IMPLEMENTED(op);
             }

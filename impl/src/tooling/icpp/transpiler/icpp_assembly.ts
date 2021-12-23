@@ -18,21 +18,8 @@ type SourceInfo = {
 };
 
 const ICPP_WORD_SIZE = 8;
-const UNIVERSAL_SIZE = 48;
-
-enum ICPPTypeKind
-{
-    Invalid = 0x0,
-    Register,
-    Struct,
-    BoxedStruct,
-    String,
-    BigNum,
-    Ref,
-    UnionRef,
-    UnionInline,
-    UnionUniversal
-}
+const UNIVERSAL_CONTENT_SIZE = 32;
+const UNIVERSAL_TOTAL_SIZE = 40;
 
 type RefMask = string;
 
@@ -52,18 +39,18 @@ class ICPPTypeSizeInfoSimple {
     }
 
     isScalarOnlyInline(): boolean {
-        return /1*/.test(this.inlinedmask);
+        return /1+/.test(this.inlinedmask);
     }
 
-    static createByRegisterTypeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
+    static createByRegisterSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
         return new ICPPTypeSizeInfoSimple(tkey, inlinedatasize, assigndatasize, inlinedmask);
     }
 
-    static createByValueTypeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
+    static createByValueSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
         return new ICPPTypeSizeInfoSimple(tkey, inlinedatasize, inlinedatasize, inlinedmask);
     }
 
-    static createByRefTypeInfo(tkey: MIRResolvedTypeKey): ICPPTypeSizeInfoSimple {
+    static createByRefSizeInfo(tkey: MIRResolvedTypeKey): ICPPTypeSizeInfoSimple {
         return new ICPPTypeSizeInfoSimple(tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2");
     }
 }
@@ -85,18 +72,18 @@ class ICPPTypeSizeInfo {
     }
 
     isScalarOnlyInline(): boolean {
-        return /1*/.test(this.inlinedmask);
+        return /1+/.test(this.inlinedmask);
     }
 
-    static createByRegisterTypeInfo(inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
+    static createByRegisterSizeInfo(inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
         return new ICPPTypeSizeInfo(inlinedatasize, inlinedatasize, assigndatasize, undefined, inlinedmask);
     }
 
-    static createByValueTypeInfo(inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
+    static createByValueSizeInfo(inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
         return new ICPPTypeSizeInfo(inlinedatasize, inlinedatasize, inlinedatasize, undefined, inlinedmask);
     }
 
-    static createByRefTypeInfo(heapsize: number, heapmask: RefMask | undefined): ICPPTypeSizeInfo {
+    static createByRefSizeInfo(heapsize: number, heapmask: RefMask | undefined): ICPPTypeSizeInfo {
         return new ICPPTypeSizeInfo(heapsize, ICPP_WORD_SIZE, ICPP_WORD_SIZE, heapmask, "2");
     }
 
@@ -105,255 +92,139 @@ class ICPPTypeSizeInfo {
     }
 }
 
-enum ICPPParseTag
-{
-    BuiltinTag = 0x0,
-    ValidatorTag,
-    StringOfTag,
-    DataStringTag,
-    TypedNumberTag,
-    VectorTag,
-    ListTag,
-    StackTag,
-    QueueTag,
-    SetTag,
-    MapTag,
-    TupleTag,
-    RecordTag,
-    EntityTag,
-    EphemeralListTag,
-    EnumTag,
-    RefUnionTag,
-    InlineUnionTag,
-    UniversalUnionTag
+enum LayoutCategory {
+    Inline = 0x0,
+    Ref,
+    UnionRef,
+    UnionInline,
+    UnionUniversal
 }
 
-class ICPPType {
+class ICPPLayoutInfo {
     readonly tkey: MIRResolvedTypeKey;
-    readonly tkind: ICPPTypeKind;
-    
-    readonly allocinfo: ICPPTypeSizeInfo; //memory size information
+    readonly allocinfo: ICPPTypeSizeInfo;
+    readonly layout: LayoutCategory;
 
-    readonly ptag: ICPPParseTag
-    readonly iskey: boolean;
-    
-    constructor(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, iskey: boolean) {
+    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, layout: LayoutCategory) {
         this.tkey = tkey;
-        this.tkind = tkind;
         this.allocinfo = allocinfo;
-
-        this.ptag = ptag;
-        this.iskey = iskey;
-    }
-
-    jemitType(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
-        assert(this.ptag !== ICPPParseTag.BuiltinTag); //shouldn't be emitting these since they are "well known"
-
-        return {ptag: this.ptag, iskey: this.iskey, tkey: this.tkey, tkind: this.tkind, allocinfo: this.allocinfo.jemit(), name: this.tkey, vtable: vtable};
+        this.layout = layout;
     }
 }
 
-class ICPPTypeRegister extends ICPPType {
-    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask, iskey: boolean) {
-        super(ICPPParseTag.BuiltinTag, tkey, ICPPTypeKind.Register, ICPPTypeSizeInfo.createByRegisterTypeInfo(inlinedatasize, assigndatasize, inlinedmask), iskey);
-        assert(inlinedatasize <= UNIVERSAL_SIZE);
-    }
-
-    jemitRegister(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
-        return this.jemitType(vtable);
+class ICPPLayoutInfoFixed extends ICPPLayoutInfo {
+    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, layout: LayoutCategory) {
+        super(tkey, allocinfo, layout);
     }
 }
 
-class ICPPTypeTuple extends ICPPType {
+class ICPPTupleLayoutInfo extends ICPPLayoutInfo {
     readonly maxIndex: number;
     readonly ttypes: MIRResolvedTypeKey[];
     readonly idxoffsets: number[];
 
-    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[], iskey: boolean) {
-        super(ICPPParseTag.TupleTag, tkey, tkind, allocinfo, iskey);
+    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[], layout: LayoutCategory) {
+        super(tkey, allocinfo, layout);
 
         this.maxIndex = idxtypes.length;
         this.ttypes = idxtypes;
         this.idxoffsets = idxoffsets;
     }
 
-    static createByValueTuple(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[], iskey: boolean): ICPPTypeTuple {
-        assert(inlinedatasize <= UNIVERSAL_SIZE);
-        return new ICPPTypeTuple(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), idxtypes, idxoffsets, iskey);
+    static createByValueTuple(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTupleLayoutInfo {
+        return new ICPPTupleLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(inlinedatasize, inlinedmask), idxtypes, idxoffsets, LayoutCategory.Inline);
     }
 
-    static createByRefTuple(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[], iskey: boolean): ICPPTypeTuple {
-        return new ICPPTypeTuple(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), idxtypes, idxoffsets, iskey);
-    }
-
-    jemitTupleType(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
-        return {...this.jemitType(vtable), maxIndex: this.maxIndex, ttypes: this.ttypes, idxoffsets: this.idxoffsets};
+    static createByRefTuple(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTupleLayoutInfo {
+        return new ICPPTupleLayoutInfo(tkey, ICPPTypeSizeInfo.createByRefSizeInfo(heapsize, heapmask), idxtypes, idxoffsets, LayoutCategory.Ref);
     }
 }
 
-class ICPPTypeRecord extends ICPPType {
+class ICPPRecordLayoutInfo extends ICPPLayoutInfo {
     readonly propertynames: string[];
     readonly propertytypes: MIRResolvedTypeKey[];
     readonly propertyoffsets: number[];
 
-    constructor(tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[], iskey: boolean) {
-        super(ICPPParseTag.RecordTag, tkey, tkind, allocinfo, iskey);
+    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[], layout: LayoutCategory) {
+        super(tkey, allocinfo, layout);
 
         this.propertynames = propertynames;
         this.propertytypes = propertytypes;
         this.propertyoffsets = propertyoffsets;
     }
 
-    static createByValueRecord(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[], iskey: boolean): ICPPTypeRecord {
-        assert(inlinedatasize <= UNIVERSAL_SIZE);
-        return new ICPPTypeRecord(tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), propertynames, propertytypes, propertyoffsets, iskey);
+    static createByValueRecord(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPRecordLayoutInfo {
+        return new ICPPRecordLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(inlinedatasize, inlinedmask), propertynames, propertytypes, propertyoffsets, LayoutCategory.Inline);
     }
 
-    static createByRefRecord(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[], iskey: boolean): ICPPTypeRecord {
-        return new ICPPTypeRecord(tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets, iskey);
-    }
-
-    jemitRecord(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
-        return {...this.jemitType(vtable), propertynames: this.propertynames, propertytypes: this.propertytypes, propertyoffsets: this.propertyoffsets};
+    static createByRefRecord(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPRecordLayoutInfo {
+        return new ICPPRecordLayoutInfo(tkey, ICPPTypeSizeInfo.createByRefSizeInfo(heapsize, heapmask), propertynames, propertytypes, propertyoffsets, LayoutCategory.Ref);
     }
 }
 
-class ICPPTypeEntity extends ICPPType {
+class ICPPEntityLayoutInfo extends ICPPLayoutInfo {
     readonly fieldnames: MIRFieldKey[];
     readonly fieldtypes: MIRResolvedTypeKey[];
     readonly fieldoffsets: number[];
-    readonly extradata: any;
 
-    constructor(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, tkind: ICPPTypeKind, allocinfo: ICPPTypeSizeInfo, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[], iskey: boolean, extradata: any) {
-        super(ptag, tkey, tkind, allocinfo, iskey);
+    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[], layout: LayoutCategory) {
+        super(tkey, allocinfo, layout);
 
         this.fieldnames = fieldnames;
         this.fieldtypes = fieldtypes;
         this.fieldoffsets = fieldoffsets;
-
-        this.extradata = extradata;
     }
 
-    static createByValueEntity(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[], iskey: boolean, extradata: any): ICPPTypeEntity {
-        assert(inlinedatasize <= UNIVERSAL_SIZE);
-        return new ICPPTypeEntity(ptag, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), fieldnames, fieldtypes, fieldoffsets, iskey, extradata);
+    static createByValueEntity(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPEntityLayoutInfo {
+        return new ICPPEntityLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(inlinedatasize, inlinedmask), fieldnames, fieldtypes, fieldoffsets, LayoutCategory.Inline);
     }
 
-    static createByRefEntity(ptag: ICPPParseTag, tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[], iskey: boolean, extradata: any): ICPPTypeEntity {
-        return new ICPPTypeEntity(ptag, tkey, ICPPTypeKind.Ref, ICPPTypeSizeInfo.createByRefTypeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets, iskey, extradata);
-    }
-
-    jemitValidator(re: object): object {
-        return {...this.jemitType([]), regex: re};
-    }
-
-    jemitStringOf(validator: MIRResolvedTypeKey): object {
-        return {...this.jemitType([]), validator: validator};
-    }
-
-    jemitDataString(chkinv: MIRInvokeKey): object {
-        return {...this.jemitType([]), chkinv: chkinv};
-    }
-
-    jemitTypedNumber(underlying: MIRResolvedTypeKey, primitive: MIRResolvedTypeKey): object {
-        return {...this.jemitType([]), underlying: underlying, primitive: primitive};
-    }
-
-    jemitEnum(underlying: MIRResolvedTypeKey, enuminvs: [string, number][]): object {
-        return {...this.jemitType([]), underlying: underlying, enuminvs: enuminvs};
-    }
-
-    jemitVector(etype: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
-        assert(false);
-        return (undefined as any) as object;
-    }
-
-    jemitList(etype: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
-        return {...this.jemitType([]), etype: etype, esize: esize, emask: emask};
-    }
-
-    jemitStack(t: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
-        assert(false);
-        return (undefined as any) as object;
-    }
-
-    jemitQueue(t: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
-        assert(false);
-        return (undefined as any) as object;
-    }
-
-    jemitSet(t: MIRResolvedTypeKey, esize: number, emask: RefMask): object {
-        assert(false);
-        return (undefined as any) as object;
-    }
-
-    jemitMap(k: MIRResolvedTypeKey, kesize: number, kemask: RefMask, v: MIRResolvedTypeKey, vesize: number, vemask: RefMask): object {
-        assert(false);
-        return (undefined as any) as object;
-    }
-
-    jemitEntity(vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]): object {
-        return {...this.jemitType(vtable), fieldnames: this.fieldnames, fieldtypes: this.fieldtypes, fieldoffsets: this.fieldoffsets};
+    static createByRefEntity(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPEntityLayoutInfo {
+        return new ICPPEntityLayoutInfo(tkey, ICPPTypeSizeInfo.createByRefSizeInfo(heapsize, heapmask), fieldnames, fieldtypes, fieldoffsets, LayoutCategory.Ref);
     }
 }
 
-class ICPPTypeEphemeralList extends ICPPType {
+class ICPPEphemeralListLayoutInfo extends ICPPLayoutInfo {
     readonly etypes: MIRResolvedTypeKey[];
     readonly eoffsets: number[];
 
     constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, etypes: MIRResolvedTypeKey[], eoffsets: number[]) {
-        super(ICPPParseTag.EphemeralListTag, tkey, ICPPTypeKind.Struct, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), false);
+        super(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(inlinedatasize, inlinedmask), LayoutCategory.Inline);
 
         this.etypes = etypes;
         this.eoffsets = eoffsets;
     }
-
-    jemitEphemeralList(): object {
-        return {...this.jemitType([]), etypes: this.etypes, eoffsets: this.eoffsets};
-    }
 }
 
-class ICPPTypeRefUnion extends ICPPType {
-    constructor(tkey: MIRResolvedTypeKey, iskey: boolean) {
-        super(ICPPParseTag.RefUnionTag, tkey, ICPPTypeKind.UnionRef, ICPPTypeSizeInfo.createByRefTypeInfo(0, "2"), iskey);
-    }
-
-    jemitRefUnion(subtypes: MIRResolvedTypeKey[]): object {
-        return {...this.jemitType([]), subtypes: subtypes};
-    }
-}
-
-class ICPPTypeInlineUnion extends ICPPType {
-    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, iskey: boolean) {
-        super(ICPPParseTag.InlineUnionTag, tkey, ICPPTypeKind.UnionInline, ICPPTypeSizeInfo.createByValueTypeInfo(inlinedatasize, inlinedmask), iskey);
-    }
-
-    jemitInlineUnion(subtypes: MIRResolvedTypeKey[]): object {
-        return {...this.jemitType([]), subtypes: subtypes};
-    }
-}
-
-class ICPPTypeUniversalUnion extends ICPPType {
+class ICPPLayoutRefUnion extends ICPPLayoutInfo {
     constructor(tkey: MIRResolvedTypeKey) {
-        super(ICPPParseTag.UniversalUnionTag, tkey, ICPPTypeKind.UnionUniversal, ICPPTypeSizeInfo.createByValueTypeInfo(40, "51111"), false);
+        super(tkey, ICPPTypeSizeInfo.createByRefSizeInfo(0, "2"), LayoutCategory.UnionRef);
     }
+}
 
-    jemitInlineUnion(subtypes: MIRResolvedTypeKey[]): object {
-        return {...this.jemitType([]), subtypes: subtypes};
+class ICPPLayoutInlineUnion extends ICPPLayoutInfo {
+    constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, iskey: boolean) {
+        super(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(inlinedatasize, inlinedmask), LayoutCategory.UnionInline);
+    }
+}
+
+class ICPPLayoutUniversalUnion extends ICPPLayoutInfo {
+    constructor(tkey: MIRResolvedTypeKey) {
+        super(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(UNIVERSAL_TOTAL_SIZE, "51111"), LayoutCategory.UnionUniversal);
     }
 }
 
 class ICPPFunctionParameter {
     readonly name: string;
-    readonly ptype: ICPPType;
+    readonly ptype: MIRResolvedTypeKey;
 
-    constructor(name: string, ptype: ICPPType) {
+    constructor(name: string, ptype: MIRResolvedTypeKey) {
         this.name = name;
         this.ptype = ptype;
     }
 
     jsonEmit(): object {
-        return {name: this.name, ptype: this.ptype.tkey};
+        return {name: this.name, ptype: this.ptype};
     }
 }
 
@@ -367,7 +238,7 @@ class ICPPInvokeDecl {
     readonly recursive: boolean;
 
     readonly params: ICPPFunctionParameter[];
-    readonly resultType: ICPPType;
+    readonly resultType: MIRResolvedTypeKey;
 
     readonly scalarStackBytes: number;
     readonly mixedStackBytes: number;
@@ -633,7 +504,7 @@ class ICPPAssembly
 }
 
 export {
-    TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_SIZE, ICPPParseTag,
+    TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_CONTENT_SIZE, UNIVERSAL_TOTAL_SIZE, ICPPParseTag,
     ICPPTypeKind, ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask,
     ICPPType, ICPPTypeRegister, ICPPTypeTuple, ICPPTypeRecord, ICPPTypeEntity, ICPPTypeEphemeralList, ICPPTypeInlineUnion, ICPPTypeRefUnion, ICPPTypeUniversalUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,

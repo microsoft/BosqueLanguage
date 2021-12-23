@@ -11,7 +11,7 @@ import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedSt
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing, MIRConstantArgument } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
-import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl } from "../compiler/mir_assembly";
+import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl, MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl } from "../compiler/mir_assembly";
 import { BSQRegex, RegexAlternation, RegexCharRange, RegexComponent, RegexConstClass, RegexDotCharClass, RegexLiteral, RegexOptional, RegexPlusRepeat, RegexRangeRepeat, RegexSequence, RegexStarRepeat } from "../ast/bsqregex";
 
 import * as assert from "assert";
@@ -6719,6 +6719,61 @@ class TypeChecker {
                     
                     const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, undefined);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
+                }
+                else if(tdecl.attributes.includes("__havoc_type")) {
+                    const havocentity = new MIRHavocEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides);
+                    this.m_emitter.masm.entityDecls.set(tkey, havocentity);
+                }
+                else if(tdecl.attributes.includes("__mask_type")) {
+                    const ccfields = this.m_assembly.getAllOOFieldsConstructors(tdecl, binds);
+                    const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
+
+                    const fields: MIRFieldDecl[] = [];
+                    const finfos = [...this.m_assembly.getAllOOFieldsLayout(tdecl, binds)];
+                    finfos.forEach((ff) => {
+                        const fi = ff[1];
+                        const f = fi[1];
+
+                        const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(fi[0], fi[2]), f.name);
+                        if (!this.m_emitter.masm.fieldDecls.has(fkey)) {
+                            const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
+                            const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
+
+                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, dtype.typeID);
+                            this.m_emitter.masm.fieldDecls.set(fkey, mfield);
+                        }
+
+                        fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
+                    });
+
+                    const maskentity = new MIRMaskEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, consfuncfields, fields);
+                    this.m_emitter.masm.entityDecls.set(tkey, maskentity);
+                }
+                else if(tdecl.attributes.includes("__partialvector_type")) {
+                    const ccfields = this.m_assembly.getAllOOFieldsConstructors(tdecl, binds);
+                    const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
+
+                    const fields: MIRFieldDecl[] = [];
+                    const finfos = [...this.m_assembly.getAllOOFieldsLayout(tdecl, binds)];
+                    finfos.forEach((ff) => {
+                        const fi = ff[1];
+                        const f = fi[1];
+
+                        const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(fi[0], fi[2]), f.name);
+                        if (!this.m_emitter.masm.fieldDecls.has(fkey)) {
+                            const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
+                            const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
+
+                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, dtype.typeID);
+                            this.m_emitter.masm.fieldDecls.set(fkey, mfield);
+                        }
+
+                        fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
+                    });
+
+                    const mirentrytype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
+                    const pventity = new MIRPartialVectorEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, shortname, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, consfuncfields, fields, mirentrytype.typeID);
+                    this.m_emitter.masm.entityDecls.set(tkey, pventity);
                 }
                 else if(tdecl.attributes.includes("__list_type")) {
                     const oftype = (tdecl.memberMethods.find((mf) => mf.name === "value") as MemberMethodDecl).invoke.resultType;

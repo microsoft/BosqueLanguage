@@ -200,15 +200,6 @@ class SMTTypeEmitter {
                 else if(this.isType(tt, "NSCore::Regex")) {
                     return new SMTType("bsq_regex", "TypeTag_Regex", entity.tkey);
                 }
-                else if (this.isType(tt, "NSCore::ISequence")) {
-                    return new SMTType("ISequence", "TypeTag_ISequence", entity.tkey);
-                }
-                else if (this.isType(tt, "NSCore::JSequence")) {
-                    return new SMTType("JSequence", "TypeTag_JSequence", entity.tkey);
-                }
-                else if (this.isType(tt, "NSCore::SSequence")) {
-                    return new SMTType("SSequence", "TypeTag_SSequence", entity.tkey);
-                }
                 else if (this.isType(tt, "NSCore::HavocSequence")) {
                     return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
                 }

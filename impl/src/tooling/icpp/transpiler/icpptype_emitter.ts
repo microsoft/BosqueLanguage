@@ -14,36 +14,6 @@ import { SourceInfo } from "../../../ast/parser";
 import * as assert from "assert";
 import { BSQRegex } from "../../../ast/bsqregex";
 
-enum APIEmitTypeTag
-{
-    NoneTag = 0x0,
-    NothingTag,
-    BoolTag,
-    NatTag,
-    IntTag,
-    BigNatTag,
-    BigIntTag,
-    RationalTag,
-    FloatTag,
-    DecimalTag,
-    StringTag,
-    StringOfTag,
-    DataStringTag,
-    ByteBufferTag,
-    DateTimeTag,
-    TickTimeTag,
-    LogicalTimeTag,
-    UUIDTag,
-    ContentHashTag,
-    ConstructableOfType,
-    TupleTag,
-    RecordTag,
-    ContainerTag,
-    EnumTag,
-    EntityTag,
-    UnionTag
-};
-
 class ICPPTypeEmitter {
     readonly topts: TranspilerOptions;
     readonly assembly: MIRAssembly;
@@ -160,7 +130,7 @@ class ICPPTypeEmitter {
             return true;
         }
         else {
-            return tt.typeID.startsWith("NSCore::StringOf") || tt.typeID.startsWith("NSCore::DataString");
+            return tt.typeID.startsWith("Core::StringOf") || tt.typeID.startsWith("Core::DataString");
         }
     }
 
@@ -200,7 +170,7 @@ class ICPPTypeEmitter {
     }
 
     private computeICCPTypeForUnion(utype: MIRType, tl: ICPPType[]): ICPPType {
-        const iskey = this.assembly.subtypeOf(utype, this.getMIRType("NSCore::KeyType"));
+        const iskey = this.assembly.subtypeOf(utype, this.getMIRType("Core::KeyType"));
 
         if(tl.some((t) => t.tkind === ICPPTypeKind.UnionUniversal)) {
             return new ICPPTypeUniversalUnion(utype.typeID);
@@ -255,29 +225,24 @@ class ICPPTypeEmitter {
                 : ICPPTypeTuple.createByRefTuple(tt.typeID, size, mask, idxtypes, idxoffsets, iskey)
         }
         else {
-            return tt.isvalue 
-                ? new ICPPTypeInlineUnion(tt.trkey, ICPP_WORD_SIZE + size, "5" + mask, iskey)
-                : new ICPPTypeRefUnion(tt.trkey, iskey);
+            return this.isTypeInline(this.getMIRType(tt.typeID))
+                ? new ICPPTypeInlineUnion(tt.typeID, ICPP_WORD_SIZE + size, "5" + mask, iskey)
+                : new ICPPTypeRefUnion(tt.typeID, iskey);
         }
     }
 
     private getICPPTypeInfoForRecordShallow(tt: MIRRecordType): ICPPTypeSizeInfoSimple {
-        if(!tt.isvalue) {
-            return ICPPTypeSizeInfoSimple.createByRefTypeInfo(tt.trkey);
+        let size = 0;
+        let mask: RefMask = "";
+
+        for (let i = 0; i < tt.entries.length; ++i) {
+            const sizeinfo = this.getICPPTypeInfoShallow(tt.entries[i].ptype);
+
+            size = size + sizeinfo.inlinedatasize;
+            mask = mask + sizeinfo.inlinedmask;
         }
-        else {
-            let size = 0;
-            let mask: RefMask = "";
 
-            for(let i = 0; i < tt.entries.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(tt.entries[i].type);
-
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
-            }
-
-            return ICPPTypeSizeInfoSimple.createByValueTypeInfo(tt.trkey, size, mask);
-        }
+        return ICPPTypeSizeInfoSimple.createByValueTypeInfo(tt.typeID, size, mask);
     }
 
     private getICPPTypeForRecord(tt: MIRRecordType): ICPPType {
@@ -287,57 +252,43 @@ class ICPPTypeEmitter {
         let size = 0;
         let mask: RefMask = "";
 
-        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoShallow(entry.type));
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoShallow(entry.ptype));
         for(let i = 0; i < icppentries.length; ++i) {
-            propertynames.push(tt.entries[i].name);
+            propertynames.push(tt.entries[i].pname);
             propertytypes.push(icppentries[i].tkey);
             propertyoffsets.push(size);
             size = size + icppentries[i].inlinedatasize;
             mask = mask + icppentries[i].inlinedmask;
         }
 
-        const iskey = this.assembly.subtypeOf(this.getMIRType(tt.trkey), this.getMIRType("NSCore::KeyType"));
-        if(this.isUniqueRecordType(this.getMIRType(tt.trkey))) {
-            return tt.isvalue 
-                ? ICPPTypeRecord.createByValueRecord(tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets, iskey)
-                : ICPPTypeRecord.createByRefRecord(tt.trkey, size, mask, propertynames, propertytypes, propertyoffsets, iskey)
+        const iskey = this.assembly.subtypeOf(this.getMIRType(tt.typeID), this.getMIRType("NSCore::KeyType"));
+        if(this.isUniqueRecordType(this.getMIRType(tt.typeID))) {
+            return this.isTypeInline(this.getMIRType(tt.typeID)) 
+                ? ICPPTypeRecord.createByValueRecord(tt.typeID, size, mask, propertynames, propertytypes, propertyoffsets, iskey)
+                : ICPPTypeRecord.createByRefRecord(tt.typeID, size, mask, propertynames, propertytypes, propertyoffsets, iskey)
         }
         else {
-            return tt.isvalue 
-                ? new ICPPTypeInlineUnion(tt.trkey, ICPP_WORD_SIZE + size, "5" + mask, iskey)
-                : new ICPPTypeRefUnion(tt.trkey, iskey);
+            return this.isTypeInline(this.getMIRType(tt.typeID)) 
+                ? new ICPPTypeInlineUnion(tt.typeID, ICPP_WORD_SIZE + size, "5" + mask, iskey)
+                : new ICPPTypeRefUnion(tt.typeID, iskey);
         }
     }
 
-    private getICPPTypeInfoForEntityShallow(tt: MIREntityTypeDecl): ICPPTypeSizeInfoSimple {
-        if(tt.attributes.includes("struct")) {
-            return ICPPTypeSizeInfoSimple.createByRefTypeInfo(tt.tkey);
-        }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.StringOfDecl) || tt.specialDecls.has(MIRSpecialTypeCategory.DataStringDecl)) {
-            return this.getICPPTypeInfoShallow(this.getMIRType("NSCore::String"));
-        }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.TypeDeclNumeric)) {
-            return this.getICPPTypeInfoShallow(this.getMIRType((tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind));
-        }
-        else if(tt.specialDecls.has(MIRSpecialTypeCategory.EnumTypeDecl)) {
-            return this.getICPPTypeInfoShallow(this.getMIRType((tt.specialTemplateInfo as {tname: string, tkind: MIRResolvedTypeKey}[])[0].tkind));
-        }
-        else {
-            let size = 0;
-            let mask: RefMask = "";
+    private getICPPTypeInfoForEntityShallow(tt: MIRObjectEntityTypeDecl): ICPPTypeSizeInfoSimple {
+        let size = 0;
+        let mask: RefMask = "";
 
-            for(let i = 0; i < tt.fields.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(this.getMIRType(tt.fields[i].declaredType));
+        for (let i = 0; i < tt.fields.length; ++i) {
+            const sizeinfo = this.getICPPTypeInfoShallow(this.getMIRType(tt.fields[i].declaredType));
 
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
-            }
-
-            return ICPPTypeSizeInfoSimple.createByValueTypeInfo(tt.tkey, size, mask);
+            size = size + sizeinfo.inlinedatasize;
+            mask = mask + sizeinfo.inlinedmask;
         }
+
+        return ICPPTypeSizeInfoSimple.createByValueTypeInfo(tt.tkey, size, mask);
     }
 
-    private getICPPTypeForEntity(tt: MIREntityTypeDecl): ICPPTypeEntity {
+    private getICPPTypeForObjectEntity(tt: MIRObjectEntityTypeDecl): ICPPTypeEntity {
         let fieldnames: MIRFieldKey[] = [];
         let fieldtypes: MIRResolvedTypeKey[] = [];
         let fieldoffsets: number[] = [];
@@ -441,6 +392,12 @@ class ICPPTypeEmitter {
         return tt.attributes.includes("struct") 
             ? ICPPTypeEntity.createByValueEntity(ptag, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets, iskey, extradata)
             : ICPPTypeEntity.createByRefEntity(ptag, tt.tkey, size, mask, fieldnames, fieldtypes, fieldoffsets, iskey, extradata);
+    }
+
+    private getICPPTypeForMaskEntity(tt: MIRObjectEntityTypeDecl): ICPPTypeEntity {
+    }
+
+    private getICPPTypeForPartialVectorEntity(tt: MIRObjectEntityTypeDecl): ICPPTypeEntity {
     }
 
     private getICPPTypeForEphemeralList(tt: MIREphemeralListType): ICPPTypeEphemeralList {

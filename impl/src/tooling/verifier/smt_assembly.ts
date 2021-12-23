@@ -133,8 +133,6 @@ class SMTFunctionUninterpreted {
 }
 
 class SMTEntityDecl {
-    readonly iskeytype: boolean;
-
     readonly smtname: string;
     readonly typetag: string;
 
@@ -142,39 +140,7 @@ class SMTEntityDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined, boxf: string, ubf: string) {
-        this.iskeytype = iskeytype;
-
-        this.smtname = smtname;
-        this.typetag = typetag;
-        this.consf = consf;
-        this.boxf = boxf;
-        this.ubf = ubf;
-    }
-}
-
-class SMTListDecl {
-    readonly iskeytype: boolean;
-
-    readonly smtllisttype: string; //the uninterpreted list contents kind with multiple constructors 
-    readonly listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[]; //the constructors for each list
-
-    readonly emptyconst: string;
-
-    readonly smtname: string;
-    readonly typetag: string;
-
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] };
-    readonly boxf: string;
-    readonly ubf: string;
-
-    constructor(iskeytype: boolean, smtllisttype: string, listtypeconsf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }[], emptyconst: string, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
-        this.iskeytype = iskeytype;
-
-        this.smtllisttype = smtllisttype;
-        this.listtypeconsf = listtypeconsf;
-        this.emptyconst = emptyconst;
-
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined, boxf: string, ubf: string) {
         this.smtname = smtname;
         this.typetag = typetag;
         this.consf = consf;
@@ -184,7 +150,6 @@ class SMTListDecl {
 }
 
 class SMTTupleDecl {
-    readonly iskeytype: boolean;
     readonly smtname: string;
     readonly typetag: string;
 
@@ -192,9 +157,7 @@ class SMTTupleDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
-        this.iskeytype = iskeytype;
-
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
         this.smtname = smtname;
         this.typetag = typetag;
         this.consf = consf;
@@ -204,7 +167,6 @@ class SMTTupleDecl {
 }
 
 class SMTRecordDecl {
-    readonly iskeytype: boolean;
     readonly smtname: string;
     readonly typetag: string;
 
@@ -212,9 +174,7 @@ class SMTRecordDecl {
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
-        this.iskeytype = iskeytype;
-
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
         this.smtname = smtname;
         this.typetag = typetag;
         this.consf = consf;
@@ -297,7 +257,6 @@ class SMTAssembly {
     allErrors: { file: string, line: number, pos: number, msg: string }[] = [];
 
     entityDecls: SMTEntityDecl[] = [];
-    listDecls: SMTListDecl[] = [];
     tupleDecls: SMTTupleDecl[] = [];
     recordDecls: SMTRecordDecl[] = [];
     ephemeralDecls: SMTEphemeralListDecl[] = [];

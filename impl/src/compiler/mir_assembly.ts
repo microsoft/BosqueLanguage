@@ -329,7 +329,7 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     }
 
     static jparse(jobj: any): MIRConceptTypeDecl {
-        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.usinginvariant, jobj.consfunc, jobj.consfuncfields, jobj.fields);
+        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.usinginvariant, jobj.consfunc, jobj.consfuncfields, jobj.fields.map((jf: any) => MIRFieldDecl.jparse(jf)));
         
         jobj.vcallMap.forEach((vc: any) => entity.vcallMap.set(vc[0], vc[1]));
         return entity;
@@ -433,34 +433,45 @@ class MIRHavocEntityTypeDecl extends MIRInternalEntityTypeDecl {
 }
 
 class MIRMaskEntityTypeDecl extends MIREntityTypeDecl {
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[]) {
+    readonly consfuncfields: MIRFieldKey[];
+    readonly fields: MIRFieldDecl[];
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
+
+        this.consfuncfields = consfuncfields;
+        this.fields = fields;
     }
 
     jemit(): object {
-        return { tag: "mask", ...this.jemitbase() };
+        return { tag: "mask", ...this.jemitbase(), consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()) };
     }
 
     static jparse(jobj: any): MIRMaskEntityTypeDecl {
-        return new MIRMaskEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj));
+        return new MIRMaskEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.consfuncfields, jobj.fields.map((jf: any) => MIRFieldDecl.jparse(jf)));
     }
 }
 
 class MIRPartialVectorEntityTypeDecl extends MIRInternalEntityTypeDecl {
+    readonly consfuncfields: MIRFieldKey[];
+    readonly fields: MIRFieldDecl[];
+
     readonly entrytype: MIRResolvedTypeKey;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], entrytype: MIRResolvedTypeKey) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, shortname: string, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[], entrytype: MIRResolvedTypeKey) {
         super(srcInfo, srcFile, tkey, shortname, attributes, ns, name, terms, provides);
 
+        this.consfuncfields = consfuncfields;
+        this.fields = fields;
         this.entrytype = entrytype;
     }
 
     jemit(): object {
-        return { tag: "partialvector", ...this.jemitbase(), entrytype: this.entrytype };
+        return { tag: "partialvector", ...this.jemitbase(), consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), entrytype: this.entrytype };
     }
 
     static jparse(jobj: any): MIRPartialVectorEntityTypeDecl {
-        return new MIRPartialVectorEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.entrytype);
+        return new MIRPartialVectorEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.consfuncfields, jobj.fields.map((jf: any) => MIRFieldDecl.jparse(jf)), jobj.entrytype);
     }
 }
 
@@ -1030,6 +1041,7 @@ export {
     MIROOTypeDecl, MIRConceptTypeDecl, MIREntityTypeDecl,
     MIRType, MIRTypeOption, 
     MIREntityType, MIRObjectEntityTypeDecl, MIRConstructableEntityTypeDecl, MIREnumEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, 
+    MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl,
     MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl,
     MIRConceptType, MIRTupleType, MIRRecordType, MIREphemeralListType,
     BuildMode, ActionMode, PackageConfig, MIRAssembly

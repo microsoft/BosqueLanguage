@@ -7,13 +7,11 @@
 namespace Core;
 
 #if EXEC_LIBS
-__internal internal entity Mask provides Some {
+internal entity Mask provides Some {
     field bit0: Bool;
     field bit1: Bool;
     field bit2: Bool;
     field bit3: Bool;
-
-    // struct {uint32_t mask (byte); uint32_t count;}
 
     __safe function s_init_k(k: Nat): Mask mask_init_k
     __safe function s_min_set(m: Mask): Nat mask_min_set

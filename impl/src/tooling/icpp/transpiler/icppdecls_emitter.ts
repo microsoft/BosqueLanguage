@@ -11,6 +11,32 @@ import { ICPPBodyEmitter } from "./iccpbody_emitter";
 import { constructCallGraphInfo } from "../../../compiler/mir_callg";
 import { SourceInfo } from "../../../ast/parser";
 
+enum ICPPParseTag {
+    BuiltinTag = 0x0,
+    ValidatorTag,
+    RegexTag,
+    TupleStructTag,
+    TupleRefTag,
+    RecordStruct,
+    RecordRefTag,
+    EntityObjectStructTag,
+    EntityObjectRefTag,
+    EntityConstructableTag,
+    EntityConstructableInternal,
+    MaskTag,
+    PartialVectorTag,
+    ListTag,
+    StackTag,
+    QueueTag,
+    SetTag,
+    MapTag,
+    EphemeralListTag,
+    BoxedStructTag,
+    RefUnionTag,
+    InlineUnionTag,
+    UniversalUnionTag
+}
+
 class ICPPEmitter {
     readonly assembly: MIRAssembly;
     readonly temitter: ICPPTypeEmitter;
