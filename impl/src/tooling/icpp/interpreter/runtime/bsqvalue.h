@@ -885,7 +885,7 @@ struct BSQRational
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-#define CONS_BSQ_RATIONAL_TYPE(TID, NAME) (new BSQRegisterType<BSQRational>(TID, sizeof(BSQRational), "41", EMPTY_KEY_CMP, entityRationalDisplay_impl, NAME))
+#define CONS_BSQ_RATIONAL_TYPE(TID, NAME) (new BSQBigNumType<BSQRational>(TID, sizeof(BSQRational), "41", EMPTY_KEY_CMP, entityRationalDisplay_impl, NAME))
 
 ////
 //String
@@ -1370,7 +1370,7 @@ typedef struct { uint8_t bytes[16]; } BSQUUID;
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_UUID_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
+#define CONS_BSQ_UUID_TYPE(TID, NAME) (new BSQRegisterType<BSQUUID>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
 
 ////
 //ContentHash

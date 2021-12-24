@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRMaskEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPartialVectorEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 import { ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo,  } from "./icpp_assembly";
@@ -136,13 +136,13 @@ class ICPPTypeEmitter {
             for (let i = 0; i < tuptt.entries.length; ++i) {
                 const sizeinfo = this.getICPPTypeInfoShallow(tuptt.entries[i]);
 
-                isinline = isinline && sizeinfo.isinlinevalue;
+                isinline = isinline && sizeinfo.issmallinlinevalue;
                 size = size + sizeinfo.inlinedatasize;
                 mask = mask + sizeinfo.inlinedmask;
             }
 
             if(tuptt.entries.length <= 4 && isinline) {
-                res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask);
+                res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
             }
             else {
                 res = ICPPTypeSizeInfoSimple.createByRefSizeInfo(tt.typeID);
@@ -157,13 +157,13 @@ class ICPPTypeEmitter {
             for (let i = 0; i < rectt.entries.length; ++i) {
                 const sizeinfo = this.getICPPTypeInfoShallow(rectt.entries[i].ptype);
 
-                isinline = isinline && sizeinfo.isinlinevalue;
+                isinline = isinline && sizeinfo.issmallinlinevalue;
                 size = size + sizeinfo.inlinedatasize;
                 mask = mask + sizeinfo.inlinedmask;
             }
 
             if(rectt.entries.length <= 4 && isinline) {
-                res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask);
+                res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
             }
             else {
                 res = ICPPTypeSizeInfoSimple.createByRefSizeInfo(tt.typeID);
@@ -184,7 +184,7 @@ class ICPPTypeEmitter {
                 mask = mask + sizeinfo.inlinedmask;
             }
 
-            res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask);
+            res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
         }
         else if(this.assembly.subtypeOf(tt, this.getMIRType("NSKeyType"))) {
             return new SMTType("BKey", "[BKEY]", tt.typeID);
@@ -216,10 +216,10 @@ class ICPPTypeEmitter {
                     return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
                 }
                 else if (this.isType(tt, "BigInt")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "4");
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE, "4", true);
                 }
                 else if (this.isType(tt, "BigNat")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "4");
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE, "4", true);
                 }
                 else if (this.isType(tt, "Float")) {
                     return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
@@ -228,74 +228,49 @@ class ICPPTypeEmitter {
                     return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
                 }
                 else if (this.isType(tt, "Rational")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "41");
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, "41", true);
                 }
-                else if (this.isType(tt, "NSString")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "31");
+                else if (this.isType(tt, "String")) {
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, "31", true);
                 }
                 else if (this.isType(tt, "ByteBuffer")) {
-                    return new SMTType("BByteBuffer", "TypeTag_ByteBuffer", entity.tkey);
+                    return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
                 }
-                else if(this.isType(tt, "NSISOTime")) {
-                    return new SMTType("BISOTime", "TypeTag_ISOTime", entity.tkey);
+                else if(this.isType(tt, "DateTime")) {
+                    return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
                 }
-                else if(this.isType(tt, "NSLogicalTime")) {
-                    return new SMTType("BLogicalTime", "TypeTag_LogicalTime", entity.tkey);
+                else if(this.isType(tt, "TickTime")) {
+                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
                 }
-                else if(this.isType(tt, "NSUUID")) {
-                    return new SMTType("BUUID", "TypeTag_UUID", entity.tkey);
+                else if(this.isType(tt, "LogicalTime")) {
+                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
                 }
-                else if(this.isType(tt, "NSContentHash")) {
-                    return new SMTType("BHash", "TypeTag_ContentHash", entity.tkey);
+                else if(this.isType(tt, "UUID")) {
+                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11");
                 }
-                else if(this.isType(tt, "NSRegex")) {
-                    return new SMTType("bsq_regex", "TypeTag_Regex", entity.tkey);
+                else if(this.isType(tt, "ContentHash")) {
+                    return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
                 }
-                else if (this.isType(tt, "NSHavocSequence")) {
-                    return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
+                else if(this.isType(tt, "Regex")) {
+                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
                 }
                 else {
-                    if (this.isType(tt, "NSNumericOps")) {
-                        return new SMTType("NumericOps", "TypeTag_NumericOps", entity.tkey);
-                    }
-                    else if (this.isType(tt, "NSListFlatOps")) {
-                        return new SMTType("ListFlatOps", "TypeTag_ListFlatOps", entity.tkey);
-                    }
-                    else if (this.isType(tt, "NSListConcatOps")) {
-                        return new SMTType("ListConcatOps", "TypeTag_ListConcatOps", entity.tkey);
-                    }
-                    else if (this.isType(tt, "NSListOps")) {
-                        return new SMTType("ListOps", "ListOps", entity.tkey);
-                    }
-                    else {
-                        assert(false, "Unknown primitive internal entity");
-                        return new SMTType("[UNKNOWN MIRPrimitiveInternalEntityTypeDecl]", "[UNKNOWN]", entity.tkey);
-                    }
+                    assert(false, "Unknown primitive internal entity");
+                    ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
                 }
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                if (tt.typeID.startsWith("NSStringOf")) {
-                    return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("NSDataString")) {
-                    return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("NSDataBuffer")) {
-                    return new SMTType("BByteBuffer", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("NSSomething")) {
-                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("NSResult::Ok")) {
-                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else {
-                    assert(tt.typeID.startsWith("NSResult::Err"));
-                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
+                const mirtype = this.getMIRType(entity.fromtype);
+                xxxx;
+                const fromlayout = this.getICPPTypeInfoShallowForEntity(mirtype, mirdecl);
+
+                return fromlayout.createFromSizeInfo(entity.tkey);
+            }
+            else if (entity instanceof MIRMaskEntityTypeDecl) {
+                return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE, "1", true);
+            }
+            else if (entity instanceof MIRPartialVectorEntityTypeDecl) {
+                return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
             }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
@@ -315,74 +290,43 @@ class ICPPTypeEmitter {
                 else {
                     assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
 
-                    return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    const ultype = (entity as MIRPrimitiveListEntityTypeDecl).oftype;
+                    const mirtype = this.getMIRType(ultype);
+                    const fromlayout = this.getICPPTypeInfoShallow(mirtype);
+
+                    return fromlayout.createFromSizeInfo(entity.tkey);
                 }
             }
         }
         else if (entity instanceof MIRConstructableEntityTypeDecl) {
-            const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-            return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            const mirtype = this.getMIRType(entity.fromtype);
+            const fromlayout = this.getICPPTypeInfoShallow(mirtype);
+
+            return fromlayout.createFromSizeInfo(entity.tkey);
         }
         else if (entity instanceof MIREnumEntityTypeDecl) {
-            const sof = this.getSMTTypeFor(this.getMIRType("NSNat"));
-            return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
         }
         else {
-            return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-        }
-    }
+            let isinline = true;
+            let size = 0;
+            let mask: RefMask = "";
 
+            const ett = this.assembly.entityDecls.get(tt.getUniqueCallTargetType().typeID) as MIRObjectEntityTypeDecl;
+            for (let i = 0; i < ett.fields.length; ++i) {
+                const sizeinfo = this.getICPPTypeInfoShallow(this.getMIRType(ett.fields[i].declaredType));
 
-
-
-
-    isTypeSmallInline(tt: MIRType): boolean {
-        if(this.isType(tt, "Bool") || this.isType(tt, "Nat") || this.isType(tt, "Int") || this.isType(tt, "Float") || this.isType(tt, "Decimal")) {
-            return true;
-        } 
-        else if(this.isType(tt, "BigNat") || this.isType(tt, "BigInt") || this.isType(tt, "String")) {
-            return true;
-        }
-        else if(this.isType(tt, "Mask")) {
-            return true;
-        }
-        else {
-            return tt.typeID.startsWith("StringOf") || tt.typeID.startsWith("DataString");
-        }
-    }
-
-    isTypeInline(tt: MIRType): boolean {
-        if(this.isTypeSmallInline(tt)) {
-            return true;
-        }
-        else if(this.isType(tt, "Rational")) {
-            return true;
-        }
-        else if(this.isUniqueTupleType(tt)) {
-            const ttup = tt.getUniqueTupleTargetType();
-            return ttup.entries.length <= 4 && ttup.entries.every((ee) => this.isTypeSmallInline(ee));
-        }
-        else if(this.isUniqueRecordType(tt)) {
-            const ttrec = tt.getUniqueRecordTargetType();
-            return ttrec.entries.length <= 4 && ttrec.entries.every((ee) => this.isTypeSmallInline(ee.ptype));
-        }
-        else if(this.isUniqueEntityType(tt)) {
-            const tted = this.assembly.entityDecls.get(tt.getUniqueCallTargetType().typeID) as MIREntityTypeDecl;
-            if(tted instanceof MIREnumEntityTypeDecl) {
-                return true;
+                isinline = isinline && sizeinfo.issmallinlinevalue;
+                size = size + sizeinfo.inlinedatasize;
+                mask = mask + sizeinfo.inlinedmask;
             }
-            else if(tted instanceof MIRConstructableEntityTypeDecl) {
-                return this.isTypeSmallInline(this.getMIRType(tted.fromtype));
-            }
-            else if(tted instanceof MIRObjectEntityTypeDecl) {
-                return tted.fields.length <= 4 && tted.fields.every((ff) => this.isTypeSmallInline(this.getMIRType(ff.declaredType)));
+
+            if(ett.fields.length <= 4 && isinline) {
+                return ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
             }
             else {
-                return false;
+                return ICPPTypeSizeInfoSimple.createByRefSizeInfo(tt.typeID);
             }
-        }
-        else {
-            return false;
         }
     }
 
@@ -461,20 +405,6 @@ class ICPPTypeEmitter {
                 ? new ICPPTypeInlineUnion(tt.typeID, ICPP_WORD_SIZE + size, "5" + mask, iskey)
                 : new ICPPTypeRefUnion(tt.typeID, iskey);
         }
-    }
-
-    private getICPPTypeInfoForEntityShallow(tt: MIRObjectEntityTypeDecl): ICPPTypeSizeInfoSimple {
-        let size = 0;
-        let mask: RefMask = "";
-
-        for (let i = 0; i < tt.fields.length; ++i) {
-            const sizeinfo = this.getICPPTypeInfoShallow(this.getMIRType(tt.fields[i].declaredType));
-
-            size = size + sizeinfo.inlinedatasize;
-            mask = mask + sizeinfo.inlinedmask;
-        }
-
-        return ICPPTypeSizeInfoSimple.createByValueTypeInfo(tt.tkey, size, mask);
     }
 
     private getICPPTypeForObjectEntity(tt: MIRObjectEntityTypeDecl): ICPPTypeEntity {

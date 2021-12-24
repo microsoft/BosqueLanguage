@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
@@ -193,92 +193,39 @@ class SMTTypeEmitter {
                     return new SMTTypeInfo("BLogicalTime", "TypeTag_LogicalTime", entity.tkey);
                 }
                 else if(this.isType(tt, "UUID")) {
-                    return new SMTType("BUUID", "TypeTag_UUID", entity.tkey);
+                    return new SMTTypeInfo("BUUID", "TypeTag_UUID", entity.tkey);
                 }
                 else if(this.isType(tt, "ContentHash")) {
-                    return new SMTType("BHash", "TypeTag_ContentHash", entity.tkey);
+                    return new SMTTypeInfo("BContentHash", "TypeTag_ContentHash", entity.tkey);
                 }
                 else if(this.isType(tt, "Regex")) {
-                    return new SMTType("bsq_regex", "TypeTag_Regex", entity.tkey);
-                }
-                else if (this.isType(tt, "HavocSequence")) {
-                    return new SMTType("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
+                    return new SMTTypeInfo("bsq_regex", "TypeTag_Regex", entity.tkey);
                 }
                 else {
-                    if (this.isType(tt, "NumericOps")) {
-                        return new SMTType("NumericOps", "TypeTag_NumericOps", entity.tkey);
-                    }
-                    else if (this.isType(tt, "ListFlatOps")) {
-                        return new SMTType("ListFlatOps", "TypeTag_ListFlatOps", entity.tkey);
-                    }
-                    else if (this.isType(tt, "ListConcatOps")) {
-                        return new SMTType("ListConcatOps", "TypeTag_ListConcatOps", entity.tkey);
-                    }
-                    else if (this.isType(tt, "ListOps")) {
-                        return new SMTType("ListOps", "ListOps", entity.tkey);
-                    }
-                    else {
-                        assert(false, "Unknown primitive internal entity");
-                        return new SMTType("[UNKNOWN MIRPrimitiveInternalEntityTypeDecl]", "[UNKNOWN]", entity.tkey);
-                    }
+                    assert(false, "Unknown primitive internal entity");
+                    return new SMTTypeInfo("[UNKNOWN_TYPE]", "TypeTag_[UNKNOWN_TYPE]", entity.tkey);
                 }
             }
+            else if (entity instanceof MIRHavocEntityTypeDecl) {
+                return new SMTTypeInfo("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
+            }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                if (tt.typeID.startsWith("StringOf")) {
-                    return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("DataString")) {
-                    return new SMTType("BString", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("DataBuffer")) {
-                    return new SMTType("BByteBuffer", `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("Something")) {
-                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else if (tt.typeID.startsWith("Result::Ok")) {
-                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
-                else {
-                    assert(tt.typeID.startsWith("Result::Err"));
-                    const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-                    return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
+                return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
-                if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
-                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
-                }
-                else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
-                }
-                else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
-                }
-                else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    return new SMTType(this.lookupTypeName(entity.ultype), `TypeTag_${this.lookupTypeName(entity.ultype)}`, entity.ultype)
-                }
-                else {
-                    assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
-
-                    return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                }
+                return new SMTTypeInfo(entity.tkey, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
         }
-        else if (entity instanceof MIRConstructableEntityTypeDecl) {
-            const sof = this.getSMTTypeFor(this.getMIRType(entity.fromtype as MIRResolvedTypeKey));
-            return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-        }
         else if (entity instanceof MIREnumEntityTypeDecl) {
-            const sof = this.getSMTTypeFor(this.getMIRType("Nat"));
-            return new SMTType(sof.name, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+        }
+        else if (entity instanceof MIRConstructableEntityTypeDecl) {
+            return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
         else {
-            return new SMTType(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
     }
 

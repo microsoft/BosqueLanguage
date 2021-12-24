@@ -460,7 +460,7 @@ class MIRHavocEntityTypeDecl extends MIRInternalEntityTypeDecl {
     }
 }
 
-class MIRMaskEntityTypeDecl extends MIREntityTypeDecl {
+class MIRMaskEntityTypeDecl extends MIRInternalEntityTypeDecl {
     readonly consfuncfields: MIRFieldKey[];
     readonly fields: MIRFieldDecl[];
 
