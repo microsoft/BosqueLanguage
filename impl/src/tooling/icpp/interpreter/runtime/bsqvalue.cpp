@@ -31,13 +31,13 @@ const BSQType* BSQWellKnownType::g_typeString = CONS_BSQ_STRING_TYPE(BSQ_TYPE_ID
 
 const BSQType* BSQWellKnownType::g_typeByteBufferLeaf = CONS_BSQ_BYTE_BUFFER_LEAF_TYPE();
 const BSQType* BSQWellKnownType::g_typeByteBufferNode = CONS_BSQ_BYTE_BUFFER_NODE_TYPE();
-const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE(BSQ_TYPE_ID_BYTEBUFFER, "ByteBuffer");
+const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE();
 const BSQType* BSQWellKnownType::g_typeDateTime = CONS_BSQ_DATE_TIME_TYPE(BSQ_TYPE_ID_DATETIME, "DateTime");
 const BSQType* BSQWellKnownType::g_typeTickTime = CONS_BSQ_TICK_TIME_TYPE(BSQ_TYPE_ID_TICKTIME, "TickTime");
 const BSQType* BSQWellKnownType::g_typeLogicalTime = CONS_BSQ_LOGICAL_TIME_TYPE(BSQ_TYPE_ID_LOGICALTIME, "LogicalTime");
 const BSQType* BSQWellKnownType::g_typeUUID = CONS_BSQ_UUID_TYPE(BSQ_TYPE_ID_UUID, "UUID");
 const BSQType* BSQWellKnownType::g_typeContentHash = CONS_BSQ_CONTENT_HASH_TYPE(BSQ_TYPE_ID_CONTENTHASH, "ContentHash");
-const BSQType* BSQWellKnownType::g_typeRegex = CONS_BSQ_REGEX_TYPE(BSQ_TYPE_ID_REGEX, "Regex");
+const BSQType* BSQWellKnownType::g_typeRegex = CONS_BSQ_REGEX_TYPE();
 
 std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
 

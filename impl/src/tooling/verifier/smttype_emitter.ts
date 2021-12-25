@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
@@ -137,10 +137,10 @@ class SMTTypeEmitter {
             return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.assembly.subtypeOf(tt, this.getMIRType("KeyType"))) {
-            return new SMTType("BKey", "[BKEY]", tt.typeID);
+            return new SMTTypeInfo("BKey", "[BKEY]", tt.typeID);
         }
         else {
-            return new SMTType("BTerm", "[BTERM]", tt.typeID);
+            return new SMTTypeInfo("BTerm", "[BTERM]", tt.typeID);
         }
     }
 
@@ -209,6 +209,15 @@ class SMTTypeEmitter {
             else if (entity instanceof MIRHavocEntityTypeDecl) {
                 return new SMTTypeInfo("HavocSequence", "TypeTag_HavocSequence", entity.tkey);
             }
+            else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
+                return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            }
+            else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
+                return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            }
+            else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
+                return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                 return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
@@ -231,7 +240,7 @@ class SMTTypeEmitter {
 
     getSMTConstructorName(tt: MIRType): { cons: string, box: string, bfield: string } {
         assert(tt.options.length === 1);
-        this.internTypeName(tt.typeID, tt.shortname);
+        this.internTypeName(tt.typeID);
 
         const kfix = this.assembly.subtypeOf(tt, this.getMIRType("KeyType")) ? "bsqkey_" : "bsqobject_"
         if (this.isUniqueTupleType(tt)) {

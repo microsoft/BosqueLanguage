@@ -9,7 +9,7 @@
 
 import * as assert from "assert";
 import { MIRBasicBlock, MIROpTag, MIRInvokeKey, MIRInvokeFixedFunction, MIRBody, MIRInvokeVirtualOperator, MIRInvokeVirtualFunction, MIREntityUpdate } from "./mir_ops";
-import { MIRAssembly, MIRConstantDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRType } from "./mir_assembly";
+import { MIRAssembly, MIRConstantDecl, MIRConstructableEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRType } from "./mir_assembly";
 
 type CallGNode = {
     invoke: MIRInvokeKey,
@@ -134,9 +134,13 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
             roots.push(invokes.get(ee.usinginvariant) as CallGNode);
             topoVisit(invokes.get(ee.usinginvariant) as CallGNode, [], tordered, invokes);
         }
-        else if(ee instanceof MIRConstructableInternalEntityTypeDecl && ee.provides.includes("APIType") && ee.optaccepts !== undefined) {
-            roots.push(invokes.get(ee.optaccepts) as CallGNode);
-            topoVisit(invokes.get(ee.optaccepts) as CallGNode, [], tordered, invokes);
+        else if(ee instanceof MIRDataStringInternalEntityTypeDecl && ee.provides.includes("APIType")) {
+            roots.push(invokes.get(ee.accepts) as CallGNode);
+            topoVisit(invokes.get(ee.accepts) as CallGNode, [], tordered, invokes);
+        }
+        else if(ee instanceof MIRDataBufferInternalEntityTypeDecl && ee.provides.includes("APIType")) {
+            roots.push(invokes.get(ee.accepts) as CallGNode);
+            topoVisit(invokes.get(ee.accepts) as CallGNode, [], tordered, invokes);
         }
         else if(ee instanceof MIRPrimitiveSetEntityTypeDecl && ee.provides.includes("APIType")) {
             roots.push(invokes.get(ee.reprinvariant) as CallGNode);

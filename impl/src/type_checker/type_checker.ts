@@ -11,7 +11,7 @@ import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedSt
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing, MIRConstantArgument } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
-import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl, MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl } from "../compiler/mir_assembly";
+import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl, MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl } from "../compiler/mir_assembly";
 import { BSQRegex, RegexAlternation, RegexCharRange, RegexComponent, RegexConstClass, RegexDotCharClass, RegexLiteral, RegexOptional, RegexPlusRepeat, RegexRangeRepeat, RegexSequence, RegexStarRepeat } from "../ast/bsqregex";
 
 import * as assert from "assert";
@@ -6671,53 +6671,55 @@ class TypeChecker {
                 else if(tdecl.attributes.includes("__stringof_type") || tdecl.attributes.includes("__datastring_type")) {
                     const miroftype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
                     
-                    let optaccepts: MIRInvokeKey | undefined = undefined;
-                    if (tdecl.attributes.includes("__datastring_type")) {
+                    if (tdecl.attributes.includes("__stringof_type")) {
+                        const mirentity = new MIRStringOfInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID);
+                        this.m_emitter.masm.entityDecls.set(tkey, mirentity);
+                    }
+                    else {
                         const aoftype = (binds.get("T") as ResolvedType).options[0];
                         const oodecl = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.object : (aoftype as ResolvedConceptAtomType).conceptTypes[0].concept;
                         const oobinds = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.binds : (aoftype as ResolvedConceptAtomType).conceptTypes[0].binds;
 
                         const sf = (oodecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
                         const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(oodecl, oobinds));
-                        optaccepts = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
-                    }
+                        const accepts = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
 
-                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, optaccepts);
-                    this.m_emitter.masm.entityDecls.set(tkey, mirentity);
+                        const mirentity = new MIRDataStringInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, accepts);
+                        this.m_emitter.masm.entityDecls.set(tkey, mirentity);
+                    }
                 }
                 else if(tdecl.attributes.includes("__databuffer_type")) {
                     const miroftype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
 
-                    let optaccepts: MIRInvokeKey | undefined = undefined;
                     const aoftype = (binds.get("T") as ResolvedType).options[0];
                     const oodecl = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.object : (aoftype as ResolvedConceptAtomType).conceptTypes[0].concept;
                     const oobinds = (aoftype instanceof ResolvedEntityAtomType) ? aoftype.binds : (aoftype as ResolvedConceptAtomType).conceptTypes[0].binds;
 
                     const sf = (oodecl.staticFunctions.find((sfv) => sfv.name === "accepts") as StaticFunctionDecl);
                     const mirencltype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(oodecl, oobinds));
-                    optaccepts = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
+                    const accepts = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(oodecl, oobinds), [mirencltype, oodecl, oobinds], sf, "accepts", oobinds, [], []);
 
-                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, optaccepts);
+                    const mirentity = new MIRDataBufferInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, accepts);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
 
                 }
                 else if(tdecl.attributes.includes("__ok_type")) {
                     const miroftype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
                     
-                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, undefined);
+                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
 
                 }
                 else if(tdecl.attributes.includes("__err_type")) {
                     const miroftype = this.m_emitter.registerResolvedTypeReference(binds.get("E") as ResolvedType);
                     
-                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, undefined);
+                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__something_type")) {
                     const miroftype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
                     
-                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, undefined);
+                    const mirentity = new MIRConstructableInternalEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__havoc_type")) {

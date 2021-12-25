@@ -426,23 +426,79 @@ class MIRPrimitiveInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
     }
 } 
 
-class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
-    readonly fromtype: MIRResolvedTypeKey;
-    readonly optaccepts: MIRInvokeKey | undefined;
+class MIRStringOfInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
+    readonly validatortype: MIRResolvedTypeKey;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, optaccepts: MIRInvokeKey | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], validatortype: MIRResolvedTypeKey) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
-        this.fromtype = fromtype;
-        this.optaccepts = optaccepts;
+        this.validatortype = validatortype;
     }
 
     jemit(): object {
-        return { tag: "constructableinternal", ...this.jemitbase(), fromtype: this.fromtype, optaccepts: this.optaccepts };
+        return { tag: "stringofinternal", ...this.jemitbase(), validatortype: this.validatortype };
+    }
+
+    static jparse(jobj: any): MIRStringOfInternalEntityTypeDecl {
+        return new MIRStringOfInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.validatortype);
+    }
+}
+
+class MIRDataStringInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
+    readonly fromtype: MIRResolvedTypeKey;
+    readonly accepts: MIRInvokeKey;
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, accepts: MIRInvokeKey) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
+
+        this.fromtype = fromtype;
+        this.accepts = accepts;
+    }
+
+    jemit(): object {
+        return { tag: "datastringinternal", ...this.jemitbase(), fromtype: this.fromtype, optaccepts: this.accepts };
+    }
+
+    static jparse(jobj: any): MIRDataStringInternalEntityTypeDecl {
+        return new MIRDataStringInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.accepts);
+    }
+}
+
+class MIRDataBufferInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
+    readonly fromtype: MIRResolvedTypeKey;
+    readonly accepts: MIRInvokeKey;
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, accepts: MIRInvokeKey) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
+
+        this.fromtype = fromtype;
+        this.accepts = accepts;
+    }
+
+    jemit(): object {
+        return { tag: "constructableinternal", ...this.jemitbase(), fromtype: this.fromtype, accepts: this.accepts };
+    }
+
+    static jparse(jobj: any): MIRDataStringInternalEntityTypeDecl {
+        return new MIRDataStringInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.accepts);
+    }
+}
+
+class MIRConstructableInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
+    readonly fromtype: MIRResolvedTypeKey;
+
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
+
+        this.fromtype = fromtype;
+    }
+
+    jemit(): object {
+        return { tag: "constructableinternal", ...this.jemitbase(), fromtype: this.fromtype };
     }
 
     static jparse(jobj: any): MIRConstructableInternalEntityTypeDecl {
-        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.optaccepts);
+        return new MIRConstructableInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype);
     }
 }
 
@@ -1065,7 +1121,7 @@ export {
     MIRConstantDecl, MIRFunctionParameter, MIRInvokeDecl, MIRInvokeBodyDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRFieldDecl,
     MIROOTypeDecl, MIRConceptTypeDecl, MIREntityTypeDecl,
     MIRType, MIRTypeOption, 
-    MIREntityType, MIRObjectEntityTypeDecl, MIRConstructableEntityTypeDecl, MIREnumEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, 
+    MIREntityType, MIRObjectEntityTypeDecl, MIRConstructableEntityTypeDecl, MIREnumEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, 
     MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl,
     MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl,
     MIRConceptType, MIRTupleType, MIRRecordType, MIREphemeralListType,
