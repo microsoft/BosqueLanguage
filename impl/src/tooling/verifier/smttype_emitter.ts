@@ -264,47 +264,74 @@ class SMTTypeEmitter {
         if (from.typeID === "None") {
             return new SMTConst("BKey@none");
         }
-        else if(from.typeID === "Nothing") {
-            return new SMTConst("BKey@nothing");
-        }
         else {
             const smtfrom = this.getSMTTypeFor(from);
+            let oftypetag = "[UNDEFINED]";
             let objval: SMTExp | undefined = undefined;
 
             if (this.isType(from, "Bool")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_bool@box", [exp]);
             }
             else if (this.isType(from, "Int")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_int@box", [exp]);
             }
             else if (this.isType(from, "Nat")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
             }
             else if (this.isType(from, "BigInt")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_bigint@box", [exp]);
             }
             else if (this.isType(from, "BigNat")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_bignat@box", [exp]);
             }
             else if (this.isType(from, "String")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_string@box", [exp]);
             }
             else if(this.isType(from, "LogicalTime")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_logicaltime@box", [exp]);
             }
             else if(this.isType(from, "UUID")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_uuid@box", [exp]);
             }
             else if(this.isType(from, "ContentHash")) {
+                oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_contenthash@box", [exp]);
             }
             else {
-                assert(this.isUniqueEntityType(from));
+                const entity = this.assembly.entityDecls.get(from.typeID) as MIREntityTypeDecl;
+
+                if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
+                    oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
+                }
+                else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
+                    oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
+                }
+                else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
+                    oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
+                }
+                else if (entity instanceof MIREnumEntityTypeDecl) {
+                    oftypetag = this.getSMTTypeFor(this.getMIRType("Nat")).smttypetag;
+                }
+                else if (entity instanceof MIRConstructableEntityTypeDecl) {
+                    oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
+                }
+                else {
+                    assert(this.isUniqueEntityType(from));
+                    oftypetag = smtfrom.smttypetag;
+                }
 
                 objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
             }
 
-            return new SMTCallSimple("BKey@box", [new SMTConst(smtfrom.smttypetag), objval as SMTExp]);
+            return new SMTCallSimple("BKey@box", [new SMTConst(smtfrom.smttypetag), new SMTConst(oftypetag), objval as SMTExp]);
         }
     }
 
@@ -335,8 +362,11 @@ class SMTTypeEmitter {
                 else if (this.isType(from, "ByteBuffer")) {
                     objval = new SMTCallSimple("bsq_bytebuffer@box", [exp]);
                 }
-                else if(this.isType(from, "ISOTime")) {
-                    objval = new SMTCallSimple("bsq_isotime@box", [exp]);
+                else if(this.isType(from, "DateTime")) {
+                    objval = new SMTCallSimple("bsq_datetime@box", [exp]);
+                }
+                else if(this.isType(from, "TickTime")) {
+                    objval = new SMTCallSimple("bsq_ticktime@box", [exp]);
                 }
                 else if (this.isType(from, "Regex")) {
                     objval = new SMTCallSimple("bsq_regex@box", [exp]);
@@ -432,8 +462,11 @@ class SMTTypeEmitter {
                 else if (this.isType(into, "ByteBuffer")) {
                     return new SMTCallSimple("bsqobject_bytebuffer_value", [oexp]);
                 }
-                else if(this.isType(into, "ISOTime")) {
-                    return new SMTCallSimple("bsqobject_isotime_value", [oexp]);
+                else if(this.isType(into, "DateTime")) {
+                    return new SMTCallSimple("bsqobject_datetime_value", [oexp]);
+                }
+                else if(this.isType(into, "TickTime")) {
+                    return new SMTCallSimple("bsqobject_ticktime_value", [oexp]);
                 }
                 else if (this.isType(into, "Regex")) {
                     return new SMTCallSimple("bsqobject_regex_value", [oexp]);

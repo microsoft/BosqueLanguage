@@ -303,7 +303,7 @@
 (assert (= BTerm@none (BTerm@keybox BKey@none)))
 
 (declare-const BTerm@nothing BTerm)
-(assert (= BTerm@nothing bsqobject_nothing@literal))
+(assert (= BTerm@nothing (BTerm@termbox TypeTag_Nothing bsqobject_nothing@literal)))
 
 ;;
 ;;Define utility functions
