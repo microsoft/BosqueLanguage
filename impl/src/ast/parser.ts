@@ -167,6 +167,7 @@ const AttributeStrings = [
     "prefix",
     "infix",
     "dynamic",
+    "sensitive",
 
     "__internal",
     "__typedeclable",

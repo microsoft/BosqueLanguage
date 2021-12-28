@@ -6,13 +6,12 @@
 import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRMaskEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPartialVectorEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
-import { ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo, UNIVERSAL_CONTENT_SIZE, UNIVERSAL_MASK, UNIVERSAL_TOTAL_SIZE, ICPPLayoutCategory, ICPPLayoutUniversalUnion, ICPPLayoutRefUnion, ICPPLayoutInlineUnion, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPLayoutInfoFixed, ICPPEphemeralListLayoutInfo,  } from "./icpp_assembly";
+import { ICPPTypeSizeInfoSimple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo, UNIVERSAL_MASK, UNIVERSAL_TOTAL_SIZE, ICPPLayoutCategory, ICPPLayoutUniversalUnion, ICPPLayoutRefUnion, ICPPLayoutInlineUnion, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPLayoutInfoFixed, ICPPEphemeralListLayoutInfo,  } from "./icpp_assembly";
 
 import { ArgumentTag, Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar, NONE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
 
 import * as assert from "assert";
-import { BSQRegex } from "../../../ast/bsqregex";
 
 class ICPPTypeEmitter {
     readonly topts: TranspilerOptions;
@@ -711,66 +710,60 @@ class ICPPTypeEmitter {
     }
 
     private coerceIntoUnion(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
-        if(this.isType(from, "NSNone")) {
-            return ICPPOpEmitter.genNoneInitUnionOp(sinfo, trgt, into.trkey);
+        if(this.isType(from, "None")) {
+            return ICPPOpEmitter.genNoneInitUnionOp(sinfo, trgt, into.typeID);
         }
         else {
-            const icppinto = this.getICPPTypeData(into);
+            const icppinto = this.getICPPLayoutInfo(into);
 
-            if(icppinto.tkind === ICPPTypeKind.UnionRef) {
-                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, arg, sguard);
+            if(icppinto.layout === ICPPLayoutCategory.UnionInline) {
+                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, arg, sguard);
             }
             else {
-                return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.typeID, arg, from.typeID, sguard);
             }
         }
     }
 
     private coerceFromUnion(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
-        if(this.isType(into, "NSNone")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, { kind: ArgumentTag.Const, location: NONE_VALUE_POSITION }, sguard);
+        if(this.isType(into, "None")) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, { kind: ArgumentTag.Const, location: NONE_VALUE_POSITION }, sguard);
         }
         else {
-            const icppfrom = this.getICPPTypeData(from);
+            const icppfrom = this.getICPPLayoutInfo(from);
 
-            if(icppfrom.tkind === ICPPTypeKind.UnionRef) {
-                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, arg, sguard);
+            if(icppfrom.layout === ICPPLayoutCategory.UnionRef) {
+                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, arg, sguard);
             }
             else {
-                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.trkey, arg, from.trkey, sguard);
+                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.typeID, arg, from.typeID, sguard);
             }
         }
     }
 
     private coerceEquivReprs(sinfo: SourceInfo, arg: Argument, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
-        return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.trkey, arg, sguard);
+        return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, arg, sguard);
     }
 
     coerce(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
-        const icppfrom = this.getICPPTypeData(from);
-        const icppinto = this.getICPPTypeData(into);
+        const icppfrom = this.getICPPLayoutInfo(from);
+        const icppinto = this.getICPPLayoutInfo(into);
 
-        if(icppinto.tkind === icppfrom.tkind) {
+        if(icppinto.layout === ICPPLayoutCategory.Ref && icppfrom.layout === ICPPLayoutCategory.Ref) {
             return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
         }
-        else if(icppinto.tkind === ICPPTypeKind.UnionInline) {
-            return this.coerceIntoUnion(sinfo, arg, from, trgt, into, sguard);
+        else if(icppinto.layout === ICPPLayoutCategory.UnionRef && icppfrom.layout === ICPPLayoutCategory.UnionRef) {
+            return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
         }
-        else if(icppfrom.tkind === ICPPTypeKind.UnionInline) {
-            return this.coerceFromUnion(sinfo, arg, from, trgt, into, sguard);
-        }
-        else if(icppinto.tkind === ICPPTypeKind.UnionRef) {
+        else if(icppinto.layout === ICPPLayoutCategory.UnionRef || icppinto.layout === ICPPLayoutCategory.UnionInline || icppinto.layout === ICPPLayoutCategory.UnionUniversal) {
             return this.coerceIntoUnion(sinfo, arg, from, trgt, into, sguard);
         }
         else {
-            assert(icppfrom.tkind === ICPPTypeKind.UnionRef);
-
             return this.coerceFromUnion(sinfo, arg, from, trgt, into, sguard);
         }
     }
 }
 
 export {
-    ICPP_WORD_SIZE,
     ICPPTypeEmitter
 };

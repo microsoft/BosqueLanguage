@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
@@ -490,19 +490,22 @@ class SMTTypeEmitter {
         const smtfrom = this.getSMTTypeFor(from);
         const smtinto = this.getSMTTypeFor(into);
 
-        if (smtfrom.name === smtinto.name) {
-            return exp;
-        }
-        else if (smtinto.name === "BKey") {
-            if(smtfrom.name === "BTerm") {
+        if (smtinto.isGeneralKeyType()) {
+            if(smtfrom.isGeneralKeyType()) {
+                return exp;
+            }
+            if(smtfrom.isGeneralTermType()) {
                 return new SMTCallSimple("BTerm_keyvalue", [exp]);
             }
             else {
                 return this.coerceFromAtomicToKey(exp, from);
             }
         }
-        else if (smtinto.name === "BTerm") {
-            if(smtfrom.name === "BKey") {
+        else if (smtinto.isGeneralTermType()) {
+            if(smtfrom.isGeneralTermType()) {
+                return exp;
+            }
+            else if(smtfrom.isGeneralKeyType()) {
                 return new SMTCallSimple("BTerm@keybox", [exp]);
             }
             else {
@@ -510,11 +513,11 @@ class SMTTypeEmitter {
             }
         }
         else {
-            if (smtfrom.name === "BKey") {
+            if (smtfrom.isGeneralKeyType()) {
                 return this.coerceKeyIntoAtomic(exp, into);
             }
             else {
-                assert(smtfrom.name === "BTerm");
+                assert(smtfrom.isGeneralTermType());
 
                 return this.coerceTermIntoAtomic(exp, into);
             }
@@ -524,11 +527,11 @@ class SMTTypeEmitter {
     coerceToKey(exp: SMTExp, from: MIRType): SMTExp {
         const smtfrom = this.getSMTTypeFor(from);
 
-        if (smtfrom.name === "BKey") {
+        if (smtfrom.isGeneralKeyType()) {
             return exp;
         }
         else {
-            if(smtfrom.name === "BTerm") {
+            if(smtfrom.isGeneralTermType()) {
                 return new SMTCallSimple("BTerm_keyvalue", [exp]);
             }
             else {
@@ -538,35 +541,35 @@ class SMTTypeEmitter {
     }
 
     generateTupleIndexGetFunction(tt: MIRTupleType, idx: number): string {
-        this.internTypeName(tt.typeID, tt.shortname);
+        this.internTypeName(tt.typeID);
         return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
     } 
 
     generateRecordPropertyGetFunction(tt: MIRRecordType, pname: string): string {
-        this.internTypeName(tt.typeID, tt.shortname);
+        this.internTypeName(tt.typeID);
         return `${this.lookupTypeName(tt.typeID)}@_${pname}`;
     }
 
     generateEntityFieldGetFunction(tt: MIREntityTypeDecl, field: MIRFieldDecl): string {
-        this.internTypeName(tt.tkey, tt.shortname);
+        this.internTypeName(tt.tkey);
         return `${this.lookupTypeName(tt.tkey)}@_${field.fname}`;
     }
 
     generateEphemeralListGetFunction(tt: MIREphemeralListType, idx: number): string {
-        this.internTypeName(tt.typeID, tt.shortname);
+        this.internTypeName(tt.typeID);
         return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
     }
 
-    generateResultType(ttype: MIRType): SMTType {
-        return new SMTType(`$Result_${this.getSMTTypeFor(ttype).name}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
+    generateResultType(ttype: MIRType): SMTTypeInfo {
+        return new SMTTypeInfo(`$Result_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }
 
     generateResultTypeConstructorSuccess(ttype: MIRType, val: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@success`, [val]);
+        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@success`, [val]);
     }
 
     generateResultTypeConstructorError(ttype: MIRType, err: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@error`, [err]);
+        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@error`, [err]);
     }
 
     generateErrorResultAssert(rtype: MIRType): SMTExp {
@@ -574,35 +577,35 @@ class SMTTypeEmitter {
     }
 
     generateResultIsSuccessTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).name}@success)`, [exp]);
+        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).smttypename}@success)`, [exp]);
     }
 
     generateResultIsErrorTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).name}@error)`, [exp]);
+        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).smttypename}@error)`, [exp]);
     }
 
     generateResultGetSuccess(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@success_value`, [exp]);
+        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@success_value`, [exp]);
     }
 
     generateResultGetError(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).name}@error_value`, [exp]);
+        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@error_value`, [exp]);
     }
     
-    generateAccessWithSetGuardResultType(ttype: MIRType): SMTType {
-        return new SMTType(`$GuardResult_${this.getSMTTypeFor(ttype).name}`, "[INTERNAL GUARD RESULT]", "[INTERNAL GUARD RESULT]");
+    generateAccessWithSetGuardResultType(ttype: MIRType): SMTTypeInfo {
+        return new SMTTypeInfo(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL GUARD RESULT]", "[INTERNAL GUARD RESULT]");
     }
 
     generateAccessWithSetGuardResultTypeConstructorLoad(ttype: MIRType, value: SMTExp, flag: boolean): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).name}@cons`, [value, new SMTConst(flag ? "true" : "false")]);
+        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@cons`, [value, new SMTConst(flag ? "true" : "false")]);
     }
 
     generateAccessWithSetGuardResultGetValue(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).name}@result`, [exp]);
+        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@result`, [exp]);
     }
 
     generateAccessWithSetGuardResultGetFlag(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).name}@flag`, [exp]);
+        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@flag`, [exp]);
     }
 
     private havocTypeInfoGen(tt: MIRType): [string, boolean] {
@@ -630,9 +633,6 @@ class SMTTypeEmitter {
         else if (this.isType(tt, "Decimal")) {
             return ["BDecimal@UFCons_API", false];
         }
-        else if (this.isType(tt, "ContentHash")) {
-            return ["BContentHash@UFCons_API", false];
-        }
         else {
             return [`_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`, true];
         }
@@ -656,175 +656,6 @@ class SMTTypeEmitter {
         }
         else {
             return new SMTCallGeneral(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]);
-        }
-    }
-
-    private getAPITypeForEntity(tt: MIRType, entity: MIREntityTypeDecl): object {
-        if(entity instanceof MIRInternalEntityTypeDecl) {
-            if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
-                if (this.isType(tt, "None")) {
-                    return {tag: APIEmitTypeTag.NoneTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "Nothing")) {
-                    return {tag: APIEmitTypeTag.NothingTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "Bool")) {
-                    return {tag: APIEmitTypeTag.BoolTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "Int")) {
-                    return {tag: APIEmitTypeTag.IntTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "Nat")) {
-                    return {tag: APIEmitTypeTag.NatTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "BigInt")) {
-                    return {tag: APIEmitTypeTag.BigIntTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "BigNat")) {
-                    return {tag: APIEmitTypeTag.BigNatTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "Float")) {
-                    return {tag: APIEmitTypeTag.FloatTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "Decimal")) {
-                    return {tag: APIEmitTypeTag.DecimalTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "Rational")) {
-                    return {tag: APIEmitTypeTag.RationalTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "String")) {
-                    return {tag: APIEmitTypeTag.StringTag, name: tt.typeID};
-                }
-                else if (this.isType(tt, "ByteBuffer")) {
-                    return {tag: APIEmitTypeTag.ByteBufferTag, name: tt.typeID};
-                }
-                else if(this.isType(tt, "ISOTime")) {
-                    return {tag: APIEmitTypeTag.ISOTag, name: tt.typeID};
-                }
-                else if(this.isType(tt, "LogicalTime")) {
-                    return {tag: APIEmitTypeTag.LogicalTag, name: tt.typeID};
-                }
-                else if(this.isType(tt, "UUID")) {
-                    return {tag: APIEmitTypeTag.UUIDTag, name: tt.typeID};
-                }
-                else if(this.isType(tt, "ContentHash")) {
-                    return {tag: APIEmitTypeTag.ContentHashTag, name: tt.typeID};
-                }
-                else {
-                    assert(false);
-                    return {tag: APIEmitTypeTag.NoneTag, name: "[UNKNOWN API TYPE]"};
-                }
-            }
-            else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                if (tt.typeID.startsWith("StringOf")) {
-                    return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else if (tt.typeID.startsWith("DataString")) {
-                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else if (tt.typeID.startsWith("DataBuffer")) {
-                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else if (tt.typeID.startsWith("Something")) {
-                    return {tag: APIEmitTypeTag.SomethingTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else if (tt.typeID.startsWith("Result::Ok")) {
-                    return {tag: APIEmitTypeTag.OkTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else {
-                    assert(tt.typeID.startsWith("Result::Err"));
-                    return {tag: APIEmitTypeTag.ErrTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-            }
-            else {
-                assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
-
-                if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ListTag, name: tt.typeID, oftype: entity.oftype};
-                }
-                else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.StackTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
-                }
-                else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.QueueTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
-                }
-                else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.SetTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype, unqchkinv: entity.unqchkinv, unqconvinv: entity.unqconvinv};
-                }
-                else {
-                    const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
-                    return {tag: APIEmitTypeTag.MapTag, name: tt.typeID, oftype: mentity.oftype, ultype: mentity.ultype, unqchkinv: mentity.unqchkinv};
-                }
-            }
-        }
-        else if(entity instanceof MIRConstructableEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons || null};
-        }
-        else if(entity instanceof MIREnumEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, enums: entity.enums};
-        }
-        else {
-            const oentity = entity as MIRObjectEntityTypeDecl;
-            
-            let fields: string[] = [];
-            let ttypes: string[] = [];
-            for(let i = 0; i < oentity.consfuncfields.length; ++i)
-            {
-                const ff = oentity.consfuncfields[i];
-                const mirff = this.assembly.fieldDecls.get(ff) as MIRFieldDecl;
-
-                fields.push(mirff.fname);
-                ttypes.push(mirff.declaredType);
-            }
-
-            return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, fields: fields, ttypes: ttypes};
-        }
-    }
-
-    getAPITypeFor(tt: MIRType): object {
-        this.internTypeName(tt.typeID, tt.shortname);
-
-        if(this.isUniqueTupleType(tt)) {
-            const tdecl = this.assembly.tupleDecls.get(tt.typeID) as MIRTupleType;
-
-            let ttypes: string[] = [];
-            for(let i = 0; i < tdecl.entries.length; ++i)
-            {
-                const mirtt = tdecl.entries[i];
-                ttypes.push(mirtt.typeID);
-            }
-
-            return {tag: APIEmitTypeTag.TupleTag, name: tt.typeID, ttypes: ttypes};
-        }
-        else if(this.isUniqueRecordType(tt)) {
-            const rdecl = this.assembly.recordDecls.get(tt.typeID) as MIRRecordType;
-
-            let props: string[] = [];
-            let ttypes: string[] = [];
-            for(let i = 0; i < rdecl.entries.length; ++i)
-            {
-                const prop = rdecl.entries[i].pname;
-                const mirtt = rdecl.entries[i].ptype;
-
-                props.push(prop);
-                ttypes.push(mirtt.typeID);
-            }
-
-            return {tag: APIEmitTypeTag.RecordTag, name: tt.typeID, props: props, ttypes: ttypes};
-        }
-        else if(this.isUniqueEntityType(tt)) {
-            return this.getAPITypeForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
-        }
-        else if(tt instanceof MIRConceptType) {
-            const etypes = [...this.assembly.entityDecls].filter((edi) => this.assembly.subtypeOf(this.getMIRType(edi[1].tkey), this.getMIRType(tt.typeID)));
-            const opts: string[] = etypes.map((opt) => opt[1].tkey);
-
-            return {tag: APIEmitTypeTag.ConceptTag, name: tt.typeID, opts: opts};
-        }
-        else {
-            const opts: string[] = tt.options.map((opt) => opt.typeID);
-            
-            return {tag: APIEmitTypeTag.UnionTag, name: tt.typeID, opts: opts};
         }
     }
 }

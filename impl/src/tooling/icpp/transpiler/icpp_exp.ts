@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { ICPP_WORD_SIZE, SourceInfo, UNIVERSAL_SIZE } from "./icpp_assembly";
+import { ICPP_WORD_SIZE, SourceInfo, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
 
 enum ArgumentTag
 {
@@ -16,7 +16,7 @@ enum ArgumentTag
 }
 
 const EMPTY_CONST_POSITION = 0;
-const NONE_VALUE_POSITION = UNIVERSAL_SIZE;
+const NONE_VALUE_POSITION = UNIVERSAL_TOTAL_SIZE;
 const NOTHING_VALUE_POSITION = NONE_VALUE_POSITION + ICPP_WORD_SIZE;
 const TRUE_VALUE_POSITION = NOTHING_VALUE_POSITION + ICPP_WORD_SIZE;
 const FALSE_VALUE_POSITION = TRUE_VALUE_POSITION + ICPP_WORD_SIZE;
