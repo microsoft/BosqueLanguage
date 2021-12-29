@@ -3,12 +3,12 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
-import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
+import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPPCode, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList,  ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions, UNIVERSAL_SIZE } from "./icpp_assembly";
+import { ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPLayoutInfo, ICPPRecordLayoutInfo, ICPPTupleLayoutInfo, RefMask, TranspilerOptions, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
 
 import * as assert from "assert";
 import { topologicalOrder } from "../../../compiler/mir_info";
@@ -29,15 +29,15 @@ class ICPPBodyEmitter {
     private argsMap: Map<string, number> = new Map<string, number>();
     private scalarStackMap: Map<string, number> = new Map<string, number>();
     private scalarStackSize: number = 0;
-    private scalarStackLayout: {offset: number, name: string, storage: ICPPType}[] = [];
+    private scalarStackLayout: {offset: number, name: string, storage: ICPPLayoutInfo}[] = [];
     private mixedStackMap: Map<string, number> = new Map<string, number>();
     private mixedStackSize: number = 0;
-    private mixedStackLayout: {offset: number, name: string, storage: ICPPType}[] = [];
+    private mixedStackLayout: {offset: number, name: string, storage: ICPPLayoutInfo}[] = [];
 
     literalMap: Map<string, number> = new Map<string, number>();
     constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
-    constsize: number = UNIVERSAL_SIZE;
-    constlayout: {offset: number, storage: ICPPType, value: string, isliteral: boolean}[] = [];
+    constsize: number = UNIVERSAL_TOTAL_SIZE;
+    constlayout: {offset: number, storage: ICPPLayoutInfo, value: string, isliteral: boolean}[] = [];
     
     private maskMap: Map<string, number> = new Map<string, number>();
     private masksize: number = 0;
@@ -74,11 +74,11 @@ class ICPPBodyEmitter {
         }
     }
 
-    private getStackInfoForTargetVar(vname: string, oftype: ICPPType): TargetVar {
+    private getStackInfoForTargetVar(vname: string, oftype: ICPPLayoutInfo): TargetVar {
         //
         //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
         //
-        if(oftype.allocinfo.isScalarOnlyInline()) {
+        if(oftype.canScalarStackAllocate()) {
             const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
 
             this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
@@ -98,8 +98,8 @@ class ICPPBodyEmitter {
         }
     }
 
-    private generateScratchVarInfo(oftype: ICPPType): [TargetVar, Argument] {
-        if (oftype.allocinfo.isScalarOnlyInline()) {
+    private generateScratchVarInfo(oftype: ICPPLayoutInfo): [TargetVar, Argument] {
+        if (oftype.canScalarStackAllocate()) {
             const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
 
             const vname = `@scalar_scratch_${this.scalarStackLayout.length}`;
@@ -145,55 +145,54 @@ class ICPPBodyEmitter {
 
     private generateProjectVirtualTupleInvName(argflowtype: MIRType, indecies: number[], resulttype: MIRType): string {
         const idxs = indecies.map((idx) => `${idx}`).join(",");
-        return `$TupleProject_${argflowtype.trkey}.[${idxs}]->${resulttype.trkey}`;
+        return `$TupleProject_${argflowtype.typeID}.[${idxs}]->${resulttype.typeID}`;
     }
 
     private generateProjectVirtualRecordInvName(argflowtype: MIRType, properties: string[], resulttype: MIRType): string {
         const pnames = properties.join(",");
-        return `$RecordProject_${argflowtype.trkey}.{${pnames}}->${resulttype.trkey}`;
+        return `$RecordProject_${argflowtype.typeID}.{${pnames}}->${resulttype.typeID}`;
     }
 
     private generateProjectVirtualEntityInvName(argflowtype: MIRType, fields: MIRFieldKey[], resulttype: MIRType): string {
         const fkeys = fields.join(",");
-        return `$EntityProject_${argflowtype.trkey}.{${fkeys}}->${resulttype.trkey}`;
+        return `$EntityProject_${argflowtype.typeID}.{${fkeys}}->${resulttype.typeID}`;
     }
 
     private generateUpdateVirtualTupleInvName(argflowtype: MIRType, indecies: [number, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const idxs = indecies.map((idx) => `(${idx[0]} ${idx[1]})`).join(",");
-        return `$TupleUpdate_${argflowtype.trkey}.[${idxs}]->${resulttype.trkey}`;
+        return `$TupleUpdate_${argflowtype.typeID}.[${idxs}]->${resulttype.typeID}`;
     }
 
     private generateUpdateVirtualRecordInvName(argflowtype: MIRType, properties: [string, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const pnames = properties.map((pname) => `(${pname[0]} ${pname[1]})`).join(",");
-        return `$RecordUpdate_${argflowtype.trkey}.{${pnames}}->${resulttype.trkey}`;
+        return `$RecordUpdate_${argflowtype.typeID}.{${pnames}}->${resulttype.typeID}`;
     }
 
     private generateUpdateEntityWithInvariantName(oftype: MIRType, fields: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const fnames = fields.map((fname) => `(${fname[0]} ${fname[1]})`).join(",");
-        return `$EntityUpdateDirectWithInvariantCheck_${oftype.trkey}.{${fnames}}->${resulttype.trkey}`;
+        return `$EntityUpdateDirectWithInvariantCheck_${oftype.typeID}.{${fnames}}->${resulttype.typeID}`;
     }
 
     private generateUpdateVirtualEntityInvName(argflowtype: MIRType, fields: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const fnames = fields.map((fname) => `(${fname[0]} ${fname[1]})`).join(",");
-        return `$EntityUpdate_${argflowtype.trkey}.{${fnames}}->${resulttype.trkey}`;
+        return `$EntityUpdate_${argflowtype.typeID}.{${fnames}}->${resulttype.typeID}`;
     }
 
     private generateTupleAppendInvName(args: { flow: MIRType, layout: MIRType }[], resulttype: MIRType): string {
-        const anames = args.map((fl) => `(${fl.flow.trkey} ${fl.layout.trkey})`).join(",");
-        return `$TupleAppend_{${anames}}->${resulttype.trkey}`;
+        const anames = args.map((fl) => `(${fl.flow.typeID} ${fl.layout.typeID})`).join(",");
+        return `$TupleAppend_{${anames}}->${resulttype.typeID}`;
     }
 
     private generateRecordMergeInvName(args: { flow: MIRType, layout: MIRType }[], resulttype: MIRType): string {
-        const mnames = args.map((fl) => `(${fl.flow.trkey} ${fl.layout.trkey})`).join(",");
-        return `$RecordMerge_{${mnames}}->${resulttype.trkey}`;
+        const mnames = args.map((fl) => `(${fl.flow.typeID} ${fl.layout.typeID})`).join(",");
+        return `$RecordMerge_{${mnames}}->${resulttype.typeID}`;
     }
 
     generateProjectTupleIndexVirtual(geninfo: { inv: string, argflowtype: MIRType, indecies: number[], resulttype: MIRType }, sinfo: SourceInfo, tupletype: MIRType): ICPPInvokeDecl {
-        const rtype = this.typegen.getICPPTypeData(geninfo.resulttype) as ICPPTypeEphemeralList;
-        const name = geninfo.inv + `@${tupletype.trkey}`;
+        const name = geninfo.inv + `@${tupletype.typeID}`;
 
-        const icpptuple = this.typegen.getICPPTypeData(tupletype) as ICPPTypeTuple;
-        const params = [new ICPPFunctionParameter("arg", icpptuple)];
+        const icpptuple = this.typegen.getICPPLayoutInfo(tupletype) as ICPPTupleLayoutInfo;
+        const params = [new ICPPFunctionParameter("arg", tupletype.typeID)];
         const parg = ICPPOpEmitter.genParameterArgument(0);
 
         let ops: ICPPOp[] = [];
@@ -202,31 +201,30 @@ class ICPPBodyEmitter {
             const tupleidxtype = this.typegen.getMIRType(icpptuple.ttypes[idx]);
             const elidxtype = (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i];
 
-            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(tupleidxtype));
-            ops.push(ICPPOpEmitter.genLoadTupleIndexDirectOp(sinfo, ltrgt, tupleidxtype.trkey, parg, icpptuple.tkey, icpptuple.idxoffsets[idx], idx));
+            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(tupleidxtype));
+            ops.push(ICPPOpEmitter.genLoadTupleIndexDirectOp(sinfo, ltrgt, tupleidxtype.typeID, parg, icpptuple.tkey, icpptuple.idxoffsets[idx], idx));
 
-            if(tupleidxtype.trkey === elidxtype.trkey) {
+            if(tupleidxtype.typeID === elidxtype.typeID) {
                 pargs.push(larg);
             }
             else {
-                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(elidxtype));
+                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(elidxtype));
                 ops.push(this.typegen.coerce(sinfo, larg, tupleidxtype, ctrgt, elidxtype, ICPPOpEmitter.genNoStatmentGuard()));
                 pargs.push(carg);
             }
         });
 
-        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }, sinfo: SourceInfo, recordtype: MIRType): ICPPInvokeDecl {
-        const rtype = this.typegen.getICPPTypeData(geninfo.resulttype) as ICPPTypeEphemeralList;
-        const name = geninfo.inv + `@${recordtype.trkey}`;
+        const name = geninfo.inv + `@${recordtype.typeID}`;
 
-        const icpprecord = this.typegen.getICPPTypeData(recordtype) as ICPPTypeRecord;
-        const params = [new ICPPFunctionParameter("arg", icpprecord)];
+        const icpprecord = this.typegen.getICPPLayoutInfo(recordtype) as ICPPRecordLayoutInfo;
+        const params = [new ICPPFunctionParameter("arg", recordtype.typeID)];
         const parg = ICPPOpEmitter.genParameterArgument(0);
 
         let ops: ICPPOp[] = [];
@@ -237,31 +235,30 @@ class ICPPBodyEmitter {
             const recordpnametype = this.typegen.getMIRType(icpprecord.propertytypes[pidx]);
             const elidxtype = (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i];
 
-            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(recordpnametype));
-            ops.push(ICPPOpEmitter.genLoadRecordPropertyDirectOp(sinfo, ltrgt, recordpnametype.trkey, parg, icpprecord.tkey, icpprecord.propertyoffsets[pidx], pname));
+            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(recordpnametype));
+            ops.push(ICPPOpEmitter.genLoadRecordPropertyDirectOp(sinfo, ltrgt, recordpnametype.typeID, parg, icpprecord.tkey, icpprecord.propertyoffsets[pidx], pname));
 
-            if(recordpnametype.trkey === elidxtype.trkey) {
+            if(recordpnametype.typeID === elidxtype.typeID) {
                 pargs.push(larg);
             }
             else {
-                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(elidxtype));
+                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(elidxtype));
                 ops.push(this.typegen.coerce(sinfo, larg, recordpnametype, ctrgt, elidxtype, ICPPOpEmitter.genNoStatmentGuard()));
                 pargs.push(carg);
             }
         });
 
-        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }, sinfo: SourceInfo, entitytype: MIRType): ICPPInvokeDecl {
-        const rtype = this.typegen.getICPPTypeData(geninfo.resulttype) as ICPPTypeEphemeralList;
-        const name = geninfo.inv + `@${entitytype.trkey}`;
+        const name = geninfo.inv + `@${entitytype.typeID}`;
 
-        const icppentity = this.typegen.getICPPTypeData(entitytype) as ICPPTypeEntity;
-        const params = [new ICPPFunctionParameter("arg", icppentity)];
+        const icppentity = this.typegen.getICPPLayoutInfo(entitytype) as ICPPEntityLayoutInfo;
+        const params = [new ICPPFunctionParameter("arg", entitytype.typeID)];
         const parg = ICPPOpEmitter.genParameterArgument(0);
 
         let ops: ICPPOp[] = [];
@@ -272,23 +269,23 @@ class ICPPBodyEmitter {
             const entityfieldtype = this.typegen.getMIRType(f.declaredType);
             const elidxtype = (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i];
 
-            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(entityfieldtype));
-            ops.push(ICPPOpEmitter.genLoadEntityFieldDirectOp(sinfo, ltrgt, entityfieldtype.trkey, parg, icppentity.tkey, icppentity.fieldoffsets[fidx], f.fkey));
+            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(entityfieldtype));
+            ops.push(ICPPOpEmitter.genLoadEntityFieldDirectOp(sinfo, ltrgt, entityfieldtype.typeID, parg, icppentity.tkey, icppentity.fieldoffsets[fidx], f.fkey));
 
-            if(entityfieldtype.trkey === elidxtype.trkey) {
+            if(entityfieldtype.typeID === elidxtype.typeID) {
                 pargs.push(larg);
             }
             else {
-                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(elidxtype));
+                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(elidxtype));
                 ops.push(this.typegen.coerce(sinfo, larg, entityfieldtype, ctrgt, elidxtype, ICPPOpEmitter.genNoStatmentGuard()));
                 pargs.push(carg);
             }
         });
 
-        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: TranspilerOptions) {
@@ -299,15 +296,16 @@ class ICPPBodyEmitter {
 
         this.currentRType = typegen.getMIRType("None");
 
-        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPTypeData(this.typegen.getMIRType("None")), value: "None", isliteral: true });
-        this.constsize = UNIVERSAL_SIZE;
+        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPLayoutInfo(this.typegen.getMIRType("None")), value: "None", isliteral: true });
+        this.constsize = UNIVERSAL_TOTAL_SIZE;
 
         this.registerSpecialLiteralValue("none", "None");
+        this.registerSpecialLiteralValue("nothing", "Nothing");
         this.registerSpecialLiteralValue("true", "Bool");
         this.registerSpecialLiteralValue("false", "Bool");
 
         this.assembly.constantDecls.forEach((cdecl) => {
-            const decltype = this.typegen.getICPPTypeData(this.typegen.getMIRType(cdecl.declaredType));
+            const decltype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(cdecl.declaredType));
             this.constlayout.push({ offset: this.constsize, storage: decltype, value: cdecl.gkey, isliteral: false });
 
             this.constsize += decltype.allocinfo.inlinedatasize;
@@ -333,7 +331,7 @@ class ICPPBodyEmitter {
 
     private registerSpecialLiteralValue(vlit: string, vtype: MIRResolvedTypeKey) {
         if (!this.literalMap.has(vlit)) {
-            const ttype = this.typegen.getICPPTypeData(this.typegen.getMIRType(vtype));
+            const ttype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(vtype));
             this.literalMap.set(vlit, this.constsize);
             this.constlayout.push({ offset: this.constsize, storage: ttype, value: vlit, isliteral: true });
             this.constsize += ttype.allocinfo.inlinedatasize;
@@ -347,6 +345,9 @@ class ICPPBodyEmitter {
     constantToICPP(cval: MIRConstantArgument): Argument {
         if (cval instanceof MIRConstantNone) {
             return this.getSpecialLiteralValue("none");
+        }
+        else if(cval instanceof MIRConstantNothing) {
+            return this.getSpecialLiteralValue("nothing");
         }
         else if (cval instanceof MIRConstantTrue) {
             return this.getSpecialLiteralValue("true");

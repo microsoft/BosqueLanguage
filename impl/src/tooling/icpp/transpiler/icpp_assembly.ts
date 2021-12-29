@@ -154,6 +154,18 @@ abstract class ICPPLayoutInfo {
     }
 
     abstract createFromLayoutInfo(tkey: MIRResolvedTypeKey): ICPPLayoutInfo;
+
+    canScalarStackAllocate(): boolean {
+        if(this.layout === ICPPLayoutCategory.Inline) {
+            return /1+/.test(this.allocinfo.inlinedmask);
+        }
+        else if(this.layout === ICPPLayoutCategory.UnionInline) {
+            return /51+/.test(this.allocinfo.inlinedmask);
+        }
+        else {
+            return false;
+        }
+    }
 }
 
 class ICPPLayoutInfoFixed extends ICPPLayoutInfo {

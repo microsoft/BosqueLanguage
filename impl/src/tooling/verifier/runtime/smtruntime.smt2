@@ -70,12 +70,29 @@
 (declare-fun TypeTagRank@ (TypeTag) Int)
 ;;KEY_TYPE_TAG_RANK;;
 
+(declare-sort FloatValue)
+(declare-const FloatValue@zero FloatValue)
+(declare-const FloatValue@one FloatValue)
+
+(declare-fun FloatValue@neg (FloatValue) FloatValue)
+(declare-fun FloatValue@add (FloatValue FloatValue) FloatValue)
+(declare-fun FloatValue@sub (FloatValue FloatValue) FloatValue)
+(declare-fun FloatValue@mult (FloatValue FloatValue) FloatValue)
+(declare-fun FloatValue@div (FloatValue FloatValue) FloatValue)
+
+(declare-fun FloatValue@eq (FloatValue FloatValue) Bool)
+(declare-fun FloatValue@neq (FloatValue FloatValue) Bool)
+(declare-fun FloatValue@lt (FloatValue FloatValue) Bool)
+(declare-fun FloatValue@gt (FloatValue FloatValue) Bool)
+(declare-fun FloatValue@lteq (FloatValue FloatValue) Bool)
+(declare-fun FloatValue@gteq (FloatValue FloatValue) Bool)
+
 ;;BINTEGRAL_TYPE_ALIAS;;
 (define-sort BBigInt () Int)
 (define-sort BBigNat () Int)
-(define-sort BFloat () Real)
-(define-sort BDecimal () Real)
-(define-sort BRational () Real)
+(define-sort BFloat () FloatValue)
+(define-sort BDecimal () FloatValue)
+(define-sort BRational () FloatValue)
 ;;BSTRING_TYPE_ALIAS;;
 (define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
@@ -119,18 +136,18 @@
 (declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero 0))
 (declare-const BBigNat@one BBigNat) (assert (= BBigNat@one 1))
 
-(declare-const BFloat@zero BFloat) (assert (= BFloat@zero 0.0))
-(declare-const BFloat@one BFloat) (assert (= BFloat@one 1.0))
-(declare-const BFloat@pi BFloat) (assert (= BFloat@pi 3.141592653589793))
-(declare-const BFloat@e BFloat) (assert (= BFloat@e 2.718281828459045))
+(declare-const BFloat@zero BFloat) (assert (= BFloat@zero FloatValue@zero))
+(declare-const BFloat@one BFloat) (assert (= BFloat@one FloatValue@one))
+(declare-const BFloat@pi BFloat)
+(declare-const BFloat@e BFloat)
 
-(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero 0.0))
-(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one 1.0))
-(declare-const BDecimal@pi BDecimal) (assert (= BDecimal@pi 3.141592653589793))
-(declare-const BDecimal@e BDecimal) (assert (= BDecimal@e 2.718281828459045))
+(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero FloatValue@zero))
+(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one FloatValue@one))
+(declare-const BDecimal@pi BDecimal)
+(declare-const BDecimal@e BDecimal)
 
-(declare-const BRational@zero BRational) (assert (= BRational@zero 0.0))
-(declare-const BRational@one BRational) (assert (= BRational@one 1.0))
+(declare-const BRational@zero BRational) (assert (= BRational@zero FloatValue@zero))
+(declare-const BRational@one BRational) (assert (= BRational@one FloatValue@one))
 
 (declare-fun BByteBuffer@expandstr ((BByteBuffer)) BString)
 

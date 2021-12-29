@@ -10,10 +10,9 @@ import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstru
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
-import { SMTConstructorGenCode, SMTDestructorGenCode } from "./smtcollection_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTAssembly, SMTConstantDecl, SMTEntityDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTListDecl, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
-import { BVEmitter, SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTType, SMTVar, VerifierOptions } from "./smt_exp";
+import { BVEmitter, SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 type APIModuleInfo = {
     apitypes: object[],
@@ -33,7 +32,7 @@ class SMTEmitter {
     readonly bemitter: SMTBodyEmitter;
     readonly assembly: SMTAssembly;
 
-    readonly havocPathType: SMTType;
+    readonly havocPathType: SMTTypeInfo;
 
     private lastVInvokeIdx = 0;
     private lastVOperatorIdx = 0;

@@ -6,12 +6,11 @@
 import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
-import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTType, VerifierOptions, BVEmitter } from "./smt_exp";
+import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions, BVEmitter } from "./smt_exp";
 import { SourceInfo } from "../../ast/parser";
 import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
 
 import * as assert from "assert";
-import { ListOpsManager } from "./smtcollection_emitter";
 import { BSQRegex } from "../../ast/bsqregex";
 
 function NOT_IMPLEMENTED(msg: string): SMTExp {
@@ -40,8 +39,6 @@ class SMTBodyEmitter {
 
     maskSizes: Set<number> = new Set<number>();
 
-    lopsManager: ListOpsManager;
-
     //!!!
     //See the methods generateLoadTupleIndexVirtual, generateLoadTupleIndexVirtual, etc for processing the entries in these arrays
     //!!!
@@ -65,7 +62,7 @@ class SMTBodyEmitter {
     requiredIndexTagChecks: {idx: number, oftype: MIRType}[] = [];
     requiredRecordTagChecks: {pname: string, oftype: MIRType}[] = [];
 
-    requiredUFConsts: SMTType[] = [];
+    requiredUFConsts: SMTTypeInfo[] = [];
 
     varStringToSMT(name: string): SMTVar {
         if (name === "$$return") {
@@ -121,9 +118,9 @@ class SMTBodyEmitter {
 
     generateUFConstantForType(tt: MIRType): string {
         const ctype = this.typegen.getSMTTypeFor(tt);
-        const ufcname = `${ctype.name}@uicons_UF`;
+        const ufcname = `${ctype.smttypename}@uicons_UF`;
         
-        if(this.requiredUFConsts.find((cc) => cc.name === ctype.name) === undefined) {
+        if(this.requiredUFConsts.find((cc) => cc.smttypename === ctype.smttypename) === undefined) {
             this.requiredUFConsts.push(ctype);
         }
 
@@ -166,7 +163,7 @@ class SMTBodyEmitter {
         const calleesmt = this.typegen.getSMTTypeFor(calleetype);
 
         const okpath = new SMTLet(this.varToSMTName(trgt).vname, this.typegen.generateResultGetSuccess(calleetype, new SMTVar(cres)), continuation);
-        const errpath = (callersmt.name === calleesmt.name) ? new SMTVar(cres) : this.typegen.generateResultTypeConstructorError(callertype, this.typegen.generateResultGetError(calleetype, new SMTVar(cres)));
+        const errpath = (callersmt.smttypename === calleesmt.smttypename) ? new SMTVar(cres) : this.typegen.generateResultTypeConstructorError(callertype, this.typegen.generateResultGetError(calleetype, new SMTVar(cres)));
 
         const icond = new SMTIf(this.typegen.generateResultIsErrorTest(calleetype, new SMTVar(cres)), errpath, okpath);
         return new SMTLet(cres, gcall, icond);
@@ -265,7 +262,7 @@ class SMTBodyEmitter {
 
     private generateVirtualInvokeOperatorName(fname: MIRVirtualMethodKey, shortvname: string, rcvrtypes: MIRResolvedTypeKey[], resulttype: MIRType): string {
         const rnames = `(${rcvrtypes.join(",")})`;
-        const shortrnames = `(${rcvrtypes.map((tt) => this.typegen.getMIRType(tt).shortname).join(",")})`;
+        const shortrnames = `(${rcvrtypes.map((tt) => this.typegen.getMIRType(tt).typeID).join(",")})`;
         const fullname = `$VirtualOperator!${fname}${rnames}!${resulttype.typeID}`;
         const shortname = `$VirtualOperator_${shortvname}${shortrnames}`;
 
@@ -637,7 +634,7 @@ class SMTBodyEmitter {
                 else {
                     const smtaatype = this.typegen.getSMTTypeFor(atype);
                     const smtgresult = this.typegen.getSMTTypeFor(geninfo.resulttype);
-                    if(smtaatype.name === smtgresult.name) {
+                    if(smtaatype.smttypename === smtgresult.smttypename) {
                         action = gcall;
                     }
                     else {
@@ -758,8 +755,6 @@ class SMTBodyEmitter {
                 safecalls.add(inv);
             }
         });
-
-        this.lopsManager = new ListOpsManager(vopts, typegen, this.numgen.int, safecalls);
     }
 
     generateTempName(): string {
