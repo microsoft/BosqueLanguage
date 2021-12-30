@@ -6,7 +6,6 @@
 #pragma once
 
 #include "common.h"
-#include "runtime/environment.h"
 
 class EvaluatorFrame
 {
@@ -339,6 +338,9 @@ private:
 
     template <bool isGuarded>
     void evalIsSomeOp(const TypeIsSomeOp* op);
+
+    template <bool isGuarded>
+    void evalIsNothingOp(const TypeIsNothingOp* op);
 
     template <bool isGuarded>
     void evalTypeTagIsOp(const TypeTagIsOp* op);

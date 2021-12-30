@@ -845,18 +845,37 @@ class SMTBodyEmitter {
             return new SMTConst(cval.value.slice(0, cval.value.length - 1));
         }
         else if (cval instanceof MIRConstantRational) {
-            const spos = cval.value.indexOf("/");
-            const num = new SMTConst(cval.value.slice(0, spos) + ".0");
-            const denom = new SMTConst(cval.value.slice(spos + 1, cval.value.length - 1) + ".0");
-            return new SMTCallSimple("/", [num, denom]);
+            if(/^0\/[0-9]+R$/.test(cval.value)) {
+                return new SMTConst("BRational@zero");
+            }
+            else if(/^1\/1R$/.test(cval.value)) {
+                return new SMTConst("BRational@one");
+            }
+            else {
+                return new SMTCallSimple("FloatValue@const", [new SMTConst(cval.value)]);
+            }
         }
         else if (cval instanceof MIRConstantFloat) {
-            const sv = cval.value.includes(".") ? cval.value.slice(0, cval.value.length - 1) : (cval.value.slice(0, cval.value.length - 1) + ".0");
-            return new SMTConst(sv);
+            if(/^0([.]0+)?f$/.test(cval.value)) {
+                return new SMTConst("BFloat@zero");
+            }
+            else if(/^1([.]0+)?f$/.test(cval.value)) {
+                return new SMTConst("BFloat@one");
+            }
+            else {
+                return new SMTCallSimple("FloatValue@const", [new SMTConst(cval.value.slice(0, cval.value.length - 1))]);
+            }
         }
         else if (cval instanceof MIRConstantDecimal) {
-            const sv = cval.value.includes(".") ? cval.value.slice(0, cval.value.length - 1) : (cval.value.slice(0, cval.value.length - 1) + ".0");
-            return new SMTConst(sv);
+            if(/^0([.]0+)?d$/.test(cval.value)) {
+                return new SMTConst("BDecimal@zero");
+            }
+            else if(/^1([.]0+)?d$/.test(cval.value)) {
+                return new SMTConst("BDecimal@one");
+            }
+            else {
+                return new SMTCallSimple("FloatValue@const", [new SMTConst(cval.value.slice(0, cval.value.length - 1))]);
+            }
         }
         else if (cval instanceof MIRConstantString) {
             assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
@@ -987,18 +1006,10 @@ class SMTBodyEmitter {
     }
 
     processInject(op: MIRInject, continuation: SMTExp): SMTExp {
-        const srctype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.srctype));
-        const intotype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.intotype));
-        assert(srctype.name === intotype.name);
-
         return new SMTLet(this.varToSMTName(op.trgt).vname, this.argToSMT(op.src), continuation);
     }
 
     processGuardedOptionInject(op: MIRGuardedOptionInject, continuation: SMTExp): SMTExp {
-        const srctype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.srctype));
-        const somethingtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.somethingtype));
-        assert(srctype.name === somethingtype.name);
-
         const conv = this.typegen.coerce(this.argToSMT(op.src), this.typegen.getMIRType(op.somethingtype), this.typegen.getMIRType(op.optiontype));
         const call = this.generateGuardStmtCond(op.sguard, conv, op.optiontype);
 
@@ -1006,10 +1017,6 @@ class SMTBodyEmitter {
     }
 
     processExtract(op: MIRExtract, continuation: SMTExp): SMTExp {
-        const srctype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.srctype));
-        const intotype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.intotype));
-        assert(srctype.name === intotype.name);
-
         return new SMTLet(this.varToSMTName(op.trgt).vname, this.argToSMT(op.src), continuation);
     }
 
@@ -1575,40 +1582,19 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: SMTExp): SMTExp {
-        const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
-
-        if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
-            const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
-        }
-        else {
-            if(constype instanceof MIRPrimitiveStackEntityTypeDecl) {
-                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
-                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
-            }
-            else if(constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
-                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
-            }
-            else if(constype instanceof MIRPrimitiveSetEntityTypeDecl) {
-                const consexp = new SMTConst(`${this.typegen.lookupTypeName(constype.ultype)}@empty_const`);
-                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
-            }
-            else {
-                assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
-                const mapconstype = constype as MIRPrimitiveMapEntityTypeDecl;
-
-                const consexp = new SMTConst(`${this.typegen.lookupTypeName(mapconstype.ultype)}@empty_const`);
-                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
-            }
-        }
+        const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
+        return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
     }
 
     processConstructorPrimaryCollectionSingletons_Helper(ltype: MIRType, exps: SMTExp[]): SMTExp {
-        if(exps.length <= 3) {
-            assert(exps.length !== 0, "Not sure how this could happen");
-            
-            return this.lopsManager.processLiteralK_Pos(ltype, exps);
+        if(exps.length === 1) {
+            return new SMTCallSimple(`${this.typegen.getSMTConstructorName(ltype).cons}`)
+        }
+        else if(exps.length === 2) {
+
+        }
+        else if(exps.length === 3) {
+
         }
         else {
             const mid = exps.length / 2;

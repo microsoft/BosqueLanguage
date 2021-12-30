@@ -87,6 +87,8 @@
 (declare-fun FloatValue@lteq (FloatValue FloatValue) Bool)
 (declare-fun FloatValue@gteq (FloatValue FloatValue) Bool)
 
+(declare-fun FloatValue@const (String) FloatValue)
+
 ;;BINTEGRAL_TYPE_ALIAS;;
 (define-sort BBigInt () Int)
 (define-sort BBigNat () Int)

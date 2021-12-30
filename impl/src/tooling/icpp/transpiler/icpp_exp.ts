@@ -87,6 +87,7 @@ enum OpCodeTag
 
     TypeIsNoneOp,
     TypeIsSomeOp,
+    TypeIsNothingOp,
     TypeTagIsOp,
     TypeTagSubtypeOfOp,
     
@@ -458,6 +459,10 @@ class ICPPOpEmitter
 
     static genTypeIsSomeOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
         return {tag: OpCodeTag.TypeIsSomeOp, sinfo: sinfo, trgt: trgt, arg: arg, arglayout: arglayout, sguard: sguard};
+    }
+
+    static genTypeIsNothingOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.TypeIsNothingOp, sinfo: sinfo, trgt: trgt, arg: arg, arglayout: arglayout, sguard: sguard};
     }
 
     static genTypeTagIsOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {

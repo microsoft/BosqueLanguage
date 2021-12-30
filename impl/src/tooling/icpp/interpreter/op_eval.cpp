@@ -960,6 +960,7 @@ inline BSQBool isNoneTest(const BSQType* tt, StorageLocationPtr chkl)
 {
     //otherwise this should be statically checkable
     assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
+    xxxx;
 
     if(tt->tkind == BSQTypeKind::UnionRef) 
     {
@@ -975,7 +976,8 @@ inline BSQBool checkIsNone(const BSQType* tt, StorageLocationPtr chkl)
 {
     //otherwise this should be statically checkable
     assert(tt->tkind == BSQTypeKind::UnionInline || tt->tkind == BSQTypeKind::UnionRef);
-
+    xxxx;
+    
     if(tt->tkind == BSQTypeKind::UnionRef) 
     {
         return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(chkl) == BSQNoneHeapValue;
@@ -984,6 +986,11 @@ inline BSQBool checkIsNone(const BSQType* tt, StorageLocationPtr chkl)
     {
         return (SLPTR_LOAD_UNION_INLINE_TYPE(chkl)->tid == BSQ_TYPE_ID_NONE);
     }
+}
+
+inline BSQBool isNothingTest(const BSQType* tt, StorageLocationPtr chkl)
+{
+    xxxx;
 }
 
 inline BSQTypeID getTypeIDForTypeOf(const BSQType* tt, StorageLocationPtr chkl)
@@ -1029,6 +1036,21 @@ template <>
 void Evaluator::evalIsSomeOp<false>(const TypeIsSomeOp* op)
 {
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), !isNoneTest(op->arglayout, this->evalArgument(op->arg)));
+}
+
+template <>
+void Evaluator::evalIsNothingOp<true>(const TypeIsNothingOp* op)
+{
+    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isNothingTest(op->arglayout, this->evalArgument(op->arg)));
+    }
+}
+
+template <>
+void Evaluator::evalIsNothingOp<false>(const TypeIsNothingOp* op)
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), isNothingTest(op->arglayout, this->evalArgument(op->arg)));
 }
 
 template <>
@@ -1530,6 +1552,19 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         else
         {
             this->evalIsSomeOp<false>(opc);
+        }
+        break;
+    }
+    case OpCodeTag::TypeIsNothingOp:
+    {
+        auto opc = static_cast<const TypeIsNothingOp*>(op);
+        if(opc->sguard.enabled)
+        {
+            this->evalIsNothingOp<true>(opc);
+        }
+        else
+        {
+            this->evalIsNothingOp<false>(opc);
         }
         break;
     }

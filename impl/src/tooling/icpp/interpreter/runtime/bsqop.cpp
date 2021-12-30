@@ -510,6 +510,11 @@ TypeIsSomeOp* TypeIsSomeOp::jparse(json v)
     return new TypeIsSomeOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
 }
 
+TypeIsNothongOp* TypeIsNothingOp::jparse(json v)
+{
+    return new TypeIsNothingOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
+}
+
 TypeTagIsOp* TypeTagIsOp::jparse(json v)
 {
     return new TypeTagIsOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
@@ -700,6 +705,8 @@ InterpOp* InterpOp::jparse(json v)
         return TypeIsNoneOp::jparse(v);
     case OpCodeTag::TypeIsSomeOp:
         return TypeIsSomeOp::jparse(v);
+    case OpCodeTag::TypeIsNothingOp:
+        return TypeIsNothingOp::jparse(v);
     case OpCodeTag::TypeTagIsOp:
         return TypeTagIsOp::jparse(v);
     case OpCodeTag::TypeTagSubtypeOfOp:

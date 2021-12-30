@@ -6,7 +6,6 @@
 #pragma once
 
 #include "../common.h"
-#include "bsqtype.h"
 
 enum class ArgumentTag
 {
@@ -82,6 +81,7 @@ enum class OpCodeTag
 
     TypeIsNoneOp,
     TypeIsSomeOp,
+    TypeIsNothingOp,
     TypeTagIsOp,
     TypeTagSubtypeOfOp,
     
@@ -1050,6 +1050,20 @@ public:
     virtual ~TypeIsSomeOp() {;}
 
     static TypeIsSomeOp* jparse(json v);
+};
+
+class TypeIsNothingOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const Argument arg;
+    const BSQType* arglayout;
+    const BSQStatementGuard sguard;
+    
+    TypeIsNothingOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    virtual ~TypeIsNothingOp() {;}
+
+    static TypeIsNothingOp* jparse(json v);
 };
 
 class TypeTagIsOp : public InterpOp
