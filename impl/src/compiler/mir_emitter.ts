@@ -18,6 +18,7 @@ import { ConstantExpressionValue, LiteralExpressionValue } from "../ast/body";
 import { ValueType } from "../type_checker/type_environment";
 
 import * as Crypto from "crypto";
+import * as assert from "assert";
 
 type PCode = {
     code: InvokeDecl,
@@ -1090,15 +1091,6 @@ class MIREmitter {
             }
         }
 
-        if (decl.ns === "Core" && decl.name === "Map") {
-            const tatoms = [this.registerResolvedTypeReference(binds.get("K") as ResolvedType), this.registerResolvedTypeReference(binds.get("V") as ResolvedType)];
-            const rt = MIRTupleType.create(tatoms);
-            
-            if(!this.masm.tupleDecls.has(rt.typeID) && this.emitEnabled) {
-                this.masm.tupleDecls.set(rt.typeID, rt as MIRTupleType);
-            }
-        }
-
         this.pendingOOProcessing.push({ tkey: key, ootype: decl, binds: binds});
         this.entityInstantiationInfo.push({ tkey: key, ootype: decl, binds: binds});
     }
@@ -1470,6 +1462,17 @@ class MIREmitter {
                         checker.processOOType(tt.tkey, tt.ootype, tt.binds);
 
                         emitter.pendingOOProcessing.shift();
+
+                        if(tt.ootype.ns === "Core" && tt.ootype.name === "SetOps") {
+                            const addop = tt.ootype.staticFunctions.find((sf) => sf.name === "s_add") as StaticFunctionDecl;
+                            emitter.registerStaticCall(, [xxx, tt.ootype, tt.binds], "s_add", addop, tt.binds, [], []);
+                            const invcheck = tt.ootype.staticFunctions.find((sf) => sf.name === "s_check_ordered");
+
+                        }
+
+                        if(tt.ootype.ns === "Core" && tt.ootype.name === "MapOps") {
+                            const invcheck = tt.ootype.memberMethods.find((mname) => mname === "s_check_ordered")
+                        }
                     }
 
                     if(emitter.pendingConstExprProcessing.length !== 0) {

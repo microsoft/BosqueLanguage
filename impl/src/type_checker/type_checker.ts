@@ -1208,9 +1208,32 @@ class TypeChecker {
         return texpandoT.isSameType(oftexpandoT);
     }
 
-    private checkArgumentsCollectionConstructor(sinfo: SourceInfo, oftype: ResolvedEntityAtomType, entrytype: ResolvedType, args: [ResolvedType, boolean, MIRRegisterArgument][], trgt: MIRRegisterArgument): ResolvedType {
-        for (let i = 0; i < args.length; ++i) {
-            const arg = args[i];
+    private checkArgumentsCollectionConstructor(sinfo: SourceInfo, env: TypeEnvironment, args: Arguments, cargs: [ResolvedType, boolean, MIRRegisterArgument][] | undefined, oftype: ResolvedEntityAtomType, oodecl: EntityTypeDecl, oobinds: Map<string, ResolvedType>, trgt: MIRRegisterArgument): ResolvedType {
+        let entrytype: ResolvedType | undefined = undefined;
+
+        if (oodecl.isListType()) {
+            entrytype = this.getTBind(oobinds);
+        }
+        else if (oodecl.isStackType()) {
+            entrytype = this.getTBind(oobinds);
+        }
+        else if (oodecl.isQueueType()) {
+            entrytype = this.getTBind(oobinds);
+        }
+        else if (oodecl.isSetType()) {
+            entrytype = this.getTBind(oobinds);
+            this.raiseErrorIf(sinfo, !entrytype.isGroundedType() || !this.m_assembly.subtypeOf(entrytype, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Set entry");
+        }
+        else {
+            const kvtypes = this.getKVBinds(oobinds);
+            this.raiseErrorIf(sinfo, !kvtypes.K.isGroundedType() || !this.m_assembly.subtypeOf(kvtypes.K, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Map key");
+
+            entrytype = ResolvedType.createSingle(ResolvedTupleAtomType.create([kvtypes.K, kvtypes.V]));
+        }
+
+        const eargs = (cargs === undefined) ? this.checkArgumentsEvaluationCollection(env, args, entrytype) : cargs;
+        for (let i = 0; i < eargs.length; ++i) {
+            const arg = eargs[i];
 
             if (!arg[1]) {
                 this.raiseErrorIf(sinfo, !arg[0].isSameType(entrytype));
@@ -1224,24 +1247,24 @@ class TypeChecker {
 
         const tkey = this.m_emitter.registerResolvedTypeReference(resulttype).typeID;
         this.m_emitter.registerResolvedTypeReference(entrytype);
-        if (args.length === 0) {
+        if (eargs.length === 0) {
             this.m_emitter.emitConstructorPrimaryCollectionEmpty(sinfo, tkey, trgt);
         }
         else {
-            if (args.every((v) => !v[1])) {
-                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+            if (eargs.every((v) => !v[1])) {
+                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
             }
-            else if (args.every((v) => v[1])) {
-                if(args.length === 1 && args[0][0].isSameType(resulttype)) {
+            else if (eargs.every((v) => v[1])) {
+                if(eargs.length === 1 && eargs[0][0].isSameType(resulttype)) {
                     //special case where we expand a (say) List<Int> into a List<Int>
-                    this.m_emitter.emitRegisterStore(sinfo, args[0][2], trgt, this.m_emitter.registerResolvedTypeReference(args[0][0]), undefined);
+                    this.m_emitter.emitRegisterStore(sinfo, eargs[0][2], trgt, this.m_emitter.registerResolvedTypeReference(eargs[0][0]), undefined);
                 }
                 else {
-                    this.m_emitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, args.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                    this.m_emitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
                 }
             }
             else {
-                this.m_emitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, args.map<[boolean, MIRType, MIRArgument]>((arg) => [arg[1], this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                this.m_emitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, eargs.map<[boolean, MIRType, MIRArgument]>((arg) => [arg[1], this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
             }
         }
 
@@ -1735,7 +1758,7 @@ class TypeChecker {
             }) as [ResolvedType, boolean, MIRRegisterArgument][];
 
             const rtreg = this.m_emitter.generateTmpRegister();
-            this.checkArgumentsCollectionConstructor(sinfo, oftype, etype, cargs, rtreg);
+            this.checkArgumentsCollectionConstructor(sinfo, env, new Arguments([]), cargs, oftype, oodecl, oobinds, rtreg);
 
             margs.push(rtreg);
         }
@@ -1899,7 +1922,7 @@ class TypeChecker {
         //if this has a rest parameter check it
         if (hasrest) {
             //
-            //TODO: we may want to distinguish List, Set, Map options
+            //TODO: we may want to distinguish List, Set, Map options -- but for now we always treat spread as being on a list
             //
             const rargs = args.slice(apos).filter((arg) => arg.name === undefined);
             const cargs = rargs.map((ca) => [(ca.argtype as ValueType).flowtype, ca.expando, this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, ca.treg as MIRRegisterArgument, ca.argtype as ValueType)] as [ResolvedType, boolean, MIRRegisterArgument]);
@@ -1920,7 +1943,7 @@ class TypeChecker {
             const oftype = ResolvedEntityAtomType.create(lentity, new Map<string, ResolvedType>().set("T", etype));
 
             const rtreg = this.m_emitter.generateTmpRegister();
-            this.checkArgumentsCollectionConstructor(sinfo, oftype, etype, cargs, rtreg);
+            this.checkArgumentsCollectionConstructor(sinfo, env, new Arguments([]), cargs, oftype, lentity, new Map<string, ResolvedType>().set("T", etype), rtreg);
 
             margs.push(rtreg);
             mtypes.push(ValueType.createUniform(ResolvedType.createSingle(oftype)));
@@ -2487,30 +2510,8 @@ class TypeChecker {
         this.checkTemplateTypes(exp.sinfo, oodecl.terms, oobinds);
 
         const oftype = ResolvedEntityAtomType.create(oodecl, oobinds);
-        if (oodecl.isListType() || oodecl.isStackType() || oodecl.isQueueType()) {
-            const ctype = this.getTBind(oobinds);
-            const eargs = this.checkArgumentsEvaluationCollection(env, exp.args, ctype);
-            const atype = this.checkArgumentsCollectionConstructor(exp.sinfo, oftype, ctype, eargs, trgt);
-
-            return env.setUniformResultExpression(atype);
-        }
-        else if (oodecl.isSetType()) {
-            const ctype = this.getTBind(oobinds);
-            this.raiseErrorIf(exp.sinfo, !ctype.isGroundedType() || !this.m_assembly.subtypeOf(ctype, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Set");
-
-            const eargs = this.checkArgumentsEvaluationCollection(env, exp.args, ctype);
-            const atype = this.checkArgumentsCollectionConstructor(exp.sinfo, oftype, ctype, eargs, trgt);
-
-            return env.setUniformResultExpression(atype);
-        }
-        else if (oodecl.isMapType()) {
-            const kvtypes = this.getKVBinds(oobinds);
-            this.raiseErrorIf(exp.sinfo, !kvtypes.K.isGroundedType() || !this.m_assembly.subtypeOf(kvtypes.K, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Map key");
-
-            const entryobj = ResolvedType.createSingle(ResolvedTupleAtomType.create([kvtypes.K, kvtypes.V]));
-            const eargs = this.checkArgumentsEvaluationCollection(env, exp.args, entryobj);
-            const atype = this.checkArgumentsCollectionConstructor(exp.sinfo, oftype, entryobj, eargs, trgt);
-
+        if (oodecl.isListType() || oodecl.isStackType() || oodecl.isQueueType() || oodecl.isSetType() || oodecl.isMapType()) {
+            const atype = this.checkArgumentsCollectionConstructor(exp.sinfo, env, exp.args, undefined, oftype, oodecl, oobinds, trgt);
             return env.setUniformResultExpression(atype);
         }
         else {

@@ -7,6 +7,8 @@
 namespace Core;
 
 __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType {
+    private field __list_dummy_contents: ListRepr<T>;
+
     private function s_into(l: ListRepr<T>): List<T> special_inject
     method value(): ListRepr<T> special_extract
 
