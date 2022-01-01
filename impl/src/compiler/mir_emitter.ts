@@ -18,7 +18,6 @@ import { ConstantExpressionValue, LiteralExpressionValue } from "../ast/body";
 import { ValueType } from "../type_checker/type_environment";
 
 import * as Crypto from "crypto";
-import * as assert from "assert";
 
 type PCode = {
     code: InvokeDecl,
@@ -1462,17 +1461,6 @@ class MIREmitter {
                         checker.processOOType(tt.tkey, tt.ootype, tt.binds);
 
                         emitter.pendingOOProcessing.shift();
-
-                        if(tt.ootype.ns === "Core" && tt.ootype.name === "SetOps") {
-                            const addop = tt.ootype.staticFunctions.find((sf) => sf.name === "s_add") as StaticFunctionDecl;
-                            emitter.registerStaticCall(, [xxx, tt.ootype, tt.binds], "s_add", addop, tt.binds, [], []);
-                            const invcheck = tt.ootype.staticFunctions.find((sf) => sf.name === "s_check_ordered");
-
-                        }
-
-                        if(tt.ootype.ns === "Core" && tt.ootype.name === "MapOps") {
-                            const invcheck = tt.ootype.memberMethods.find((mname) => mname === "s_check_ordered")
-                        }
                     }
 
                     if(emitter.pendingConstExprProcessing.length !== 0) {

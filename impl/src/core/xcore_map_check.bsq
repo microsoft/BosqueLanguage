@@ -7,6 +7,35 @@
 namespace Core;
 
 #if CHECK_LIBS
+internal function __map_literal_cons0<K grounded KeyType, V>(): MapRepr<K, V> {
+    return none;
+}
+
+internal function __map_literal_cons1<K grounded KeyType, V>(e1: [K, V]): MapRepr<K, V> {
+    return Vector1<[K, V]>{e1};
+}
+
+internal function __map_literal_cons2<K grounded KeyType, V>(e1: [K, V], e2: [K, V]): MapRepr<K, V> {
+    if(KeyType::less<K>(e2.0, e1.0)) {
+         return Vector2<[K, V]>{e2, e1};
+    }
+    else {
+        return Vector2<[K, V]>{e1, e2};
+    }
+}
+
+internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> {
+    return Vector3<T>{v1, v2, v3};
+}
+
+internal function __list_literal_cons_add<T>(h: T, ll: RecListEntry<T>): RecListEntry<T> {
+    return RecListEntry<T>{h, ll};
+}
+
+internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>): ListRepr<T> {
+    return ListOps::s_append(l1, l2);
+}
+
 internal entity MapOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U map_safeas
 
@@ -365,7 +394,7 @@ internal entity MapOps provides Some {
         elif(m.is<Vector2<[K, V]>>()) {
             return KeyType::less<K>(m.v0.0, m.v1.0);
         }
-        elif(m.is<Vector3<T>>()) {
+        elif(m.is<Vector3<[K, V]>>()) {
             return /\(KeyType::less<K>(m.v0.0, m.v1.0), KeyType::less<K>(m.v1.0, m.v2.0));
         }
         else {

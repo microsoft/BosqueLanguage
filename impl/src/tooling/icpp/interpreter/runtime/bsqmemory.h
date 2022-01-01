@@ -7,8 +7,6 @@
 
 #include "../common.h"
 
-#include <list>
-
 ////
 //BSQType abstract base class
 class BSQType
@@ -372,8 +370,6 @@ private:
     void* globals_mem;
     RefMask globals_mask;
 
-    std::list<void*> load_roots;
-
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
     size_t promotedbytes;
@@ -733,14 +729,6 @@ private:
         {
             Allocator::gcProcessSlotsWithMask<true>((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
         }
-
-        if(!Allocator::GlobalAllocator.load_roots.empty())
-        {
-            for(auto iter = Allocator::GlobalAllocator.load_roots.begin(); iter != Allocator::GlobalAllocator.load_roots.end(); ++iter)
-            {
-                Allocator::gcProcessSlot<true>(&(*iter));
-            }
-        }
     }
 
     void processHeap()
@@ -821,18 +809,10 @@ private:
         {
             Allocator::gcClearMarkSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
         }
-
-        if(!Allocator::GlobalAllocator.load_roots.empty())
-        {
-            for(auto iter = Allocator::GlobalAllocator.load_roots.begin(); iter != Allocator::GlobalAllocator.load_roots.end(); ++iter)
-            {
-                Allocator::gcClearMark(*iter);
-            }
-        }
     }
 
 public:
-    Allocator() : bumpalloc(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr), load_roots()
+    Allocator() : bumpalloc(), maybeZeroCounts(), newMaybeZeroCounts(), worklist(), releaselist(), liveoldspace(0), globals_mem(nullptr)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->promotedbytes = 0);
@@ -891,21 +871,6 @@ public:
 
         //Adjust the new space size if needed and reset/free the newspace allocators
         this->bumpalloc.postGCProcess(this->liveoldspace);
-    }
-
-    void pushLoadRoot(void* vv)
-    {
-        this->load_roots.push_front(vv);
-    }
-
-    std::list<void*>::iterator getLoadRootPosition()
-    {
-        return this->load_roots.begin();
-    }
-
-    void clearFromLoadRootPosition(std::list<void*>::iterator pos)
-    {
-        this->load_roots.erase(this->load_roots.begin(), pos);
     }
 
     void setGlobalsMemory(void* globals, const RefMask mask)

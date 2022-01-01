@@ -1330,6 +1330,7 @@ enum class ContainerCategory
 class ContainerType : public IGroundedType
 {
 public:
+xxxx;
     const ContainerCategory category;
     const std::string elemtype;
 

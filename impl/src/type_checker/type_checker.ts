@@ -6810,6 +6810,7 @@ class TypeChecker {
                     const mopstype = this.m_assembly.getMapOpsType();
                     const mirmopstype = this.m_emitter.registerResolvedTypeReference(mopstype);
 
+                    xxxx;
                     const uniqff = (mopstype.options[0] as ResolvedEntityAtomType).object.staticFunctions.find((ff) => ff.name === "s_check_ordered") as StaticFunctionDecl;
                     const unqinv = this.m_emitter.registerStaticCall(mopstype, [mirmopstype, (mopstype.options[0] as ResolvedEntityAtomType).object, new Map<string, ResolvedType>()], uniqff, "s_check_ordered", ofbinds, [], []);
                     
