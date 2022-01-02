@@ -16,24 +16,61 @@ internal function __map_literal_cons1<K grounded KeyType, V>(e1: [K, V]): MapRep
 }
 
 internal function __map_literal_cons2<K grounded KeyType, V>(e1: [K, V], e2: [K, V]): MapRepr<K, V> {
-    if(KeyType::less<K>(e2.0, e1.0)) {
-         return Vector2<[K, V]>{e2, e1};
+    if(KeyType::equal<K>(e1.0, e2.0)) {
+        return none;
     }
     else {
-        return Vector2<[K, V]>{e1, e2};
+        if(KeyType::less<K>(e2.0, e1.0)) {
+            return Vector2<[K, V]>{e2, e1};
+        }
+        else {
+            return Vector2<[K, V]>{e1, e2};
+        }
     }
 }
 
-internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> {
-    return Vector3<T>{v1, v2, v3};
+internal function __map_literal_cons3<K grounded KeyType, V>(e1: [K, V], e2: [K, V], e3: [K, V]): MapRepr<K, V> {
+    if(\/(KeyType::equal<K>(e1.0, e2.0), KeyType::equal<K>(e1.0, e3.0), KeyType::equal<K>(e2.0, e3.0))) {
+        return none;
+    }
+    else {
+        if(/\(KeyType::less<K>(e3.0, e1.0), KeyType::less<K>(e3.0, e2.0))) {
+            if(KeyType::less<K>(e2.0, e1.0)) {
+                return Vector3<[K, V]>{e3, e2, e1};
+            }
+            else {
+                return Vector3<[K, V]>{e3, e1, e2};
+            }
+        }
+        elif(KeyType::less<K>(e2.0, e1.0)) {
+            if(KeyType::less<K>(e3.0, e1.0)) {
+                return Vector3<[K, V]>{e2, e3, e1};
+            }
+            else {
+                return Vector3<[K, V]>{e2, e1, e3};
+            }
+        }
+        else {
+            if(KeyType::less<K>(e3.0, e2.0)) {
+                return Vector3<[K, V]>{e1, e3, e2};
+            }
+            else {
+                return Vector3<[K, V]>{e1, e2, e3};
+            }
+        }
+    }
 }
 
-internal function __list_literal_cons_add<T>(h: T, ll: RecListEntry<T>): RecListEntry<T> {
-    return RecListEntry<T>{h, ll};
+internal function __map_literal_cons_add<K grounded KeyType, V>(e: [K, V], mm: RecMapEntry<K, V>): RecMapEntry<K, V> {
+    return mm.add[recursive](e.0, e.1);
 }
 
-internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>): ListRepr<T> {
-    return ListOps::s_append(l1, l2);
+internal function __map_literal_cons_add_done<K grounded KeyType, V>(count: Nat, mm: RecMapEntry<K, V>): MapRepr<K, V> {
+    return RecMap<K, V>{count, mm};
+}
+
+internal function __map_literal_cons_append<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
+    return MapOps::s_union<K, V>(m1, m2);
 }
 
 internal entity MapOps provides Some {

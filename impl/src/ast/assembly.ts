@@ -11,6 +11,8 @@ import { SourceInfo } from "./parser";
 import * as assert from "assert";
 import { BSQRegex } from "./bsqregex";
 
+type BuildApplicationMode = "exec" | "modelcheck" | "modelcheck" | "typecheck";
+
 type BuildLevel = "doc" | "spec" | "debug" | "test" | "release";
 
 function isBuildLevelEnabled(check: BuildLevel, enabled: BuildLevel): boolean {
@@ -2590,7 +2592,7 @@ class Assembly {
 }
 
 export {
-    BuildLevel, isBuildLevelEnabled,
+    BuildApplicationMode, BuildLevel, isBuildLevelEnabled,
     TemplateTermDecl, TemplateTypeRestriction, TypeConditionRestriction, PreConditionDecl, PostConditionDecl, InvokeDecl,
     OOMemberDecl, InvariantDecl, StaticMemberDecl, StaticFunctionDecl, StaticOperatorDecl, MemberFieldDecl, MemberMethodDecl, OOPTypeDecl, ConceptTypeDecl, EntityTypeDecl,
     NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, NamespaceTypedef, NamespaceUsing, NamespaceDeclaration,

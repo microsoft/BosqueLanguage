@@ -7,6 +7,22 @@
 namespace Core;
 
 #if EXEC_LIBS
+internal function __map_literal_cons0<K grounded KeyType, V>(): MapRepr<K, V> {
+    return none;
+}
+
+internal function __map_literal_cons_add<K grounded KeyType, V>(e: [K, V], mm: BTreeNode<K, V>): BTreeNode<K, V> {
+    return mm.add[recursive](e.0, e.1);
+}
+
+internal function __map_literal_cons_add_done<K grounded KeyType, V>(count: Nat, mm: BTreeNode<K, V>): MapRepr<K, V> {
+    return BTree<K, V>{count, mm};
+}
+
+internal function __map_literal_cons_append<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
+    return MapOps::s_union<K, V>(m1, m2);
+}
+
 internal entity MapOps provides Some {
     __assume_safe function s_safeAs<T, U>(v: T): U map_safeas
 

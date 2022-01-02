@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedRecordAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
-import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl } from "../ast/assembly";
+import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl, BuildApplicationMode } from "../ast/assembly";
 import { TypeEnvironment, VarInfo, FlowTypeTruthValue, ValueType } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, FunctionTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, CheckStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, IsTypeExpression, AsTypeExpression, PostfixGetPropertyOption, PostfixGetIndexOption, SwitchExpression, WildcardSwitchGuard, LiteralSwitchGuard, SwitchGuard, SwitchStatement, LogicActionExpression } from "../ast/body";
@@ -97,6 +97,7 @@ class InitializerEvaluationCallAction extends InitializerEvaluationAction {
 class TypeChecker {
     private readonly m_assembly: Assembly;
 
+    private readonly m_buildapplication: BuildApplicationMode;
     private readonly m_buildLevel: BuildLevel;
 
     private m_file: string;
@@ -105,9 +106,10 @@ class TypeChecker {
     private readonly m_emitter: MIREmitter;
     private readonly m_sortedSrcFiles: {fullname: string, shortname: string}[]; 
 
-    constructor(assembly: Assembly, emitter: MIREmitter, buildlevel: BuildLevel, sortedSrcFiles: {fullname: string, shortname: string}[]) {
+    constructor(assembly: Assembly, emitter: MIREmitter, buildmode: BuildApplicationMode, buildlevel: BuildLevel, sortedSrcFiles: {fullname: string, shortname: string}[]) {
         this.m_assembly = assembly;
 
+        this.m_buildapplication = buildmode;
         this.m_buildLevel = buildlevel;
 
         this.m_file = "[No File]";
@@ -1213,22 +1215,30 @@ class TypeChecker {
 
         if (oodecl.isListType()) {
             entrytype = this.getTBind(oobinds);
+            this.processCollectionSpecialConstructorFunctions_List(oobinds);
         }
         else if (oodecl.isStackType()) {
             entrytype = this.getTBind(oobinds);
+
+            assert(false, "Stack not supported yet");
         }
         else if (oodecl.isQueueType()) {
             entrytype = this.getTBind(oobinds);
+
+            assert(false, "Stack not supported yet");
         }
         else if (oodecl.isSetType()) {
             entrytype = this.getTBind(oobinds);
             this.raiseErrorIf(sinfo, !entrytype.isGroundedType() || !this.m_assembly.subtypeOf(entrytype, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Set entry");
+
+            assert(false, "Stack not supported yet");
         }
         else {
             const kvtypes = this.getKVBinds(oobinds);
             this.raiseErrorIf(sinfo, !kvtypes.K.isGroundedType() || !this.m_assembly.subtypeOf(kvtypes.K, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Map key");
 
             entrytype = ResolvedType.createSingle(ResolvedTupleAtomType.create([kvtypes.K, kvtypes.V]));
+            this.processCollectionSpecialConstructorFunctions_Map(oobinds);
         }
 
         const eargs = (cargs === undefined) ? this.checkArgumentsEvaluationCollection(env, args, entrytype) : cargs;
@@ -6628,6 +6638,46 @@ class TypeChecker {
         }
     }
 
+    private processCollectionSpecialConstructorFunctions_List(oobinds: Map<string, ResolvedType>): MIRInvokeKey[] {
+        const nscore = this.m_assembly.getNamespace("Core");
+
+        let consfuncs: MIRInvokeKey[] = [];
+        if(this.m_buildapplication === "modelcheck") {
+            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons_add", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
+                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
+                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
+            });
+        }
+        else {
+            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons4", "__list_literal_cons_add1", "__list_literal_cons_add2", "__list_literal_cons_add3", "__list_literal_cons_add4", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
+                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
+                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
+            });
+        }
+
+        return consfuncs;
+    }
+
+    private processCollectionSpecialConstructorFunctions_Map(oobinds: Map<string, ResolvedType>): MIRInvokeKey[] {
+        const nscore = this.m_assembly.getNamespace("Core");
+
+        let consfuncs: MIRInvokeKey[] = [];
+        if(this.m_buildapplication === "modelcheck") {
+            ["__map_literal_cons0", "__map_literal_cons1", "__map_literal_cons2", "__map_literal_cons3", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
+                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
+                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
+            });
+        }
+        else {
+            ["__map_literal_cons0", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
+                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
+                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
+            });
+        }
+
+        return consfuncs;
+    }
+
     processOOType(tkey: MIRResolvedTypeKey, tdecl: OOPTypeDecl, binds: Map<string, ResolvedType>) {
         try {
             this.m_file = tdecl.srcFile;
@@ -6783,7 +6833,8 @@ class TypeChecker {
                     const miroftype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.normalizeTypeOnly(oftype, new Map().set("T", binds.get("T") as ResolvedType)));
                     const mirbinds = new Map<string, MIRType>().set("T", this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType));
 
-                    const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds);
+                    const consfuncs = this.processCollectionSpecialConstructorFunctions_List(new Map().set("T", binds.get("T") as ResolvedType));
+                    const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, consfuncs);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__stack_type")) {
@@ -6807,14 +6858,8 @@ class TypeChecker {
                     const tupletype = ResolvedType.createSingle(ResolvedTupleAtomType.create([binds.get("K") as ResolvedType, binds.get("V") as ResolvedType]));
                     const mirtupletype = this.m_emitter.registerResolvedTypeReference(tupletype);
 
-                    const mopstype = this.m_assembly.getMapOpsType();
-                    const mirmopstype = this.m_emitter.registerResolvedTypeReference(mopstype);
-
-                    xxxx;
-                    const uniqff = (mopstype.options[0] as ResolvedEntityAtomType).object.staticFunctions.find((ff) => ff.name === "s_check_ordered") as StaticFunctionDecl;
-                    const unqinv = this.m_emitter.registerStaticCall(mopstype, [mirmopstype, (mopstype.options[0] as ResolvedEntityAtomType).object, new Map<string, ResolvedType>()], uniqff, "s_check_ordered", ofbinds, [], []);
-                    
-                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, mirtupletype.typeID, unqinv);
+                    const consfuncs = this.processCollectionSpecialConstructorFunctions_Map(ofbinds);
+                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, consfuncs, mirtupletype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__internal")) { 

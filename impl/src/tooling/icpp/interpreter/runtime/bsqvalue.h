@@ -441,13 +441,11 @@ public:
 class BSQListType : public BSQType
 {
 public:
-    const BSQTypeID ctype; //type of elements in the list
-    const BSQTypeID pvtype; //PV type
-    const BSQTypeID treetype; //Tree type
+    const BSQTypeID elemtype; //type of elements in the list
 
-    BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ctype, BSQTypeID elemtype, BSQTypeID pvtype, BSQTypeID treetype): 
+    BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID elemtype): 
         BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        ctype(ctype), pvtype(pvtype), treetype(treetype)
+        elemtype(elemtype)
     {;}
 
     virtual ~BSQListType() {;}
@@ -475,12 +473,11 @@ class BSQMapType : public BSQType
 public:
     const BSQTypeID ktype; //type of K in the map
     const BSQTypeID vtype; //type of V in the map
-    const BSQTypeID ctype; //type of [K, V]
-    const BSQTypeID treetype; //Tree type
+    const BSQTypeID etype; //type of [K, V]
 
-    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype, BSQTypeID ctype, BSQTypeID treetype): 
+    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype, BSQTypeID etype): 
         BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        ktype(ktype), vtype(vtype), ctype(ctype), treetype(treetype)
+        ktype(ktype), vtype(vtype), etype(etype)
     {;}
 
     virtual ~BSQMapType() {;}

@@ -27,6 +27,10 @@ internal function __list_literal_cons_add<T>(h: T, ll: RecListEntry<T>): RecList
     return RecListEntry<T>{h, ll};
 }
 
+internal function __list_literal_cons_add_done<T>(count: Nat, ll: RecListEntry<T>): ListRepr<T> {
+    return RecList<T>{count, ll};
+}
+
 internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>): ListRepr<T> {
     return ListOps::s_append(l1, l2);
 }
