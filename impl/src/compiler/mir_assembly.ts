@@ -335,17 +335,17 @@ abstract class MIREntityTypeDecl extends MIROOTypeDecl {
 }
 
 class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
-    readonly usinginvariant: MIRInvokeKey | undefined;
+    readonly validatefunc: MIRInvokeKey | undefined;
     readonly consfunc: MIRInvokeKey;
     readonly consfuncfields: MIRFieldKey[];
 
     readonly fields: MIRFieldDecl[];
     readonly vcallMap: Map<MIRVirtualMethodKey, MIRInvokeKey> = new Map<string, MIRInvokeKey>();
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], usinginvariant: MIRInvokeKey | undefined, consfunc: MIRInvokeKey, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], validatefunc: MIRInvokeKey | undefined, consfunc: MIRInvokeKey, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
-        this.usinginvariant = usinginvariant;
+        this.validatefunc = validatefunc;
         this.consfunc = consfunc;
 
         this.consfuncfields = consfuncfields;
@@ -353,11 +353,11 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     }
 
     jemit(): object {
-        return { tag: "std", ...this.jemitbase(), usinginvariant: this.usinginvariant, consfunc: this.consfunc, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
+        return { tag: "std", ...this.jemitbase(), validatefunc: this.validatefunc, consfunc: this.consfunc, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
     }
 
     static jparse(jobj: any): MIRConceptTypeDecl {
-        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.usinginvariant, jobj.consfunc, jobj.consfuncfields, jobj.fields.map((jf: any) => MIRFieldDecl.jparse(jf)));
+        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.validatefunc, jobj.consfunc, jobj.consfuncfields, jobj.fields.map((jf: any) => MIRFieldDecl.jparse(jf)));
         
         jobj.vcallMap.forEach((vc: any) => entity.vcallMap.set(vc[0], vc[1]));
         return entity;
@@ -366,23 +366,23 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
 
 class MIRConstructableEntityTypeDecl extends MIREntityTypeDecl {
     readonly fromtype: MIRResolvedTypeKey;
-    readonly usinginvariant: MIRInvokeKey | undefined; 
+    readonly validatefunc: MIRInvokeKey | undefined; 
     readonly usingcons: MIRInvokeKey | undefined;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, usinginvariant: MIRInvokeKey | undefined, usingcons: MIRInvokeKey | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, validatefunc: MIRInvokeKey | undefined, usingcons: MIRInvokeKey | undefined) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
         this.fromtype = fromtype;
-        this.usinginvariant = usinginvariant;
+        this.validatefunc = validatefunc;
         this.usingcons = usingcons;
     }
 
     jemit(): object {
-        return { tag: "constructable", ...this.jemitbase(), fromtype: this.fromtype, usinginvariant: this.usinginvariant, usingcons: this.usingcons };
+        return { tag: "constructable", ...this.jemitbase(), fromtype: this.fromtype, validatefunc: this.validatefunc, usingcons: this.usingcons };
     }
 
     static jparse(jobj: any): MIRConstructableEntityTypeDecl {
-        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.usinginvariant, jobj.usingcons);
+        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.validatefunc, jobj.usingcons);
     }
 }
 
@@ -1202,7 +1202,7 @@ class MIRAssembly {
             }
         }
         else if(entity instanceof MIRConstructableEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.fromtype, usinginv: entity.usingcons || null};
+            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.fromtype, validatefunc: entity.validatefunc || null};
         }
         else if(entity instanceof MIREnumEntityTypeDecl) {
             return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, enums: entity.enums};

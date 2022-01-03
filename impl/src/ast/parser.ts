@@ -6,7 +6,7 @@
 import { ParserEnvironment, FunctionScope } from "./parser_env";
 import { FunctionParameter, TypeSignature, NominalTypeSignature, TemplateTypeSignature, ParseErrorTypeSignature, TupleTypeSignature, RecordTypeSignature, FunctionTypeSignature, UnionTypeSignature, AutoTypeSignature, ProjectTypeSignature, EphemeralListTypeSignature, PlusTypeSignature, AndTypeSignature } from "./type_signature";
 import { Arguments, TemplateArguments, NamedArgument, PositionalArgument, InvalidExpression, Expression, LiteralNoneExpression, LiteralBoolExpression, LiteralStringExpression, LiteralTypedStringExpression, AccessVariableExpression, AccessNamespaceConstantExpression, LiteralTypedStringConstructorExpression, CallNamespaceFunctionOrOperatorExpression, AccessStaticFieldExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, PostfixOperation, PostfixAccessFromIndex, PostfixAccessFromName, PostfixProjectFromIndecies, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames, PostfixInvoke, PostfixOp, PrefixNotOp, BinLogicExpression, SelectExpression, BlockStatement, Statement, BodyImplementation, EmptyStatement, InvalidStatement, VariableDeclarationStatement, VariableAssignmentStatement, ReturnStatement, YieldStatement, CondBranchEntry, IfElse, IfElseStatement, InvokeArgument, CallStaticFunctionOrOperatorExpression, AssertStatement, CheckStatement, DebugStatement, StructuredAssignment, TupleStructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, IgnoreTermStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, MatchStatement, MatchEntry, MatchGuard, WildcardMatchGuard, StructureMatchGuard, AbortStatement, BlockStatementExpression, IfExpression, MatchExpression, RecursiveAnnotation, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ValidateStatement, NakedCallStatement, ValueListStructuredAssignment, NominalStructuredAssignment, VariablePackDeclarationStatement, VariablePackAssignmentStatement, ConstructorEphemeralValueList, MapEntryConstructorExpression, SpecialConstructorExpression, TypeMatchGuard, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralExpressionValue, LiteralIntegralExpression, LiteralFloatPointExpression, LiteralRationalExpression, IsTypeExpression, AsTypeExpression, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, PostfixGetIndexOption, PostfixGetPropertyOption, SwitchEntry, SwitchExpression, StructuredAssignementPrimitive, SwitchStatement, SwitchGuard, WildcardSwitchGuard, LiteralSwitchGuard, LogicActionExpression } from "./body";
-import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, PreConditionDecl, PostConditionDecl, BuildLevel, TypeConditionRestriction, InvariantDecl, TemplateTypeRestriction, StaticOperatorDecl, NamespaceOperatorDecl, OOPTypeDecl } from "./assembly";
+import { Assembly, NamespaceUsing, NamespaceDeclaration, NamespaceTypedef, StaticMemberDecl, StaticFunctionDecl, MemberFieldDecl, MemberMethodDecl, ConceptTypeDecl, EntityTypeDecl, NamespaceConstDecl, NamespaceFunctionDecl, InvokeDecl, TemplateTermDecl, PreConditionDecl, PostConditionDecl, BuildLevel, TypeConditionRestriction, InvariantDecl, TemplateTypeRestriction, StaticOperatorDecl, NamespaceOperatorDecl, OOPTypeDecl, ValidateDecl } from "./assembly";
 import { BSQRegex } from "./bsqregex";
 
 const KeywordStrings = [
@@ -168,6 +168,8 @@ const AttributeStrings = [
     "infix",
     "dynamic",
     "sensitive",
+    "chktest",
+    "errtest",
 
     "__internal",
     "__typedeclable",
@@ -3963,7 +3965,7 @@ class Parser {
         memberMethods.push(new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), mname, refrcvr, sig));
     }
 
-    private parseInvariantsInto(invs: InvariantDecl[]) {
+    private parseInvariantsInto(invs: InvariantDecl[], vdates: ValidateDecl[]) {
         try {
 
             //
@@ -3971,15 +3973,25 @@ class Parser {
             //
 
             this.m_penv.pushFunctionScope(new FunctionScope(new Set<string>(), new NominalTypeSignature("Core", ["Bool"]), false));
-            while (this.testToken("invariant")) {
-                this.consumeToken();
+            while (this.testToken("invariant") || this.testToken("validate")) {
+                if(this.testToken("validate")) {
+                    this.consumeToken();
 
-                let level: BuildLevel = this.parseBuildInfo("debug");
+                    const sinfo = this.getCurrentSrcInfo();
+                    const exp = this.parseConstExpression(true);
 
-                const sinfo = this.getCurrentSrcInfo();
-                const exp = this.parseConstExpression(true);
+                    vdates.push(new ValidateDecl(sinfo, exp));
+                }
+                else {
+                    this.consumeToken();
 
-                invs.push(new InvariantDecl(sinfo, level, exp));
+                    let level: BuildLevel = this.parseBuildInfo("debug");
+
+                    const sinfo = this.getCurrentSrcInfo();
+                    const exp = this.parseConstExpression(true);
+
+                    invs.push(new InvariantDecl(sinfo, level, exp));
+                }
 
                 this.ensureAndConsumeToken(";");
             }
@@ -3989,7 +4001,7 @@ class Parser {
     }
 
     private parseOOPMembersCommon(thisType: TypeSignature, currentNamespace: NamespaceDeclaration, currentTypeNest: string[], currentTermNest: TemplateTermDecl[], 
-        nestedEntities: Map<string, EntityTypeDecl>, invariants: InvariantDecl[], 
+        nestedEntities: Map<string, EntityTypeDecl>, invariants: InvariantDecl[], validates: ValidateDecl[],
         staticMembers: StaticMemberDecl[], staticFunctions: StaticFunctionDecl[], staticOperators: StaticOperatorDecl[], 
         memberFields: MemberFieldDecl[], memberMethods: MemberMethodDecl[]) {
         let allMemberNames = new Set<string>();
@@ -3999,8 +4011,8 @@ class Parser {
             if(this.testToken("entity")) {
                 this.parseObject(currentNamespace, nestedEntities, currentTypeNest, currentTermNest);
             }
-            else if (this.testToken("invariant")) {
-                this.parseInvariantsInto(invariants);
+            else if (this.testToken("invariant") || this.testToken("validate")) {
+                this.parseInvariantsInto(invariants, validates);
             }
             else if (this.testToken("const")) {
                 this.parseConstMember(staticMembers, allMemberNames, attributes);
@@ -4044,13 +4056,14 @@ class Parser {
             const thisType = new NominalTypeSignature(currentDecl.ns, [cname], terms.map((term) => new TemplateTypeSignature(term.name)));
 
             const invariants: InvariantDecl[] = [];
+            const validates: ValidateDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
             const staticFunctions: StaticFunctionDecl[] = [];
             const staticOperators: StaticOperatorDecl[] = [];
             const memberFields: MemberFieldDecl[] = [];
             const memberMethods: MemberMethodDecl[] = [];
             const nestedEntities = new Map<string, EntityTypeDecl>();
-            this.parseOOPMembersCommon(thisType, currentDecl, [cname], [...terms], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+            this.parseOOPMembersCommon(thisType, currentDecl, [cname], [...terms], nestedEntities, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
 
             this.ensureAndConsumeToken("}");
 
@@ -4072,7 +4085,7 @@ class Parser {
                 }
             }
 
-            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, cname, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
+            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, cname, terms, provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
             currentDecl.concepts.set(cname, cdecl);
             this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + cname, cdecl);
         }
@@ -4102,13 +4115,14 @@ class Parser {
             const thisType = new NominalTypeSignature(currentDecl.ns, [...currentTypeNest, ename], [...terms, ...currentTermNest].map((term) => new TemplateTypeSignature(term.name)));
 
             const invariants: InvariantDecl[] = [];
+            const validates: ValidateDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
             const staticFunctions: StaticFunctionDecl[] = [];
             const staticOperators: StaticOperatorDecl[] = [];
             const memberFields: MemberFieldDecl[] = [];
             const memberMethods: MemberMethodDecl[] = [];
             const nestedEntities = new Map<string, EntityTypeDecl>();
-            this.parseOOPMembersCommon(thisType, currentDecl, [...currentTypeNest, ename], [...currentTermNest, ...terms], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+            this.parseOOPMembersCommon(thisType, currentDecl, [...currentTypeNest, ename], [...currentTermNest, ...terms], nestedEntities, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
 
             this.ensureAndConsumeToken("}");
 
@@ -4208,7 +4222,7 @@ class Parser {
             const fename = [...currentTypeNest, ename].join("::");
             const feterms = [...currentTermNest, ...terms];
 
-            const edecl = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, fename, feterms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
+            const edecl = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, fename, feterms, provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
             this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + fename, edecl);
             currentDecl.objects.set(ename, edecl);
             
@@ -4259,6 +4273,7 @@ class Parser {
             ] as [TypeSignature, TypeConditionRestriction | undefined][];
 
             const invariants: InvariantDecl[] = [];
+            const validates: ValidateDecl[] = [];
             const staticMembers: StaticMemberDecl[] = [];
             const staticFunctions: StaticFunctionDecl[] = [];
             const staticOperators: StaticOperatorDecl[] = [];
@@ -4279,7 +4294,7 @@ class Parser {
                 const thisType = new NominalTypeSignature(currentDecl.ns, [ename], []);
     
                 const nestedEntities = new Map<string, EntityTypeDecl>();
-                this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
     
                 this.ensureAndConsumeToken("}");
     
@@ -4297,7 +4312,7 @@ class Parser {
             attributes.push("__enum_type", "__constructable");
 
             this.clearRecover();
-            currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, ename, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
+            currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, ename, [], provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
             this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
         }
         catch (ex) {
@@ -4350,7 +4365,7 @@ class Parser {
                 const acceptsinvoke = new InvokeDecl(sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("Core", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
                 const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
                 const provides = [[new NominalTypeSignature("Core", ["Some"]), undefined], [new NominalTypeSignature("Core", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
-                const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type", ...attributes], currentDecl.ns, iname, [], provides, [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
+                const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type", ...attributes], currentDecl.ns, iname, [], provides, [], [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
 
                 currentDecl.objects.set(iname, validatortype);
                 this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
@@ -4458,6 +4473,7 @@ class Parser {
                 });
 
                 const invariants: InvariantDecl[] = [];
+                const validates: ValidateDecl[] = [];
                 const staticMembers: StaticMemberDecl[] = [];
                 const staticFunctions: StaticFunctionDecl[] = [];
                 const staticOperators: StaticOperatorDecl[] = [];
@@ -4489,7 +4505,7 @@ class Parser {
                     const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
 
                     const nestedEntities = new Map<string, EntityTypeDecl>();
-                    this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                    this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
 
                     this.ensureAndConsumeToken("}");
 
@@ -4514,7 +4530,7 @@ class Parser {
 
                 attributes.push("__typedprimitive", "__constructable");
 
-                currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
+                currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
                 this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
             }
         }
@@ -4530,6 +4546,7 @@ class Parser {
 
             let complexheader = false;
             const cinvariants: InvariantDecl[] = [];
+            const cvalidates: ValidateDecl[] = [];
             const cstaticMembers: StaticMemberDecl[] = [];
             const cstaticFunctions: StaticFunctionDecl[] = [];
             const cstaticOperators: StaticOperatorDecl[] = [];
@@ -4559,7 +4576,7 @@ class Parser {
                     const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
 
                     const nestedEntities = new Map<string, EntityTypeDecl>();
-                    this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, cinvariants, cstaticMembers, cstaticFunctions, cstaticOperators, cusing, cmemberMethods);
+                    this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, cinvariants, cvalidates, cstaticMembers, cstaticFunctions, cstaticOperators, cusing, cmemberMethods);
                 }
             }
 
@@ -4579,6 +4596,7 @@ class Parser {
                 }
 
                 const invariants: InvariantDecl[] = [];
+                const validates: ValidateDecl[] = [];
                 const staticMembers: StaticMemberDecl[] = [];
                 const staticFunctions: StaticFunctionDecl[] = [];
                 const staticOperators: StaticOperatorDecl[] = [];
@@ -4607,12 +4625,12 @@ class Parser {
                         const thisType = new NominalTypeSignature(currentDecl.ns, [ename], []);
 
                         const nestedEntities = new Map<string, EntityTypeDecl>();
-                        this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+                        this.parseOOPMembersCommon(thisType, currentDecl, [ename], [], nestedEntities, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
                     }
                 }
 
                 const eprovides = [[concepttype, undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
-                const edecl = new EntityTypeDecl(esinfo, this.m_penv.getCurrentFile(), ["__adt_entity_type"], currentDecl.ns, ename, terms, eprovides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>());
+                const edecl = new EntityTypeDecl(esinfo, this.m_penv.getCurrentFile(), ["__adt_entity_type"], currentDecl.ns, ename, terms, eprovides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>());
                 
                 edecls.push(edecl);
                 currentDecl.objects.set(ename, edecl);
@@ -4631,7 +4649,7 @@ class Parser {
 
                 const nestedEntities = new Map<string, EntityTypeDecl>();
                 const memberFields: MemberFieldDecl[] = [];
-                this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, cinvariants, cstaticMembers, cstaticFunctions, cstaticOperators, memberFields, cmemberMethods);
+                this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, cinvariants, cvalidates, cstaticMembers, cstaticFunctions, cstaticOperators, memberFields, cmemberMethods);
 
                 if(cusing.length !== 0 && memberFields.length !== 0) {
                     this.raiseError(this.getCurrentLine(), "Cannot define fields in multiple places in ADT++ decl");
@@ -4650,7 +4668,7 @@ class Parser {
                 this.ensureAndConsumeToken(";");
             }
 
-            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__adt_concept_type"], currentDecl.ns, iname, terms, provides, cinvariants, cstaticMembers, cstaticFunctions, cstaticOperators, cusing, cmemberMethods, new Map<string, EntityTypeDecl>());
+            const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__adt_concept_type"], currentDecl.ns, iname, terms, provides, cinvariants, cvalidates, cstaticMembers, cstaticFunctions, cstaticOperators, cusing, cmemberMethods, new Map<string, EntityTypeDecl>());
             currentDecl.concepts.set(iname, cdecl);
             this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + iname, cdecl);
         }

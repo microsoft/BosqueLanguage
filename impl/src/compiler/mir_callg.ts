@@ -123,16 +123,16 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
     });
 
     assembly.entityDecls.forEach((ee) => {
-        if(ee instanceof MIRObjectEntityTypeDecl && ee.provides.includes("APIType") && ee.usinginvariant !== undefined) {
-            roots.push(invokes.get(ee.usinginvariant) as CallGNode);
-            topoVisit(invokes.get(ee.usinginvariant) as CallGNode, [], tordered, invokes);
+        if(ee instanceof MIRObjectEntityTypeDecl && ee.provides.includes("APIType") && ee.validatefunc !== undefined) {
+            roots.push(invokes.get(ee.validatefunc) as CallGNode);
+            topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
 
             roots.push(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode);
             topoVisit(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode, [], tordered, invokes);
         }
-        else if(ee instanceof MIRConstructableEntityTypeDecl && ee.provides.includes("APIType") && ee.usinginvariant !== undefined) {
-            roots.push(invokes.get(ee.usinginvariant) as CallGNode);
-            topoVisit(invokes.get(ee.usinginvariant) as CallGNode, [], tordered, invokes);
+        else if(ee instanceof MIRConstructableEntityTypeDecl && ee.provides.includes("APIType") && ee.validatefunc !== undefined) {
+            roots.push(invokes.get(ee.validatefunc) as CallGNode);
+            topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
         }
         else if(ee instanceof MIRDataStringInternalEntityTypeDecl && ee.provides.includes("APIType")) {
             roots.push(invokes.get(ee.accepts) as CallGNode);

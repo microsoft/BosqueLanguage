@@ -1585,9 +1585,9 @@ ConstructableOfType* ConstructableOfType::jparse(json j)
 {
     auto name = j["name"].get<std::string>();
     auto oftype = j["oftype"].get<std::string>();
-    auto usinginv = j["usinginv"].get<std::string>();
+    auto validatefunc = j["validatefunc"].get<std::string>();
     
-    return new ConstructableOfType(name, oftype, usinginv);
+    return new ConstructableOfType(name, oftype, validatefunc);
 }
 
 bool ConstructableOfType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const
@@ -2119,7 +2119,7 @@ EnumType* EnumType::jparse(json j)
         return std::make_pair(jv["ename"].get<std::string>(), jv["value"].get<uint32_t>());
     });
 
-    return new EnumType(j["name"].get<std::string>(), j["usinginv"].get<std::string>(), enums);
+    return new EnumType(j["name"].get<std::string>(), enums);
 }
 
 bool EnumType::toz3arg(ParseInfo& pinfo, json j, const z3::expr& ctx, z3::context& c) const

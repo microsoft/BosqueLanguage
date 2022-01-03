@@ -114,6 +114,16 @@ class InvariantDecl {
     }
 }
 
+class ValidateDecl {
+    readonly sinfo: SourceInfo;
+    readonly exp: ConstantExpressionValue;
+
+    constructor(sinfo: SourceInfo, exp: ConstantExpressionValue) {
+        this.sinfo = sinfo;
+        this.exp = exp;
+    }
+}
+
 class InvokeDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
@@ -323,6 +333,7 @@ class OOPTypeDecl {
     readonly provides: [TypeSignature, TypeConditionRestriction | undefined][];
 
     readonly invariants: InvariantDecl[];
+    readonly validates: ValidateDecl[];
 
     readonly staticMembers: StaticMemberDecl[];
     readonly staticFunctions: StaticFunctionDecl[];
@@ -333,7 +344,7 @@ class OOPTypeDecl {
     readonly nestedEntityDecls: Map<string, EntityTypeDecl>;
 
     constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
-        invariants: InvariantDecl[],
+        invariants: InvariantDecl[], validates: ValidateDecl[],
         staticMembers: StaticMemberDecl[], staticFunctions: StaticFunctionDecl[], staticOperators: StaticOperatorDecl[],
         memberFields: MemberFieldDecl[], memberMethods: MemberMethodDecl[],
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
@@ -345,6 +356,7 @@ class OOPTypeDecl {
         this.terms = terms;
         this.provides = provides;
         this.invariants = invariants;
+        this.validates = validates;
         this.staticMembers = staticMembers;
         this.staticFunctions = staticFunctions;
         this.staticOperators = staticOperators;
@@ -400,21 +412,21 @@ class OOPTypeDecl {
 
 class ConceptTypeDecl extends OOPTypeDecl {
     constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
-        invariants: InvariantDecl[],
+        invariants: InvariantDecl[], validates: ValidateDecl[],
         staticMembers: StaticMemberDecl[], staticFunctions: StaticFunctionDecl[], staticOperators: StaticOperatorDecl[],
         memberFields: MemberFieldDecl[], memberMethods: MemberMethodDecl[],
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
-        super(sourceLocation, srcFile, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
+        super(sourceLocation, srcFile, attributes, ns, name, terms, provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
     }
 }
 
 class EntityTypeDecl extends OOPTypeDecl {
     constructor(sourceLocation: SourceInfo, srcFile: string, attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], provides: [TypeSignature, TypeConditionRestriction | undefined][],
-        invariants: InvariantDecl[],
+        invariants: InvariantDecl[], validates: ValidateDecl[],
         staticMembers: StaticMemberDecl[], staticFunctions: StaticFunctionDecl[], staticOperators: StaticOperatorDecl[],
         memberFields: MemberFieldDecl[], memberMethods: MemberMethodDecl[],
         nestedEntityDecls: Map<string, EntityTypeDecl>) {
-        super(sourceLocation, srcFile, attributes, ns, name, terms, provides, invariants, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
+        super(sourceLocation, srcFile, attributes, ns, name, terms, provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntityDecls);
     }
 }
 
@@ -1796,16 +1808,12 @@ class Assembly {
             return declinvs;
         }
         else {
-            if(ooptype.invariants.length !== 0) {
+            if(ooptype.invariants.length !== 0 || ooptype.validates.length !== 0) {
                 declinvs.push([ttype, ooptype, binds]);
             }
 
             return declinvs;
         }
-    }
-
-    hasInvariants(ooptype: OOPTypeDecl, binds: Map<string, ResolvedType>): boolean {
-        return this.getAllInvariantProvidingTypes(ooptype, binds).length !== 0;
     }
 
     getAbstractPrePostConds(fname: string, ooptype: OOPTypeDecl, oobinds: Map<string, ResolvedType>, callbinds: Map<string, ResolvedType>): {pre: [PreConditionDecl[], Map<string, ResolvedType>], post: [PostConditionDecl[], Map<string, ResolvedType>] } | undefined {
@@ -2594,7 +2602,7 @@ class Assembly {
 export {
     BuildApplicationMode, BuildLevel, isBuildLevelEnabled,
     TemplateTermDecl, TemplateTypeRestriction, TypeConditionRestriction, PreConditionDecl, PostConditionDecl, InvokeDecl,
-    OOMemberDecl, InvariantDecl, StaticMemberDecl, StaticFunctionDecl, StaticOperatorDecl, MemberFieldDecl, MemberMethodDecl, OOPTypeDecl, ConceptTypeDecl, EntityTypeDecl,
+    OOMemberDecl, InvariantDecl, ValidateDecl, StaticMemberDecl, StaticFunctionDecl, StaticOperatorDecl, MemberFieldDecl, MemberMethodDecl, OOPTypeDecl, ConceptTypeDecl, EntityTypeDecl,
     NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, NamespaceTypedef, NamespaceUsing, NamespaceDeclaration,
     OOMemberLookupInfo, Assembly
 };

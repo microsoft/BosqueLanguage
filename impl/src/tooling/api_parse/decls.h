@@ -1101,18 +1101,18 @@ class ConstructableOfType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::optional<std::string> chkinv; 
+    const std::optional<std::string> validatefunc; 
 
-    ConstructableOfType(std::string name, std::string oftype, std::optional<std::string> chkinv) : IGroundedType(TypeTag::ConstructableOfType, name), oftype(oftype), chkinv(chkinv) {;}
+    ConstructableOfType(std::string name, std::string oftype, std::optional<std::string> validatefunc) : IGroundedType(TypeTag::ConstructableOfType, name), oftype(oftype), validatefunc(validatefunc) {;}
     virtual ~ConstructableOfType() {;}
 
     static ConstructableOfType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto oftype = j["oftype"].get<std::string>();
-        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
+        auto validatefunc = (j["validatefunc"] != nullptr ? std::make_optional(j["validatefunc"].get<std::string>()) : std::nullopt);
     
-        return new ConstructableOfType(name, oftype, chkinv);
+        return new ConstructableOfType(name, oftype, validatefunc);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1129,7 +1129,7 @@ public:
             return false;
         }
 
-        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
+        return !this->validatefunc.has_value() || apimgr.checkInvokeOk(this->validatefunc.value(), value);
     }
 
     template <typename ValueRepr, typename State>
@@ -1488,10 +1488,10 @@ public:
     const std::vector<std::pair<std::string, bool>> ttypes;
 
     const std::vector<std::string> consfields;
-    const std::optional<std::string> chkinv;
+    const std::optional<std::string> validatefunc;
     const std::optional<std::string> consinv;
 
-    EntityType(std::string name, std::vector<std::pair<std::string, std::string>> fields, std::vector<std::pair<std::string, bool>> ttypes, std::vector<std::string> consfields, std::optional<std::string> chkinv, std::optional<std::string> consinv) : IGroundedType(TypeTag::EntityTag, name), fields(fields), ttypes(ttypes), consfields(consfields), chkinv(chkinv), consinv(consinv) {;}
+    EntityType(std::string name, std::vector<std::pair<std::string, std::string>> fields, std::vector<std::pair<std::string, bool>> ttypes, std::vector<std::string> consfields, std::optional<std::string> validatefunc, std::optional<std::string> consinv) : IGroundedType(TypeTag::EntityTag, name), fields(fields), ttypes(ttypes), consfields(consfields), validatefunc(validatefunc), consinv(consinv) {;}
     virtual ~EntityType() {;}
 
     static EntityType* jparse(json j)
@@ -1516,10 +1516,10 @@ public:
             return jv.get<std::string>();
         });
 
-        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
+        auto validatefunc = (j["validatefunc"] != nullptr ? std::make_optional(j["validatefunc"].get<std::string>()) : std::nullopt);
         auto chkcons = (j["chkcons"] != nullptr ? std::make_optional(j["chkcons"].get<std::string>()) : std::nullopt);
 
-        return new EntityType(name, fields, ttypes, consfields, chkinv, chkcons);
+        return new EntityType(name, fields, ttypes, consfields, validatefunc, chkcons);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final

@@ -6312,11 +6312,12 @@ class TypeChecker {
         }
     }
 
-    private processGenerateSpecialInvariantDirectFunction(exps: [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>][], allfieldstypes: Map<string, ResolvedType>): { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[] {
+    private processGenerateSpecialInvariantDirectFunction(exps: [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean][], allfieldstypes: Map<string, ResolvedType>): { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[] {
         try {
             const clauses = exps.map((cev, i) => {
-                const bodyid = this.generateBodyID(cev[0].exp.sinfo, cev[1].srcFile, `invariant@${i}`);
-                const ikeyinfo = MIRKeyGenerator.generateFunctionKeyWNamespace(bodyid /*not ns but sure*/, `invariant@${i}`, cev[2], []);
+                const ccname = cev[3] ? `invariant@${i}` : `validate@${i}`
+                const bodyid = this.generateBodyID(cev[0].exp.sinfo, cev[1].srcFile, ccname);
+                const ikeyinfo = MIRKeyGenerator.generateFunctionKeyWNamespace(bodyid /*not ns but sure*/, ccname, cev[2], []);
 
                 const capturedtypes = this.getCapturedTypeInfoForFields(cev[0].exp.sinfo, cev[0].captured, allfieldstypes);
                 const fparams = [...cev[0].captured].sort().map((cp) => {
@@ -6339,25 +6340,32 @@ class TypeChecker {
         }
     }
 
-    private generateEntityInitializerFunctions(tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>): {clauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[], optinits: InitializerEvaluationAction[] } {
+    private generateEntityInitializerFunctions(tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>): {invariantclauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[], validateclauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[], optinits: InitializerEvaluationAction[] } {
         const allfields = this.m_assembly.getAllOOFieldsLayout(tdecl, binds);
         const allfieldstypes = new Map<string, ResolvedType>();
         allfields.forEach((v, k) => allfieldstypes.set(k, this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, v[1].declaredType, v[2])));
         const optfields = [...allfields].filter((ff) => ff[1][1].value !== undefined).map((af) => af[1]);
 
-        const invs = ([] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>][]).concat(...
+        const invs = ([] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean][]).concat(...
             this.m_assembly.getAllInvariantProvidingTypes(tdecl, binds).map((ipt) => 
             ipt[1].invariants
             .filter((inv) => isBuildLevelEnabled(inv.level, this.m_buildLevel))
-            .map((inv) => [inv.exp, ipt[1], ipt[2]] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>]))
+            .map((inv) => [inv.exp, ipt[1], ipt[2], true] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean]))
         );
-        const clauses = this.processGenerateSpecialInvariantDirectFunction(invs, allfieldstypes);
+        const invariantclauses = this.processGenerateSpecialInvariantDirectFunction(invs, allfieldstypes);
+
+        const valdts = ([] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean][]).concat(...
+            this.m_assembly.getAllInvariantProvidingTypes(tdecl, binds).map((ipt) => 
+            ipt[1].validates
+            .map((inv) => [inv.exp, ipt[1], ipt[2], false] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean]))
+        );
+        const validateclauses = this.processGenerateSpecialInvariantDirectFunction([...invs, ...valdts], allfieldstypes);
 
         const optinits = optfields.map((opf) => {
             return this.processExpressionForFieldInitializer(opf[0], opf[1], opf[2], allfieldstypes);
         });
 
-        return {clauses: clauses, optinits: optinits};
+        return {invariantclauses: invariantclauses, validateclauses: validateclauses, optinits: optinits};
     }
 
     private generateConstructor(bodyid: string, env: TypeEnvironment, conskey: MIRInvokeKey, conskeyshort: string, tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>, initinfo: {clauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[], optinits: InitializerEvaluationAction[] }) {
@@ -6503,18 +6511,25 @@ class TypeChecker {
         }
     }
 
-    private generateInjectableEntityInitializerFunctions(tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>, oftype: ResolvedType): { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[] {
-        const invs = ([] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>][]).concat(...
+    private generateInjectableEntityInitializerFunctions(tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>, oftype: ResolvedType): {invariantclauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[], validateclauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[]} {
+        const implicitfield = new Map<string, ResolvedType>().set("value", oftype);
+
+        const invs = ([] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean][]).concat(...
             this.m_assembly.getAllInvariantProvidingTypes(tdecl, binds).map((ipt) => 
             ipt[1].invariants
             .filter((inv) => isBuildLevelEnabled(inv.level, this.m_buildLevel))
-            .map((inv) => [inv.exp, ipt[1], ipt[2]] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>]))
+            .map((inv) => [inv.exp, ipt[1], ipt[2], true] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean]))
         );
+        const invariantclauses = this.processGenerateSpecialInvariantDirectFunction(invs, implicitfield);
 
-        const implicitfield = new Map<string, ResolvedType>().set("value", oftype);
-        const clauses = this.processGenerateSpecialInvariantDirectFunction(invs, implicitfield);
+        const valdts = ([] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean][]).concat(...
+            this.m_assembly.getAllInvariantProvidingTypes(tdecl, binds).map((ipt) => 
+            ipt[1].validates
+            .map((inv) => [inv.exp, ipt[1], ipt[2], false] as [ConstantExpressionValue, OOPTypeDecl, Map<string, ResolvedType>, boolean]))
+        );
+        const validateclauses = this.processGenerateSpecialInvariantDirectFunction([...invs, ...valdts], implicitfield);
 
-        return clauses;
+        return {invariantclauses: invariantclauses, validateclauses: validateclauses};
     }
 
     private generateInjectableConstructor(bodyid: string, conskey: MIRInvokeKey, conskeyshort: string, tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>, oftype: ResolvedType, clauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[]) {
@@ -6548,7 +6563,7 @@ class TypeChecker {
         }
     }
 
-    private generateInjectableInvariant(bodyid: string, invkey: MIRInvokeKey, invkeyshort: string, tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>, oftype: ResolvedType, clauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[]) {
+    private generateInjectableInvariant(bodyid: string, invkey: MIRInvokeKey, invkeyshort: string, tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>, clauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[]) {
         const constype = this.resolveOOTypeFromDecls(tdecl, binds);
 
         this.m_emitter.initializeBodyEmitter(undefined);
@@ -6701,22 +6716,24 @@ class TypeChecker {
                     const rrtype = (tdecl.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
                     const oftype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, rrtype, binds);
 
-                    let invkey: string | undefined = undefined;
+                    let validatekey: string | undefined = undefined;
                     let conskey: string | undefined = undefined;
-                    if(tdecl.invariants.length !== 0) {
+                    if(tdecl.invariants.length !== 0 || tdecl.validates.length !== 0) {
                         const initinfo = this.generateInjectableEntityInitializerFunctions(tdecl, binds, oftype);
 
-                        const invbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@invariant");
-                        const invkeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@invariant", new Map<string, ResolvedType>(), []);
-                        this.generateInjectableInvariant(invbodyid, invkeyid.keyid, invkeyid.shortname, tdecl, binds, oftype, initinfo);
-                        invkey = invkeyid.keyid;
+                        const validatebodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@validateinput");
+                        const validatekeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@validateinput", new Map<string, ResolvedType>(), []);
+                        this.generateInjectableInvariant(validatebodyid, validatekeyid.keyid, validatekeyid.shortname, tdecl, binds, initinfo.validateclauses);
+                        validatekey = validatekeyid.keyid;
 
-                        const consbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@constructor");
-                        const conskeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@constructor", new Map<string, ResolvedType>(), []);
-                        this.generateInjectableConstructor(consbodyid, conskeyid.keyid, conskeyid.shortname, tdecl, binds, oftype, initinfo);
-                        conskey = conskeyid.keyid;
+                        if (tdecl.invariants.length !== 0) {
+                            const consbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@constructor");
+                            const conskeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@constructor", new Map<string, ResolvedType>(), []);
+                            this.generateInjectableConstructor(consbodyid, conskeyid.keyid, conskeyid.shortname, tdecl, binds, oftype, initinfo.invariantclauses);
+                            conskey = conskeyid.keyid;
+                        }
                     }
-                    const mirentity = new MIRConstructableEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, invkey, conskey);
+                    const mirentity = new MIRConstructableEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, validatekey, conskey);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__stringof_type") || tdecl.attributes.includes("__datastring_type")) {
@@ -6881,21 +6898,21 @@ class TypeChecker {
                     });
                     const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
 
-                    let invkey: string | undefined = undefined;
-                    if(tdecl.invariants.length !== 0) {
-                        const invbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@invariant");
-                        const invkeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@invariant", new Map<string, ResolvedType>(), []);
+                    let validatekey: string | undefined = undefined;
+                    if(initinfo.validateclauses.length !== 0) {
+                        const validatebodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@validateinput");
+                        const validatekeyid = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@validateinput", new Map<string, ResolvedType>(), []);
                         
-                        const invenv = TypeEnvironment.createInitialEnvForCall(invkeyid.keyid, invbodyid, binds, new Map<string, PCode>(), invenvargs, undefined);
-                        this.generateInvariantCheck(invbodyid, invenv, invkeyid.keyid, invkeyid.shortname, tdecl, binds, initinfo);
-                        invkey = invkeyid.keyid;
+                        const validateenv = TypeEnvironment.createInitialEnvForCall(validatekeyid.keyid, validatebodyid, binds, new Map<string, PCode>(), invenvargs, undefined);
+                        this.generateInvariantCheck(validatebodyid, validateenv, validatekeyid.keyid, validatekeyid.shortname, tdecl, binds, {clauses: initinfo.validateclauses, optinits: initinfo.optinits});
+                        validatekey = validatekeyid.keyid;
                     }
 
                     const consbodyid = this.generateBodyID(tdecl.sourceLocation, tdecl.srcFile, "@@constructor");
                     const conskey = MIRKeyGenerator.generateFunctionKeyWType(this.resolveOOTypeFromDecls(tdecl, binds), "@@constructor", new Map<string, ResolvedType>(), []);
                     
                     const consenv = TypeEnvironment.createInitialEnvForCall(conskey.keyid, consbodyid, binds, new Map<string, PCode>(), consenvargs, undefined);
-                    this.generateConstructor(consbodyid, consenv, conskey.keyid, conskey.shortname, tdecl, binds, initinfo);
+                    this.generateConstructor(consbodyid, consenv, conskey.keyid, conskey.shortname, tdecl, binds, {clauses: initinfo.invariantclauses, optinits: initinfo.optinits});
 
                     const fields: MIRFieldDecl[] = [];
                     const finfos = [...this.m_assembly.getAllOOFieldsLayout(tdecl, binds)];
@@ -6915,7 +6932,7 @@ class TypeChecker {
                         fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
                     });
 
-                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, invkey !== undefined ? invkey : undefined, conskey.keyid, consfuncfields, fields);
+                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, validatekey, conskey.keyid, consfuncfields, fields);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
             }
