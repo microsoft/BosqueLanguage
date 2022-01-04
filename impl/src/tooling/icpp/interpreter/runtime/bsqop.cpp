@@ -4,8 +4,6 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "bsqop.h"
-#include "../core/bsqmemory.h"
-#include "../runtime/environment.h"
 
 Argument jsonParse_Argument(json j)
 {
@@ -421,34 +419,6 @@ ConstructorEphemeralListOp* ConstructorEphemeralListOp::jparse(json v)
     return new ConstructorEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_oftype(v)), args);
 }
 
-ConstructorPrimaryCollectionEmptyOp* ConstructorPrimaryCollectionEmptyOp::jparse(json v)
-{
-    return new ConstructorPrimaryCollectionEmptyOp(j_sinfo(v), j_trgt(v), j_oftype(v));
-}
-
-ConstructorPrimaryCollectionSingletonsOp* ConstructorPrimaryCollectionSingletonsOp::jparse(json v)
-{
-    std::vector<Argument> args;
-    j_args(v, args);
-
-    return new ConstructorPrimaryCollectionSingletonsOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
-}
-ConstructorPrimaryCollectionCopiesOp* ConstructorPrimaryCollectionCopiesOp::jparse(json v)
-{
-    std::vector<Argument> args;
-    j_args(v, args);
-
-    return new ConstructorPrimaryCollectionCopiesOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
-}
-
-ConstructorPrimaryCollectionMixedOp* ConstructorPrimaryCollectionMixedOp::jparse(json v)
-{
-    std::vector<Argument> args;
-    j_args(v, args);
-
-    return new ConstructorPrimaryCollectionMixedOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
-}
-
 PrefixNotOp* PrefixNotOp::jparse(json v)
 {
     return new PrefixNotOp(j_sinfo(v), j_trgt(v), j_arg(v));
@@ -675,14 +645,6 @@ InterpOp* InterpOp::jparse(json v)
         return EphemeralListExtendOp::jparse(v);
     case OpCodeTag::ConstructorEphemeralListOp:
         return ConstructorEphemeralListOp::jparse(v);
-    case OpCodeTag::ConstructorPrimaryCollectionEmptyOp:
-        return ConstructorPrimaryCollectionEmptyOp::jparse(v);
-    case OpCodeTag::ConstructorPrimaryCollectionSingletonsOp:
-        return ConstructorPrimaryCollectionSingletonsOp::jparse(v);
-    case OpCodeTag::ConstructorPrimaryCollectionCopiesOp:
-        return ConstructorPrimaryCollectionCopiesOp::jparse(v);
-    case OpCodeTag::ConstructorPrimaryCollectionMixedOp:
-        return ConstructorPrimaryCollectionMixedOp::jparse(v);
     case OpCodeTag::PrefixNotOp:
         return PrefixNotOp::jparse(v);
     case OpCodeTag::AllTrueOp:

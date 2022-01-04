@@ -306,11 +306,6 @@ private:
     void evalEphemeralListExtendOp(const EphemeralListExtendOp* op);
     void evalConstructorEphemeralListOp(const ConstructorEphemeralListOp* op);
 
-    void evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op);
-    void evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op);
-    void evalConstructorPrimaryCollectionCopiesOp(const ConstructorPrimaryCollectionCopiesOp* op);
-    void evalConstructorPrimaryCollectionMixedOp(const ConstructorPrimaryCollectionMixedOp* op);
-
     void evalPrefixNotOp(const PrefixNotOp* op);
     void evalAllTrueOp(const AllTrueOp* op);
     void evalSomeTrueOp(const SomeTrueOp* op);

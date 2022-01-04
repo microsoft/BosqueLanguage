@@ -1422,7 +1422,7 @@ class MIREmitter {
 
         emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
 
-        if(buildmode === "exec" || buildmode === "typecheck") {
+        if(buildmode === BuildApplicationMode.Executable) {
             emitter.registerResolvedTypeReference(assembly.getMaskType());
         }
 
@@ -1522,7 +1522,7 @@ class MIREmitter {
             if (checker.getErrorList().length === 0) {
                 checker.processRegexInfo();
 
-                if (buildmode === "modelcheck") {
+                if (buildmode === BuildApplicationMode.ModelChecker) {
                     functionalizeInvokes(emitter, masm);
                 }
                 

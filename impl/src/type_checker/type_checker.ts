@@ -6657,14 +6657,14 @@ class TypeChecker {
         const nscore = this.m_assembly.getNamespace("Core");
 
         let consfuncs: MIRInvokeKey[] = [];
-        if(this.m_buildapplication === "modelcheck") {
-            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons_add", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
+        if(this.m_buildapplication === BuildApplicationMode.Executable) {
+            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons4", "__list_literal_cons_add1", "__list_literal_cons_add2", "__list_literal_cons_add3", "__list_literal_cons_add4", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
                 const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
                 consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
             });
         }
         else {
-            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons4", "__list_literal_cons_add1", "__list_literal_cons_add2", "__list_literal_cons_add3", "__list_literal_cons_add4", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
+            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons_add", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
                 const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
                 consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
             });
@@ -6677,14 +6677,14 @@ class TypeChecker {
         const nscore = this.m_assembly.getNamespace("Core");
 
         let consfuncs: MIRInvokeKey[] = [];
-        if(this.m_buildapplication === "modelcheck") {
-            ["__map_literal_cons0", "__map_literal_cons1", "__map_literal_cons2", "__map_literal_cons3", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
+        if(this.m_buildapplication === BuildApplicationMode.Executable) {
+            ["__map_literal_cons0", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
                 const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
                 consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
             });
         }
         else {
-            ["__map_literal_cons0", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
+            ["__map_literal_cons0", "__map_literal_cons1", "__map_literal_cons2", "__map_literal_cons3", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
                 const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
                 consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
             });

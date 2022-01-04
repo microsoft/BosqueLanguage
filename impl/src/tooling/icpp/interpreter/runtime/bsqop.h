@@ -64,10 +64,6 @@ enum class OpCodeTag
     ConstructorRecordFromEphemeralListOp,
     EphemeralListExtendOp,
     ConstructorEphemeralListOp,
-    ConstructorPrimaryCollectionEmptyOp,
-    ConstructorPrimaryCollectionSingletonsOp,
-    ConstructorPrimaryCollectionCopiesOp,
-    ConstructorPrimaryCollectionMixedOp,
     PrefixNotOp,
     AllTrueOp,
     SomeTrueOp,
@@ -836,57 +832,6 @@ public:
     virtual ~ConstructorEphemeralListOp() {;}
 
     static ConstructorEphemeralListOp* jparse(json v);
-};
-
-class ConstructorPrimaryCollectionEmptyOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    
-    ConstructorPrimaryCollectionEmptyOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionEmptyOp), trgt(trgt), oftype(oftype) {;}
-    virtual ~ConstructorPrimaryCollectionEmptyOp() {;}
-
-    static ConstructorPrimaryCollectionEmptyOp* jparse(json v);
-};
-
-class ConstructorPrimaryCollectionSingletonsOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorPrimaryCollectionSingletonsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionSingletonsOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorPrimaryCollectionSingletonsOp() {;}
-
-    static ConstructorPrimaryCollectionSingletonsOp* jparse(json v);
-};
-
-class ConstructorPrimaryCollectionCopiesOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorPrimaryCollectionCopiesOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionCopiesOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorPrimaryCollectionCopiesOp() {;}
-
-    static ConstructorPrimaryCollectionCopiesOp* jparse(json v);
-};
-
-class ConstructorPrimaryCollectionMixedOp : public InterpOp
-{
-public:
-    const TargetVar trgt;
-    const BSQType* oftype;
-    const std::vector<Argument> args;
-    
-    ConstructorPrimaryCollectionMixedOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorPrimaryCollectionMixedOp), trgt(trgt), oftype(oftype), args(args) {;}
-    virtual ~ConstructorPrimaryCollectionMixedOp() {;}
-
-    static ConstructorPrimaryCollectionMixedOp* jparse(json v);
 };
 
 class PrefixNotOp : public InterpOp

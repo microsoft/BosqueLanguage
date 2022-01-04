@@ -11,7 +11,11 @@ import { SourceInfo } from "./parser";
 import * as assert from "assert";
 import { BSQRegex } from "./bsqregex";
 
-type BuildApplicationMode = "exec" | "modelcheck" | "modelcheck" | "typecheck";
+enum BuildApplicationMode {
+    Executable,
+    ModelChecker,
+    TypeChecker
+}
 
 type BuildLevel = "doc" | "spec" | "debug" | "test" | "release";
 

@@ -730,54 +730,6 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
     }
 }
 
-void Evaluator::evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op)
-{
-    ((BSQListType*)op->oftype)->storeValue(this->evalTargetVar(op->trgt), (StorageLocationPtr)&bsqemptylist);
-}
-
-void Evaluator::evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op)
-{
-    auto ltype = (BSQListType*)op->oftype;
-    size_t ct = op->args.size();
-    const ListTypeConstructorInfo& glistalloc = BSQListType::g_listTypeMap[ltype->tid];
-
-    if(ct <= 40)
-    {
-        auto fltype = std::find_if(glistalloc.kcons, glistalloc.kcons + sizeof(glistalloc.kcons), [ct](const std::pair<size_t, BSQListFlatKTypeAbstract*>& pp) {
-            return ct <= pp.first;
-        });
-
-        const BSQListFlatKTypeAbstract* klist = fltype->second;
-        auto etype = BSQType::g_typetable[ltype->etype];
-        void* res = Allocator::GlobalAllocator.allocateDynamic(klist);
-        klist->initializeCountInfo(res, ct, ltype->esize);
-
-        BSQList ll = {res, ct};
-        ltype->storeValue(this->evalTargetVar(op->trgt), (StorageLocationPtr)&ll);
-
-        uint8_t* iter = klist->initializeWriteIter(res);
-        for(size_t i = 0; i < op->args.size(); ++i)
-        {
-            klist->storeDataToPostion(iter, etype, this->evalArgument(op->args[i]));
-            klist->advanceWriteIter(&iter, etype);
-        }
-    }
-    else
-    {
-        assert(false);
-    }
-}
-
-void Evaluator::evalConstructorPrimaryCollectionCopiesOp(const ConstructorPrimaryCollectionCopiesOp* op)
-{
-    assert(false);
-}
-
-void Evaluator::evalConstructorPrimaryCollectionMixedOp(const ConstructorPrimaryCollectionMixedOp* op)
-{
-    assert(false);
-}
-
 void Evaluator::evalPrefixNotOp(const PrefixNotOp* op)
 {
     BSQBool sval = !SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg));
@@ -1414,26 +1366,6 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::ConstructorEphemeralListOp:
     {
         this->evalConstructorEphemeralListOp(static_cast<const ConstructorEphemeralListOp*>(op));
-        break;
-    }
-    case OpCodeTag::ConstructorPrimaryCollectionEmptyOp:
-    {
-        this->evalConstructorPrimaryCollectionEmptyOp(static_cast<const ConstructorPrimaryCollectionEmptyOp*>(op));
-        break;
-    }
-    case OpCodeTag::ConstructorPrimaryCollectionSingletonsOp:
-    {
-        this->evalConstructorPrimaryCollectionSingletonsOp(static_cast<const ConstructorPrimaryCollectionSingletonsOp*>(op));
-        break;
-    }
-    case OpCodeTag::ConstructorPrimaryCollectionCopiesOp:
-    {
-        this->evalConstructorPrimaryCollectionCopiesOp(static_cast<const ConstructorPrimaryCollectionCopiesOp*>(op));
-        break;
-    }
-    case OpCodeTag::ConstructorPrimaryCollectionMixedOp:
-    {
-        this->evalConstructorPrimaryCollectionMixedOp(static_cast<const ConstructorPrimaryCollectionMixedOp*>(op));
         break;
     }
     case OpCodeTag::PrefixNotOp:

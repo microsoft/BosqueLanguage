@@ -129,9 +129,6 @@
 
 ;;BINT_CONSTANTS;;
 
-(declare-sort NumericOps 0)
-(declare-sort ListOps 0)
-
 (declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))
 (declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))
 

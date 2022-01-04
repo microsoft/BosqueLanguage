@@ -70,10 +70,6 @@ enum OpCodeTag
     EphemeralListExtendOp,
     ConstructorRecordFromEphemeralListOp,
     ConstructorEphemeralListOp,
-    ConstructorPrimaryCollectionEmptyOp,
-    ConstructorPrimaryCollectionSingletonsOp,
-    ConstructorPrimaryCollectionCopiesOp,
-    ConstructorPrimaryCollectionMixedOp,
     PrefixNotOp,
     AllTrueOp,
     SomeTrueOp,
@@ -399,22 +395,6 @@ class ICPPOpEmitter
 
     static genConstructorEphemeralListOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.ConstructorEphemeralListOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
-    }
-
-    static genConstructorPrimaryCollectionEmptyOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionEmptyOp, sinfo: sinfo, trgt: trgt, oftype: oftype};
-    }
-
-    static genConstructorPrimaryCollectionSingletonsOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionSingletonsOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
-    }
-
-    static genConstructorPrimaryCollectionCopiesOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionCopiesOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
-    }
-
-    static genConstructorPrimaryCollectionMixedOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionMixedOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
     }
 
     static genPrefixNotOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument): ICPPOp {

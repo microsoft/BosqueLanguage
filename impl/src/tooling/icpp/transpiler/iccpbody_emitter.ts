@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRPrimitiveListEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, TargetVar } from "./icpp_exp";
@@ -1008,19 +1008,28 @@ class ICPPBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty): ICPPOp {
-        return ICPPOpEmitter.genConstructorPrimaryCollectionEmptyOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey);
+        return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), this.typegen.getMIRType(op.tkey),  ICPPOpEmitter.genNoStatmentGuard());
     }
 
-    processConstructorPrimaryCollectionSingletons_Helper(ltype: MIRType, exps: Argument[]): ICPPOp {
-        if(exps.length <= 4) {
-            return this.lopsManager.processLiteralK_Pos(ltype, exps);
+    processConstructorPrimaryCollectionSingletonsList_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveListEntityTypeDecl, exps: Argument[]): ICPPOp {
+        if(exps.length === 1) {
+            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[1]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
+        }
+        else if(exps.length === 2) {
+            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[2]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
+        }
+        else if(exps.length === 3) {
+            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[3]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
+        }
+        else if(exps.length === 4) {
+            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[4]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            const mid = exps.length / 2;
-            const lhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(0, mid));
-            const rhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(mid));
-
-            return this.lopsManager.processConcat2(ltype, lhs, rhs, this.numgen.int.emitSimpleNat(exps.length));
+            let expr: SMTExp = new SMTConst("BTerm@none");
+            for(let i = exps.length - 1; i >= 0; --i) {
+                expr = new SMTCallSimple(`${ltype.consfuncs[4]}`, [exps[i], expr]);
+            }
+            return new SMTCallSimple(`${ltype.consfuncs[5]}`, [this.numgen.int.emitSimpleNat(exps.length), expr]);
         }
     }
 

@@ -1582,26 +1582,48 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: SMTExp): SMTExp {
-        const consexp = new SMTConst(`${this.typegen.lookupTypeName(op.tkey)}@empty_const`);
+        const consexp = new SMTConst("BTerm@none");
         return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
     }
 
-    processConstructorPrimaryCollectionSingletons_Helper(ltype: MIRType, exps: SMTExp[]): SMTExp {
+    processConstructorPrimaryCollectionSingletons_ListHelper(ltype: MIRPrimitiveListEntityTypeDecl, exps: SMTExp[]): SMTExp {
         if(exps.length === 1) {
-            return new SMTCallSimple(`${this.typegen.getSMTConstructorName(ltype).cons}`)
+            return new SMTCallSimple(`${ltype.consfuncs[1]}`, exps);
         }
         else if(exps.length === 2) {
-
+            return new SMTCallSimple(`${ltype.consfuncs[2]}`, exps);
         }
         else if(exps.length === 3) {
-
+            return new SMTCallSimple(`${ltype.consfuncs[3]}`, exps);
         }
         else {
-            const mid = exps.length / 2;
-            const lhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(0, mid));
-            const rhs = this.processConstructorPrimaryCollectionSingletons_Helper(ltype, exps.slice(mid));
+            let expr: SMTExp = new SMTConst("BTerm@none");
+            for(let i = exps.length - 1; i >= 0; --i) {
+                expr = new SMTCallSimple(`${ltype.consfuncs[4]}`, [exps[i], expr]);
+            }
+            return new SMTCallSimple(`${ltype.consfuncs[5]}`, [this.numgen.int.emitSimpleNat(exps.length), expr]);
+        }
+    }
 
-            return this.lopsManager.processConcat2(ltype, lhs, rhs, this.numgen.int.emitSimpleNat(exps.length));
+    processConstructorPrimaryCollectionSingletons_MapHelper(ltype: MIRPrimitiveMapEntityTypeDecl, exps: SMTExp[]): [SMTExp, boolean] {
+        if(exps.length === 1) {
+            return [new SMTCallSimple(`${ltype.consfuncs[1]}`, exps), false];
+        }
+        else if(exps.length === 2) {
+            return [new SMTCallGeneral(`${ltype.consfuncs[2]}`, exps), true];
+        }
+        else if(exps.length === 3) {
+            return [new SMTCallGeneral(`${ltype.consfuncs[3]}`, exps), true];
+        }
+        else {
+            const cerr = this.typegen.generateErrorResultAssert(this.typegen.getMIRType(ltype.tkey));
+
+            let expr: SMTExp = new SMTConst("BTerm@none");
+            for(let i = exps.length - 1; i >= 0; --i) {
+                expr = new SMTCallGeneral(`${ltype.consfuncs[4]}`, [exps[i], expr]);
+                expr = new SMTIf
+            }
+            return new SMTCallSimple(`${ltype.consfuncs[5]}`, [this.numgen.int.emitSimpleNat(exps.length), expr]);
         }
     }
 
@@ -1610,11 +1632,10 @@ class SMTBodyEmitter {
         const args = op.args.map((arg) => this.argToSMT(arg[1]));
 
         if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
-            const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(this.typegen.getMIRType(op.tkey), args);
+            const consexp = this.processConstructorPrimaryCollectionSingletons_ListHelper(constype, args);
             return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
         }
-        else {
-            if(constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+        else if(constype instanceof MIRPrimitiveStackEntityTypeDecl) {
                 const ultype = this.typegen.getMIRType(constype.ultype);
                 const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
 
@@ -1670,7 +1691,6 @@ class SMTBodyEmitter {
                     )
                 );
             }
-        }
     }
 
     processConstructorPrimaryCollectionCopies(op: MIRConstructorPrimaryCollectionCopies, continuation: SMTExp): SMTExp {
