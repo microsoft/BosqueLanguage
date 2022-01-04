@@ -157,8 +157,10 @@ class ICPPEmitter {
             });
         });
 
+        xxxx; //TODO: the list and map constructors
+
         this.icppasm.cbuffsize = this.bemitter.constsize;
-        this.icppasm.cmask = "111111";
+        this.icppasm.cmask = "111111"; xxxx; //TODO is this the right size
         for(let i = 1; i < this.bemitter.constlayout.length; ++i) {
             this.icppasm.cmask += this.bemitter.constlayout[i].storage.allocinfo.inlinedmask;
         }

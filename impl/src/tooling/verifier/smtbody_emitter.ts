@@ -55,6 +55,9 @@ class SMTBodyEmitter {
     requiredUpdateVirtualRecord: { inv: string, argflowtype: MIRType, updates: [string, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, allsafe: boolean, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
+    requiredSingletonConstructorsList: { inv: string, argc: number, resulttype: MIRType }[] = [];
+    requiredSingletonConstructorsMap: { inv: string, argc: number, resulttype: MIRType }[] = [];
+
     requiredVirtualFunctionInvokes: { inv: string, allsafe: boolean, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }[] = [];
     requiredVirtualOperatorInvokes: { inv: string, argflowtype: MIRType, opname: MIRVirtualMethodKey, args: MIRResolvedTypeKey[], resulttype: MIRType }[] = [];
 
@@ -247,6 +250,22 @@ class SMTBodyEmitter {
         const shortfnames = fields.map((fname) => (this.assembly.fieldDecls.get(fname[0]) as MIRFieldDecl).fname).join(",");
         const fullname = `$EntityUpdate!${argflowtype.typeID}!{${fnames}}=!${resulttype.typeID}`;
         const shortname = `$EntityUpdate_${argflowtype.typeID}@_${shortfnames}_`;
+
+        this.typegen.internFunctionName(fullname, shortname);
+        return fullname;
+    }
+
+    private generateSingletonConstructorsList(argc: number, resulttype: MIRType): string {
+        const fullname = `$ListSingletonCons!${argc}!{resulttype.typeID}`;
+        const shortname = `$ListSingletonCons_${argc}_${resulttype.typeID}`;
+
+        this.typegen.internFunctionName(fullname, shortname);
+        return fullname;
+    }
+
+    private generateSingletonConstructorsMap(argc: number, resulttype: MIRType): string {
+        const fullname = `$MapSingletonCons!${argc}!${resulttype.typeID}`;
+        const shortname = `$MapSingletonCons_${argc}_${resulttype.typeID}`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -1597,11 +1616,13 @@ class SMTBodyEmitter {
             return new SMTCallSimple(`${ltype.consfuncs[3]}`, exps);
         }
         else {
-            let expr: SMTExp = new SMTConst("BTerm@none");
-            for(let i = exps.length - 1; i >= 0; --i) {
-                expr = new SMTCallSimple(`${ltype.consfuncs[4]}`, [exps[i], expr]);
+            const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(ltype.tkey));
+            if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
+                const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(ltype.tkey) };
+                this.requiredSingletonConstructorsList.push(geninfo);
             }
-            return new SMTCallSimple(`${ltype.consfuncs[5]}`, [this.numgen.int.emitSimpleNat(exps.length), expr]);
+
+            return new SMTCallSimple(this.typegen.lookupFunctionName(icall), exps);
         }
     }
 
@@ -1616,14 +1637,13 @@ class SMTBodyEmitter {
             return [new SMTCallGeneral(`${ltype.consfuncs[3]}`, exps), true];
         }
         else {
-            const cerr = this.typegen.generateErrorResultAssert(this.typegen.getMIRType(ltype.tkey));
-
-            let expr: SMTExp = new SMTConst("BTerm@none");
-            for(let i = exps.length - 1; i >= 0; --i) {
-                expr = new SMTCallGeneral(`${ltype.consfuncs[4]}`, [exps[i], expr]);
-                expr = new SMTIf
+            const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(ltype.tkey));
+            if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
+                const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(ltype.tkey) };
+                this.requiredSingletonConstructorsMap.push(geninfo);
             }
-            return new SMTCallSimple(`${ltype.consfuncs[5]}`, [this.numgen.int.emitSimpleNat(exps.length), expr]);
+
+            return [new SMTCallGeneral(this.typegen.lookupFunctionName(icall), exps), true];
         }
     }
 
@@ -1635,62 +1655,34 @@ class SMTBodyEmitter {
             const consexp = this.processConstructorPrimaryCollectionSingletons_ListHelper(constype, args);
             return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
         }
-        else if(constype instanceof MIRPrimitiveStackEntityTypeDecl) {
-                const ultype = this.typegen.getMIRType(constype.ultype);
-                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
+        else if (constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveStackEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveQueueEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveSetEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveSetEntityTypeDecl@cons");
+        }
+        else {
+            assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
+            const mapconstype = constype as MIRPrimitiveMapEntityTypeDecl;
 
-                //it is just an inject -- so direct assign is ok
-                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
-            }
-            else if(constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                const ultype = this.typegen.getMIRType(constype.ultype);
-                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
+            const consexp = this.processConstructorPrimaryCollectionSingletons_MapHelper(mapconstype, args);
 
-                //it is just an inject -- so direct assign is ok
-                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
-            }
-            else if(constype instanceof MIRPrimitiveSetEntityTypeDecl) {
-                const ultype = this.typegen.getMIRType(constype.ultype);
-                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
-
-                const cvar = this.generateTempName();
-                const uvar = this.generateTempName();
-                const unqinv = new SMTCallGeneral(this.typegen.lookupFunctionName(constype.unqconvinv), [new SMTVar(cvar)]);
-                const erropt = this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(ultype, new SMTVar(uvar)));
-                        
-                return new SMTLet(cvar, consexp,
-                        new SMTLet(uvar, unqinv,
-                            new SMTIf(this.typegen.generateResultIsErrorTest(ultype, unqinv),
-                            erropt,
-                            new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.generateResultGetSuccess(ultype, new SMTVar(uvar)), continuation)
-                        )
-                    )
-                );
+            const cvar = this.generateTempName();
+            if(!consexp[1]) {
+                return new SMTLet(this.varToSMTName(op.trgt).vname, consexp[0], continuation);
             }
             else {
-                assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
-                const mapconstype = constype as MIRPrimitiveMapEntityTypeDecl;
-
-                const ultype = this.typegen.getMIRType(mapconstype.ultype);
-                const consexp = this.processConstructorPrimaryCollectionSingletons_Helper(ultype, args);
-
-                const cvar = this.generateTempName();
-                const uvar = this.generateTempName();
-                const unqinv = new SMTCallGeneral(this.typegen.lookupFunctionName(mapconstype.unqchkinv), [new SMTVar(cvar)]);
-                const erropt = this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(this.typegen.getMIRType("Bool"), new SMTVar(uvar)));
-                        
-                return new SMTLet(cvar, consexp,
-                        new SMTLet(uvar, unqinv,
-                            new SMTIf(this.typegen.generateResultIsErrorTest(this.typegen.getMIRType("Bool"), unqinv),
-                            erropt,
-                            new SMTIf(SMTCallSimple.makeNot(this.typegen.generateResultGetSuccess(this.typegen.getMIRType("Bool"), new SMTVar(uvar))),
-                                this.generateErrorCreate(op.sinfo, this.typegen.getMIRType(op.tkey), "Key collision in Map constructor"),
-                                new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.generateResultGetSuccess(ultype, new SMTVar(cvar)), continuation)
-                            )
-                        )
+                return new SMTLet(cvar, consexp[0],
+                    new SMTIf(this.typegen.generateResultIsErrorTest(this.typegen.getMIRType(constype.oftype), new SMTVar(cvar)),
+                        this.generateErrorCreate(op.sinfo, this.typegen.getMIRType(op.tkey), "Key collision in Map constructor"),
+                        new SMTLet(this.varToSMTName(op.trgt).vname, this.typegen.generateResultGetSuccess(this.typegen.getMIRType(constype.oftype), new SMTVar(cvar)), continuation)
                     )
                 );
             }
+        }
     }
 
     processConstructorPrimaryCollectionCopies(op: MIRConstructorPrimaryCollectionCopies, continuation: SMTExp): SMTExp {
@@ -1719,7 +1711,7 @@ class SMTBodyEmitter {
     }
 
     processBinKeyLess(op: MIRBinKeyLess, continuation: SMTExp): SMTExp {
-        return NOT_IMPLEMENTED("processBinKeyLess");
+        xxxx;
     }
 
     processPrefixNotOp(op: MIRPrefixNotOp, continuation: SMTExp): SMTExp {
