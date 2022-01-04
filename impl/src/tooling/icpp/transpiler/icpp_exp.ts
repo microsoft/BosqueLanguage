@@ -421,16 +421,16 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.BinKeyEqVirtualOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout, sguard: sguard };
     }
      
-    static genBinKeyLessFastOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argr: Argument, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.BinKeyLessFastOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argr: argr, sguard: sguard };
+    static genBinKeyLessFastOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argr: Argument): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessFastOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argr: argr };
     }
 
-    static genBinKeyLessStaticOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.BinKeyLessStaticOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout, sguard: sguard };
+    static genBinKeyLessStaticOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessStaticOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
     }
 
-    static genBinKeyLessVirtualOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.BinKeyLessVirtualOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout, sguard: sguard };
+    static genBinKeyLessVirtualOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessVirtualOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
     }
 
     static genTypeIsNoneOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {

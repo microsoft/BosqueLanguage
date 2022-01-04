@@ -802,12 +802,12 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRBinKeyEq(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, guard, lhsflowtype.typeID, rhsflowtype.typeID));
     }
 
-    emitBinKeyLess(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined, lhsflowtype: MIRType, rhsflowtype: MIRType) {
+    emitBinKeyLess(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, lhsflowtype: MIRType, rhsflowtype: MIRType) {
         if(!this.emitEnabled) {
             return;
         }
 
-        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, guard, lhsflowtype.typeID, rhsflowtype.typeID));
+        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, lhsflowtype.typeID, rhsflowtype.typeID));
     }
 
     emitPrefixNotOp(sinfo: SourceInfo, arg: MIRArgument, trgt: MIRRegisterArgument) {

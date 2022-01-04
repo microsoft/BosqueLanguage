@@ -2312,12 +2312,11 @@ class MIRBinKeyLess extends MIROp {
     lhs: MIRArgument;
     readonly rhslayouttype: MIRResolvedTypeKey;
     rhs: MIRArgument;
-    sguard: MIRStatmentGuard | undefined;
 
     readonly lhsflowtype: MIRResolvedTypeKey;
     readonly rhsflowtype: MIRResolvedTypeKey;
 
-    constructor(sinfo: SourceInfo, lhslayouttype: MIRResolvedTypeKey, lhs: MIRArgument, rhslayouttype: MIRResolvedTypeKey, rhs: MIRArgument, cmptype: MIRResolvedTypeKey, trgt: MIRRegisterArgument, sguard: MIRStatmentGuard | undefined, lhsflowtype: MIRResolvedTypeKey, rhsflowtype: MIRResolvedTypeKey) {
+    constructor(sinfo: SourceInfo, lhslayouttype: MIRResolvedTypeKey, lhs: MIRArgument, rhslayouttype: MIRResolvedTypeKey, rhs: MIRArgument, cmptype: MIRResolvedTypeKey, trgt: MIRRegisterArgument, lhsflowtype: MIRResolvedTypeKey, rhsflowtype: MIRResolvedTypeKey) {
         super(MIROpTag.MIRBinKeyLess, sinfo);
 
         this.trgt = trgt;
@@ -2326,26 +2325,24 @@ class MIRBinKeyLess extends MIROp {
         this.lhs = lhs;
         this.rhslayouttype = rhslayouttype;
         this.rhs = rhs;
-        this.sguard = sguard;
 
         this.lhsflowtype = lhsflowtype;
         this.rhsflowtype = rhsflowtype;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.lhs, this.rhs, ...this.sguard.getUsedVars()] : [this.lhs, this.rhs]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.lhs, this.rhs]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
-        const gstring = this.sguard !== undefined ? ` | ${this.sguard.stringify()}` : "";
-        return `${this.trgt.stringify()} = ${this.lhs.stringify()} Key< ${this.rhs.stringify()}${gstring}`;
+        return `${this.trgt.stringify()} = ${this.lhs.stringify()} Key< ${this.rhs.stringify()}`;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), cmptype: this.cmptype, lhslayouttype: this.lhslayouttype, lhs: this.lhs.jemit(), rhslayouttype: this.rhslayouttype, rhs: this.rhs.jemit(), sguard: this.sguard !== undefined ? this.sguard.jemit() : undefined, lhsflowtype: this.lhsflowtype, rhsflowtype: this.rhsflowtype };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), cmptype: this.cmptype, lhslayouttype: this.lhslayouttype, lhs: this.lhs.jemit(), rhslayouttype: this.rhslayouttype, rhs: this.rhs.jemit(), lhsflowtype: this.lhsflowtype, rhsflowtype: this.rhsflowtype };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRBinKeyLess(jparsesinfo(jobj.sinfo), jobj.lhslayouttype, MIRArgument.jparse(jobj.lhs), jobj.rhslayouttype, MIRArgument.jparse(jobj.rhs), jobj.cmptype, MIRRegisterArgument.jparse(jobj.trgt), jobj.sguard !== undefined ? MIRStatmentGuard.jparse(jobj.sguard) : undefined, jobj.lhsflowtype, jobj.rhsflowtype);
+        return new MIRBinKeyLess(jparsesinfo(jobj.sinfo), jobj.lhslayouttype, MIRArgument.jparse(jobj.lhs), jobj.rhslayouttype, MIRArgument.jparse(jobj.rhs), jobj.cmptype, MIRRegisterArgument.jparse(jobj.trgt), jobj.lhsflowtype, jobj.rhsflowtype);
     }
 }
 

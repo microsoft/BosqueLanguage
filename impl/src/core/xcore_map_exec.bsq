@@ -11,6 +11,10 @@ internal function __map_literal_cons0<K grounded KeyType, V>(): MapRepr<K, V> {
     return none;
 }
 
+internal function __map_literal_cons1<K grounded KeyType, V>(e: [K, V]): MapRepr<K, V> {
+    return return BTree<K, V>{count, BTreeNode<K, V>{e.0, e.1, none, none}};
+}
+
 internal function __map_literal_cons_add<K grounded KeyType, V>(e: [K, V], mm: BTreeNode<K, V>): BTreeNode<K, V> {
     return mm.add[recursive](e.0, e.1);
 }

@@ -927,9 +927,8 @@ public:
     const BSQType* oftype;
     const Argument argl;
     const Argument argr;
-    const BSQStatementGuard sguard;
     
-    BinKeyLessFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BinKeyLessFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr), sguard(sguard) {;}
+    BinKeyLessFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr) : InterpOp(sinfo, OpCodeTag::BinKeyLessFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr) {;}
     virtual ~BinKeyLessFastOp() {;}
 
     static BinKeyLessFastOp* jparse(json v);
@@ -944,9 +943,8 @@ public:
     const BSQType* argllayout;
     const Argument argr;
     const BSQType* argrlayout;
-    const BSQStatementGuard sguard;
     
-    BinKeyLessStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BinKeyLessStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout), sguard(sguard) {;}
+    BinKeyLessStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
     virtual ~BinKeyLessStaticOp() {;}
 
     static BinKeyLessStaticOp* jparse(json v);
@@ -961,9 +959,8 @@ public:
     const BSQType* argllayout;
     const Argument argr;
     const BSQType* argrlayout;
-    const BSQStatementGuard sguard;
     
-    BinKeyLessVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout), sguard(sguard) {;}
+    BinKeyLessVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
     virtual ~BinKeyLessVirtualOp() {;}
 
     static BinKeyLessVirtualOp* jparse(json v);

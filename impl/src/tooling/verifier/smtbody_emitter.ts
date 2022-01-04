@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions, BVEmitter } from "./smt_exp";
@@ -1607,13 +1607,13 @@ class SMTBodyEmitter {
 
     processConstructorPrimaryCollectionSingletons_ListHelper(ltype: MIRPrimitiveListEntityTypeDecl, exps: SMTExp[]): SMTExp {
         if(exps.length === 1) {
-            return new SMTCallSimple(`${ltype.consfuncs[1]}`, exps);
+            return new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[1])}`, exps);
         }
         else if(exps.length === 2) {
-            return new SMTCallSimple(`${ltype.consfuncs[2]}`, exps);
+            return new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[2])}`, exps);
         }
         else if(exps.length === 3) {
-            return new SMTCallSimple(`${ltype.consfuncs[3]}`, exps);
+            return new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[3])}`, exps);
         }
         else {
             const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(ltype.tkey));
@@ -1628,13 +1628,13 @@ class SMTBodyEmitter {
 
     processConstructorPrimaryCollectionSingletons_MapHelper(ltype: MIRPrimitiveMapEntityTypeDecl, exps: SMTExp[]): [SMTExp, boolean] {
         if(exps.length === 1) {
-            return [new SMTCallSimple(`${ltype.consfuncs[1]}`, exps), false];
+            return [new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[1])}`, exps), false];
         }
         else if(exps.length === 2) {
-            return [new SMTCallGeneral(`${ltype.consfuncs[2]}`, exps), true];
+            return [new SMTCallGeneral(`${this.typegen.lookupFunctionName(ltype.consfuncs[2])}`, exps), true];
         }
         else if(exps.length === 3) {
-            return [new SMTCallGeneral(`${ltype.consfuncs[3]}`, exps), true];
+            return [new SMTCallGeneral(`${this.typegen.lookupFunctionName(ltype.consfuncs[3])}`, exps), true];
         }
         else {
             const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(ltype.tkey));
@@ -1694,14 +1694,16 @@ class SMTBodyEmitter {
     }
 
     processBinKeyEq(op: MIRBinKeyEq, continuation: SMTExp): SMTExp {
-        let eqcmp: SMTExp = new SMTConst("false");
+        const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
+        const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
 
-        if(op.lhslayouttype === op.rhslayouttype) {
+        let eqcmp: SMTExp = new SMTConst("false");
+        if(mirlhslayout.typeID === mirrhslayout.typeID && this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
             eqcmp = SMTCallSimple.makeEq(this.argToSMT(op.lhs), this.argToSMT(op.rhs));
         }
         else {
-            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), this.typegen.getMIRType(op.lhslayouttype));
-            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), this.typegen.getMIRType(op.rhslayouttype));
+            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), mirlhslayout);
+            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), mirrhslayout);
 
             eqcmp = SMTCallSimple.makeEq(lhs, rhs);
         }
@@ -1711,7 +1713,44 @@ class SMTBodyEmitter {
     }
 
     processBinKeyLess(op: MIRBinKeyLess, continuation: SMTExp): SMTExp {
-        xxxx;
+        const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
+        const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
+
+        let ltcmp: SMTExp = new SMTConst("false");
+        if(mirlhslayout.typeID === mirrhslayout.typeID && this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
+            const etype = this.typegen.assembly.entityDecls.get(op.cmptype) as MIREntityTypeDecl;
+
+            if(etype instanceof MIRPrimitiveInternalEntityTypeDecl) {
+                const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.cmptype));
+                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+            }
+            else if(etype instanceof MIRStringOfInternalEntityTypeDecl) {
+                const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("String"));
+                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+            }
+            else if(etype instanceof MIRDataStringInternalEntityTypeDecl) {
+                const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("String"));
+                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+            }
+            else if(etype instanceof MIREnumEntityTypeDecl) {
+                const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("Nat"));
+                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+            }
+            else {
+                const ttval = etype as MIRConstructableEntityTypeDecl;
+
+                const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(ttval.fromtype));
+                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+            }
+        }
+        else {
+            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), mirlhslayout);
+            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), mirrhslayout);
+
+            ltcmp = new SMTCallSimple("BKey@less", [lhs, rhs]);
+        }
+
+        return new SMTLet(this.varToSMTName(op.trgt).vname, ltcmp, continuation);
     }
 
     processPrefixNotOp(op: MIRPrefixNotOp, continuation: SMTExp): SMTExp {

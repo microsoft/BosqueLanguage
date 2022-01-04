@@ -2882,7 +2882,7 @@ class TypeChecker {
                 this.m_emitter.emitBinKeyEq(exp.sinfo, this.m_emitter.registerResolvedTypeReference(tlhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(trhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(ktype), trgt, undefined, this.m_emitter.registerResolvedTypeReference(tlhs.flowtype), this.m_emitter.registerResolvedTypeReference(trhs.flowtype));
             }
             else {
-                this.m_emitter.emitBinKeyLess(exp.sinfo, this.m_emitter.registerResolvedTypeReference(tlhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(trhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(ktype), trgt, undefined, this.m_emitter.registerResolvedTypeReference(tlhs.flowtype), this.m_emitter.registerResolvedTypeReference(trhs.flowtype));
+                this.m_emitter.emitBinKeyLess(exp.sinfo, this.m_emitter.registerResolvedTypeReference(tlhs.layout), lhsreg, this.m_emitter.registerResolvedTypeReference(trhs.layout), rhsreg, this.m_emitter.registerResolvedTypeReference(ktype), trgt, this.m_emitter.registerResolvedTypeReference(tlhs.flowtype), this.m_emitter.registerResolvedTypeReference(trhs.flowtype));
             }
 
             return [env.setUniformResultExpression(this.m_assembly.getSpecialBoolType())];
@@ -6678,7 +6678,7 @@ class TypeChecker {
 
         let consfuncs: MIRInvokeKey[] = [];
         if(this.m_buildapplication === BuildApplicationMode.Executable) {
-            ["__map_literal_cons0", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
+            ["__map_literal_cons0", "__map_literal_cons1", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
                 const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
                 consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
             });
