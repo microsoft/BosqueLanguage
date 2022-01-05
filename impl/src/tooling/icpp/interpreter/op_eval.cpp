@@ -76,6 +76,7 @@ VTYPE->getVStorageLocation(SL, __scratch__);
 
 jmp_buf Evaluator::g_entrybuff;
 EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
+uint8_t* Evaluator::g_constantbuffer = nullptr;
 
 std::vector<const BSQInvokeDecl*> Evaluator::g_invokes;
 
@@ -1936,6 +1937,7 @@ void Evaluator::evaluateBody(StorageLocationPtr resultsl, const BSQType* restype
 
 void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
+    xxxx;
     void* argsbase = BSQ_STACK_SPACE_ALLOC(args.size() * sizeof(void*));
     void** curr = (void**)argsbase;
     for(size_t i = 0; i < args.size(); ++i)
@@ -1968,6 +1970,7 @@ void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& a
 
 void Evaluator::vinvoke(const BSQInvokeDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
+    xxxx;
     void* argsbase = BSQ_STACK_SPACE_ALLOC((args.size() + 1) * sizeof(void*));
     void** curr = (void**)argsbase;
 
@@ -2025,7 +2028,7 @@ void Evaluator::invokePostlude()
     GCStack::popFrame();
 }
 
-void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype)
+void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<StorageLocationPtr>& params, StorageLocationPtr resultsl, const BSQType* restype)
 {
     switch (invk->implkey)
     {

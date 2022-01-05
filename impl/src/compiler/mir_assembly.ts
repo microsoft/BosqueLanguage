@@ -150,10 +150,7 @@ abstract class MIRInvokeDecl {
             let binds = new Map<string, MIRResolvedTypeKey>();
             jobj.binds.forEach((bind: any) => binds.set(bind[0], bind[1]));
 
-            let pcodes = new Map<string, MIRPCode>();
-            jobj.pcodes.forEach((pc: any) => pcodes.set(pc[0], pc[1]));
-
-            return new MIRInvokePrimitiveDecl(jobj.enclosingDecl, jobj.bodyID, jobj.ikey, jobj.shortname, jobj.attributes, jobj.recursive, jparsesinfo(jobj.sinfo), jobj.file, binds, jobj.params.map((p: any) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.implkey, pcodes, jobj.scalarslotsinfo, jobj.mixedslotsinfo);
+            return new MIRInvokePrimitiveDecl(jobj.enclosingDecl, jobj.bodyID, jobj.ikey, jobj.shortname, jobj.attributes, jobj.recursive, jparsesinfo(jobj.sinfo), jobj.file, binds, jobj.params.map((p: any) => MIRFunctionParameter.jparse(p)), jobj.resultType, jobj.implkey);
         }
     }
 }
@@ -174,32 +171,19 @@ class MIRInvokeBodyDecl extends MIRInvokeDecl {
     }
 }
 
-type MIRPCode = {
-    code: MIRInvokeKey,
-    cargs: string[]
-};
-
 class MIRInvokePrimitiveDecl extends MIRInvokeDecl {
     readonly implkey: string;
     readonly binds: Map<string, MIRResolvedTypeKey>;
-    readonly pcodes: Map<string, MIRPCode>;
 
-    readonly scalarslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]; 
-    readonly mixedslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]; 
-
-    constructor(enclosingDecl: MIRResolvedTypeKey | undefined, bodyID: string, ikey: MIRInvokeKey, shortname: string, attributes: string[], recursive: boolean, sinfo: SourceInfo, srcFile: string, binds: Map<string, MIRResolvedTypeKey>, params: MIRFunctionParameter[], resultType: MIRResolvedTypeKey, implkey: string, pcodes: Map<string, MIRPCode>, scalarslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[], mixedslotsinfo: {vname: string, vtype: MIRResolvedTypeKey}[]) {
+    constructor(enclosingDecl: MIRResolvedTypeKey | undefined, bodyID: string, ikey: MIRInvokeKey, shortname: string, attributes: string[], recursive: boolean, sinfo: SourceInfo, srcFile: string, binds: Map<string, MIRResolvedTypeKey>, params: MIRFunctionParameter[], resultType: MIRResolvedTypeKey, implkey: string) {
         super(enclosingDecl, bodyID, ikey, shortname, attributes, recursive, sinfo, srcFile, params, resultType, undefined, undefined);
 
         this.implkey = implkey;
         this.binds = binds;
-        this.pcodes = pcodes;
-
-        this.scalarslotsinfo = scalarslotsinfo;
-        this.mixedslotsinfo = mixedslotsinfo; 
     }
 
     jemit(): object {
-        return {enclosingDecl: this.enclosingDecl, bodyID: this.bodyID, ikey: this.ikey, shortname: this.shortname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, params: this.params.map((p) => p.jemit()), resultType: this.resultType, implkey: this.implkey, binds: [...this.binds], pcodes: [... this.pcodes], scalarslotsinfo: this.scalarslotsinfo, mixedlotsinfo: this.mixedslotsinfo };
+        return {enclosingDecl: this.enclosingDecl, bodyID: this.bodyID, ikey: this.ikey, shortname: this.shortname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, attributes: this.attributes, recursive: this.recursive, params: this.params.map((p) => p.jemit()), resultType: this.resultType, implkey: this.implkey, binds: [...this.binds] };
     }
 }
 
@@ -886,10 +870,14 @@ class MIRType {
 }
 
 enum ActionMode {
-    EvaluateInput, //Inputs will be parsed as concrete values and set to extract result value
-    EvaluateSymbolic, //Inputs will be symbolically generated and executed with failures reported -- single entrypoint assumed
-    TestFixedInput, //Inputs will be parsed as concrete values and executed with failures reported and check for "true" return value
-    TestSymbolic //Inputs will be symbolically generated and executed with failures reported and check for "true" return value -- single entrypoint assumed
+    EvaluateConcrete, //Inputs will be parsed as concrete values and set to extract result value
+    EvaluateSymbolic, //Inputs will be symbolically parsed and executed and set to extract result value -- single entrypoint assumed
+
+    ErrTestConcrete, //Inputs will be parsed as concrete values and executed with failures reported (NO check on output)
+    ChkTestConcrete, //Inputs will be parsed as concrete values and executed with failures reported and check for "true" return value
+    
+    ErrTestSymbolic, //Inputs will symbolically generated and executed with failures reported (NO check on output) -- single entrypoint assumed
+    ChkTestSymbolic //Inputs will be symbolically generated and executed with failures reported and check for "true" return value -- single entrypoint assumed
 }
 
 class PackageConfig {
@@ -943,18 +931,28 @@ class MIRAssembly {
     entyremaps = {namespaceremap: new Map<string, string>(), entrytypedef: new Map<string, MIRType>()};
 
     private getConceptsProvidedByTuple(tt: MIRTupleType): MIRType {
-        let tci: MIRResolvedTypeKey[] = ["Some"];
+        let tci: MIRResolvedTypeKey[] = ["Tuple"];
         if (tt.entries.every((ttype) => this.subtypeOf(ttype, this.typeMap.get("APIType") as MIRType))) {
             tci.push("APIType");
         }
+        else {
+            if (tt.entries.every((ttype) => this.subtypeOf(ttype, this.typeMap.get("TestableType") as MIRType))) {
+                tci.push("TestableType");
+            }
+        } 
 
         return MIRType.createSingle(MIRConceptType.create(tci));
     }
 
     private getConceptsProvidedByRecord(rr: MIRRecordType): MIRType {
-        let tci: MIRResolvedTypeKey[] = ["Some"];
+        let tci: MIRResolvedTypeKey[] = ["Record"];
         if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.typeMap.get("APIType") as MIRType))) {
             tci.push("APIType");
+        }
+        else {
+            if (rr.entries.every((entry) => this.subtypeOf(entry.ptype, this.typeMap.get("TestableType") as MIRType))) {
+                tci.push("TestableType");
+            }
         }
 
         return MIRType.createSingle(MIRConceptType.create(tci));
@@ -1279,7 +1277,7 @@ class MIRAssembly {
 }
 
 export {
-    MIRConstantDecl, MIRFunctionParameter, MIRInvokeDecl, MIRInvokeBodyDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRFieldDecl,
+    MIRConstantDecl, MIRFunctionParameter, MIRInvokeDecl, MIRInvokeBodyDecl, MIRInvokePrimitiveDecl, MIRFieldDecl,
     MIROOTypeDecl, MIRConceptTypeDecl, MIREntityTypeDecl,
     MIRType, MIRTypeOption, 
     MIREntityType, MIRObjectEntityTypeDecl, MIRConstructableEntityTypeDecl, MIREnumEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, 

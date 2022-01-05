@@ -1109,7 +1109,7 @@ class Parser {
         const argNames = new Set<string>([...(restName ? [restName] : []), ...fparams.map((param) => param.name)]);
         let preconds: PreConditionDecl[] = [];
         let postconds: PostConditionDecl[] = [];
-        let body: {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]} | undefined = undefined;
+        let body: BodyImplementation | undefined = undefined;
         let captured = new Set<string>();
         if (noBody) {
             this.ensureAndConsumeToken(";");
@@ -1135,15 +1135,15 @@ class Parser {
         }
 
         if (ikind === InvokableKind.PCodeFn || ikind === InvokableKind.PCodePred) {
-            const bbody = body as {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]};
-            return InvokeDecl.createPCodeInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, bbody.impl, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
+            const bbody = body as BodyImplementation;
+            return InvokeDecl.createPCodeInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, fparams, restName, restType, resultInfo, captured, bbody, ikind === InvokableKind.PCodeFn, ikind === InvokableKind.PCodePred);
         }
         else {
             if(body !== undefined) {
-                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body.impl, body.optscalarslots, body.optmixedslots);
+                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, body);
             }
             else {
-                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, undefined, [], []);
+                return InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, srcFile, attributes, isrecursive, terms, termRestrictions, fparams, restName, restType, resultInfo, preconds, postconds, undefined);
             }
         }
     }
@@ -3516,49 +3516,19 @@ class Parser {
         }
     }
 
-    private parseBody(bodyid: string, file: string): {impl: BodyImplementation, optscalarslots: {vname: string, vtype: TypeSignature}[], optmixedslots: {vname: string, vtype: TypeSignature}[]} {
-        if (this.testToken("#")) {
-            this.consumeToken();
-
-            const scalarslots = this.testToken("(")
-                ? this.parseListOf("(", ")", ",", () => {
-                    this.ensureToken(TokenStrings.Identifier);
-                    const vname = this.consumeTokenAndGetValue();
-                    this.ensureAndConsumeToken(":");
-                    const vtype = this.parseTypeSignature();
-
-                    return { vname: vname, vtype: vtype };
-                })[0]
-                : [];
-
-            const mixedslots = this.testToken("(")
-                ? this.parseListOf("(", ")", ",", () => {
-                    this.ensureToken(TokenStrings.Identifier);
-                    const vname = this.consumeTokenAndGetValue();
-                    this.ensureAndConsumeToken(":");
-                    const vtype = this.parseTypeSignature();
-
-                    return { vname: vname, vtype: vtype };
-                })[0]
-                : [];
-
-            this.ensureToken(TokenStrings.Identifier);
-            return { impl: new BodyImplementation(bodyid, file, this.consumeTokenAndGetValue()), optscalarslots: scalarslots, optmixedslots: mixedslots};
-        }
-        else if(this.testToken("=")) {
+    private parseBody(bodyid: string, file: string): BodyImplementation {
+        if(this.testToken("=")) {
             this.consumeToken();
             const iname = this.consumeTokenAndGetValue();
-            if(iname !== "default") {
-                this.raiseError(this.getCurrentSrcInfo().line, "Only valid option is 'default'");
-            }
             this.ensureAndConsumeToken(";")
-            return { impl: new BodyImplementation(bodyid, file, "default"), optscalarslots: [], optmixedslots: [] };
+            
+            return new BodyImplementation(bodyid, file, iname);
         }
         else if (this.testToken("{")) {
-            return { impl: new BodyImplementation(bodyid, file, this.parseBlockStatement()), optscalarslots: [], optmixedslots: [] };
+            return new BodyImplementation(bodyid, file, this.parseBlockStatement());
         }
         else {
-            return { impl: new BodyImplementation(bodyid, file, this.parseExpression()), optscalarslots: [], optmixedslots: [] };
+            return new BodyImplementation(bodyid, file, this.parseExpression());
         }
     }
 
@@ -4362,7 +4332,7 @@ class Parser {
                 
                 const acceptsid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "accepts");
                 const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
-                const acceptsinvoke = new InvokeDecl(sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("Core", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody, [], []);
+                const acceptsinvoke = new InvokeDecl(sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("Core", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody);
                 const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
                 const provides = [[new NominalTypeSignature("Core", ["Some"]), undefined], [new NominalTypeSignature("Core", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
                 const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type", ...attributes], currentDecl.ns, iname, [], provides, [], [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
@@ -4453,7 +4423,7 @@ class Parser {
 
                     const bodyid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), opstr);
                     const body = new BodyImplementation(bodyid, this.m_penv.getCurrentFile(), new BlockStatement(sinfo, [new ReturnStatement(sinfo, [bexp])]));
-                    const sig = InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, this.m_penv.getCurrentFile(), [isprefix ? "prefix" : "infix"], "no", [], undefined, params, undefined, undefined, resultType, [], [], body, [], []);
+                    const sig = InvokeDecl.createStandardInvokeDecl(sinfo, bodyid, this.m_penv.getCurrentFile(), [isprefix ? "prefix" : "infix"], "no", [], undefined, params, undefined, undefined, resultType, [], [], body);
 
                     let level = -1;
                     if (opstr === "+" || opstr === "-") {
@@ -4523,7 +4493,7 @@ class Parser {
 
                 const valueid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "value");
                 const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
-                const valuedecl = new InvokeDecl(sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), valuebody, [], []);
+                const valuedecl = new InvokeDecl(sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), valuebody);
                 const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
 
                 memberMethods.push(value);

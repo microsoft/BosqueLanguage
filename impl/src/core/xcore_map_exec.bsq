@@ -28,7 +28,7 @@ internal function __map_literal_cons_append<K grounded KeyType, V>(m1: MapRepr<K
 }
 
 internal entity MapOps provides Some {
-    __assume_safe function s_safeAs<T, U>(v: T): U map_safeas
+    __assume_safe function s_safeAs<T, U>(v: T): U = map_safeas;
 
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
         return m === none;

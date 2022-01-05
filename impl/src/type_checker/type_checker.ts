@@ -11,7 +11,7 @@ import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedSt
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing, MIRConstantArgument } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
-import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRPCode, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl, MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl } from "../compiler/mir_assembly";
+import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl, MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl } from "../compiler/mir_assembly";
 import { BSQRegex, RegexAlternation, RegexCharRange, RegexComponent, RegexConstClass, RegexDotCharClass, RegexLiteral, RegexOptional, RegexPlusRepeat, RegexRangeRepeat, RegexSequence, RegexStarRepeat } from "../ast/bsqregex";
 
 import * as assert from "assert";
@@ -7140,27 +7140,10 @@ class TypeChecker {
         const encdecl = enclosingDecl !== undefined ? enclosingDecl[0].typeID : undefined;
         if (typeof ((invoke.body as BodyImplementation).body) === "string") {
             if ((invoke.body as BodyImplementation).body !== "default" || OOPTypeDecl.attributeSetContains("__primitive", invoke.attributes)) {
-                let mpc = new Map<string, MIRPCode>();
-                fargs.forEach((v, k) => {
-                    const dcapture = [...v.captured].map((cname) => cname[0]);
-                    const icapture = v.capturedpcode.size !== 0 ? this.m_emitter.flattenCapturedPCodeVarCaptures(v.capturedpcode) : [];
-
-                    mpc.set(k, { code: MIRKeyGenerator.generatePCodeKey(v.code.isPCodeFn, v.code.bodyID), cargs: [...dcapture, ...icapture] })
-                });
-
                 let mbinds = new Map<string, MIRResolvedTypeKey>();
                 binds.forEach((v, k) => mbinds.set(k, this.m_emitter.registerResolvedTypeReference(v).typeID));
 
-                const scalarslots = invoke.optscalarslots.map((sslot) => {
-                    const rtype = this.resolveAndEnsureTypeOnly(invoke.sourceLocation, sslot.vtype, binds);
-                    return { vname: sslot.vname, vtype: this.m_emitter.registerResolvedTypeReference(rtype).typeID };
-                });
-                const mixedslots = invoke.optmixedslots.map((mslot) => {
-                    const rtype = this.resolveAndEnsureTypeOnly(invoke.sourceLocation, mslot.vtype, binds);
-                    return { vname: mslot.vname, vtype: this.m_emitter.registerResolvedTypeReference(rtype).typeID };
-                });
-
-                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, mbinds, params, resultType.typeID, (invoke.body as BodyImplementation).body as string, mpc, scalarslots, mixedslots);
+                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, mbinds, params, resultType.typeID, (invoke.body as BodyImplementation).body as string);
             }
             else {
                 //
@@ -7168,7 +7151,7 @@ class TypeChecker {
                 //
                 assert(false, "We only handle default ops on primitive types -- need to do better to support TypedNumbers");
                 
-                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, new Map<string, string>(), [], resultType.typeID, "[INVALID]", new Map<string, MIRPCode>(), [], []);
+                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, new Map<string, string>(), [], resultType.typeID, "[INVALID]");
             }
         }
         else {

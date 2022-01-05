@@ -6,11 +6,11 @@
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace Core;
 
-__internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType {
+__internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType, TestableType when T grounded TestableType {
     private field __list_dummy_contents: ListRepr<T>;
 
-    private function s_into(l: ListRepr<T>): List<T> special_inject
-    method value(): ListRepr<T> special_extract
+    private function s_into(l: ListRepr<T>): List<T> = special_inject;
+    method value(): ListRepr<T> = special_extract;
 
     function {when T unique Int | Nat} range(start: T, end: T): List<T>
         requires release start <= end;

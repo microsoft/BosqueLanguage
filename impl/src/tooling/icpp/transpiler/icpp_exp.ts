@@ -10,9 +10,8 @@ enum ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    LocalScalar,
-    LocalMixed,
-    Argument
+    ScalarVal,
+    MixedVal
 }
 
 const EMPTY_CONST_POSITION = 0;
@@ -173,6 +172,11 @@ type TargetVar = {
     offset: number;
 };
 
+type ParameterInfo = {
+    kind: ArgumentTag;
+    poffset: number;
+};
+
 type ICPPGuard = {
     gmaskoffset: number; 
     gindex: number; //-1 if this is var guard
@@ -195,16 +199,12 @@ class ICPPOpEmitter
         return { kind: ArgumentTag.Const, location: offset };
     }
 
-    static genLocalScalarArgument(offset: number): Argument {
-        return { kind: ArgumentTag.LocalScalar, location: offset };
+    static genScalarArgument(offset: number): Argument {
+        return { kind: ArgumentTag.ScalarVal, location: offset };
     }
 
-    static genLocalMixedArgument(offset: number): Argument {
-        return { kind: ArgumentTag.LocalMixed, location: offset };
-    }
-
-    static genParameterArgument(offset: number): Argument {
-        return { kind: ArgumentTag.Argument, location: offset };
+    static genMixedArgument(offset: number): Argument {
+        return { kind: ArgumentTag.MixedVal, location: offset };
     }
 
     static genMaskGuard(gindex: number, goffset: number): ICPPGuard {
@@ -491,7 +491,7 @@ class ICPPOpEmitter
 export {
     ArgumentTag, OpCodeTag, 
     EMPTY_CONST_POSITION, NONE_VALUE_POSITION, NOTHING_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
-    Argument, TargetVar,
+    Argument, TargetVar, ParameterInfo,
     ICPPGuard, ICPPStatementGuard,
     ICPPOp,
     ICPPOpEmitter

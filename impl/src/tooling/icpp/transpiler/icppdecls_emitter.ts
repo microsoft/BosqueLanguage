@@ -74,7 +74,7 @@ class ICPPEmitter {
         //
     }
 
-    private processAssembly(entrypoint: MIRInvokeKey) {
+    private processAssembly(entrypoints: MIRInvokeKey[]) {
         const cinits = [...this.assembly.constantDecls].map((cdecl) => cdecl[1].value);
         xxxx; //see SMT version
         const cginfo = constructCallGraphInfo([entrypoint, ...cinits], this.assembly);

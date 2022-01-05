@@ -18,7 +18,6 @@ public:
     int64_t dbg_line;
 #endif
 
-    StorageLocationPtr* argsbase;
     uint8_t* scalarbase;
     uint8_t* mixedbase;
     BSQBool* argmask;
@@ -37,6 +36,7 @@ private:
 
     static jmp_buf g_entrybuff;
     static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
+    static uint8_t* g_constantbuffer;
 
     static std::vector<const BSQInvokeDecl*> g_invokes;
 
@@ -156,22 +156,18 @@ private:
 
     inline StorageLocationPtr evalConstArgument(Argument arg)
     {
-        return (StorageLocationPtr)(Environment::g_constantbuffer + arg.location);
+        return (StorageLocationPtr)(Evaluator::g_constantbuffer + arg.location);
     }
 
     inline StorageLocationPtr evalArgument(Argument arg)
     {
-        if(arg.kind == ArgumentTag::LocalScalar)
+        if(arg.kind == ArgumentTag::ScalarVal)
         {
             return this->cframe->scalarbase + arg.location;
         }
-        else if(arg.kind == ArgumentTag::LocalMixed)
+        else if(arg.kind == ArgumentTag::MixedVal)
         {
             return this->cframe->mixedbase + arg.location;
-        }
-        else if(arg.kind == ArgumentTag::Argument)
-        {
-            return this->cframe->argsbase[arg.location];
         }
         else 
         {
@@ -181,7 +177,7 @@ private:
 
     inline StorageLocationPtr evalTargetVar(TargetVar trgt)
     {
-        if(trgt.kind == ArgumentTag::LocalScalar)
+        if(trgt.kind == ArgumentTag::ScalarVal)
         {
             return this->cframe->scalarbase + trgt.offset;
         }
@@ -372,7 +368,7 @@ private:
     void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots);
     void invokePostlude();
 
-    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype);
+    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<StorageLocationPtr>& params, StorageLocationPtr resultsl, const BSQType* restype);
 
 public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);

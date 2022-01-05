@@ -12,9 +12,8 @@ enum class ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    LocalScalar,
-    LocalMixed,
-    Argument
+    ScalarVal,
+    MixedVal
 };
 
 enum class OpCodeTag
@@ -171,6 +170,13 @@ struct TargetVar
     uint32_t offset;
 };
 TargetVar jsonParse_TargetVar(json j);
+
+struct ParameterInfo
+{
+    ArgumentTag kind;
+    uint32_t poffset;
+};
+Argument jsonParse_ParameterInfo(json j);
 
 struct SourceInfo
 {

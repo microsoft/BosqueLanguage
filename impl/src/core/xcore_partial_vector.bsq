@@ -13,14 +13,14 @@ internal entity Mask provides Some {
     field bit2: Bool;
     field bit3: Bool;
 
-    __safe function s_init_k(k: Nat): Mask mask_init_k
-    __safe function s_min_set(m: Mask): Nat mask_min_set
-    __safe function s_max_set(m: Mask): Nat mask_max_set
-    __safe function s_count(m: Mask): Nat mask_count
-    __safe function s_all_true(m: Mask): Nat mask_all_true
-    __safe function s_some_true(m: Mask): Nat mask_some_true
-    __safe function s_and(m1: Mask, m2: Mask): Mask mask_and
-    __safe function s_or(m1: Mask, m2: Mask): Mask mask_or
+    __safe function s_init_k(k: Nat): Mask = mask_init_k;
+    __safe function s_min_set(m: Mask): Nat = mask_min_set;
+    __safe function s_max_set(m: Mask): Nat = mask_max_set;
+    __safe function s_count(m: Mask): Nat = mask_count;
+    __safe function s_all_true(m: Mask): Nat = mask_all_true;
+    __safe function s_some_true(m: Mask): Nat = mask_some_true;
+    __safe function s_and(m1: Mask, m2: Mask): Mask = mask_and;
+    __safe function s_or(m1: Mask, m2: Mask): Mask = mask_or;
 
     method empty(): Bool {
         return !Mask::some_true(this);
@@ -65,15 +65,15 @@ internal entity Mask provides Some {
     }
 }
 
-__safe internal function s_pv_undef<T>(): T special_function
+__safe internal function s_pv_undef<T>(): T = special_function;
 
 internal entity PartialVector<T> provides Some {
-    __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T pv_safe_get
-    __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> pv_compact
-    __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> pv_append
-    __safe function s_slice_start(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> pv_slice_start
-    __safe function s_slice_end(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> pv_slice_end
-    __safe function s_reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> pv_reverse
+    __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T = pv_safe_get;
+    __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> = pv_compact;
+    __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> = pv_append;
+    __safe function s_slice_start(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> = pv_slice_start;
+    __safe function s_slice_end(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> = pv_slice_end;
+    __safe function s_reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> = pv_reverse;
 
     field mask: Mask;
     field v0: T;

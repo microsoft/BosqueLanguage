@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { Argument, ICPPOp } from "./icpp_exp";
+import { Argument, ICPPOp, ParameterInfo, TargetVar } from "./icpp_exp";
 
 import { BSQRegex } from "../../../ast/bsqregex";
 
@@ -367,55 +367,43 @@ class ICPPInvokeDecl {
     }
 }
 
-class ICPPInvokeBodyDecl extends ICPPInvokeDecl 
-{
+class ICPPInvokeBodyDecl extends ICPPInvokeDecl {
     readonly body: ICPPOp[];
+    readonly paraminfo: ParameterInfo[];
     readonly resultArg: Argument;
     readonly argmaskSize: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, resultArg: Argument, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], paraminfo: ParameterInfo[], resultType: MIRResolvedTypeKey, resultArg: Argument, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
         super(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
         this.body = body;
+        this.paraminfo = paraminfo;
         this.resultArg = resultArg;
         this.argmaskSize = argmaskSize;
     }
 
     jsonEmit(): object {
-        return {...super.jsonEmit(), isbuiltin: false, resultArg: this.resultArg, body: this.body, argmaskSize: this.argmaskSize};
+        return {...super.jsonEmit(), isbuiltin: false, paraminfo: this.paraminfo, resultArg: this.resultArg, body: this.body, argmaskSize: this.argmaskSize};
     }
 }
 
-class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl 
-{
+class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl {
     readonly enclosingtype: string | undefined;
     readonly implkeyname: string;
-    readonly scalaroffsetMap: Map<string, [number, MIRResolvedTypeKey]>;
-    readonly mixedoffsetMap: Map<string, [number, MIRResolvedTypeKey]>;
     readonly binds: Map<string, MIRResolvedTypeKey>;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, enclosingtype: string | undefined, implkeyname: string, scalaroffsetMap: Map<string, [number, MIRResolvedTypeKey]>, mixedoffsetMap: Map<string, [number, MIRResolvedTypeKey]>, binds: Map<string, MIRResolvedTypeKey>) {
-        super(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, enclosingtype: string | undefined, implkeyname: string, binds: Map<string, MIRResolvedTypeKey>) {
+        super(name, ikey, srcFile, sinfo, recursive, params, resultType, 0, 0, "", 0);
         this.enclosingtype = enclosingtype;
         this.implkeyname = implkeyname;
-        this.scalaroffsetMap = scalaroffsetMap;
-        this.mixedoffsetMap = mixedoffsetMap;
         this.binds = binds;
     }
 
     jsonEmit(): object {
-        const soffsets = [...this.scalaroffsetMap].map((v) => {
-            return {name: v[0], info: v[1]};
-        });
-
-        const moffsets = [...this.mixedoffsetMap].map((v) => {
-            return {name: v[0], info: v[1]};
-        });
-
         const binds = [...this.binds].map((v) => {
             return {name: v[0], ttype: v[1]};
         });
 
-        return {...super.jsonEmit(), isbuiltin: true, enclosingtype: this.enclosingtype, implkeyname: this.implkeyname, scalaroffsetMap: soffsets, mixedoffsetMap: moffsets, binds: binds};
+        return {...super.jsonEmit(), isbuiltin: true, enclosingtype: this.enclosingtype, implkeyname: this.implkeyname, binds: binds};
     }
 }
 

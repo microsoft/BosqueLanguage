@@ -36,7 +36,7 @@ internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>
 }
 
 internal entity ListOps provides Some {
-    __assume_safe function s_safeAs<T, U>(v: T): U list_safeas
+    __assume_safe function s_safeAs<T, U>(v: T): U = list_safeas;
 
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
