@@ -765,6 +765,10 @@ InterpOp* InterpOp::jparse(json v)
         return PrimitiveBinaryCompareOp<OpCodeTag::EqBigIntOp>::jparse(v);
     case OpCodeTag::EqRationalOp:
         return PrimitiveBinaryCompareOp<OpCodeTag::EqRationalOp>::jparse(v);
+    case OpCodeTag::EqFloatOp:
+    return PrimitiveBinaryCompareOp<OpCodeTag::EqFloatOp>::jparse(v);
+    case OpCodeTag::EqDecimalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::EqDecimalOp>::jparse(v);
     case OpCodeTag::NeqNatOp:
         return PrimitiveBinaryCompareOp<OpCodeTag::NeqNatOp>::jparse(v);
     case OpCodeTag::NeqIntOp:
@@ -775,6 +779,10 @@ InterpOp* InterpOp::jparse(json v)
         return PrimitiveBinaryCompareOp<OpCodeTag::NeqBigIntOp>::jparse(v);
     case OpCodeTag::NeqRationalOp:
         return PrimitiveBinaryCompareOp<OpCodeTag::NeqRationalOp>::jparse(v);
+    case OpCodeTag::NeqFloatOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqFloatOp>::jparse(v);
+    case OpCodeTag::NeqDecimalOp:
+        return PrimitiveBinaryCompareOp<OpCodeTag::NeqDecimalOp>::jparse(v);
     case OpCodeTag::LtNatOp:
         return PrimitiveBinaryCompareOp<OpCodeTag::LtNatOp>::jparse(v);
     case OpCodeTag::LtIntOp:
@@ -789,20 +797,6 @@ InterpOp* InterpOp::jparse(json v)
         return PrimitiveBinaryCompareOp<OpCodeTag::LtFloatOp>::jparse(v);
     case OpCodeTag::LtDecimalOp:
         return PrimitiveBinaryCompareOp<OpCodeTag::LtDecimalOp>::jparse(v);
-    case OpCodeTag::GtNatOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtNatOp>::jparse(v);
-    case OpCodeTag::GtIntOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtIntOp>::jparse(v);
-    case OpCodeTag::GtBigNatOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtBigNatOp>::jparse(v);
-    case OpCodeTag::GtBigIntOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtBigIntOp>::jparse(v);
-    case OpCodeTag::GtRationalOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtRationalOp>::jparse(v);
-    case OpCodeTag::GtFloatOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtFloatOp>::jparse(v);
-    case OpCodeTag::GtDecimalOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtDecimalOp>::jparse(v);
     case OpCodeTag::LeNatOp:
         return PrimitiveBinaryCompareOp<OpCodeTag::LeNatOp>::jparse(v);
     case OpCodeTag::LeIntOp:
@@ -817,32 +811,6 @@ InterpOp* InterpOp::jparse(json v)
         return PrimitiveBinaryCompareOp<OpCodeTag::LeFloatOp>::jparse(v);
     case OpCodeTag::LeDecimalOp:
         return PrimitiveBinaryCompareOp<OpCodeTag::LeDecimalOp>::jparse(v);
-    case OpCodeTag::GeNatOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeNatOp>::jparse(v);
-    case OpCodeTag::GeIntOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeIntOp>::jparse(v);
-    case OpCodeTag::GeBigNatOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeBigNatOp>::jparse(v);
-    case OpCodeTag::GeBigIntOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeBigIntOp>::jparse(v);
-    case OpCodeTag::GeRationalOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeRationalOp>::jparse(v);
-    case OpCodeTag::GeFloatOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeFloatOp>::jparse(v);
-    case OpCodeTag::GeDecimalOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeDecimalOp>::jparse(v);
-    case OpCodeTag::EqStrPosOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::EqStrPosOp>::jparse(v);
-    case OpCodeTag::NeqStrPosOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::NeqStrPosOp>::jparse(v);
-    case OpCodeTag::LtStrPosOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::LtStrPosOp>::jparse(v);
-    case OpCodeTag::GtStrPosOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GtStrPosOp>::jparse(v);
-    case OpCodeTag::LeStrPosOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::LeStrPosOp>::jparse(v);
-    case OpCodeTag::GeStrPosOp:
-        return PrimitiveBinaryCompareOp<OpCodeTag::GeStrPosOp>::jparse(v);
     default: {
         assert(false);
         return nullptr;

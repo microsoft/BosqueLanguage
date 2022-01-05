@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
-import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
+import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
 import { ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPLayoutInfo, ICPPRecordLayoutInfo, ICPPTupleLayoutInfo, RefMask, TranspilerOptions, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
@@ -1137,6 +1137,22 @@ class ICPPBodyEmitter {
         return ICPPOpEmitter.genPrefixNotOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg));
     }
 
+    processLogicAction(op: MIRLogicAction): ICPPOp {
+        assert(op.args.length !== 0, "Should not be empty logic argument list");
+
+        if(op.args.length === 1) {
+            return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), "Bool", this.argToICPPLocation(op.args[0]), ICPPOpEmitter.genNoStatmentGuard());
+        }
+        else {
+            if (op.opkind === "/\\") {
+                return ICPPOpEmitter.genAllTrueOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), op.args.map((arg) => this.argToICPPLocation(arg)));
+            }
+            else {
+                return ICPPOpEmitter.genSomeTrueOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), op.args.map((arg) => this.argToICPPLocation(arg)));
+            }
+        }
+    }
+
     processIsTypeOf(op: MIRIsTypeOf): ICPPOp {
         const layout = this.typegen.getMIRType(op.srclayouttype);
         const flow = this.typegen.getMIRType(op.srcflowtype);
@@ -1147,17 +1163,20 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), sguard);
         }
         else if(this.typegen.isType(oftype, "None")) {
-            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
+            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
         }
         else if (this.typegen.isType(oftype, "Some")) {
-            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
+            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
+        }
+        else if(this.typegen.isType(oftype, "Nothing")) {
+            return ICPPOpEmitter.genTypeIsNothingOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
         }
         else {
             if(this.typegen.isUniqueType(oftype)) {
-                return ICPPOpEmitter.genTypeTagIsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
+                return ICPPOpEmitter.genTypeTagIsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.arg), layout.typeID, sguard);
             }
             else {
-                return ICPPOpEmitter.genTypeTagSubtypeOfOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
+                return ICPPOpEmitter.genTypeTagSubtypeOfOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.arg), layout.typeID, sguard);
             }
         }
     }
@@ -1203,6 +1222,15 @@ class ICPPBodyEmitter {
             }
             case MIROpTag.MIRConvertValue: {
                 return this.processConvertValue(op as MIRConvertValue);
+            }
+            case MIROpTag.MIRInject: {
+                return this.processInject(op as MIRInject);
+            }
+            case MIROpTag.MIRGuardedOptionInject: {
+                return this.processGuardedOptionInject(op as MIRGuardedOptionInject);
+            }
+            case MIROpTag.MIRExtract: {
+                return this.processExtract(op as MIRExtract);
             }
             case MIROpTag.MIRLoadConst: {
                 return this.processLoadConst(op as MIRLoadConst);
@@ -1310,7 +1338,7 @@ class ICPPBodyEmitter {
                 return this.processPrefixNotOp(op as MIRPrefixNotOp);
             }
             case MIROpTag.MIRLogicAction: {
-                return xxxx;
+                return this.processLogicAction(op as MIRLogicAction);
             }
             case MIROpTag.MIRIsTypeOf: {
                 return this.processIsTypeOf(op as MIRIsTypeOf);
@@ -1334,238 +1362,250 @@ class ICPPBodyEmitter {
     processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, op: MIRInvokeKey, args: Argument[]): ICPPOp {
         switch (op) {
             //op unary +
-            case "+=prefix=(Int)":
-            case "+=prefix=(Nat)":
-            case "+=prefix=(BigInt)":
-            case "+=prefix=(BigNat)":
-            case "+=prefix=(Rational)":
-            case "+=prefix=(Float)":
-            case "+=prefix=(Decimal)": {
+            case "__i__+=prefix=(Int)":
+            case "__i__+=prefix=(Nat)":
+            case "__i__+=prefix=(BigInt)":
+            case "__i__+=prefix=(BigNat)":
+            case "__i__+=prefix=(Rational)":
+            case "__i__+=prefix=(Float)":
+            case "__i__+=prefix=(Decimal)": {
                 return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, oftype, args[0], ICPPOpEmitter.genNoStatmentGuard());
             }
             //op unary -
-            case "-=prefix=(Int)": {
+            case "__i__-=prefix=(Int)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateIntOp, trgt, oftype, args[0]);
             }
-            case "-=prefix=(BigInt)": {
+            case "__i__-=prefix=(BigInt)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateBigIntOp, trgt, oftype, args[0]);
             }
-            case "-=prefix=(Rational)": {
+            case "__i__-=prefix=(Rational)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateRationalOp, trgt, oftype, args[0]);
             }
-            case "-=prefix=(Float)": {
+            case "__i__-=prefix=(Float)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateFloatOp, trgt, oftype, args[0]);
             }
-            case "-=prefix=(Decimal)": {
+            case "__i__-=prefix=(Decimal)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateDecimalOp, trgt, oftype, args[0]);
             }
             //op infix +
-            case "+=infix=(Int, Int)": {
+            case "__i__+=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "+=infix=(Nat, Nat)": {
+            case "__i__+=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "+=infix=(BigInt, BigInt)": {
+            case "__i__+=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "+=infix=(BigNat, BigNat)": {
+            case "__i__+=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "+=infix=(Rational, Rational)": {
+            case "__i__+=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "+=infix=(Float, Float)": {
+            case "__i__+=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "+=infix=(Decimal, Decimal)": {
+            case "__i__+=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix -
-            case "-=infix=(Int, Int)": {
+            case "__i__-=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "-=infix=(Nat, Nat)": {
+            case "__i__-=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "-=infix=(BigInt, BigInt)": {
+            case "__i__-=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "-=infix=(BigNat, BigNat)": {
+            case "__i__-=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "-=infix=(Rational, Rational)": {
+            case "__i__-=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "-=infix=(Float, Float)": {
+            case "__i__-=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "-=infix=(Decimal, Decimal)": {
+            case "__i__-=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix *
-            case "*=infix=(Int, Int)": {
+            case "__i__*=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "*=infix=(Nat, Nat)": {
+            case "__i__*=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "*=infix=(BigInt, BigInt)": {
+            case "__i__*=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "*=infix=(BigNat, BigNat)": {
+            case "__i__*=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "*=infix=(Rational, Rational)": {
+            case "__i__*=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "*=infix=(Float, Float)": {
+            case "__i__*=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "*=infix=(Decimal, Decimal)": {
+            case "__i__*=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix /
-            case "/=infix=(Int, Int)": {
+            case "__i__/=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "/=infix=(Nat, Nat)": {
+            case "__i__/=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "/=infix=(BigInt, BigInt)": {
+            case "__i__/=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "/=infix=(BigNat, BigNat)": {
+            case "__i__/=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "/=infix=(Rational, Rational)": {
+            case "__i__/=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "/=infix=(Float, Float)": {
+            case "__i__/=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "/=infix=(Decimal, Decimal)": {
+            case "__i__/=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix ==
-            case "===infix=(Int, Int)": {
+            case "__i__===infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "===infix=(Nat, Nat)": {
+            case "__i__===infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "===infix=(BigInt, BigInt)": {
+            case "__i__===infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "===infix=(BigNat, BigNat)": {
+            case "__i__===infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "===infix=(Rational, Rational)": {
+            case "__i__===infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqRationalOp, trgt, oftype, args[0], args[1]);
             }
+            case "__i__===infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqFloatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "__i__===infix=(Decimal, Decmial)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqDecimalOp, trgt, oftype, args[0], args[1]);
+            }
             //op infix !=
-            case "!==infix=(Int, Int)": {
+            case "__i__!==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "!==infix=(Nat, Nat)": {
+            case "__i__!==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "!==infix=(BigInt, BigInt)": {
+            case "__i__!==infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "!==infix=(BigNat, BigNat)": {
+            case "__i__!==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "!==infix=(Rational, Rational)": {
+            case "__i__!==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqRationalOp, trgt, oftype, args[0], args[1]);
             }
+            case "__i__!==infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqFloatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "__i__!==infix=(Decimal, Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqDecimalOp, trgt, oftype, args[0], args[1]);
+            }
             //op infix <
-            case "<=infix=(Int, Int)": {
+            case "__i__<=infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "<=infix=(Nat, Nat)": {
+            case "__i__<=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "<=infix=(BigInt, BigInt)": {
+            case "__i__<=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "<=infix=(BigNat, BigNat)": {
+            case "__i__<=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "<=infix=(Rational, Rational)": {
+            case "__i__<=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "<=infix=(Float, Float)": {
+            case "__i__<=infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "<=infix=(Decimal, Decimal)": {
+            case "__i__<=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >
-            case ">=infix=(Int, Int)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__>=infix=(Int, Int)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[1], args[0]);
             }
-            case ">=infix=(Nat, Nat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__>=infix=(Nat, Nat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[1], args[0]);
             }
-            case ">=infix=(BigInt, BigInt)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__>=infix=(BigInt, BigInt)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[1], args[0]);
             }
-            case ">=infix=(BigNat, BigNat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__>=infix=(BigNat, BigNat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[1], args[0]);
             }
-            case ">=infix=(Rational, Rational)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtRationalOp, trgt, oftype, args[0], args[1]);
+            case "__i__>=infix=(Rational, Rational)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[1], args[0]);
             }
-            case ">=infix=(Float, Float)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtFloatOp, trgt, oftype, args[0], args[1]);
+            case "__i__>=infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[1], args[0]);
             }
-            case ">=infix=(Decimal, Decimal)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtDecimalOp, trgt, oftype, args[0], args[1]);
+            case "__i__>=infix=(Decimal, Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[1], args[0]);
             }
             //op infix <=
-            case "<==infix=(Int, Int)": {
+            case "__i__<==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "<==infix=(Nat, Nat)": {
+            case "__i__<==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "<==infix=(BigInt, BigInt)":  {
+            case "__i__<==infix=(BigInt, BigInt)":  {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "<==infix=(BigNat, BigNat)": {
+            case "__i__<==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "<==infix=(Rational, Rational)": {
+            case "__i__<==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "<==infix=(Float, Float)": {
+            case "__i__<==infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "<==infix=(Decimal, Decimal)": {
+            case "__i__<==infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >=
-            case ">==infix=(Int, Int)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__>==infix=(Int, Int)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[1], args[0]);
             }
-            case ">==infix=(Nat, Nat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__>==infix=(Nat, Nat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[1], args[0]);
             }
-            case ">==infix=(BigInt, BigInt)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__>==infix=(BigInt, BigInt)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[1], args[0]);
             }
-            case ">==infix=(BigNat, BigNat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__>==infix=(BigNat, BigNat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[1], args[0]);
             }
-            case ">==infix=(Rational, Rational)":{
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeRationalOp, trgt, oftype, args[0], args[1]);
+            case "__i__>==infix=(Rational, Rational)":{
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[1], args[0]);
             }
-            case ">==infix=(Float, Float)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeFloatOp, trgt, oftype, args[0], args[1]);
+            case "__i__>==infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[1], args[0]);
             }
-            case ">==infix=(Decimal, Decimal)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeDecimalOp, trgt, oftype, args[0], args[1]);
+            case "__i__>==infix=(Decimal, Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[1], args[0]);
             }
             default: {
                 return NOT_IMPLEMENTED(op);
@@ -1666,7 +1706,7 @@ class ICPPBodyEmitter {
 
     generateICPPInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl | undefined {
         const params = idecl.params.map((arg) => {
-            return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
+            return new ICPPFunctionParameter(arg.name, arg.type);
         });
 
         let paramsmap: Map<string, number> = new Map<string, number>();
@@ -1675,15 +1715,13 @@ class ICPPBodyEmitter {
             paramsmap.set(param.name, i);
         }
 
-        const rtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(idecl.resultType));
-
         this.initializeBodyGen(idecl.srcFile, this.typegen.getMIRType(idecl.resultType), paramsmap);
 
         if (idecl instanceof MIRInvokeBodyDecl) {
             const revblocks = topologicalOrder((idecl as MIRInvokeBodyDecl).body.body).reverse().map((bb) => bb.label);
             const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, revblocks);
 
-            return new ICPPInvokeBodyDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
+            return new ICPPInvokeBodyDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, idecl.resultType, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
         }
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
@@ -1698,16 +1736,14 @@ class ICPPBodyEmitter {
         }
         
         const params = idecl.params.map((arg) => {
-            return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
+            return new ICPPFunctionParameter(arg.name, arg.type);
         });
-
-        const rtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(idecl.resultType));
 
         let scalarsmap: Map<string, [number, MIRResolvedTypeKey]> = new Map<string, [number, MIRResolvedTypeKey]>();
         let spoffset: number = 0;
         for(let i = 0; i < idecl.scalarslotsinfo.length; ++i) {
             const slot = idecl.scalarslotsinfo[i];
-            const stype = this.typegen.getICPPTypeData(this.typegen.getMIRType(slot.vtype));
+            const stype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(slot.vtype));
             scalarsmap.set(slot.vname, [spoffset, slot.vtype]);
             spoffset += stype.allocinfo.inlinedatasize;
         }
@@ -1717,24 +1753,13 @@ class ICPPBodyEmitter {
         let mmask = "";
         for(let i = 0; i < idecl.mixedslotsinfo.length; ++i) {
             const slot = idecl.mixedslotsinfo[i];
-            const mtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(slot.vtype));
+            const mtype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(slot.vtype));
             mixedmap.set(slot.vname, [mpoffset, slot.vtype]);
             mpoffset += mtype.allocinfo.inlinedatasize;
             mmask = mmask + mtype.allocinfo.inlinedmask;
         }
 
-        let binds: Map<string, ICPPType> = new Map<string, ICPPType>();
-        idecl.binds.forEach((btype, bname) => {
-            binds.set(bname, this.typegen.getICPPTypeData(this.typegen.getMIRType(btype)));
-        });
-
-        let pcodes: Map<string, ICPPPCode> = new Map<string, ICPPPCode>();
-        idecl.pcodes.forEach((pc, pcname) => {
-            const icpppc = new ICPPPCode(pc.code, pc.cargs.map((carg) => ICPPOpEmitter.genParameterArgument(this.argsMap.get(carg) as number)));
-            pcodes.set(pcname, icpppc);
-        });
-
-        return new ICPPInvokePrimitiveDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, spoffset, mpoffset, mmask, 0, idecl.enclosingDecl, idecl.implkey, scalarsmap, mixedmap, binds, pcodes);
+        return new ICPPInvokePrimitiveDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, idecl.resultType, spoffset, mpoffset, mmask, 0, idecl.enclosingDecl, idecl.implkey, scalarsmap, mixedmap, idecl.binds);
     }
 }
 

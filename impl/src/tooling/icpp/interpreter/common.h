@@ -29,9 +29,9 @@
 #define BSQ_INTERNAL_ASSERT(C) if(!(C)) { assert(false); }
 
 #ifdef BSQ_DEBUG_BUILD
-#define HANDLE_BSQ_ABORT(MSG, F, L, C) { printf("\"%s\" in %s on line %i\n", MSG, F, (int)L); fflush(stdout); longjmp(Environment::g_entrybuff, C); }
+#define HANDLE_BSQ_ABORT(MSG, F, L, C) { printf("\"%s\" in %s on line %i\n", MSG, F, (int)L); fflush(stdout); longjmp(Evaluator::g_entrybuff, C); }
 #else
-#define HANDLE_BSQ_ABORT() { printf("ABORT\n"); longjmp(Environment::g_entrybuff, 5); }
+#define HANDLE_BSQ_ABORT() { printf("ABORT\n"); longjmp(Evaluator::g_entrybuff, 5); }
 #endif
 
 #ifdef BSQ_DEBUG_BUILD

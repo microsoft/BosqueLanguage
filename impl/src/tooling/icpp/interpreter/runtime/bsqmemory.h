@@ -38,6 +38,11 @@ public:
         return this->allocinfo.heapmask == nullptr;
     }
 
+    virtual bool isUnion() const
+    {
+        return false;
+    }
+
     virtual void clearValue(StorageLocationPtr trgt) const = 0;
     virtual void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const = 0;
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const = 0;

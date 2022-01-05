@@ -6,7 +6,6 @@
 #pragma once
 
 #include "../common.h"
-#include "bsqtype.h"
 #include "bsqop.h"
 
 void jsonLoadBSQTypeDecl(json v);
@@ -92,8 +91,8 @@ public:
     const std::map<std::string, std::pair<uint32_t, const BSQType*>> mixedoffsetMap;
     const std::map<std::string, const BSQType*> binds;
 
-    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap, std::map<std::string, std::pair<uint32_t, const BSQType*>> mixedoffsetMap, std::map<std::string, const BSQType*> binds, std::map<std::string, BSQPCode*> pcodes)
-    : BSQInvokeDecl(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, mixedstackBytes, mixedMask, maskSlots), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), scalaroffsetMap(scalaroffsetMap), mixedoffsetMap(mixedoffsetMap), binds(binds), pcodes(pcodes)
+    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, std::pair<uint32_t, const BSQType*>> scalaroffsetMap, std::map<std::string, std::pair<uint32_t, const BSQType*>> mixedoffsetMap, std::map<std::string, const BSQType*> binds)
+    : BSQInvokeDecl(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarstackBytes, mixedstackBytes, mixedMask, maskSlots), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), scalaroffsetMap(scalaroffsetMap), mixedoffsetMap(mixedoffsetMap), binds(binds)
     {;}
 
     virtual ~BSQInvokePrimitiveDecl() {;}

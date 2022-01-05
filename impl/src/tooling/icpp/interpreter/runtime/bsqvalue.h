@@ -530,6 +530,16 @@ public:
     {;}
 
     virtual ~BSQUnionType() {;}
+
+    virtual bool isUnion() const
+    {
+        return true;
+    }
+
+    virtual const BSQType* getVType(StorageLocationPtr trgt) const = 0;
+
+    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const = 0;
+    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const = 0;
 };
 
 class BSQUnionRefType : public BSQUnionType
@@ -579,6 +589,21 @@ public:
     void extractToAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
     {
         btype->storeValue(trgt, src);
+    }
+
+    virtual const BSQType* getVType(StorageLocationPtr trgt) const override final
+    {
+        return SLPTR_LOAD_HEAP_TYPE(trgt);
+    }
+
+    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const override final
+    {
+        return trgt;
+    }
+
+    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const override final
+    {
+        return trgt;
     }
 };
 
@@ -651,6 +676,21 @@ public:
     void extractToAtomic(const BSQType* btype, StorageLocationPtr trgt, StorageLocationPtr src) const
     {
         btype->storeValue(trgt, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
+    }
+
+    virtual const BSQType* getVType(StorageLocationPtr trgt) const override final
+    {
+        return SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
+    }
+
+    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const override final
+    {
+        return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+    }
+
+    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const override final
+    {
+        return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
     }
 };
 
@@ -767,6 +807,50 @@ public:
 
                 btype->storeValue(trgt, boxeddata);
             }
+        }
+    }
+
+    virtual const BSQType* getVType(StorageLocationPtr trgt) const override final
+    {
+        auto btype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
+        if(btype->tkind != BSQTypeLayoutKind::BoxedStruct)
+        {
+            return btype;
+        }
+        else
+        {
+            return dynamic_cast<const BSQBoxedStructType*>(btype)->oftype;
+        }
+    }
+
+    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const override final
+    {
+        auto btype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
+        if(btype->tkind != BSQTypeLayoutKind::BoxedStruct)
+        {
+            return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+        }
+        else
+        {
+            auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+            return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata);
+        }
+    }
+
+    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const override final
+    {
+        auto btype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
+        if(btype->tkind != BSQTypeLayoutKind::BoxedStruct)
+        {
+            return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+        }
+        else
+        {
+            auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+            auto boxeddata = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata);
+
+            dynamic_cast<const BSQBoxedStructType*>(btype)->oftype->storeValue(scratch, boxeddata);
+            return scratch;
         }
     }
 };

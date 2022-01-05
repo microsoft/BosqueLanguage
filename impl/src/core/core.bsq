@@ -270,6 +270,8 @@ __safe __primitive inline infix operator *(a: Float, b: Float): Float = default;
 __primitive inline infix operator /(a: Float, b: Float): Float = default;
 __safe __primitive inline infix operator +(a: Float, b: Float): Float = default;
 __safe __primitive inline infix operator -(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator ==(a: Float, b: Float): Bool = default;
+__safe __primitive inline infix operator !=(a: Float, b: Float): Bool = default;
 __safe __primitive inline infix operator <(a: Float, b: Float): Bool = default;
 __safe __primitive inline infix operator >(a: Float, b: Float): Bool = default;
 __safe __primitive inline infix operator <=(a: Float, b: Float): Bool = default;
@@ -279,7 +281,7 @@ __safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, APIType {
     const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
     const zero: Decimal = 0.0d;
-    const one: Decmial = 1.0d;
+    const one: Decimal = 1.0d;
 
     const pi: Decimal = 3.1415926535897931d;
     const e: Decimal = 2.7182818284590451d;
@@ -313,6 +315,8 @@ __safe __primitive inline infix operator *(a: Decimal, b: Decimal): Decimal = de
 __primitive inline infix operator /(a: Decimal, b: Decimal): Decimal = default;
 __safe __primitive inline infix operator +(a: Decimal, b: Decimal): Decimal = default;
 __safe __primitive inline infix operator -(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator ==(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline infix operator !=(a: Decimal, b: Decimal): Bool = default;
 __safe __primitive inline infix operator <(a: Decimal, b: Decimal): Bool = default;
 __safe __primitive inline infix operator >(a: Decimal, b: Decimal): Bool = default;
 __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;

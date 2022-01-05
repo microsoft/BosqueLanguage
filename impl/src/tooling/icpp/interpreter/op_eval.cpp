@@ -68,7 +68,16 @@ BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->c
 BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
+#define VCALL_PRE(VTYPE, SRCTYPE, SL) StorageLocationPtr __scratch__ = BSQ_STACK_SPACE_ALLOC(SRCTYPE->allocinfo.inlinedatasize); \
+GCStack::pushFrame(&__scratch__, SRCTYPE->allocinfo.inlinedmask); \
+VTYPE->getVStorageLocation(SL, __scratch__);
+
+#define VCALL_POST() GCStack::popFrame()
+
+jmp_buf Evaluator::g_entrybuff;
 EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
+
+std::vector<const BSQInvokeDecl*> Evaluator::g_invokes;
 
 void Evaluator::evalDeadFlowOp()
 {
@@ -113,15 +122,7 @@ void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
 void Evaluator::evalNoneInitUnionOp(const NoneInitUnionOp* op)
 {
     auto tl = this->evalTargetVar(op->trgt);
-    if(op->oftype->isInline())
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(BSQType::g_typeNone, tl);
-        SLPTR_STORE_CONTENTS_AS(BSQNone, SLPTR_LOAD_UNION_INLINE_DATAPTR(tl), BSQNoneValue);
-    }
-    else
-    {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tl, BSQNoneHeapValue);
-    }
+    SLPTR_STORE_CONTENTS_AS(BSQNone, tl, BSQNoneValue);
 }
 
 void Evaluator::evalStoreConstantMaskValueOp(const StoreConstantMaskValueOp* op)
@@ -150,14 +151,14 @@ void Evaluator::evalBoxOp<true>(const BoxOp* op)
 {
     if(this->tryProcessGuardStmt(op->trgt, op->intotype, op->sguard))
     {
-        op->intotype->injectIntoUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
+        coerce(op->fromtype, op->intotype, this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
     }
 }
 
 template <>
 void Evaluator::evalBoxOp<false>(const BoxOp* op)
 {
-    op->intotype->injectIntoUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
+    coerce(op->fromtype, op->intotype, this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
 }
 
 template <>
@@ -165,14 +166,14 @@ void Evaluator::evalExtractOp<true>(const ExtractOp* op)
 {
     if(this->tryProcessGuardStmt(op->trgt, op->intotype, op->sguard))
     {
-        op->intotype->extractFromUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
+        coerce(op->fromtype, op->intotype, this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
     }
 }
 
 template <>
 void Evaluator::evalExtractOp<false>(const ExtractOp* op)
 {
-    op->intotype->extractFromUnion(this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
+    coerce(op->fromtype, op->intotype, this->evalTargetVar(op->trgt), this->evalArgument(op->arg));
 }
 
 void Evaluator::evalLoadConstOp(const LoadConstOp* op)
@@ -187,14 +188,16 @@ void Evaluator::processTupleDirectLoadAndStore(StorageLocationPtr src, const BSQ
 
 void Evaluator::processTupleVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQTupleIndex idx, TargetVar dst, const BSQType* dsttype)
 {
-    //
-    //TODO: this is where it might be nice to do some mono/polymorphic inline caching
-    //
+    const BSQType* ttype = srctype->getVType(src);
+    StorageLocationPtr pp = srctype->getVStorageLocation_noalloc(src);
 
-    const BSQType* ttype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(srctype, src);
+    //
+    //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
+    //
     auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
     auto voffset = tinfo->idxoffsets[idx];
-    this->processTupleDirectLoadAndStore(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), ttype, voffset, dst, dsttype);
+
+    this->processTupleDirectLoadAndStore(pp, ttype, voffset, dst, dsttype);
 }
 
 void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype)
@@ -204,11 +207,12 @@ void Evaluator::processRecordDirectLoadAndStore(StorageLocationPtr src, const BS
 
 void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQRecordPropertyID propId, TargetVar dst, const BSQType* dsttype)
 {
-    //
-    //TODO: this is where it might be nice to do some mono/polymorphic inline caching
-    //
+    const BSQType* rtype = srctype->getVType(src);
+    StorageLocationPtr pp = srctype->getVStorageLocation_noalloc(src);
 
-    const BSQType* rtype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(srctype, src);
+    //
+    //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
+    //
     auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
     auto proppos = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), propId);
     assert(proppos != rinfo->properties.cend());
@@ -216,7 +220,7 @@ void Evaluator::processRecordVirtualLoadAndStore(StorageLocationPtr src, const B
     auto propidx = (size_t)std::distance(rinfo->properties.cbegin(), proppos);
     auto voffset = rinfo->propertyoffsets[propidx];
 
-    this->processRecordDirectLoadAndStore(SLPTR_LOAD_UNION_INLINE_DATAPTR(src), rtype, voffset, dst, dsttype);
+    this->processRecordDirectLoadAndStore(pp, rtype, voffset, dst, dsttype);
 }
     
 void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BSQType* srctype, size_t slotoffset, TargetVar dst, const BSQType* dsttype)
@@ -226,13 +230,13 @@ void Evaluator::processEntityDirectLoadAndStore(StorageLocationPtr src, const BS
 
 void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const BSQUnionType* srctype, BSQFieldID fldId, TargetVar dst, const BSQType* dsttype)
 {
+    const BSQType* etype = srctype->getVType(src);
+    StorageLocationPtr pp = srctype->getVStorageLocation_noalloc(src);
+
     //
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
     //
-
-    const BSQType* etype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(srctype, src);
     auto einfo = dynamic_cast<const BSQEntityInfo*>(etype);
-
     auto fldpos = std::find(einfo->fields.cbegin(), einfo->fields.cend(), fldId);
     assert(fldpos != einfo->fields.cend());
 
@@ -258,20 +262,22 @@ void Evaluator::processGuardVarStore(const BSQGuard& gv, BSQBool f)
 void Evaluator::evalTupleHasIndexOp(const TupleHasIndexOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    const BSQType* ttype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
+
+    const BSQType* ttype = op->layouttype->getVType(sl);
     auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
-    
     BSQBool hasidx = op->idx < tinfo->maxIndex;
+
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), hasidx);
 }
 
 void Evaluator::evalRecordHasPropertyOp(const RecordHasPropertyOp* op)
 {
     auto sl = this->evalArgument(op->arg);
-    const BSQType* rtype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
-    auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
 
+    const BSQType* rtype = op->layouttype->getVType(sl);
+    auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
     BSQBool hasprop = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), op->propId) != rinfo->properties.cend();
+
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), hasprop);
 }
 
@@ -294,14 +300,16 @@ void Evaluator::evalLoadTupleIndexSetGuardDirectOp(const LoadTupleIndexSetGuardD
 
 void Evaluator::evalLoadTupleIndexSetGuardVirtualOp(const LoadTupleIndexSetGuardVirtualOp* op)
 {
+    auto sl = this->evalArgument(op->arg);
+
+    const BSQType* ttype = op->layouttype->getVType(sl);
+    StorageLocationPtr pp = op->layouttype->getVStorageLocation_noalloc(sl);
+
     //
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
     //
 
-    auto sl = this->evalArgument(op->arg);
-    const BSQType* ttype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
     auto tinfo = dynamic_cast<const BSQTupleInfo*>(ttype);
-    
     BSQBool loadsafe = op->idx < tinfo->maxIndex;
     if(loadsafe)
     {
@@ -330,14 +338,16 @@ void Evaluator::evalLoadRecordPropertySetGuardDirectOp(const LoadRecordPropertyS
 
 void Evaluator::evalLoadRecordPropertySetGuardVirtualOp(const LoadRecordPropertySetGuardVirtualOp* op)
 {
+    auto sl = this->evalArgument(op->arg);
+    
+    const BSQType* rtype = op->layouttype->getVType(sl);
+    StorageLocationPtr pp = op->layouttype->getVStorageLocation_noalloc(sl);
+
     //
     //TODO: this is where it might be nice to do some mono/polymorphic inline caching vtable goodness
     //
 
-    auto sl = this->evalArgument(op->arg);
-    const BSQType* rtype = SLPTR_LOAD_CONCRETE_TYPE_FROM_UNION(op->layouttype, sl);
     auto rinfo = dynamic_cast<const BSQRecordInfo*>(rtype);
-
     BSQBool loadsafe = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), op->propId) != rinfo->properties.cend();
     if(loadsafe)
     {
@@ -359,23 +369,23 @@ void Evaluator::evalLoadVirtualFieldOp(const LoadEntityFieldVirtualOp* op)
 
 void Evaluator::evalProjectTupleOp(const ProjectTupleOp* op)
 {
+    StorageLocationPtr src = this->evalArgument(op->arg);
+    StorageLocationPtr trgtl = this->evalTargetVar(op->trgt);
+
     void* sl = nullptr;
-    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = this->evalArgument(op->arg);
+        sl = src;
     }
-    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
+    else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
-
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVStorageLocation_noalloc(src);
     }
-
-    auto trgtl = this->evalTargetVar(op->trgt);
+    
     for(size_t i = 0; i < op->idxs.size(); ++i)
     {
         auto dst = SLPTR_INDEX_DATAPTR(trgtl, op->trgttype->idxoffsets[i]);
@@ -387,20 +397,21 @@ void Evaluator::evalProjectTupleOp(const ProjectTupleOp* op)
 
 void Evaluator::evalProjectRecordOp(const ProjectRecordOp* op)
 {
+    StorageLocationPtr src = this->evalArgument(op->arg);
+    StorageLocationPtr trgtl = this->evalTargetVar(op->trgt);
+
     void* sl = nullptr;
-    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = this->evalArgument(op->arg);
+        sl = src;
     }
-    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
+    else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
-        
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVStorageLocation_noalloc(src);
     }
 
     auto trgtl = this->evalTargetVar(op->trgt);
@@ -415,20 +426,21 @@ void Evaluator::evalProjectRecordOp(const ProjectRecordOp* op)
 
 void Evaluator::evalProjectEntityOp(const ProjectEntityOp* op)
 {
+    StorageLocationPtr src = this->evalArgument(op->arg);
+    StorageLocationPtr trgtl = this->evalTargetVar(op->trgt);
+
     void* sl = nullptr;
-    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = this->evalArgument(op->arg);
+        sl = src;
     }
-    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
+    else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
-        
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVStorageLocation_noalloc(src);
     }
 
     auto trgtl = this->evalTargetVar(op->trgt);
@@ -445,24 +457,24 @@ void Evaluator::evalUpdateTupleOp(const UpdateTupleOp* op)
 {
     Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
     
+    StorageLocationPtr src = this->evalArgument(op->arg);
+
     void* sl = nullptr;
-    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = this->evalArgument(op->arg);
+        sl = src;
     }
-    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
+    else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
-        
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVStorageLocation_noalloc(src);
     }
 
     void* trgtl = nullptr;
-    if(op->trgttype->tkind == BSQTypeKind::Struct)
+    if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
         trgtl = this->evalTargetVar(op->trgt);
         GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
@@ -485,24 +497,24 @@ void Evaluator::evalUpdateRecordOp(const UpdateRecordOp* op)
 {
     Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
     
+    StorageLocationPtr src = this->evalArgument(op->arg);
+
     void* sl = nullptr;
-    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = this->evalArgument(op->arg);
+        sl = src;
     }
-    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
+    else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
-        
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVStorageLocation_noalloc(src);
     }
 
     void* trgtl = nullptr;
-    if(op->trgttype->tkind == BSQTypeKind::Struct)
+    if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
         trgtl = this->evalTargetVar(op->trgt);
         GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
@@ -525,24 +537,24 @@ void Evaluator::evalUpdateEntityOp(const UpdateEntityOp* op)
 {
     Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
     
+    StorageLocationPtr src = this->evalArgument(op->arg);
+
     void* sl = nullptr;
-    if(op->layouttype->tkind == BSQTypeKind::Struct)
+    if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = this->evalArgument(op->arg);
+        sl = src;
     }
-    else if(op->layouttype->tkind == BSQTypeKind::UnionInline)
+    else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->arg));
+        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        assert(op->layouttype->tkind == BSQTypeKind::Ref || op->layouttype->tkind == BSQTypeKind::UnionRef);
-        
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalArgument(op->arg));
+        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVStorageLocation_noalloc(src);
     }
 
     void* trgtl = nullptr;
-    if(op->trgttype->tkind == BSQTypeKind::Struct)
+    if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
         trgtl = this->evalTargetVar(op->trgt);
         GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
@@ -590,7 +602,7 @@ void Evaluator::evalInvokeFixedFunctionOp<true>(const InvokeFixedFunctionOp* op)
     if(this->tryProcessGuardStmt(op->trgt, op->trgttype, op->sguard))
     {
         StorageLocationPtr resl = this->evalTargetVar(op->trgt);
-        this->invoke(Environment::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
+        this->invoke(Evaluator::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
     }
 }
 
@@ -598,17 +610,24 @@ template <>
 void Evaluator::evalInvokeFixedFunctionOp<false>(const InvokeFixedFunctionOp* op)
 {
     StorageLocationPtr resl = this->evalTargetVar(op->trgt);
-    this->invoke(Environment::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
+    this->invoke(Evaluator::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
 }
 
 void Evaluator::evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op)
 {
-    //
-    //TODO: remember to handle the case where rcvr layout is inline union but target call expects a ref union
-    //
+    auto sl = this->evalArgument(op->args[0]);
+    const BSQType* etype = op->rcvrlayouttype->getVType(sl);
 
-    //NOT IMPLEMENTED
-    assert(false);
+    StorageLocationPtr rcvrloc;
+    VCALL_PRE(op->rcvrlayouttype, etype, rcvrloc);
+
+    auto viter = etype->vtable.find(op->invokeId);
+    BSQ_INTERNAL_ASSERT(viter != etype->vtable.cend());
+
+    StorageLocationPtr resl = this->evalTargetVar(op->trgt);
+    this->vinvoke(Evaluator::g_invokes[viter->second], rcvrloc, op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
+
+    VCALL_POST();
 }
 
 void Evaluator::evalInvokeVirtualOperatorOp(const InvokeVirtualOperatorOp* op)
@@ -621,7 +640,7 @@ void Evaluator::evalConstructorTupleOp(const ConstructorTupleOp* op)
 {
     StorageLocationPtr sl = this->evalTargetVar(op->trgt);
     StorageLocationPtr tcontents = nullptr;
-    if(op->oftype->tkind == BSQTypeKind::Struct)
+    if(op->oftype->tkind == BSQTypeLayoutKind::Struct)
     {
         tcontents = sl;
     }
@@ -642,7 +661,7 @@ void Evaluator::evalConstructorTupleFromEphemeralListOp(const ConstructorTupleFr
 {
     StorageLocationPtr sl = this->evalTargetVar(op->trgt);
     StorageLocationPtr tcontents = nullptr;
-    if(op->oftype->tkind == BSQTypeKind::Struct)
+    if(op->oftype->tkind == BSQTypeLayoutKind::Struct)
     {
         tcontents = sl;
     }
@@ -660,7 +679,7 @@ void Evaluator::evalConstructorRecordOp(const ConstructorRecordOp* op)
 {
     StorageLocationPtr sl = this->evalTargetVar(op->trgt);
     StorageLocationPtr tcontents = nullptr;
-    if(op->oftype->tkind == BSQTypeKind::Struct)
+    if(op->oftype->tkind == BSQTypeLayoutKind::Struct)
     {
         tcontents = sl;
     }
@@ -681,7 +700,7 @@ void Evaluator::evalConstructorRecordFromEphemeralListOp(const ConstructorRecord
 {
     StorageLocationPtr sl = this->evalTargetVar(op->trgt);
     StorageLocationPtr tcontents = nullptr;
-    if(op->oftype->tkind == BSQTypeKind::Struct)
+    if(op->oftype->tkind == BSQTypeLayoutKind::Struct)
     {
         tcontents = sl;
     }
@@ -757,7 +776,7 @@ void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)
 template<>
 void Evaluator::evalBinKeyEqFastOp<true>(const BinKeyEqFastOp* op)
 {
-    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    if(this->tryProcessGuardStmt(op->trgt, BSQWellKnownType::g_typeBool, op->sguard))
     {
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, this->evalArgument(op->argl), this->evalArgument(op->argr)) == 0);
     }
@@ -772,10 +791,10 @@ void Evaluator::evalBinKeyEqFastOp<false>(const BinKeyEqFastOp* op)
 template<>
 void Evaluator::evalBinKeyEqStaticOp<true>(const BinKeyEqStaticOp* op)
 {
-    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    if(this->tryProcessGuardStmt(op->trgt, BSQWellKnownType::g_typeBool, op->sguard))
     {
-        auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
-        auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+        auto lldata = op->argllayout->isUnion() ? dynamic_cast<const BSQUnionType*>(op->argllayout)->getVStorageLocation_noalloc(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+        auto rrdata = op->argrlayout->isUnion() ? dynamic_cast<const BSQUnionType*>(op->argrlayout)->getVStorageLocation_noalloc(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
     
         SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) == 0);
     }
@@ -784,8 +803,8 @@ void Evaluator::evalBinKeyEqStaticOp<true>(const BinKeyEqStaticOp* op)
 template<>
 void Evaluator::evalBinKeyEqStaticOp<false>(const BinKeyEqStaticOp* op)
 {
-    auto lldata = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
-    auto rrdata = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_DATAPTR(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
+    auto lldata = op->argllayout->isUnion() ? dynamic_cast<const BSQUnionType*>(op->argllayout)->getVStorageLocation_noalloc(this->evalArgument(op->argl)) : this->evalArgument(op->argl); 
+    auto rrdata = op->argrlayout->isUnion() ? dynamic_cast<const BSQUnionType*>(op->argrlayout)->getVStorageLocation_noalloc(this->evalArgument(op->argr)) : this->evalArgument(op->argr); 
     
     SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), op->oftype->fpkeycmp(op->oftype, lldata, rrdata) == 0);
 }
@@ -793,7 +812,7 @@ void Evaluator::evalBinKeyEqStaticOp<false>(const BinKeyEqStaticOp* op)
 template<>
 void Evaluator::evalBinKeyEqVirtualOp<true>(const BinKeyEqVirtualOp* op)
 {
-    if(this->tryProcessGuardStmt(op->trgt, BSQType::g_typeBool, op->sguard))
+    if(this->tryProcessGuardStmt(op->trgt, BSQWellKnownType::g_typeBool, op->sguard))
     {
         auto lltype = op->argllayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argl)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argl)); 
         auto rrtype = op->argrlayout->tkind == BSQTypeKind::UnionInline ? SLPTR_LOAD_UNION_INLINE_TYPE(this->evalArgument(op->argr)) : SLPTR_LOAD_HEAP_TYPE_ANY(this->evalArgument(op->argr));
@@ -1754,6 +1773,16 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         assert(false);
         break;
     }
+    case OpCodeTag::EqFloatOp:
+    {
+        assert(false);
+        break;
+    }
+    case OpCodeTag::EqDecimalOp:
+    {
+        assert(false);
+        break;
+    }
     case OpCodeTag::NeqNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::NeqNatOp, BSQNat, !=)
@@ -1775,6 +1804,16 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         break;
     }
     case OpCodeTag::NeqRationalOp:
+    {
+        assert(false);
+        break;
+    }
+    case OpCodeTag::NeqFloatOp:
+    {
+        assert(false);
+        break;
+    }
+    case OpCodeTag::NeqDecimalOp:
     {
         assert(false);
         break;
@@ -1814,41 +1853,6 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LtDecimalOp, BSQDecimal, std::isnan, std::isinf, <)
         break;
     }
-    case OpCodeTag::GtNatOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtNatOp, BSQNat, >)
-        break;
-    }
-    case OpCodeTag::GtIntOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtIntOp, BSQInt, >)
-        break;
-    }
-    case OpCodeTag::GtBigNatOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtBigNatOp, BSQBigNat, >)
-        break;
-    }
-    case OpCodeTag::GtBigIntOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GtBigIntOp, BSQBigInt, >)
-        break;
-    }
-    case OpCodeTag::GtRationalOp:
-    {
-        assert(false);
-        break;
-    }
-    case OpCodeTag::GtFloatOp:
-    {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtFloatOp, BSQFloat, std::isnan, std::isinf, >)
-        break;
-    }
-    case OpCodeTag::GtDecimalOp:
-    {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GtDecimalOp, BSQDecimal, std::isnan, std::isinf, >)
-        break;
-    }
     case OpCodeTag::LeNatOp:
     {
         PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::LeNatOp, BSQNat, <=)
@@ -1882,89 +1886,6 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::LeDecimalOp:
     {
         PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::LeDecimalOp, BSQDecimal, std::isnan, std::isinf, <=)
-        break;
-    }
-    case OpCodeTag::GeNatOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeNatOp, BSQNat, >=)
-        break;
-    }
-    case OpCodeTag::GeIntOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeIntOp, BSQInt, >=)
-        break;
-    }
-    case OpCodeTag::GeBigNatOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeBigNatOp, BSQBigNat, >=)
-        break;
-    }
-    case OpCodeTag::GeBigIntOp:
-    {
-        PrimitiveBinaryComparatorMacroSafe(this, op, OpCodeTag::GeBigIntOp, BSQBigInt, >=)
-        break;
-    }
-    case OpCodeTag::GeRationalOp:
-    {
-        assert(false);
-        break;
-    }
-    case OpCodeTag::GeFloatOp:
-    {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeFloatOp, BSQFloat, std::isnan, std::isinf, >=)
-        break;
-    }
-    case OpCodeTag::GeDecimalOp:
-    {
-        PrimitiveBinaryComparatorMacroFP(this, op, OpCodeTag::GeDecimalOp, BSQDecimal, std::isnan, std::isinf, >=)
-        break;
-    }
-    case OpCodeTag::EqStrPosOp:
-    {
-        const PrimitiveBinaryOperatorOp<OpCodeTag::EqStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::EqStrPosOp>*>(op);
-        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
-        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorEqual(&i1, &i2));
-        break;
-    }
-    case OpCodeTag::NeqStrPosOp:
-    {
-        const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::NeqStrPosOp>*>(op);
-        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
-        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorEqual(&i1, &i2));
-        break;
-    }
-    case OpCodeTag::LtStrPosOp:
-    {
-        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
-        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
-        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorLess(&i1, &i2));
-        break;
-    }
-    case OpCodeTag::GtStrPosOp:
-    {
-        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
-        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
-        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), iteratorLess(&i2, &i1));
-        break;
-    }
-    case OpCodeTag::LeStrPosOp:
-    {
-        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
-        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
-        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorLess(&i2, &i1));
-        break;
-    }
-    case OpCodeTag::GeStrPosOp:
-    {
-        const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>* bop = static_cast<const PrimitiveBinaryOperatorOp<OpCodeTag::LtStrPosOp>*>(op);
-        auto i1 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->larg));
-        auto i2 = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, this->evalArgument(bop->rarg));
-        SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(bop->trgt), !iteratorLess(&i1, &i2));
         break;
     }
     default:
@@ -2015,9 +1936,9 @@ void Evaluator::evaluateBody(StorageLocationPtr resultsl, const BSQType* restype
 
 void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
-    void* argsbase = BSQ_STACK_SPACE_ALLOC(call->params.size() * sizeof(void*));
+    void* argsbase = BSQ_STACK_SPACE_ALLOC(args.size() * sizeof(void*));
     void** curr = (void**)argsbase;
-    for(size_t i = 0; i < call->params.size(); ++i)
+    for(size_t i = 0; i < args.size(); ++i)
     {
         *curr = this->evalArgument(args[i]);
         curr++;
@@ -2045,45 +1966,34 @@ void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& a
     this->invokePostlude();
 }
 
-void Evaluator::invokePCode(BSQPCodeOperator& pc, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
+void Evaluator::vinvoke(const BSQInvokeDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
-    void* argsbase = BSQ_STACK_SPACE_ALLOC(pc.call->params.size() * sizeof(void*));
+    void* argsbase = BSQ_STACK_SPACE_ALLOC((args.size() + 1) * sizeof(void*));
     void** curr = (void**)argsbase;
+
+    //handle rcvr special case
+    *curr = rcvr;
+    curr++;
 
     for(size_t i = 0; i < args.size(); ++i)
     {
-        *curr = args[i];
+        *curr = this->evalArgument(args[i]);
         curr++;
     }
 
-    for(size_t i = 0; i < pc.cargs.size(); ++i)
-    {
-        *curr = pc.cargs[i];
-        curr++;
-    }
-
-    size_t cssize = pc.call->scalarstackBytes + pc.call->mixedstackBytes;
+    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
-    size_t maskslotbytes = pc.call->maskSlots * sizeof(BSQBool);
+    size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
     BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
-    if(pc.call->isPrimitive())
-    {
-        this->invokePrimitivePrelude((const BSQInvokePrimitiveDecl*)pc.call, argsbase, cstack, maskslots);
-        this->evaluatePrimitiveBody((const BSQInvokePrimitiveDecl*)pc.call, resultsl, pc.call->resultType);
-    }
-    else
-    {
-        this->invokePrelude((const BSQInvokeBodyDecl*)pc.call, argsbase, cstack, maskslots, nullptr);
-        this->evaluateBody(resultsl, pc.call->resultType, static_cast<const BSQInvokeBodyDecl*>(pc.call)->resultArg);
-    }
+    this->invokePrelude((const BSQInvokeBodyDecl*)call, argsbase, cstack, maskslots, optmask);
+    this->evaluateBody(resultsl, call->resultType, static_cast<const BSQInvokeBodyDecl*>(call)->resultArg);
 
     this->invokePostlude();
 }
-
 
 void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask)
 {

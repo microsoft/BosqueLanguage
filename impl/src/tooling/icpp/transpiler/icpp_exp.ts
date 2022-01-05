@@ -136,11 +136,15 @@ enum OpCodeTag
     EqBigNatOp,
     EqBigIntOp,
     EqRationalOp,
+    EqFloatOp,
+    EqDecimalOp,
     NeqNatOp,
     NeqIntOp,
     NeqBigNatOp,
     NeqBigIntOp,
     NeqRationalOp,
+    NeqFloatOp,
+    NeqDecimalOp,
 
     LtNatOp,
     LtIntOp,
@@ -149,13 +153,6 @@ enum OpCodeTag
     LtRationalOp,
     LtFloatOp,
     LtDecimalOp,
-    GtNatOp,
-    GtIntOp,
-    GtBigNatOp,
-    GtBigIntOp,
-    GtRationalOp,
-    GtFloatOp,
-    GtDecimalOp,
 
     LeNatOp,
     LeIntOp,
@@ -163,14 +160,7 @@ enum OpCodeTag
     LeBigIntOp,
     LeRationalOp,
     LeFloatOp,
-    LeDecimalOp,
-    GeNatOp,
-    GeIntOp,
-    GeBigNatOp,
-    GeBigIntOp,
-    GeRationalOp,
-    GeFloatOp,
-    GeDecimalOp
+    LeDecimalOp
 }
 
 type Argument = {

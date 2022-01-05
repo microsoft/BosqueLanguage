@@ -80,12 +80,7 @@
 (declare-fun FloatValue@mult (FloatValue FloatValue) FloatValue)
 (declare-fun FloatValue@div (FloatValue FloatValue) FloatValue)
 
-(declare-fun FloatValue@eq (FloatValue FloatValue) Bool)
-(declare-fun FloatValue@neq (FloatValue FloatValue) Bool)
 (declare-fun FloatValue@lt (FloatValue FloatValue) Bool)
-(declare-fun FloatValue@gt (FloatValue FloatValue) Bool)
-(declare-fun FloatValue@lteq (FloatValue FloatValue) Bool)
-(declare-fun FloatValue@gteq (FloatValue FloatValue) Bool)
 
 (declare-fun FloatValue@const (String) FloatValue)
 

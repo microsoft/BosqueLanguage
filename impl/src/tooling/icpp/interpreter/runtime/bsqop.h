@@ -6,6 +6,7 @@
 #pragma once
 
 #include "../common.h"
+#include "bsqvalue.h"
 
 enum class ArgumentTag
 {
@@ -130,11 +131,15 @@ enum class OpCodeTag
     EqBigNatOp,
     EqBigIntOp,
     EqRationalOp,
+    EqFloatOp,
+    EqDecimalOp,
     NeqNatOp,
     NeqIntOp,
     NeqBigNatOp,
     NeqBigIntOp,
     NeqRationalOp,
+    NeqFloatOp,
+    NeqDecimalOp,
 
     LtNatOp,
     LtIntOp,
@@ -143,13 +148,6 @@ enum class OpCodeTag
     LtRationalOp,
     LtFloatOp,
     LtDecimalOp,
-    GtNatOp,
-    GtIntOp,
-    GtBigNatOp,
-    GtBigIntOp,
-    GtRationalOp,
-    GtFloatOp,
-    GtDecimalOp,
 
     LeNatOp,
     LeIntOp,
@@ -157,21 +155,7 @@ enum class OpCodeTag
     LeBigIntOp,
     LeRationalOp,
     LeFloatOp,
-    LeDecimalOp,
-    GeNatOp,
-    GeIntOp,
-    GeBigNatOp,
-    GeBigIntOp,
-    GeRationalOp,
-    GeFloatOp,
-    GeDecimalOp,
-
-    EqStrPosOp,
-    NeqStrPosOp,
-    LtStrPosOp,
-    GtStrPosOp,
-    LeStrPosOp,
-    GeStrPosOp
+    LeDecimalOp
 };
 
 struct Argument
@@ -331,12 +315,12 @@ class BoxOp : public InterpOp
 {
 public:
     const TargetVar trgt;
-    const BSQType* intotype;
+    const BSQUnionType* intotype;
     const Argument arg;
     const BSQType* fromtype;
     const BSQStatementGuard sguard;
 
-    BoxOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    BoxOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~BoxOp() {;}
 
     static BoxOp* jparse(json v);
@@ -348,10 +332,10 @@ public:
     const TargetVar trgt;
     const BSQType* intotype;
     const Argument arg;
-    const BSQType* fromtype;
+    const BSQUnionType* fromtype;
     const BSQStatementGuard sguard;
 
-    ExtractOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    ExtractOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQUnionType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~ExtractOp() {;}
 
     static ExtractOp* jparse(json v);
@@ -723,11 +707,11 @@ public:
     const TargetVar trgt;
     const BSQType* trgttype;
     const BSQVirtualInvokeID invokeId;
-    const BSQType* rcvrlayouttype;
+    const BSQUnionType* rcvrlayouttype;
     const int32_t optmaskoffset;
     const std::vector<Argument> args;
     
-    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const BSQType* rcvrlayouttype, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), rcvrlayouttype(rcvrlayouttype), args(args), optmaskoffset(optmaskoffset) {;}
+    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const BSQUnionType* rcvrlayouttype, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), rcvrlayouttype(rcvrlayouttype), args(args), optmaskoffset(optmaskoffset) {;}
     virtual ~InvokeVirtualFunctionOp() {;}
 
     static InvokeVirtualFunctionOp* jparse(json v);

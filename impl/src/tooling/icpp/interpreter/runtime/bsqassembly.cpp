@@ -4,8 +4,6 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "bsqassembly.h"
-#include "../core/bsqmemory.h"
-#include "../runtime/environment.h"
 
 RefMask jsonLoadRefMask(json val)
 {

@@ -6,6 +6,7 @@
 #pragma once
 
 #include "common.h"
+#include "runtime/bsqassembly.h"
 
 class EvaluatorFrame
 {
@@ -33,7 +34,11 @@ class Evaluator
 private:
     EvaluatorFrame* cframe = nullptr;
     int32_t cpos = 0;
+
+    static jmp_buf g_entrybuff;
     static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
+
+    static std::vector<const BSQInvokeDecl*> g_invokes;
 
 #ifdef BSQ_DEBUG_BUILD
     template <bool isbultin>
@@ -361,8 +366,8 @@ private:
     void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
-    void invokePCode(BSQPCodeOperator& pc, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
-
+    void vinvoke(const BSQInvokeDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
+    
     void invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
     void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots);
     void invokePostlude();
