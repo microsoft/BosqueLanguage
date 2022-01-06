@@ -13,29 +13,24 @@ internal entity Mask provides Some {
     field bit2: Bool;
     field bit3: Bool;
 
-    __safe function s_init_k(k: Nat): Mask = mask_init_k;
+    function initk(k: Nat): Mask {
+        return Mask{k >= 1, k >= 2, k >= 3, k >= 4};
+    }
+
     __safe function s_min_set(m: Mask): Nat = mask_min_set;
     __safe function s_max_set(m: Mask): Nat = mask_max_set;
     __safe function s_count(m: Mask): Nat = mask_count;
-    __safe function s_all_true(m: Mask): Nat = mask_all_true;
-    __safe function s_some_true(m: Mask): Nat = mask_some_true;
-    __safe function s_and(m1: Mask, m2: Mask): Mask = mask_and;
-    __safe function s_or(m1: Mask, m2: Mask): Mask = mask_or;
 
     method empty(): Bool {
-        return !Mask::some_true(this);
+        return !\/(this.bit0, this.bit1, this.bit2, this.bit3);
     }
 
     method count(): Nat {
         return Mask::s_count(this);
     }
 
-    method all_true(): Bool {
-        return Mask::s_all_true(this);
-    }
-
     method some_true(): Bool {
-        return Mask::s_some_true(this);
+        return \/(this.bit0, this.bit1, this.bit2, this.bit3);
     }
 
     method min(): Nat? {
@@ -57,19 +52,19 @@ internal entity Mask provides Some {
     }
 
     function and(m1: Mask, m2: Mask): Mask {
-        Mask::s_and(m1, m2);
+        return Mask{/\(m1.bit0, m2.bit0), /\(m1.bit1, m2.bit1), /\(m1.bit2, m2.bit2), /\(m1.bit3, m2.bit3)};
     }
 
     function or(m1: Mask, m2: Mask): Mask  {
-        Mask::s_or(m1, m2);
+        return Mask{\/(m1.bit0, m2.bit0), \/(m1.bit1, m2.bit1), \/(m1.bit2, m2.bit2), \/(m1.bit3, m2.bit3)};
     }
 }
 
 __safe internal function s_pv_undef<T>(): T = special_function;
+internal function s_phi_assign() = special_function;
 
 internal entity PartialVector<T> provides Some {
     __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T = pv_safe_get;
-    __safe function s_select(pv: PartialVector<T>, m: Mask): PartialVector<T> = pv_compact;
     __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> = pv_append;
     __safe function s_slice_start(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> = pv_slice_start;
     __safe function s_slice_end(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> = pv_slice_end;
@@ -81,6 +76,37 @@ internal entity PartialVector<T> provides Some {
     field v2: T;
     field v3: T;
     
+    method select(m: Mask): PartialVector<T> {
+        var v0 = s_pv_undef<U>();
+        var v1 = s_pv_undef<U>();
+        var v2 = s_pv_undef<U>();
+        var v3 = s_pv_undef<U>();
+
+        var i = 0;
+        if(m.bit0) {
+            v0 = this.v0;
+            i = i + 1;
+        }
+
+        if(m.bit1) {
+            s_phi_assign(v0, v1, v2, v3, i, this.v1);
+            i = i + 1;
+        }
+
+        if(m.bit2) {
+            s_phi_assign(v0, v1, v2, v3, i, this.v2);
+            i = i + 1;
+        }
+
+        if(m.bit3) {
+            s_phi_assign(v0, v1, v2, v3, i, this.v3);
+            i = i + 1;
+        }
+
+        return PartialVector<T>{Mask::initk(i), v0, v1, v2, v3};
+    }
+
+
     recursive? method apply_pred(p: recursive? pred(_: T) -> Bool): Mask {
         let m = this.mask;
         var b0 = false;
@@ -104,7 +130,7 @@ internal entity PartialVector<T> provides Some {
             b3 = p[recursive?](this.v3);
         }
 
-        return Mask::s_cons(b0, b1, b2, b3);
+        return Mask{b0, b1, b2, b3};
     }
 
     recursive? method apply_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
@@ -130,7 +156,7 @@ internal entity PartialVector<T> provides Some {
             b3 = p[recursive?](this.v3, idx + 3n);
         }
         
-        return Mask::s_cons(b0, b1, b2, b3);
+        return Mask{b0, b1, b2, b3};
     }
 
     recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Mask {
@@ -156,7 +182,7 @@ internal entity PartialVector<T> provides Some {
             b3 = p[recursive?](this.v3);
         }
         
-        return Mask::s_cons(b0, b1, b2, b3);
+        return Mask{b0, b1, b2, b3};
     }
 
     recursive? method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
@@ -182,7 +208,7 @@ internal entity PartialVector<T> provides Some {
             b3 = p[recursive?](this.v3, idx + 3n);
         }
         
-        return Mask::s_cons(b0, b1, b2, b3);
+        return Mask{b0, b1, b2, b3};
     }
 
     recursive? method s_find_last_pred(p: recursive? pred(_: T) -> Bool): Mask {
@@ -208,7 +234,7 @@ internal entity PartialVector<T> provides Some {
             b0 = p[recursive?](this.v0);
         }
         
-        return Mask::s_cons(b0, b1, b2, b3);
+        return Mask{b0, b1, b2, b3};
     }
 
     recursive? method s_find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
@@ -234,7 +260,7 @@ internal entity PartialVector<T> provides Some {
             b0 = p[recursive?](this.v0, idx);
         }
         
-        return Mask::s_cons(b0, b1, b2, b3);
+        return Mask{b0, b1, b2, b3};
     }
 
     recursive? method s_map_fn<T, U>(f: recursive? fn(_: T) -> U): PartialVector<U> {
@@ -572,10 +598,10 @@ internal entity PartialVector<T> provides Some {
             b3e = /\(!b3l, b3g);
         }
 
-        let ml = Mask::s_cons(b0l, b1l, b2l, b3l);
-        let me = Mask::s_cons(b0e, b1e, b2e, b3e);
-        let mg = Mask::s_cons(b0g, b1g, b2g, b3g);
-        return PartialVector<T>::s_select(this, ml), PartialVector<T>::s_select(this, me), PartialVector<T>::s_select(this, mg);
+        let ml = Mask{b0l, b1l, b2l, b3l};
+        let me = Mask{b0e, b1e, b2e, b3e};
+        let mg = Mask}b0g, b1g, b2g, b3g};
+        return this.select(ml), this.select(me), this.select(mg);
     }
 
     recursive? method s_sort(cmp: recursive? pred(_: T, _: T) -> Bool): PartialVector<T> {
