@@ -28,8 +28,6 @@ internal function __map_literal_cons_append<K grounded KeyType, V>(m1: MapRepr<K
 }
 
 internal entity MapOps provides Some {
-    __assume_safe function s_safeAs<T, U>(v: T): U = map_safeas;
-
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
         return m === none;
     }
@@ -104,11 +102,11 @@ internal entity MapOps provides Some {
     }
 
     function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
-        return MapOps::s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).set(k, v);
+        return s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).set(k, v);
     }
 
     function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
-        return MapOps::s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).remove(k);
+        return s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).remove(k);
     }
 }
 

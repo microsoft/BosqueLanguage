@@ -36,8 +36,6 @@ internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>
 }
 
 internal entity ListOps provides Some {
-    __assume_safe function s_safeAs<T, U>(v: T): U = list_safeas;
-
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
     }
@@ -122,26 +120,26 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(/\(l1.is<Vector1<T>>(), l2.is<Vector1<U>>())) {
-            let ll1 = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(l1);
-            let ll2 = ListOps::s_safeAs<ListRepr<U>, Vector1<U>>(l2);
+            let ll1 = s_safeAs<ListRepr<T>, Vector1<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, Vector1<U>>(l2);
 
             return Vector1<[T, U]>{[l11.v0, l12.v0]};
         }
         elif(/\(l1.is<Vector2<T>>(), l2.is<Vector2<U>>())) {
-            let ll1 = ListOps::s_safeAs<ListRepr<T>, Vector2<T>>(l1);
-            let ll2 = ListOps::s_safeAs<ListRepr<U>, Vector2<U>>(l2);
+            let ll1 = s_safeAs<ListRepr<T>, Vector2<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, Vector2<U>>(l2);
 
             return Vector2<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1]};
         }
         elif(/\(l1.is<Vector3<T>>(), l2.is<Vector3<U>>())) {
-            let ll1 = ListOps::s_safeAs<ListRepr<T>, Vector3<T>>(l1);
-            let ll2 = ListOps::s_safeAs<ListRepr<U>, Vector3<U>>(l2);
+            let ll1 = s_safeAs<ListRepr<T>, Vector3<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, Vector3<U>>(l2);
 
             return Vector3<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1], [l1.v2, l2.v2]};
         }
         else {
-            let ll1 = ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l1);
-            let ll2 = ListOps::s_safeAs<ListRepr<U>, RecList<U>>(l2);
+            let ll1 = s_safeAs<ListRepr<T>, RecList<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, RecList<U>>(l2);
 
             return ll1.zip<U>(ll2);
         }
@@ -158,20 +156,20 @@ internal entity ListOps provides Some {
             return l;
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
-            let ll = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(l);
-            let rr = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(r);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
 
             return Vector2<T>{ll.v0, rr.v0};
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
-            let ll = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(l);
-            let rr = ListOps::s_safeAs<ListRepr<T>, Vector2<T>>(r);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
 
             return Vector3<T>{ll.v0, rr.v0, rr.v1};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
-            let ll = ListOps::s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            let rr = ListOps::s_safeAs<ListRepr<T>, Vector1<T>>(r);
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
 
             return Vector3<T>{ll.v0, ll.v1, rr.v0};
         }
@@ -287,7 +285,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l).safe_get(i);
+            return s_safeAs<ListRepr<T>, RecList<T>>(l).safe_get(i);
         }
     }
 
@@ -702,7 +700,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l).min_arg[recursive?](f);
+            return s_safeAs<ListRepr<T>, RecList<T>>(l).min_arg[recursive?](f);
         }
     }
 
@@ -733,7 +731,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return ListOps::s_safeAs<ListRepr<T>, RecList<T>>(l).max_arg[recursive?](f);
+            return s_safeAs<ListRepr<T>, RecList<T>>(l).max_arg[recursive?](f);
         }
     }
 
@@ -958,12 +956,12 @@ internal entity RecList<T> provides Some {
 
     function {when T unique Int | Nat} range(start: T, end: T, inc: T): RecList<T> {
         let ll = RecListEntry<T>::range[recursive](start, end, inc);
-        return RecList<T>{end - start, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
+        return RecList<T>{end - start, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
     }
 
     function fill(count: Nat, v: T): RecList<T> {
         let ll = RecListEntry<T>::fill[recursive](count);
-        return RecList<T>{count, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
+        return RecList<T>{count, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
     }
 
     method zip_index(): RecList<[Nat, T]> {
@@ -1124,7 +1122,7 @@ internal entity RecList<T> provides Some {
         let tl = this.ll.tail;
         let hh = this.ll.head;
 
-        let nll, ns = ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(tl).unique_from_sorted[recursive](hh, eq);
+        let nll, ns = s_safeAs<RecListEntry<T>?, RecListEntry<T>>(tl).unique_from_sorted[recursive](hh, eq);
         if(ns <= 3) {
             if(ns == 1) {
                 return RecListEntry<T>::s_list_to_vector1(nll);
@@ -1203,13 +1201,13 @@ internal entity RecListEntry<T> provides Some {
 
     function s_list_to_vector2(l: RecListEntry<T>): Vector2<T> {
         let ee2 = lls.tail;
-        return Vector2<T>{l.head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head};
+        return Vector2<T>{l.head, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head};
     }
 
     function s_list_to_vector3(l: RecListEntry<T>): Vector3<T> {
         let ee2 = lls.tail;
-        let ee3 = ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).tail
-        return RecListEntry<T>{l.head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head, ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee3).head};
+        let ee3 = s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).tail
+        return RecListEntry<T>{l.head, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee3).head};
     }
 
     function s_list_to_vector(l: RecListEntry<T>, count: Nat): Vector3<T> {
@@ -1313,7 +1311,7 @@ internal entity RecListEntry<T> provides Some {
             return this.head;
         }
         else {
-            return ListOps::s_safeAs<RecListEntry<T>?, RecListEntry<T>>(this.tail).safe_get[recursive](i - 1);
+            return s_safeAs<RecListEntry<T>?, RecListEntry<T>>(this.tail).safe_get[recursive](i - 1);
         }
     }
 

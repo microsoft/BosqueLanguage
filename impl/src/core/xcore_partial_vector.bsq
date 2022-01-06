@@ -17,16 +17,26 @@ internal entity Mask provides Some {
         return Mask{k >= 1, k >= 2, k >= 3, k >= 4};
     }
 
-    __safe function s_min_set(m: Mask): Nat = mask_min_set;
-    __safe function s_max_set(m: Mask): Nat = mask_max_set;
-    __safe function s_count(m: Mask): Nat = mask_count;
-
     method empty(): Bool {
         return !\/(this.bit0, this.bit1, this.bit2, this.bit3);
     }
 
     method count(): Nat {
-        return Mask::s_count(this);
+        if(this.bit3) {
+            return 4n;
+        }
+        else if(this.bit2) {
+            return 3n;
+        }
+        else if(this.bit1) {
+            return 2n;
+        }
+        else if(this.bit0) {
+            return 1n;
+        }
+        else {
+            return 0n;
+        }
     }
 
     method some_true(): Bool {
@@ -34,20 +44,38 @@ internal entity Mask provides Some {
     }
 
     method min(): Nat? {
-        if(this.empty()) {
-            return none;
+        if(this.bit0) {
+            return 0n;
+        }
+        else if(this.bit1) {
+            return 1n;
+        }
+        else if(this.bit2) {
+            return 2n;
+        }
+        else if(this.bit3) {
+            return 3n;
         }
         else {
-            return Mask::s_min_set(this);
+            return none;
         }
     }
 
     method max(): Nat? {
-        if(this.empty()) {
-            return none;
+        if(this.bit3) {
+            return 3n;
+        }
+        else if(this.bit2) {
+            return 2n;
+        }
+        else if(this.bit1) {
+            return 1n;
+        }
+        else if(this.bit0) {
+            return 0n;
         }
         else {
-            return Mask::s_max_set(this);
+            return none;
         }
     }
 
@@ -60,52 +88,43 @@ internal entity Mask provides Some {
     }
 }
 
-__safe internal function s_pv_undef<T>(): T = special_function;
-internal function s_phi_assign() = special_function;
-
 internal entity PartialVector<T> provides Some {
-    __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T = pv_safe_get;
-    __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> = pv_append;
-    __safe function s_slice_start(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> = pv_slice_start;
-    __safe function s_slice_end(pv: PartialVector<T>, start: Nat, end: Nat): PartialVector<T> = pv_slice_end;
+    __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T = pv_get
+    __safe function s_select(pv: PartialVector<T>, m: Mask): T = pv_select
+    __safe function s_slice_start(pv: PartialVector<T>, start: Nat): PartialVector<T> = pv_slice_start;
+    __safe function s_slice_end(pv: PartialVector<T>, end: Nat): PartialVector<T> = pv_slice_end;
     __safe function s_reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> = pv_reverse;
+    __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> = pv_append;
 
     field mask: Mask;
     field v0: T;
     field v1: T;
     field v2: T;
     field v3: T;
-    
-    method select(m: Mask): PartialVector<T> {
-        var v0 = s_pv_undef<U>();
-        var v1 = s_pv_undef<U>();
-        var v2 = s_pv_undef<U>();
-        var v3 = s_pv_undef<U>();
 
-        var i = 0;
-        if(m.bit0) {
-            v0 = this.v0;
-            i = i + 1;
-        }
-
-        if(m.bit1) {
-            s_phi_assign(v0, v1, v2, v3, i, this.v1);
-            i = i + 1;
-        }
-
-        if(m.bit2) {
-            s_phi_assign(v0, v1, v2, v3, i, this.v2);
-            i = i + 1;
-        }
-
-        if(m.bit3) {
-            s_phi_assign(v0, v1, v2, v3, i, this.v3);
-            i = i + 1;
-        }
-
-        return PartialVector<T>{Mask::initk(i), v0, v1, v2, v3};
+    method safe_get(i: Nat): T {
+        return PartialVector<T>::s_safe_get(this, i);
     }
 
+    method select(m: Mask): PartialVector<T> {
+        return PartialVector<T>::s_select(this, m);
+    }
+
+    method slice_start(start: Nat): PartialVector<T> {
+        return PartialVector<T>::s_slice_start(this, start); 
+    }
+
+    method slice_end(end: Nat): PartialVector<T> {
+        return PartialVector<T>::s_slice_end(this, end);
+    }
+
+    method reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> {
+        return PartialVector<T>::s_reverse(this, count);
+    }
+
+    function append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> {
+        return PartialVector<T>::s_append(pv1, count1, pv2, count2);
+    }
 
     recursive? method apply_pred(p: recursive? pred(_: T) -> Bool): Mask {
         let m = this.mask;
@@ -342,10 +361,10 @@ internal entity PartialVector<T> provides Some {
     function s_fill(count: Nat, v: T): PartialVector<T> {
         let m = Mask::s_init_k(count);
 
-        var v0 = s_pv_undef<T>();
-        var v1 = s_pv_undef<T>();
-        var v2 = s_pv_undef<T>();
-        var v3 = s_pv_undef<T>();
+        var v0 = s_undef<T>();
+        var v1 = s_undef<T>();
+        var v2 = s_undef<T>();
+        var v3 = s_undef<T>();
 
         if(m.bit0) {
             v0 = v;
@@ -616,7 +635,7 @@ internal entity PartialVector<T> provides Some {
                 return this;
             }
             else {
-                let v = s_pv_undef<T>();
+                let v = s_undef<T>();
                 if(count == 2n) {
                     return PartialVector<T>{this.mask, minval, maxval, v, v};
                 }
@@ -706,9 +725,9 @@ internal entity PartialVector<T> provides Some {
 
     method s_mid4(minxidx: Nat, maxidx: Nat): Nat, T, Nat, T {
         var imid1: Nat? = none;
-        var vmid1 = s_pv_undef<T>();
+        var vmid1 = s_undef<T>();
         var imid2: Nat? = none;
-        var vmid2 = s_pv_undef<T>();
+        var vmid2 = s_undef<T>();
 
         if(/\(minidx != 0n, maxidx != 0n)) {
             imid1 = 0n;
@@ -742,11 +761,7 @@ internal entity PartialVector<T> provides Some {
             vmid2 = this.v3;
         }
 
-        return ListOps::s_safeAs<Nat?, Nat>(imid1), vmid1, ListOps::s_safeAs<Nat?, Nat>(imid2), vmid2;
-    }
-
-    method s_reverse(): PartialVector<T> {
-        return PartialVector<T>::s_reverse(this, Mask::s_count(this.mask));
+        return s_safeAs<Nat?, Nat>(imid1), vmid1, s_safeAs<Nat?, Nat>(imid2), vmid2;
     }
 
     recursive? method s_reduce_fn<U>(init: U, op: recursive? fn(_: T, _: U) -> U): U {

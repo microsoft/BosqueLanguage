@@ -74,8 +74,6 @@ internal function __map_literal_cons_append<K grounded KeyType, V>(m1: MapRepr<K
 }
 
 internal entity MapOps provides Some {
-    __assume_safe function s_safeAs<T, U>(v: T): U = map_safeas;
-
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
         return m === none;
     }
@@ -169,8 +167,8 @@ internal entity MapOps provides Some {
             return m1;
         }
         elif(/\(m1.is<Vector1<[K, V]>>(), m2.is<Vector1<[K, V]>>())) {
-            let mm1 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m1);
-            let mm2 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m2);
+            let mm1 = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m1);
+            let mm2 = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m2);
 
             let kl0 = mm1.v0.0;
             let kr0 = mm2.v0.0;
@@ -184,8 +182,8 @@ internal entity MapOps provides Some {
             }
         }
         elif(/\(m1.is<Vector1<[K, V]>>(), m2.is<Vector2<[K, V]>>())) {
-            let mm1 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m1);
-            let mm2 = ListOps::s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(m2);
+            let mm1 = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m1);
+            let mm2 = s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(m2);
 
             let kl0 = mm1.v0.0;
             let kr0 = mm2.v0.0;
@@ -203,8 +201,8 @@ internal entity MapOps provides Some {
             }
         }
         elif(/\(m1.is<Vector2<[K, V]>>(), m2.is<Vector1<[K, V]>>())) {
-            let mm1 = ListOps::s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(m1);
-            let mm2 = ListOps::s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m2);
+            let mm1 = s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(m1);
+            let mm2 = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m2);
 
             let kl0 = mm1.v0.0;
             let kl1 = mm1.v1.0;
@@ -386,7 +384,7 @@ internal entity MapOps provides Some {
             }
         }
         else {
-            return MapOps::s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).set(k, v);
+            return s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).set(k, v);
         }
     }
 
@@ -417,7 +415,7 @@ internal entity MapOps provides Some {
             }
         }
         else {
-            return MapOps::s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).remove(k);
+            return s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).remove(k);
         }
     }
 
@@ -482,13 +480,13 @@ entity RecMap<K grounded KeyType, V> provides Some {
 
     method remove(k: K): RecMapEntry<K, V>? {
         let rl = this.ll.set[recursive](k);
-        let rrl = MapOps::s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rl);
+        let rrl = s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rl);
 
         if(this.count == 4) {
             let h0 = rrl.head;
-            let tl0 = MapOps::s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rrl.tail);
+            let tl0 = s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rrl.tail);
             let h1 = tl0.head;
-            let tl1 = MapOps::s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(tl0.tail);
+            let tl1 = s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(tl0.tail);
             let h2 = tl1.head;
 
             return Vector3<[K, V]>>{h0, h1, h2}; 

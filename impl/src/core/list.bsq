@@ -860,22 +860,22 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
     method filterType<U>(): List<U> {
         let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v istype U);
-        return List<U>::s_into(ListOps::s_map<T, U>(fl, fn(v: T): U => ListOps::s_safeAs<T, U>(v)));
+        return List<U>::s_into(ListOps::s_map<T, U>(fl, fn(v: T): U => s_safeAs<T, U>(v)));
     }
 
     method filterSome(): List<T!Some> {
         let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v !== none);
-        return List<T!Some>::s_into(ListOps::s_map<T, T!Some>(fl.value(), fn(v: T): T!Some => ListOps::s_safeAs<T, T!Some>(v)));
+        return List<T!Some>::s_into(ListOps::s_map<T, T!Some>(fl.value(), fn(v: T): T!Some => s_safeAs<T, T!Some>(v)));
     }
 
     method {when T unique IOption} filterSomething(): List<T!IOptionT> {
         let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v !== nothing);
-        return List<T!IOptionT>::s_into(ListOps::s_map<T, T!IOptionT>(fl.value(), fn(v: T): T!IOptionT => ListOps::s_safeAs<T, Something<T!IOptionT>>(v).value()));
+        return List<T!IOptionT>::s_into(ListOps::s_map<T, T!IOptionT>(fl.value(), fn(v: T): T!IOptionT => s_safeAs<T, Something<T!IOptionT>>(v).value()));
     }
 
     method {when T unique IResult} filterOk(): List<T!IResultT> {
         let fl = ListOps::s_filter_pred<T>(this.value(), pred(v: T): Bool => v.isOk());
-        return List<T!IResultT>::s_into(ListOps::s_map<T, T!IResultT>(fl.value(), fn(v: T): T!IResultT => ListOps::s_safeAs<T, Result<T!IResultT, T!IResultE>::Ok>(v).value()));
+        return List<T!IResultT>::s_into(ListOps::s_map<T, T!IResultT>(fl.value(), fn(v: T): T!IResultT => s_safeAs<T, Result<T!IResultT, T!IResultE>::Ok>(v).value()));
     }
 
     method castType<U>(): List<U> {

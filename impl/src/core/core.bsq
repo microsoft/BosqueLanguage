@@ -347,6 +347,36 @@ __internal entity String provides Some, KeyType, APIType {
     method prepend(s: String): String {
         return String::s_concat2(s, this);
     }
+
+    /*
+    method startsWith(v: String | Regex): Bool {
+        use RE(.*)
+    }
+
+    method endsWith(v: String | Regex): Bool {
+        use (.*)RE
+    }
+
+    method includes(v: String | Regex): Bool {
+        use (.*)RE(.*)
+    }
+
+    method extractFront(v: String | Regex): String, String {
+        use bin search on RE(.*) and RE -- take maximal slice
+    }
+
+    method extractEnd(v: String | Regex): String, String {
+        use bin search on (.*)RE and RE -- take maximal slice
+    }
+
+    method splitAt(v: String | Regex): String, String, String {
+        use bin search on min start position of RE(.*)
+    }
+
+    method splitAll(...seps: List<String>): List<String> {
+        split on every sep provided
+    }
+    */
 }
 
 //<summary>Primitive safe string value.</summary>
@@ -592,3 +622,6 @@ __internal entity HavocSequence provides Some {
 concept Expandoable<T> provides Some {
     method expand<U>(): List<U> = special_method;
 }
+
+__assume_safe internal function s_safeAs<T, U>(v: T): U = special_function;
+__safe internal function s_undef<T>(): T = special_function;

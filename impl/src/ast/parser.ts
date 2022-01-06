@@ -3744,12 +3744,6 @@ class Parser {
 
         //
         //TODO: Packaging!!!!
-        //We want to change this to do an in-order scan of the files AND assuming the namespace imports do NOT have cycles.
-        //
-        //Allow namespaces as xxx, or xxx::yyy::zzz
-        //Import takes a NS and imports all the names defined in it -- fully qualified name collisions, even if not actually imported are an error -- like Java
-        //Import by default shortens the NS by removing the URI or allows you to rename to a new NS prefix but not flat import.
-        //Package just exports a set of namespaces.
         //
         //Our versioning trick is going to be looking at the imported types and signatures (including transative dependencies). We will split up the 
         //package dependencies into "public" and "internal" -- internal dependencies can be resolved by finding a satisfying version OR cloning. The 
