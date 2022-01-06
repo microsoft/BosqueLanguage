@@ -546,11 +546,11 @@ __universal concept IResultE provides Some {
 //<summary>Result type.</summary>
 concept Result<T, E=None> provides IResult, APIType when T grounded APIType && E grounded APIType, TestableType when T grounded TestableType && E grounded TestableType {
     __internal __constructable entity Ok provides IOk, Result<T, E> {
-        method value(): T special_extract
+        method value(): T = special_extract;
     }
 
     __internal __constructable entity Err provides IErr, Result<T, E> {
-        method value(): E special_extract
+        method value(): E = special_extract;
     }
 
     method isOk(): Bool {

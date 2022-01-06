@@ -2800,8 +2800,11 @@ class SMTBodyEmitter {
             case "string_append": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
             }
-            case "stringof_into": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+            case "bytebuffer_getformat": {
+                xxxx;
+            }
+            case "bytebuffer_getcompression": {
+                xxxx;
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

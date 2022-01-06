@@ -267,6 +267,42 @@ enum class BSQPrimitiveImplTag
 
     validator_accepts,
 
+    number_nattoint,
+    number_inttonat,
+    number_nattobignat,
+    number_inttobigint,
+    number_bignattonat,
+    number_biginttoint,
+    number_bignattobigint,
+    number_biginttobignat,
+    number_bignattofloat,
+    number_bignattodecimal,
+    number_bignattorational,
+    number_biginttofloat,
+    number_biginttodecimal,
+    number_biginttorational,
+    number_floattobigint,
+    number_decimaltobigint,
+    number_rationaltobigint,
+    number_floattodecimal,
+    number_floattorational,
+    number_decimaltofloat,
+    number_decimaltorational,
+    number_rationaltofloat,
+    number_rationaltodecimal,
+    float_floor,
+    decimal_floor,
+    float_ceil,
+    decimal_ceil,
+    float_truncate,
+    decimal_truncate,
+
+    float_power,
+    decimal_power,
+
+    bytebuffer_getformat,
+    bytebuffer_getcompression,
+
     string_empty,
     string_append
 };

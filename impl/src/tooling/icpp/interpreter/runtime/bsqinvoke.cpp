@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-#include "bsqassembly.h"
+#include "bsqinvoke.h"
 
 RefMask jsonLoadRefMask(json val)
 {

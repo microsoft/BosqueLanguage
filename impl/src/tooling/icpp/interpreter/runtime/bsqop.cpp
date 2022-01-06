@@ -15,6 +15,11 @@ TargetVar jsonParse_TargetVar(json j)
     return TargetVar{ j["kind"].get<ArgumentTag>(), j["offset"].get<uint32_t>() };
 }
 
+ParameterInfo jsonParse_ParameterInfo(json j)
+{
+    return ParameterInfo{ j["kind"].get<ArgumentTag>(), j["poffset"].get<uint32_t>() };
+}
+
 SourceInfo jsonParse_SourceInfo(json j)
 {
     return SourceInfo{ j["line"].get<uint32_t>(), j["column"].get<uint32_t>() };

@@ -613,7 +613,8 @@ std::optional<std::pair<std::string, std::string>> JSONParseHelper::checkEnumNam
 InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, const IType*>& typemap)
 {
     auto name = j["name"].get<std::string>();
-    auto restype = typemap.find(j["restype"].get<std::string>())->second;
+    auto rtname = j["restype"].get<std::string>();
+    auto restype = typemap.find(rtname)->second;
 
     std::vector<std::string> argnames;
     auto jargnames = j["argnames"];
@@ -624,7 +625,8 @@ InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, con
     std::vector<const IType*> argtypes;
     auto jargtypes = j["argtypes"];
     std::transform(jargtypes.cbegin(), jargtypes.cend(), std::back_inserter(argtypes), [&typemap](const json& jv) {
-        return typemap.find(jv.get<std::string>())->second;
+        auto tname = jv.get<std::string>();
+        return typemap.find(tname)->second;
     });
 
     return new InvokeSignature(name, restype, argnames, argtypes);

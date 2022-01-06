@@ -6,7 +6,8 @@
 #pragma once
 
 #include "common.h"
-#include "runtime/bsqassembly.h"
+#include "runtime/bsqop.h"
+#include "runtime/bsqinvoke.h"
 
 class EvaluatorFrame
 {
@@ -40,16 +41,18 @@ private:
 
     static std::vector<const BSQInvokeDecl*> g_invokes;
 
+    static std::map<BSQTypeID, const BSQRegex*> g_validators;
+    static std::vector<const BSQRegex*> g_regexs;
+
 #ifdef BSQ_DEBUG_BUILD
     template <bool isbultin>
-    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->cpos++;
         auto cf = Evaluator::g_callstack + this->cpos;
         cf->dbg_file = dbg_file;
         cf->dbg_function = dbg_function;
         cf->dbg_prevline = 0;
-        cf->argsbase = argsbase;
         cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;
@@ -67,11 +70,10 @@ private:
     }
 #else
     template <bool isbultin>
-    inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
         auto cf = Evaluator::g_callstack + cpos;
-        cf->argsbase = argsbase;
         cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;
@@ -184,6 +186,18 @@ private:
         else
         {
             return this->cframe->mixedbase + trgt.offset;
+        }
+    }
+
+    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* scalarbase, uint8_t* mixedbase)
+    {
+        if(pinfo.kind == ArgumentTag::ScalarVal)
+        {
+            return scalarbase + pinfo.poffset;
+        }
+        else 
+        {
+            return mixedbase + pinfo.poffset;
         }
     }
 
@@ -320,13 +334,8 @@ private:
     template <bool isGuarded>
     void evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op);
     
-    template <bool isGuarded>
     void evalBinKeyLessFastOp(const BinKeyLessFastOp* op);
-    
-    template <bool isGuarded>
     void evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op);
-    
-    template <bool isGuarded>
     void evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op);
 
     template <bool isGuarded>
@@ -362,10 +371,9 @@ private:
     void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
-    void vinvoke(const BSQInvokeDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
+    void vinvoke(const BSQInvokeBodyDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
     
-    void invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
-    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots);
+    void invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
     void invokePostlude();
 
     void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<StorageLocationPtr>& params, StorageLocationPtr resultsl, const BSQType* restype);

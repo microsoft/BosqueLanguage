@@ -352,11 +352,10 @@ class BSQEntityInfo
 public:
     const std::vector<BSQFieldID> fields;
     const std::vector<size_t> fieldoffsets;
-    const std::optional<BSQVirtualInvokeID> consfunc;
-    const std::vector<BSQFieldID> consfields;
+    const std::vector<BSQTypeID> ftypes;
 
-    BSQEntityInfo(std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields):
-        fields(fields), fieldoffsets(fieldoffsets), consfunc(consfunc), consfields(consfields)
+    BSQEntityInfo(std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::vector<BSQTypeID> ftypes):
+        fields(fields), fieldoffsets(fieldoffsets), ftypes(ftypes)
     {;}
 
     virtual ~BSQEntityInfo() {;}
@@ -365,9 +364,9 @@ public:
 class BSQEntityRefType : public BSQRefType, public BSQEntityInfo
 {
 public:
-    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields):
+    BSQEntityRefType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::vector<BSQTypeID> ftypes):
         BSQRefType(tid, heapsize, heapmask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name),
-        BSQEntityInfo(fields, fieldoffsets, consfunc, consfields)
+        BSQEntityInfo(fields, fieldoffsets, ftypes)
     {;}
 
     virtual ~BSQEntityRefType() {;}
@@ -376,9 +375,9 @@ public:
 class BSQEntityStructType : public BSQStructType, public BSQEntityInfo
 {
 public:
-    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, BSQTypeID boxedtype, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::optional<BSQInvokeID> consfunc, std::vector<BSQFieldID> consfields): 
+    BSQEntityStructType(BSQTypeID tid, uint64_t datasize, const RefMask imask, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, std::string name, bool norefs, BSQTypeID boxedtype, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, std::vector<BSQTypeID> ftypes): 
         BSQStructType(tid, datasize, imask, vtable, EMPTY_KEY_CMP, entityDisplay_impl, name, norefs, boxedtype),
-        BSQEntityInfo(fields, fieldoffsets, consfunc, consfields)
+        BSQEntityInfo(fields, fieldoffsets, ftypes)
     {;}
 
     virtual ~BSQEntityStructType() {;}
@@ -415,7 +414,7 @@ class BSQMaskType : public BSQStructType, public BSQEntityInfo
 public:
     BSQMaskType(std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets): 
         BSQStructType(BSQ_TYPE_ID_MASK, 8, "1", {}, EMPTY_KEY_CMP, entityDisplay_impl, "Mask", true, 0),
-        BSQEntityInfo(fields, fieldoffsets, std::nullopt, {})
+        BSQEntityInfo(fields, fieldoffsets, {BSQ_TYPE_ID_BOOL, BSQ_TYPE_ID_BOOL, BSQ_TYPE_ID_BOOL, BSQ_TYPE_ID_BOOL})
     {;}
 
     virtual ~BSQMaskType() {;}
@@ -430,7 +429,7 @@ public:
 
     BSQPartialVectorType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, BSQTypeID elemtype): 
         BSQRefType(tid, heapsize, heapmask, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        BSQEntityInfo(fields, fieldoffsets, std::nullopt, fields),
+        BSQEntityInfo(fields, fieldoffsets, {BSQ_TYPE_ID_MASK, elemtype, elemtype, elemtype, elemtype}),
         elemtype(elemtype)
     {;}
 
@@ -538,8 +537,7 @@ public:
 
     virtual const BSQType* getVType(StorageLocationPtr trgt) const = 0;
 
-    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const = 0;
-    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const = 0;
+    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const = 0;
 };
 
 class BSQUnionRefType : public BSQUnionType
@@ -596,12 +594,7 @@ public:
         return SLPTR_LOAD_HEAP_TYPE(trgt);
     }
 
-    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const override final
-    {
-        return trgt;
-    }
-
-    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const override final
+    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const override final
     {
         return trgt;
     }
@@ -683,12 +676,7 @@ public:
         return SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
     }
 
-    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const override final
-    {
-        return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
-    }
-
-    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const override final
+    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const override final
     {
         return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
     }
@@ -823,7 +811,7 @@ public:
         }
     }
 
-    virtual StorageLocationPtr getVStorageLocation_noalloc(StorageLocationPtr trgt) const override final
+    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const override final
     {
         auto btype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
         if(btype->tkind != BSQTypeLayoutKind::BoxedStruct)
@@ -834,23 +822,6 @@ public:
         {
             auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
             return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata);
-        }
-    }
-
-    virtual StorageLocationPtr getVStorageLocation(StorageLocationPtr trgt, StorageLocationPtr scratch) const override final
-    {
-        auto btype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
-        if(btype->tkind != BSQTypeLayoutKind::BoxedStruct)
-        {
-            return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
-        }
-        else
-        {
-            auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
-            auto boxeddata = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata);
-
-            dynamic_cast<const BSQBoxedStructType*>(btype)->oftype->storeValue(scratch, boxeddata);
-            return scratch;
         }
     }
 };

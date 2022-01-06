@@ -176,7 +176,7 @@ struct ParameterInfo
     ArgumentTag kind;
     uint32_t poffset;
 };
-Argument jsonParse_ParameterInfo(json j);
+ParameterInfo jsonParse_ParameterInfo(json j);
 
 struct SourceInfo
 {
@@ -961,10 +961,10 @@ class TypeIsNoneOp : public InterpOp
 public:
     const TargetVar trgt;
     const Argument arg;
-    const BSQType* arglayout;
+    const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsNoneOp() {;}
 
     static TypeIsNoneOp* jparse(json v);
@@ -975,10 +975,10 @@ class TypeIsSomeOp : public InterpOp
 public:
     const TargetVar trgt;
     const Argument arg;
-    const BSQType* arglayout;
+    const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsSomeOp() {;}
 
     static TypeIsSomeOp* jparse(json v);
@@ -989,10 +989,10 @@ class TypeIsNothingOp : public InterpOp
 public:
     const TargetVar trgt;
     const Argument arg;
-    const BSQType* arglayout;
+    const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsNothingOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsNothingOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsNothingOp() {;}
 
     static TypeIsNothingOp* jparse(json v);
@@ -1004,10 +1004,10 @@ public:
     const TargetVar trgt;
     const BSQType* oftype;
     const Argument arg;
-    const BSQType* arglayout;
+    const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagIsOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagIsOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeTagIsOp() {;}
 
     static TypeTagIsOp* jparse(json v);
@@ -1019,10 +1019,10 @@ public:
     const TargetVar trgt;
     const BSQUnionType* oftype;
     const Argument arg;
-    const BSQType* arglayout;
+    const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeTagSubtypeOfOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype, Argument arg, const BSQType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeTagSubtypeOfOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeTagSubtypeOfOp() {;}
 
     static TypeTagSubtypeOfOp* jparse(json v);
@@ -1059,13 +1059,13 @@ class JumpNoneOp : public InterpOp
 {
 public:
     const Argument arg;
-    const BSQType* arglayout;
+    const BSQUnionType* arglayout;
     const uint32_t noffset;
     const uint32_t soffset;
     const std::string nlabel;
     const std::string slabel;
     
-    JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQType* arglayout, uint32_t noffset, uint32_t soffset, const std::string nlabel, const std::string slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
+    JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQUnionType* arglayout, uint32_t noffset, uint32_t soffset, const std::string nlabel, const std::string slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
     virtual ~JumpNoneOp() {;}
 
     static JumpNoneOp* jparse(json v);
