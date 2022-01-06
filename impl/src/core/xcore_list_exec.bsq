@@ -365,7 +365,7 @@ internal entity ListOps provides Some {
                 return none;
             }
             else {
-                return PartialVector<T>::s_select(l, fm);
+                return l.select(fm);
             }
         }
         else {
@@ -383,7 +383,7 @@ internal entity ListOps provides Some {
                 return none;
             }
             else {
-                return PartialVector<T>::s_select(l, fm);
+                return l.select(fm);
             }
         }
         else {
@@ -993,7 +993,7 @@ internal entity ListTree<T> provides Some {
                 nl = none;
             }
             else {
-                nl = PartialVector<T>::s_select(l, lm);
+                nl = l.select(lm);
             }
         }
         else {
@@ -1007,7 +1007,7 @@ internal entity ListTree<T> provides Some {
                 nr = none;
             }
             else {
-                nr = PartialVector<T>::s_select(r, rm);
+                nr = r.select(rm);
             }
         }
         else {
@@ -1041,7 +1041,7 @@ internal entity ListTree<T> provides Some {
                 nl = none;
             }
             else {
-                nl = PartialVector<T>::s_select(l, lm);
+                nl = l.select(lm);
             }
         }
         else {
@@ -1057,7 +1057,7 @@ internal entity ListTree<T> provides Some {
                 nr = none;
             }
             else {
-                nr = PartialVector<T>::s_select(r, rm);
+                nr = r.select(rm);
             }
         }
         else {
