@@ -386,16 +386,35 @@ class ICPPInvokeBodyDecl extends ICPPInvokeDecl {
     }
 }
 
+class ICPPPCode
+{
+    readonly code: MIRInvokeKey;
+    readonly ctypes: MIRResolvedTypeKey[];
+    readonly cargpos: number[];
+
+    constructor(code: MIRInvokeKey, ctypes: MIRResolvedTypeKey[], cargpos: number[]) {
+        this.code = code;
+        this.ctypes = ctypes;
+        this.cargpos = cargpos;
+    }
+
+    jsonEmit(): object {
+        return {code: this.code, ctypes: this.ctypes, cargs: this.cargpos};
+    }
+}
+
 class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl {
     readonly enclosingtype: string | undefined;
     readonly implkeyname: string;
     readonly binds: Map<string, MIRResolvedTypeKey>;
+    readonly pcodes: Map<string, ICPPPCode>;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, enclosingtype: string | undefined, implkeyname: string, binds: Map<string, MIRResolvedTypeKey>) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, enclosingtype: string | undefined, implkeyname: string, binds: Map<string, MIRResolvedTypeKey>, pcodes: Map<string, ICPPPCode>) {
         super(name, ikey, srcFile, sinfo, recursive, params, resultType, 0, 0, "", 0);
         this.enclosingtype = enclosingtype;
         this.implkeyname = implkeyname;
         this.binds = binds;
+        this.pcodes = pcodes;
     }
 
     jsonEmit(): object {
@@ -403,7 +422,11 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl {
             return {name: v[0], ttype: v[1]};
         });
 
-        return {...super.jsonEmit(), isbuiltin: true, enclosingtype: this.enclosingtype, implkeyname: this.implkeyname, binds: binds};
+        const pcodes = [...this.pcodes].map((v) => {
+            return {name: v[0], pc: v[1].jsonEmit()};
+        });
+
+        return {...super.jsonEmit(), isbuiltin: true, enclosingtype: this.enclosingtype, implkeyname: this.implkeyname, binds: binds, pcodes: pcodes};
     }
 }
 
@@ -575,7 +598,7 @@ export {
     ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask,
     ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, 
     ICPPLayoutInlineUnion, ICPPLayoutRefUnion, ICPPLayoutUniversalUnion,
-    ICPPInvokeDecl, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
+    ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
     ICPPConstDecl,
     ICPPAssembly
 };

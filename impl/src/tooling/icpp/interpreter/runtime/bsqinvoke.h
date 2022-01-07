@@ -82,6 +82,26 @@ public:
     static BSQInvokeBodyDecl* jsonLoad(json v);
 };
 
+class BSQPCode
+{
+public:
+    const BSQInvokeID code;
+    const std::vector<uint32_t> cargpos;
+
+    BSQPCode(BSQInvokeID code, std::vector<uint32_t> cargpos): code(code), cargpos(cargpos) {;}
+    ~BSQPCode() {;}
+};
+
+class BSQPCodeOperator
+{
+public:
+    const BSQInvokeDecl* call;
+    const std::vector<StorageLocationPtr> cargs;
+
+    BSQPCodeOperator(const BSQInvokeDecl* call) : call(call), cargs() {;}
+    ~BSQPCodeOperator() {;}
+};
+
 class BSQInvokePrimitiveDecl : public BSQInvokeDecl 
 {
 public:
@@ -89,9 +109,10 @@ public:
     const BSQPrimitiveImplTag implkey; 
     const std::string implkeyname;
     const std::map<std::string, const BSQType*> binds;
+    const std::map<std::string, BSQPCode*> pcodes;
 
-    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, const BSQType*> binds)
-    : BSQInvokeDecl(name, ikey, srcFile, sinfo, recursive, params, resultType), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), binds(binds)
+    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, const BSQType*> binds, std::map<std::string, BSQPCode*> pcodes)
+    : BSQInvokeDecl(name, ikey, srcFile, sinfo, recursive, params, resultType), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), binds(binds), pcodes(pcodes)
     {;}
 
     virtual ~BSQInvokePrimitiveDecl() {;}
