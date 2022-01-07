@@ -286,7 +286,7 @@ internal entity ListOps provides Some {
             return false;
         }
         elif(l.is<PartialVector<T>>()) {
-            return l.find_pred[recursive?](p).some_true();
+            return Mask::s_some_true(l.find_pred[recursive?](p));
         }
         else {
             return l.has_pred[recursive](p);
@@ -298,7 +298,7 @@ internal entity ListOps provides Some {
             return false;
         }
         elif(l.is<PartialVector<T>>()) {
-            return l.find_pred_idx[recursive?](0, p).some_true();
+            return Mask::s_some_true(l.find_pred_idx[recursive?](0, p));
         }
         else {
             return l.has_pred_idx[recursive](0, p);
@@ -359,7 +359,7 @@ internal entity ListOps provides Some {
         }
         elif(l.is<PartialVector<T>>()) {
             let fm = l.apply_pred[recursive?](p);
-            if(fm.empty()) {
+            if(Mask::s_empty(fm)) {
                 return none;
             }
             else {
@@ -377,7 +377,7 @@ internal entity ListOps provides Some {
         }
         elif(l.is<PartialVector<T>>()) {
             let fm = l.apply_pred_idx[recursive?](0, p);
-            if(fm.empty()) {
+            if(Mask::s_empty(fm)) {
                 return none;
             }
             else {
@@ -682,8 +682,6 @@ internal entity ListTree<T> provides Some {
         if(start == 0) {
             return this;
         }
-        
-        assert start < this.count;
 
         let l = this.left;
         let r = this.right;
@@ -784,11 +782,11 @@ internal entity ListTree<T> provides Some {
         let l = this.left;
         let r = this.right;
 
-        if(l.is<PartialVector<T>>() && l.find_pred[recursive?](p).some_true()) {
+        if(l.is<PartialVector<T>>() && Mask::s_some_true(l.find_pred[recursive?](p))) {
             return true;
         }
 
-        if(r.is<PartialVector<T>>() && r.find_pred[recursive?](p).some_true()) {
+        if(r.is<PartialVector<T>>() && Mask::s_some_true(r.find_pred[recursive?](p))) {
             return true;
         }
 
@@ -809,7 +807,7 @@ internal entity ListTree<T> provides Some {
 
         var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
-            if(l.find_pred_idx[recursive?](idx, p).some_true()) {
+            if(Mask::s_some_true(l.find_pred_idx[recursive?](idx, p))) {
                 return true;
             }
             lcount = l.count();
@@ -823,7 +821,7 @@ internal entity ListTree<T> provides Some {
 
         let nidx = idx + lcount; 
         if(r.is<PartialVector<T>>()) {
-            return r.find_pred_idx[recursive?](nidx, p).some_true();
+            return Mask::s_some_true(r.find_pred_idx[recursive?](nidx, p));
         }
         else {
             return r.has_pred[recursive](nidx, p);
@@ -837,7 +835,7 @@ internal entity ListTree<T> provides Some {
         var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
             let lm = l.find_pred[recursive?](p);
-            if(lm.some_true()) {
+            if(Mask::s_some_true(lm)) {
                 return idx + lm.min();
             }
             lcount = l.count();
@@ -853,7 +851,7 @@ internal entity ListTree<T> provides Some {
         let nidx = idx + lcount; 
         if(r.is<PartialVector<T>>()) {
             let rm = r.find_pred[recursive?](p);
-            if(rm.some_true()) {
+            if(Mask::s_some_true(rm)) {
                 return nidx + rm.min();
             }
             else {
@@ -872,7 +870,7 @@ internal entity ListTree<T> provides Some {
         var lcount: Nat;
         if(l.is<PartialVector<T>>()) {
             let lm = l.find_pred_idx[recursive?](idx, p);
-            if(lm.some_true()) {
+            if(Mask::s_some_true(lm)) {
                 return idx + lm.min();
             }
             lcount = l.count();
@@ -888,7 +886,7 @@ internal entity ListTree<T> provides Some {
         let nidx = idx + lcount; 
         if(r.is<PartialVector<T>>()) {
             let rm = r.find_pred_idx[recursive?](nidx, p);
-            if(rm.some_true()) {
+            if(Mask::s_some_true(rm)) {
                 return nidx + rm.min();
             }
             else {
@@ -915,7 +913,7 @@ internal entity ListTree<T> provides Some {
         let nidx = idx + lcount;
         if(r.is<PartialVector<T>>()) {
             let rm = r.find_last_pred[recursive?](p);
-            if(rm.some_true()) {
+            if(Mask::s_some_true(rm)) {
                 return nidx + rm.max();
             }
         }
@@ -928,7 +926,7 @@ internal entity ListTree<T> provides Some {
 
         if(l.is<PartialVector<T>>()) {
             let lm = l.find_last_pred_idx[recursive?](idx, p);
-           if(lm.some_true()) {
+            if(Mask::s_some_true(lm)) {
                 return idx + lm.max();
             }
             else {
@@ -955,7 +953,7 @@ internal entity ListTree<T> provides Some {
         let nidx = idx + lcount;
         if(r.is<PartialVector<T>>()) {
             let rm = r.find_last_pred_idx[recursive?](nidx, p);
-            if(rm.some_true()) {
+            if(Mask::s_some_true(rm)) {
                 return nidx + rm.max();
             }
         }
@@ -968,7 +966,7 @@ internal entity ListTree<T> provides Some {
 
         if(l.is<PartialVector<T>>()) {
             let lm = l.find_last_pred_idx[recursive?](idx, p);
-            if(lm.some_true()) {
+            if(Mask::s_some_true(lm)) {
                 return idx + lm.max();
             }
             else {
@@ -987,7 +985,7 @@ internal entity ListTree<T> provides Some {
         var nl: ListRepr<T>;
         if(l.is<PartialVector<T>>()) {
             let lm = l.apply_pred[recursive?](p);
-            if(lm.empty()) {
+            if(Mask::s_empty(lm)) {
                 nl = none;
             }
             else {
@@ -1001,7 +999,7 @@ internal entity ListTree<T> provides Some {
         var nr: ListRepr<T>;
         if(r.is<PartialVector<T>>()) {
             let rm = r.apply_pred[recursive?](p);
-            if(rm.empty()) {
+            if(Mask::s_empty(rm)) {
                 nr = none;
             }
             else {
@@ -1035,7 +1033,7 @@ internal entity ListTree<T> provides Some {
         if(l.is<PartialVector<T>>()) {
             lcount = l.count();
             let lm = l.apply_pred_idx[recursive?](idx, p);
-            if(lm.empty()) {
+            if(Mask::s_empty(lm)) {
                 nl = none;
             }
             else {
@@ -1051,7 +1049,7 @@ internal entity ListTree<T> provides Some {
         var nr: ListRepr<T>;
         if(r.is<PartialVector<T>>()) {
             let rm = r.apply_pred_idx[recursive?](nidx, p);
-            if(rm.empty()) {
+            if(Mask::s_empty(rm)) {
                 nr = none;
             }
             else {
@@ -1284,13 +1282,13 @@ internal entity ListTree<T> provides Some {
         var lgt: ListTreeEntry<T>? = none;
         if(l.is<PartialVector<T>>()) {
             let ml, me, mg = l.partition[recursive?](piv, cmp);
-            if(!ml.mask.empty()) {
+            if(!Mask::s_empty(ml.mask)) {
                 llt = ml;
             }
-            if(!me.mask.empty()) {
+            if(!Mask::s_empty(me.mask)) {
                 leq = me;
             }
-            if(!mg.mask.empty()) {
+            if(!Mask::s_empty(mg.mask)) {
                 lgt = mg;
             }
         }
@@ -1303,13 +1301,13 @@ internal entity ListTree<T> provides Some {
         var rgt: ListTreeEntry<T>? = none;
         if(r.is<PartialVector<T>>()) {
             let ml, me, mg = r.partition[recursive?](piv, cmp);
-            if(!ml.mask.empty()) {
+            if(!Mask::s_empty(ml.mask)) {
                 rlt = ml;
             }
-            if(!me.mask.empty()) {
+            if(!Mask::s_empty(me.mask)) {
                 req = me;
             }
-            if(!mg.mask.empty()) {
+            if(!Mask::s_empty(mg.mask)) {
                 rgt = mg;
             }
         }

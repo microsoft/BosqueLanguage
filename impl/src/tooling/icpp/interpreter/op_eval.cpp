@@ -2103,6 +2103,42 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)bb.compression);
         break;
     }
+    case BSQPrimitiveImplTag::mask_empty: {
+        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, bvmask.count == 0);
+        break;
+    }
+    case BSQPrimitiveImplTag::mask_count: {
+        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, bvmask.count);
+        break;
+    }
+    case BSQPrimitiveImplTag::mask_some_true: {
+        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, bvmask.count != 0);
+        break;
+    }
+    case BSQPrimitiveImplTag::mask_min_bit: {
+        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
+        for(size_t i = 0; i < 4; ++i) {
+            if(bvmask.bits[i]) {
+                SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)i);
+                break;
+            }
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::mask_max_bit: {
+        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
+        for(size_t i = 3; i >= 0; --i) {
+            //ok since we only call this when we know it isn't empty
+            if(bvmask.bits[i]) {
+                SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)i);
+                break;
+            }
+        }
+        break;
+    }
     case BSQPrimitiveImplTag::pv_get: {
         auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
         pvtype->get(params[0], SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), resultsl);
@@ -2119,6 +2155,8 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         for(size_t i = 0; i < 4; ++i) {
             if(mask.bits[i]) {
                 rrm.bits[pos] = BSQTRUE;
+                rrm.count++;
+
                 auto into = pvtype->storagepos(respv, pos++);
                 pvtype->get(sl, i, into);
             }
@@ -2139,6 +2177,9 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         BSQMask rrm = {0};
         for(size_t i = nstart; i < 4; ++i) {
             if(mask.bits[i]) {
+                rrm.bits[pos] = BSQTRUE;
+                rrm.count++;
+
                 auto into = pvtype->storagepos(respv, pos++);
                 pvtype->get(sl, i, into);
             }
@@ -2149,7 +2190,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::pv_slice_end: {
-       auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
         auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
         auto sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
@@ -2159,6 +2200,9 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         BSQMask rrm = {0};
         for(size_t i = 0; i < nend; ++i) {
             if(mask.bits[i]) {
+                rrm.bits[pos] = BSQTRUE;
+                rrm.count++;
+
                 auto into = pvtype->storagepos(respv, pos++);
                 pvtype->get(sl, i, into);
             }
@@ -2174,6 +2218,32 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::pv_append: {
         xxxx;
+        break;
+    }
+    case BSQPrimitiveImplTag::apply_pred: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        
+        auto sl = params[0];
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl));
+
+        xxx; //push stack slot for 1 temp element + 1 bool
+
+        size_t pos = 0;
+        BSQMask rrm = {0};
+        for(size_t i = 0; i < 4; ++i) {
+            if(mask.bits[i]) {
+                pvtype->get(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl), i, tmp);
+                xxxx; //call pred put return in ok
+
+                if(ok) {
+                    rrm.bits[pos] = BSQTRUE;
+                    rrm.count++;
+                }
+            }
+        }
+
+        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
         break;
     }
     default: {

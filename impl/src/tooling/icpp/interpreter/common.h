@@ -306,6 +306,12 @@ enum class BSQPrimitiveImplTag
     string_empty,
     string_append,
 
+    mask_empty,
+    mask_count,
+    mask_some_true,
+    mask_min_bit,
+    mask_max_bit,
+
     pv_get,
     pv_select,
     pv_slice_start,

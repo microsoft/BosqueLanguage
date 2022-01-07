@@ -8,83 +8,29 @@ namespace Core;
 
 #if EXEC_LIBS
 internal entity Mask provides Some {
-    field bit0: Bool;
-    field bit1: Bool;
-    field bit2: Bool;
-    field bit3: Bool;
+    safe function s_empty(m: Mask): Bool = mask_empty;
+    safe function s_count(m: Mask): Bool = mask_count;
 
-    function initk(k: Nat): Mask {
-        return Mask{k >= 1, k >= 2, k >= 3, k >= 4};
-    }
-
-    method empty(): Bool {
-        return !\/(this.bit0, this.bit1, this.bit2, this.bit3);
-    }
-
-    method count(): Nat {
-        if(this.bit3) {
-            return 4n;
-        }
-        else if(this.bit2) {
-            return 3n;
-        }
-        else if(this.bit1) {
-            return 2n;
-        }
-        else if(this.bit0) {
-            return 1n;
-        }
-        else {
-            return 0n;
-        }
-    }
-
-    method some_true(): Bool {
-        return \/(this.bit0, this.bit1, this.bit2, this.bit3);
-    }
+    safe function s_some_true(m: Mask): Bool = mask_some_true;
+    safe function s_min_bit(m: Mask): Bool = mask_min_bit;
+    safe function s_max_bit(m: Mask): Bool = mask_max_bit;
 
     method min(): Nat? {
-        if(this.bit0) {
-            return 0n;
-        }
-        else if(this.bit1) {
-            return 1n;
-        }
-        else if(this.bit2) {
-            return 2n;
-        }
-        else if(this.bit3) {
-            return 3n;
+        if(Mask::s_empty(this)) {
+            return none;
         }
         else {
-            return none;
+            return Mask::s_min_bit(this);
         }
     }
 
     method max(): Nat? {
-        if(this.bit3) {
-            return 3n;
-        }
-        else if(this.bit2) {
-            return 2n;
-        }
-        else if(this.bit1) {
-            return 1n;
-        }
-        else if(this.bit0) {
-            return 0n;
-        }
-        else {
+        if(Mask::s_empty(this)) {
             return none;
         }
-    }
-
-    function and(m1: Mask, m2: Mask): Mask {
-        return Mask{/\(m1.bit0, m2.bit0), /\(m1.bit1, m2.bit1), /\(m1.bit2, m2.bit2), /\(m1.bit3, m2.bit3)};
-    }
-
-    function or(m1: Mask, m2: Mask): Mask  {
-        return Mask{\/(m1.bit0, m2.bit0), \/(m1.bit1, m2.bit1), \/(m1.bit2, m2.bit2), \/(m1.bit3, m2.bit3)};
+        else {
+            return Mask::s_max_bit(this);
+        }
     }
 }
 

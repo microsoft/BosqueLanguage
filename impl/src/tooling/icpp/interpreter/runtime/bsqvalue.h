@@ -409,19 +409,14 @@ public:
 };
 
 //MASK
-class BSQMaskType : public BSQStructType, public BSQEntityInfo
+class BSQMaskType : public BSQRegisterType<BSQMask>
 {
 public:
-    BSQMaskType(std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets): 
-        BSQStructType(BSQ_TYPE_ID_MASK, 8, "1", {}, EMPTY_KEY_CMP, entityDisplay_impl, "Mask", true, 0),
-        BSQEntityInfo(fields, fieldoffsets, {BSQ_TYPE_ID_BOOL, BSQ_TYPE_ID_BOOL, BSQ_TYPE_ID_BOOL, BSQ_TYPE_ID_BOOL})
+    BSQMaskType(): 
+        BSQRegisterType<BSQMask>(BSQ_TYPE_ID_MASK, sizeof(BSQMask), "1", EMPTY_KEY_CMP, entityDisplay_impl, "Mask")
     {;}
 
     virtual ~BSQMaskType() {;}
-
-    static inline BSQBool bit(StorageLocationPtr sl, uint32_t i) {
-        return SLPTR_LOAD_CONTENTS_AS(BSQBool, SLPTR_INDEX_DATAPTR(sl, i));
-    }
 };
 
 //PARTIAL VECTOR
@@ -433,6 +428,7 @@ public:
     const uint32_t elemsize;
 
     const uint32_t elembase;
+    xxx;
 
     BSQPartialVectorType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, BSQTypeID elemtype, uint32_t elemsize, uint32_t elembase): 
         BSQRefType(tid, heapsize, heapmask, {}, EMPTY_KEY_CMP, fpDisplay, name),
@@ -1470,9 +1466,9 @@ std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data
 ////
 //Mask
 
-typedef struct { uint8_t bits[4]; } BSQMask;
+typedef struct { BSQBool bits[4]; uint32_t count; } BSQMask;
 
-#define CONS_BSQ_MASK_TYPE(FIELDS, FIELDOFFSETS) (new BSQMaskType(FIELDS, FIELDOFFSETS))
+#define CONS_BSQ_MASK_TYPE() (new BSQMaskType())
 
 ////
 //PartialVector
