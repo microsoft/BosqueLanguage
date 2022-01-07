@@ -84,6 +84,12 @@
 
 (declare-fun FloatValue@const (String) FloatValue)
 
+(declare-fun FloatValue@FromInt (Int) FloatValue)
+(declare-fun FloatValue@ToInt (FloatValue) Int)
+
+(declare-fun FloatValue@Rounding (FloatValue) FloatValue)
+(declare-fun FloatValue@Power (FloatValue, FloatValue) FloatValue)
+
 ;;BINTEGRAL_TYPE_ALIAS;;
 (define-sort BBigInt () Int)
 (define-sort BBigNat () Int)
@@ -101,8 +107,8 @@
 (define-datatype BByteBuffer 
   (BByteBuffer@cons 
     (BByteBuffer@bytes (Seq (_ BitVec 8)))
-    (BDateTimeRaw@format BNat)
-    (BDateTimeRaw@compress BNat)
+    (BByteBuffer@format BNat)
+    (BByteBuffer@compress BNat)
 ))
 
 (declare-datatype BDateTimeRaw 

@@ -2805,49 +2805,64 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, !this.m_assembly.hasNamespace(exp.ns), `Namespace '${exp.ns}' is not defined`);
         const nsdecl = this.m_assembly.getNamespace(exp.ns);
 
-        if (nsdecl.operators.has(exp.name)) {
-            const opsintro = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).find((nso) => nso.doesKindTagMatch(exp.opkind) && OOPTypeDecl.attributeSetContains("abstract", nso.invoke.attributes));
-            const opdecls = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).filter((nso) => nso.doesKindTagMatch(exp.opkind) && !OOPTypeDecl.attributeSetContains("abstract", nso.invoke.attributes));
-            this.raiseErrorIf(exp.sinfo, opdecls.length === 0, "Operator must have at least one decl");
+        if(nsdecl.ns === "Core" && exp.name === "s_safeAs") {
+            const tmp = this.m_emitter.generateTmpRegister();
+            const argtype = this.checkExpression(env, exp.args.argList[0].value, tmp, undefined).getExpressionResult().valtype;
+            const astype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.terms.targs[1], env.terms);
 
-            const pnames = (opsintro as NamespaceOperatorDecl).invoke.params.map((p) => p.name);
-            const hasrest = (opsintro as NamespaceOperatorDecl).invoke.optRestType !== undefined;
-
-            //No terms to be bound on operator call
-
-            const eargs = this.checkArgumentsEvaluationWOperator(exp.sinfo, env, env.terms, exp.args, refok);
-            const rargs = this.checkArgumentsWOperator(exp.sinfo, env, pnames, hasrest, eargs);
-
-            const isigs = opdecls.map((opd) => this.m_assembly.normalizeTypeFunction(opd.invoke.generateSig(), new Map<string, ResolvedType>()) as ResolvedFunctionType);
-            const opidx = this.m_assembly.tryGetUniqueStaticOperatorResolve(rargs.types.map((vt) => vt.flowtype), isigs);
-
-            this.raiseErrorIf(exp.sinfo, opidx === -1 || (opsintro !== undefined && opsintro.isDynamic), "Cannot resolve operator");
-            const opdecl = opidx !== -1 ? opdecls[opidx] : opsintro as NamespaceOperatorDecl;
-            
-            return this.checkNamespaceOperatorInvoke(exp.sinfo, env, opdecl, rargs.args, rargs.types, rargs.refs, rargs.pcodes, rargs.cinfo, exp.rec, trgt, refok);
-        } 
+            this.m_emitter.emitRegisterStore(exp.sinfo, this.emitInlineConvertIfNeeded(exp.sinfo, tmp, argtype, astype), trgt, this.m_emitter.registerResolvedTypeReference(astype), undefined);
+            return [env.setUniformResultExpression(astype)];
+        }
+        else if(nsdecl.ns === "Core" && exp.name === "s_undef") {
+            const oftype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.terms.targs[0], env.terms);
+            this.m_emitter.emitLoadUninitVariableValue(exp.sinfo, this.m_emitter.registerResolvedTypeReference(oftype), trgt);
+            return [env.setUniformResultExpression(oftype)];
+        }
         else {
-            this.raiseErrorIf(exp.sinfo, !nsdecl.functions.has(exp.name), `Function named '${exp.name}' is not defined`);
-            const fdecl = nsdecl.functions.get(exp.name) as NamespaceFunctionDecl;
+            if (nsdecl.operators.has(exp.name)) {
+                const opsintro = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).find((nso) => nso.doesKindTagMatch(exp.opkind) && OOPTypeDecl.attributeSetContains("abstract", nso.invoke.attributes));
+                const opdecls = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).filter((nso) => nso.doesKindTagMatch(exp.opkind) && !OOPTypeDecl.attributeSetContains("abstract", nso.invoke.attributes));
+                this.raiseErrorIf(exp.sinfo, opdecls.length === 0, "Operator must have at least one decl");
 
-            const [fsig, callbinds, eargs] = this.inferAndCheckArguments(exp.sinfo, env, exp.args, fdecl.invoke, exp.terms.targs, new Map<string, ResolvedType>(), env.terms, undefined, refok);
-            this.checkTemplateTypes(exp.sinfo, fdecl.invoke.terms, callbinds, fdecl.invoke.termRestrictions);
+                const pnames = (opsintro as NamespaceOperatorDecl).invoke.params.map((p) => p.name);
+                const hasrest = (opsintro as NamespaceOperatorDecl).invoke.optRestType !== undefined;
 
-            const rargs = this.checkArgumentsSignature(exp.sinfo, env, exp.name, fsig, eargs);
+                //No terms to be bound on operator call
 
-            if(fdecl.invoke.body !== undefined && fdecl.invoke.body.body === "special_inject") {
-                this.m_emitter.emitInject(exp.sinfo, this.m_emitter.registerResolvedTypeReference(fsig.params[0].type as ResolvedType), this.m_emitter.registerResolvedTypeReference(fsig.resultType), rargs.args[0], trgt);
+                const eargs = this.checkArgumentsEvaluationWOperator(exp.sinfo, env, env.terms, exp.args, refok);
+                const rargs = this.checkArgumentsWOperator(exp.sinfo, env, pnames, hasrest, eargs);
 
-                return [env.setUniformResultExpression(fsig.resultType)];
+                const isigs = opdecls.map((opd) => this.m_assembly.normalizeTypeFunction(opd.invoke.generateSig(), new Map<string, ResolvedType>()) as ResolvedFunctionType);
+                const opidx = this.m_assembly.tryGetUniqueStaticOperatorResolve(rargs.types.map((vt) => vt.flowtype), isigs);
+
+                this.raiseErrorIf(exp.sinfo, opidx === -1 || (opsintro !== undefined && opsintro.isDynamic), "Cannot resolve operator");
+                const opdecl = opidx !== -1 ? opdecls[opidx] : opsintro as NamespaceOperatorDecl;
+
+                return this.checkNamespaceOperatorInvoke(exp.sinfo, env, opdecl, rargs.args, rargs.types, rargs.refs, rargs.pcodes, rargs.cinfo, exp.rec, trgt, refok);
             }
             else {
-                this.checkRecursion(exp.sinfo, fsig, rargs.pcodes, exp.rec);
+                this.raiseErrorIf(exp.sinfo, !nsdecl.functions.has(exp.name), `Function named '${exp.name}' is not defined`);
+                const fdecl = nsdecl.functions.get(exp.name) as NamespaceFunctionDecl;
 
-                const ckey = this.m_emitter.registerFunctionCall(exp.ns, exp.name, fdecl, callbinds, rargs.pcodes, rargs.cinfo);
-                const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
-                this.m_emitter.emitInvokeFixedFunction(exp.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
+                const [fsig, callbinds, eargs] = this.inferAndCheckArguments(exp.sinfo, env, exp.args, fdecl.invoke, exp.terms.targs, new Map<string, ResolvedType>(), env.terms, undefined, refok);
+                this.checkTemplateTypes(exp.sinfo, fdecl.invoke.terms, callbinds, fdecl.invoke.termRestrictions);
 
-                return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
+                const rargs = this.checkArgumentsSignature(exp.sinfo, env, exp.name, fsig, eargs);
+
+                if (fdecl.invoke.body !== undefined && fdecl.invoke.body.body === "special_inject") {
+                    this.m_emitter.emitInject(exp.sinfo, this.m_emitter.registerResolvedTypeReference(fsig.params[0].type as ResolvedType), this.m_emitter.registerResolvedTypeReference(fsig.resultType), rargs.args[0], trgt);
+
+                    return [env.setUniformResultExpression(fsig.resultType)];
+                }
+                else {
+                    this.checkRecursion(exp.sinfo, fsig, rargs.pcodes, exp.rec);
+
+                    const ckey = this.m_emitter.registerFunctionCall(exp.ns, exp.name, fdecl, callbinds, rargs.pcodes, rargs.cinfo);
+                    const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
+                    this.m_emitter.emitInvokeFixedFunction(exp.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
+
+                    return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
+                }
             }
         }
     }
@@ -2860,7 +2875,7 @@ class TypeChecker {
         this.raiseErrorIf(exp.sinfo, (fdecltry === undefined && opdecltry === undefined), `Static function/operator not defined for type ${fromtype.typeID}`);
         this.raiseErrorIf(exp.sinfo, (fdecltry !== undefined && opdecltry !== undefined), `Static function/operator multiply defined for type ${fromtype.typeID}`);
 
-        if(fdecltry !== undefined && fdecltry.contiainingType.ns === "Core" && fdecltry.contiainingType.name === "KeyType" && (exp.name === "less" || exp.name === "equal")) {
+        if(fromtype.typeID === "KeyType" && (exp.name === "less" || exp.name === "equal")) {
             const ktype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.terms.targs[0], env.terms);
             this.raiseErrorIf(exp.sinfo, !this.m_assembly.subtypeOf(ktype, this.m_assembly.getSpecialKeyTypeConceptType()) || !ktype.isGroundedType(), "Invalid argument");
 

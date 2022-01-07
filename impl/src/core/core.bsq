@@ -423,10 +423,7 @@ enum BufferFormat {
     utf8,
     binary,
     bosque,
-    bosque_binary,
-    json,
-    json_binary,
-    protobuf
+    json
 }
 
 enum BufferCompression {

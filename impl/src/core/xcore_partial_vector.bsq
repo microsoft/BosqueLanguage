@@ -89,8 +89,8 @@ internal entity Mask provides Some {
 }
 
 internal entity PartialVector<T> provides Some {
-    __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T = pv_get
-    __safe function s_select(pv: PartialVector<T>, m: Mask): T = pv_select
+    __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T = pv_get;
+    __safe function s_select(pv: PartialVector<T>, m: Mask): T = pv_select;
     __safe function s_slice_start(pv: PartialVector<T>, start: Nat): PartialVector<T> = pv_slice_start;
     __safe function s_slice_end(pv: PartialVector<T>, end: Nat): PartialVector<T> = pv_slice_end;
     __safe function s_reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> = pv_reverse;
@@ -284,10 +284,10 @@ internal entity PartialVector<T> provides Some {
 
     recursive? method s_map_fn<T, U>(f: recursive? fn(_: T) -> U): PartialVector<U> {
         let m = this.mask;
-        var v0 = s_pv_undef<U>();
-        var v1 = s_pv_undef<U>();
-        var v2 = s_pv_undef<U>();
-        var v3 = s_pv_undef<U>();
+        var v0 = s_undef<U>();
+        var v1 = s_undef<U>();
+        var v2 = s_undef<U>();
+        var v3 = s_undef<U>();
 
         if(m.bit0) {
             v0 = f[recursive?](this.v0);
@@ -310,10 +310,10 @@ internal entity PartialVector<T> provides Some {
     
     recursive? method s_map_fn_idx<T, U>(idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> {
         let m = this.mask;
-        var v0 = s_pv_undef<U>();
-        var v1 = s_pv_undef<U>();
-        var v2 = s_pv_undef<U>();
-        var v3 = s_pv_undef<U>();
+        var v0 = s_undef<U>();
+        var v1 = s_undef<U>();
+        var v2 = s_undef<U>();
+        var v3 = s_undef<U>();
 
         if(m.bit0) {
             v0 = f[recursive?](this.v0, idx);
@@ -387,10 +387,10 @@ internal entity PartialVector<T> provides Some {
 
     method s_zip_index<T>(idx: Nat): PartialVector<[Nat, T]> {
         let m = this.mask;
-        var v0 = s_pv_undef<[Nat, T]>();
-        var v1 = s_pv_undef<[Nat, T]>();
-        var v2 = s_pv_undef<[Nat, T]>();
-        var v3 = s_pv_undef<[Nat, T]>();
+        var v0 = s_undef<[Nat, T]>();
+        var v1 = s_undef<[Nat, T]>();
+        var v2 = s_undef<[Nat, T]>();
+        var v3 = s_undef<[Nat, T]>();
 
         if(m.bit0) {
             v0 = [idx, this.v0];
@@ -415,10 +415,10 @@ internal entity PartialVector<T> provides Some {
         let tm = this.mask;
         let om = ov.mask;
 
-        var v0 = s_pv_undef<[T, U]>();
-        var v1 = s_pv_undef<[T, U]>();
-        var v2 = s_pv_undef<[T, U]>();
-        var v3 = s_pv_undef<[T, U]>();
+        var v0 = s_undef<[T, U]>();
+        var v1 = s_undef<[T, U]>();
+        var v2 = s_undef<[T, U]>();
+        var v3 = s_undef<[T, U]>();
 
         if(/\(tm.bit0, om.bit0)) {
             v0 = [this.v0, ov.v0];
@@ -441,10 +441,10 @@ internal entity PartialVector<T> provides Some {
 
     method s_zip_map<U>(idx: i, getfn: fn(i: Nat) -> U): PartialVector<[T, U]> {
         let m = this.mask;
-        var v0 = s_pv_undef<[T, U]>();
-        var v1 = s_pv_undef<[T, U]>();
-        var v2 = s_pv_undef<[T, U]>();
-        var v3 = s_pv_undef<[T, U]>();
+        var v0 = s_undef<[T, U]>();
+        var v1 = s_undef<[T, U]>();
+        var v2 = s_undef<[T, U]>();
+        var v3 = s_undef<[T, U]>();
 
         if(m.bit0) {
             v0 = [this.v0, getfn(idx)];
@@ -619,7 +619,7 @@ internal entity PartialVector<T> provides Some {
 
         let ml = Mask{b0l, b1l, b2l, b3l};
         let me = Mask{b0e, b1e, b2e, b3e};
-        let mg = Mask}b0g, b1g, b2g, b3g};
+        let mg = Mask{b0g, b1g, b2g, b3g};
         return this.select(ml), this.select(me), this.select(mg);
     }
 
@@ -813,10 +813,10 @@ internal entity PartialVector<T> provides Some {
     recursive? method s_transduce_fn<U, E>(init: E, op: recursive? fn(_: T, _: E) -> U, E): PartialVector<U>, E {
         let m = this.mask;
 
-        var v0 = s_pv_undef<U>();
-        var v1 = s_pv_undef<U>();
-        var v2 = s_pv_undef<U>();
-        var v3 = s_pv_undef<U>();
+        var v0 = s_undef<U>();
+        var v1 = s_undef<U>();
+        var v2 = s_undef<U>();
+        var v3 = s_undef<U>();
 
         var ee = init;
 
@@ -842,10 +842,10 @@ internal entity PartialVector<T> provides Some {
     recursive? method s_transduce_fn_idx<U, E>(init: E, idx: Nat, op: recursive? fn(_: T, _: E, _: Nat) -> U, E): PartialVector<U>, E {
         let m = this.mask;
 
-        var v0 = s_pv_undef<U>();
-        var v1 = s_pv_undef<U>();
-        var v2 = s_pv_undef<U>();
-        var v3 = s_pv_undef<U>();
+        var v0 = s_undef<U>();
+        var v1 = s_undef<U>();
+        var v2 = s_undef<U>();
+        var v3 = s_undef<U>();
 
         var ee = init;
 

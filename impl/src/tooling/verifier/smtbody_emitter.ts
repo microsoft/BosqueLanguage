@@ -2745,12 +2745,12 @@ class SMTBodyEmitter {
             case "number_biginttofloat":
             case "number_biginttodecimal":
             case "number_biginttorational": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_real", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@FromInt", [new SMTVar(args[0].vname)]));
             }
             case "number_floattobigint":
             case "number_decimaltobigint": 
             case "number_rationaltobigint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@ToInt", [new SMTVar(args[0].vname)]));
             }
             case "number_floattodecimal":
             case "number_floattorational":
@@ -2761,38 +2761,16 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "float_floor":
-            case "decimal_floor": {
-                const ceil = new SMTIf(
-                    new SMTCallSimple("<=", [new SMTVar("vvround"), new SMTVar(args[0].vname)]),
-                    new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
-                    new SMTCallSimple("-", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
-                );
-                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), ceil);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
-            }
+            case "decimal_floor":
             case "float_ceil":
-            case "decimal_ceil": {
-                const ceil = new SMTIf(
-                    new SMTCallSimple(">=", [new SMTVar("vvround"), new SMTVar(args[0].vname)]),
-                    new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
-                    new SMTCallSimple("+", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
-                );
-                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), ceil);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
-            }
+            case "decimal_ceil":
             case "float_truncate":
             case "decimal_truncate": {
-                const truncate = new SMTIf(
-                    new SMTCallSimple(">=", [new SMTVar(args[0].vname), new SMTConst("0.0")]),
-                    new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
-                    new SMTCallSimple("-", [new SMTCallSimple("to_int", [new SMTCallSimple("-", [new SMTVar(args[0].vname)])])])
-                );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, truncate);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@Rounding", [new SMTVar(args[0].vname)]));
             }
             case "float_power":
             case "decimal_power": {
-                const rr = this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@Rounding", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
             }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));
@@ -2801,10 +2779,10 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
             }
             case "bytebuffer_getformat": {
-                xxxx;
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("BByteBuffer@format", [new SMTVar(args[0].vname)]));
             }
             case "bytebuffer_getcompression": {
-                xxxx;
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("BByteBuffer@compress", [new SMTVar(args[0].vname)]));
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

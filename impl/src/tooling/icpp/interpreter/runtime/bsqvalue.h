@@ -418,6 +418,10 @@ public:
     {;}
 
     virtual ~BSQMaskType() {;}
+
+    static inline BSQBool bit(StorageLocationPtr sl, uint32_t i) {
+        return SLPTR_LOAD_CONTENTS_AS(BSQBool, SLPTR_INDEX_DATAPTR(sl, i));
+    }
 };
 
 //PARTIAL VECTOR
@@ -426,14 +430,29 @@ class BSQPartialVectorType : public BSQRefType, public BSQEntityInfo
 {
 public:
     const BSQTypeID elemtype;
+    const uint32_t elemsize;
 
-    BSQPartialVectorType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, BSQTypeID elemtype): 
+    const uint32_t elembase;
+
+    BSQPartialVectorType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, BSQTypeID elemtype, uint32_t elemsize, uint32_t elembase): 
         BSQRefType(tid, heapsize, heapmask, {}, EMPTY_KEY_CMP, fpDisplay, name),
         BSQEntityInfo(fields, fieldoffsets, {BSQ_TYPE_ID_MASK, elemtype, elemtype, elemtype, elemtype}),
-        elemtype(elemtype)
+        elemtype(elemtype), elemsize(elemsize), elembase(elembase)
     {;}
 
     virtual ~BSQPartialVectorType() {;}
+
+    static inline BSQMask mask(StorageLocationPtr sl) {
+        return SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
+    }
+
+    inline void get(void* data, size_t i, StorageLocationPtr trgt) const {
+        BSQType::g_typetable[this->elemtype]->storeValue(trgt, SLPTR_INDEX_DATAPTR(data, elembase + (i * elemsize)));
+    }
+
+    inline StorageLocationPtr storagepos(void* data, size_t i) const {
+        SLPTR_INDEX_DATAPTR(data, elembase + (i * elemsize));
+    }
 };
 
 //LIST
@@ -1347,10 +1366,7 @@ enum class BufferFormat {
     utf8 = 0x0,
     binary,
     bosque,
-    bosque_binary,
-    json,
-    json_binary,
-    protobuf
+    json
 };
 
 enum class BufferCompression {
@@ -1454,7 +1470,7 @@ std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data
 ////
 //Mask
 
-typedef struct { uint8_t bits[4]; uint32_t size; } BSQMask;
+typedef struct { uint8_t bits[4]; } BSQMask;
 
 #define CONS_BSQ_MASK_TYPE(FIELDS, FIELDOFFSETS) (new BSQMaskType(FIELDS, FIELDOFFSETS))
 

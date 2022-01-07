@@ -304,5 +304,12 @@ enum class BSQPrimitiveImplTag
     bytebuffer_getcompression,
 
     string_empty,
-    string_append
+    string_append,
+
+    pv_get,
+    pv_select,
+    pv_slice_start,
+    pv_slice_end,
+    pv_reverse,
+    pv_append
 };

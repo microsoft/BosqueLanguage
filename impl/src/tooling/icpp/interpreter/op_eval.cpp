@@ -48,7 +48,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), -SLPTR_LOAD_CO
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
-BSQ_LANGUAGE_ASSERT(rarg != (REPRTYPE)0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by 0"); \
+BSQ_LANGUAGE_ASSERT(rarg != (REPRTYPE)0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by zero"); \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg / rarg);
 
 //Big Macro for generating code for primitive un-checked infix binary operations
@@ -1934,127 +1934,147 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::number_nattoint: {
-        xxxx;
+        BSQNat nn = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]);
+        BSQ_LANGUAGE_ASSERT(nn <= (BSQNat)std::numeric_limits<BSQInt>::max(), &invk->srcFile, 0, "Out-of-bounds Nat to Int");
+        
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (BSQInt)nn);
         break;
     }
     case BSQPrimitiveImplTag::number_inttonat: {
-        xxxx;
+        BSQInt ii = SLPTR_LOAD_CONTENTS_AS(BSQInt, params[0]);
+        BSQ_LANGUAGE_ASSERT(ii >= 0, &invk->srcFile, 0, "Out-of-bounds Int to Nat");
+        
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)ii);
         break;
     }
     case BSQPrimitiveImplTag::number_nattobignat: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, resultsl, (BSQBigNat)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_inttobigint: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, resultsl, (BSQBigInt)SLPTR_LOAD_CONTENTS_AS(BSQInt, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_bignattonat: {
-        xxxx;
+        BSQBigNat nn = SLPTR_LOAD_CONTENTS_AS(BSQBigNat, params[0]);
+        BSQ_LANGUAGE_ASSERT(nn <= (BSQBigNat)std::numeric_limits<BSQNat>::max(), &invk->srcFile, 0, "Out-of-bounds BigNat to Nat");
+        
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)nn);
         break;
     }
     case BSQPrimitiveImplTag::number_biginttoint: {
-        xxxx;
+        BSQBigInt ii = SLPTR_LOAD_CONTENTS_AS(BSQBigInt, params[0]);
+        BSQ_LANGUAGE_ASSERT((BSQBigInt)std::numeric_limits<BSQInt>::lowest() <= ii && ii <= (BSQBigInt)std::numeric_limits<BSQInt>::max(), &invk->srcFile, 0, "Out-of-bounds BigInt to Int");
+        
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (BSQInt)ii);
         break;
     }
     case BSQPrimitiveImplTag::number_bignattobigint: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, resultsl, (BSQBigInt)SLPTR_LOAD_CONTENTS_AS(BSQBigNat, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_biginttobignat: {
-        xxxx;
+        BSQBigInt ii = SLPTR_LOAD_CONTENTS_AS(BSQBigInt, params[0]);
+        BSQ_LANGUAGE_ASSERT(ii >= 0, &invk->srcFile, 0, "Out-of-bounds Int to Nat");
+        
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, resultsl, (BSQBigNat)ii);
         break;
     }
     case BSQPrimitiveImplTag::number_bignattofloat: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, (BSQFloat)SLPTR_LOAD_CONTENTS_AS(BSQBigNat, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_bignattodecimal: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, (BSQDecimal)SLPTR_LOAD_CONTENTS_AS(BSQBigNat, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_bignattorational: {
-        xxxx;
+        BSQRational rr = {(BSQBigInt)SLPTR_LOAD_CONTENTS_AS(BSQBigNat, params[0]), 1};
+        SLPTR_STORE_CONTENTS_AS(BSQRational, resultsl, rr);
         break;
     }
     case BSQPrimitiveImplTag::number_biginttofloat: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, (BSQFloat)SLPTR_LOAD_CONTENTS_AS(BSQBigInt, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_biginttodecimal: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, (BSQDecimal)SLPTR_LOAD_CONTENTS_AS(BSQBigInt, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_biginttorational: {
-        xxxx;
+        BSQRational rr = {SLPTR_LOAD_CONTENTS_AS(BSQBigInt, params[0]), 1};
+        SLPTR_STORE_CONTENTS_AS(BSQRational, resultsl, rr);
         break;
     }
     case BSQPrimitiveImplTag::number_floattobigint: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, resultsl, (BSQBigInt)SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_decimaltobigint: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, resultsl, (BSQBigInt)SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_rationaltobigint: {
-        xxxx;
+        auto rr = SLPTR_LOAD_CONTENTS_AS(BSQRational, params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, resultsl, ((BSQBigInt)rr.numerator) / ((BSQBigInt)rr.denominator));
         break;
     }
     case BSQPrimitiveImplTag::number_floattodecimal: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, (BSQDecimal)SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_floattorational: {
-        xxxx;
+        BSQ_INTERNAL_ASSERT(false);
         break;
     }
     case BSQPrimitiveImplTag::number_decimaltofloat: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, (BSQFloat)SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0]));
         break;
     }
     case BSQPrimitiveImplTag::number_decimaltorational: {
-        xxxx;
+        BSQ_INTERNAL_ASSERT(false);
         break;
     }
     case BSQPrimitiveImplTag::number_rationaltofloat: {
-        xxxx;
+        auto rr = SLPTR_LOAD_CONTENTS_AS(BSQRational, params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, ((BSQFloat)rr.numerator) / ((BSQFloat)rr.denominator));
         break;
     }
     case BSQPrimitiveImplTag::number_rationaltodecimal: {
-        xxxx;
+        auto rr = SLPTR_LOAD_CONTENTS_AS(BSQRational, params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, ((BSQDecimal)rr.numerator) / ((BSQDecimal)rr.denominator));
         break;
     }
     case BSQPrimitiveImplTag::float_floor: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, std::floor(SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[0])));
         break;
     }
     case BSQPrimitiveImplTag::decimal_floor: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::floor(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0])));
         break;
     }
     case BSQPrimitiveImplTag::float_ceil: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, std::ceil(SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[0])));
         break;
     }
     case BSQPrimitiveImplTag::decimal_ceil: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::ceil(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0])));
         break;
     }
     case BSQPrimitiveImplTag::float_truncate: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, std::trunc(SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[0])));
         break;
     }
     case BSQPrimitiveImplTag::decimal_truncate: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::trunc(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0])));
         break;
     }
     case BSQPrimitiveImplTag::float_power: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, std::pow(SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[0]), SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[1])));
         break;
     }
     case BSQPrimitiveImplTag::decimal_power: {
-        xxxx;
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::pow(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0]), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[1])));
         break;
     }
     case BSQPrimitiveImplTag::string_empty: {
@@ -2065,14 +2085,94 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::string_append: {
         BSQString res = BSQStringImplType::concat2(params[0], params[1]);
+
         SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
         break;
     }
     case BSQPrimitiveImplTag::bytebuffer_getformat: {
-        xxxx;
+        BSQByteBuffer bb;
+        BSQWellKnownType::g_typeByteBuffer->storeValue(&bb, params[0]);
+
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)bb.format);
         break;
     }
     case BSQPrimitiveImplTag::bytebuffer_getcompression: {
+        BSQByteBuffer bb;
+        BSQWellKnownType::g_typeByteBuffer->storeValue(&bb, params[0]);
+
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)bb.compression);
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_get: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        pvtype->get(params[0], SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_select: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
+        auto sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[1]);
+
+        size_t pos = 0;
+        BSQMask rrm = {0};
+        for(size_t i = 0; i < 4; ++i) {
+            if(mask.bits[i]) {
+                rrm.bits[pos] = BSQTRUE;
+                auto into = pvtype->storagepos(respv, pos++);
+                pvtype->get(sl, i, into);
+            }
+        }
+
+        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_slice_start: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
+        auto sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
+        auto nstart = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+
+        size_t pos = 0;
+        BSQMask rrm = {0};
+        for(size_t i = nstart; i < 4; ++i) {
+            if(mask.bits[i]) {
+                auto into = pvtype->storagepos(respv, pos++);
+                pvtype->get(sl, i, into);
+            }
+        }
+
+        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_slice_end: {
+       auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
+        auto sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
+        auto nend = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+
+        size_t pos = 0;
+        BSQMask rrm = {0};
+        for(size_t i = 0; i < nend; ++i) {
+            if(mask.bits[i]) {
+                auto into = pvtype->storagepos(respv, pos++);
+                pvtype->get(sl, i, into);
+            }
+        }
+
+        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_reverse: {
+        xxxx;
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_append: {
         xxxx;
         break;
     }
