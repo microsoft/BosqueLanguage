@@ -5,6 +5,8 @@
 
 #include "bsqinvoke.h"
 
+std::vector<const BSQInvokeDecl*> BSQInvokeDecl::g_invokes;
+
 RefMask jsonLoadRefMask(json val)
 {
     if(val.is_null())

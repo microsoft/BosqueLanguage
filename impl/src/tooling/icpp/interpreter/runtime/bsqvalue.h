@@ -1459,7 +1459,9 @@ std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data
 ////
 //Mask
 
-typedef struct { BSQBool bits[4]; } BSQMask;
+xxxx; //this should go away
+
+typedef struct { BSQBool bits[8]; } BSQMask;
 constexpr BSQMask g_empty_bsqmask = {0};
 
 #define CONS_BSQ_MASK_TYPE() (new BSQMaskType())

@@ -37,6 +37,8 @@ public:
     const std::vector<BSQFunctionParameter> params;
     const BSQType* resultType;
 
+    static std::vector<const BSQInvokeDecl*> g_invokes;
+
     BSQInvokeDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfo, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType)
     : name(name), ikey(ikey), srcFile(srcFile), sinfo(sinfo), recursive(recursive), params(params), resultType(resultType)
     {;}

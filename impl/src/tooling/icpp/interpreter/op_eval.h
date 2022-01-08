@@ -39,8 +39,6 @@ private:
     static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
     static uint8_t* g_constantbuffer;
 
-    static std::vector<const BSQInvokeDecl*> g_invokes;
-
     static std::map<BSQTypeID, const BSQRegex*> g_validators;
     static std::vector<const BSQRegex*> g_regexs;
 

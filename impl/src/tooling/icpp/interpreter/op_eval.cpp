@@ -68,40 +68,9 @@ BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->c
 BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
-
-#define BI_LAMBDA_CALL_SETUP_TEMP(TTYPE, TEMPSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize); \
-        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize); \
-        GCStack::pushFrame((void**)TEMPSL, TTYPE->allocinfo.inlinedmask); \
-        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL}; \
-        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
-            return PARAMS[pos]; \
-        });
-
-#define BI_LAMBDA_CALL_SETUP_TEMP_IDX(TTYPE, TEMPSL, PARAMS, PC, LPARAMS, IDXSL) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize); \
-        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize); \
-        GCStack::pushFrame((void**)TEMPSL, TTYPE->allocinfo.inlinedmask); \
-        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL, IDXSL}; \
-        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
-            return PARAMS[pos]; \
-        });
-
-#define BI_LAMBDA_CALL_SETUP_TEMP_AND_RES(TTYPE, TEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
-        RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
-        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize); \
-        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.inlinedmask); \
-        GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
-        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL}; \
-        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
-            return PARAMS[pos]; \
-        });
-
-#define BI_LAMBDA_CALL_SETUP_POP() GCStack::popFrame();
-
 jmp_buf Evaluator::g_entrybuff;
 EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
 uint8_t* Evaluator::g_constantbuffer = nullptr;
-
-std::vector<const BSQInvokeDecl*> Evaluator::g_invokes;
 
 std::map<BSQTypeID, const BSQRegex*> Evaluator::g_validators;
 std::vector<const BSQRegex*> Evaluator::g_regexs;
@@ -629,7 +598,7 @@ void Evaluator::evalInvokeFixedFunctionOp<true>(const InvokeFixedFunctionOp* op)
     if(this->tryProcessGuardStmt(op->trgt, op->trgttype, op->sguard))
     {
         StorageLocationPtr resl = this->evalTargetVar(op->trgt);
-        this->invoke(Evaluator::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
+        this->invoke(BSQInvokeDecl::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
     }
 }
 
@@ -637,7 +606,7 @@ template <>
 void Evaluator::evalInvokeFixedFunctionOp<false>(const InvokeFixedFunctionOp* op)
 {
     StorageLocationPtr resl = this->evalTargetVar(op->trgt);
-    this->invoke(Evaluator::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
+    this->invoke(BSQInvokeDecl::g_invokes[op->invokeId], op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
 }
 
 void Evaluator::evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op)
@@ -651,7 +620,7 @@ void Evaluator::evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op)
     BSQ_INTERNAL_ASSERT(viter != etype->vtable.cend());
 
     StorageLocationPtr resl = this->evalTargetVar(op->trgt);
-    this->vinvoke(dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[viter->second]), rcvrloc, op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
+    this->vinvoke(dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[viter->second]), rcvrloc, op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
 }
 
 void Evaluator::evalInvokeVirtualOperatorOp(const InvokeVirtualOperatorOp* op)
@@ -2279,7 +2248,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto etype = BSQType::g_typetable[pvtype->elemtype];
 
         const BSQPCode* pc = invk->pcodes.find("p")->second;
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pc->code]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
         {
             BI_LAMBDA_CALL_SETUP_TEMP(etype, esl, params, pc, lparams)
@@ -2301,7 +2270,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto etype = BSQType::g_typetable[pvtype->elemtype];
 
         const BSQPCode* pc = invk->pcodes.find("p")->second;
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pc->code]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
         {
             BSQNat idx = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
@@ -2325,7 +2294,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto etype = BSQType::g_typetable[pvtype->elemtype];
 
         const BSQPCode* pc = invk->pcodes.find("p")->second;
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pc->code]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
         {
             BI_LAMBDA_CALL_SETUP_TEMP(etype, esl, params, pc, lparams)
@@ -2351,7 +2320,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto etype = BSQType::g_typetable[pvtype->elemtype];
 
         const BSQPCode* pc = invk->pcodes.find("p")->second;
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pc->code]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
         {
             BSQNat idx = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
@@ -2379,7 +2348,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto etype = BSQType::g_typetable[pvtype->elemtype];
 
         const BSQPCode* pc = invk->pcodes.find("p")->second;
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pc->code]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
         {
             BI_LAMBDA_CALL_SETUP_TEMP(etype, esl, params, pc, lparams)
@@ -2409,7 +2378,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto etype = BSQType::g_typetable[pvtype->elemtype];
 
         const BSQPCode* pc = invk->pcodes.find("p")->second;
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pc->code]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
         {
             BSQNat idx = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
@@ -2443,7 +2412,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto etypeR = BSQType::g_typetable[pvtypeR->elemtype];
 
         const BSQPCode* pc = invk->pcodes.find("f")->second;
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pc->code]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
         {
             BI_LAMBDA_CALL_SETUP_TEMP_AND_RES(etypeT, esl, pvtypeR, rsl, params, pc, lparams)
