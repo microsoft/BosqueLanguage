@@ -2813,11 +2813,6 @@ class TypeChecker {
             this.m_emitter.emitRegisterStore(exp.sinfo, this.emitInlineConvertIfNeeded(exp.sinfo, tmp, argtype, astype), trgt, this.m_emitter.registerResolvedTypeReference(astype), undefined);
             return [env.setUniformResultExpression(astype)];
         }
-        else if(nsdecl.ns === "Core" && exp.name === "s_undef") {
-            const oftype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.terms.targs[0], env.terms);
-            this.m_emitter.emitLoadUninitVariableValue(exp.sinfo, this.m_emitter.registerResolvedTypeReference(oftype), trgt);
-            return [env.setUniformResultExpression(oftype)];
-        }
         else {
             if (nsdecl.operators.has(exp.name)) {
                 const opsintro = (nsdecl.operators.get(exp.name) as NamespaceOperatorDecl[]).find((nso) => nso.doesKindTagMatch(exp.opkind) && OOPTypeDecl.attributeSetContains("abstract", nso.invoke.attributes));

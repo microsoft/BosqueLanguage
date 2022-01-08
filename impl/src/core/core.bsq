@@ -621,4 +621,3 @@ concept Expandoable<T> provides Some {
 }
 
 __assume_safe internal function s_safeAs<T, U>(v: T): U = special_function;
-__safe internal function s_undef<T>(): T = special_function;

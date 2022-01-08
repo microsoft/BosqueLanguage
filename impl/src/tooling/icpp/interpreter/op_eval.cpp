@@ -68,6 +68,35 @@ BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->c
 BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
+
+#define BI_LAMBDA_CALL_SETUP_TEMP(TTYPE, TEMPSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize); \
+        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize); \
+        GCStack::pushFrame((void**)TEMPSL, TTYPE->allocinfo.inlinedmask); \
+        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL}; \
+        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
+            return PARAMS[pos]; \
+        });
+
+#define BI_LAMBDA_CALL_SETUP_TEMP_IDX(TTYPE, TEMPSL, PARAMS, PC, LPARAMS, IDXSL) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize); \
+        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize); \
+        GCStack::pushFrame((void**)TEMPSL, TTYPE->allocinfo.inlinedmask); \
+        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL, IDXSL}; \
+        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
+            return PARAMS[pos]; \
+        });
+
+#define BI_LAMBDA_CALL_SETUP_TEMP_AND_RES(TTYPE, TEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
+        RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
+        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize); \
+        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.inlinedmask); \
+        GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
+        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL}; \
+        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
+            return PARAMS[pos]; \
+        });
+
+#define BI_LAMBDA_CALL_SETUP_POP() GCStack::popFrame();
+
 jmp_buf Evaluator::g_entrybuff;
 EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
 uint8_t* Evaluator::g_constantbuffer = nullptr;
@@ -1877,6 +1906,27 @@ void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& a
     }
 }
 
+void Evaluator::linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
+{
+        size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
+        uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+        GC_MEM_ZERO(cstack, cssize);
+
+        for(size_t i = 0; i < args.size(); ++i)
+        {
+            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+            call->params[i].ptype->storeValue(pv, args[i]);
+        }
+
+        size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
+        BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+        GC_MEM_ZERO(maskslots, maskslotbytes);
+
+        this->invokePrelude(call, cstack, maskslots, nullptr);
+        this->evaluateBody(resultsl, call->resultType, call->resultArg);
+        this->invokePostlude();
+}
+
 void Evaluator::vinvoke(const BSQInvokeBodyDecl* idecl, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
     size_t cssize = idecl->scalarstackBytes + idecl->mixedstackBytes;
@@ -2105,38 +2155,19 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::mask_empty: {
         auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, bvmask.count == 0);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, (BSQBool)std::equal(bvmask.bits, bvmask.bits + 4, g_empty_bsqmask.bits));
         break;
     }
-    case BSQPrimitiveImplTag::mask_count: {
+    case BSQPrimitiveImplTag::mask_bit: {
         auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, bvmask.count);
+        auto i = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, bvmask.bits[i]);
         break;
     }
-    case BSQPrimitiveImplTag::mask_some_true: {
-        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, bvmask.count != 0);
-        break;
-    }
-    case BSQPrimitiveImplTag::mask_min_bit: {
-        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
-        for(size_t i = 0; i < 4; ++i) {
-            if(bvmask.bits[i]) {
-                SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)i);
-                break;
-            }
-        }
-        break;
-    }
-    case BSQPrimitiveImplTag::mask_max_bit: {
-        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
-        for(size_t i = 3; i >= 0; --i) {
-            //ok since we only call this when we know it isn't empty
-            if(bvmask.bits[i]) {
-                SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)i);
-                break;
-            }
-        }
+    case BSQPrimitiveImplTag::pv_count: {
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]));
+        auto ct = std::count_if(mask.bits, mask.bits + 4, [](BSQBool bv) { return bv; });
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)ct);
         break;
     }
     case BSQPrimitiveImplTag::pv_get: {
@@ -2147,103 +2178,294 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     case BSQPrimitiveImplTag::pv_select: {
         auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
         auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
-        auto sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]);
-        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[1]);
+        auto sl = SLPTR_LOAD_HEAP_DATAPTR(params[0]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
 
         size_t pos = 0;
-        BSQMask rrm = {0};
         for(size_t i = 0; i < 4; ++i) {
             if(mask.bits[i]) {
-                rrm.bits[pos] = BSQTRUE;
-                rrm.count++;
+                ((BSQMask*)respv)->bits[pos] = BSQTRUE;
 
                 auto into = pvtype->storagepos(respv, pos++);
                 pvtype->get(sl, i, into);
             }
         }
 
-        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
         break;
     }
     case BSQPrimitiveImplTag::pv_slice_start: {
         auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
         auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
-        auto sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]);
+        auto sl = SLPTR_LOAD_HEAP_DATAPTR(params[0]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
         auto nstart = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
 
         size_t pos = 0;
-        BSQMask rrm = {0};
         for(size_t i = nstart; i < 4; ++i) {
             if(mask.bits[i]) {
-                rrm.bits[pos] = BSQTRUE;
-                rrm.count++;
+                ((BSQMask*)respv)->bits[pos] = BSQTRUE;
 
                 auto into = pvtype->storagepos(respv, pos++);
                 pvtype->get(sl, i, into);
             }
         }
 
-        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
         break;
     }
     case BSQPrimitiveImplTag::pv_slice_end: {
         auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
         auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
-        auto sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]);
+        auto sl = SLPTR_LOAD_HEAP_DATAPTR(params[0]);
         auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
         auto nend = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
 
         size_t pos = 0;
-        BSQMask rrm = {0};
         for(size_t i = 0; i < nend; ++i) {
             if(mask.bits[i]) {
-                rrm.bits[pos] = BSQTRUE;
-                rrm.count++;
+                ((BSQMask*)respv)->bits[pos] = BSQTRUE;
 
                 auto into = pvtype->storagepos(respv, pos++);
                 pvtype->get(sl, i, into);
             }
         }
 
-        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
         break;
     }
     case BSQPrimitiveImplTag::pv_reverse: {
-        xxxx;
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
+        auto sl = SLPTR_LOAD_HEAP_DATAPTR(params[0]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
+
+        size_t pos = 0;
+        auto ct = std::count_if(mask.bits, mask.bits + 4, [](BSQBool bv) { return bv; }) - 1;
+
+        SLPTR_STORE_CONTENTS_AS(BSQMask, sl, mask);
+        for(size_t i = 0; i < ct; ++i) {
+            auto into = pvtype->storagepos(respv, pos++);
+            pvtype->get(sl, ct - i, into);
+        }
+
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
         break;
     }
     case BSQPrimitiveImplTag::pv_append: {
-        xxxx;
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtype);
+        size_t pos = 0;
+
+        auto sl1 = SLPTR_LOAD_HEAP_DATAPTR(params[0]);
+        auto mask1 = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl1);
+        for(size_t i = 0; i < 4 & mask1.bits[i]; ++i) {
+            auto into = pvtype->storagepos(respv, pos++);
+            pvtype->get(sl1, i, into);
+        }
+
+        auto sl2 = SLPTR_LOAD_HEAP_DATAPTR(params[1]);
+        auto mask2 = SLPTR_LOAD_CONTENTS_AS(BSQMask, sl2);
+        for(size_t i = 0; i < 4 & mask2.bits[i]; ++i) {
+            auto into = pvtype->storagepos(respv, pos++);
+            pvtype->get(sl2, i, into);
+        }
+
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
         break;
     }
     case BSQPrimitiveImplTag::apply_pred: {
         auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
-        
-        auto sl = params[0];
-        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl));
+        auto etype = BSQType::g_typetable[pvtype->elemtype];
 
-        xxx; //push stack slot for 1 temp element + 1 bool
+        const BSQPCode* pc = invk->pcodes.find("p")->second;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
+        {
+            BI_LAMBDA_CALL_SETUP_TEMP(etype, esl, params, pc, lparams)
 
-        size_t pos = 0;
-        BSQMask rrm = {0};
-        for(size_t i = 0; i < 4; ++i) {
-            if(mask.bits[i]) {
-                pvtype->get(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl), i, tmp);
-                xxxx; //call pred put return in ok
-
-                if(ok) {
-                    rrm.bits[pos] = BSQTRUE;
-                    rrm.count++;
-                }
+            size_t pos = 0;
+            BSQMask* rrm = (BSQMask*)resultsl;
+            while(mask.bits[pos] & (pos < 4)) {
+                pvtype->get(SLPTR_LOAD_HEAP_DATAPTR(params[0]), pos, esl);
+                this->linvoke(icall, lparams, rrm->bits + pos);
+                pos++;
             }
-        }
 
-        SLPTR_STORE_CONTENTS_AS(BSQMask, respv, rrm);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::apply_pred_idx: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto etype = BSQType::g_typetable[pvtype->elemtype];
+
+        const BSQPCode* pc = invk->pcodes.find("p")->second;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
+        {
+            BSQNat idx = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+            BI_LAMBDA_CALL_SETUP_TEMP_IDX(etype, esl, params, pc, lparams, &idx)
+
+            size_t pos = 0;
+            BSQMask* rrm = (BSQMask*)resultsl;
+            while(mask.bits[pos] & (pos < 4)) {
+                pvtype->get(SLPTR_LOAD_HEAP_DATAPTR(params[0]), pos, esl);
+                this->linvoke(icall, lparams, rrm->bits + pos);
+                pos++;
+                idx++;
+            }
+
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_find_pred: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto etype = BSQType::g_typetable[pvtype->elemtype];
+
+        const BSQPCode* pc = invk->pcodes.find("p")->second;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
+        {
+            BI_LAMBDA_CALL_SETUP_TEMP(etype, esl, params, pc, lparams)
+
+            size_t pos = 0;
+            BSQBool found = BSQFALSE;
+            while(mask.bits[pos] & (pos < 4)) {
+                pvtype->get(SLPTR_LOAD_HEAP_DATAPTR(params[0]), pos, esl);
+                this->linvoke(icall, lparams, &found);
+                if(found) {
+                    break;
+                }
+                pos++;
+            }
+
+            SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_find_pred_idx: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto etype = BSQType::g_typetable[pvtype->elemtype];
+
+        const BSQPCode* pc = invk->pcodes.find("p")->second;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
+        {
+            BSQNat idx = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+            BI_LAMBDA_CALL_SETUP_TEMP_IDX(etype, esl, params, pc, lparams, &idx)
+
+            size_t pos = 0;
+            BSQBool found = BSQFALSE;
+            while(mask.bits[pos] & (pos < 4)) {
+                pvtype->get(SLPTR_LOAD_HEAP_DATAPTR(params[0]), pos, esl);
+                this->linvoke(icall, lparams, &found);
+                if(found) {
+                    break;
+                }
+                pos++;
+                idx++;
+            }
+
+            SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_find_last_pred: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto etype = BSQType::g_typetable[pvtype->elemtype];
+
+        const BSQPCode* pc = invk->pcodes.find("p")->second;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
+        {
+            BI_LAMBDA_CALL_SETUP_TEMP(etype, esl, params, pc, lparams)
+
+            size_t pos = 0;
+            BSQBool found = BSQFALSE;
+            while(pos < 4) {
+                if(mask.bits[3 - pos])
+                {
+                    pvtype->get(SLPTR_LOAD_HEAP_DATAPTR(params[0]), 3 - pos, esl);
+                    this->linvoke(icall, lparams, &found);
+                    if(found) 
+                    {
+                        break;
+                    }
+                }
+                pos++;
+            }
+
+            SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_find_last_pred_idx: {
+        auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto etype = BSQType::g_typetable[pvtype->elemtype];
+
+        const BSQPCode* pc = invk->pcodes.find("p")->second;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
+        {
+            BSQNat idx = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+            BI_LAMBDA_CALL_SETUP_TEMP_IDX(etype, esl, params, pc, lparams, &idx)
+
+            size_t pos = 0;
+            BSQBool found = BSQFALSE;
+            while(pos < 4) {
+                if(mask.bits[3 - pos])
+                {
+                    pvtype->get(SLPTR_LOAD_HEAP_DATAPTR(params[0]), 3 - pos, esl);
+                    this->linvoke(icall, lparams, &found);
+                    if(found) 
+                    {
+                        break;
+                    }
+                }
+                pos++;
+            }
+
+            SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_map: {
+        auto pvtypeT = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
+        auto etypeT = BSQType::g_typetable[pvtypeT->elemtype];
+
+        auto pvtypeR = dynamic_cast<const BSQPartialVectorType*>(invk->resultType);
+        auto etypeR = BSQType::g_typetable[pvtypeR->elemtype];
+
+        const BSQPCode* pc = invk->pcodes.find("f")->second;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(Evaluator::g_invokes[pc->code]);
+        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_HEAP_DATAPTR(params[0]));
+        {
+            BI_LAMBDA_CALL_SETUP_TEMP_AND_RES(etypeT, esl, pvtypeR, rsl, params, pc, lparams)
+
+            size_t pos = 0;
+            BSQMask* rrm = (BSQMask*)rsl;
+            while(mask.bits[pos] & (pos < 4)) {
+                auto into = pvtype->storagepos(rsl, pos++);
+                pvtype->get(SLPTR_LOAD_HEAP_DATAPTR(params[0]), pos, esl);
+                this->linvoke(icall, lparams, );
+                pos++;
+            }
+
+            auto respv = Allocator::GlobalAllocator.allocateDynamic(pvtypeR);
+            GC_MEM_COPY(respv, rsl, pvtypeR->allocinfo.inlinedatasize);
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(resultsl, respv);
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        break;
+    }
+    case BSQPrimitiveImplTag::pv_map_idx: {
+        xxxx;
         break;
     }
     default: {

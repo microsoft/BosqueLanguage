@@ -307,15 +307,22 @@ enum class BSQPrimitiveImplTag
     string_append,
 
     mask_empty,
-    mask_count,
-    mask_some_true,
-    mask_min_bit,
-    mask_max_bit,
+    mask_bit,
 
+    pv_count,
     pv_get,
     pv_select,
     pv_slice_start,
     pv_slice_end,
     pv_reverse,
-    pv_append
+    pv_append,
+
+    apply_pred,
+    apply_pred_idx,
+    pv_find_pred,
+    pv_find_pred_idx,
+    pv_find_last_pred,
+    pv_find_last_pred_idx,
+    pv_map,
+    pv_map_idx
 };

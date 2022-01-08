@@ -427,27 +427,20 @@ public:
     const BSQTypeID elemtype;
     const uint32_t elemsize;
 
-    const uint32_t elembase;
-    xxx;
-
     BSQPartialVectorType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, BSQTypeID elemtype, uint32_t elemsize, uint32_t elembase): 
         BSQRefType(tid, heapsize, heapmask, {}, EMPTY_KEY_CMP, fpDisplay, name),
         BSQEntityInfo(fields, fieldoffsets, {BSQ_TYPE_ID_MASK, elemtype, elemtype, elemtype, elemtype}),
-        elemtype(elemtype), elemsize(elemsize), elembase(elembase)
+        elemtype(elemtype), elemsize(elemsize)
     {;}
 
     virtual ~BSQPartialVectorType() {;}
-
-    static inline BSQMask mask(StorageLocationPtr sl) {
-        return SLPTR_LOAD_CONTENTS_AS(BSQMask, sl);
-    }
-
+    
     inline void get(void* data, size_t i, StorageLocationPtr trgt) const {
-        BSQType::g_typetable[this->elemtype]->storeValue(trgt, SLPTR_INDEX_DATAPTR(data, elembase + (i * elemsize)));
+        BSQType::g_typetable[this->elemtype]->storeValue(trgt, SLPTR_INDEX_DATAPTR(data, 8 + (i * elemsize)));
     }
 
     inline StorageLocationPtr storagepos(void* data, size_t i) const {
-        SLPTR_INDEX_DATAPTR(data, elembase + (i * elemsize));
+        SLPTR_INDEX_DATAPTR(data, 8 + (i * elemsize));
     }
 };
 
@@ -1466,7 +1459,8 @@ std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data
 ////
 //Mask
 
-typedef struct { BSQBool bits[4]; uint32_t count; } BSQMask;
+typedef struct { BSQBool bits[4]; } BSQMask;
+constexpr BSQMask g_empty_bsqmask = {0};
 
 #define CONS_BSQ_MASK_TYPE() (new BSQMaskType())
 
@@ -1475,7 +1469,7 @@ typedef struct { BSQBool bits[4]; uint32_t count; } BSQMask;
 
 std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-#define CONS_BSQ_PARTIAL_VECTOR_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, FIELDS, FIELDOFFSETS, ELEMTYPE) (new BSQPartialVectorType(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, FIELDS, FIELDOFFSETS, ELEMTYPE))
+#define CONS_BSQ_PARTIAL_VECTOR_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQPartialVectorType(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, ELEMTYPE, ELEMSIZE))
 
 ////
 //List

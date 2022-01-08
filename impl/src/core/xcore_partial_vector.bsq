@@ -9,276 +9,87 @@ namespace Core;
 #if EXEC_LIBS
 internal entity Mask provides Some {
     safe function s_empty(m: Mask): Bool = mask_empty;
-    safe function s_count(m: Mask): Bool = mask_count;
+    safe function s_bit(m: Mask, i: Nat): Bool = mask_bit;
 
-    safe function s_some_true(m: Mask): Bool = mask_some_true;
-    safe function s_min_bit(m: Mask): Bool = mask_min_bit;
-    safe function s_max_bit(m: Mask): Bool = mask_max_bit;
-
-    method min(): Nat? {
-        if(Mask::s_empty(this)) {
-            return none;
-        }
-        else {
-            return Mask::s_min_bit(this);
-        }
+    method bit0(): Bool {
+        return Mask::s_bit(0);
     }
 
-    method max(): Nat? {
-        if(Mask::s_empty(this)) {
-            return none;
-        }
-        else {
-            return Mask::s_max_bit(this);
-        }
+    method bit1(): Bool {
+        return Mask::s_bit(1);
+    }
+
+    method bit2(): Bool {
+        return Mask::s_bit(2);
+    }
+
+    method bit3(): Bool {
+        return Mask::s_bit(3);
     }
 }
 
 internal entity PartialVector<T> provides Some {
+    __safe function s_count(pv: PartialVector<T>): Nat = pv_count;
     __safe function s_safe_get(pv: PartialVector<T>, i: Nat): T = pv_get;
+
     __safe function s_select(pv: PartialVector<T>, m: Mask): T = pv_select;
     __safe function s_slice_start(pv: PartialVector<T>, start: Nat): PartialVector<T> = pv_slice_start;
     __safe function s_slice_end(pv: PartialVector<T>, end: Nat): PartialVector<T> = pv_slice_end;
     __safe function s_reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> = pv_reverse;
-    __safe function s_append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> = pv_append;
+    __safe function s_append(pv1: PartialVector<T>, pv2: PartialVector<T>): PartialVector<T> = pv_append;
 
-    field mask: Mask;
-    field v0: T;
-    field v1: T;
-    field v2: T;
-    field v3: T;
+    recursive? function s_apply_pred(PartialVector<T> l, p: recursive? pred(_: T) -> Bool): Mask = pv_apply_pred;
+    recursive? function s_apply_pred_idx(PartialVector<T> l, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask = pv_apply_pred_idx;
 
-    method safe_get(i: Nat): T {
-        return PartialVector<T>::s_safe_get(this, i);
+    recursive? function s_find_pred(PartialVector<T> pv, p: recursive? pred(_: T) -> Bool): Nat = pv_find_pred;
+    recursive? function s_find_pred_idx(PartialVector<T> pv, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = pv_find_pred_idx;
+    recursive? function s_find_last_pred(PartialVector<T> pv, p: recursive? pred(_: T) -> Bool): Nat = pv_find_last_pred;
+    recursive? function s_find_last_pred_idx(PartialVector<T> pv, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = pv_find_last_pred_idx;
+
+    recursive? function s_map_fn<U>(PartialVector<T> pv, f: recursive? fn(_: T) -> U): PartialVector<U> = pv_map;
+    recursive? method s_map_fn_idx<U>(PartialVector<T> pv, idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> = pv_map_idx;
+
+    recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+        let ff = PartialVector<T>::s_find_pred(this, p);
+        if(ff == 4) {
+            return none;
+        }
+        else {
+            return ff;
+        }
     }
 
-    method select(m: Mask): PartialVector<T> {
-        return PartialVector<T>::s_select(this, m);
+    recursive? method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let ff = PartialVector<T>::s_find_pred_idx(this, idx, p);
+        if(ff == 4) {
+            return none;
+        }
+        else {
+            return ff;
+        }
     }
 
-    method slice_start(start: Nat): PartialVector<T> {
-        return PartialVector<T>::s_slice_start(this, start); 
+    recursive? method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+        let ff = PartialVector<T>::s_find_last_pred(this, p);
+        if(ff == 4) {
+            return none;
+        }
+        else {
+            return ff;
+        }
     }
 
-    method slice_end(end: Nat): PartialVector<T> {
-        return PartialVector<T>::s_slice_end(this, end);
+    recursive? method find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let ff = PartialVector<T>::s_find_last_pred_idx(this, idx, p);
+        if(ff == 4) {
+            return none;
+        }
+        else {
+            return ff;
+        }
     }
 
-    method reverse(pv: PartialVector<T>, count: Nat): PartialVector<T> {
-        return PartialVector<T>::s_reverse(this, count);
-    }
-
-    function append(pv1: PartialVector<T>, count1: Nat, pv2: PartialVector<T>, count2: Nat): PartialVector<T> {
-        return PartialVector<T>::s_append(pv1, count1, pv2, count2);
-    }
-
-    recursive? method apply_pred(p: recursive? pred(_: T) -> Bool): Mask {
-        let m = this.mask;
-        var b0 = false;
-        var b1 = false;
-        var b2 = false;
-        var b3 = false;
-
-        if(m.bit0) {
-            b0 = p[recursive?](this.v0);
-        }
-
-        if(m.bit1) {
-            b1 = p[recursive?](this.v1);
-        }
-
-        if(m.bit2) {
-            b2 = p[recursive?](this.v2);
-        }
-
-        if(m.bit3) {
-            b3 = p[recursive?](this.v3);
-        }
-
-        return Mask{b0, b1, b2, b3};
-    }
-
-    recursive? method apply_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
-        let m = this.mask;
-        var b0 = false;
-        var b1 = false;
-        var b2 = false;
-        var b3 = false;
-
-        if(m.bit0) {
-            b0 = p[recursive?](this.v0, idx);
-        }
-
-        if(m.bit1) {
-            b1 = p[recursive?](this.v1, idx + 1n);
-        }
-
-        if(m.bit2) {
-            b2 = p[recursive?](this.v2, idx + 2n);
-        }
-
-        if(m.bit3) {
-            b3 = p[recursive?](this.v3, idx + 3n);
-        }
-        
-        return Mask{b0, b1, b2, b3};
-    }
-
-    recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Mask {
-        let m = this.mask;
-        var b0 = false;
-        var b1 = false;
-        var b2 = false;
-        var b3 = false;
-
-        if(m.bit0) {
-            b0 = p[recursive?](this.v0);
-        }
-
-        if(/\(!b0, m.bit1)) {
-            b1 = p[recursive?](this.v1);
-        }
-
-        if(/\(!b0, !b1, m.bit2)) {
-            b2 = p[recursive?](this.v2);
-        }
-
-        if(/\(!b0, !b1, !b2, m.bit3)) {
-            b3 = p[recursive?](this.v3);
-        }
-        
-        return Mask{b0, b1, b2, b3};
-    }
-
-    recursive? method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
-        let m = this.mask;
-        var b0 = false;
-        var b1 = false;
-        var b2 = false;
-        var b3 = false;
-
-        if(m.bit0) {
-            b0 = p[recursive?](this.v0, idx);
-        }
-
-        if(/\(!b0, m.bit1)) {
-            b1 = p[recursive?](this.v1, idx + 1n);
-        }
-
-        if(/\(!b0, !b1, m.bit2)) {
-            b2 = p[recursive?](this.v2, idx + 2n);
-        }
-
-        if(/\(!b0, !b1, !b2, m.bit3)) {
-            b3 = p[recursive?](this.v3, idx + 3n);
-        }
-        
-        return Mask{b0, b1, b2, b3};
-    }
-
-    recursive? method s_find_last_pred(p: recursive? pred(_: T) -> Bool): Mask {
-        let m = this.mask;
-        var b0 = false;
-        var b1 = false;
-        var b2 = false;
-        var b3 = false;
-
-        if(m.bit3) {
-            b3 = p[recursive?](this.v3);
-        }
-
-        if(/\(!b3, m.bit2)) {
-            b2 = p[recursive?](this.v2);
-        }
-
-        if(/\(!b3, !b2, m.bit1)) {
-            b1 = p[recursive?](this.v1);
-        }
-
-        if(/\(!b3, !b2, !b1, m.bit0)) {
-            b0 = p[recursive?](this.v0);
-        }
-        
-        return Mask{b0, b1, b2, b3};
-    }
-
-    recursive? method s_find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Mask {
-        let m = this.mask;
-        var b0 = false;
-        var b1 = false;
-        var b2 = false;
-        var b3 = false;
-
-        if(m.bit3) {
-            b3 = p[recursive?](this.v3, idx + 3n);
-        }
-
-        if(/\(!b3, m.bit2)) {
-            b2 = p[recursive?](this.v2, idx + 2n);
-        }
-
-        if(/\(!b3, !b2, m.bit1)) {
-            b1 = p[recursive?](this.v1, idx + 1n);
-        }
-
-        if(/\(!b3, !b2, !b1, m.bit0)) {
-            b0 = p[recursive?](this.v0, idx);
-        }
-        
-        return Mask{b0, b1, b2, b3};
-    }
-
-    recursive? method s_map_fn<T, U>(f: recursive? fn(_: T) -> U): PartialVector<U> {
-        let m = this.mask;
-        var v0 = s_undef<U>();
-        var v1 = s_undef<U>();
-        var v2 = s_undef<U>();
-        var v3 = s_undef<U>();
-
-        if(m.bit0) {
-            v0 = f[recursive?](this.v0);
-        }
-
-        if(m.bit1) {
-            v1 = f[recursive?](this.v1);
-        }
-
-        if(m.bit2) {
-            v2 = f[recursive?](this.v2);
-        }
-
-        if(m.bit3) {
-            v3 = f[recursive?](this.v3);
-        }
-        
-        return PartialVector<U>{m, v0, v1, v2, v3};
-    }
     
-    recursive? method s_map_fn_idx<T, U>(idx: Nat, p: recursive? fn(_: T, _: Nat) -> U): PartialVector<U> {
-        let m = this.mask;
-        var v0 = s_undef<U>();
-        var v1 = s_undef<U>();
-        var v2 = s_undef<U>();
-        var v3 = s_undef<U>();
-
-        if(m.bit0) {
-            v0 = f[recursive?](this.v0, idx);
-        }
-
-        if(m.bit1) {
-            v1 = f[recursive?](this.v1, idx + 1n);
-        }
-
-        if(m.bit2) {
-            v2 = f[recursive?](this.v2, idx + 2n);
-        }
-
-        if(m.bit3) {
-            v3 = f[recursive?](this.v3, idx + 3n);
-        }
-        
-        return PartialVector<U>{m, v0, v1, v2, v3};
-    }
 
     function {when T unique Int | Nat} s_range(start: T, end: T, inc: T, zero: T): PartialVector<T> {
         let m = Mask::s_init_k(count);
@@ -501,7 +312,7 @@ internal entity PartialVector<T> provides Some {
     method s_parallel_sum<T unique Algebraic>(iv: T): T {
         let m = this.mask;
         
-        var v0= iv;
+        var v0 = iv;
         if(m.bit0) {
             v0 = this.v0;
         }

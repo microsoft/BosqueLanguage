@@ -371,6 +371,7 @@ private:
     void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
+    void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
     void vinvoke(const BSQInvokeBodyDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
     
     void invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
