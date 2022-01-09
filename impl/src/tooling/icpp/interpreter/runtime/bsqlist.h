@@ -25,32 +25,33 @@ public:
 
     virtual ~BSQListReprType() {;}
 
-    virtual size_t getCount(void* repr) const = 0;
+    virtual uint64_t getCount(void* repr) const = 0;
 };
 
-template <size_t K, size_t S>
-class BSQPartialVector : public BSQListReprType
+class BSQPartialVectorType : public BSQListReprType
 {
 public:
-    BSQPartialVector(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name, ListReprKind lkind) 
-    : BSQListReprType(tid, allocsize, heapmask, name, lkind) 
+    const size_t entrysize;
+
+    BSQPartialVectorType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name, ListReprKind lkind, size_t entrysize) 
+    : BSQListReprType(tid, allocsize, heapmask, name, lkind), entrysize(entrysize)
     {;}
 
-    virtual ~BSQPartialVector() {;}
+    virtual ~BSQPartialVectorType() {;}
 
     virtual uint64_t getCount(void* repr) const override final
     {
         return *((uint64_t*)repr);
     }
 
-    BSQMask getMask(void* repr)
+    inline static uint64_t getPVCount(void* repr) 
     {
-        return *((BSQMask*)repr);
+        return *((uint64_t*)repr);
     }
 
-    StorageLocationPtr get(void* repr, size_t i)
+    inline StorageLocationPtr get(void* repr, size_t i) const
     {
-        return ((uint8_t*)repr) + sizeof(uint64_t) + (i * S);
+        return ((uint8_t*)repr) + sizeof(uint64_t) + (i * this->entrysize);
     }
 };
 
@@ -70,7 +71,7 @@ public:
 
     virtual ~BSQListTreeType() {;}
 
-    virtual size_t getCount(void* repr) const override final
+    virtual uint64_t getCount(void* repr) const override final
     {
         return ((BSQListTreeRepr*)repr)->size;
     }
@@ -84,24 +85,36 @@ struct BSQList
 
 class BSQListForwardIterator
 {
-private:
-    void initializeIteratorPosition(int64_t curr);
-
 public:
-    void* lroot;
+    std::vector<BSQListTreeRepr*> iterstack;
     size_t curr;
     size_t lmax;
     void* lcurr;
-    BSQListReprType* lctype;
+    const BSQPartialVectorType* lctype;
     uint16_t icurr;
     uint16_t imax;
 
-    BSQListForwardIterator(BSQList& lroot, int64_t curr) 
-    : lroot(lroot.repr), curr(curr), lmax(0), lcurr(nullptr), lctype(nullptr), icurr(0), imax(0)
+    BSQListForwardIterator(BSQList& lroot) 
+    : iterstack(), curr(0), lmax(0), lcurr(nullptr), lctype(nullptr), icurr(0), imax(0)
     {
         if(lroot.repr != nullptr) {
             this->lmax = dynamic_cast<const BSQListReprType*>(lroot.lreprtype)->getCount(lroot.repr); 
-            this->initializeIteratorPosition(curr);
+
+            void* rr = lroot.repr;
+            const BSQListReprType* rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
+            while(rt->lkind == ListReprKind::TreeElement)
+            {
+                this->iterstack.push_back(static_cast<BSQListTreeRepr*>(rr));
+
+                rr = static_cast<BSQListTreeRepr*>(rr)->l;
+                rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
+            }
+
+            this->lcurr = static_cast<void*>(rr);
+            this->lctype = static_cast<const BSQPartialVectorType*>(rt);
+
+            this->icurr = 0;
+            this->imax = BSQPartialVectorType::getPVCount(rr);
         }
     }
     
@@ -112,16 +125,49 @@ public:
         return this->curr != this->lmax;
     }
 
+    void advance_slow()
+    {
+        void* rr = this->lcurr;
+        while(this->iterstack.back()->r == rr)
+        {
+            rr = this->iterstack.back();
+            this->iterstack.pop_back();
+        }
+
+        rr = static_cast<BSQListTreeRepr*>(rr)->r;
+        const BSQListReprType* rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
+        while(rt->lkind == ListReprKind::TreeElement)
+        {
+            this->iterstack.push_back(static_cast<BSQListTreeRepr*>(rr));
+
+            rr = static_cast<BSQListTreeRepr*>(rr)->l;
+            rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
+        }
+
+        this->lcurr = static_cast<void*>(rr);
+        this->lctype = static_cast<const BSQPartialVectorType*>(rt);
+
+        this->icurr = 0;
+        this->imax = BSQPartialVectorType::getPVCount(rr);
+    }
+
     inline void advance()
     {
         assert(this->valid());
+
+        this->curr++;
+        this->icurr++;
+        if(this->icurr >= this->imax)
+        {
+            this->advance_slow();
+        }
     }
 
     inline StorageLocationPtr getlocation() const
     {
         assert(this->valid());
 
-        xxxx;
+        return this->lctype->get(this->lcurr, this->icurr);
     }
 
     size_t distance() const

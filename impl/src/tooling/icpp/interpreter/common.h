@@ -156,7 +156,7 @@ typedef void* StorageLocationPtr;
 #define SLPTR_STORE_UNION_INLINE_TYPE(T, L) *((const BSQType**)L) = T
 
 #define SLPTR_LOAD_HEAP_TYPE(L) GET_TYPE_META_DATA(*((void**)L))
-#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)SLPTR_LOAD_HEAP_TYPE_SOME(*((void**)L)))
+#define SLPTR_LOAD_HEAP_TYPE_AS(T, L) ((const T*)SLPTR_LOAD_HEAP_TYPE(*((void**)L)))
 
 #define SLPTR_LOAD_HEAP_DATAPTR(L) (*((void**)L))
 
