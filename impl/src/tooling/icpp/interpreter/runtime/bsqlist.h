@@ -44,12 +44,12 @@ public:
         return *((uint64_t*)repr);
     }
 
-    inline static uint64_t getPVCount(void* repr) 
+    inline static int16_t getPVCount(void* repr) 
     {
-        return *((uint64_t*)repr);
+        return (int16_t)*((uint64_t*)repr);
     }
 
-    inline StorageLocationPtr get(void* repr, size_t i) const
+    inline StorageLocationPtr get(void* repr, int16_t i) const
     {
         return ((uint8_t*)repr) + sizeof(uint64_t) + (i * this->entrysize);
     }
@@ -83,22 +83,20 @@ struct BSQList
     void* repr;
 };
 
-class BSQListForwardIterator
+class BSQListForwardIterator : public BSQCollectionIterator
 {
 public:
-    std::vector<BSQListTreeRepr*> iterstack;
-    size_t curr;
-    size_t lmax;
-    void* lcurr;
+    int64_t curr;
+    int64_t lmax;
     const BSQPartialVectorType* lctype;
-    uint16_t icurr;
-    uint16_t imax;
+    int16_t icurr;
+    int16_t imax;
 
-    BSQListForwardIterator(BSQList& lroot) 
-    : iterstack(), curr(0), lmax(0), lcurr(nullptr), lctype(nullptr), icurr(0), imax(0)
+    BSQListForwardIterator(BSQList& lroot): BSQCollectionIterator(), lctype(nullptr), icurr(0), imax(0)
     {
-        if(lroot.repr != nullptr) {
-            this->lmax = dynamic_cast<const BSQListReprType*>(lroot.lreprtype)->getCount(lroot.repr); 
+        if(lroot.repr != nullptr) 
+        {
+            this->lmax = (int64_t)dynamic_cast<const BSQListReprType*>(lroot.lreprtype)->getCount(lroot.repr); 
 
             void* rr = lroot.repr;
             const BSQListReprType* rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
@@ -128,7 +126,7 @@ public:
     void advance_slow()
     {
         void* rr = this->lcurr;
-        while(this->iterstack.back()->r == rr)
+        while(static_cast<BSQListTreeRepr*>(this->iterstack.back())->r == rr)
         {
             rr = this->iterstack.back();
             this->iterstack.pop_back();
@@ -169,113 +167,149 @@ public:
 
         return this->lctype->get(this->lcurr, this->icurr);
     }
-
-    size_t distance() const
-    {
-        return this->curr;
-    }
 };
 
-class BSQStringReverseIterator : public CharCodeIterator
+class BSQListReverseIterator : public BSQCollectionIterator
 {
-private:
-    void initializeIteratorPosition(int64_t curr);
-    
-    void increment_utf8byte();
 public:
-    BSQString* sstr;
     int64_t curr;
-    int64_t strmax;
-    uint8_t* cbuff;
-    uint16_t cpos;
+    const BSQPartialVectorType* lctype;
+    int16_t icurr;
 
-    BSQStringReverseIterator(BSQString* sstr, int64_t curr) : CharCodeIterator(), sstr(sstr), curr(curr), strmax(strmax), cbuff(nullptr), cpos(0) 
+    BSQListReverseIterator(BSQList& lroot): BSQCollectionIterator(), lctype(nullptr), icurr(0)
     {
-        if(IS_INLINE_STRING(sstr))
+        if(lroot.repr != nullptr) 
         {
-            this->strmax = (int64_t)BSQInlineString::utf8ByteCount(sstr->u_inlineString);
-        }
-        else
-        {
-            this->strmax = (int64_t)GET_TYPE_META_DATA_AS(BSQStringReprType, sstr->u_data)->utf8ByteCount(sstr->u_data);
-        }
+            this->curr = (int64_t)dynamic_cast<const BSQListReprType*>(lroot.lreprtype)->getCount(lroot.repr) - 1; 
 
-        this->initializeIteratorPosition(curr);
-        if(curr == strmax - 1)
-        {
-            auto utfbyte = this->cbuff[this->cpos];
-            if((utfbyte & 0x8) == 1)
+            void* rr = lroot.repr;
+            const BSQListReprType* rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
+            while(rt->lkind == ListReprKind::TreeElement)
             {
-                //not implemented
-                assert(false);
+                this->iterstack.push_back(static_cast<BSQListTreeRepr*>(rr));
+
+                rr = static_cast<BSQListTreeRepr*>(rr)->r;
+                rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
             }
+
+            this->lcurr = static_cast<void*>(rr);
+            this->lctype = static_cast<const BSQPartialVectorType*>(rt);
+
+            this->icurr = BSQPartialVectorType::getPVCount(rr) - 1;
         }
     }
+    
+    virtual ~BSQListReverseIterator() {;}
 
-    virtual ~BSQStringReverseIterator() {;}
-
-    virtual bool valid() const override final
+    inline bool valid() const
     {
-        return this->curr != -1;
+        return this->curr >= 0;
     }
 
-    virtual void advance() override final
+    void advance_slow()
     {
-        assert(this->valid());
-        this->increment_utf8byte();
-
-        if(this->valid()) [[likely]]
+        void* rr = this->lcurr;
+        while(static_cast<BSQListTreeRepr*>(this->iterstack.back())->l == rr)
         {
-            auto utfbyte = this->cbuff[this->cpos];
-            if((utfbyte & 0x8) == 1) [[unlikely]]
-            {
-                //not implemented
-                assert(false);
-            }
+            rr = this->iterstack.back();
+            this->iterstack.pop_back();
         }
-    }
 
-    virtual CharCode get() const override final
-    {
-        assert(this->valid());
-
-        auto utfbyte = this->cbuff[this->cpos];
-        if((utfbyte & 0x8) == 0) [[likely]]
+        rr = static_cast<BSQListTreeRepr*>(rr)->r;
+        const BSQListReprType* rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
+        while(rt->lkind == ListReprKind::TreeElement)
         {
-            return (CharCode)utfbyte;
+            this->iterstack.push_back(static_cast<BSQListTreeRepr*>(rr));
+
+            rr = static_cast<BSQListTreeRepr*>(rr)->r;
+            rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
         }
-        else [[unlikely]]
+
+        this->lcurr = static_cast<void*>(rr);
+        this->lctype = static_cast<const BSQPartialVectorType*>(rt);
+
+        this->icurr = BSQPartialVectorType::getPVCount(rr) - 1;
+    }
+
+    inline void advance()
+    {
+        assert(this->valid());
+
+        this->curr--;
+        this->icurr--;
+        if(this->icurr < 0)
         {
-            //not implemented
-            assert(false);
+            this->advance_slow();
         }
     }
 
-    virtual size_t distance() const override final
-    {
-        return this->strmax - (this->curr + 1);
-    }
-
-    virtual void resetTo(size_t distance) override final
-    {
-        this->initializeIteratorPosition(this->strmax - (distance + 1));
-    }
-
-    void advance_byte()
+    inline StorageLocationPtr getlocation() const
     {
         assert(this->valid());
-        this->increment_utf8byte();
-    } 
 
-    uint8_t get_byte() const
-    {
-        assert(this->valid());
-        return this->cbuff[this->cpos];
-    } 
+        return this->lctype->get(this->lcurr, this->icurr);
+    }
 };
 
 class BSQListOps
 {
+private:
+    BSQCollectionGCReprNode* list_tree_transform(BSQCollectionGCReprNode* reprnode)
+    {
+        auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(reprnode->repr));
+        if(reprtype->lkind != ListReprKind::TreeElement)
+        {
+            return fn_partialvector(reprnode);
+        }
+        else
+        {
+            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto lnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(reprnode->repr)->l);
+            auto llnode = fn_listtree(lnode);
+            Allocator::GlobalAllocator.getCollectionNodeReset();
+            if(llnode != nullptr)
+            {
+                Allocator::GlobalAllocator.getCollectionNodeAdd(llnode);
+            }
+
+            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(reprnode->repr)->r);
+            auto rrnode = fn_listtree(rnode);
+            Allocator::GlobalAllocator.getCollectionNodeReset();
+            if(rrnode != nullptr)
+            {
+                Allocator::GlobalAllocator.getCollectionNodeAdd(rrnode);
+            }
+
+            if(llnode == nullptr & rrnode == nullptr)
+            {
+                return nullptr;
+            }
+            else if(llnode == nullptr)
+            {
+                return rrnode;
+            }
+            else if(rrnode == nullptr)
+            {
+                return llnode;
+            }
+            else
+            {
+                auto lltype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(llnode->repr));
+                auto rrtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rrnode->repr));
+
+                if((lltype->lkind != ListReprKind::TreeElement) & (rrtype->lkind != ListReprKind::TreeElement))
+                {
+
+                }
+                else
+                {
+                    xxxx;
+                }
+            }
+        }
+    }
+
 public:
 
 };

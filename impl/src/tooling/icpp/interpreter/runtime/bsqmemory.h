@@ -48,6 +48,22 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const = 0;
 };
 
+class BSQCollectionIterator
+{
+public:
+    std::vector<void*> iterstack;
+    void* lcurr;
+
+    BSQCollectionIterator(): iterstack(), lcurr(nullptr) {;}
+    virtual ~BSQCollectionIterator() {;}
+};
+
+class BSQCollectionGCReprNode
+{
+public:
+    void* repr;
+};
+
 struct GCStackEntry
 {
     void** framep;
@@ -374,6 +390,8 @@ private:
 
     void* globals_mem;
     RefMask globals_mask;
+
+    xxxx; //allocator add roots for CollectionIterators and CollectionTreeIterators and stash for nodes in trees
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
