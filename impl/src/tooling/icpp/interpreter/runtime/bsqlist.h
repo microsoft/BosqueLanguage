@@ -59,6 +59,11 @@ public:
         return (int16_t)*((uint64_t*)repr);
     }
 
+    inline static void setPVCount(void* repr, int16_t count)
+    {
+        *((uint64_t*)repr) = (uint64_t)count;
+    }
+
     inline StorageLocationPtr get(void* repr, int16_t i) const
     {
         return ((uint8_t*)repr) + sizeof(uint64_t) + (i * this->entrysize);
@@ -368,7 +373,7 @@ public:
         auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(reprnode->repr));
         if(reprtype->lkind != ListReprKind::TreeElement)
         {
-            return fn_partialvector(lflavor, reprnode);
+            return fn_partialvector(lflavor, reprnode, reprtype);
         }
         else
         {
@@ -392,7 +397,7 @@ public:
         auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(reprnode->repr));
         if(reprtype->lkind != ListReprKind::TreeElement)
         {
-            return fn_partialvector(lflavor, reprnode, idx);
+            return fn_partialvector(lflavor, reprnode, reprtype, idx);
         }
         else
         {
@@ -409,7 +414,7 @@ public:
             auto rrnode = list_tree_transform_idx(lflavor, rnode, idx + lsize, fn_partialvector);
             auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
 
-            return BSQListOps::list_append(lflavor, llnode, rrnode);
+            return BSQListOps::list_append(lflavor, llres, rrres);
         }
     }
 
@@ -424,7 +429,8 @@ public:
         void* res = nullptr;
         if(count <= 4)
         {
-            res = Allocator::GlobalAllocator.allocateSafe(lflavor.pv4type);
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
+            BSQPartialVectorType::setPVCount(res, (int16_t)count);
             for(int16_t i = 0; i < (int16_t)count; ++i)
             {
                 SLPTR_STORE_CONTENTS_AS(T, lflavor.pv4type->get(res, i), start + (T)i);
@@ -432,7 +438,8 @@ public:
         }
         else if(count <= 8)
         {
-            res = Allocator::GlobalAllocator.allocateSafe(lflavor.pv8type);
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+            BSQPartialVectorType::setPVCount(res, (int16_t)count);
             for(int16_t i = 0; i < (int16_t)count; ++i)
             {
                 SLPTR_STORE_CONTENTS_AS(T, lflavor.pv4type->get(res, i), start + (T)i);
@@ -449,7 +456,7 @@ public:
             auto rrnode = s_range_ne_rec(lflavor, mid, end, end - mid);
             auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
 
-            return BSQListOps::list_append(lflavor, llnode, rrnode);
+            return BSQListOps::list_append(lflavor, llres, rrres);
         }
         return res;
     }
@@ -465,16 +472,132 @@ public:
         else
         {
             assert(oftype->tid == BSQ_TYPE_ID_NAT);
-            
+
             auto ll = BSQListOps::s_range_ne_rec<BSQNat>(BSQListOps::g_flavormap.find(BSQ_TYPE_ID_NAT)->second, SLPTR_LOAD_CONTENTS_AS(BSQNat, start), SLPTR_LOAD_CONTENTS_AS(BSQNat, end), SLPTR_LOAD_CONTENTS_AS(BSQNat, count));
             LIST_STORE_RESULT_REPR(res, ll);
         }
+        Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    }
+
+    static void* s_fill_ne_rec(const BSQListTypeFlavor& lflavor, const BSQType* oftype, StorageLocationPtr val, BSQNat count)
+    {
+        void* res = nullptr;
+        if(count <= 4)
+        {
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
+            BSQPartialVectorType::setPVCount(res, (int16_t)count);
+            for(int16_t i = 0; i < (int16_t)count; ++i)
+            {
+                oftype->storeValue(lflavor.pv4type->get(res, i), val);
+            }
+        }
+        else if(count <= 8)
+        {
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+            BSQPartialVectorType::setPVCount(res, (int16_t)count);
+            for(int16_t i = 0; i < (int16_t)count; ++i)
+            {
+                oftype->storeValue(lflavor.pv4type->get(res, i), val);
+            }
+        }
+        else
+        {
+            auto mid = count / 2;
+            auto gclpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto llnode = s_fill_ne_rec(lflavor, oftype, val, mid);
+            auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gclpoint, llnode);
+
+            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto rrnode = s_fill_ne_rec(lflavor, oftype, val, count - mid);
+            auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
+
+            return BSQListOps::list_append(lflavor, llres, rrres);
+        }
+        return res;
+    }
+
+    static void s_fill_ne(const BSQType* oftype, StorageLocationPtr val, StorageLocationPtr count, StorageLocationPtr res)
+    {
+        auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+
+        auto ll = BSQListOps::s_fill_ne_rec(BSQListOps::g_flavormap.find(oftype->tid)->second, oftype, val, SLPTR_LOAD_CONTENTS_AS(BSQNat, count));
+        LIST_STORE_RESULT_REPR(res, ll);
+    
+        Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    }
+
+    static void s_zip_index_ne(const BSQType* oftype, const BSQType* oftupletype, StorageLocationPtr ll, StorageLocationPtr res)
+    {
+        auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+        auto lnode = Allocator::GlobalAllocator.registerCollectionNode(LIST_LOAD_DATA(ll));
+
+        auto offlavor = BSQListOps::g_flavormap.find(oftype->tid)->second;
+        auto tupleinfo = dynamic_cast<const BSQTupleInfo*>(oftupletype);
+
+        auto zlres = BSQListOps::list_tree_transform_idx(BSQListOps::g_flavormap.find(oftupletype->tid)->second, lnode, 0, [&](const BSQListTypeFlavor& lflavor, BSQCollectionGCReprNode* reprnode, const BSQListReprType* reprtype, BSQNat idx) {
+            auto pvcount = BSQPartialVectorType::getPVCount(reprnode->repr);
+            void* pvres = nullptr;
+            if(reprtype->lkind == ListReprKind::PV4)
+            {
+                pvres = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
+                BSQPartialVectorType::setPVCount(pvres, pvcount);
+                for(int16_t i = 0; i < pvcount; ++i)
+                {
+                    auto val = lflavor.pv4type->get(pvres, i);
+                    SLPTR_STORE_CONTENTS_AS(BSQNat, oftupletype->indexStorageLocationOffset(val, tupleinfo->idxoffsets[0]), idx);
+                    BSQType::g_typetable[tupleinfo->ttypes[1]]->storeValue(oftupletype->indexStorageLocationOffset(val, tupleinfo->idxoffsets[1]), offlavor.pv4type->get(reprnode->repr, i));
+                }
+            }
+            else
+            {
+                pvres = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+                BSQPartialVectorType::setPVCount(pvres, pvcount);
+                for(int16_t i = 0; i < pvcount; ++i)
+                {
+                    auto val = lflavor.pv8type->get(pvres, i);
+                    SLPTR_STORE_CONTENTS_AS(BSQNat, oftupletype->indexStorageLocationOffset(val, tupleinfo->idxoffsets[0]), idx);
+                    BSQType::g_typetable[tupleinfo->ttypes[1]]->storeValue(oftupletype->indexStorageLocationOffset(val, tupleinfo->idxoffsets[1]), offlavor.pv8type->get(reprnode->repr, i));
+                }
+            }
+        });
+    
+        LIST_STORE_RESULT_REPR(zlres, res);
         Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
     }
 };
 
 
 /////////////////////////////////////////
+
+//List
+class BSQListType : public BSQType
+{
+public:
+    const BSQTypeID etype; //type of entries in the list
+
+    BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID etype): 
+        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        etype(etype)
+    {;}
+
+    virtual ~BSQListType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        GC_MEM_ZERO(trgt, 16);
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        BSQ_MEM_COPY(trgt, src, 16);
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+};
 
 //MAP
 class BSQMapType : public BSQType
