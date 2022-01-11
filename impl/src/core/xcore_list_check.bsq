@@ -58,19 +58,19 @@ internal entity ListOps provides Some {
         }
     }
 
-    function s_range<T unique Int | Nat>(start: T, end: T, inc: T, zero: T): ListRepr<T> {
+    function s_range<T unique Int | Nat>(start: T, end: T, inc: T): ListRepr<T> {
         if(start == end) {
             return none;
         }
         else {
             let count = end - start;
-            if(count == 1n) {
+            if(count == 1_T) {
                 return Vector1<T>{start};
             }
-            elif(count == 2n) {
+            elif(count == 2_T) {
                 return Vector2<T>{start, start + inc};
             }
-            elif(count == 3n) {
+            elif(count == 3_T) {
                 return Vector3<T>{start, start + inc, start + inc + inc};
             }
             else {

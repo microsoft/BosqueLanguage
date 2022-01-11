@@ -7,15 +7,15 @@
 namespace Core;
 
 __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType, TestableType when T grounded TestableType {
-    private field __list_dummy_contents: ListRepr<T>;
-
     private function s_into(l: ListRepr<T>): List<T> = special_inject;
     method value(): ListRepr<T> = special_extract;
 
     function {when T unique Int | Nat} range(start: T, end: T): List<T>
         requires start <= end;
     {
-        return List<T>::s_into(ListOps::s_range<T>(start, end, T::one, T::zero));
+        //TODO: want to support at least additional BigInt/BigNat and maybe user defined numerics here
+
+        return List<T>::s_into(ListOps::s_range<T>(start, end, T::one));
     }
 
     method index(): List<[Nat, T]> {

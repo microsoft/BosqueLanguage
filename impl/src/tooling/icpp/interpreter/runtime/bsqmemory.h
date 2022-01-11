@@ -62,6 +62,18 @@ class BSQCollectionGCReprNode
 {
 public:
     void* repr;
+
+    BSQCollectionGCReprNode(void* repr): repr(repr) {;}
+};
+
+class BSQTempRootNode
+{
+public:
+    const BSQType* rtype;
+    void* root;
+    const bool alloc;
+
+    BSQTempRootNode(const BSQType* rtype, void* root, bool alloc): rtype(rtype), root(root), alloc(alloc) {;}
 };
 
 struct GCStackEntry
@@ -377,6 +389,11 @@ class Allocator
 public:
     static Allocator GlobalAllocator;
 
+    static BSQCollectionGCReprNode* collectionnodesend;
+    static BSQCollectionGCReprNode collectionnodes[BSQ_MAX_STACK];
+    static std::list<BSQCollectionIterator*> collectioniters;
+    static std::list<BSQTempRootNode> alloctemps;
+
 private:
     BumpSpaceAllocator bumpalloc;
 
@@ -390,8 +407,6 @@ private:
 
     void* globals_mem;
     RefMask globals_mask;
-
-    xxxx; //allocator add roots for CollectionIterators and CollectionTreeIterators and stash for nodes in trees
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
@@ -752,6 +767,26 @@ private:
         {
             Allocator::gcProcessSlotsWithMask<true>((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
         }
+
+        BSQCollectionGCReprNode* cni = Allocator::collectionnodes;
+        while(cni < Allocator::collectionnodesend)
+        {
+            Allocator::gcProcessSlot<true>(&(cni->repr));
+        }
+
+        for(auto citer = Allocator::collectioniters.begin(); citer != Allocator::collectioniters.end(); ++citer)
+        {
+            Allocator::gcProcessSlot<true>(&((*citer)->lcurr));
+            for(auto piter = (*citer)->iterstack.begin(); piter != (*citer)->iterstack.end(); piter++)
+            {
+                Allocator::gcProcessSlot<true>(&(*piter));
+            }
+        }
+
+        for(auto titer = Allocator::alloctemps.begin(); titer != Allocator::alloctemps.end(); ++titer)
+        {
+            Allocator::gcProcessSlotsWithMask<true>(&(titer->root), titer->rtype->allocinfo.inlinedmask);
+        }
     }
 
     void processHeap()
@@ -832,6 +867,26 @@ private:
         {
             Allocator::gcClearMarkSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
         }
+
+        BSQCollectionGCReprNode* cni = Allocator::collectionnodes;
+        while(cni < Allocator::collectionnodesend)
+        {
+            Allocator::gcClearMark(cni->repr);
+        }
+
+        for(auto citer = Allocator::collectioniters.begin(); citer != Allocator::collectioniters.end(); ++citer)
+        {
+            Allocator::gcClearMark((*citer)->lcurr);
+            for(auto piter = (*citer)->iterstack.begin(); piter != (*citer)->iterstack.end(); piter++)
+            {
+                Allocator::gcClearMark(*piter);
+            }
+        }
+
+        for(auto titer = Allocator::alloctemps.begin(); titer != Allocator::alloctemps.end(); ++titer)
+        {
+            Allocator::gcClearMarkSlotsWithMask(&(titer->root), titer->rtype->allocinfo.inlinedmask);
+        }
     }
 
 public:
@@ -910,6 +965,64 @@ public:
 
         mi_free(Allocator::GlobalAllocator.globals_mem);
         Allocator::GlobalAllocator.globals_mem = nullptr;
+    }
+
+    void registerCollectionIterator(BSQCollectionIterator* iter)
+    {
+        Allocator::collectioniters.push_front(iter);
+    }
+
+    void releaseCollectionIterator(BSQCollectionIterator* iter)
+    {
+        Allocator::collectioniters.erase(std::find(Allocator::collectioniters.begin(), Allocator::collectioniters.end(), iter));
+    }
+
+    BSQCollectionGCReprNode* getCollectionNodeCurrentEnd()
+    {
+        return Allocator::collectionnodesend;
+    }
+
+    BSQCollectionGCReprNode* registerCollectionNode(void* val)
+    {
+        assert(collectionnodesend < collectionnodes + BSQ_MAX_STACK);
+
+        Allocator::collectionnodesend->repr = val;
+        return Allocator::collectionnodesend++;
+    }
+
+    BSQCollectionGCReprNode* resetCollectionNodeEnd(BSQCollectionGCReprNode* endpoint, void* val=nullptr)
+    {
+        Allocator::collectionnodesend = endpoint;
+        if(val == nullptr)
+        {
+            return nullptr;
+        }
+        else
+        {
+            return this->registerCollectionNode(val);
+        }
+    }
+
+    std::list<BSQTempRootNode>::iterator registerTempRoot(const BSQType* btype, void* root)
+    {
+        bool alloc = false;
+        if(root == nullptr)
+        {
+            alloc = true;
+            root = mi_zalloc(btype->allocinfo.inlinedatasize);
+        }
+
+        Allocator::alloctemps.emplace_back(btype, root, alloc);
+    }
+
+    void releaseTempRoot(std::list<BSQTempRootNode>::iterator root)
+    {
+        if(root->alloc)
+        {
+            mi_free(root->root);
+        }
+
+        Allocator::alloctemps.erase(root);
     }
 };
 

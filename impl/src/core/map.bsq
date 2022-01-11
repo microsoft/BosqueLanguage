@@ -11,8 +11,6 @@ xxxx;
 }
 
 __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType, TestableType when K grounded TestableType && V grounded TestableType {
-    private field __map_dummy_contents: MapRepr<K, V>;
-
     private function s_into(m: MapRepr<K, V>): Map<K, V> = special_inject;
     method value(): MapRepr<K, V> = special_extract;
 

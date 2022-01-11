@@ -9,6 +9,7 @@
 #include "bsqmemory.h"
 
 #include <vector>
+#include <list>
 #include <map>
 
 class BSQField
@@ -406,104 +407,6 @@ public:
     {;}
 
     virtual ~BSQEntityConstructableStructType() {;}
-};
-
-//MASK
-class BSQMaskType : public BSQRegisterType<BSQMask>
-{
-public:
-    BSQMaskType(): 
-        BSQRegisterType<BSQMask>(BSQ_TYPE_ID_MASK, sizeof(BSQMask), "1", EMPTY_KEY_CMP, entityDisplay_impl, "Mask")
-    {;}
-
-    virtual ~BSQMaskType() {;}
-};
-
-//PARTIAL VECTOR
-
-class BSQPartialVectorType : public BSQRefType, public BSQEntityInfo
-{
-public:
-    const BSQTypeID elemtype;
-    const uint32_t elemsize;
-
-    BSQPartialVectorType(BSQTypeID tid, uint64_t heapsize, const RefMask heapmask, DisplayFP fpDisplay, std::string name, std::vector<BSQFieldID> fields, std::vector<size_t> fieldoffsets, BSQTypeID elemtype, uint32_t elemsize, uint32_t elembase): 
-        BSQRefType(tid, heapsize, heapmask, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        BSQEntityInfo(fields, fieldoffsets, {BSQ_TYPE_ID_MASK, elemtype, elemtype, elemtype, elemtype}),
-        elemtype(elemtype), elemsize(elemsize)
-    {;}
-
-    virtual ~BSQPartialVectorType() {;}
-    
-    inline void get(void* data, size_t i, StorageLocationPtr trgt) const {
-        BSQType::g_typetable[this->elemtype]->storeValue(trgt, SLPTR_INDEX_DATAPTR(data, 8 + (i * elemsize)));
-    }
-
-    inline StorageLocationPtr storagepos(void* data, size_t i) const {
-        SLPTR_INDEX_DATAPTR(data, 8 + (i * elemsize));
-    }
-};
-
-//LIST
-class BSQListType : public BSQType
-{
-public:
-    const BSQTypeID elemtype; //type of elements in the list
-
-    BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID elemtype): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        elemtype(elemtype)
-    {;}
-
-    virtual ~BSQListType() {;}
-
-    void clearValue(StorageLocationPtr trgt) const override final
-    {
-        GC_MEM_ZERO(trgt, 16);
-    }
-
-    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        BSQ_MEM_COPY(trgt, src, 16);
-    }
-
-    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
-    {
-        assert(false);
-        return nullptr;
-    }
-};
-
-//MAP
-class BSQMapType : public BSQType
-{
-public:
-    const BSQTypeID ktype; //type of K in the map
-    const BSQTypeID vtype; //type of V in the map
-    const BSQTypeID etype; //type of [K, V]
-
-    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype, BSQTypeID etype): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        ktype(ktype), vtype(vtype), etype(etype)
-    {;}
-
-    virtual ~BSQMapType() {;}
-
-    void clearValue(StorageLocationPtr trgt) const override final
-    {
-        GC_MEM_ZERO(trgt, 16);
-    }
-
-    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        BSQ_MEM_COPY(trgt, src, 16);
-    }
-
-    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
-    {
-        assert(false);
-        return nullptr;
-    }
 };
 
 //TODO: QUEUE, STACK, SET

@@ -130,34 +130,34 @@ internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>
 }
 
 internal entity ListOps provides Some {
+    function s_size_ne<T>(l: ListRepr<T>): Nat = s_size_ne;
+
+    function s_range_ne<T unique Int | Nat>(start: T, end: T, inc: T, count: T): ListRepr<T> = s_range_ne;
+    function s_fill_ne<T>(count: Nat, v: T): ListRepr<T> = s_fill_ne;
+
+    function s_zip_idx_ne<T>(l: ListRepr<T>): ListRepr<[Nat, T]> = s_zip_idx_ne;
+    function s_zip_ne<T, U>(l1: ListRepr<T>, l2: ListRepr<U>): ListRepr<[T, U]> = s_zip_ne;
+
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
     }
 
-    function s_size<T>(l: ListRepr<T>): Nat {
+    function s_size<T>(l: ListRepr<T>): Nat
+    {
         if(l === none) {
-            return 0n;
-        }
-        elif(l.is<PartialVector<T>>()) {
-            return l.count();
+            return 0;
         }
         else {
-            return l.count;
+            return ListOps::s_size_ne<T>(l);
         }
     }
 
-    function s_range<T unique Int | Nat>(start: T, end: T, inc: T, zero: T): ListRepr<Int> {
+    function s_range<T unique Int | Nat>(start: T, end: T, inc: T): ListRepr<T> {
         if(start == end) {
             return none;
         }
         else {
-            let count = end - start;
-            if(count <= 4n) {
-                return PartialVector<T>::s_range(start, end, inc, zero);
-            }
-            else {
-                return ListTree<T>::range[recursive](start, end, inc);
-            }
+            return ListOps::s_range_ne<T>(start, end, inc, end - start);
         }
     }
     
@@ -1463,6 +1463,6 @@ internal entity ListTree<T> provides Some {
     }
 }
 
-internal typedef ListRepr<T> = None | PartialVector<T> | ListTree<T>;
+internal typedef ListRepr<T> = None | PartialVector4<T> | PartialVector8<T>  | ListTree<T>;
 
 #endif
