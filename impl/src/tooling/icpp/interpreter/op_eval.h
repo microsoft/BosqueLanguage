@@ -9,6 +9,11 @@
 #include "runtime/bsqop.h"
 #include "runtime/bsqinvoke.h"
 
+#include "runtime/bsqvalue.h"
+#include "runtime/bsqlist.h"
+
+#include "collection_eval.h"
+
 class EvaluatorFrame
 {
 public:
@@ -369,7 +374,6 @@ private:
     void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
-    void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
     void vinvoke(const BSQInvokeBodyDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
     
     void invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
@@ -380,6 +384,8 @@ private:
 public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     void invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
+
+    void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
 };
 
 class ICPPParseJSON : public ApiManagerJSON<StorageLocationPtr, Evaluator>

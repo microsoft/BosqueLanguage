@@ -12,6 +12,18 @@
 #include <list>
 #include <map>
 
+
+class LambdaEvalThunk
+{
+public:
+    void* ctx;
+
+    LambdaEvalThunk(void* ctx): ctx(ctx) {;}
+    ~LambdaEvalThunk() {;}
+
+    void invoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
+};
+
 class BSQField
 {
 public:

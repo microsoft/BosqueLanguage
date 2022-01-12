@@ -1875,27 +1875,6 @@ void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& a
     }
 }
 
-void Evaluator::linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
-{
-        size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
-        uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
-        GC_MEM_ZERO(cstack, cssize);
-
-        for(size_t i = 0; i < args.size(); ++i)
-        {
-            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
-            call->params[i].ptype->storeValue(pv, args[i]);
-        }
-
-        size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
-        BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
-        GC_MEM_ZERO(maskslots, maskslotbytes);
-
-        this->invokePrelude(call, cstack, maskslots, nullptr);
-        this->evaluateBody(resultsl, call->resultType, call->resultArg);
-        this->invokePostlude();
-}
-
 void Evaluator::vinvoke(const BSQInvokeBodyDecl* idecl, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
     size_t cssize = idecl->scalarstackBytes + idecl->mixedstackBytes;
@@ -2496,6 +2475,32 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
     this->evaluateBody(resultsl, restype, resarg);
 
     this->popFrame();
+}
+
+void Evaluator::linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
+{
+        size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
+        uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+        GC_MEM_ZERO(cstack, cssize);
+
+        for(size_t i = 0; i < args.size(); ++i)
+        {
+            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+            call->params[i].ptype->storeValue(pv, args[i]);
+        }
+
+        size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
+        BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+        GC_MEM_ZERO(maskslots, maskslotbytes);
+
+        this->invokePrelude(call, cstack, maskslots, nullptr);
+        this->evaluateBody(resultsl, call->resultType, call->resultArg);
+        this->invokePostlude();
+}
+
+void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
+{
+    static_cast<Evaluator*>(this->ctx)->linvoke(call, args, resultsl);
 }
 
 /*

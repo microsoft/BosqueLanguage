@@ -58,23 +58,23 @@ internal entity ListOps provides Some {
         }
     }
 
-    function s_range<T unique Int | Nat>(start: T, end: T, inc: T): ListRepr<T> {
+    function s_range<T unique Int | Nat>(start: T, end: T, one: T, count: Nat): ListRepr<T> {
         if(start == end) {
             return none;
         }
         else {
             let count = end - start;
-            if(count == 1_T) {
+            if(count == 1n) {
                 return Vector1<T>{start};
             }
-            elif(count == 2_T) {
-                return Vector2<T>{start, start + inc};
+            elif(count == 2n) {
+                return Vector2<T>{start, end};
             }
-            elif(count == 3_T) {
-                return Vector3<T>{start, start + inc, start + inc + inc};
+            elif(count == 3n) {
+                return Vector3<T>{start, start + one, end};
             }
             else {
-                return RecList<T>::range(start, end, inc);
+                return RecList<T>::range(start, end, one, count);
             }
         }
     }
@@ -178,6 +178,32 @@ internal entity ListOps provides Some {
             let rr, rrc = RecListEntry<T>::s_ensure_list(r);
 
             return RecList<T>{llc + rrc, RecListEntry<T>::append(ll, rr)}; 
+        }
+    }
+
+    recursive function s_concatrec<T>(ll: ListRepr<List<T>>): ListRepr<T> {
+        let count = ListOps::s_size<List<T>>(ll);
+        if(count == 1) {
+            return ListOps::s_safe_get<List<T>>(ll, 0n);
+        }
+        else {
+            let lr = ListOps::s_slice_front<List<T>>(ll, 1n);
+            let ltail = List<T>::s_concat(lr);
+
+            return ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ltail);
+        }
+    }
+
+    function s_concat(ll: ListRepr<List<T>>): ListRepr<T> {
+        let count = ListOps::s_size<List<T>>(ll);
+        if(count == 1) {
+            return ListOps::s_safe_get<List<T>>(ll, start);
+        }
+        else { 
+            let lr = ListOps::s_slice_front<List<T>>(ll, 1n);
+            let ltail = ListOps::s_concatrec<T>(lr);
+
+            return ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ltail);
         }
     }
 
@@ -954,9 +980,9 @@ internal entity RecList<T> provides Some {
     field count: Nat;
     field ll: RecListEntry<T>;
 
-    function {when T unique Int | Nat} range(start: T, end: T, inc: T): RecList<T> {
-        let ll = RecListEntry<T>::range[recursive](start, end, inc);
-        return RecList<T>{end - start, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
+    function {when T unique Int | Nat} range(start: T, end: T, one: T, count: Nat): RecList<T> {
+        let ll = RecListEntry<T>::range[recursive](start, end, one);
+        return RecList<T>{count, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ll)};
     }
 
     function fill(count: Nat, v: T): RecList<T> {
