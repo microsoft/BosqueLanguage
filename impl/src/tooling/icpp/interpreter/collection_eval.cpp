@@ -21,15 +21,48 @@
             return PARAMS[pos]; \
         });
 
+#define BI_LAMBDA_CALL_SETUP_TEMP_AND_RES_VECTOR(TTYPE, TEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
+        uint8_t* RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
+        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
+        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.heapmask); \
+        GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
+        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL}; \
+        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
+            return PARAMS[pos]; \
+        });
+
+#define BI_LAMBDA_CALL_SETUP_TEMP_AND_RES_VECTOR_IDX(TTYPE, TEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS, IDXSL) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
+        uint8_t* RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
+        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
+        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.heapmask); \
+        GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
+        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL, IDXSL}; \
+        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
+            return PARAMS[pos]; \
+        });
+
+#define BI_LAMBDA_CALL_SETUP_TEMP_X2_AND_RES(TTYPE1, TEMPSL1, TTYPE2, TEMPSL2, RTYPE, RESSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL1 = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE1->allocinfo.inlinedatasize + TTYPE2->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
+        uint8_t* TEMPSL2 = TEMPSL1 + TTYPE1->allocinfo.inlinedatasize; \
+        uint8_t* RESSL = TEMPSL2 + TTYPE2->allocinfo.inlinedatasize; \
+        GC_MEM_ZERO(TEMPSL1, TTYPE1->allocinfo.inlinedatasize + TTYPE2->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
+        std::string msk = std::string(TTYPE1->allocinfo.inlinedmask) + std::string(TTYPE2->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.inlinedmask); \
+        GCStack::pushFrame((void**)TEMPSL1, msk.c_str()); \
+        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL1, TEMPSL2}; \
+        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
+            return PARAMS[pos]; \
+        });
+
 #define BI_LAMBDA_CALL_SETUP_TEMP_AND_RES(TTYPE, TEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
-        RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
-        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize); \
+        uint8_t* RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
+        GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
         std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.inlinedmask); \
         GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
         std::vector<StorageLocationPtr> LPARAMS = {TEMPSL}; \
         std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
             return PARAMS[pos]; \
         });
+
+#define BI_LAMBDA_CALL_SETUP_CLEAR_TEMP_PV(PVTYPE, PVL) GC_MEM_ZERO(PVL, PVTYPE->allocinfo.heapsize)
 
 #define BI_LAMBDA_CALL_SETUP_POP() GCStack::popFrame();
 
@@ -66,18 +99,18 @@ void BSQListOps::s_fill_ne(const BSQType* oftype, StorageLocationPtr val, Storag
     Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
 }
 
-BSQNat BSQListOps::s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQType* lentrytype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQNat BSQListOps::s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     int64_t pos = 0;
 
     BSQListForwardIterator iter(ttype, t);
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    const BSQType* lentrytype = BSQType::g_typetable[ttype->entrytype];
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
 
     {
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
-
         BSQBool found = BSQFALSE;
-        StorageLocationPtr esl;
         BI_LAMBDA_CALL_SETUP_TEMP(lentrytype, esl, params, pred, lparams)
 
         while(iter.valid())
@@ -101,18 +134,18 @@ BSQNat BSQListOps::s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListRepr
     return (BSQNat)pos;
 }
 
-BSQNat BSQListOps::s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQType* lentrytype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQNat BSQListOps::s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     int64_t pos = 0;
 
     BSQListForwardIterator iter(ttype, t);
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    const BSQType* lentrytype = BSQType::g_typetable[ttype->entrytype];
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
 
     {
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
-
         BSQBool found = BSQFALSE;
-        StorageLocationPtr esl;
         BI_LAMBDA_CALL_SETUP_TEMP_IDX(lentrytype, esl, params, pred, lparams, &pos)
 
         while(iter.valid())
@@ -136,17 +169,18 @@ BSQNat BSQListOps::s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQList
     return (BSQNat)pos;
 }
 
-BSQNat BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQType* lentrytype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQNat BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     int64_t icount = ttype->getCount(t);
     int64_t pos = icount - 1;
 
     BSQListReverseIterator iter(ttype, t);
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    const BSQType* lentrytype = BSQType::g_typetable[ttype->entrytype];
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
 
     {
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
-
         BSQBool found = BSQFALSE;
         StorageLocationPtr esl;
         BI_LAMBDA_CALL_SETUP_TEMP(lentrytype, esl, params, pred, lparams)
@@ -172,19 +206,19 @@ BSQNat BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQLis
     return (BSQNat)(pos != -1 ? pos : icount);
 }
 
-BSQNat BSQListOps::s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQType* lentrytype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQNat BSQListOps::s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     int64_t icount = ttype->getCount(t);
     int64_t pos = icount - 1;
 
     BSQListReverseIterator iter(ttype, t);
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    const BSQType* lentrytype = BSQType::g_typetable[ttype->entrytype];
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
 
     {
-        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
-
         BSQBool found = BSQFALSE;
-        StorageLocationPtr esl;
         BI_LAMBDA_CALL_SETUP_TEMP_IDX(lentrytype, esl, params, pred, lparams, &pos)
 
         while(iter.valid())
@@ -206,4 +240,237 @@ BSQNat BSQListOps::s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BS
     Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
 
     return (BSQNat)(pos != -1 ? pos : icount);
+}
+
+void* BSQListOps::s_filter_pred_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+{
+    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+    auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
+
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
+
+    void* rres = nullptr;
+    {
+        BI_LAMBDA_CALL_SETUP_TEMP(lflavor.entrytype, esl, params, pred, lparams)
+    
+        rres = BSQListOps::list_tree_transform(lflavor, rnode, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype) {
+            int16_t vcount = reprtype->getPVCount(reprnode->repr);
+           
+            std::bitset<8> mask;
+            BSQBool found = BSQFALSE;
+            int16_t fcount = 0;
+            for(int16_t i = 0; i < vcount; ++i)
+            {
+                lflavor.entrytype->storeValue(esl, reprtype->get(reprnode->repr, i));
+                ee.invoke(icall, lparams, &found);
+
+                mask.set(i, found);
+                fcount += found;
+            }
+
+            void* pvinto = nullptr;
+            if(fcount != 0)
+            {
+                pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((fcount <= 4) ? lflavor.pv4type : lflavor.pv8type);
+                BSQPartialVectorType::packPVData(pvinto, reprnode->repr, mask, lflavor.entrytype->allocinfo.inlinedatasize);
+            }
+
+            lflavor.entrytype->clearValue(esl);
+            return pvinto;
+        });
+    
+        BI_LAMBDA_CALL_SETUP_POP()
+    }
+
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    return rres;
+}
+
+void* BSQListOps::s_filter_pred_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+{
+    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+    auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
+
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
+
+    void* rres = nullptr;
+    {
+        BSQNat pos = 0;
+        BI_LAMBDA_CALL_SETUP_TEMP_IDX(lflavor.entrytype, esl, params, pred, lparams, &pos)
+    
+        rres = BSQListOps::list_tree_transform_idx(lflavor, rnode, 0, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype, uint64_t idx) {
+            int16_t vcount = reprtype->getPVCount(reprnode->repr);
+
+            std::bitset<8> mask;
+            BSQBool found = BSQFALSE;
+            int16_t fcount = 0;
+            pos = idx;
+            for(int16_t i = 0; i < vcount; ++i)
+            {
+                lflavor.entrytype->storeValue(esl, reprtype->get(reprnode->repr, i));
+                ee.invoke(icall, lparams, &found);
+               
+                mask.set(i, found);
+                fcount += found;
+                    
+                pos++;
+            }
+
+            void* pvinto = nullptr;
+            if(fcount != 0)
+            {
+                pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((fcount <= 4) ? lflavor.pv4type : lflavor.pv8type);
+                BSQPartialVectorType::packPVData(pvinto, reprnode->repr, mask, lflavor.entrytype->allocinfo.inlinedatasize);
+            }
+
+            lflavor.entrytype->clearValue(esl);
+            return pvinto;
+        });
+
+        BI_LAMBDA_CALL_SETUP_POP()
+    }
+
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    return rres;
+}
+    
+
+void* BSQListOps::s_map_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor)
+{
+    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+    auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
+
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
+
+    void* rres = nullptr;
+    {
+        BI_LAMBDA_CALL_SETUP_TEMP_AND_RES_VECTOR(lflavor.entrytype, esl, resflavor.pv8type, resl, params, fn, lparams)
+
+        rres = BSQListOps::list_tree_transform(lflavor, rnode, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype) {
+            int16_t vcount = reprtype->getPVCount(reprnode->repr);
+        
+            for(int16_t i = 0; i < vcount; ++i)
+            {
+                lflavor.entrytype->storeValue(esl, reprtype->get(reprnode->repr, i));
+                ee.invoke(icall, lparams, resflavor.pv8type->get(resl, i));
+            }
+
+            void* pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((vcount <= 4) ? resflavor.pv4type : resflavor.pv8type);
+            BSQPartialVectorType::directCopyPVData(pvinto, resl, resflavor.entrytype->allocinfo.inlinedatasize);
+
+            lflavor.entrytype->clearValue(esl);
+            BI_LAMBDA_CALL_SETUP_CLEAR_TEMP_PV(resflavor.pv8type, resl);
+            return pvinto;
+        });
+    
+        BI_LAMBDA_CALL_SETUP_POP()
+    }
+
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    return rres;
+}
+
+void* BSQListOps::s_map_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor)
+{
+    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+    auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
+
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
+
+    void* rres = nullptr;
+    {
+        BSQNat pos = 0;
+        BI_LAMBDA_CALL_SETUP_TEMP_AND_RES_VECTOR_IDX(lflavor.entrytype, esl, resflavor.pv8type, resl, params, fn, lparams, &pos)
+
+        rres = BSQListOps::list_tree_transform_idx(lflavor, rnode, 0, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype, uint64_t idx) {
+            int16_t vcount = reprtype->getPVCount(reprnode->repr);
+
+            pos = idx;
+            for(int16_t i = 0; i < vcount; ++i)
+            {
+                lflavor.entrytype->storeValue(esl, reprtype->get(reprnode->repr, i));
+                ee.invoke(icall, lparams, resflavor.pv8type->get(resl, i));
+            }
+
+            void* pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((vcount <= 4) ? resflavor.pv4type : resflavor.pv8type);
+            BSQPartialVectorType::directCopyPVData(pvinto, resl, resflavor.entrytype->allocinfo.inlinedatasize);
+
+            lflavor.entrytype->clearValue(esl);
+            BI_LAMBDA_CALL_SETUP_CLEAR_TEMP_PV(resflavor.pv8type, resl);
+            return pvinto;
+        });
+
+        BI_LAMBDA_CALL_SETUP_POP()
+    }
+
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    return rres;
+}
+
+void* BSQListOps::s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQListTypeFlavor& lflavor2, LambdaEvalThunk ee, uint64_t count, void* t1, const BSQListReprType* ttype1, void* t2, const BSQListReprType* ttype2, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor)
+{
+    BSQListForwardIterator iter1(ttype1, t1);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter1);
+
+    BSQListForwardIterator iter2(ttype2, t2);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter2);
+
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
+
+    {
+        BI_LAMBDA_CALL_SETUP_TEMP_X2_AND_RES(lflavor1.entrytype, esl1, lflavor2.entrytype, esl2, resflavor.entrytype, resl, params, fn, lparams)
+
+        while(iter1.valid() & iter2.valid())
+        {
+            lflavor1.entrytype->storeValue(esl1, iter1.getlocation());
+            lflavor2.entrytype->storeValue(esl2, iter2.getlocation());
+            ee.invoke(icall, lparams, resl);
+            
+            auto rr = Allocator::GlobalAllocator.registerTempRoot(resflavor.entrytype, nullptr);
+            resflavor.entrytype->storeValue(rr->root, resl);
+
+            iter1.advance();
+            iter2.advance();
+        }
+
+        BI_LAMBDA_CALL_SETUP_POP()
+    }
+
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter2);
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter1);
+    
+    xxx;
+
+    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+    auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
+    void* rres = BSQListOps::list_tree_transform(lflavor, rnode, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype) {
+        int16_t vcount = reprtype->getPVCount(reprnode->repr);
+        const BSQPartialVectorType* pvt = (reprtype->lkind == ListReprKind::PV4 ? resflavor.pv4type : resflavor.pv8type);
+
+        void* pvinto = nullptr;
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
+        {
+            
+
+            for(int16_t i = 0; i < vcount; ++i)
+            {
+                lentrytype1->storeValue(esl1, reprtype->get(reprnode->repr, i));
+                ee.invoke(icall, lparams, pvt->get(resl, i));
+            }
+
+            pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic(pvt);
+            BSQPartialVectorType::directCopyPVData(pvinto, resl, resflavor.entrytype->allocinfo.inlinedatasize);
+
+            BI_LAMBDA_CALL_SETUP_POP()
+        }
+        return pvinto;
+    });
+    auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+
+    return rres;
+}
+
+void BSQListOps::s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQType* lentrytype, const BSQPCode* dop, const BSQPCode* cop, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res)
+{
+
 }

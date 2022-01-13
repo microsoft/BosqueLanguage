@@ -69,6 +69,15 @@ public:
         return ((uint8_t*)repr) + sizeof(uint64_t) + (i * this->entrysize);
     }
 
+    inline static void directCopyPVData(void* pvinto, void* pvfrom, uint64_t entrysize)
+    {
+        auto intoloc = ((uint8_t*)pvinto);
+        auto fromloc = ((uint8_t*)pvfrom);
+        auto bytecount = sizeof(uint64_t) + (*((uint64_t*)pvfrom) * entrysize);
+
+        GC_MEM_COPY(intoloc, fromloc, bytecount);
+    }
+
     inline static void appendPVData(void* pvinto, void* pvfrom, uint64_t entrysize)
     {
         auto intoloc = ((uint8_t*)pvinto) + (sizeof(uint64_t) + (*((uint64_t*)pvinto) * entrysize));

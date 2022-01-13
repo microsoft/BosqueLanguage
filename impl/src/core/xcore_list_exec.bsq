@@ -146,6 +146,9 @@ internal entity ListOps provides Some {
     recursive? function s_find_pred_last_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat = s_find_pred_last_ne;
     recursive? function s_find_pred_last_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = s_find_pred_last_idx_ne;
 
+    recursive? function s_filter_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat = s_filter_pred_ne;
+    recursive? function s_filter_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = s_filter_pred_idx_ne;
+
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
     }
@@ -311,39 +314,21 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_filter_pred<T>(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+    recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
          if(l === none) {
             return none;
         }
-        elif(l.is<PartialVector<T>>()) {
-            let fm = PartialVector<T>::s_apply_pred[recursive?](l, p);
-            if(Mask::s_empty(fm)) {
-                return none;
-            }
-            else {
-                return PartialVector<T>::s_select(l, fm);
-            }
-        }
         else {
-            return l.filter_pred_idx[recursive](0, p);
+            return ListOps::s_filter_pred_ne[recursive](l, p);
         }
     }
 
-    recursive? function s_filter_pred_idx<T>(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+    recursive? function s_filter_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
         if(l === none) {
             return none;
         }
-        elif(l.is<PartialVector<T>>()) {
-            let fm = PartialVector<T>::s_apply_pred_idx[recursive?](l, 0, p);
-            if(Mask::s_empty(fm)) {
-                return none;
-            }
-            else {
-                return PartialVector<T>::s_select(l, fm);
-            }
-        }
         else {
-            return l.filter_pred_idx[recursive](0, p);
+            return ListOps::s_filter_pred_idx_ne[recursive](l, p);
         }
     }
 

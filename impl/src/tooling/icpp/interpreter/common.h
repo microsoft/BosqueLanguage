@@ -67,9 +67,9 @@
 
 //Allocation routines
 #ifdef _WIN32
-#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : _alloca(SIZE))
+#define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : _alloca(SIZE))
 #else
-#define BSQ_STACK_SPACE_ALLOC(SIZE) (SIZE == 0 ? nullptr : alloca(SIZE))
+#define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
 #endif
 
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_zalloc(SIZE)
@@ -131,8 +131,8 @@ typedef uint64_t GC_META_DATA_WORD;
 //Misc operations
 #define COMPUTE_REAL_BYTES(M) (GET_TYPE_META_DATA(M)->allocinfo.heapsize + sizeof(GC_META_DATA_WORD))
 
-#define GC_MEM_COPY(DST, SRC, BYTES) std::copy((uint8_t*)SRC, ((uint8_t*)SRC) + BYTES, (uint8_t*)DST)
-#define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + BYTES, (uint8_t)0)
+#define GC_MEM_COPY(DST, SRC, BYTES) std::copy((uint8_t*)SRC, ((uint8_t*)SRC) + (BYTES), (uint8_t*)DST)
+#define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + (BYTES), (uint8_t)0)
 
 ////////////////////////////////
 //Storage location ops
