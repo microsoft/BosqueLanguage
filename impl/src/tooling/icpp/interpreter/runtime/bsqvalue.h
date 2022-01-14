@@ -1372,28 +1372,17 @@ std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data
 #define CONS_BSQ_ENUM_TYPE(TID, NAME, ENAMES) (new BSQEnumType(TID, entityNatKeyCmp_impl, entityEnumDisplay_impl, NAME, ENAMES))
 
 ////
-//Mask
-
-xxxx; //this should go away
-
-typedef struct { BSQBool bits[8]; } BSQMask;
-constexpr BSQMask g_empty_bsqmask = {0};
-
-#define CONS_BSQ_MASK_TYPE() (new BSQMaskType())
-
-////
-//PartialVector
-
-std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-#define CONS_BSQ_PARTIAL_VECTOR_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQPartialVectorType(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, ELEMTYPE, ELEMSIZE))
-
-////
 //List
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
 #define CONS_BSQ_LIST_TYPE(TID, NAME, CTYPE, PVTYPE, TREETYPE) (new BSQListType(TID, entityListDisplay_impl, NAME, CTYPE, PVTYPE, TREETYPE))
+
+xxxx;
+
+#define CONS_BSQ_PARTIAL_VECTOR_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQPartialVectorType(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, ELEMTYPE, ELEMSIZE))
+#define CONS_BSQ_TREE_LIST_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQTR(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, ELEMTYPE, ELEMSIZE))
+
 
 ////
 //Map

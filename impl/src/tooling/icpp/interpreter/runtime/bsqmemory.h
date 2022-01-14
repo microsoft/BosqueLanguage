@@ -1003,6 +1003,25 @@ public:
         }
     }
 
+    std::list<BSQTempRootNode>::iterator getTempRootCurrPos()
+    {
+        return Allocator::alloctemps.begin();
+    }
+
+    void resetRootCurrPos(std::list<BSQTempRootNode>::iterator pos)
+    {
+        for(auto iter = Allocator::alloctemps.begin(); iter != Allocator::alloctemps.end(); ++iter)
+        {
+            if(iter->alloc)
+            {
+                mi_free(iter->root);
+            }
+        }
+
+        Allocator::alloctemps.erase(Allocator::alloctemps.begin(), pos);
+    }
+
+
     std::list<BSQTempRootNode>::iterator registerTempRoot(const BSQType* btype, void* root)
     {
         bool alloc = false;
@@ -1012,7 +1031,8 @@ public:
             root = mi_zalloc(btype->allocinfo.inlinedatasize);
         }
 
-        Allocator::alloctemps.emplace_back(btype, root, alloc);
+        Allocator::alloctemps.emplace_front(btype, root, alloc);
+        return Allocator::alloctemps.begin();
     }
 
     void releaseTempRoot(std::list<BSQTempRootNode>::iterator root)

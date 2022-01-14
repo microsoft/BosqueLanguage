@@ -1071,11 +1071,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return List<[T, U]>::s_into(ListOps::s_append<[T, U]>(la, ra));
             }
             else {
-#if CHECK_LIBS
                 return List<T>::s_into(List<T>::s_concat<T>(jjl));
-#else
-                return List<T>::s_into(List<T>::s_concat<T>(jjl, 0, count));
-#endif
             }
     }
 
@@ -1106,7 +1102,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return [k, tl];
         }));
 
-        return Map<K, T>@{...classes};
+        return Map<K, T>::s_from_list(classes);
     }
 
     recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
@@ -1190,11 +1186,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         } 
     }
 
-    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T, _: U) -> U): U {
+    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: U, _: T) -> U): U {
         return ListOps::s_reduce<T, U>[recursive?](this.value(), init, f);
     }
 
-    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: T, _: U, _: Nat) -> U): U {
+    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U {
         return ListOps::s_reduce_idx<T, U>[recursive?](this.value(), init, f);
     }
 

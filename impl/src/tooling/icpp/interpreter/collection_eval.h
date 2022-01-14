@@ -133,6 +133,43 @@ public:
         }
     }
 
+    static void* s_temp_root_to_list_rec(const BSQListTypeFlavor& lflavor, std::list<BSQTempRootNode>::iterator& lelems, uint64_t count)
+    {
+        void* res = nullptr;
+        if(count <= 4)
+        {
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
+            BSQPartialVectorType::setPVCount(res, (int16_t)count);
+            for(int16_t i = 0; i < (int16_t)count; ++i)
+            {
+                lflavor.entrytype->storeValue(lflavor.pv4type->get(res, i), lelems->root);
+            }
+        }
+        else if(count <= 8)
+        {
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+            BSQPartialVectorType::setPVCount(res, (int16_t)count);
+            for(int16_t i = 0; i < (int16_t)count; ++i)
+            {
+                lflavor.entrytype->storeValue(lflavor.pv8type->get(res, i), lelems->root);
+            }
+        }
+        else
+        {
+            auto mid = count / 2;
+            auto gclpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto llnode = BSQListOps::s_temp_root_to_list_rec(lflavor, lelems, mid);
+            auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gclpoint, llnode);
+
+            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto rrnode = BSQListOps::s_temp_root_to_list_rec(lflavor, lelems, count - mid);
+            auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
+
+            res = BSQListOps::list_append(lflavor, llres, rrres);
+        }
+        return res;
+    }
+
     template <typename T>
     static std::pair<void*, T> s_range_ne_rec(const BSQListTypeFlavor& lflavor, T start, BSQNat count)
     {
@@ -341,6 +378,10 @@ public:
     static void* s_map_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor);
     static void* s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQListTypeFlavor& lflavor2, LambdaEvalThunk ee, uint64_t count, void* t1, const BSQListReprType* ttype1, void* t2, const BSQListReprType* ttype2, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor);
 
-    static void s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQType* lentrytype, const BSQPCode* dop, const BSQPCode* cop, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
+    static void s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
+    static void s_reduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
+
+    static void* s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* lt, const std::vector<StorageLocationPtr>& params);
+    static void* s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* eq, const std::vector<StorageLocationPtr>& params);
 };
 
