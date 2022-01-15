@@ -135,6 +135,9 @@ internal entity ListOps provides Some {
     recursive? function s_reduce_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_reduce_ne;
     recursive? function s_reduce_idx_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_reduce_idx_ne;
 
+    recursive? function s_transduce_ne<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T) -> E, U): E, ListRepr<U> = s_transduce_ne;
+    recursive? function s_transduce_ne_idx<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> E, U): E, ListRepr<U> = s_transduce_idx_ne;
+
     function s_range_ne<T unique Int | Nat>(start: T, end: T, inc: T, count: T): ListRepr<T> = s_range_ne;
     function s_fill_ne<T>(count: Nat, v: T): ListRepr<T> = s_fill_ne;
 
@@ -155,6 +158,9 @@ internal entity ListOps provides Some {
     recursive? function s_map_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): List<U> = s_map_ne;
     recursive? function s_map_idx_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_map_idx_ne;
     recursive? function s_map_sync_ne<T, U, V>(l1: ListRepr<T>, l2: ListRepr<U>, f: recursive? fn(_: T, _: U) -> V): ListRepr<V> = s_map_sync_ne
+
+    recursive? function s_sort_ne<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_sort_ne
+    recursive? function s_unique_from_sorted_ne<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_unique_from_sorted_ne
 
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
@@ -403,20 +409,17 @@ internal entity ListOps provides Some {
             return none;
         }
         else {
-            return l.sort[recursive](cmp);
+            return ListOps::s_sort_ne<T>(l, cmp);
         }
     }
 
     recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
-        return ListOps::s_filter_pred_idx<T>(l, recursive? pred(v: T, idx: Nat): Bool => {
-            if(idx == 0n) {
-                return true;
-            }
-            else {
-                let prev = ListOps::s_safe_get<T>(l, idx - 1n);
-                return !eq[recursive?](prev, v);
-            }
-        });
+        if(l === none) {
+            return none;
+        }
+        else {
+            return ListOps::s_unique_from_sorted_ne<T>(l, cmp);
+        }
     }
     
     function s_reverse(l: ListRepr<T>): ListRepr<T> {
@@ -436,16 +439,8 @@ internal entity ListOps provides Some {
             return init;
         }
         else {
-            let acc = ListOps::s_safe_get_ne<T>(l, 0);
-            xxxx;
-            let rr = ListOps::s_reduce_ne<T, U>(l, acc, fn(acc: U, v: T): T => acc + v);
-        }
-
-        elif(l.is<PartialVector<T>>()) {
-            return l.s_reduce_fn<U>[recursive?](init, op);
-        }
-        else {
-            return l.reduce<U>[recursive](init, op);
+            let acc = op[recursive?](init, ListOps::s_safe_get_ne<T>(l, 0));
+            let rr = ListOps::s_reduce_ne<T, U>(l, acc, op);
         }
     }
 
@@ -453,32 +448,19 @@ internal entity ListOps provides Some {
         if(l === none) {
             return init;
         }
-        elif(l.is<PartialVector<T>>()) {
-            return l.s_reduce_fn_idx<U>[recursive?](init, 0n, op);
-        }
         else {
-            return l.reduce_idx<U>[recursive](init, 0n, op);
+            let acc = op[recursive?](init, ListOps::s_safe_get_ne<T>(l, 0), 0n);
+            let rr = ListOps::s_reduce_idx_ne<T, U>(l, acc, op);
         }
     }
 
-    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: E, _: T) -> U, E): ListRepr<U>, E {
+    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: E, _: T) -> U, E): E, ListRepr<U> {
         if(l === none) {
-            return none, env;
+            return env, none;
         }
         else {
-            var nl: ListRepr<U>;
-            var nenv: E;
-
-            if(l.is<PartialVector<T>>()) {
-                nl, nenv = l.s_transduce_fn<E, U>[recursive?](env, op);
-            }
-            else {
-                nl, nenv = l.transduce<E, U>[recursive](env, op);
-            }
-
-            return nl, nenv;
+            return ListOps::s_transduce_ne<T, E, U>(l, env, op);
         }
-    }
     }
 
     recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> U, E): ListRepr<U>, E {
@@ -486,17 +468,7 @@ internal entity ListOps provides Some {
             return none, env;
         }
         else {
-            var nl: ListRepr<U>;
-            var nenv: E;
-
-            if(l.is<PartialVector<T>>()) {
-                nl, nenv = l.s_transduce_fn_idx<E, U>[recursive?](env, 0n, op);
-            }
-            else {
-                nl, nenv = l.transduce_idx<E, U>[recursive](env, 0n, op);
-            }
-
-            return nl, nenv;
+            return ListOps::s_transduce_idx_ne<T, E, U>(l, env, op);
         }
     }
 }

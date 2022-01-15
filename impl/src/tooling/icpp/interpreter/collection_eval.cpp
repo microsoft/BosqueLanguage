@@ -520,8 +520,52 @@ void BSQListOps::s_reduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThu
     Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
 }
 
+void* BSQListOps::s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQType* etype, StorageLocationPtr eres)
+{
+    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+    auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
+
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[f->code]);
+
+    void* rres = nullptr;
+    {
+        BI_LAMBDA_CALL_SETUP_TRANSDUCE(lflavor.entrytype, esl, resflavor.pv8type, resl, params, fn, lparams)
+
+        rres = BSQListOps::list_tree_transform(lflavor, rnode, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype) {
+            int16_t vcount = reprtype->getPVCount(reprnode->repr);
+        
+            for(int16_t i = 0; i < vcount; ++i)
+            {
+                lflavor.entrytype->storeValue(esl, reprtype->get(reprnode->repr, i));
+                ee.invoke(icall, lparams, resflavor.pv8type->get(resl, i));
+            }
+
+            void* pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((vcount <= 4) ? resflavor.pv4type : resflavor.pv8type);
+            BSQPartialVectorType::directCopyPVData(pvinto, resl, resflavor.entrytype->allocinfo.inlinedatasize);
+
+            lflavor.entrytype->clearValue(esl);
+            BI_LAMBDA_CALL_SETUP_CLEAR_TEMP_PV(resflavor.pv8type, resl);
+            return pvinto;
+        });
+    
+        BI_LAMBDA_CALL_SETUP_POP()
+    }
+
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    return rres;
+}
+
+void* BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQType* etype, StorageLocationPtr eres)
+{
+    xxxx;
+}
+
 void* BSQListOps::s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* lt, const std::vector<StorageLocationPtr>& params)
 {
+    //
+    //TODO: this is somewhat inefficient -- we can do a better merge sort here
+    //
+
     uint64_t count = ttype->getCount(t);
 
     BSQListForwardIterator iter(ttype, t);
@@ -565,5 +609,47 @@ void* BSQListOps::s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee
 
 void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* eq, const std::vector<StorageLocationPtr>& params)
 {
-    xxxx;
+    //
+    //TODO: this is somewhat inefficient -- we can do a better merge sort here
+    //
+
+    uint64_t count = ttype->getCount(t);
+
+    BSQListForwardIterator iter(ttype, t);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    auto rootipos = Allocator::GlobalAllocator.getTempRootCurrPos();
+    while(iter.valid())
+    {
+        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype, nullptr);
+        lflavor.entrytype->storeValue(rr->root, iter.getlocation());
+
+        iter.advance();
+    }
+
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[eq->code]);
+
+    {
+        BI_LAMBDA_CALL_SETUP_TEMP_X2_CMP(lflavor.entrytype, esl, lflavor.entrytype, esr, params, eq, lparams)
+
+        std::unique(Allocator::GlobalAllocator.getTempRootCurrPos(), rootipos, [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+            BSQBool bb;
+            ee.invoke(icall, lparams, &bb);
+            return (bool)bb;
+        });
+
+        BI_LAMBDA_CALL_SETUP_POP()
+    }
+    
+    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+
+    auto lstart = Allocator::GlobalAllocator.getTempRootCurrPos();
+    void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, count);
+
+    Allocator::GlobalAllocator.resetRootCurrPos(rootipos);
+    auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    
+    return rres;
 }

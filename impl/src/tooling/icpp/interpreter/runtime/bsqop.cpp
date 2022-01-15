@@ -159,12 +159,12 @@ DirectAssignOp* DirectAssignOp::jparse(json v)
 
 BoxOp* BoxOp::jparse(json v)
 {
-    return new BoxOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(v["fromtype"]), j_sguard(v));
+    return new BoxOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_intotype(v)), j_arg(v), jsonParse_BSQType(v["fromtype"]), j_sguard(v));
 }
 
 ExtractOp* ExtractOp::jparse(json v)
 {
-    return new ExtractOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), jsonParse_BSQType(v["fromtype"]), j_sguard(v));
+    return new ExtractOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_intotype(v)), j_arg(v), jsonParse_BSQType(v["fromtype"]), j_sguard(v));
 }
 
 LoadConstOp* LoadConstOp::jparse(json v)
@@ -477,27 +477,27 @@ BinKeyLessVirtualOp* BinKeyLessVirtualOp::jparse(json v)
 
 TypeIsNoneOp* TypeIsNoneOp::jparse(json v)
 {
-    return new TypeIsNoneOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
+    return new TypeIsNoneOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["arglayout"])), j_sguard(v));
 }
 
 TypeIsSomeOp* TypeIsSomeOp::jparse(json v)
 {
-    return new TypeIsSomeOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
+    return new TypeIsSomeOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["arglayout"])), j_sguard(v));
 }
 
-TypeIsNothongOp* TypeIsNothingOp::jparse(json v)
+TypeIsNothingOp* TypeIsNothingOp::jparse(json v)
 {
-    return new TypeIsNothingOp(j_sinfo(v), j_trgt(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
+    return new TypeIsNothingOp(j_sinfo(v), j_trgt(v), j_arg(v), dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["arglayout"])), j_sguard(v));
 }
 
 TypeTagIsOp* TypeTagIsOp::jparse(json v)
 {
-    return new TypeTagIsOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
+    return new TypeTagIsOp(j_sinfo(v), j_trgt(v), j_oftype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["arglayout"])), j_sguard(v));
 }
 
 TypeTagSubtypeOfOp* TypeTagSubtypeOfOp::jparse(json v)
 {
-    return new TypeTagSubtypeOfOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)), j_arg(v), jsonParse_BSQType(v["arglayout"]), j_sguard(v));
+    return new TypeTagSubtypeOfOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_oftype(v)), j_arg(v), dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["arglayout"])), j_sguard(v));
 }
 
 JumpOp* JumpOp::jparse(json v)
@@ -512,7 +512,7 @@ JumpCondOp* JumpCondOp::jparse(json v)
 
 JumpNoneOp* JumpNoneOp::jparse(json v)
 {
-    return new JumpNoneOp(j_sinfo(v), j_arg(v), jsonParse_BSQType(v["arglayout"]), v["noffset"].get<uint32_t>(), v["soffset"].get<uint32_t>(), v["nlabel"].get<std::string>(), v["slabel"].get<std::string>());
+    return new JumpNoneOp(j_sinfo(v), j_arg(v), dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["arglayout"])), v["noffset"].get<uint32_t>(), v["soffset"].get<uint32_t>(), v["nlabel"].get<std::string>(), v["slabel"].get<std::string>());
 }
 
 RegisterAssignOp* RegisterAssignOp::jparse(json v)
