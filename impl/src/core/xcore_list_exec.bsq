@@ -11,156 +11,49 @@ internal function __list_literal_cons0<T>(): ListRepr<T> {
     return none;
 }
 
-internal function __list_literal_cons1<T>(v1: T): ListRepr<T> {
-    let udf = s_undef<T>();
-    return PartialVector<T>{Mask::s_init_k(1), v1, udf, udf, udf};
-}
-
-internal function __list_literal_cons2<T>(v1: T, v2: T): ListRepr<T> {
-    let udf = s_undef<T>();
-    return PartialVector<T>{Mask::s_init_k(2), v1, v2, udf, udf};
-}
-
-internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> {
-    let udf = s_undef<T>();
-    return PartialVector<T>{Mask::s_init_k(3), v1, v2, v3, udf};
-}
-
-internal function __list_literal_cons4<T>(v1: T, v2: T, v3: T, v4: T): ListRepr<T> {
-    return PartialVector<T>{Mask::s_init_k(4), v1, v2, v3, v4};
-}
-
-internal function __list_literal_cons_add1<T>(ltp: [ListTree<T>?, ListTree<T>?], v1: T): [ListTree<T>?, rr: ListTree<T>?] {
-    let ll = ltp.0;
-    let rr = ltp.1;
-    if(ll === none) {
-        return [__list_literal_cons1<T>(v1), none];
-    }
-    elif(rr === none) {
-        return [ll, __list_literal_cons1<T>(v1)];
-    }
-    else {
-        let nrr = ListOps::s_append<T>(rr, __list_literal_cons1<T>(v1));
-        if(ListOps::s_size<T>(ll) > ListOps::s_size<T>(nrr)) {
-            return [ll, nrr];
-        }
-        else {
-            let njl = ListOps::s_append<T>(ll, nrr);
-            return [njl, none];
-        }
-    }
-}
-
-internal function __list_literal_cons_add2<T>(ltp: [ListTree<T>?, ListTree<T>?], v1: T, v2: T): [ListTree<T>?, rr: ListTree<T>?] {
-    let ll = ltp.0;
-    let rr = ltp.1;
-    if(ll === none) {
-        return [__list_literal_cons2<T>(v1, v2), none];
-    }
-    elif(rr === none) {
-        return [ll, __list_literal_cons2<T>(v1, v2)];
-    }
-    else {
-        let nrr = ListOps::s_append<T>(rr, __list_literal_cons2<T>(v1, v2));
-        if(ListOps::s_size<T>(ll) > ListOps::s_size<T>(nrr)) {
-            return [ll, nrr];
-        }
-        else {
-            let njl = ListOps::s_append<T>(ll, nrr);
-            return [njl, none];
-        }
-    }
-}
-
-internal function __list_literal_cons_add3<T>(ltp: [ListTree<T>?, ListTree<T>?], v1: T, v2: T, v3: T): [ListTree<T>?, rr: ListTree<T>?] {
-    let ll = ltp.0;
-    let rr = ltp.1;
-    if(ll=== none) {
-        return [__list_literal_cons3<T>(v1, v2, v3), none];
-    }
-    elif(rr === none) {
-        return [ll, __list_literal_cons3<T>(v1, v2, v3)];
-    }
-    else {
-        let nrr = ListOps::s_append<T>(rr, __list_literal_cons3<T>(v1, v2, v3));
-        if(ListOps::s_size<T>(ll) > ListOps::s_size<T>(nrr)) {
-            return [ll, nrr];
-        }
-        else {
-            let njl = ListOps::s_append<T>(ll, nrr);
-            return [njl, none];
-        }
-    }
-}
-
-internal function __list_literal_cons_add4<T>(ltp: [ListTree<T>?, ListTree<T>?], v1: T, v2: T, v3: T, v4: T): [ListTree<T>?, rr: ListTree<T>?] {
-    let ll = ltp.0;
-    let rr = ltp.1;
-    if(ll === none) {
-        return [__list_literal_cons4<T>(v1, v2, v3, v4), none];
-    }
-    elif(rr === none) {
-        return [ll, __list_literal_cons4<T>(v1, v2, v3, v4)];
-    }
-    else {
-        let nrr = ListOps::s_append<T>(rr, __list_literal_cons4<T>(v1, v2, v3, v4));
-        if(ListOps::s_size<T>(ll) > ListOps::s_size<T>(nrr)) {
-            return [ll, nrr];
-        }
-        else {
-            let njl = ListOps::s_append<T>(ll, nrr);
-            return [njl, none];
-        }
-    }
-}
-
-internal function __list_literal_cons_add_done<T>(ltp: [ListTree<T>?, ListTree<T>?]): ListRepr<T> {
-    let ll = ltp.0;
-    let rr = ltp.1;
-    if(rr === none) {
-        return ll;
-    }
-    else {
-        return ListOps::s_append<T>(ll, rr);
-    }
-}
-
-internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>): ListRepr<T> {
-    return ListOps::s_append(l1, l2);
-}
+internal function __list_literal_cons1<T>(v1: T): ListRepr<T> = s_list_literal_cons1;
+internal function __list_literal_cons2<T>(v1: T, v2: T): ListRepr<T>  = s_list_literal_cons2;
+internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> = s_list_literal_cons3;
+internal function __list_literal_cons4<T>(v1: T, v2: T, v3: T, v4: T): ListRepr<T> = s_list_literal_cons4;
+internal function __list_literal_cons5<T>(v1: T, v2: T, v3: T, v4: T, v5: T): ListRepr<T> = s_list_literal_cons5;
+internal function __list_literal_cons6<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T): ListRepr<T> = s_list_literal_cons6;
+internal function __list_literal_cons7<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T): ListRepr<T> = s_list_literal_cons7;
+internal function __list_literal_cons8<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T, v8: T): ListRepr<T> = s_list_literal_cons8;
 
 internal entity ListOps provides Some {
-    function s_size_ne<T>(l: ListRepr<T>): Nat = s_size_ne;
+    function s_size_ne<T>(l: ListRepr<T>): Nat = s_list_size_ne;
 
-    recursive? function s_reduce_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_reduce_ne;
-    recursive? function s_reduce_idx_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_reduce_idx_ne;
+    recursive? function s_reduce_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce_ne;
+    recursive? function s_reduce_idx_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx_ne;
 
-    recursive? function s_transduce_ne<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T) -> E, U): E, ListRepr<U> = s_transduce_ne;
-    recursive? function s_transduce_ne_idx<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> E, U): E, ListRepr<U> = s_transduce_idx_ne;
+    recursive? function s_transduce_ne<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T) -> E, U): E, ListRepr<U> = s_list_transduce_ne;
+    recursive? function s_transduce_ne_idx<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> E, U): E, ListRepr<U> = s_list_transduce_idx_ne;
 
-    function s_range_ne<T unique Int | Nat>(start: T, end: T, inc: T, count: T): ListRepr<T> = s_range_ne;
-    function s_fill_ne<T>(count: Nat, v: T): ListRepr<T> = s_fill_ne;
+    function s_range_ne<T unique Int | Nat>(start: T, end: T, inc: T, count: T): ListRepr<T> = s_list_range_ne;
+    function s_fill_ne<T>(count: Nat, v: T): ListRepr<T> = s_list_fill_ne;
 
-    function s_append_ne<T>(ListRepr<T> ll, ListRepr<T> rr): ListRepr<T> = s_append_ne;
+    function s_reverse_ne<T>(ListRepr<T> ll): ListRepr<T> = s_list_reverse_ne;
 
-    function s_slice_start_ne<T>(l: ListRepr<T>, start: Nat): ListRepr<T> = s_slice_start;
-    function s_slice_end_ne<T>(l: ListRepr<T>, end: Nat): ListRepr<T> = s_slice_end;
-    function s_safe_get_ne<T>(l: ListRepr<T>, i: Nat): T = s_safe_get;
+    function s_append_ne<T>(ListRepr<T> ll, ListRepr<T> rr): ListRepr<T> = s_list_append_ne;
 
-    recursive? function s_find_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat = s_find_pred_ne;
-    recursive? function s_find_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = s_find_pred_idx_ne;
-    recursive? function s_find_pred_last_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat = s_find_pred_last_ne;
-    recursive? function s_find_pred_last_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = s_find_pred_last_idx_ne;
+    function s_slice_start_ne<T>(l: ListRepr<T>, start: Nat): ListRepr<T> = s_list_slice_start;
+    function s_slice_end_ne<T>(l: ListRepr<T>, end: Nat): ListRepr<T> = s_list_slice_end;
+    function s_safe_get_ne<T>(l: ListRepr<T>, i: Nat): T = s_list_safe_get;
 
-    recursive? function s_filter_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_filter_pred_ne;
-    recursive? function s_filter_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_filter_pred_idx_ne;
+    recursive? function s_find_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat = s_list_find_pred_ne;
+    recursive? function s_find_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = s_list_find_pred_idx_ne;
+    recursive? function s_find_pred_last_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat = s_list_find_pred_last_ne;
+    recursive? function s_find_pred_last_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = s_list_find_pred_last_idx_ne;
 
-    recursive? function s_map_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): List<U> = s_map_ne;
-    recursive? function s_map_idx_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_map_idx_ne;
-    recursive? function s_map_sync_ne<T, U, V>(l1: ListRepr<T>, l2: ListRepr<U>, f: recursive? fn(_: T, _: U) -> V): ListRepr<V> = s_map_sync_ne
+    recursive? function s_filter_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred_ne;
+    recursive? function s_filter_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx_ne;
 
-    recursive? function s_sort_ne<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_sort_ne
-    recursive? function s_unique_from_sorted_ne<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_unique_from_sorted_ne
+    recursive? function s_map_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): List<U> = s_list_map_ne;
+    recursive? function s_map_idx_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_list_map_idx_ne;
+    recursive? function s_map_sync_ne<T, U, V>(l1: ListRepr<T>, l2: ListRepr<U>, f: recursive? fn(_: T, _: U) -> V): ListRepr<V> = s_list_map_sync_ne
+
+    recursive? function s_sort_ne<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_list_sort_ne
+    recursive? function s_unique_from_sorted_ne<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_list_unique_from_sorted_ne
 
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
@@ -426,11 +319,8 @@ internal entity ListOps provides Some {
         if(l === none) {
             return none;
         }
-        elif(l.is<PartialVector<T>>()) {
-            return PartialVector<T>::s_reverse(l);
-        }
         else {
-            return l.reverse[recursive]();
+            return ListOps::s_reverse_ne(l);
         }
     }
 
@@ -454,7 +344,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: E, _: T) -> U, E): E, ListRepr<U> {
+    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: E, _: T) -> E, U): E, ListRepr<U> {
         if(l === none) {
             return env, none;
         }
@@ -463,7 +353,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> U, E): ListRepr<U>, E {
+    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> E, U): ListRepr<U>, E {
         if(l === none) {
             return none, env;
         }

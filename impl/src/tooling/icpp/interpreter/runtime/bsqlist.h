@@ -69,6 +69,16 @@ public:
         return ((uint8_t*)repr) + sizeof(uint64_t) + (i * this->entrysize);
     }
 
+    inline static void initializePVData(void* pvinto, const std::vector<StorageLocationPtr>& vals, uint64_t entrysize)
+    {
+        auto intoloc = ((uint8_t*)pvinto);
+        auto fromloc = ((uint8_t*)vals.data());
+        auto bytecount = sizeof(uint64_t) + (vals.size() * entrysize);
+
+        BSQPartialVectorType::setPVCount(pvinto, vals.size());
+        GC_MEM_COPY(intoloc, fromloc, bytecount);
+    }
+
     inline static void directCopyPVData(void* pvinto, void* pvfrom, uint64_t entrysize)
     {
         auto intoloc = ((uint8_t*)pvinto);
@@ -162,7 +172,7 @@ public:
     int16_t icurr;
     int16_t imax;
 
-    BSQListForwardIterator(const BSQType* lreprtype, void* lroot): BSQCollectionIterator(), lctype(nullptr), icurr(0), imax(0)
+    BSQListForwardIterator(const BSQType* lreprtype, void* lroot): BSQCollectionIterator(), curr(0), lmax(0), lctype(nullptr), icurr(0), imax(0)
     {
         if(lroot != nullptr) 
         {
@@ -246,7 +256,7 @@ public:
     const BSQPartialVectorType* lctype;
     int16_t icurr;
 
-    BSQListReverseIterator(const BSQType* lreprtype, void* lroot): BSQCollectionIterator(), lctype(nullptr), icurr(0)
+    BSQListReverseIterator(const BSQType* lreprtype, void* lroot): BSQCollectionIterator(), curr(-1), lctype(nullptr), icurr(0)
     {
         if(lroot != nullptr) 
         {
@@ -333,41 +343,6 @@ public:
     {;}
 
     virtual ~BSQListType() {;}
-
-    void clearValue(StorageLocationPtr trgt) const override final
-    {
-        GC_MEM_ZERO(trgt, 16);
-    }
-
-    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
-    {
-        BSQ_MEM_COPY(trgt, src, 16);
-    }
-
-    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
-    {
-        assert(false);
-        return nullptr;
-    }
-};
-
-
-///////////////////////////
-
-//MAP
-class BSQMapType : public BSQType
-{
-public:
-    const BSQTypeID ktype; //type of K in the map
-    const BSQTypeID vtype; //type of V in the map
-    const BSQTypeID etype; //type of [K, V]
-
-    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype, BSQTypeID etype): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        ktype(ktype), vtype(vtype), etype(etype)
-    {;}
-
-    virtual ~BSQMapType() {;}
 
     void clearValue(StorageLocationPtr trgt) const override final
     {

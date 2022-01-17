@@ -6645,7 +6645,7 @@ class TypeChecker {
 
         let consfuncs: MIRInvokeKey[] = [];
         if(this.m_buildapplication === BuildApplicationMode.Executable) {
-            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons4", "__list_literal_cons_add1", "__list_literal_cons_add2", "__list_literal_cons_add3", "__list_literal_cons_add4", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
+            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons4", "__list_literal_cons5", "__list_literal_cons6", "__list_literal_cons7", "__list_literal_cons8", "__list_literal_cons_append"].forEach((fname) => {
                 const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
                 consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
             });
@@ -6665,7 +6665,7 @@ class TypeChecker {
 
         let consfuncs: MIRInvokeKey[] = [];
         if(this.m_buildapplication === BuildApplicationMode.Executable) {
-            ["__map_literal_cons0", "__map_literal_cons1", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
+            ["__map_literal_cons0", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
                 const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
                 consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
             });

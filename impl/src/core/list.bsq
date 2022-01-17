@@ -1194,12 +1194,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         return ListOps::s_reduce_idx<T, U>[recursive?](this.value(), init, f);
     }
 
-    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E) -> U, E): E, List<U> {
+    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E) -> E, U): E, List<U> {
         let ee, llu = ListOps::s_transduce<T, E, U>[recursive?](this.value(), env, f);
         return ee, List<U>::s_into(llu);
     }
 
-    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> U, E): E, List<U> {
+    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> E, U): E, List<U> {
         let ee, llu = ListOps::s_transduce_idx<T, E, U>[recursive?](this.value(), env, f);
         return ee, List<U>::s_into(llu);
     }

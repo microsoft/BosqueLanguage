@@ -11,6 +11,7 @@
 
 #include "runtime/bsqvalue.h"
 #include "runtime/bsqlist.h"
+#include "runtime/bsqmap.h"
 
 //Forward Decl
 class Evaluator;
@@ -19,6 +20,16 @@ class BSQListOps
 {
 public:
     static std::map<BSQTypeID, BSQListTypeFlavor> g_flavormap; //map from entry type to the flavors of the repr
+
+    inline static void* list_consk(const BSQListTypeFlavor& lflavor, const std::vector<StorageLocationPtr>& params)
+    {
+         Allocator::GlobalAllocator.ensureSpace(sizeof(GC_META_DATA_WORD) + lflavor.pv8type->allocinfo.heapsize);
+
+        auto res = Allocator::GlobalAllocator.allocateSafe((params.size() <= 4) ? lflavor.pv4type : lflavor.pv8type);
+        BSQPartialVectorType::initializePVData(res, params, lflavor.entrytype->allocinfo.inlinedatasize);
+
+        return res;
+    }
 
     static void* list_append(const BSQListTypeFlavor& lflavor, BSQCollectionGCReprNode* lnode, BSQCollectionGCReprNode* rnode)
     {
@@ -366,6 +377,8 @@ public:
     static void s_range_ne(const BSQType* oftype, StorageLocationPtr start, StorageLocationPtr end, StorageLocationPtr count, StorageLocationPtr res);
     static void s_fill_ne(const BSQType* oftype, StorageLocationPtr val, StorageLocationPtr count, StorageLocationPtr res);
 
+    static void* s_reverse_ne(const BSQListTypeFlavor& lflavor, BSQCollectionGCReprNode* reprnode);
+
     static BSQNat s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
     static BSQNat s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
     static BSQNat s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
@@ -381,10 +394,48 @@ public:
     static void s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
     static void s_reduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
 
-    static void* s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQType* etype, StorageLocationPtr eres);
-    static void* s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQType* etype, StorageLocationPtr eres);
+    static void* s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres);
+    static void* s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres);
 
     static void* s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* lt, const std::vector<StorageLocationPtr>& params);
     static void* s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* eq, const std::vector<StorageLocationPtr>& params);
 };
 
+
+class BSQMapOps
+{
+public:
+    static std::map<BSQTypeID, BSQMapTypeFlavor> g_flavormap; //map from entry type to the flavors of the repr
+
+    static void* s_lookup_ne(void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, const BSQType* ktype)
+    {
+        BSQMapTreeRepr* curr = static_cast<BSQMapTreeRepr*>(t);
+        while(curr != nullptr)
+        {
+            auto ck = ttype->getKeyLocation(curr);
+            if(ktype->fpkeycmp(ktype, kl, ck))
+            {
+                curr = static_cast<BSQMapTreeRepr*>(curr->l);
+            }
+            else if(ktype->fpkeycmp(ktype, ck, kl))
+            {
+                curr = static_cast<BSQMapTreeRepr*>(curr->r);
+            }
+            else
+            {
+                return curr;
+            }
+        }
+
+        return nullptr;
+    }
+
+    function s_union_ne<K, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> = s_map_union_ne;
+
+    recursive? function s_submap_ne<K, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> = s_map_submap_ne;
+    recursive? function s_remap_ne<K, V, U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): MapRepr<K, U> = s_map_remap_ne;
+
+    function s_add_ne<K, V>(m: MapRepr<K, V>, k: K, v: V): V = s_map_add_ne;
+    function s_set_ne<K, V>(m: MapRepr<K, V>, k: K, v: V): V = s_map_set_ne;
+    function s_remove_ne<K, V>(m: MapRepr<K, V>, k: K, v: V): V = s_map_remove_ne;
+};
