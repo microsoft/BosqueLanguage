@@ -150,6 +150,7 @@ public:
             for(int16_t i = 0; i < (int16_t)count; ++i)
             {
                 lflavor.entrytype->storeValue(lflavor.pv4type->get(res, i), lelems->root);
+                lelems++;
             }
         }
         else if(count <= 8)
@@ -159,6 +160,7 @@ public:
             for(int16_t i = 0; i < (int16_t)count; ++i)
             {
                 lflavor.entrytype->storeValue(lflavor.pv8type->get(res, i), lelems->root);
+                lelems++;
             }
         }
         else
@@ -428,10 +430,103 @@ public:
         return nullptr;
     }
 
-    static void* s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2);
+    template <typename OP_PV>
+    static void* map_tree_transform(const BSQMapTypeFlavor& mflavor, BSQCollectionGCReprNode* reprnode, OP_PV fn_node)
+    {
+        BSQCollectionGCReprNode* llres = nullptr;
+        if(BSQMapTreeType::getLeft(reprnode->repr) != nullptr)
+        {
+            auto gclpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto lnode = Allocator::GlobalAllocator.registerCollectionNode(BSQMapTreeType::getLeft(reprnode->repr));
+            auto ll = map_tree_transform(mflavor, lnode, fn_node);
+            llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gclpoint, ll);
+        }
 
-    static void* s_submap_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
-    static void* s_remap_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor);
+        BSQCollectionGCReprNode* rrres = nullptr;
+        if(BSQMapTreeType::getRight(reprnode->repr) != nullptr)
+        {
+            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto rnode = Allocator::GlobalAllocator.registerCollectionNode(BSQMapTreeType::getRight(reprnode->repr));
+            auto rr = list_tree_transform(lflavor, rnode, fn_partialvector);
+            rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rr);
+        }
+
+        return fn_node(reprnode, llres, rrres);
+    }
+
+    template <typename OP_PV>
+    static void map_tree_flatten(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, OP_PV pred)
+    {
+        if(BSQMapTreeType::getLeft(iter.lcurr) != nullptr)
+        {
+            iter.moveLeft();
+            map_tree_flatten(mflavor, iter, pred);
+            iter.pop();
+        }
+
+        if(pred(mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.treetype->getValueLocation(iter.lcurr)))
+        {
+            auto nn = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+            mflavor.treetype->initializeLeaf(nn, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->valuetype(iter.lcurr), mflavor.valuetype);
+
+            Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype, nn);
+        }
+
+        if(BSQMapTreeType::getRight(iter.lcurr) != nullptr)
+        {
+            iter.moveRight();
+            map_tree_flatten(mflavor, iter, pred);
+            iter.pop();
+        }
+    }
+
+    static void* map_tree_lmerge(const BSQMapTypeFlavor& mflavor, std::list<BSQTempRootNode>& lelems, std::list<BSQTempRootNode>& relems, uint64_t count)
+    {
+        std::list<BSQTempRootNode> ml;
+        std::merge(lelems.begin(), lelems.end(), relems.begin(), relems.end(), std::back_inserter(ml), [&mflavor](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+            return (bool)mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root));
+        });
+
+        auto ii = ml.begin();
+        return BSQMapOps::s_temp_root_to_map_rec(mflavor, ii, count);
+    }
+
+    static void* s_temp_root_to_map_rec(const BSQMapTypeFlavor& mflavor, std::list<BSQTempRootNode>::iterator& lelems, uint64_t count)
+    {
+        void* res = nullptr;
+        if(count == 0)
+        {
+            ;
+        }
+        else if(count == 1)
+        {
+            res = lelems->root;
+            lelems++;
+        }
+        else
+        {
+            auto mid = count / 2;
+            auto gclpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto llnode = BSQMapOps::s_temp_root_to_map_rec(mflavor, lelems, mid);
+            auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gclpoint, llnode);
+
+            auto rootitem = lelems;
+            lelems++;
+
+            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
+            auto rrnode = BSQMapOps::s_temp_root_to_map_rec(mflavor, lelems, count - mid);
+            auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
+
+            static_cast<BSQMapTreeRepr*>(rootitem->root)->l = llres->repr;
+            static_cast<BSQMapTreeRepr*>(rootitem->root)->r = rrres->repr;
+        }
+        return res;
+    }
+
+    static void* s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, uint64_t ccount);
+
+    static void* s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, uint64_t count, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
+    static void* s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor);
 
     static void* s_add_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);
     static void* s_set_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);

@@ -71,9 +71,9 @@ class BSQTempRootNode
 public:
     const BSQType* rtype;
     void* root;
-    const bool alloc;
+    const bool isinline;
 
-    BSQTempRootNode(const BSQType* rtype, void* root, bool alloc): rtype(rtype), root(root), alloc(alloc) {;}
+    BSQTempRootNode(const BSQType* rtype, void* root, bool alloc): rtype(rtype), root(root), isinline(isinline) {;}
 };
 
 struct GCStackEntry
@@ -785,7 +785,14 @@ private:
 
         for(auto titer = Allocator::alloctemps.begin(); titer != Allocator::alloctemps.end(); ++titer)
         {
-            Allocator::gcProcessSlotsWithMask<true>(&(titer->root), titer->rtype->allocinfo.inlinedmask);
+            if(!titer->isinline)
+            {
+                Allocator::gcProcessSlot<true>(&(titer->root));
+            }
+            else
+            {
+                Allocator::gcProcessSlotsWithMask<true>((void**)titer->root, titer->rtype->allocinfo.inlinedmask);
+            }
         }
     }
 
@@ -885,7 +892,14 @@ private:
 
         for(auto titer = Allocator::alloctemps.begin(); titer != Allocator::alloctemps.end(); ++titer)
         {
-            Allocator::gcClearMarkSlotsWithMask(&(titer->root), titer->rtype->allocinfo.inlinedmask);
+            if(!titer->isinline)
+            {
+                Allocator::gcClearMark(titer->root);
+            }
+            else
+            {
+                Allocator::gcClearMarkSlotsWithMask((void**)titer->root, titer->rtype->allocinfo.inlinedmask);
+            }
         }
     }
 
@@ -1012,7 +1026,7 @@ public:
     {
         for(auto iter = Allocator::alloctemps.begin(); iter != Allocator::alloctemps.end(); ++iter)
         {
-            if(iter->alloc)
+            if(iter->isinline)
             {
                 mi_free(iter->root);
             }
@@ -1037,7 +1051,7 @@ public:
 
     void releaseTempRoot(std::list<BSQTempRootNode>::iterator root)
     {
-        if(root->alloc)
+        if(root->isinline)
         {
             mi_free(root->root);
         }
