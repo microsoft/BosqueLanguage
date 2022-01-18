@@ -188,7 +188,7 @@ public:
                 rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
             }
 
-            this->lcurr = static_cast<void*>(rr);
+            this->lcurr = rr;
             this->lctype = static_cast<const BSQPartialVectorType*>(rt);
 
             this->icurr = 0;
@@ -222,7 +222,7 @@ public:
             rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
         }
 
-        this->lcurr = static_cast<void*>(rr);
+        this->lcurr = rr;
         this->lctype = static_cast<const BSQPartialVectorType*>(rt);
 
         this->icurr = 0;
@@ -272,7 +272,7 @@ public:
                 rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
             }
 
-            this->lcurr = static_cast<void*>(rr);
+            this->lcurr = rr;
             this->lctype = static_cast<const BSQPartialVectorType*>(rt);
 
             this->icurr = BSQPartialVectorType::getPVCount(rr) - 1;
@@ -305,7 +305,7 @@ public:
             rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
         }
 
-        this->lcurr = static_cast<void*>(rr);
+        this->lcurr = rr;
         this->lctype = static_cast<const BSQPartialVectorType*>(rt);
 
         this->icurr = BSQPartialVectorType::getPVCount(rr) - 1;
@@ -328,6 +328,49 @@ public:
         assert(this->valid());
 
         return this->lctype->get(this->lcurr, this->icurr);
+    }
+};
+
+class BSQListSpineIterator : public BSQCollectionIterator
+{
+public:
+    BSQListSpineIterator(const BSQType* lreprtype, void* lroot): BSQCollectionIterator()
+    {
+        if(lroot != nullptr) 
+        {
+            this->lcurr = lroot;
+        }
+    }
+    
+    virtual ~BSQListSpineIterator() {;}
+
+    inline bool valid() const
+    {
+        return this->lcurr != nullptr;
+    }
+
+    inline void moveLeft()
+    {
+        assert(this->valid());
+
+        this->iterstack.push_back(this->lcurr);
+        this->lcurr = static_cast<BSQListTreeRepr*>(this->lcurr)->l;
+    }
+
+    inline void moveRight()
+    {
+        assert(this->valid());
+
+        this->iterstack.push_back(this->lcurr);
+        this->lcurr = static_cast<BSQListTreeRepr*>(this->lcurr)->r;
+    }
+
+    inline void pop()
+    {
+        assert(this->valid());
+
+        this->lcurr = this->iterstack.back();
+        this->iterstack.pop_back();
     }
 };
 

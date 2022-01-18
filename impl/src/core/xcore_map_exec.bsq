@@ -28,19 +28,19 @@ internal function __map_literal_cons_append<K grounded KeyType, V>(m1: MapRepr<K
 }
 
 internal entity MapOps provides Some {
-    function s_size_ne<K, V>(m: MapRepr<K, V>): Nat = s_map_size_ne;
+    function s_size_ne<K grounded KeyType, V>(m: MapRepr<K, V>): Nat = s_map_size_ne;
 
-    function s_has_ne<K, V>(m: MapRepr<K, V>, k: K): Bool = s_map_has_ne;
-    function s_find_ne<K, V>(m: MapRepr<K, V>, k: K): V = s_map_find_ne;
+    function s_has_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): Bool = s_map_has_ne;
+    function s_find_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): V = s_map_find_ne;
 
-    function s_union_ne<K, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> = s_map_union_ne;
+    function s_union_ne<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> = s_map_union_ne;
 
-    recursive? function s_submap_ne<K, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> = s_map_submap_ne;
-    recursive? function s_remap_ne<K, V, U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): MapRepr<K, U> = s_map_remap_ne;
+    recursive? function s_submap_ne<K grounded KeyType, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> = s_map_submap_ne;
+    recursive? function s_remap_ne<K grounded KeyType, V, U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): MapRepr<K, U> = s_map_remap_ne;
 
-    function s_add_ne<K, V>(m: MapRepr<K, V>, k: K, v: V): V = s_map_add_ne;
-    function s_set_ne<K, V>(m: MapRepr<K, V>, k: K, v: V): V = s_map_set_ne;
-    function s_remove_ne<K, V>(m: MapRepr<K, V>, k: K, v: V): V = s_map_remove_ne;
+    function s_add_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> = s_map_add_ne;
+    function s_set_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> = s_map_set_ne;
+    function s_remove_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> = s_map_remove_ne;
 
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
         return m === none;

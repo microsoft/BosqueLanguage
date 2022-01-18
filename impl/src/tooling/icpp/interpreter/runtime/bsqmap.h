@@ -18,7 +18,6 @@ struct BSQMapTreeRepr
 {
     void* l;
     void* r;
-    BSQNat count;
 };
 
 class BSQMapTreeType : public BSQRefType
@@ -36,6 +35,24 @@ public:
 
     virtual ~BSQMapTreeType() {;}
 
+    inline void initializeLeaf(void* repr, StorageLocationPtr ksl, const BSQType* ktype, StorageLocationPtr vsl, const BSQType* vtype) const
+    {
+        ((BSQMapTreeRepr*)repr)->l = nullptr;
+        ((BSQMapTreeRepr*)repr)->r = nullptr;
+
+        ktype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->keyoffset), ksl);
+        vtype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->valueoffset), vsl);
+    }
+
+    inline void initializeLR(void* repr, StorageLocationPtr ksl, const BSQType* ktype, StorageLocationPtr vsl, const BSQType* vtype, void* l, void* r) const
+    {
+        ((BSQMapTreeRepr*)repr)->l = l;
+        ((BSQMapTreeRepr*)repr)->r = r;
+
+        ktype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->keyoffset), ksl);
+        vtype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->valueoffset), vsl);
+    }
+
     inline static void* getLeft(void* repr)
     {
         return ((BSQMapTreeRepr*)repr)->l;
@@ -45,12 +62,6 @@ public:
     {
         return ((BSQMapTreeRepr*)repr)->r;
     }
-
-    inline static BSQNat getCount(void* repr)
-    {
-        return ((BSQMapTreeRepr*)repr)->count;
-    }
-
 
     StorageLocationPtr getKeyLocation(void* repr) const
     {
@@ -88,6 +99,49 @@ public:
         }
 
         return curr;
+    }
+};
+
+class BSQMapSpineIterator : public BSQCollectionIterator
+{
+public:
+    BSQMapSpineIterator(const BSQType* mreprtype, void* mroot): BSQCollectionIterator()
+    {
+        if(mroot != nullptr) 
+        {
+            this->lcurr = mroot;
+        }
+    }
+    
+    virtual ~BSQMapSpineIterator() {;}
+
+    inline bool valid() const
+    {
+        return this->lcurr != nullptr;
+    }
+
+    inline void moveLeft()
+    {
+        assert(this->valid());
+
+        this->iterstack.push_back(this->lcurr);
+        this->lcurr = static_cast<BSQMapTreeRepr*>(this->lcurr)->l;
+    }
+
+    inline void moveRight()
+    {
+        assert(this->valid());
+
+        this->iterstack.push_back(this->lcurr);
+        this->lcurr = static_cast<BSQMapTreeRepr*>(this->lcurr)->r;
+    }
+
+    inline void pop()
+    {
+        assert(this->valid());
+
+        this->lcurr = this->iterstack.back();
+        this->iterstack.pop_back();
     }
 };
 
