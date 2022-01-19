@@ -7,15 +7,6 @@
 namespace Core;
 
 #if EXEC_LIBS
-internal function __list_literal_cons1<T>(v1: T): ListRepr<T> = s_list_literal_cons1;
-internal function __list_literal_cons2<T>(v1: T, v2: T): ListRepr<T>  = s_list_literal_cons2;
-internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> = s_list_literal_cons3;
-internal function __list_literal_cons4<T>(v1: T, v2: T, v3: T, v4: T): ListRepr<T> = s_list_literal_cons4;
-internal function __list_literal_cons5<T>(v1: T, v2: T, v3: T, v4: T, v5: T): ListRepr<T> = s_list_literal_cons5;
-internal function __list_literal_cons6<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T): ListRepr<T> = s_list_literal_cons6;
-internal function __list_literal_cons7<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T): ListRepr<T> = s_list_literal_cons7;
-internal function __list_literal_cons8<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T, v8: T): ListRepr<T> = s_list_literal_cons8;
-
 internal entity ListOps provides Some {
     function s_size_ne<T>(l: ListRepr<T>): Nat = s_list_size_ne;
 

@@ -6642,7 +6642,7 @@ class TypeChecker {
 
     private processCollectionSpecialConstructorFunctions_List(oobinds: Map<string, ResolvedType>): MIRInvokeKey[] {
         const nscore = this.m_assembly.getNamespace("Core");
-
+xxxx;
         let consfuncs: MIRInvokeKey[] = [];
         if(this.m_buildapplication === BuildApplicationMode.Executable) {
             ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons4", "__list_literal_cons5", "__list_literal_cons6", "__list_literal_cons7", "__list_literal_cons8", "__list_literal_cons_append"].forEach((fname) => {
@@ -6662,7 +6662,7 @@ class TypeChecker {
 
     private processCollectionSpecialConstructorFunctions_Map(oobinds: Map<string, ResolvedType>): MIRInvokeKey[] {
         const nscore = this.m_assembly.getNamespace("Core");
-
+xxxx;
         let consfuncs: MIRInvokeKey[] = [];
         if(this.m_buildapplication === BuildApplicationMode.Executable) {
             ["__map_literal_cons0", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {

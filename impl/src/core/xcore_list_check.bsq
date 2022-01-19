@@ -7,22 +7,6 @@
 namespace Core;
 
 #if CHECK_LIBS
-internal function __list_literal_cons0<T>(): ListRepr<T> {
-    return none;
-}
-
-internal function __list_literal_cons1<T>(v1: T): ListRepr<T> {
-    return Vector1<T>{v1};
-}
-
-internal function __list_literal_cons2<T>(v1: T, v2: T): ListRepr<T> {
-    return Vector2<T>{v1, v2};
-}
-
-internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> {
-    return Vector3<T>{v1, v2, v3};
-}
-
 internal entity ListOps provides Some {
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
