@@ -23,18 +23,6 @@ internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> {
     return Vector3<T>{v1, v2, v3};
 }
 
-internal function __list_literal_cons_add<T>(h: T, ll: RecListEntry<T>): RecListEntry<T> {
-    return RecListEntry<T>{h, ll};
-}
-
-internal function __list_literal_cons_add_done<T>(count: Nat, ll: RecListEntry<T>): ListRepr<T> {
-    return RecList<T>{count, ll};
-}
-
-internal function __list_literal_cons_append<T>(l1: ListRepr<T>, l2: ListRepr<T>): ListRepr<T> {
-    return ListOps::s_append(l1, l2);
-}
-
 internal entity ListOps provides Some {
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;

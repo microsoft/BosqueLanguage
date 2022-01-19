@@ -61,18 +61,6 @@ internal function __map_literal_cons3<K grounded KeyType, V>(e1: [K, V], e2: [K,
     }
 }
 
-internal function __map_literal_cons_add<K grounded KeyType, V>(e: [K, V], mm: RecMapEntry<K, V>): RecMapEntry<K, V> {
-    return mm.add[recursive](e.0, e.1);
-}
-
-internal function __map_literal_cons_add_done<K grounded KeyType, V>(count: Nat, mm: RecMapEntry<K, V>): MapRepr<K, V> {
-    return RecMap<K, V>{count, mm};
-}
-
-internal function __map_literal_cons_append<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
-    return MapOps::s_union<K, V>(m1, m2);
-}
-
 internal entity MapOps provides Some {
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
         return m === none;
@@ -418,24 +406,6 @@ internal entity MapOps provides Some {
             return s_safeAs<MapRepr<K, V>, RecMap<K, V>>(m).remove(k);
         }
     }
-
-    function s_check_ordered<K grounded KeyType, V>(m: MapRepr<K, V>): Bool {
-        if(m === none) {
-            return true;
-        }
-        elif(m.is<Vector1<[K, V]>>()) {
-            return true;
-        }
-        elif(m.is<Vector2<[K, V]>>()) {
-            return KeyType::less<K>(m.v0.0, m.v1.0);
-        }
-        elif(m.is<Vector3<[K, V]>>()) {
-            return /\(KeyType::less<K>(m.v0.0, m.v1.0), KeyType::less<K>(m.v1.0, m.v2.0));
-        }
-        else {
-            return m.checkOrdered();
-        }
-    }
 }
 
 entity RecMap<K grounded KeyType, V> provides Some {
@@ -493,16 +463,6 @@ entity RecMap<K grounded KeyType, V> provides Some {
         }
         else {
             return RecMap<K, V>{this.count - 1n, rrl};
-        }
-    }
-
-    method checkOrdered(): Bool {
-        let ttl = this.ll.tail;
-        if(ttl === none) {
-            return true;
-        }
-        else {
-             return ttl.checkOrdered[recursive](this.ll.head.0);
         }
     }
 }
@@ -682,22 +642,6 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
             let ntl = tl.remove[recursive](k);
             return RecMapEntry<K, V>{this.head, ntl};
         }
-    }
-
-    recursive method checkOrdered(k: K): Bool {
-        let hk = this.head.0;
-        if(!KeyType::less<K>(k, hk)) {
-            return false;
-        }
-        else {
-            let tl = this.tail;
-            if(tail === none) {
-                return true;
-            }
-            else {
-                return tl.checkOrdered(hk);
-            }
-       }
     }
 }
 

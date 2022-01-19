@@ -7,10 +7,6 @@
 namespace Core;
 
 #if EXEC_LIBS
-internal function __list_literal_cons0<T>(): ListRepr<T> {
-    return none;
-}
-
 internal function __list_literal_cons1<T>(v1: T): ListRepr<T> = s_list_literal_cons1;
 internal function __list_literal_cons2<T>(v1: T, v2: T): ListRepr<T>  = s_list_literal_cons2;
 internal function __list_literal_cons3<T>(v1: T, v2: T, v3: T): ListRepr<T> = s_list_literal_cons3;
