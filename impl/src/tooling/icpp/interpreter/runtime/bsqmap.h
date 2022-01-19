@@ -31,7 +31,7 @@ public:
     const uint32_t valueoffset;
 
     BSQMapTreeType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name, BSQTypeID keytype, uint32_t keyoffset, BSQTypeID valuetype, uint32_t valueoffset)
-    : BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityMapReprDisplay_impl, name), keytype(keytype), keyoffset(keyoffset), valuetype(valuetype), valueoffset(valueoffset)
+    : BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, nullptr, name), keytype(keytype), keyoffset(keyoffset), valuetype(valuetype), valueoffset(valueoffset)
     {;}
 
     virtual ~BSQMapTreeType() {;}

@@ -1082,3 +1082,64 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
     Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
     return res;
 }
+
+std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    auto ltype = dynamic_cast<const BSQListType*>(btype);
+    auto lflavor = BSQListOps::g_flavormap[ltype->tid];
+
+    std::string res = btype->name + "{";
+    BSQListForwardIterator iter(LIST_LOAD_TYPE_INFO(data), LIST_LOAD_DATA(data));
+    bool first = true;
+    while(iter.valid())
+    {
+        if(!first)
+        {
+            res += ",";
+        }
+
+        res += lflavor.entrytype->fpDisplay(lflavor.entrytype, iter.getlocation());
+    }
+    res += "}";
+
+    return res;
+}
+
+
+std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter)
+{
+    if(iter.lcurr == nullptr)
+    {
+        return "";
+    }
+    else
+    {
+        iter.moveLeft();
+        auto ll = entityMapDisplay_impl_rec(mflavor, iter);
+        iter.pop();
+
+        auto iistr = mflavor.keytype->fpDisplay(mflavor.keytype, mflavor.treetype->getKeyLocation(iter.lcurr)) + " => " + mflavor.valuetype->fpDisplay(mflavor.valuetype, mflavor.treetype->getValueLocation(iter.lcurr));
+
+        iter.moveRight();
+        auto rr = entityMapDisplay_impl_rec(mflavor, iter);
+        iter.pop();
+
+        return ll + (ll.empty() ? "" : ", ") + iistr + (rr.empty() ? "" : ", ") + rr;
+    }
+}
+
+std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    auto mtype = dynamic_cast<const BSQMapType*>(btype);
+    auto mflavor = BSQMapOps::g_flavormap[mtype->tid];
+
+    std::string res = btype->name + "{";
+    BSQMapSpineIterator iter(MAP_LOAD_TYPE_INFO(data), MAP_LOAD_REPR(data));
+    if(iter.valid())
+    {
+        res += entityMapDisplay_impl_rec(mflavor, iter);
+    }
+    res += "}";
+
+    return res;
+}

@@ -12,18 +12,6 @@
 #include <list>
 #include <map>
 
-
-class LambdaEvalThunk
-{
-public:
-    void* ctx;
-
-    LambdaEvalThunk(void* ctx): ctx(ctx) {;}
-    ~LambdaEvalThunk() {;}
-
-    void invoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
-};
-
 class BSQField
 {
 public:
@@ -1378,11 +1366,8 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
 
 #define CONS_BSQ_LIST_TYPE(TID, NAME, CTYPE, PVTYPE, TREETYPE) (new BSQListType(TID, entityListDisplay_impl, NAME, CTYPE, PVTYPE, TREETYPE))
 
-xxxx;
-
-#define CONS_BSQ_PARTIAL_VECTOR_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQPartialVectorType(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, ELEMTYPE, ELEMSIZE))
-#define CONS_BSQ_TREE_LIST_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQTR(TID, HEAP_SIZE, HEAP_MASK, entityPartialVectorDisplay_impl, NAME, ELEMTYPE, ELEMSIZE))
-
+#define CONS_BSQ_PARTIAL_VECTOR_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQPartialVectorType(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE))
+#define CONS_BSQ_TREE_LIST_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE, ELEMSIZE) (new BSQListTreeType(TID, HEAP_SIZE, HEAP_MASK, NAME, ELEMTYPE))
 
 ////
 //Map

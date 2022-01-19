@@ -164,7 +164,7 @@ BoxOp* BoxOp::jparse(json v)
 
 ExtractOp* ExtractOp::jparse(json v)
 {
-    return new ExtractOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQUnionType*>(j_intotype(v)), j_arg(v), jsonParse_BSQType(v["fromtype"]), j_sguard(v));
+    return new ExtractOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["fromtype"])), j_sguard(v));
 }
 
 LoadConstOp* LoadConstOp::jparse(json v)

@@ -30,7 +30,7 @@ public:
     const ListReprKind lkind;
 
     BSQListReprType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name, BSQTypeID entrytype, ListReprKind lkind)
-    : BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, entityListReprDisplay_impl, name), entrytype(entrytype), lkind(lkind)
+    : BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, nullptr, name), entrytype(entrytype), lkind(lkind)
     {;}
 
     virtual ~BSQListReprType() {;}
