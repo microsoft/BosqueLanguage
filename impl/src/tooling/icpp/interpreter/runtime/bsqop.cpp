@@ -424,6 +424,14 @@ ConstructorEphemeralListOp* ConstructorEphemeralListOp::jparse(json v)
     return new ConstructorEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_oftype(v)), args);
 }
 
+ConstructorEntityDirectOp* ConstructorEntityDirectOp::jparse(json v)
+{
+    std::vector<Argument> args;
+    j_args(v, args);
+
+    return new ConstructorEntityDirectOp(j_sinfo(v), j_trgt(v), j_oftype(v), args);
+}
+
 PrefixNotOp* PrefixNotOp::jparse(json v)
 {
     return new PrefixNotOp(j_sinfo(v), j_trgt(v), j_arg(v));

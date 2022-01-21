@@ -64,6 +64,7 @@ enum class OpCodeTag
     ConstructorRecordFromEphemeralListOp,
     EphemeralListExtendOp,
     ConstructorEphemeralListOp,
+    ConstructorEntityDirectOp,
     PrefixNotOp,
     AllTrueOp,
     SomeTrueOp,
@@ -822,6 +823,19 @@ public:
     virtual ~ConstructorEphemeralListOp() {;}
 
     static ConstructorEphemeralListOp* jparse(json v);
+};
+
+class ConstructorEntityDirectOp : public InterpOp
+{
+public:
+    const TargetVar trgt;
+    const BSQType* oftype;
+    const std::vector<Argument> args;
+    
+    ConstructorEntityDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorEntityDirectOp), trgt(trgt), oftype(oftype), args(args) {;}
+    virtual ~ConstructorEntityDirectOp() {;}
+
+    static ConstructorEntityDirectOp* jparse(json v);
 };
 
 class PrefixNotOp : public InterpOp

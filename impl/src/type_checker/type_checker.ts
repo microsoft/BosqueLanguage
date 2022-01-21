@@ -1556,9 +1556,16 @@ class TypeChecker {
             const constype = ResolvedType.createSingle(oftype);
             const rtype = this.m_emitter.registerResolvedTypeReference(constype);
 
-            const ikey = MIRKeyGenerator.generateFunctionKeyWType(constype, "@@constructor", new Map<string, ResolvedType>(), []);
-            this.m_emitter.emitInvokeFixedFunction(sinfo, ikey.keyid, cargs, fflag, rtype, trgt);
-            return constype;
+            const issimplecons = this.isSimpleConstructor(oftype.object, oftype.binds);
+            if(issimplecons) {
+                this.m_emitter.emitConstructorEntityDirect(sinfo, rtype, cargs, trgt);
+                return constype;
+            }
+            else {
+                const ikey = MIRKeyGenerator.generateFunctionKeyWType(constype, "@@constructor", new Map<string, ResolvedType>(), []);
+                this.m_emitter.emitInvokeFixedFunction(sinfo, ikey.keyid, cargs, fflag, rtype, trgt);
+                return constype;
+            }
         }
     }
 
@@ -6321,6 +6328,19 @@ class TypeChecker {
 
             return [];
         }
+    }
+
+    private isSimpleConstructor(tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>): boolean {
+        const allfields = this.m_assembly.getAllOOFieldsLayout(tdecl, binds);
+        if([...allfields].some((ff) => ff[1][1].value !== undefined)) {
+            return false; //has an initilizer
+        }
+
+        if(this.m_assembly.getAllInvariantProvidingTypes(tdecl, binds).some((ipt) => ipt[1].invariants.length !== 0)) {
+            return false; //has invariant (dont' care about validates)
+        }
+
+        return true;
     }
 
     private generateEntityInitializerFunctions(tdecl: EntityTypeDecl, binds: Map<string, ResolvedType>): {invariantclauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[], validateclauses: { ikey: string, sinfo: SourceInfo, srcFile: string, args: string[] }[], optinits: InitializerEvaluationAction[] } {

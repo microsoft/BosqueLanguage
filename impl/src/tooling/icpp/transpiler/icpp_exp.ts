@@ -69,6 +69,7 @@ enum OpCodeTag
     EphemeralListExtendOp,
     ConstructorRecordFromEphemeralListOp,
     ConstructorEphemeralListOp,
+    ConstructorEntityDirect,
     PrefixNotOp,
     AllTrueOp,
     SomeTrueOp,
@@ -385,6 +386,10 @@ class ICPPOpEmitter
 
     static genConstructorEphemeralListOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
         return {tag: OpCodeTag.ConstructorEphemeralListOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
+    }
+
+    static genConstructorEntityDirectOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
+        return {tag: OpCodeTag.ConstructorEntityDirect, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
     }
 
     static genPrefixNotOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument): ICPPOp {

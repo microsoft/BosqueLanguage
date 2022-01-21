@@ -323,6 +323,7 @@ private:
     void evalConstructorRecordFromEphemeralListOp(const ConstructorRecordFromEphemeralListOp* op);
     void evalEphemeralListExtendOp(const EphemeralListExtendOp* op);
     void evalConstructorEphemeralListOp(const ConstructorEphemeralListOp* op);
+    void evalConstructorEntityDirectOp(const ConstructorEntityDirectOp* op);
 
     void evalPrefixNotOp(const PrefixNotOp* op);
     void evalAllTrueOp(const AllTrueOp* op);

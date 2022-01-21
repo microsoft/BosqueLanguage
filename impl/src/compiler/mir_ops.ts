@@ -635,6 +635,7 @@ enum MIROpTag {
     MIRStructuredAppendTuple = "MIRStructuredAppendTuple",
     MIRStructuredJoinRecord = "MIRStructuredJoinRecord",
     MIRConstructorEphemeralList = "MIRConstructorEphemeralList",
+    MIRConstructorEntityDirect = "MIRConstructorEntityDirect",
     MIREphemeralListExtend = "MIREphemeralListExtend",
 
     MIRConstructorPrimaryCollectionEmpty = "MIRConstructorPrimaryCollectionEmpty",
@@ -771,6 +772,8 @@ abstract class MIROp {
                 return MIRStructuredJoinRecord.jparse(jobj);
             case MIROpTag.MIRConstructorEphemeralList:
                 return MIRConstructorEphemeralList.jparse(jobj);
+            case MIROpTag.MIRConstructorEntityDirect:
+                return MIRConstructorEntityDirect.jparse(jobj);
             case MIROpTag.MIREphemeralListExtend:
                 return MIREphemeralListExtend.jparse(jobj);
             case MIROpTag.MIRConstructorPrimaryCollectionEmpty:
@@ -2104,6 +2107,35 @@ class MIRConstructorEphemeralList extends MIROp {
     }
 }
 
+class MIRConstructorEntityDirect extends MIROp {
+    trgt: MIRRegisterArgument
+    readonly entityType: MIRResolvedTypeKey;
+    args: MIRArgument[];
+
+    constructor(sinfo: SourceInfo, entityType: MIRResolvedTypeKey, args: MIRArgument[], trgt: MIRRegisterArgument) {
+        super(MIROpTag.MIRConstructorEntityDirect, sinfo);
+
+        this.trgt = trgt;
+        this.entityType = entityType;
+        this.args = args;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args]); }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = [${this.args.map((arg) => arg.stringify()).join(", ")}]`;
+    }
+
+    jemit(): object {
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), entityType: this.entityType, args: this.args.map((arg) => arg.jemit()) };
+    }
+
+    static jparse(jobj: any): MIROp {
+        return new MIRConstructorEntityDirect(jparsesinfo(jobj.sinfo), jobj.entityType, jobj.args.map((jarg: any) => MIRArgument.jparse(jarg)), MIRRegisterArgument.jparse(jobj.trgt));
+    }
+}
+
 class MIREphemeralListExtend extends MIROp {
     trgt: MIRRegisterArgument;
     arg: MIRArgument;
@@ -2817,7 +2849,7 @@ export {
     MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate,
     MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList,
     MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator,
-    MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIREphemeralListExtend,
+    MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIRConstructorEntityDirect, MIREphemeralListExtend,
     MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed,
     MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp,
     MIRLogicAction,

@@ -742,6 +742,28 @@ void Evaluator::evalConstructorEphemeralListOp(const ConstructorEphemeralListOp*
     }
 }
 
+void Evaluator::evalConstructorEntityDirectOp(const ConstructorEntityDirectOp* op)
+{
+    StorageLocationPtr sl = this->evalTargetVar(op->trgt);
+
+    StorageLocationPtr tcontents = nullptr;
+    if(op->oftype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        tcontents = sl;
+    }
+    else
+    {
+        tcontents = Allocator::GlobalAllocator.allocateDynamic(op->oftype);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tcontents);
+    }
+
+    auto einfo = dynamic_cast<const BSQEntityInfo*>(op->oftype);
+    for(size_t i = 0; i < einfo->fieldoffsets.size(); ++i)
+    {
+        BSQType::g_typetable[einfo->ftypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, einfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
+    }
+}
+
 void Evaluator::evalPrefixNotOp(const PrefixNotOp* op)
 {
     BSQBool sval = !SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg));
@@ -1313,6 +1335,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
     case OpCodeTag::ConstructorEphemeralListOp:
     {
         this->evalConstructorEphemeralListOp(static_cast<const ConstructorEphemeralListOp*>(op));
+        break;
+    }
+    case OpCodeTag::ConstructorEntityDirectOp:
+    {
+        this->evalConstructorEntityDirectOp(static_cast<const ConstructorEntityDirectOp*>(op));
         break;
     }
     case OpCodeTag::PrefixNotOp:
@@ -2101,23 +2128,39 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)bb.compression);
         break;
     }
-    case BSQPrimitiveImplTag::mask_empty: {
-        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, (BSQBool)std::equal(bvmask.bits, bvmask.bits + 4, g_empty_bsqmask.bits));
-        break;
-    }
-    case BSQPrimitiveImplTag::mask_bit: {
-        auto bvmask = SLPTR_LOAD_CONTENTS_AS(BSQMask, params[0]);
-        auto i = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
-        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, bvmask.bits[i]);
-        break;
-    }
-    case BSQPrimitiveImplTag::pv_count: {
-        auto mask = SLPTR_LOAD_CONTENTS_AS(BSQMask, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(params[0]));
-        auto ct = std::count_if(mask.bits, mask.bits + 4, [](BSQBool bv) { return bv; });
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)ct);
-        break;
-    }
+    case BSQPrimitiveImplTag::s_list_size_ne;
+    case BSQPrimitiveImplTag::s_list_reduce_ne;
+    case BSQPrimitiveImplTag::s_list_reduce_idx_ne;
+    case BSQPrimitiveImplTag::s_list_transduce_ne;
+    case BSQPrimitiveImplTag::s_list_transduce_idx_ne;
+    case BSQPrimitiveImplTag::s_list_range_ne;
+    case BSQPrimitiveImplTag::s_list_fill_ne;
+    case BSQPrimitiveImplTag::s_list_reverse_ne;
+    case BSQPrimitiveImplTag::s_list_append_ne;
+    case BSQPrimitiveImplTag::s_list_slice_start;
+    case BSQPrimitiveImplTag::s_list_slice_end;
+    case BSQPrimitiveImplTag::s_list_safe_get;
+    case BSQPrimitiveImplTag::s_list_find_pred_ne;
+    case BSQPrimitiveImplTag::s_list_find_pred_idx_ne;
+    case BSQPrimitiveImplTag::s_list_find_pred_last_ne;
+    case BSQPrimitiveImplTag::s_list_find_pred_last_idx_ne;
+    case BSQPrimitiveImplTag::s_list_filter_pred_ne;
+    case BSQPrimitiveImplTag::s_list_filter_pred_idx_ne;
+    case BSQPrimitiveImplTag::s_list_map_ne;
+    case BSQPrimitiveImplTag::s_list_map_idx_ne;
+    case BSQPrimitiveImplTag::s_list_map_sync_ne;
+    case BSQPrimitiveImplTag::s_list_sort_ne;
+    case BSQPrimitiveImplTag::s_list_unique_from_sorted_ne;
+    case BSQPrimitiveImplTag::s_map_size_ne;
+    case BSQPrimitiveImplTag::s_map_has_ne;
+    case BSQPrimitiveImplTag::s_map_find_ne;
+    case BSQPrimitiveImplTag::s_map_union_ne;
+    case BSQPrimitiveImplTag::s_map_submap_ne;
+    case BSQPrimitiveImplTag::s_map_remap_ne;
+    case BSQPrimitiveImplTag::s_map_add_ne;
+    case BSQPrimitiveImplTag::s_map_set_ne;
+    case BSQPrimitiveImplTag::s_map_remove_ne;
+
     case BSQPrimitiveImplTag::pv_get: {
         auto pvtype = dynamic_cast<const BSQPartialVectorType*>(invk->enclosingtype);
         pvtype->get(params[0], SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), resultsl);
