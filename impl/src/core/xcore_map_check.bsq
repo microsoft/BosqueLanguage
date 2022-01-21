@@ -7,60 +7,6 @@
 namespace Core;
 
 #if CHECK_LIBS
-internal function __map_literal_cons0<K grounded KeyType, V>(): MapRepr<K, V> {
-    return none;
-}
-
-internal function __map_literal_cons1<K grounded KeyType, V>(e1: [K, V]): MapRepr<K, V> {
-    return Vector1<[K, V]>{e1};
-}
-
-internal function __map_literal_cons2<K grounded KeyType, V>(e1: [K, V], e2: [K, V]): MapRepr<K, V> {
-    if(KeyType::equal<K>(e1.0, e2.0)) {
-        return none;
-    }
-    else {
-        if(KeyType::less<K>(e2.0, e1.0)) {
-            return Vector2<[K, V]>{e2, e1};
-        }
-        else {
-            return Vector2<[K, V]>{e1, e2};
-        }
-    }
-}
-
-internal function __map_literal_cons3<K grounded KeyType, V>(e1: [K, V], e2: [K, V], e3: [K, V]): MapRepr<K, V> {
-    if(\/(KeyType::equal<K>(e1.0, e2.0), KeyType::equal<K>(e1.0, e3.0), KeyType::equal<K>(e2.0, e3.0))) {
-        return none;
-    }
-    else {
-        if(/\(KeyType::less<K>(e3.0, e1.0), KeyType::less<K>(e3.0, e2.0))) {
-            if(KeyType::less<K>(e2.0, e1.0)) {
-                return Vector3<[K, V]>{e3, e2, e1};
-            }
-            else {
-                return Vector3<[K, V]>{e3, e1, e2};
-            }
-        }
-        elif(KeyType::less<K>(e2.0, e1.0)) {
-            if(KeyType::less<K>(e3.0, e1.0)) {
-                return Vector3<[K, V]>{e2, e3, e1};
-            }
-            else {
-                return Vector3<[K, V]>{e2, e1, e3};
-            }
-        }
-        else {
-            if(KeyType::less<K>(e3.0, e2.0)) {
-                return Vector3<[K, V]>{e1, e3, e2};
-            }
-            else {
-                return Vector3<[K, V]>{e1, e2, e3};
-            }
-        }
-    }
-}
-
 internal entity MapOps provides Some {
     function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
         return m === none;

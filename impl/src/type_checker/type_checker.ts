@@ -4,14 +4,14 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedRecordAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
-import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl, BuildApplicationMode } from "../ast/assembly";
+import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl } from "../ast/assembly";
 import { TypeEnvironment, VarInfo, FlowTypeTruthValue, ValueType } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, FunctionTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, IsTypeExpression, AsTypeExpression, PostfixGetPropertyOption, PostfixGetIndexOption, SwitchExpression, WildcardSwitchGuard, LiteralSwitchGuard, SwitchGuard, SwitchStatement, LogicActionExpression } from "../ast/body";
 import { PCode, MIREmitter, MIRKeyGenerator } from "../compiler/mir_emitter";
 import { MIRArgument, MIRConstantNone, MIRVirtualMethodKey, MIRInvokeKey, MIRResolvedTypeKey, MIRFieldKey, MIRConstantString, MIRRegisterArgument, MIRConstantInt, MIRConstantNat, MIRConstantBigNat, MIRConstantBigInt, MIRConstantRational, MIRConstantDecimal, MIRConstantFloat, MIRGlobalKey, MIRGlobalVariable, MIRBody, MIRMaskGuard, MIRArgGuard, MIRStatmentGuard, MIRConstantFalse, MIRConstantNothing, MIRConstantArgument } from "../compiler/mir_ops";
 import { SourceInfo, unescapeLiteralString } from "../ast/parser";
-import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl, MIRHavocEntityTypeDecl, MIRMaskEntityTypeDecl, MIRPartialVectorEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRPCode } from "../compiler/mir_assembly";
+import { MIRConceptTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRFunctionParameter, MIRType, MIRConstantDecl, MIRInvokePrimitiveDecl, MIRInvokeBodyDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRConstructableEntityTypeDecl, MIRHavocEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRPCode } from "../compiler/mir_assembly";
 import { BSQRegex, RegexAlternation, RegexCharRange, RegexComponent, RegexConstClass, RegexDotCharClass, RegexLiteral, RegexOptional, RegexPlusRepeat, RegexRangeRepeat, RegexSequence, RegexStarRepeat } from "../ast/bsqregex";
 
 import * as assert from "assert";
@@ -97,7 +97,6 @@ class InitializerEvaluationCallAction extends InitializerEvaluationAction {
 class TypeChecker {
     private readonly m_assembly: Assembly;
 
-    private readonly m_buildapplication: BuildApplicationMode;
     private readonly m_buildLevel: BuildLevel;
 
     private m_file: string;
@@ -106,10 +105,9 @@ class TypeChecker {
     private readonly m_emitter: MIREmitter;
     private readonly m_sortedSrcFiles: {fullname: string, shortname: string}[]; 
 
-    constructor(assembly: Assembly, emitter: MIREmitter, buildmode: BuildApplicationMode, buildlevel: BuildLevel, sortedSrcFiles: {fullname: string, shortname: string}[]) {
+    constructor(assembly: Assembly, emitter: MIREmitter, buildlevel: BuildLevel, sortedSrcFiles: {fullname: string, shortname: string}[]) {
         this.m_assembly = assembly;
 
-        this.m_buildapplication = buildmode;
         this.m_buildLevel = buildlevel;
 
         this.m_file = "[No File]";
@@ -1215,7 +1213,6 @@ class TypeChecker {
 
         if (oodecl.isListType()) {
             entrytype = this.getTBind(oobinds);
-            this.processCollectionSpecialConstructorFunctions_List(oobinds);
         }
         else if (oodecl.isStackType()) {
             entrytype = this.getTBind(oobinds);
@@ -1238,7 +1235,6 @@ class TypeChecker {
             this.raiseErrorIf(sinfo, !kvtypes.K.isGroundedType() || !this.m_assembly.subtypeOf(kvtypes.K, this.m_assembly.getSpecialKeyTypeConceptType()), "Must be grounded key type for Map key");
 
             entrytype = ResolvedType.createSingle(ResolvedTupleAtomType.create([kvtypes.K, kvtypes.V]));
-            this.processCollectionSpecialConstructorFunctions_Map(oobinds);
         }
 
         const eargs = (cargs === undefined) ? this.checkArgumentsEvaluationCollection(env, args, entrytype) : cargs;
@@ -6640,46 +6636,6 @@ class TypeChecker {
         }
     }
 
-    private processCollectionSpecialConstructorFunctions_List(oobinds: Map<string, ResolvedType>): MIRInvokeKey[] {
-        const nscore = this.m_assembly.getNamespace("Core");
-xxxx;
-        let consfuncs: MIRInvokeKey[] = [];
-        if(this.m_buildapplication === BuildApplicationMode.Executable) {
-            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons4", "__list_literal_cons5", "__list_literal_cons6", "__list_literal_cons7", "__list_literal_cons8", "__list_literal_cons_append"].forEach((fname) => {
-                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
-                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
-            });
-        }
-        else {
-            ["__list_literal_cons0", "__list_literal_cons1", "__list_literal_cons2", "__list_literal_cons3", "__list_literal_cons_add", "__list_literal_cons_add_done", "__list_literal_cons_append"].forEach((fname) => {
-                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
-                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
-            });
-        }
-
-        return consfuncs;
-    }
-
-    private processCollectionSpecialConstructorFunctions_Map(oobinds: Map<string, ResolvedType>): MIRInvokeKey[] {
-        const nscore = this.m_assembly.getNamespace("Core");
-xxxx;
-        let consfuncs: MIRInvokeKey[] = [];
-        if(this.m_buildapplication === BuildApplicationMode.Executable) {
-            ["__map_literal_cons0", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
-                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
-                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
-            });
-        }
-        else {
-            ["__map_literal_cons0", "__map_literal_cons1", "__map_literal_cons2", "__map_literal_cons3", "__map_literal_cons_add", "__map_literal_cons_add_done", "__map_literal_cons_append"].forEach((fname) => {
-                const ff = nscore.functions.get(fname) as NamespaceFunctionDecl;
-                consfuncs.push(this.m_emitter.registerFunctionCall("Core", fname, ff, oobinds, [], []));
-            });
-        }
-
-        return consfuncs;
-    }
-
     processOOType(tkey: MIRResolvedTypeKey, tdecl: OOPTypeDecl, binds: Map<string, ResolvedType>) {
         try {
             this.m_file = tdecl.srcFile;
@@ -6781,64 +6737,12 @@ xxxx;
                     const havocentity = new MIRHavocEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides);
                     this.m_emitter.masm.entityDecls.set(tkey, havocentity);
                 }
-                else if(tdecl.attributes.includes("__mask_type")) {
-                    const ccfields = this.m_assembly.getAllOOFieldsConstructors(tdecl, binds);
-                    const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
-
-                    const fields: MIRFieldDecl[] = [];
-                    const finfos = [...this.m_assembly.getAllOOFieldsLayout(tdecl, binds)];
-                    finfos.forEach((ff) => {
-                        const fi = ff[1];
-                        const f = fi[1];
-
-                        const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(fi[0], fi[2]), f.name);
-                        if (!this.m_emitter.masm.fieldDecls.has(fkey)) {
-                            const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
-                            const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
-
-                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, dtype.typeID);
-                            this.m_emitter.masm.fieldDecls.set(fkey, mfield);
-                        }
-
-                        fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
-                    });
-
-                    const maskentity = new MIRMaskEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, consfuncfields, fields);
-                    this.m_emitter.masm.entityDecls.set(tkey, maskentity);
-                }
-                else if(tdecl.attributes.includes("__partialvector_type")) {
-                    const ccfields = this.m_assembly.getAllOOFieldsConstructors(tdecl, binds);
-                    const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
-
-                    const fields: MIRFieldDecl[] = [];
-                    const finfos = [...this.m_assembly.getAllOOFieldsLayout(tdecl, binds)];
-                    finfos.forEach((ff) => {
-                        const fi = ff[1];
-                        const f = fi[1];
-
-                        const fkey = MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(fi[0], fi[2]), f.name);
-                        if (!this.m_emitter.masm.fieldDecls.has(fkey)) {
-                            const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
-                            const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
-
-                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, dtype.typeID);
-                            this.m_emitter.masm.fieldDecls.set(fkey, mfield);
-                        }
-
-                        fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
-                    });
-
-                    const mirentrytype = this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType);
-                    const pventity = new MIRPartialVectorEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, consfuncfields, fields, mirentrytype.typeID);
-                    this.m_emitter.masm.entityDecls.set(tkey, pventity);
-                }
                 else if(tdecl.attributes.includes("__list_type")) {
                     const oftype = (tdecl.memberMethods.find((mf) => mf.name === "value") as MemberMethodDecl).invoke.resultType;
                     const miroftype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.normalizeTypeOnly(oftype, new Map().set("T", binds.get("T") as ResolvedType)));
                     const mirbinds = new Map<string, MIRType>().set("T", this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType));
 
-                    const consfuncs = this.processCollectionSpecialConstructorFunctions_List(new Map().set("T", binds.get("T") as ResolvedType));
-                    const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, consfuncs);
+                    const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__stack_type")) {
@@ -6862,8 +6766,7 @@ xxxx;
                     const tupletype = ResolvedType.createSingle(ResolvedTupleAtomType.create([binds.get("K") as ResolvedType, binds.get("V") as ResolvedType]));
                     const mirtupletype = this.m_emitter.registerResolvedTypeReference(tupletype);
 
-                    const consfuncs = this.processCollectionSpecialConstructorFunctions_Map(ofbinds);
-                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, consfuncs, mirtupletype.typeID);
+                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, mirtupletype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__internal")) { 

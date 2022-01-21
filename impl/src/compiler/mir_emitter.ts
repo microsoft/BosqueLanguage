@@ -1372,7 +1372,7 @@ class MIREmitter {
 
         const masm = new MIRAssembly(pckge, masmsrc, hash.digest("hex"));
         const emitter = new MIREmitter(assembly, masm, true);
-        const checker = new TypeChecker(assembly, emitter, buildmode, buildLevel, p.sortedSrcFiles);
+        const checker = new TypeChecker(assembly, emitter, buildLevel, p.sortedSrcFiles);
 
         emitter.registerResolvedTypeReference(assembly.getSpecialNoneType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBoolType());
@@ -1421,10 +1421,6 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialIResultEConceptType());
 
         emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
-
-        if(buildmode === BuildApplicationMode.Executable) {
-            emitter.registerResolvedTypeReference(assembly.getMaskType());
-        }
 
         //get any entrypoint functions and initialize the checker there
         const epns = assembly.getNamespace(entryns);
