@@ -3,139 +3,10 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import * as assert from "assert";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 
 type VerifierOptions = {
-    ISize: number, //bits used for Int/Nat
-    StringOpt: "ASCII" | "UNICODE"
 };
-
-class BVEmitter {
-    readonly bvsize: bigint;
-    readonly natmax: bigint;
-    readonly intmin: bigint;
-    readonly intmax: bigint;
-
-    readonly bvnatmax: SMTExp;
-    readonly bvintmin: SMTExp;
-    readonly bvintmax: SMTExp;
-
-    readonly bvnatmax1: SMTExp;
-    readonly bvintmin1: SMTExp;
-    readonly bvintmax1: SMTExp;
-
-    static computeBVMinSigned(bits: bigint): bigint {
-        return -((2n ** bits) / 2n);
-    }
-
-    static computeBVMaxSigned(bits: bigint): bigint {
-        return ((2n ** bits) / 2n) - 1n;
-    }
-
-    static computeBVMaxUnSigned(bits: bigint): bigint {
-        return (2n ** bits) - 1n;
-    }
-
-    private static emitIntCore(val: bigint, imin: bigint, imax: bigint, bvsize: bigint): SMTExp {
-        if(val === 0n) {
-            return new SMTConst("BInt@zero");
-        }
-        else {
-            if (val > 0n) {
-                assert(BigInt(val) <= imax);
-
-                return new SMTConst(`(_ bv${val} ${bvsize})`);
-            }
-            else {
-                assert(imin <= val);
-
-                let bitstr = (-val).toString(2);
-                let bits = "";
-                let carry = true;
-                for(let i = bitstr.length - 1; i >= 0; --i) {
-                    const bs = (bitstr[i] === "0" ? "1" : "0");
-
-                    if(bs === "0") {
-                        bits = (carry ? "1": "0") + bits;
-                        carry = false;
-                    }
-                    else {
-                        if(!carry) {
-                            bits = "1" + bits;
-                            //carry stays false
-                        }
-                        else {
-                            bits = "0" + bits;
-                            carry = true;
-                        }
-                    }
-                }
-
-                while(bits.length < bvsize) {
-                    bits = "1" + bits;
-                }
-
-                return new SMTConst(`#b${bits}`);
-            }
-        }
-    }
-
-    private static emitNatCore(val: bigint, nmax: bigint, bvsize: bigint): SMTExp {
-        if(val === 0n) {
-            return new SMTConst("BNat@zero");
-        }
-        else {
-            assert(0n < val && val <= nmax);
-            return new SMTConst(`(_ bv${val} ${bvsize})`);
-        }
-    }
-
-    constructor(bvsize: bigint, natmax: bigint, intmin: bigint, intmax: bigint, natmax1: bigint, intmin1: bigint, intmax1: bigint) {
-        this.bvsize = bvsize;
-        this.natmax = natmax;
-        this.intmin = intmin;
-        this.intmax = intmax;
-
-        this.bvnatmax = BVEmitter.emitNatCore(natmax, natmax, bvsize);
-        this.bvintmin = BVEmitter.emitIntCore(intmin, intmin, intmax, bvsize);
-        this.bvintmax = BVEmitter.emitIntCore(intmax, intmin, intmax, bvsize);
-
-        this.bvnatmax1 = BVEmitter.emitNatCore(natmax, natmax1, bvsize + 1n);
-        this.bvintmin1 = BVEmitter.emitIntCore(intmin, intmin1, intmax1, bvsize + 1n);
-        this.bvintmax1 = BVEmitter.emitIntCore(intmax, intmin1, intmax1, bvsize + 1n);
-    }
-
-    static create(bvsize: bigint): BVEmitter {
-        return new BVEmitter(bvsize, 
-            BVEmitter.computeBVMaxUnSigned(bvsize), BVEmitter.computeBVMinSigned(bvsize), BVEmitter.computeBVMaxSigned(bvsize),
-            BVEmitter.computeBVMaxUnSigned(bvsize + 1n), BVEmitter.computeBVMinSigned(bvsize + 1n), BVEmitter.computeBVMaxSigned(bvsize + 1n));
-    }
-
-    emitIntGeneral(val: bigint): SMTExp {
-        return BVEmitter.emitIntCore(val, this.intmin, this.intmax, this.bvsize);
-    }
-
-    emitNatGeneral(val: bigint): SMTExp {
-        return BVEmitter.emitNatCore(val, this.natmax, this.bvsize);
-    }
-
-    emitSimpleInt(val: number): SMTExp {
-        return this.emitIntGeneral(BigInt(val));
-    }
-
-    emitSimpleNat(val: number): SMTExp {
-       return this.emitNatGeneral(BigInt(val));
-    }
-
-    emitInt(intv: string): SMTExp {
-        return this.emitIntGeneral(BigInt(intv.slice(0, intv.length - 1)));
-    }
-
-    emitNat(natv: string): SMTExp {
-        return this.emitNatGeneral(BigInt(natv.slice(0, natv.length - 1)));
-    }
-}
 
 class SMTMaskConstruct {
     readonly maskname: string;
@@ -457,7 +328,6 @@ class SMTCond extends SMTExp {
 export {
     VerifierOptions,
     SMTMaskConstruct,
-    BVEmitter,
     SMTTypeInfo, SMTExp, SMTVar, SMTConst, 
     SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallGeneralWPassThroughMask,
     SMTLet, SMTLetMulti, SMTIf, SMTCond

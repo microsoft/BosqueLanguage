@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRMaskEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPartialVectorEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 import { ICPPTypeSizeInfoSimple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo, UNIVERSAL_MASK, UNIVERSAL_TOTAL_SIZE, ICPPLayoutCategory, ICPPLayoutUniversalUnion, ICPPLayoutRefUnion, ICPPLayoutInlineUnion, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPLayoutInfoFixed, ICPPEphemeralListLayoutInfo,  } from "./icpp_assembly";
@@ -299,12 +299,6 @@ class ICPPTypeEmitter {
 
                 return fromlayout.createFromSizeInfo(entity.tkey);
             }
-            else if (entity instanceof MIRMaskEntityTypeDecl) {
-                return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE, "1", true);
-            }
-            else if (entity instanceof MIRPartialVectorEntityTypeDecl) {
-                return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
-            }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
@@ -553,39 +547,6 @@ class ICPPTypeEmitter {
                 const fromlayout = this.getICPPLayoutInfo(mirtype);
 
                 return fromlayout.createFromLayoutInfo(entity.tkey);
-            }
-            else if (entity instanceof MIRMaskEntityTypeDecl) {
-                const ssinfo = this.getICPPTypeInfoShallowForEntity(tt, entity);
-                let fieldnames: MIRFieldKey[] = [];
-                let fieldtypes: MIRResolvedTypeKey[] = [];
-                let fieldoffsets: number[] = [];
-
-                for(let i = 0; i < entity.fields.length; ++i) {
-                    fieldnames.push(entity.fields[i].fkey);
-                    fieldtypes.push("Bool");
-                    fieldoffsets.push(1);
-                }
-
-                return ICPPEntityLayoutInfo.createByValueEntity(tt.typeID, ssinfo.inlinedatasize, ssinfo.inlinedmask, fieldnames, fieldtypes, fieldoffsets);
-            }
-            else if (entity instanceof MIRPartialVectorEntityTypeDecl) {
-                let fieldnames: MIRFieldKey[] = [];
-                let fieldtypes: MIRResolvedTypeKey[] = [];
-                let fieldoffsets: number[] = [];
-                let size = 0;
-                let mask: RefMask = "";
-
-                for(let i = 0; i < entity.fields.length; ++i) {
-                    const sizeinfo = this.getICPPTypeInfoShallow(this.getMIRType(entity.fields[i].declaredType));
-
-                    fieldnames.push(entity.fields[i].fkey);
-                    fieldtypes.push("Bool");
-                    fieldoffsets.push(1);
-                    size = size + sizeinfo.inlinedatasize;
-                    mask = mask + sizeinfo.inlinedmask;
-                }
-                
-                return ICPPEntityLayoutInfo.createByRefEntity(tt.typeID, size, mask, fieldnames, fieldtypes, fieldoffsets);
             }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");

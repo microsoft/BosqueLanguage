@@ -6,7 +6,7 @@
 import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
-import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions, BVEmitter } from "./smt_exp";
+import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 import { SourceInfo } from "../../ast/parser";
 import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
 
@@ -20,7 +20,6 @@ function NOT_IMPLEMENTED(msg: string): SMTExp {
 class SMTBodyEmitter {
     readonly assembly: MIRAssembly;
     readonly typegen: SMTTypeEmitter;
-    readonly numgen: { int: BVEmitter, hash: BVEmitter };
 
     readonly callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>;
 
@@ -756,10 +755,9 @@ class SMTBodyEmitter {
         }
     }
 
-    constructor(assembly: MIRAssembly, typegen: SMTTypeEmitter, numgen: { int: BVEmitter, hash: BVEmitter }, vopts: VerifierOptions, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, errorTrgtPos: { file: string, line: number, pos: number }) {
+    constructor(assembly: MIRAssembly, typegen: SMTTypeEmitter, vopts: VerifierOptions, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, errorTrgtPos: { file: string, line: number, pos: number }) {
         this.assembly = assembly;
         this.typegen = typegen;
-        this.numgen = numgen;
         this.callsafety = callsafety;
 
         this.errorTrgtPos = errorTrgtPos;
@@ -852,10 +850,10 @@ class SMTBodyEmitter {
             return new SMTConst("false");
         }
         else if (cval instanceof MIRConstantInt) {
-            return this.numgen.int.emitInt(cval.value);
+            return new SMTConst(cval.value.slice(0, cval.value.length - 1));
         }
         else if (cval instanceof MIRConstantNat) {
-            return this.numgen.int.emitNat(cval.value);
+            return new SMTConst(cval.value.slice(0, cval.value.length - 1));
         }
         else if (cval instanceof MIRConstantBigInt) {
             return new SMTConst(cval.value.slice(0, cval.value.length - 1));
@@ -897,21 +895,15 @@ class SMTBodyEmitter {
             }
         }
         else if (cval instanceof MIRConstantString) {
-            assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
-            
             return new SMTConst(cval.value);
         }
         else if (cval instanceof MIRConstantTypedNumber) {
             return this.constantToSMT(cval.value);
         }
         else if (cval instanceof MIRConstantStringOf) {
-            assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
-
             return new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"");
         }
         else if (cval instanceof MIRConstantDataString) {
-            assert(this.vopts.StringOpt === "ASCII", "We need to UNICODE!!!🦄🚀✨");
-
             return new SMTConst("\"" + cval.value.slice(1, cval.value.length - 1) + "\"");
         }
         else {
@@ -1606,45 +1598,23 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionSingletons_ListHelper(ltype: MIRPrimitiveListEntityTypeDecl, exps: SMTExp[]): SMTExp {
-        if(exps.length === 1) {
-            return new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[1])}`, exps);
+        const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(ltype.tkey));
+        if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(ltype.tkey) };
+            this.requiredSingletonConstructorsList.push(geninfo);
         }
-        else if(exps.length === 2) {
-            return new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[2])}`, exps);
-        }
-        else if(exps.length === 3) {
-            return new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[3])}`, exps);
-        }
-        else {
-            const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(ltype.tkey));
-            if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
-                const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(ltype.tkey) };
-                this.requiredSingletonConstructorsList.push(geninfo);
-            }
 
-            return new SMTCallSimple(this.typegen.lookupFunctionName(icall), exps);
-        }
+        return new SMTCallSimple(this.typegen.lookupFunctionName(icall), exps);
     }
 
     processConstructorPrimaryCollectionSingletons_MapHelper(ltype: MIRPrimitiveMapEntityTypeDecl, exps: SMTExp[]): [SMTExp, boolean] {
-        if(exps.length === 1) {
-            return [new SMTCallSimple(`${this.typegen.lookupFunctionName(ltype.consfuncs[1])}`, exps), false];
+        const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(ltype.tkey));
+        if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(ltype.tkey) };
+            this.requiredSingletonConstructorsMap.push(geninfo);
         }
-        else if(exps.length === 2) {
-            return [new SMTCallGeneral(`${this.typegen.lookupFunctionName(ltype.consfuncs[2])}`, exps), true];
-        }
-        else if(exps.length === 3) {
-            return [new SMTCallGeneral(`${this.typegen.lookupFunctionName(ltype.consfuncs[3])}`, exps), true];
-        }
-        else {
-            const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(ltype.tkey));
-            if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
-                const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(ltype.tkey) };
-                this.requiredSingletonConstructorsMap.push(geninfo);
-            }
 
-            return [new SMTCallGeneral(this.typegen.lookupFunctionName(icall), exps), true];
-        }
+        return [new SMTCallGeneral(this.typegen.lookupFunctionName(icall), exps), true];
     }
 
     processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons, continuation: SMTExp): SMTExp {
@@ -2024,109 +1994,6 @@ class SMTBodyEmitter {
         return new SMTIf(chkzero, this.generateErrorCreate(sinfo, oftype, "Div by 0"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
     }
 
-    processGenerateSafeDiv_Int(sinfo: SourceInfo, args: SMTExp[]): SMTExp {
-        const bvmin = this.numgen.int.bvintmin;
-
-        const chkzero = SMTCallSimple.makeEq(new SMTConst("BInt@zero"), args[1]);
-        const checkovf = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(bvmin, args[0]), SMTCallSimple.makeEq(this.numgen.int.emitSimpleInt(-1), args[1]));
-
-        return new SMTIf(
-            checkovf,
-            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Int")),
-            new SMTIf(
-                chkzero, 
-                this.generateErrorCreate(sinfo, this.typegen.getMIRType("Int"), "Div by 0"), 
-                this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Int"), new SMTCallSimple("bvsdiv", args)))
-        );
-    }
-
-    processGenerateSafeNegate_Int(args: SMTExp[]): SMTExp {
-        const bvmin = this.numgen.int.bvintmin;
-        return new SMTIf(
-            SMTCallSimple.makeEq(args[0], bvmin),
-            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Int")),
-            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Int"), new SMTCallSimple("bvneg", args))
-        );
-    }
-
-    processGenerateSafeAdd_Nat(args: SMTExp[]): SMTExp {
-        //TODO: maybe this is better (but more complex) https://github.com/Z3Prover/z3/blob/master/src/api/api_bv.cpp
-
-        const extl = new SMTCallSimple("(_ zero_extend 1)", [args[0]]);
-        const extr = new SMTCallSimple("(_ zero_extend 1)", [args[1]]);
-        const bvmax = this.numgen.int.bvnatmax1;
-
-        return new SMTIf(
-            new SMTCallSimple("bvugt", [new SMTCallSimple("bvadd", [extl, extr]), bvmax]),
-            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Nat")),
-            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Nat"), new SMTCallSimple("bvadd", args))
-        );
-    }
-
-    processGenerateSafeAdd_Int(args: SMTExp[]): SMTExp {
-        //TODO: maybe this is better (but more complex) https://github.com/Z3Prover/z3/blob/master/src/api/api_bv.cpp
-
-        const extl = new SMTCallSimple("(_ sign_extend 1)", [args[0]]);
-        const extr = new SMTCallSimple("(_ sign_extend 1)", [args[1]]);
-        const bvmin = this.numgen.int.bvintmin1;
-        const bvmax = this.numgen.int.bvintmax1;
-
-        const tres = this.generateTempName();
-        return new SMTLet(
-            tres, 
-            new SMTCallSimple("bvadd", [extl, extr]),
-            new SMTIf(
-                SMTCallSimple.makeOrOf(new SMTCallSimple("bvslt", [new SMTVar(tres), bvmin]), new SMTCallSimple("bvsgt", [new SMTVar(tres), bvmax])),
-                this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Int")),
-                this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Int"), new SMTCallSimple("bvadd", args))
-            )
-        );
-    }
-
-    processGenerateSafeSub_Nat(args: SMTExp[]): SMTExp {
-        return new SMTIf(
-            new SMTCallSimple("bvult", args),
-            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Nat")),
-            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Nat"), new SMTCallSimple("bvsub", args))
-        );
-    }
-
-    processGenerateSafeSub_Int(args: SMTExp[]): SMTExp {
-        //TODO: maybe this is better (but more complex) https://github.com/Z3Prover/z3/blob/master/src/api/api_bv.cpp
-
-        const extl = new SMTCallSimple("(_ sign_extend 1)", [args[0]]);
-        const extr = new SMTCallSimple("(_ sign_extend 1)", [args[1]]);
-        const bvmin = this.numgen.int.bvintmin1;
-        const bvmax = this.numgen.int.bvintmax1;
-
-        const tres = this.generateTempName();
-        return new SMTLet(
-            tres, 
-            new SMTCallSimple("bvsub", [extl, extr]),
-            new SMTIf(
-                SMTCallSimple.makeOrOf(new SMTCallSimple("bvslt", [new SMTVar(tres), bvmin]), new SMTCallSimple("bvsgt", [new SMTVar(tres), bvmax])),
-                this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Int")),
-                this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Int"), new SMTCallSimple("bvsub", args))
-            )
-        );
-    }
-
-    processGenerateSafeMult_Nat(args: SMTExp[]): SMTExp {
-        return new SMTIf(
-            new SMTCallSimple("bvumul_noovfl", args),
-            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Nat"), new SMTCallSimple("bvmul", args)),
-            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Nat"))
-        );
-    }
-
-    processGenerateSafeMult_Int(args: SMTExp[]): SMTExp {
-        return new SMTIf(
-            SMTCallSimple.makeAndOf(new SMTCallSimple("bvsmul_noovfl", args), new SMTCallSimple("bvsmul_noudfl", args)),
-            this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Int"), new SMTCallSimple("bvmul", args)),
-            this.typegen.generateErrorResultAssert(this.typegen.getMIRType("Int"))
-        );
-    }
-
     processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: MIRRegisterArgument, op: MIRInvokeKey, args: SMTExp[], continuation: SMTExp): SMTExp {
         let smte: SMTExp = new SMTConst("[INVALID]");
         let erropt = false;
@@ -2172,8 +2039,7 @@ class SMTBodyEmitter {
             //op unary -
             case "__i__-=prefix=(Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateSafeNegate_Int(args);
-                erropt = true;
+                smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
                 break;
             }
             case "__i__-=prefix=(BigInt)": {
@@ -2199,14 +2065,12 @@ class SMTBodyEmitter {
             //op infix +
             case "__i__+=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateSafeAdd_Int(args);
-                erropt = true;
+                smte = new SMTCallSimple("+", args);
                 break;
             }
             case "__i__+=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateSafeAdd_Nat(args);
-                erropt = true;
+                smte = new SMTCallSimple("+", args);
                 break;
             }
             case "__i__+=infix=(BigInt, BigInt)": {
@@ -2237,14 +2101,12 @@ class SMTBodyEmitter {
             //op infix -
             case "__i__-=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateSafeSub_Int(args);
-                erropt = true;
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__-=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateSafeSub_Nat(args);
-                erropt = true;
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__-=infix=(BigInt, BigInt)": {
@@ -2275,14 +2137,12 @@ class SMTBodyEmitter {
             //op infix *
             case "__i__*=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateSafeMult_Int(args);
-                erropt = true;
+                smte = new SMTCallSimple("*", args);
                 break;
             }
             case "__i__*=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateSafeMult_Nat(args);
-                erropt = true;
+                smte = new SMTCallSimple("*", args);
                 break;
             }
             case "__i__*=infix=(BigInt, BigInt)": {
@@ -2313,13 +2173,13 @@ class SMTBodyEmitter {
             //op infix /
             case "__i__/=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateSafeDiv_Int(sinfo, args);
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BInt@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
             case "__i__/=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("bvudiv", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
@@ -2377,11 +2237,11 @@ class SMTBodyEmitter {
             }
             //op infix <
             case "__i__<=infix=(Int, Int)": {
-                smte = new SMTCallSimple("bvslt", args);
+                smte = new SMTCallSimple("<", args);
                 break;
             }
             case "__i__<=infix=(Nat, Nat)": {
-                smte = new SMTCallSimple("bvult", args);
+                smte = new SMTCallSimple("<", args);
                 break;
             }
             case "__i__<=infix=(BigInt, BigInt)": {
@@ -2406,11 +2266,11 @@ class SMTBodyEmitter {
             }
             //op infix >
             case "__i__>=infix=(Int, Int)": {
-                smte = new SMTCallSimple("bvsgt", args);
+                smte = new SMTCallSimple(">", args);
                 break;
             }
             case "__i__>=infix=(Nat, Nat)": {
-                smte = new SMTCallSimple("bvugt", args);
+                smte = new SMTCallSimple(">", args);
                 break;
             }
             case "__i__>=infix=(BigInt, BigInt)": {
@@ -2435,11 +2295,11 @@ class SMTBodyEmitter {
             }
             //op infix <=
             case "__i__<==infix=(Int, Int)": {
-                smte = new SMTCallSimple("bvsle", args);
+                smte = new SMTCallSimple("<=", args);
                 break;
             }
             case "__i__<==infix=(Nat, Nat)": {
-                smte = new SMTCallSimple("bvule", args);
+                smte = new SMTCallSimple("<=", args);
                 break;
             }
             case "__i__<==infix=(BigInt, BigInt)":  {
@@ -2464,11 +2324,11 @@ class SMTBodyEmitter {
             }
             //op infix >=
             case "__i__>==infix=(Int, Int)": {
-                smte = new SMTCallSimple("bvsge", args);
+                smte = new SMTCallSimple(">=", args);
                 break;
             }
             case "__i__>==infix=(Nat, Nat)": {
-                smte = new SMTCallSimple("bvuge", args);
+                smte = new SMTCallSimple(">=", args);
                 break;
             }
             case "__i__>==infix=(BigInt, BigInt)": {
@@ -2676,68 +2536,34 @@ class SMTBodyEmitter {
             }
             case "validator_accepts": {
                 const bsqre = this.assembly.validatorRegexs.get(idecl.enclosingDecl as MIRResolvedTypeKey) as BSQRegex;
-                const lre = bsqre.compileToPatternToSMT(this.vopts.StringOpt === "ASCII");
+                const lre = bsqre.compileToPatternToSMT(true);
 
-                let accept: SMTExp = new SMTConst("false");
-                if (this.vopts.StringOpt === "ASCII") {
-                    accept = new SMTCallSimple("str.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
-                }
-                else {
-                    accept = new SMTCallSimple("seq.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
-                }
-
+                let accept = new SMTCallSimple("str.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
             }
             case "number_nattoint": {
-                const bchk = new SMTCallSimple("bvule", [new SMTVar(args[0].vname), this.numgen.int.bvintmax]);
-                const bce = new SMTIf(bchk, 
-                    this.typegen.generateResultTypeConstructorSuccess(mirrestype,new SMTVar(args[0].vname)),
-                    this.typegen.generateErrorResultAssert(mirrestype)
-                );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_inttonat": {
-                const bchk = new SMTCallSimple("bvsle", [this.numgen.int.emitSimpleInt(0), new SMTVar(args[0].vname)]);
-                const bce = new SMTIf(bchk, 
-                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTVar(args[0].vname)),
-                    this.typegen.generateErrorResultAssert(mirrestype)
-                );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_nattobignat": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("bv2nat", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_inttobigint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("bv2int", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_bignattonat": {
-                const bchk = new SMTCallSimple("<=", [new SMTVar(args[0].vname), new SMTConst(this.numgen.int.natmax.toString())]);
-                const bce = new SMTIf(bchk, 
-                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple(`(_ int2bv ${this.numgen.int.bvsize})`, [new SMTVar(args[0].vname)])),
-                    this.typegen.generateErrorResultAssert(mirrestype)
-                );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_biginttoint": {
-                const bchk = SMTCallSimple.makeAndOf(
-                    new SMTCallSimple("<=", [new SMTConst(this.numgen.int.intmin.toString()), new SMTVar(args[0].vname)]),
-                    new SMTCallSimple("<=", [new SMTVar(args[0].vname), new SMTConst(this.numgen.int.intmax.toString())])
-                );
-                const bce = new SMTIf(bchk, 
-                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple(`(_ int2bv ${this.numgen.int.bvsize})`, [new SMTVar(args[0].vname)])),
-                    this.typegen.generateErrorResultAssert(mirrestype)
-                );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname)); 
             }
             case "number_bignattobigint": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_biginttobignat": {
-                const bce = new SMTIf(new SMTCallSimple("<=", [new SMTConst("0"), new SMTVar(args[0].vname)]), 
-                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTVar(args[0].vname)),
-                    this.typegen.generateErrorResultAssert(mirrestype)
-                );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bce);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_bignattofloat":
             case "number_bignattodecimal":

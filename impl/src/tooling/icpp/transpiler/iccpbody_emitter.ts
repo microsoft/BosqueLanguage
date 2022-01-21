@@ -200,11 +200,11 @@ class ICPPBodyEmitter {
     }
 
     private generateSingletonConstructorsList(argc: number, resulttype: MIRType): string {
-        return `$ListSingletonCons->${resulttype.typeID}`;
+        return `$ListSingletonCons->${resulttype.typeID}#${argc}`;
     }
 
     private generateSingletonConstructorsMap(argc: number, resulttype: MIRType): string {
-        return `$MapSingletonCons->${resulttype.typeID}`;
+        return `$MapSingletonCons->${resulttype.typeID}#${argc}`;
     }
 
     private generateTupleAppendInvName(args: { flow: MIRType, layout: MIRType }[], resulttype: MIRType): string {
@@ -1043,42 +1043,23 @@ class ICPPBodyEmitter {
     }
 
     processConstructorPrimaryCollectionSingletonsList_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveListEntityTypeDecl, exps: Argument[]): ICPPOp {
-        if(exps.length === 1) {
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[1]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
+        const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(op.tkey));
+        if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredSingletonConstructorsList.push(geninfo);
         }
-        else if(exps.length === 2) {
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[2]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
-        }
-        else if(exps.length === 3) {
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[3]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
-        }
-        else if(exps.length === 4) {
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[4]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
-        }
-        else {
-            const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(op.tkey));
-            if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
-                const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
-                this.requiredSingletonConstructorsList.push(geninfo);
-            }
             
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
-        }
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorPrimaryCollectionSingletonsMap_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveCollectionEntityTypeDecl, exps: Argument[]): ICPPOp {
-        if(exps.length === 1) {
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, `${ltype.consfuncs[1]}`, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
+        const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(op.tkey));
+        if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredSingletonConstructorsMap.push(geninfo);
         }
-        else {
-            const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(op.tkey));
-            if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
-                const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
-                this.requiredSingletonConstructorsMap.push(geninfo);
-            }
             
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
-        }
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons): ICPPOp {

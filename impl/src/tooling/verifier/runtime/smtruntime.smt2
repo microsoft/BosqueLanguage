@@ -90,7 +90,8 @@
 (declare-fun FloatValue@Rounding (FloatValue) FloatValue)
 (declare-fun FloatValue@Power (FloatValue, FloatValue) FloatValue)
 
-;;BINTEGRAL_TYPE_ALIAS;;
+(define-sort BInt () Int)
+(define-sort BNat () Int)
 (define-sort BBigInt () Int)
 (define-sort BBigNat () Int)
 (define-sort BFloat () FloatValue)
@@ -99,8 +100,8 @@
 ;;BSTRING_TYPE_ALIAS;;
 (define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
-;;BUUID_TYPE_ALIAS;;
-;;BHASHCODE_TYPE_ALIAS;;
+(define-sort BUUID (Seq (_ BitVec 8)))
+(define-sort BHASHCODE (_ BitVec 16))
 
 ;;TODO BHashable and Hash + HashInvert and axioms
 
@@ -128,7 +129,11 @@
     (BDateTime@tzinfo BString)
 ))
 
-;;BINT_CONSTANTS;;
+(declare-const BInt@zero BInt) (assert (= BInt@zero 0))
+(declare-const BInt@one BInt) (assert (= BInt@one 1))
+
+(declare-const BNat@zero BNat) (assert (= BNat@zero 0))
+(declare-const BNat@one BNat) (assert (= BNat@one 1))
 
 (declare-const BBigInt@zero BBigInt) (assert (= BBigInt@zero 0))
 (declare-const BBigInt@one BBigInt) (assert (= BBigInt@one 1))
@@ -158,20 +163,20 @@
       (bsq_none 0)
       (bsq_nothing 0)
       ; Bool -> Bool
-      ; Int -> BV
-      ; Nat -> BV
+      ; Int -> Int
+      ; Nat -> Int
       ; BigInt -> Int
       ; BigNat -> Int
       ; Float -> Real 
       ; Decimal -> Real
       ; Rational -> Real
-      ; String -> String | (Seq (_ BitVec 64))
+      ; String -> String | (Seq (_ BitVec 8))
       ; ByteBuffer -> BByteBuffer
       ; DateTime -> BDateTime
       ; TickTime -> Int
       ; LogicalTime -> Int
       ; UUID -> BUUID
-      ; ContentHash -> (_ BitVec X)
+      ; ContentHash -> (_ BitVec 16)
       (HavocSequence 0)
     ) (
       ( (bsq_none@literal) ) 
@@ -213,11 +218,11 @@
 )
 
 (define-fun BInt@less ((k1 BInt) (k2 BInt)) Bool
-  (bvslt k1 k2)
+  (< k1 k2)
 )
 
 (define-fun BNat@less ((k1 BNat) (k2 BNat)) Bool
-  (bvult k1 k2)
+  (< k1 k2)
 )
 
 (define-fun BBigInt@less ((k1 BBigInt) (k2 BBigInt)) Bool
@@ -237,7 +242,7 @@
 )
 
 (define-fun BUUID@less ((k1 BUUID) (k2 BUUID)) Bool
-  (bvult k1 k2)
+  (seq.< k1 k2)
 )
 
 (define-fun BContentHash@less ((k1 BContentHash) (k2 BContentHash)) Bool
@@ -372,25 +377,25 @@
   bsq_nothing@literal
 )
 
-(declare-fun BBool@UFCons_API ((Seq BNat)) Bool)
-(declare-fun BInt@UFCons_API ((Seq BNat)) BInt )
-(declare-fun BNat@UFCons_API ((Seq BNat)) BNat)
-(declare-fun BBigInt@UFCons_API ((Seq BNat)) BBigInt)
-(declare-fun BBigNat@UFCons_API ((Seq BNat)) BBigNat)
-(declare-fun BFloat@UFCons_API ((Seq BNat)) BFloat)
-(declare-fun BDecimal@UFCons_API ((Seq BNat)) BDecimal)
-(declare-fun BRational@UFCons_API ((Seq BNat)) BRational)
-(declare-fun BString@UFCons_API ((Seq BNat)) BString)
-(declare-fun BByteBuffer@UFCons_API ((Seq BNat)) BByteBuffer)
-(declare-fun BDateTime@UFCons_API ((Seq BNat)) BDateTime)
-(declare-fun BTickTime@UFCons_API ((Seq BNat)) BTickTime)
-(declare-fun BLogicalTime@UFCons_API ((Seq BNat)) BLogicalTime)
-(declare-fun BUUID@UFCons_API ((Seq BNat)) BUUID)
-(declare-fun BContentHash@UFCons_API ((Seq BNat)) BHash)
+(declare-fun BBool@UFCons_API (HavocSequence) Bool)
+(declare-fun BInt@UFCons_API (HavocSequence) BInt)
+(declare-fun BNat@UFCons_API (HavocSequence) BNat)
+(declare-fun BBigInt@UFCons_API (HavocSequence) BBigInt)
+(declare-fun BBigNat@UFCons_API (HavocSequence) BBigNat)
+(declare-fun BFloat@UFCons_API (HavocSequence) BFloat)
+(declare-fun BDecimal@UFCons_API (HavocSequence) BDecimal)
+(declare-fun BRational@UFCons_API (HavocSequence) BRational)
+(declare-fun BString@UFCons_API (HavocSequence) BString)
+(declare-fun BByteBuffer@UFCons_API (HavocSequence) BByteBuffer)
+(declare-fun BDateTime@UFCons_API (HavocSequence) BDateTime)
+(declare-fun BTickTime@UFCons_API (HavocSequence) BTickTime)
+(declare-fun BLogicalTime@UFCons_API (HavocSequence) BLogicalTime)
+(declare-fun BUUID@UFCons_API (HavocSequence) BUUID)
+(declare-fun BContentHash@UFCons_API (HavocSequence) BHash)
 
-(declare-fun ContainerSize@UFCons_API ((Seq BNat)) BNat)
-(declare-fun EnumChoice@UFCons_API ((Seq BNat)) BNat)
-(declare-fun UnionChoice@UFCons_API ((Seq BNat)) BNat)
+(declare-fun ContainerSize@UFCons_API (HavocSequence) BNat)
+(declare-fun EnumChoice@UFCons_API (HavocSequence) BNat)
+(declare-fun UnionChoice@UFCons_API (HavocSequence) BNat)
 
 ;;GLOBAL_DECLS;;
 

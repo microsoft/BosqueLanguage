@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { Argument, ICPPOp, ParameterInfo, TargetVar } from "./icpp_exp";
+import { Argument, ICPPOp, ParameterInfo } from "./icpp_exp";
 
 import { BSQRegex } from "../../../ast/bsqregex";
 

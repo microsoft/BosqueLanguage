@@ -118,11 +118,11 @@ __internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyTyp
     method toRational(): Decimal { return NumericOps::s_bigIntToRational(NumericOps::s_intToBigInt(this)); }
 }
 __safe __primitive inline prefix operator +(a: Int): Int = default;
-__primitive inline prefix operator -(a: Int): Int = default;
-__primitive inline infix operator *(a: Int, b: Int): Int = default;
+__safe __primitive inline prefix operator -(a: Int): Int = default;
+__safe __primitive inline infix operator *(a: Int, b: Int): Int = default;
 __primitive inline infix operator /(a: Int, b: Int): Int = default;
-__primitive inline infix operator +(a: Int, b: Int): Int = default;
-__primitive inline infix operator -(a: Int, b: Int): Int = default;
+__safe __primitive inline infix operator +(a: Int, b: Int): Int = default;
+__safe __primitive inline infix operator -(a: Int, b: Int): Int = default;
 __safe __primitive inline infix operator ==(a: Int, b: Int): Bool = default;
 __safe __primitive inline infix operator !=(a: Int, b: Int): Bool = default;
 __safe __primitive inline infix operator <(a: Int, b: Int): Bool = default;
@@ -144,10 +144,10 @@ __internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyTyp
     method toRational(): Decimal { return NumericOps::s_bigNatToRational(NumericOps::s_natToBigNat(this)); }
 }
 __safe __primitive inline prefix operator +(a: Nat): Nat = default;
-__primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
+__safe __primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
 __primitive inline infix operator /(a: Nat, b: Nat): Nat = default;
-__primitive inline infix operator +(a: Nat, b: Nat): Nat = default;
-__primitive inline infix operator -(a: Nat, b: Nat): Nat = default;
+__safe __primitive inline infix operator +(a: Nat, b: Nat): Nat = default;
+__safe __primitive inline infix operator -(a: Nat, b: Nat): Nat = default;
 __safe __primitive inline infix operator ==(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator !=(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator <(a: Nat, b: Nat): Bool = default;
