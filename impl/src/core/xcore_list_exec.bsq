@@ -35,9 +35,9 @@ internal entity ListOps provides Some {
     recursive? function s_filter_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred_ne;
     recursive? function s_filter_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx_ne;
 
-    recursive? function s_map_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T) -> U): List<U> = s_list_map_ne;
-    recursive? function s_map_idx_ne<T, U>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_list_map_idx_ne;
-    recursive? function s_map_sync_ne<T, U, V>(l1: ListRepr<T>, l2: ListRepr<U>, f: recursive? fn(_: T, _: U) -> V): ListRepr<V> = s_list_map_sync_ne;
+    recursive? function s_map_ne<T, U>(l: ListRepr<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map_ne;
+    recursive? function s_map_idx_ne<T, U>(l: ListRepr<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx_ne;
+    recursive? function s_map_sync_ne<T, U, V>(l1: ListRepr<T>, l2: ListRepr<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): ListRepr<V> = s_list_map_sync_ne;
 
     recursive? function s_sort_ne<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_list_sort_ne;
     recursive? function s_unique_from_sorted_ne<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_list_unique_from_sorted_ne;
@@ -83,7 +83,7 @@ internal entity ListOps provides Some {
             return none;
         }
         else {
-            return ListOps::s_map_sync_ne<T, U, [T, U]>(l1, l2, fn(v1: T, v2: U) => [v1, v2]);
+            return ListOps::s_map_sync_ne<T, U, [T, U]>(l1, l2, ListOps::s_size_ne<T>(l1), fn(v1: T, v2: U) => [v1, v2]);
         }
     }
 

@@ -109,6 +109,7 @@ public:
             auto rrnode = list_tree_transform(lflavor, rnode, fn_partialvector);
             auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
 
+            Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
             return BSQListOps::list_append(lflavor, llres->repr, rrres->repr);
         }
     }
@@ -136,6 +137,7 @@ public:
             auto rrnode = list_tree_transform_idx(lflavor, rnode, idx + lsize, fn_partialvector);
             auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
 
+            Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
             return BSQListOps::list_append(lflavor, llres->repr, rrres->repr);
         }
     }
@@ -174,6 +176,7 @@ public:
             auto rrnode = BSQListOps::s_temp_root_to_list_rec(lflavor, lelems, count - mid);
             auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
 
+            Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
             res = BSQListOps::list_append(lflavor, llres->repr, rrres->repr);
         }
         return res;
@@ -217,6 +220,7 @@ public:
             auto rrnode = BSQListOps::s_range_ne_rec(lflavor, llnode.second + (T)1, rrcount);
             auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode.first);
 
+            Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
             res = BSQListOps::list_append(lflavor, llres->repr, rrres->repr);
         }
         return std::make_pair(res, max);
@@ -254,6 +258,7 @@ public:
             auto rrnode = BSQListOps::s_fill_ne_rec(lflavor, val, count - mid);
             auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
 
+            Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
             res = BSQListOps::list_append(lflavor, llres->repr, rrres->repr);
         }
         return res;
@@ -405,7 +410,7 @@ public:
 class BSQMapOps
 {
 public:
-    static std::map<BSQTypeID, BSQMapTypeFlavor> g_flavormap; //map from entry type to the flavors of the repr
+    static std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> g_flavormap; //map from entry type to the flavors of the repr
 
     static void* s_lookup_ne(void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, const BSQType* ktype)
     {
@@ -525,7 +530,7 @@ public:
 
     static void* s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, uint64_t ccount);
 
-    static void* s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, uint64_t count, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
+    static std::pair<void*, BSQNat> s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
     static void* s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor);
 
     static void* s_add_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);

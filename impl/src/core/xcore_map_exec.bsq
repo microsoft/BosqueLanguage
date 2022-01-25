@@ -80,7 +80,7 @@ internal entity MapOps provides Some {
             return none;
         }
         else {
-            return m.submap[recursive?](p); 
+            return MapOps::s_submap_ne<K, V>[recursive?](m, p);
         }
     }
 
@@ -89,7 +89,7 @@ internal entity MapOps provides Some {
             return none;
         }
         else {
-            return m.remap<U>[recursive?](f);
+            return MapOps::s_remap_ne<K, V, U>(m, f);
         }
     }
 
@@ -98,16 +98,16 @@ internal entity MapOps provides Some {
             return BTree<K, V>{1n, BTreeNode<K, V>{k, v, none, none}};
         }
         else {
-            return m.add(k, v);
+            return MapOps::s_add_ne<K, V>(m, k, v);
         }
     }
 
     function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
-        return s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).set(k, v);
+        return MapOps::s_set_ne<K, V>(m, k, v);
     }
 
     function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
-        return s_safeAs<MapRepr<K, V>, BTree<K, V>>(m).remove(k);
+        return MapOps::s_remove_ne<K, V>(m, k);
     }
 }
 

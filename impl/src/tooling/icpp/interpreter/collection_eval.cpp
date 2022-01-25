@@ -438,7 +438,6 @@ void* BSQListOps::s_filter_pred_idx_ne(const BSQListTypeFlavor& lflavor, LambdaE
     return rres;
 }
     
-
 void* BSQListOps::s_map_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor)
 {
     auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
@@ -644,7 +643,9 @@ void* BSQListOps::s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThu
         });
     
         envtype->storeValue(rrtype->indexStorageLocationOffset(eres, rrtype->idxoffsets[0]), envsl);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(rrtype->indexStorageLocationOffset(eres, rrtype->idxoffsets[1]), rres);
+
+        auto lsl = rrtype->indexStorageLocationOffset(eres, rrtype->idxoffsets[1]);
+        LIST_STORE_RESULT_REPR(rres, lsl);
 
         BI_LAMBDA_CALL_SETUP_POP()
     }
@@ -690,7 +691,9 @@ void* BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEva
         });
     
         envtype->storeValue(rrtype->indexStorageLocationOffset(eres, rrtype->idxoffsets[0]), envsl);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(rrtype->indexStorageLocationOffset(eres, rrtype->idxoffsets[1]), rres);
+
+        auto lsl = rrtype->indexStorageLocationOffset(eres, rrtype->idxoffsets[1]);
+        LIST_STORE_RESULT_REPR(rres, lsl);
 
         BI_LAMBDA_CALL_SETUP_POP()
     }
@@ -792,6 +795,8 @@ void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, Lamb
     return rres;
 }
 
+std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> BSQMapOps::g_flavormap;
+
 void* BSQMapOps::s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, uint64_t ccount)
 {
     auto resetpos = Allocator::GlobalAllocator.getTempRootCurrPos();
@@ -820,7 +825,7 @@ void* BSQMapOps::s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQ
     return BSQMapOps::map_tree_lmerge(mflavor, ll1, ll2, ccount);
 }
 
-void* BSQMapOps::s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, uint64_t count, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+std::pair<void*, BSQNat> BSQMapOps::s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     auto resetpos = Allocator::GlobalAllocator.getTempRootCurrPos();
 
@@ -856,7 +861,7 @@ void* BSQMapOps::s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee
     Allocator::GlobalAllocator.resetRootCurrPos(resetpos);
 
     auto ii = ll.begin();
-    return BSQMapOps::s_temp_root_to_map_rec(mflavor, ii, count);
+    return std::make_pair(BSQMapOps::s_temp_root_to_map_rec(mflavor, ii, ll.size()), (BSQNat)ll.size());
 }
 
 void* BSQMapOps::s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor)
@@ -1086,7 +1091,7 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto ltype = dynamic_cast<const BSQListType*>(btype);
-    auto lflavor = BSQListOps::g_flavormap[ltype->tid];
+    auto lflavor = BSQListOps::g_flavormap.find(ltype->etype)->second;
 
     std::string res = btype->name + "{";
     BSQListForwardIterator iter(LIST_LOAD_TYPE_INFO(data), LIST_LOAD_DATA(data));
@@ -1131,7 +1136,7 @@ std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpi
 std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto mtype = dynamic_cast<const BSQMapType*>(btype);
-    auto mflavor = BSQMapOps::g_flavormap[mtype->tid];
+    auto mflavor = BSQMapOps::g_flavormap.find(std::make_pair(mtype->ktype, mtype->vtype))->second;
 
     std::string res = btype->name + "{";
     BSQMapSpineIterator iter(MAP_LOAD_TYPE_INFO(data), MAP_LOAD_REPR(data));
