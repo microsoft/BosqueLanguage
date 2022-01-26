@@ -22,7 +22,7 @@ class SMTParseJSON : public ApiManagerJSON<z3::expr, z3::solver>
     virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, z3::expr value, z3::solver& ctx) const override final;
     virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, z3::expr value, z3::solver& ctx) const override final;
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, z3::expr value, z3::solver& ctx) const override final;
-    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t>& data, z3::expr value, z3::solver& ctx) const override final;
+    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, z3::expr value, z3::solver& ctx) const override final;
     virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, z3::expr value, z3::solver& ctx) const override final;
     virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, z3::expr value, z3::solver& ctx) const override final;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, z3::expr value, z3::solver& ctx) const override final;
@@ -60,7 +60,7 @@ class SMTParseJSON : public ApiManagerJSON<z3::expr, z3::solver>
     virtual std::optional<std::string> extractDecimalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;
     virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;
     virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;
-    virtual std::optional<std::vector<uint8_t>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;
+    virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;
     virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const override final;

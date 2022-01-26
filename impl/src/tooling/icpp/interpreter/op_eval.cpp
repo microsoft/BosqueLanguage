@@ -2575,24 +2575,78 @@ bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* ity
     return true;
 }
 
-bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx) const
 {
-    xxxx;
+    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeByteBufferLeaf->allocinfo.heapsize + BSQWellKnownType::g_typeByteBufferNode->allocinfo.heapsize + (2 * sizeof(GC_META_DATA_WORD)));
+    BSQByteBufferNode* cnode = (BSQByteBufferNode*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferNode);
+    cnode->bytecount = std::min((uint64_t)data.size(), (uint64_t)256);
+    cnode->bytes = (BSQByteBufferLeaf*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferLeaf);
+    cnode->next = nullptr;
+
+    size_t i = 0;
+    auto croot = Allocator::GlobalAllocator.registerTempRoot(BSQWellKnownType::g_typeByteBufferNode, cnode);
+    while(i < data.size())
+    {
+        GC_MEM_COPY(cnode->bytes, &data[i], cnode->bytecount);
+        i += cnode->bytecount;
+
+        if(i < data.size())
+        {
+            Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeByteBufferLeaf->allocinfo.heapsize + BSQWellKnownType::g_typeByteBufferNode->allocinfo.heapsize + (2 * sizeof(GC_META_DATA_WORD)));
+            BSQByteBufferNode* cnode = (BSQByteBufferNode*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferNode);
+            cnode->bytecount = std::min((uint64_t)data.size(), (uint64_t)256);
+            cnode->bytes = (BSQByteBufferLeaf*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferLeaf);
+            cnode->next = (BSQByteBufferNode*)croot->root;
+
+            Allocator::GlobalAllocator.releaseTempRoot(croot);
+            croot = Allocator::GlobalAllocator.registerTempRoot(BSQWellKnownType::g_typeByteBufferNode, cnode);
+        }
+    }
+
+    BSQByteBufferNode* nnode = (BSQByteBufferNode*)croot->root;
+    Allocator::GlobalAllocator.releaseTempRoot(croot);
+
+    while(nnode->next != nullptr)
+    {
+        auto nn = nnode->next;
+        nnode->next = nnode;
+        nnode = nn;
+    }
+
+    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeByteBuffer->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
+    BSQByteBuffer* buff = (BSQByteBuffer*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferNode);
+    buff->bytecount = data.size();
+    buff->bytes = nnode;
+    buff->compression = (BufferCompression)compress;
+    buff->format = (BufferFormat)format;
+
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, buff);
+    return true;
 }
 
 bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx) const
 {
-xxxx;
+    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeDateTime);
+    BSQDateTime* dt = (BSQDateTime*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeDateTime);
+    dt->utctime = {t.utctime.year, t.utctime.month, t.utctime.day, t.utctime.hour, t.utctime.min};
+    dt->localtime = {t.localtime.year, t.localtime.month, t.localtime.day, t.localtime.hour, t.localtime.min};
+    dt->tzoffset = t.tzoffset;
+    dt->tzname = t.tzname;
+
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, dt);
+    return true;
 }
 
 bool ICPPParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, StorageLocationPtr value, Evaluator& ctx) const
 {
-xxxx;
+    SLPTR_STORE_CONTENTS_AS(BSQTickTime, value, (BSQTickTime)t);
+    return true;
 }
 
 bool ICPPParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, StorageLocationPtr value, Evaluator& ctx) const
 {
-xxxx;
+    SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, value, (BSQLogicalTime)j);
+    return true;
 }
 
 bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) const
@@ -2745,24 +2799,45 @@ std::optional<std::string> ICPPParseJSON::extractStringImpl(const APIModule* api
     }
 }
 
-std::optional<std::vector<uint8_t>> ICPPParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPPParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
 {
-xxxx;
+    BSQByteBuffer* bb = (BSQByteBuffer*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
+    auto pprops = std::make_pair((uint8_t)bb->compression, (uint8_t)bb->format);
+
+    std::vector<uint8_t> bytes;
+    bytes.reserve(bb->bytecount);
+
+    BSQByteBufferNode* bbn = bb->bytes;
+    while(bbn != nullptr)
+    {
+        std::copy(bbn->bytes, bbn->bytes + bbn->bytecount, std::back_inserter(bytes));
+        bbn = bbn->next;
+    }
+
+    return std::make_optional(std::make_pair(bytes, pprops));
 }
 
 std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
 {
-xxxx;
+    BSQDateTime* t = (BSQDateTime*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
+
+    DateTime dt;
+    dt.utctime = {t->utctime.year, t->utctime.month, t->utctime.day, t->utctime.hour, t->utctime.min};
+    dt.localtime = {t->localtime.year, t->localtime.month, t->localtime.day, t->localtime.hour, t->localtime.min};
+    dt.tzoffset = t->tzoffset;
+    dt.tzname = t->tzname;
+
+    return std::make_optional(dt);
 }
 
 std::optional<uint64_t> ICPPParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
 {
-xxxx;
+    return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQTickTime, value));
 }
 
 std::optional<uint64_t> ICPPParseJSON::extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
 {
-xxxx;
+    return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, value));
 }
 
 std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const

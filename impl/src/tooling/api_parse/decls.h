@@ -121,7 +121,7 @@ public:
     virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, ValueRepr value, State& ctx) const = 0;
     virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ValueRepr value, State& ctx) const = 0;
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t>& data, ValueRepr value, State& ctx) const = 0;
+    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, ValueRepr value, State& ctx) const = 0;
     virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, ValueRepr value, State& ctx) const = 0;
     virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) const = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) const = 0;
@@ -159,7 +159,7 @@ public:
     virtual std::optional<std::string> extractDecimalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::vector<uint8_t>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
+    virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
@@ -807,14 +807,22 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        if(!j.is_array())
+        if(!jdata.is())
+        {
+            return false;
+        }
+
+        auto jdata = j["data"];
+        auto jcompress = j["compress"];
+        auto jformat = j["format"];
+        if(!jdata.is_array() || !jcompress.is_number_unsigned() || j.get<uint8_t>() >= 2 || !jformat.is_number_unsigned() || jformat.get<uint8_t>() >= 4)
         {
             return false;
         }
 
         std::vector<uint8_t> bbuff;
         bool badval = false;
-        std::transform(j.cbegin(), j.cend(), [&badval](const json& vv) {
+        std::transform(jdata.cbegin(), jdata.cend(), [&badval](const json& vv) {
             if(!vv.is_number_unsigned() || vv.get<uint64_t>() >= 256)
             {
                 badval = true;
@@ -831,13 +839,24 @@ public:
             return false;
         }
 
-        return apimgr.parseByteBufferImpl(apimodule, this, bbuff, value, ctx);
+        return apimgr.parseByteBufferImpl(apimodule, this, jcompress.get<utin8_t>(), jformat.get<uint8_t>(), bbuff, value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        return apimgr.extractByteBufferImpl(apimodule, this, value, ctx);
+        auto iiinfo = apimgr.extractByteBufferImpl(apimodule, this, value, ctx);
+        if(!iiinfo.has_value())
+        {
+            return std::nullopt;
+        }
+
+        auto rr = json::object();
+        rr["compress"] = iiinfo->second.first;
+        rr["format"] = iiinfo->second.second;
+        rr["data"] = iiinfo->first;
+
+        return std::make_optional(rr);
     }
 };
 
