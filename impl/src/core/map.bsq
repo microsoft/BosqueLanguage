@@ -25,7 +25,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     method get(key: K): V {
         let e = MapOps::s_find<K, V>(this.value(), key);
 
-        check e !== none;
+        assert e !== none;
         return e.1;
     }
 
@@ -77,12 +77,12 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method set(k: K, v: V): Map<K, V> {
-        check !this.empty();
+        assert !this.empty();
         return Map<K, V>::s_into(MapOps::s_set<K, V>(this.value(), k, v));
     }
 
     method remove(k: K): Map<K, V> {
-        check !this.empty();
+        assert !this.empty();
         return Map<K, V>::s_into(MapOps::s_remove<K, V>(this.value(), k));
     }
 

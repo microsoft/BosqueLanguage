@@ -72,7 +72,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method front(): T {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
         return ListOps::s_safe_get<T>(this.value(), 0n);
     }
 
@@ -105,7 +105,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method back(): T {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
         return ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
     }
 
@@ -173,10 +173,10 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
     recursive? method single(p: recursive? pred(_: T) -> Bool): T {
         let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
-        check idx !== none;
+        assert idx !== none;
 
         let lastidx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
-        check lastidx === idx;
+        assert lastidx === idx;
 
         return ListOps::s_safe_get<T>(this.value(), idx);
     }
@@ -298,14 +298,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T unique Orderable} min(): T {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
 
         let midx = ListOps::s_min_arg<T, T>(this.value(), fn(v: T): T => v);
         return ListOps::s_safe_get<T>(this.value(), midx);
     }
 
     method {when T unique Orderable} max(): T {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
 
         let midx = ListOps::s_max_arg<T, T>(this.value(), fn(v: T): T => v);
         return ListOps::s_safe_get<T>(this.value(), midx);
@@ -374,14 +374,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method argMin<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
 
         let midx = ListOps::s_min_arg<T, U>[recursive?](this.value(), f);
         return ListOps::s_safe_get<T>(this.value(), midx);
     }
 
     method argMax<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
 
         let midx = ListOps::s_max_arg<T, U>[recursive?](this.value(), f);
         return ListOps::s_safe_get<T>(this.value(), midx);
@@ -456,14 +456,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     recursive? method find(p: recursive? pred(_: T) -> Bool): T {
         let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
     recursive? method find(p: recursive? pred(_: T, _: Nat) -> Bool): T {
         let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
@@ -538,14 +538,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     recursive? method findLast(p: recursive? pred(_: T) -> Bool): T {
         let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
     recursive? method findLast(p: recursive? pred(_: T, _: Nat) -> Bool): T {
         let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return ListOps::s_safe_get<T>(this.value(), idx);
     }
 
@@ -620,14 +620,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     recursive? method findIndexOf(p: recursive? pred(_: T) -> Bool): Nat {
         let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return idx;
     }
 
     recursive? method findIndexOf(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
         let idx = ListOps::s_find_pred_idx<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return idx;
     }
 
@@ -688,14 +688,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     recursive? method findIndexOfLast(p: recursive? pred(_: T) -> Bool): Nat {
         let idx = ListOps::s_find_last_pred<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return idx;
     }
 
     recursive? method findIndexOfLast(p: recursive? pred(_: T, _: Nat) -> Bool): Nat {
         let idx = ListOps::s_find_last_pred_idx<T>[recursive?](this.value(), p);
 
-        check idx !== none;
+        assert idx !== none;
         return idx;
     }
 
@@ -756,7 +756,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method {when T grounded KeyType} indexOf(v: T): Nat {
         let idx = ListOps::s_find_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
-        check idx !== none;
+        assert idx !== none;
         return idx;
     }
 
@@ -790,7 +790,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method {when T grounded KeyType} indexOfLast(v: T): Nat {
         let idx = ListOps::s_find_last_pred<T>(this.value(), pred(e: T): Bool => KeyType::equal<T>(v, e));
 
-        check idx !== none;
+        assert idx !== none;
         return idx;
     }
 
@@ -866,18 +866,18 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method slice(start?: Nat=0n, end?: Nat=ListOps::s_size<T>(this.value())): List<T> {
-        check start <= end;
-        check end <= ListOps::s_size<T>(this.value());
+        assert start <= end;
+        assert end <= ListOps::s_size<T>(this.value());
         return List<T>::s_into(ListOps::s_slice_end<T>(ListOps::s_slice_front<T>(this.value(), start), end));
     }
 
     method removeFirst(k: Nat): List<T> {
-        check k <= ListOps::s_size<T>(this.value());
+        assert k <= ListOps::s_size<T>(this.value());
         return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), k));
     } 
 
     method removeLast(k: Nat): List<T> {
-        check k <= ListOps::s_size<T>(this.value());
+        assert k <= ListOps::s_size<T>(this.value());
         return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), ListOps::s_size<T>(this.value()) - k));
     }
 
@@ -1126,19 +1126,19 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method popBack(): List<T> {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
 
         return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n));
     }
 
     method popFront(): List<T> {
-        check !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty(this.value());
 
         return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), 1n));
     }
 
     method set(i: Nat, v: T): List<T> {
-        check i < ListOps::s_size<T>(this.value());
+        assert i < ListOps::s_size<T>(this.value());
 
         let count = ListOps::s_size<T>(this.value());
         let vl = List<T>{v};
@@ -1163,7 +1163,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method remove(i: Nat): List<T> {
-        check i < ListOps::s_size<T>(this.value());
+        assert i < ListOps::s_size<T>(this.value());
 
         let count = ListOps::s_size<T>(this.value());
 
