@@ -1550,33 +1550,6 @@ class Assembly {
     getOkType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Result::Ok") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
     getErrType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Result::Err") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))); }
 
-    getMaskType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Mask") as EntityTypeDecl, new Map<string, ResolvedType>())); }
-    getPartialVectorType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("PartialVector") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getListTreeType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("ListTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getListTreeEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("ListTreeEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    
-    getBTreeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("BTree") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    getBTreeNodeType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("BTreeNode") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    
-    getVector1Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Vector1") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getVector2Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Vector2") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getVector3Type(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Vector3") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    
-    getRecListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecList") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getRecListEntryType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecListEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    
-    getRecMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecMap") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    getRecMapEntryType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("RecMapEntry") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-    
-    getListOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("ListOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
-    getMapOpsType(): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("MapOps") as EntityTypeDecl, new Map<string, ResolvedType>())); }
-    
-    getListType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("List") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getStackType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Stack") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getQueueType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Queue") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getSetType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Set") as EntityTypeDecl, new Map<string, ResolvedType>().set("T", t))); }
-    getMapType(k: ResolvedType, v: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedEntityAtomType.create(this.m_objectMap.get("Map") as EntityTypeDecl, new Map<string, ResolvedType>().set("K", k).set("V", v))); }
-
     getOptionConceptType(t: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Option") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t))])); }
     getResultConceptType(t: ResolvedType, e: ResolvedType): ResolvedType { return ResolvedType.createSingle(ResolvedConceptAtomType.create([ResolvedConceptAtomTypeEntry.create(this.m_conceptMap.get("Result") as ConceptTypeDecl, new Map<string, ResolvedType>().set("T", t).set("E", e))])); }
     

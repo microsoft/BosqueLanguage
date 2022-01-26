@@ -4114,23 +4114,14 @@ class Parser {
                 else if(ename === "Map") {
                     attributes.push("__map_type");
                 }
-                else if(ename === "Mask") {
-                    attributes.push("__mask_type");
-                }
-                else if(ename === "PartialVector") {
-                    attributes.push("__partialvector_type");
-                }
                 else if(ename === "ListTree") {
                     attributes.push("__listtree_type");
                 }
                 else if(ename === "ListTreeEntry") {
                     attributes.push("__listtreeentry_type");
                 }
-                else if(ename === "BTree") {
+                else if(ename === "MapTree") {
                     attributes.push("__btree_type");
-                }
-                else if(ename === "BTreeEntry") {
-                    attributes.push("__btreeentry_type");
                 }
                 else if(ename === "Vector1") {
                     attributes.push("__vector1_type");
@@ -4144,14 +4135,8 @@ class Parser {
                 else if(ename === "RecList") {
                     attributes.push("__reclist_type");
                 }
-                else if(ename === "RecListEntry") {
-                    attributes.push("__reclistentry_type");
-                }
                 else if(ename === "RecMap") {
                     attributes.push("__recmap_type");
-                }
-                else if(ename === "RecMapEntry") {
-                    attributes.push("__recmapentry_type");
                 }
                 else if(ename === "ListOps") {
                     attributes.push("__listops_type");
