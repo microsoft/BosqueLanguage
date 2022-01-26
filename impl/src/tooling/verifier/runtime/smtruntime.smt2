@@ -71,8 +71,6 @@
 ;;KEY_TYPE_TAG_RANK;;
 
 (declare-sort FloatValue)
-(declare-const FloatValue@zero FloatValue)
-(declare-const FloatValue@one FloatValue)
 
 (declare-fun FloatValue@neg (FloatValue) FloatValue)
 (declare-fun FloatValue@add (FloatValue FloatValue) FloatValue)
@@ -89,6 +87,12 @@
 
 (declare-fun FloatValue@Rounding (FloatValue) FloatValue)
 (declare-fun FloatValue@Power (FloatValue, FloatValue) FloatValue)
+
+(declare-const FloatValue@zero FloatValue)
+(assert (= FloatValue@zero (FloatValue@const "0.0")))
+
+(declare-const FloatValue@one FloatValue)
+(assert (= FloatValue@one (FloatValue@const "1.0")))
 
 (define-sort BInt () Int)
 (define-sort BNat () Int)
@@ -156,6 +160,8 @@
 
 (declare-fun BByteBuffer@expandstr ((BByteBuffer)) BString)
 
+(define-sort HavocSequence (Seq Int))
+
 ;;
 ;; Primitive datatypes 
 ;;
@@ -177,11 +183,9 @@
       ; LogicalTime -> Int
       ; UUID -> BUUID
       ; ContentHash -> (_ BitVec 16)
-      (HavocSequence 0)
     ) (
       ( (bsq_none@literal) ) 
       ( (bsq_nothing@literal) )
-      ( (HavocSequence@cons (HavocSequence@root Int) (HavocSequence@path (Seq BNat))) )
 ))
 
 ;;

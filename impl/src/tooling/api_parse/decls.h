@@ -108,7 +108,7 @@ template <typename ValueRepr, typename State>
 class ApiManagerJSON
 {
 public:
-    virtual bool checkInvokeOk(const std::string& checkinvoke, ValueRepr value);
+    virtual bool checkInvokeOk(const std::string& checkinvoke, ValueRepr value) const = 0;
 
     virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
     virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
@@ -121,8 +121,7 @@ public:
     virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, ValueRepr value, State& ctx) const = 0;
     virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ValueRepr value, State& ctx) const = 0;
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseDataStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, vector<uint8_t>& data, ValueRepr value, State& ctx) const = 0;
+    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t>& data, ValueRepr value, State& ctx) const = 0;
     virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, ValueRepr value, State& ctx) const = 0;
     virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) const = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) const = 0;

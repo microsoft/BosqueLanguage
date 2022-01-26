@@ -2365,26 +2365,19 @@ void Evaluator::invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationP
 {
     size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
-    uint8_t* mixedslots = cstack + invk->scalarstackBytes;
     GC_MEM_ZERO(cstack, cssize);
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
     BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
-    GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
-#ifdef BSQ_DEBUG_BUILD
-    this->pushFrame<false>(&invk->srcFile, &invk->name, nullptr, cstack, mixedslots, nullptr, maskslots, &invk->body);
-#else
-    this->pushFrame<false>(nullptr, cstack, mixedslots, nullptr, maskslots, &invk->body);
-#endif
 
+    this->invokePrelude(invk, cstack, maskslots, nullptr);
     this->evaluateBody(resultsl, restype, resarg);
-
-    this->popFrame();
+    this->invokePostlude();
 }
 
-void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
+void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<StorageLocationPtr>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
 {
     void* argsbase = BSQ_STACK_SPACE_ALLOC(invk->params.size() * sizeof(void*));
     void** curr = (void**)argsbase;
@@ -2396,23 +2389,22 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void
 
     size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
-    uint8_t* mixedslots = cstack + invk->scalarstackBytes;
     GC_MEM_ZERO(cstack, cssize);
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
     BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
-    GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
-#ifdef BSQ_DEBUG_BUILD
-    this->pushFrame<false>(&invk->srcFile, &invk->name, (StorageLocationPtr*)argsbase, cstack, mixedslots, nullptr, maskslots, &invk->body);
-#else
-    this->pushFrame<false>((StorageLocationPtr*)argsbase, cstack, mixedslots, nullptr, maskslots, &invk->body);
-#endif
+    for(size_t i = 0; i < argslocs.size(); ++i)
+    {
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(invk->paraminfo[i], cstack, cstack + invk->scalarstackBytes);
+     
+        invk->params[i].ptype->storeValue(pv, argslocs[i]);
+    }
 
+    this->invokePrelude(invk, cstack, maskslots, nullptr);
     this->evaluateBody(resultsl, restype, resarg);
-
-    this->popFrame();
+    this->invokePostlude();
 }
 
 void Evaluator::linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
@@ -2441,172 +2433,379 @@ void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<St
     static_cast<Evaluator*>(this->ctx)->linvoke(call, args, resultsl);
 }
 
+bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value) const
+{
+    xxxx;
+}
+
+bool ICPPParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    //location is aleady zero initialized
+    return true;
+}
+
+bool ICPPParseJSON::parseNothingImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    //location is aleady zero initialized
+    return true;
+}
+
+bool ICPPParseJSON::parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, StorageLocationPtr value, Evaluator& ctx) const
+{
+    SLPTR_STORE_CONTENTS_AS(BSQBool, value, (BSQBool)(b ? BSQTRUE : BSQFALSE));
+    return true;
+}
+
+bool ICPPParseJSON::parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, StorageLocationPtr value, Evaluator& ctx) const
+{
+    SLPTR_STORE_CONTENTS_AS(BSQNat, value, (BSQNat)n);
+    return true;
+}
+
+bool ICPPParseJSON::parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, StorageLocationPtr value, Evaluator& ctx) const
+{
+    SLPTR_STORE_CONTENTS_AS(BSQInt, value, (BSQInt)i);
+    return true;
+}
+
+bool ICPPParseJSON::parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, StorageLocationPtr value, Evaluator& ctx) const
+{
+    try
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigNat, value, (BSQBigNat)std::stoull(n));
+        return true;
+    }
+    catch(...)
+    {
+        ;
+    }
+
+    return false;
+}
+
+bool ICPPParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, StorageLocationPtr value, Evaluator& ctx) const
+{
+    try
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQBigInt, value, (BSQBigInt)std::stoll(i));
+        return true;
+    }
+    catch(...)
+    {
+        ;
+    }
+
+    return false;
+}
+
+bool ICPPParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, StorageLocationPtr value, Evaluator& ctx) const
+{
+    try
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, value, (BSQFloat)std::stod(f));
+        return true;
+    }
+    catch(...)
+    {
+        ;
+    }
+
+    return false;
+}
+
+bool ICPPParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, StorageLocationPtr value, Evaluator& ctx) const
+{
+    try
+    {
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, value, (BSQDecimal)std::stod(d));
+        return true;
+    }
+    catch(...)
+    {
+        ;
+    }
+
+    return false;
+}
+
+bool ICPPParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, StorageLocationPtr value, Evaluator& ctx) const
+{
+    try
+    {
+        BSQRational rv = {(BSQBigInt) std::stoll(n), (BSQNat)d};
+        SLPTR_STORE_CONTENTS_AS(BSQRational, value, rv);
+        return true;
+    }
+    catch(...)
+    {
+        ;
+    }
+
+    return false;
+}
+
+bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, StorageLocationPtr value, Evaluator& ctx) const
+{
+    BSQString rstr = g_emptyString;
+    if(s.empty())
+    {
+        //already empty
+    }
+    else if(s.size() < 16) 
+    {
+        rstr.u_inlineString = BSQInlineString::create((const uint8_t*)s.c_str(), s.size());
+    }
+    else if(s.size() <= 128)
+    {
+        auto stp = std::find_if(BSQWellKnownType::g_typeStringKCons, BSQWellKnownType::g_typeStringKCons + sizeof(BSQWellKnownType::g_typeStringKCons), [&s](const std::pair<size_t, const BSQType*>& cc) {
+            return cc.first > s.size();
+        });
+        rstr.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
+        BSQ_MEM_COPY(rstr.u_data, s.c_str(), s.size());
+    }
+    else
+    {
+        //
+        //TODO: split the string into multiple parts
+        //
+         assert(false);
+    }
+    
+    SLPTR_STORE_CONTENTS_AS(BSQString, value, rstr);
+    return true;
+}
+
+bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx) const
+{
+    xxxx;
+}
+
+bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+bool ICPPParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+bool ICPPParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+bool ICPPParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+    
+StorageLocationPtr ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx) const
+{
+xxxx;
+}
+
+void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+{
+xxxx;
+}
+
+void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t count, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+{
+xxxx;
+}
+
+void ICPPParseJSON::completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr vval, Evaluator& ctx) const
+{
+xxxx;
+}
+
+void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+{
+xxxx;
+}
+
+void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t pick, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<bool> ICPPParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    return std::make_optional((bool)SLPTR_LOAD_CONTENTS_AS(BSQBool, value));
+}
+
+std::optional<uint64_t> ICPPParseJSON::extractNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, value));
+}
+
+std::optional<int64_t> ICPPParseJSON::extractIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    return std::make_optional((int64_t)SLPTR_LOAD_CONTENTS_AS(BSQInt, value));
+}
+
+std::optional<std::string> ICPPParseJSON::extractBigNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    auto val = (uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQBigNat, value);
+    return std::make_optional(std::to_string(val));
+}
+
+std::optional<std::string> ICPPParseJSON::extractBigIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    auto val = (int64_t)SLPTR_LOAD_CONTENTS_AS(BSQBigInt, value);
+    return std::make_optional(std::to_string(val));
+}
+
+std::optional<std::string> ICPPParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQFloat, value);
+    return std::make_optional(std::to_string(val));
+}
+
+std::optional<std::string> ICPPParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQDecimal, value);
+    return std::make_optional(std::to_string(val));
+}
+
+std::optional<std::pair<std::string, uint64_t>> ICPPParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    auto val = SLPTR_LOAD_CONTENTS_AS(BSQRational, value);
+    return std::make_optional(std::make_pair(std::to_string(val.numerator), val.denominator));
+}
+
+std::optional<std::string> ICPPParseJSON::extractStringImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+    auto val = SLPTR_LOAD_CONTENTS_AS(BSQString, value);
+
+    std::string rstr;
+    BSQStringForwardIterator iter(&val, 0);
+
+    rstr.reserve(BSQStringImplType::utf8ByteCount(val));
+    while(iter.valid())
+    {
+        rstr.push_back((char)iter.get_byte());
+        iter.advance_byte();
+    }
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<uint64_t> ICPPParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<uint64_t> ICPPParseJSON::extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+{
+xxxx;
+}
+
+std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx) const
+{
+xxxx;
+}
+
 /*
-
-bool entityNoneJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_null())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQNoneType*>(BSQType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
-        return true;
-    }
-}
-
-bool entityBoolJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_boolean())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQBoolType*>(BSQType::g_typeBool)->storeValueDirect(sl, j.get<bool>() ? BSQTRUE : BSQFALSE);
-        return true;
-    }
-}
-
-bool entityNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto uval = parseToUnsignedNumber(j);
-    if(!uval.has_value())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, uval.value());
-        return true;
-    }
-}
-
-bool entityBigNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto bnval = parseToBigUnsignedNumber(j);
-    if(!bnval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, std::stoull(bnval.value()));
-    return true;
-}
-
-bool entityIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto ival = parseToSignedNumber(j);
-    if(!ival.has_value())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQIntType*>(BSQType::g_typeInt)->storeValueDirect(sl, ival.value());
-        return true;
-    }
-}
-
-bool entityBigIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto bival = parseToBigUnsignedNumber(j);
-    if(!bival.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, std::stoll(bival.value()));
-    return true;
-}
-
-bool entityFloatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto fval = parseToRealNumber(j);
-    if(!fval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQFloatType*>(BSQType::g_typeFloat)->storeValueDirect(sl, std::stod(fval.value()));
-    return true;
-}
-
-bool entityDecimalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto dval = parseToDecimalNumber(j);
-    if(!dval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQDecimalType*>(BSQType::g_typeDecimal)->storeValueDirect(sl, std::stod(dval.value()));
-    return true;
-}
-
-bool entityRationalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_array() || j.size() != 2)
-    {
-        return false;
-    }
-
-    auto numtype = dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt);
-    auto denomtype = dynamic_cast<const BSQNatType*>(BSQType::g_typeNat);
-
-    BSQRational rr;
-    auto oknum = numtype->consops.fpJSONParse(numtype, j[0], &rr.numerator);
-    auto okdenom = denomtype->consops.fpJSONParse(denomtype, j[1], &rr.denominator);
-
-    if(!oknum || !okdenom)
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQRationalType*>(BSQType::g_typeRational)->storeValueDirect(sl, rr);
-    return true;
-}
-
-
-bool entityStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_string())
-    {
-        return false;
-    }
-    else
-    {
-        auto sstr = j.get<std::string>();
-        BSQString s = g_emptyString;
-        if(sstr.size() == 0)
-        {
-            //already empty
-        }
-        else if(sstr.size() < 16) 
-        {
-            s.u_inlineString = BSQInlineString::create((const uint8_t*)sstr.c_str(), sstr.size());
-        }
-        else if(sstr.size() <= 256)
-        {
-            auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
-                return cc.first > sstr.size();
-            });
-            s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
-            BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
-        }
-        else
-        {
-            //
-            //TODO: split the string into multiple parts
-            //
-            assert(false);
-        }
-        
-        dynamic_cast<const BSQStringType*>(BSQType::g_typeString)->storeValueDirect(sl, s);
-        return true;
-    }
-}
 
 
 bool entityLogicalTimeJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
