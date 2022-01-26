@@ -981,14 +981,8 @@ internal entity RecList<T> provides Some {
         if(lle === none) {
             return none;
         }
-        elif(ncount == 1) {
-            return RecListEntry<T>::s_list_to_vector1(lle);
-        }
-        elif(ncount == 2) {
-            return RecListEntry<T>::s_list_to_vector2(lle);
-        }
-        elif(ncount == 3) {
-            return RecListEntry<T>::s_list_to_vector3(lle);
+        elif(ncount <= 3) {
+            return RecListEntry<T>::s_list_to_vector(lle);
         }
         else {
             return RecList<T>{ncount, lle};
@@ -1002,14 +996,8 @@ internal entity RecList<T> provides Some {
         if(lle === none) {
             return none;
         }
-        elif(ncount == 1) {
-            return RecListEntry<T>::s_list_to_vector1(lle);
-        }
-        elif(ncount == 2) {
-            return RecListEntry<T>::s_list_to_vector2(lle);
-        }
-        elif(ncount == 3) {
-            return RecListEntry<T>::s_list_to_vector3(lle);
+        elif(ncount <= 3) {
+            return RecListEntry<T>::s_list_to_vector(lle);
         }
         else {
             return RecList<T>{ncount, lle};
@@ -1050,15 +1038,7 @@ internal entity RecList<T> provides Some {
             return none;
         }
         elif(lls <= 3) {
-            if(lls == 1) {
-                return RecListEntry<T>::s_list_to_vector1(lle);
-            }
-            elif(lls == 2) {
-                return RecListEntry<T>::s_list_to_vector2(lle);
-            }
-            else {
-                return RecListEntry<T>::s_list_to_vector3(lle);
-            }
+            return RecListEntry<T>::s_list_to_vector(lle);
         }
         else {
             return RecList<T>{lle, lls};
@@ -1071,15 +1051,7 @@ internal entity RecList<T> provides Some {
             return none;
         }
         elif(lls <= 3) {
-            if(lls == 1) {
-                return RecListEntry<T>::s_list_to_vector1(lle);
-            }
-            elif(lls == 2) {
-                return RecListEntry<T>::s_list_to_vector2(lle);
-            }
-            else {
-                return RecListEntry<T>::s_list_to_vector3(lle);
-            }
+           return RecListEntry<T>::s_list_to_vector(lle);
         }
         else {
             return RecList<T>{lle, lls};
@@ -1114,24 +1086,21 @@ internal entity RecList<T> provides Some {
         return RecList<T>{this.ll.sort[recursive](cmp), this.count};
     }
 
-    recursive method unique_from_sorted(prev: T, eq: recursive? pred(_: T, _: T) -> Bool): RecListEntry<T>?, Nat {
+    recursive method unique_from_sorted(prev: T, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
         let tl = this.ll.tail;
         let hh = this.ll.head;
 
-        let nll, ns = s_safeAs<RecListEntry<T>?, RecListEntry<T>>(tl).unique_from_sorted[recursive](hh, eq);
-        if(ns <= 3) {
-            if(ns == 1) {
-                return RecListEntry<T>::s_list_to_vector1(nll);
-            }
-            elif(ns == 2) {
-                return RecListEntry<T>::s_list_to_vector2(nll);
-            }
-            else {
-                return RecListEntry<T>::s_list_to_vector3(nll);
-            }
+        if(tl === none) {
+            return Vector1<T>(hh);
         }
         else {
-            return RecList<T>{nll, ns};
+            let nll, ns = tl.unique_from_sorted[recursive](hh, eq);
+            if(ns <= 3) {
+                return RecListEntry<T>::s_list_to_vector(nll);
+            }
+            else {
+                return RecList<T>{nll, ns};
+            }
         }
     }
     
@@ -1189,30 +1158,22 @@ internal entity RecListEntry<T> provides Some {
         }
     }
 
-    function s_list_to_vector1(l: RecListEntry<T>): Vector1<T> {
-        return Vector1<T>{l.head};
-    }
-
-    function s_list_to_vector2(l: RecListEntry<T>): Vector2<T> {
-        let ee2 = lls.tail;
-        return Vector2<T>{l.head, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head};
-    }
-
-    function s_list_to_vector3(l: RecListEntry<T>): Vector3<T> {
-        let ee2 = lls.tail;
-        let ee3 = s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).tail
-        return RecListEntry<T>{l.head, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee2).head, s_safeAs<RecListEntry<T>?, RecListEntry<T>>(ee3).head};
-    }
-
-    function s_list_to_vector(l: RecListEntry<T>, count: Nat): Vector3<T> {
-        if(count == 1n) {
-            return RecListEntry<T>::s_list_to_vector1(l);
-        }
-        elif(count == 2n) {
-            return RecListEntry<T>::s_list_to_vector2(l);
+    function s_list_to_vector(l: RecListEntry<T>): Vector1<T> | Vector2<T> | Vector3<T> {
+        let hh1 = l.head;
+        let tl1 = l.tail;
+        if(tl1 === none) {
+            return Vector1<T>{hh1};
         }
         else {
-            return RecListEntry<T>::s_list_to_vector3(l);
+            let hh2 = tl1.head;
+            let tl2 = tl1.tail;
+
+            if(tl1 === none) {
+                return Vector2<T>{hh1, hh2};
+            }
+            else {
+                return Vector3<T>{hh1, hh2, tl2.head};
+            }
         }
     }
 
@@ -1305,7 +1266,15 @@ internal entity RecListEntry<T> provides Some {
             return this.head;
         }
         else {
-            return s_safeAs<RecListEntry<T>?, RecListEntry<T>>(this.tail).safe_get[recursive](i - 1);
+            let tl = this.tail;
+
+            //simplify life for solver a bit -- this case should never happen but may be hard for solver to know
+            if(tl === none) {
+                return this.head;
+            }
+            else {
+                return tl.safe_get[recursive](i - 1);
+            }
         }
     }
 

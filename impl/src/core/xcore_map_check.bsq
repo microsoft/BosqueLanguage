@@ -376,6 +376,9 @@ entity RecMap<K grounded KeyType, V> provides Some {
         if(uu === none) {
             return none;
         }
+        elif(us <= 3) {
+            return RecMapEntry<K, V>::s_map_to_vector(uu);
+        }
         else {
             return RecMap<K, V>{us, uu};
         }
@@ -395,17 +398,13 @@ entity RecMap<K grounded KeyType, V> provides Some {
     }
 
     method remove(k: K): RecMapEntry<K, V>? {
-        let rl = this.ll.set[recursive](k);
-        let rrl = s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rl);
-
-        if(this.count == 4) {
-            let h0 = rrl.head;
-            let tl0 = s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(rrl.tail);
-            let h1 = tl0.head;
-            let tl1 = s_safeAs<RecMapEntry<K, V>?, RecMapEntry<K, V>>(tl0.tail);
-            let h2 = tl1.head;
-
-            return Vector3<[K, V]>>{h0, h1, h2}; 
+        let rl = this.ll.remove[recursive](k);
+        
+        if(rl === none) {
+            return none;
+        }
+        elif(this.count - 1 <= 3) {
+            return RecMapEntry<K, V>::s_map_to_vector(rl);
         }
         else {
             return RecMap<K, V>{this.count - 1n, rrl};
@@ -442,6 +441,25 @@ entity RecMapEntry<K grounded KeyType, V> provides Some {
             }
             else {
                 return RecMapEntry<T>::s_vector3_to_list(m), 3n;
+            }
+        }
+    }
+
+    function s_map_to_vector(m: RecMapEntry<K, V>): Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> {
+        let hh1 = m.head;
+        let tl1 = m.tail;
+        if(tl1 === none) {
+            return Vector1<[K, V]>{hh1};
+        }
+        else {
+            let hh2 = tl1.head;
+            let tl2 = tl1.tail;
+
+            if(tl1 === none) {
+                return Vector2<[K, V]>{hh1, hh2};
+            }
+            else {
+                return Vector3<[K, V]>{hh1, hh2, tl2.head};
             }
         }
     }
