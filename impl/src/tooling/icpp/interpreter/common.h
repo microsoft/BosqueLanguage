@@ -15,6 +15,10 @@
 #include <optional>
 #include <string>
 
+#include <vector>
+#include <list>
+#include <map>
+
 #include "../../api_parse/decls.h"
 
 #include <mimalloc.h>

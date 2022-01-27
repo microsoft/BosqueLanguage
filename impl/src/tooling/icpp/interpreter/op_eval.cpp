@@ -2583,8 +2583,10 @@ bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType*
     cnode->bytes = (BSQByteBufferLeaf*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferLeaf);
     cnode->next = nullptr;
 
+    void* croot = cnode;
+    GCStack::pushFrame(&croot, "2");
+
     size_t i = 0;
-    auto croot = Allocator::GlobalAllocator.registerTempRoot(BSQWellKnownType::g_typeByteBufferNode, cnode);
     while(i < data.size())
     {
         std::copy(data.cbegin() + i, data.cbegin() + i + cnode->bytecount, cnode->bytes->bytes);
@@ -2596,15 +2598,13 @@ bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType*
             BSQByteBufferNode* cnode = (BSQByteBufferNode*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferNode);
             cnode->bytecount = std::min((uint64_t)data.size(), (uint64_t)256);
             cnode->bytes = (BSQByteBufferLeaf*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferLeaf);
-            cnode->next = (BSQByteBufferNode*)croot->root;
+            cnode->next = (BSQByteBufferNode*)croot;
 
-            Allocator::GlobalAllocator.releaseTempRoot(croot);
-            croot = Allocator::GlobalAllocator.registerTempRoot(BSQWellKnownType::g_typeByteBufferNode, cnode);
+            croot = cnode;
         }
     }
 
-    BSQByteBufferNode* nnode = (BSQByteBufferNode*)croot->root;
-    Allocator::GlobalAllocator.releaseTempRoot(croot);
+    BSQByteBufferNode* nnode = (BSQByteBufferNode*)croot;
 
     while(nnode->next != nullptr)
     {
@@ -2621,6 +2621,8 @@ bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType*
     buff->format = (BufferFormat)format;
 
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, buff);
+
+    GCStack::popFrame();
     return true;
 }
 

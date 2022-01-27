@@ -518,7 +518,7 @@ void* BSQListOps::s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQList
     BSQListForwardIterator iter2(ttype2, t2);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter2);
 
-    auto rootipos = Allocator::GlobalAllocator.getTempRootCurrPos();
+    Allocator::GlobalAllocator.pushTempRootScope();
 
     const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
 
@@ -531,7 +531,7 @@ void* BSQListOps::s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQList
             lflavor2.entrytype->storeValue(esl2, iter2.getlocation());
             ee.invoke(icall, lparams, resl);
             
-            auto rr = Allocator::GlobalAllocator.registerTempRoot(resflavor.entrytype, nullptr);
+            auto rr = Allocator::GlobalAllocator.registerTempRoot(resflavor.entrytype);
             resflavor.entrytype->storeValue(rr->root, resl);
 
             iter1.advance();
@@ -546,10 +546,10 @@ void* BSQListOps::s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQList
     
     auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
 
-    auto lstart = Allocator::GlobalAllocator.getTempRootCurrPos();
+    auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
     void* rres = BSQListOps::s_temp_root_to_list_rec(resflavor, lstart, count);
 
-    Allocator::GlobalAllocator.resetRootCurrPos(rootipos);
+    Allocator::GlobalAllocator.popTempRootScope();
     auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
     
     return rres;
@@ -712,10 +712,10 @@ void* BSQListOps::s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee
     BSQListForwardIterator iter(ttype, t);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter);
 
-    auto rootipos = Allocator::GlobalAllocator.getTempRootCurrPos();
+    Allocator::GlobalAllocator.pushTempRootScope();
     while(iter.valid())
     {
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype, nullptr);
+        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
         lflavor.entrytype->storeValue(rr->root, iter.getlocation());
 
         iter.advance();
@@ -728,7 +728,8 @@ void* BSQListOps::s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee
     {
         BI_LAMBDA_CALL_SETUP_TEMP_X2_CMP(lflavor.entrytype, esl, lflavor.entrytype, esr, params, lt, lparams)
 
-        std::stable_sort(Allocator::GlobalAllocator.getTempRootCurrPos(), rootipos, [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+        std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
+        std::stable_sort(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
             BSQBool bb;
             ee.invoke(icall, lparams, &bb);
             return (bool)bb;
@@ -739,11 +740,11 @@ void* BSQListOps::s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee
     
     auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
 
-    auto lstart = Allocator::GlobalAllocator.getTempRootCurrPos();
+    auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
     void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, count);
 
-    Allocator::GlobalAllocator.resetRootCurrPos(rootipos);
-    auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    Allocator::GlobalAllocator.popTempRootScope();
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
     
     return rres;
 }
@@ -759,10 +760,10 @@ void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, Lamb
     BSQListForwardIterator iter(ttype, t);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter);
 
-    auto rootipos = Allocator::GlobalAllocator.getTempRootCurrPos();
+    Allocator::GlobalAllocator.pushTempRootScope();
     while(iter.valid())
     {
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype, nullptr);
+        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
         lflavor.entrytype->storeValue(rr->root, iter.getlocation());
 
         iter.advance();
@@ -775,7 +776,8 @@ void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, Lamb
     {
         BI_LAMBDA_CALL_SETUP_TEMP_X2_CMP(lflavor.entrytype, esl, lflavor.entrytype, esr, params, eq, lparams)
 
-        std::unique(Allocator::GlobalAllocator.getTempRootCurrPos(), rootipos, [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+        std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
+        std::unique(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
             BSQBool bb;
             ee.invoke(icall, lparams, &bb);
             return (bool)bb;
@@ -786,55 +788,61 @@ void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, Lamb
     
     auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
 
-    auto lstart = Allocator::GlobalAllocator.getTempRootCurrPos();
+    auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
     void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, count);
 
-    Allocator::GlobalAllocator.resetRootCurrPos(rootipos);
-    auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    Allocator::GlobalAllocator.popTempRootScope();
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
     
     return rres;
 }
 
 std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> BSQMapOps::g_flavormap;
 
+void s_union_rec_ne(const BSQMapTypeFlavor& mflavor, StorageLocationPtr tnode, BSQMapSpineIterator& ii)
+{
+    if(BSQMapTreeType::getLeft(ii.lcurr) != nullptr)
+    {
+        ii.moveLeft();
+        s_union_rec_ne(mflavor, tnode, ii);
+        ii.pop();
+    }
+
+    auto tmpi = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(tnode);
+    auto tmpr = BSQMapOps::s_add_ne(mflavor, tmpi, mflavor.treetype, mflavor.treetype->getKeyLocation(ii.lcurr), mflavor.treetype->getKeyLocation(ii.lcurr));
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tmpnam, tmpr);
+
+    if(BSQMapTreeType::getRight(ii.lcurr) != nullptr)
+    {
+        ii.moveRight();
+        s_union_rec_ne(mflavor, tnode, ii);
+        ii.pop();
+    }
+}
+
 void* BSQMapOps::s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, uint64_t ccount)
 {
-    auto resetpos = Allocator::GlobalAllocator.getTempRootCurrPos();
+    void* ll = t1;
+    GCStack::pushFrame(&ll, "2");
 
     BSQMapSpineIterator iter2(ttype2, t2);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter2);
-
-    auto m2end = Allocator::GlobalAllocator.getTempRootCurrPos();
-    BSQMapOps::map_tree_flatten(mflavor, iter2, [](StorageLocationPtr ksl, StorageLocationPtr vsl) { return true; });
-    auto m2start = Allocator::GlobalAllocator.getTempRootCurrPos();
-    auto ll2 = std::list<BSQTempRootNode>(m2start, m2end);
-
+    s_union_rec_ne(mflavor, &ll, iter2);
     Allocator::GlobalAllocator.releaseCollectionIterator(&iter2);
 
-    BSQMapSpineIterator iter1(ttype1, t1);
-    Allocator::GlobalAllocator.registerCollectionIterator(&iter1);
-
-    auto m1end = Allocator::GlobalAllocator.getTempRootCurrPos();
-    BSQMapOps::map_tree_flatten(mflavor, iter1, [](StorageLocationPtr ksl, StorageLocationPtr vsl) { return true; });
-    auto m1start = Allocator::GlobalAllocator.getTempRootCurrPos();
-    auto ll1 = std::list<BSQTempRootNode>(m1start, m1end);
-    
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter1);
-
-    Allocator::GlobalAllocator.resetRootCurrPos(resetpos);
-    return BSQMapOps::map_tree_lmerge(mflavor, ll1, ll2, ccount);
+    GCStack::popFrame();
+    return ll;
 }
 
 std::pair<void*, BSQNat> BSQMapOps::s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
-    auto resetpos = Allocator::GlobalAllocator.getTempRootCurrPos();
+    Allocator::GlobalAllocator.pushTempRootScope();
 
     BSQMapSpineIterator iter(ttype, t);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter);
 
     const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[pred->code]);
 
-    auto mend = Allocator::GlobalAllocator.getTempRootCurrPos();
     {
         BI_LAMBDA_CALL_SETUP_KV_TEMP(mflavor.keytype, ksl, mflavor.valuetype, vsl, params, pred, lparams)
 
@@ -853,15 +861,15 @@ std::pair<void*, BSQNat> BSQMapOps::s_submap_ne(const BSQMapTypeFlavor& mflavor,
         BI_LAMBDA_CALL_SETUP_POP()
     }
     
-    auto mstart = Allocator::GlobalAllocator.getTempRootCurrPos();
-    auto ll = std::list<BSQTempRootNode>(mstart, mend);
-
     Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
 
-    Allocator::GlobalAllocator.resetRootCurrPos(resetpos);
+    auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
+    auto lsize = Allocator::GlobalAllocator.getTempRootCurrScope().size();
+    auto llnode = BSQMapOps::s_temp_root_to_map_rec(mflavor, lstart, lsize);
 
-    auto ii = ll.begin();
-    return std::make_pair(BSQMapOps::s_temp_root_to_map_rec(mflavor, ii, ll.size()), (BSQNat)ll.size());
+    Allocator::GlobalAllocator.pushTempRootScope();
+
+    return std::make_pair(llnode, (BSQNat)lsize);
 }
 
 void* BSQMapOps::s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor)

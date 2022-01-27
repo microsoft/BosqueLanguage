@@ -71,9 +71,8 @@ class BSQTempRootNode
 public:
     const BSQType* rtype;
     void* root;
-    const bool isinline;
 
-    BSQTempRootNode(const BSQType* rtype, void* root, bool alloc): rtype(rtype), root(root), isinline(isinline) {;}
+    BSQTempRootNode(const BSQType* rtype, void* root): rtype(rtype), root(root) {;}
 };
 
 struct GCStackEntry
@@ -392,7 +391,7 @@ public:
     static BSQCollectionGCReprNode* collectionnodesend;
     static BSQCollectionGCReprNode collectionnodes[BSQ_MAX_STACK];
     static std::list<BSQCollectionIterator*> collectioniters;
-    static std::list<BSQTempRootNode> alloctemps;
+    static std::vector<std::list<BSQTempRootNode>> alloctemps;
 
 private:
     BumpSpaceAllocator bumpalloc;
@@ -785,13 +784,9 @@ private:
 
         for(auto titer = Allocator::alloctemps.begin(); titer != Allocator::alloctemps.end(); ++titer)
         {
-            if(!titer->isinline)
+            for(auto iiter = titer->cbegin(); iiter != titer->cend(); ++iiter)
             {
-                Allocator::gcProcessSlot<true>(&(titer->root));
-            }
-            else
-            {
-                Allocator::gcProcessSlotsWithMask<true>((void**)titer->root, titer->rtype->allocinfo.inlinedmask);
+                Allocator::gcProcessSlotsWithMask<true>((void**)iiter->root, iiter->rtype->allocinfo.inlinedmask);
             }
         }
     }
@@ -892,13 +887,9 @@ private:
 
         for(auto titer = Allocator::alloctemps.begin(); titer != Allocator::alloctemps.end(); ++titer)
         {
-            if(!titer->isinline)
+            for(auto iiter = titer->cbegin(); iiter != titer->cend(); ++iiter)
             {
-                Allocator::gcClearMark(titer->root);
-            }
-            else
-            {
-                Allocator::gcClearMarkSlotsWithMask((void**)titer->root, titer->rtype->allocinfo.inlinedmask);
+                Allocator::gcClearMarkSlotsWithMask((void**)iiter->root, iiter->rtype->allocinfo.inlinedmask);
             }
         }
     }
@@ -1017,46 +1008,32 @@ public:
         }
     }
 
-    std::list<BSQTempRootNode>::iterator getTempRootCurrPos()
+    void pushTempRootScope()
     {
-        return Allocator::alloctemps.begin();
+        Allocator::alloctemps.push_back({});
     }
 
-    void resetRootCurrPos(std::list<BSQTempRootNode>::iterator pos)
+    std::list<BSQTempRootNode>& getTempRootCurrScope()
     {
-        for(auto iter = Allocator::alloctemps.begin(); iter != Allocator::alloctemps.end(); ++iter)
-        {
-            if(iter->isinline)
-            {
-                mi_free(iter->root);
-            }
-        }
-
-        Allocator::alloctemps.erase(Allocator::alloctemps.begin(), pos);
+        return Allocator::alloctemps.back();
     }
 
-
-    std::list<BSQTempRootNode>::iterator registerTempRoot(const BSQType* btype, void* root)
+    void popTempRootScope()
     {
-        bool alloc = false;
-        if(root == nullptr)
+        for(auto iter = Allocator::alloctemps.back().begin(); iter != Allocator::alloctemps.back().end(); ++iter)
         {
-            alloc = true;
-            root = mi_zalloc(btype->allocinfo.inlinedatasize);
+            mi_free(iter->root);
         }
 
-        Allocator::alloctemps.emplace_front(btype, root, alloc);
-        return Allocator::alloctemps.begin();
+        Allocator::alloctemps.pop_back();
     }
 
-    void releaseTempRoot(std::list<BSQTempRootNode>::iterator root)
+    std::list<BSQTempRootNode>::iterator registerTempRoot(const BSQType* btype)
     {
-        if(root->isinline)
-        {
-            mi_free(root->root);
-        }
+        void* root = mi_zalloc(btype->allocinfo.inlinedatasize);
+        Allocator::alloctemps.back().emplace_front(btype, root);
 
-        Allocator::alloctemps.erase(root);
+        return Allocator::alloctemps.back().begin();
     }
 };
 

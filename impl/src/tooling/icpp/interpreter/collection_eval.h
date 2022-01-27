@@ -474,7 +474,8 @@ public:
             auto nn = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
             mflavor.treetype->initializeLeaf(nn, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->valuetype(iter.lcurr), mflavor.valuetype);
 
-            Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype, nn);
+            auto root = Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype);
+            root->root = nn;
         }
 
         if(BSQMapTreeType::getRight(iter.lcurr) != nullptr)
@@ -483,17 +484,6 @@ public:
             map_tree_flatten(mflavor, iter, pred);
             iter.pop();
         }
-    }
-
-    static void* map_tree_lmerge(const BSQMapTypeFlavor& mflavor, std::list<BSQTempRootNode>& lelems, std::list<BSQTempRootNode>& relems, uint64_t count)
-    {
-        std::list<BSQTempRootNode> ml;
-        std::merge(lelems.begin(), lelems.end(), relems.begin(), relems.end(), std::back_inserter(ml), [&mflavor](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-            return (bool)mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root));
-        });
-
-        auto ii = ml.begin();
-        return BSQMapOps::s_temp_root_to_map_rec(mflavor, ii, count);
     }
 
     static void* s_temp_root_to_map_rec(const BSQMapTypeFlavor& mflavor, std::list<BSQTempRootNode>::iterator& lelems, uint64_t count)

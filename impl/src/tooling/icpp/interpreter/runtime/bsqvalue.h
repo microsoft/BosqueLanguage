@@ -8,10 +8,6 @@
 #include "../common.h"
 #include "bsqmemory.h"
 
-#include <vector>
-#include <list>
-#include <map>
-
 class BSQField
 {
 public:
