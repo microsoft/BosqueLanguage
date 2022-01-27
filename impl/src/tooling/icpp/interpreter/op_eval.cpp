@@ -2671,32 +2671,115 @@ bool ICPPParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType
     
 StorageLocationPtr ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-xxxx;
+    BSQTypeID tupid = Environment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQType* tuptype = BSQType::g_typetable[tupid];
+
+    void* tupmem = nullptr;
+    RefMask tupmask = nullptr;
+    if(tuptype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        tupmem = mi_zalloc(tuptype->allocinfo.heapsize);
+        tupmask = tuptype->allocinfo.heapmask;
+    }
+    else
+    {
+        tupmem = mi_zalloc(tuptype->allocinfo.inlinedatasize);
+        tupmask = tuptype->allocinfo.inlinedmask;
+    }
+    
+    GCStack::pushFrame((void**)tupmem, tupmask);
+    this->tuplestack.push_back(std::make_pair(tupmem, tuptype));
 }
 
 StorageLocationPtr ICPPParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx)
 {
-xxxx;
+    void* tupmem = this->tuplestack.back().first;
+    const BSQType* tuptype = this->tuplestack.back().second;
+
+    return SLPTR_INDEX_DATAPTR(tupmem, dynamic_cast<const BSQTupleInfo*>(tuptype)->idxoffsets[i]);
 }
 
 void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
+    void* tupmem = this->tuplestack.back().first;
+    const BSQType* tuptype = this->tuplestack.back().second;
+
+    void* trgt = nullptr;
+    uint64_t bytes = 0;
+    if(tuptype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        trgt = (void*)value;
+        bytes = tuptype->allocinfo.inlinedatasize;
+    }
+    else
+    {
+        trgt = Allocator::GlobalAllocator.allocateDynamic(tuptype);
+        bytes = tuptype->allocinfo.heapsize;
+
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, trgt);
+    }
+
+    GC_MEM_COPY(trgt, tupmem, bytes);
+
+    GCStack::popFrame();
+    this->tuplestack.pop_back();
 }
 
 StorageLocationPtr ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-xxxx;
+    BSQTypeID tupid = Environment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQType* rectype = BSQType::g_typetable[tupid];
+
+    void* recmem = nullptr;
+    RefMask recmask = nullptr;
+    if(rectype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        recmem = mi_zalloc(rectype->allocinfo.heapsize);
+        recmask = rectype->allocinfo.heapmask;
+    }
+    else
+    {
+        recmem = mi_zalloc(rectype->allocinfo.inlinedatasize);
+        recmask = rectype->allocinfo.inlinedmask;
+    }
+    
+    GCStack::pushFrame((void**)recmem, recmask);
+    this->recordstack.push_back(std::make_pair(recmem, rectype));
 }
 
 StorageLocationPtr ICPPParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
 {
-xxxx;
+    void* recmem = this->recordstack.back().first;
+    const BSQType* rectype = this->recordstack.back().second;
+
+    BSQRecordPropertyID pid = Environment::g_propertyToIdMap.find(itype->name)->second;
+    return SLPTR_INDEX_DATAPTR(recmem, dynamic_cast<const BSQRecordInfo*>(rectype)->propertyoffsets[pid]);
 }
 
 void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
+    void* recmem = this->recordstack.back().first;
+    const BSQType* rectype = this->recordstack.back().second;
+
+    void* trgt = nullptr;
+    uint64_t bytes = 0;
+    if(rectype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        trgt = (void*)value;
+        bytes = rectype->allocinfo.inlinedatasize;
+    }
+    else
+    {
+        trgt = Allocator::GlobalAllocator.allocateDynamic(rectype);
+        bytes = rectype->allocinfo.heapsize;
+
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, trgt);
+    }
+
+    GC_MEM_COPY(trgt, recmem, bytes);
+
+    GCStack::popFrame();
+    this->tuplestack.pop_back();
 }
 
 StorageLocationPtr ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t count, Evaluator& ctx)

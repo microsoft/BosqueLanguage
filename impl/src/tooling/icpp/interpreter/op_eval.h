@@ -391,6 +391,11 @@ public:
 
 class ICPPParseJSON : public ApiManagerJSON<StorageLocationPtr, Evaluator>
 {
+private:
+    std::vector<std::pair<void*, const BSQType*>> tuplestack;
+    std::vector<std::pair<void*, const BSQType*>> recordstack;
+    std::vector<std::pair<void*, const BSQType*>> entitystack;
+
 public:
     virtual bool checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value) override final;
 
