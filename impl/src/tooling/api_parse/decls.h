@@ -86,19 +86,13 @@ enum class TypeTag
     UnionTag
 };
 
-struct DateTimeRaw
+struct DateTime
 {
     uint16_t year;   // Year since 1900
     uint8_t month;   // 0-11
     uint8_t day;     // 1-31
     uint8_t hour;    // 0-23
     uint8_t min;     // 0-59
-};
-
-struct DateTime
-{
-    DateTimeRaw utctime;
-    DateTimeRaw localtime;
 
     int32_t tzoffset; //in minutes
     std::string tzname; //optional abbrev (and/or) description

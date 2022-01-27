@@ -847,14 +847,14 @@ std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPt
     return bstr;
 }
 
-std::string emitDateTimeRaw(BSQDateTimeRaw t)
+std::string emitDateTimeRaw(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
     struct tm dt = {0};
-    dt.tm_year = t.year;
-    dt.tm_mon = t.month;
-    dt.tm_mday = t.day;
-    dt.tm_hour = t.hour;
-    dt.tm_min = t.min;
+    dt.tm_year = y + 1900;
+    dt.tm_mon = m;
+    dt.tm_mday = d;
+    dt.tm_hour = hh;
+    dt.tm_min = mm;
 
     char sstrt[20] = {0};
     size_t dtlen = strftime(sstrt, 20, "%Y-%m-%dT%H:%M", &dt);
@@ -869,31 +869,29 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
 
     if(t->tzoffset == 0)
     {
-        auto tstr = emitDateTimeRaw(t->utctime) + "Z"; 
+        auto tstr = emitDateTimeRaw(t->year, t->month, t->day, t->hour, t->min) + "Z"; 
         return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
     }
     else
     {
-        std::string rstr = "[";
-
-        auto utcstr = emitDateTimeRaw(t->utctime) + "Z";
-        rstr += utcstr;
-
         auto hh = t->tzoffset / 60;
         auto mm = std::abs(t->tzoffset) % 60;
         char sstrt[10] = {0};
         sprintf_s(sstrt, 10, "%+02d:%0d", hh, mm);
         std::string tzstr(sstrt, sstrt + 10);
 
-        auto lclstr = emitDateTimeRaw(t->localtime) + tzstr;
-        rstr += (", " + lclstr);
+        auto tstr = emitDateTimeRaw(t->year, t->month, t->day, t->hour, t->min) + tzstr;
 
-        if(!t->tzname.empty())
+        std::string rstr;
+        if(t->tzname.empty())
         {
-            rstr += (", " + t->tzname);
+            rstr = tstr;
+        }
+        else
+        {
+            rstr = tstr + "(" + t->tzname  + ")";
         }
 
-        rstr += "]";
         return rstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
     }
 }

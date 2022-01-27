@@ -2630,8 +2630,11 @@ bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* i
 {
     Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeDateTime);
     BSQDateTime* dt = (BSQDateTime*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeDateTime);
-    dt->utctime = {t.utctime.year, t.utctime.month, t.utctime.day, t.utctime.hour, t.utctime.min};
-    dt->localtime = {t.localtime.year, t.localtime.month, t.localtime.day, t.localtime.hour, t.localtime.min};
+    dt->year = t.year;
+    dt->month = t.month;
+    dt->day = t.day;
+    dt->hour = t.hour;
+    dt->month = t.min;
     dt->tzoffset = t.tzoffset;
     dt->tzname = t.tzname;
 
@@ -2917,8 +2920,11 @@ std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apim
     BSQDateTime* t = (BSQDateTime*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
 
     DateTime dt;
-    dt.utctime = {t->utctime.year, t->utctime.month, t->utctime.day, t->utctime.hour, t->utctime.min};
-    dt.localtime = {t->localtime.year, t->localtime.month, t->localtime.day, t->localtime.hour, t->localtime.min};
+    dt.year = t->year;
+    dt.month = t->month;
+    dt.day = t->day;
+    dt.hour = t->hour;
+    dt.min = t->min;
     dt.tzoffset = t->tzoffset;
     dt.tzname = t->tzname;
 

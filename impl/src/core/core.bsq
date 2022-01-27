@@ -451,16 +451,19 @@ __internal __constructable entity DataBuffer<T unique BufferParsable> provides S
 }
 
 //<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity DateTime provides Some, Orderable, APIType {
+__internal __typedeclable entity DateTime provides Some, Orderable, KeyType, APIType {
 }
+//TODO: operators for orderable and make key type compliant
 
 //<summary>Primitive DateTime value.</summary>
 __internal __typedeclable entity TickTime provides Some, Orderable, APIType {
 }
+//TODO: operators for orderable
 
 //<summary>Primitive LogicalTime value.</summary>
 __internal __typedeclable entity LogicalTime provides Some, Orderable, KeyType, APIType {
 }
+//TODO: operators for orderable and make key type compliant
 
 //<summary>Primitive UUID value.</summary>
 __internal __typedeclable entity UUID provides Some, KeyType, APIType {

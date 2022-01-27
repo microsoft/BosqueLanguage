@@ -116,19 +116,13 @@
     (BByteBuffer@compress BNat)
 ))
 
-(declare-datatype BDateTimeRaw 
-  (BDateTimeRaw@cons 
-    (BDateTimeRaw@year BNat)
-    (BDateTimeRaw@month BNat)
-    (BDateTimeRaw@day BNat)
-    (BDateTimeRaw@hour BNat)
-    (BDateTimeRaw@min BNat) 
-))
-
 (declare-datatype BDateTime 
   (BDateTime@cons 
-    (BDateTime@utctime BDateTimeRaw)
-    (BDateTime@localtime BDateTimeRaw)
+    (BDateTime@year BNat)
+    (BDateTime@month BNat)
+    (BDateTime@day BNat)
+    (BDateTime@hour BNat)
+    (BDateTime@min BNat) 
     (BDateTime@tzoffset BNat)
     (BDateTime@tzinfo BString)
 ))

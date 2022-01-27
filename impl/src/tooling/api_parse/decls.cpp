@@ -222,11 +222,11 @@ std::optional<std::pair<std::string, uint64_t>> JSONParseHelper::parseToRational
     }
 }
 
-std::optional<DateTimeRaw> parseToDateTimeRaw(json j)
+bool parseToDateTimeRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh, uint8_t& mm)
 {
     if(!j.is_string())
     {
-        return std::nullopt;
+        return false;
     }
 
     std::string sstr = j.get<std::string>();
@@ -235,42 +235,41 @@ std::optional<DateTimeRaw> parseToDateTimeRaw(json j)
 
     if(!isutctime && !islocaltime)
     {
-        return std::nullopt;
+        return false;
     }
 
-    DateTimeRaw t;
     uint16_t yy = std::strtol(&sstr[0], nullptr, 10);
     if(yy < 1900)
     {
-        return std::nullopt;
+        return false;
     }
-    t.year = yy - 1900;
+    y = yy - 1900;
 
-    t.month = std::strtol(&sstr[5], nullptr, 10) - 1;
-    if(t.month > 11)
+    m = std::strtol(&sstr[5], nullptr, 10) - 1;
+    if(m > 11)
     {
-        return std::nullopt;
-    }
-
-    t.day = std::strtol(&sstr[8], nullptr, 10);
-    if(t.day == 0 || t.day > 31)
-    {
-        return std::nullopt;
+        return false;
     }
 
-    t.hour = std::strtol(&sstr[11], nullptr, 10);
-    if(t.hour > 23)
+    d = std::strtol(&sstr[8], nullptr, 10);
+    if(d == 0 || d > 31)
     {
-        return std::nullopt;
+        return false;
     }
 
-    t.min = std::strtol(&sstr[14], nullptr, 10);
-    if(t.min > 59)
+    hh = std::strtol(&sstr[11], nullptr, 10);
+    if(hh > 23)
     {
-        return std::nullopt;
+        return false;
+    }
+
+    mm = std::strtol(&sstr[14], nullptr, 10);
+    if(mm > 59)
+    {
+        return false;
     }
     
-    return std::make_optional(t);
+    return true;
 }
 
 std::optional<int32_t> parseToDateTimeTZ(json j)
@@ -334,34 +333,48 @@ std::optional<DateTime> JSONParseHelper::parseToDateTime(json j)
 {
     if(j.is_string())
     {
-        auto utc = parseToDateTimeRaw(j);
-        if(!utc.has_value())
+        DateTime tinfo = {0, 0, 0, 0, 0, 0, ""};
+        auto ok = parseToDateTimeRaw(j, tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min);
+        if(!ok)
         {
             return std::nullopt;
         }
 
-        DateTime tinfo = {utc.value(), utc.value(), 0, ""};
+        auto tzo = parseToDateTimeTZ(j);
+        if(!tzo.has_value())
+        {
+            return std::nullopt;
+        }
+        tinfo.tzoffset = tzo.value();
+
         return std::make_optional(tinfo);
     }
     else
     {
-        if(!j.is_array() || j.size() > 3)
+        if(!j.is_array() || j.size() > 2)
         {
             return std::nullopt;
         }
 
-        auto utc = parseToDateTimeRaw(j[0]);
-        auto local = parseToDateTimeRaw(j[1]);
-        auto tz = parseToDateTimeTZ(j[1]);
-
-        if(!utc.has_value() || !local.has_value() || !tz.has_value())
+        if(j.size() == 2 && !j[2].is_string())
         {
             return std::nullopt;
         }
 
-        auto sstr = (j.size() == 3 && j[2].is_string()) ? j[2].get<std::string>() : "";
+        DateTime tinfo = {0, 0, 0, 0, 0, 0, j[2].get<std::string>()};
+        auto ok = parseToDateTimeRaw(j[0], tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min);
+        if(!ok)
+        {
+            return std::nullopt;
+        }
 
-        DateTime tinfo = {utc.value(), local.value(), tz.value(), sstr};
+        auto tzo = parseToDateTimeTZ(j[0]);
+        if(!tzo.has_value())
+        {
+            return std::nullopt;
+        }
+        tinfo.tzoffset = tzo.value();
+
         return std::make_optional(tinfo);
     }
 }
@@ -500,14 +513,14 @@ std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, u
     std::make_optional(rv.first + "/" + std::to_string(rv.second));
 }
 
-std::string emitDateTimeRaw(DateTimeRaw t)
+std::string emitDateTimeRaw(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
     struct tm dt = {0};
-    dt.tm_year = t.year;
-    dt.tm_mon = t.month;
-    dt.tm_mday = t.day;
-    dt.tm_hour = t.hour;
-    dt.tm_min = t.min;
+    dt.tm_year = y + 1900;
+    dt.tm_mon = m;
+    dt.tm_mday = d;
+    dt.tm_hour = hh;
+    dt.tm_min = mm;
 
     char sstrt[20] = {0};
     size_t dtlen = strftime(sstrt, 20, "%Y-%m-%dT%H:%M", &dt);
@@ -520,31 +533,31 @@ std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
 {
     if(t.tzoffset == 0)
     {
-        auto tstr = emitDateTimeRaw(t.utctime) + "Z"; 
+        auto tstr = emitDateTimeRaw(t.year, t.month, t.day, t.hour, t.min) + "Z"; 
         return std::make_optional(tstr);
     }
     else
     {
-        auto jobj = json::array();
-
-        auto utcstr = emitDateTimeRaw(t.utctime) + "Z";
-        jobj[0] = utcstr;
-
         auto hh = t.tzoffset / 60;
         auto mm = std::abs(t.tzoffset) % 60;
         char sstrt[10] = {0};
         sprintf_s(sstrt, 10, "%+02d:%0d", hh, mm);
         std::string tzstr(sstrt, sstrt + 10);
 
-        auto lclstr = emitDateTimeRaw(t.localtime) + tzstr;
-        jobj[1] = lclstr;
+        auto tstr = emitDateTimeRaw(t.year, t.month, t.day, t.hour, t.min) + tzstr;
 
-        if(!t.tzname.empty())
+        if(t.tzname.empty())
         {
-            jobj[2] = t.tzname;
+            return std::make_optional(tstr);
         }
+        else
+        {
+            auto jobj = json::array();
+            jobj[0] = tstr;
+            jobj[1] = t.tzname;
 
-        return std::make_optional(jobj);
+            return std::make_optional(jobj);
+        }
     }
 }
 
